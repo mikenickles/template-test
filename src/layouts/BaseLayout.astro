@@ -1,0 +1,74 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = "A personal blog about tech, AI, personal life, and health." } = Astro.props;
+const currentPath = Astro.url.pathname;
+
+const navLinks = [
+  { href: "/", label: "Home" },
+  { href: "/blog", label: "Blog" },
+  { href: "/about", label: "About" },
+  { href: "/contact", label: "Contact" },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+  </head>
+  <body class="min-h-screen flex flex-col">
+    <!-- Navigation -->
+    <header class="border-b border-neutral-100">
+      <nav class="max-w-3xl mx-auto px-6 py-8 flex items-center justify-between">
+        <a href="/" class="font-serif text-xl text-neutral-900 no-underline hover:text-burnt-500 transition-colors">
+          template-test
+        </a>
+        <ul class="flex gap-8 list-none m-0 p-0">
+          {navLinks.map((link) => (
+            <li>
+              <a
+                href={link.href}
+                class:list={[
+                  "text-sm uppercase tracking-widest no-underline transition-colors duration-200",
+                  currentPath === link.href || (link.href !== "/" && currentPath.startsWith(link.href))
+                    ? "text-burnt-500"
+                    : "text-neutral-400 hover:text-neutral-900",
+                ]}
+              >
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-3xl mx-auto px-6 py-16 w-full">
+      <slot />
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-neutral-100">
+      <div class="max-w-3xl mx-auto px-6 py-10 flex items-center justify-between text-sm text-neutral-400">
+        <span>&copy; {new Date().getFullYear()}</span>
+        <div class="accent-line"></div>
+        <span class="text-xs uppercase tracking-widest">Simplicity</span>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style>
+  a {
+    text-decoration: none;
+  }
+</style>
