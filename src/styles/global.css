@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-white text-neutral-900 font-sans antialiased;
+    @apply leading-normal tracking-normal;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-sans font-bold tracking-tight text-neutral-900;
+  }
+
+  h1 {
+    @apply text-4xl md:text-6xl leading-none;
+  }
+
+  h2 {
+    @apply text-2xl md:text-3xl;
+  }
+
+  h3 {
+    @apply text-lg md:text-xl;
+  }
+
+  a {
+    @apply text-neutral-900 transition-colors duration-150;
+  }
+
+  a:hover {
+    @apply text-burnt-500;
+  }
+
+  ::selection {
+    @apply bg-burnt-500 text-white;
+  }
+}
+
+@layer components {
+  /* Bold horizontal rule — Swiss style divider */
+  .accent-line {
+    @apply w-full h-0.5 bg-neutral-900;
+  }
+
+  .accent-line-thin {
+    @apply w-full h-px bg-neutral-200;
+  }
+
+  /* Category badge — geometric, structured */
+  .category-tag {
+    @apply text-[10px] uppercase tracking-[0.2em] font-semibold text-burnt-500 border border-burnt-500 px-2 py-0.5 inline-block;
+  }
+
+  /* Grid card for posts */
+  .post-card {
+    @apply border border-neutral-200 p-6 flex flex-col justify-between h-full transition-all duration-150;
+  }
+
+  .post-card:hover {
+    @apply border-burnt-500;
+  }
+
+  /* Prose styling for blog post content */
+  .prose {
+    @apply max-w-none text-base leading-relaxed;
+  }
+
+  .prose p {
+    @apply mb-6;
+  }
+
+  .prose h2 {
+    @apply mt-14 mb-4 pt-6 border-t-2 border-neutral-900;
+  }
+
+  .prose h3 {
+    @apply mt-10 mb-3;
+  }
+
+  .prose ul,
+  .prose ol {
+    @apply mb-6 pl-6;
+  }
+
+  .prose ul {
+    @apply list-disc;
+  }
+
+  .prose ol {
+    @apply list-decimal;
+  }
+
+  .prose li {
+    @apply mb-2;
+  }
+
+  .prose blockquote {
+    @apply border-l-4 border-burnt-500 pl-6 text-neutral-600 my-8 text-lg font-light;
+  }
+
+  .prose code {
+    @apply bg-neutral-100 text-neutral-800 px-1.5 py-0.5 text-sm font-mono;
+  }
+
+  .prose pre {
+    @apply bg-neutral-50 border border-neutral-200 p-4 overflow-x-auto my-6;
+  }
+
+  .prose pre code {
+    @apply bg-transparent p-0;
+  }
+
+  .prose img {
+    @apply my-8;
+  }
+
+  .prose hr {
+    @apply border-neutral-200 my-12;
+  }
+
+  .prose strong {
+    @apply font-semibold text-neutral-900;
+  }
+}

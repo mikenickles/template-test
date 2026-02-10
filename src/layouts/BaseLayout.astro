@@ -1,0 +1,83 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  wide?: boolean;
+}
+
+const { title, description = "A personal blog about tech, AI, personal life, and health.", wide = false } = Astro.props;
+const currentPath = Astro.url.pathname;
+
+const navLinks = [
+  { href: "/", label: "Home" },
+  { href: "/blog", label: "Blog" },
+  { href: "/about", label: "About" },
+  { href: "/contact", label: "Contact" },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+  </head>
+  <body class="min-h-screen flex flex-col">
+    <!-- Navigation -->
+    <header class="border-b-2 border-neutral-900">
+      <nav class:list={[
+        "mx-auto px-6 py-6 flex items-center justify-between",
+        wide ? "max-w-6xl" : "max-w-4xl",
+      ]}>
+        <a href="/" class="text-lg font-bold uppercase tracking-[0.15em] text-neutral-900 no-underline hover:text-burnt-500 transition-colors">
+          template-test
+        </a>
+        <ul class="flex gap-8 list-none m-0 p-0">
+          {navLinks.map((link) => (
+            <li>
+              <a
+                href={link.href}
+                class:list={[
+                  "text-xs font-semibold uppercase tracking-[0.15em] no-underline transition-colors duration-150",
+                  currentPath === link.href || (link.href !== "/" && currentPath.startsWith(link.href))
+                    ? "text-burnt-500"
+                    : "text-neutral-400 hover:text-neutral-900",
+                ]}
+              >
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class:list={[
+      "flex-1 mx-auto px-6 py-16 w-full",
+      wide ? "max-w-6xl" : "max-w-4xl",
+    ]}>
+      <slot />
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t-2 border-neutral-900">
+      <div class:list={[
+        "mx-auto px-6 py-8 flex items-center justify-between text-xs font-medium uppercase tracking-[0.15em] text-neutral-400",
+        wide ? "max-w-6xl" : "max-w-4xl",
+      ]}>
+        <span>&copy; {new Date().getFullYear()}</span>
+        <span class="text-burnt-500">Swiss Minimalism</span>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style>
+  a {
+    text-decoration: none;
+  }
+</style>

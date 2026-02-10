@@ -1,0 +1,115 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const posts = [
+  {
+    title: "Building My First AI-Powered Side Project",
+    date: "2026-02-08",
+    category: "ai",
+    slug: "building-my-first-ai-side-project",
+    excerpt: "What I learned spending a weekend building a small tool with large language models — and why the hardest part wasn't the AI.",
+  },
+  {
+    title: "Morning Routines That Actually Stick",
+    date: "2026-02-05",
+    category: "health",
+    slug: "morning-routines-that-stick",
+    excerpt: "After years of failed 5 AM wake-up attempts, here's the simple framework that finally worked for me.",
+  },
+  {
+    title: "Why I Switched to a Minimal Dev Setup",
+    date: "2026-02-01",
+    category: "tech",
+    slug: "minimal-dev-setup",
+    excerpt: "Fewer tools, fewer distractions. How stripping my development environment down to the essentials made me more productive.",
+  },
+  {
+    title: "On Slowing Down in a Fast World",
+    date: "2026-01-28",
+    category: "personal",
+    slug: "on-slowing-down",
+    excerpt: "A reflection on intentional living, saying no more often, and finding quiet in the noise.",
+  },
+];
+
+const categories = ["tech", "ai", "personal", "health"];
+---
+
+<BaseLayout title="template-test — A personal blog" wide>
+  <!-- Hero -->
+  <section class="mb-20">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-end">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-burnt-500 mb-4">Personal Blog</p>
+        <h1 class="text-5xl md:text-7xl font-bold leading-[0.9] tracking-tighter">
+          Tech.<br />
+          AI.<br />
+          Life.<br />
+          <span class="text-burnt-500">Health.</span>
+        </h1>
+      </div>
+      <div>
+        <div class="accent-line mb-6"></div>
+        <p class="text-neutral-500 text-lg leading-relaxed">
+          A space for exploring ideas across technology, artificial intelligence, personal growth, and well-being — with clarity and precision.
+        </p>
+        <div class="flex gap-4 mt-8">
+          {categories.map((cat) => (
+            <a
+              href={`/blog?category=${cat}`}
+              class="category-tag no-underline hover:bg-burnt-500 hover:text-white transition-all"
+            >
+              {cat}
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Recent Posts — Grid -->
+  <section>
+    <div class="flex items-center justify-between mb-8">
+      <h2 class="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-400 m-0">Recent Posts</h2>
+      <div class="flex-1 ml-6 h-px bg-neutral-200"></div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {posts.map((post) => (
+        <a href={`/blog/${post.slug}`} class="no-underline group">
+          <article class="post-card">
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <span class="category-tag">{post.category}</span>
+                <time class="text-[10px] font-medium uppercase tracking-[0.15em] text-neutral-400" datetime={post.date}>
+                  {new Date(post.date).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </time>
+              </div>
+              <h3 class="text-lg font-bold text-neutral-900 group-hover:text-burnt-500 transition-colors mb-3 leading-snug">
+                {post.title}
+              </h3>
+              <p class="text-neutral-500 text-sm leading-relaxed m-0">
+                {post.excerpt}
+              </p>
+            </div>
+            <div class="mt-6 pt-4 border-t border-neutral-100">
+              <span class="text-[10px] font-semibold uppercase tracking-[0.2em] text-burnt-500 group-hover:tracking-[0.3em] transition-all">
+                Read &rarr;
+              </span>
+            </div>
+          </article>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <!-- View all -->
+  <div class="mt-12 text-right">
+    <a href="/blog" class="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-900 hover:text-burnt-500 no-underline">
+      View all posts &rarr;
+    </a>
+  </div>
+</BaseLayout>
