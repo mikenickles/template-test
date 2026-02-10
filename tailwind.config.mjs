@@ -18,8 +18,7 @@ export default {
         },
       },
       fontFamily: {
-        serif: ['"Noto Serif JP"', "Georgia", "serif"],
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["Inter", "Helvetica Neue", "Helvetica", "Arial", "system-ui", "sans-serif"],
       },
     },
   },

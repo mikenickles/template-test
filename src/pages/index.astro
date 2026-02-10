@@ -1,8 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 
-// In a full setup, these would come from Astro.glob or content collections.
-// For now, we define them manually to match our sample posts.
 const posts = [
   {
     title: "Building My First AI-Powered Side Project",
@@ -37,66 +35,80 @@ const posts = [
 const categories = ["tech", "ai", "personal", "health"];
 ---
 
-<BaseLayout title="template-test — A personal blog">
+<BaseLayout title="template-test — A personal blog" wide>
   <!-- Hero -->
   <section class="mb-20">
-    <h1 class="text-4xl md:text-5xl font-serif font-medium leading-tight mb-6">
-      Thoughts on<br />
-      <span class="text-burnt-500">technology</span>, life,<br />
-      and everything between.
-    </h1>
-    <div class="accent-line mb-6"></div>
-    <p class="text-neutral-500 max-w-md leading-relaxed">
-      A space for exploring ideas in tech, AI, health, and personal growth — with intention and simplicity.
-    </p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-end">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-burnt-500 mb-4">Personal Blog</p>
+        <h1 class="text-5xl md:text-7xl font-bold leading-[0.9] tracking-tighter">
+          Tech.<br />
+          AI.<br />
+          Life.<br />
+          <span class="text-burnt-500">Health.</span>
+        </h1>
+      </div>
+      <div>
+        <div class="accent-line mb-6"></div>
+        <p class="text-neutral-500 text-lg leading-relaxed">
+          A space for exploring ideas across technology, artificial intelligence, personal growth, and well-being — with clarity and precision.
+        </p>
+        <div class="flex gap-4 mt-8">
+          {categories.map((cat) => (
+            <a
+              href={`/blog?category=${cat}`}
+              class="category-tag no-underline hover:bg-burnt-500 hover:text-white transition-all"
+            >
+              {cat}
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
   </section>
 
-  <!-- Categories -->
-  <section class="mb-16">
-    <div class="flex gap-6">
-      {categories.map((cat) => (
-        <a
-          href={`/blog?category=${cat}`}
-          class="text-xs uppercase tracking-widest text-neutral-400 hover:text-burnt-500 no-underline transition-colors"
-        >
-          {cat}
+  <!-- Recent Posts — Grid -->
+  <section>
+    <div class="flex items-center justify-between mb-8">
+      <h2 class="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-400 m-0">Recent Posts</h2>
+      <div class="flex-1 ml-6 h-px bg-neutral-200"></div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {posts.map((post) => (
+        <a href={`/blog/${post.slug}`} class="no-underline group">
+          <article class="post-card">
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <span class="category-tag">{post.category}</span>
+                <time class="text-[10px] font-medium uppercase tracking-[0.15em] text-neutral-400" datetime={post.date}>
+                  {new Date(post.date).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </time>
+              </div>
+              <h3 class="text-lg font-bold text-neutral-900 group-hover:text-burnt-500 transition-colors mb-3 leading-snug">
+                {post.title}
+              </h3>
+              <p class="text-neutral-500 text-sm leading-relaxed m-0">
+                {post.excerpt}
+              </p>
+            </div>
+            <div class="mt-6 pt-4 border-t border-neutral-100">
+              <span class="text-[10px] font-semibold uppercase tracking-[0.2em] text-burnt-500 group-hover:tracking-[0.3em] transition-all">
+                Read &rarr;
+              </span>
+            </div>
+          </article>
         </a>
       ))}
     </div>
   </section>
 
-  <!-- Recent Posts -->
-  <section>
-    <h2 class="text-sm uppercase tracking-widest text-neutral-400 mb-10">Recent</h2>
-    <div class="space-y-12">
-      {posts.map((post) => (
-        <article class="group">
-          <a href={`/blog/${post.slug}`} class="no-underline block">
-            <div class="flex items-center gap-4 mb-2">
-              <span class="category-tag">{post.category}</span>
-              <span class="text-neutral-300">·</span>
-              <time class="text-xs text-neutral-400" datetime={post.date}>
-                {new Date(post.date).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })}
-              </time>
-            </div>
-            <h3 class="text-xl font-serif font-medium text-neutral-900 group-hover:text-burnt-500 transition-colors mb-2">
-              {post.title}
-            </h3>
-            <p class="text-neutral-500 text-sm leading-relaxed">
-              {post.excerpt}
-            </p>
-          </a>
-        </article>
-      ))}
-    </div>
-  </section>
-
-  <!-- View all link -->
-  <div class="mt-16 pt-8 border-t border-neutral-100">
-    <a href="/blog" class="text-sm uppercase tracking-widest">
+  <!-- View all -->
+  <div class="mt-12 text-right">
+    <a href="/blog" class="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-900 hover:text-burnt-500 no-underline">
       View all posts &rarr;
     </a>
   </div>

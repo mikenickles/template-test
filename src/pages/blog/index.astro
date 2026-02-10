@@ -35,49 +35,54 @@ const posts = [
 const categories = ["all", "tech", "ai", "personal", "health"];
 ---
 
-<BaseLayout title="Blog — template-test" description="All posts about tech, AI, personal life, and health.">
+<BaseLayout title="Blog — template-test" description="All posts about tech, AI, personal life, and health." wide>
   <header class="mb-16">
     <h1 class="mb-4">Blog</h1>
-    <div class="accent-line mb-6"></div>
-    <p class="text-neutral-500">Thoughts and reflections, written with care.</p>
+    <div class="accent-line mb-8"></div>
+    <p class="text-neutral-500 text-lg">All posts. Filtered by clarity.</p>
   </header>
 
   <!-- Category Filter -->
-  <nav class="mb-12 flex gap-6" id="category-filter">
+  <nav class="mb-12 flex gap-3" id="category-filter">
     {categories.map((cat) => (
       <button
         data-category={cat}
-        class="text-xs uppercase tracking-widest text-neutral-400 hover:text-burnt-500 transition-colors cursor-pointer bg-transparent border-none p-0 category-btn"
+        class="text-[10px] font-semibold uppercase tracking-[0.2em] px-3 py-1.5 border border-neutral-300 text-neutral-400 hover:border-burnt-500 hover:text-burnt-500 transition-all cursor-pointer bg-transparent category-btn"
       >
         {cat}
       </button>
     ))}
   </nav>
 
-  <!-- Posts -->
-  <div class="space-y-12" id="posts-list">
+  <!-- Posts Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="posts-list">
     {posts.map((post) => (
-      <article class="group post-item" data-category={post.category}>
-        <a href={`/blog/${post.slug}`} class="no-underline block">
-          <div class="flex items-center gap-4 mb-2">
-            <span class="category-tag">{post.category}</span>
-            <span class="text-neutral-300">·</span>
-            <time class="text-xs text-neutral-400" datetime={post.date}>
-              {new Date(post.date).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </time>
+      <a href={`/blog/${post.slug}`} class="no-underline group post-item" data-category={post.category}>
+        <article class="post-card">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="category-tag">{post.category}</span>
+              <time class="text-[10px] font-medium uppercase tracking-[0.15em] text-neutral-400" datetime={post.date}>
+                {new Date(post.date).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}
+              </time>
+            </div>
+            <h3 class="text-lg font-bold text-neutral-900 group-hover:text-burnt-500 transition-colors mb-3 leading-snug">
+              {post.title}
+            </h3>
+            <p class="text-neutral-500 text-sm leading-relaxed m-0">
+              {post.excerpt}
+            </p>
           </div>
-          <h3 class="text-xl font-serif font-medium text-neutral-900 group-hover:text-burnt-500 transition-colors mb-2">
-            {post.title}
-          </h3>
-          <p class="text-neutral-500 text-sm leading-relaxed">
-            {post.excerpt}
-          </p>
-        </a>
-      </article>
+          <div class="mt-6 pt-4 border-t border-neutral-100">
+            <span class="text-[10px] font-semibold uppercase tracking-[0.2em] text-burnt-500 group-hover:tracking-[0.3em] transition-all">
+              Read &rarr;
+            </span>
+          </div>
+        </article>
+      </a>
     ))}
   </div>
 </BaseLayout>
@@ -86,18 +91,17 @@ const categories = ["all", "tech", "ai", "personal", "health"];
   const buttons = document.querySelectorAll<HTMLButtonElement>(".category-btn");
   const posts = document.querySelectorAll<HTMLElement>(".post-item");
 
-  // Check URL for initial category
   const params = new URLSearchParams(window.location.search);
   const initialCategory = params.get("category") || "all";
 
   function filterPosts(category: string) {
     buttons.forEach((btn) => {
       if (btn.dataset.category === category) {
-        btn.classList.add("text-burnt-500");
-        btn.classList.remove("text-neutral-400");
+        btn.classList.add("border-burnt-500", "text-burnt-500");
+        btn.classList.remove("border-neutral-300", "text-neutral-400");
       } else {
-        btn.classList.remove("text-burnt-500");
-        btn.classList.add("text-neutral-400");
+        btn.classList.remove("border-burnt-500", "text-burnt-500");
+        btn.classList.add("border-neutral-300", "text-neutral-400");
       }
     });
 
@@ -116,6 +120,5 @@ const categories = ["all", "tech", "ai", "personal", "health"];
     });
   });
 
-  // Apply initial filter
   filterPosts(initialCategory);
 </script>

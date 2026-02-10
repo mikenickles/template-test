@@ -2,9 +2,10 @@
 interface Props {
   title: string;
   description?: string;
+  wide?: boolean;
 }
 
-const { title, description = "A personal blog about tech, AI, personal life, and health." } = Astro.props;
+const { title, description = "A personal blog about tech, AI, personal life, and health.", wide = false } = Astro.props;
 const currentPath = Astro.url.pathname;
 
 const navLinks = [
@@ -26,9 +27,12 @@ const navLinks = [
   </head>
   <body class="min-h-screen flex flex-col">
     <!-- Navigation -->
-    <header class="border-b border-neutral-100">
-      <nav class="max-w-3xl mx-auto px-6 py-8 flex items-center justify-between">
-        <a href="/" class="font-serif text-xl text-neutral-900 no-underline hover:text-burnt-500 transition-colors">
+    <header class="border-b-2 border-neutral-900">
+      <nav class:list={[
+        "mx-auto px-6 py-6 flex items-center justify-between",
+        wide ? "max-w-6xl" : "max-w-4xl",
+      ]}>
+        <a href="/" class="text-lg font-bold uppercase tracking-[0.15em] text-neutral-900 no-underline hover:text-burnt-500 transition-colors">
           template-test
         </a>
         <ul class="flex gap-8 list-none m-0 p-0">
@@ -37,7 +41,7 @@ const navLinks = [
               <a
                 href={link.href}
                 class:list={[
-                  "text-sm uppercase tracking-widest no-underline transition-colors duration-200",
+                  "text-xs font-semibold uppercase tracking-[0.15em] no-underline transition-colors duration-150",
                   currentPath === link.href || (link.href !== "/" && currentPath.startsWith(link.href))
                     ? "text-burnt-500"
                     : "text-neutral-400 hover:text-neutral-900",
@@ -52,16 +56,21 @@ const navLinks = [
     </header>
 
     <!-- Main Content -->
-    <main class="flex-1 max-w-3xl mx-auto px-6 py-16 w-full">
+    <main class:list={[
+      "flex-1 mx-auto px-6 py-16 w-full",
+      wide ? "max-w-6xl" : "max-w-4xl",
+    ]}>
       <slot />
     </main>
 
     <!-- Footer -->
-    <footer class="border-t border-neutral-100">
-      <div class="max-w-3xl mx-auto px-6 py-10 flex items-center justify-between text-sm text-neutral-400">
+    <footer class="border-t-2 border-neutral-900">
+      <div class:list={[
+        "mx-auto px-6 py-8 flex items-center justify-between text-xs font-medium uppercase tracking-[0.15em] text-neutral-400",
+        wide ? "max-w-6xl" : "max-w-4xl",
+      ]}>
         <span>&copy; {new Date().getFullYear()}</span>
-        <div class="accent-line"></div>
-        <span class="text-xs uppercase tracking-widest">Simplicity</span>
+        <span class="text-burnt-500">Swiss Minimalism</span>
       </div>
     </footer>
   </body>
