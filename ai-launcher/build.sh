@@ -11,10 +11,14 @@ cd "$(dirname "$0")"
 SRC=app/src/main
 OUT=build
 PACKAGE=com.mikenickles.ailauncher
+VERSION_CODE=2
+VERSION_NAME=1.1
 ANDROID_JAR=${ANDROID_JAR:-/usr/lib/android-sdk/platforms/android-23/android.jar}
 BUILD_TOOLS=${BUILD_TOOLS:-/usr/lib/android-sdk/build-tools/debian}
 MIN_SDK=23
-TARGET_SDK=23   # Matches the platform jar this script compiles against.
+# Declare a modern target: Android 15+ refuses to install apps targeting old SDKs. The code only
+# uses APIs present in the API 23 jar it compiles against, so this is safe.
+TARGET_SDK=35
 
 DX=$(command -v dx || command -v dalvik-exchange || echo "$BUILD_TOOLS/dx")
 AAPT2=${AAPT2:-$BUILD_TOOLS/aapt2}
@@ -23,7 +27,7 @@ rm -rf "$OUT"
 mkdir -p "$OUT/res" "$OUT/gen" "$OUT/classes" "$OUT/dex"
 
 # The Gradle build sets the package via `namespace`; aapt2 needs it in the manifest.
-sed "s|<manifest |<manifest package=\"$PACKAGE\" android:versionCode=\"1\" android:versionName=\"1.0\" |" \
+sed "s|<manifest |<manifest package=\"$PACKAGE\" android:versionCode=\"$VERSION_CODE\" android:versionName=\"$VERSION_NAME\" |" \
     "$SRC/AndroidManifest.xml" > "$OUT/AndroidManifest.xml"
 
 echo "==> Compiling resources"
@@ -43,14 +47,10 @@ echo "==> Dexing"
 (cd "$OUT/dex" && zip -q -u ../unsigned.apk classes.dex)
 
 echo "==> Aligning and signing"
-KEYSTORE=${KEYSTORE:-$OUT/../debug.keystore}
-if [ ! -f "$KEYSTORE" ]; then
-    keytool -genkeypair -keystore "$KEYSTORE" -storepass android -keypass android \
-        -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
-        -dname "CN=Android Debug,O=Android,C=US" >/dev/null 2>&1
-fi
+# Same key as the Gradle build (see signing/README.md), so updates install over each other.
+KEYSTORE=${KEYSTORE:-signing/ailauncher.keystore}
 "$BUILD_TOOLS/zipalign" -f 4 "$OUT/unsigned.apk" "$OUT/aligned.apk"
-"$BUILD_TOOLS/apksigner" sign --ks "$KEYSTORE" --ks-pass pass:android --key-pass pass:android \
+"$BUILD_TOOLS/apksigner" sign --ks "$KEYSTORE" --ks-key-alias ailauncher --ks-pass pass:android --key-pass pass:android \
     --out "$OUT/ai-launcher.apk" "$OUT/aligned.apk"
 "$BUILD_TOOLS/apksigner" verify "$OUT/ai-launcher.apk"
 

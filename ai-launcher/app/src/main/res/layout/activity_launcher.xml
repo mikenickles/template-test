@@ -1,111 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:animateLayoutChanges="true"
     android:background="@color/scrim"
     android:fitsSystemWindows="true"
-    android:orientation="vertical"
-    android:paddingLeft="16dp"
-    android:paddingRight="16dp">
+    android:orientation="vertical">
 
-    <TextClock
-        android:id="@+id/clock"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:fontFamily="sans-serif-light"
-        android:format12Hour="h:mm"
-        android:format24Hour="HH:mm"
-        android:textColor="@color/text_primary"
-        android:textSize="64sp" />
-
-    <TextClock
-        android:id="@+id/date"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:format12Hour="EEEE, MMMM d"
-        android:format24Hour="EEEE, MMMM d"
-        android:textColor="@color/text_secondary"
-        android:textSize="16sp" />
-
-    <com.mikenickles.ailauncher.MaxHeightScrollView
-        android:id="@+id/answer_card"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:background="@drawable/bg_card"
-        android:visibility="gone">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:id="@+id/question"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/accent"
-                android:textSize="13sp" />
-
-            <ProgressBar
-                android:id="@+id/progress"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:indeterminate="true"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/answer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:lineSpacingMultiplier="1.15"
-                android:textColor="@color/text_primary"
-                android:textIsSelectable="true"
-                android:textSize="15sp" />
-        </LinearLayout>
-    </com.mikenickles.ailauncher.MaxHeightScrollView>
-
-    <GridView
-        android:id="@+id/app_grid"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="12dp"
-        android:layout_weight="1"
-        android:clipToPadding="false"
-        android:numColumns="4"
-        android:scrollbars="none"
-        android:stretchMode="columnWidth"
-        android:verticalSpacing="4dp" />
-
+    <!-- Header: greeting, clock, date, settings -->
     <LinearLayout
+        android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/bg_input"
-        android:gravity="center_vertical"
+        android:layout_marginTop="20dp"
         android:orientation="horizontal"
         android:paddingLeft="20dp"
-        android:paddingRight="6dp">
+        android:paddingRight="8dp">
 
-        <EditText
-            android:id="@+id/prompt"
+        <LinearLayout
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:background="@null"
-            android:hint="@string/prompt_hint"
-            android:imeOptions="actionSend"
-            android:inputType="text|textCapSentences"
-            android:maxLines="1"
-            android:textColor="@color/text_primary"
-            android:textColorHint="@color/text_secondary"
-            android:textSize="16sp" />
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/greeting"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/accent"
+                android:textSize="15sp" />
+
+            <TextClock
+                android:id="@+id/clock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-thin"
+                android:format12Hour="h:mm"
+                android:format24Hour="HH:mm"
+                android:includeFontPadding="false"
+                android:textColor="@color/text_primary"
+                android:textSize="72sp" />
+
+            <TextClock
+                android:id="@+id/date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:format12Hour="EEEE, MMMM d"
+                android:format24Hour="EEEE, MMMM d"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp" />
+        </LinearLayout>
 
         <ImageButton
             android:id="@+id/settings"
@@ -113,7 +58,160 @@
             android:layout_height="44dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/settings"
-            android:src="@android:drawable/ic_menu_preferences"
+            android:src="@drawable/ic_tune"
             android:tint="@color/text_secondary" />
     </LinearLayout>
+
+    <!-- Conversation -->
+    <ScrollView
+        android:id="@+id/chat_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:fadingEdgeLength="24dp"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:requiresFadingEdge="vertical"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/chat_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:animateLayoutChanges="true"
+            android:orientation="vertical"
+            android:paddingBottom="8dp" />
+    </ScrollView>
+
+    <!-- App drawer: shown while typing or after tapping the apps button -->
+    <LinearLayout
+        android:id="@+id/drawer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/drawer_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_chip"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:paddingBottom="10dp"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:paddingTop="10dp"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp" />
+
+        <GridView
+            android:id="@+id/app_grid"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="8dp"
+            android:clipToPadding="false"
+            android:fadingEdgeLength="24dp"
+            android:numColumns="4"
+            android:requiresFadingEdge="vertical"
+            android:scrollbars="none"
+            android:stretchMode="columnWidth"
+            android:verticalSpacing="4dp" />
+    </LinearLayout>
+
+    <!-- Dock: pinned and most-used apps -->
+    <LinearLayout
+        android:id="@+id/dock"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp" />
+
+    <!-- Suggestions -->
+    <HorizontalScrollView
+        android:id="@+id/chips_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:clipToPadding="false"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/chips"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
+
+    <!-- Prompt bar with a gradient glow behind it -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:layout_marginLeft="12dp"
+        android:layout_marginRight="12dp"
+        android:layout_marginTop="10dp">
+
+        <View
+            android:id="@+id/glow"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:alpha="0.35"
+            android:background="@drawable/bg_glow" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dp"
+            android:background="@drawable/bg_input"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingLeft="6dp"
+            android:paddingRight="6dp">
+
+            <ImageButton
+                android:id="@+id/apps_button"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/all_apps"
+                android:src="@drawable/ic_apps"
+                android:tint="@color/text_secondary" />
+
+            <EditText
+                android:id="@+id/prompt"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@null"
+                android:hint="@string/prompt_hint"
+                android:imeOptions="actionSend"
+                android:inputType="text|textCapSentences"
+                android:maxLines="1"
+                android:minHeight="52dp"
+                android:paddingLeft="6dp"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_secondary"
+                android:textSize="16sp" />
+
+            <ImageButton
+                android:id="@+id/action_button"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/voice"
+                android:src="@drawable/ic_mic"
+                android:tint="@color/accent" />
+        </LinearLayout>
+    </FrameLayout>
 </LinearLayout>

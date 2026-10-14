@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sits 2dp behind the prompt bar so it reads as a gradient border. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="0"
+        android:endColor="@color/glow_end"
+        android:startColor="@color/glow_start" />
+    <corners android:radius="30dp" />
+</shape>

@@ -7,6 +7,9 @@ on:
       - ".github/workflows/ai-launcher.yml"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,9 +22,22 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - name: Build debug APK
-        run: ./gradlew --no-daemon assembleDebug
+      - name: Build APK
+        run: |
+          ./gradlew --no-daemon assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk ai-launcher.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: ai-launcher-debug-apk
-          path: ai-launcher/app/build/outputs/apk/debug/*.apk
+          name: ai-launcher-apk
+          path: ai-launcher/ai-launcher.apk
+      # A fixed "launcher-latest" release always holds the newest APK, so it can be
+      # downloaded straight from a phone's browser.
+      - name: Publish to the launcher-latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete launcher-latest --yes --cleanup-tag || true
+          gh release create launcher-latest ai-launcher.apk \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "AI Launcher (latest build)" \
+            --notes "Built from ${GITHUB_REF_NAME} @ ${GITHUB_SHA::7}. Download ai-launcher.apk on your phone and open it to install or update."

@@ -1,16 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="scrim">#73000000</color>
-    <color name="card">#CC1B1B22</color>
-    <color name="input">#E6232330</color>
+    <color name="scrim">#8C0B0B10</color>
+    <color name="card">#D91B1B22</color>
+    <color name="input">#F2202029</color>
+    <color name="chip">#B3262632</color>
     <color name="accent">#FFD97757</color>
+    <color name="accent_soft">#33D97757</color>
+    <color name="glow_start">#FFD97757</color>
+    <color name="glow_end">#FF8F7CF7</color>
     <color name="text_primary">#FFF5F5F7</color>
     <color name="text_secondary">#B3F5F5F7</color>
 
     <style name="LauncherTheme" parent="android:Theme.Material.Wallpaper.NoTitleBar">
         <item name="android:statusBarColor">#00000000</item>
-        <item name="android:navigationBarColor">#59000000</item>
+        <item name="android:navigationBarColor">#00000000</item>
         <item name="android:colorAccent">@color/accent</item>
         <item name="android:windowShowWallpaper">true</item>
+    </style>
+
+    <style name="Chip">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">36dp</item>
+        <item name="android:layout_marginRight">8dp</item>
+        <item name="android:background">@drawable/bg_chip</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingLeft">14dp</item>
+        <item name="android:paddingRight">14dp</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">13sp</item>
     </style>
 </resources>

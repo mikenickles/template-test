@@ -1,13 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AI Launcher</string>
-    <string name="prompt_hint">Ask Claude or search apps</string>
+    <string name="prompt_hint">Ask anything, or type an app</string>
     <string name="settings">Settings</string>
+    <string name="all_apps">All apps</string>
+    <string name="voice">Speak</string>
+    <string name="send">Send</string>
     <string name="api_key_hint">Anthropic API key (sk-ant-…)</string>
     <string name="model_hint">Model</string>
+    <string name="name_hint">Your first name (optional)</string>
+    <string name="city_hint">Your city, for weather and places (optional)</string>
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
     <string name="thinking">Thinking…</string>
-    <string name="need_key">Add your Anthropic API key in settings (gear icon) to talk to Claude.</string>
-    <string name="settings_note">Your key is stored only on this device. Pressing Home starts a new conversation.</string>
+    <string name="settings_note">Your key stays on this phone and is only sent to Anthropic. Press Home any time to start a new conversation.</string>
+    <string name="welcome_title">Welcome to your AI home screen</string>
+    <string name="welcome_body">Type or speak anything below. Claude can answer questions, search the web, open apps, set timers and alarms, and find places. Typing an app name opens it instantly.</string>
+    <string name="setup_key">Add API key</string>
+    <string name="setup_home">Make default</string>
+    <string name="new_chat">✦ New chat</string>
+    <string name="pin">Pin to dock</string>
+    <string name="unpin">Unpin from dock</string>
+    <string name="app_info">App info</string>
+    <string name="uninstall">Uninstall</string>
+    <string name="voice_prompt">What can I do for you?</string>
 </resources>

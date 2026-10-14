@@ -10,13 +10,28 @@ android {
         applicationId "com.mikenickles.ailauncher"
         minSdk 23
         targetSdk 35
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.1"
+    }
+
+    // One shared, intentionally public key so every build installs over the last one.
+    // See ../signing/README.md before publishing anywhere.
+    signingConfigs {
+        sideload {
+            storeFile file("../signing/ailauncher.keystore")
+            storePassword "android"
+            keyAlias "ailauncher"
+            keyPassword "android"
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig signingConfigs.sideload
+        }
         release {
             minifyEnabled false
+            signingConfig signingConfigs.sideload
         }
     }
 

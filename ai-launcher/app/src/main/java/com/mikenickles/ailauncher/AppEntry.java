@@ -18,4 +18,9 @@ final class AppEntry {
     String packageName() {
         return component.getPackageName();
     }
+
+    /** Stable id used for usage counts and pins. */
+    String key() {
+        return component.flattenToShortString();
+    }
 }

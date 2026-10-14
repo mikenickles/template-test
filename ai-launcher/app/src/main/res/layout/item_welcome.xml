@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="8dp"
+    android:background="@drawable/bg_card"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <ImageView
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_sparkle"
+        android:tint="@color/accent" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/welcome_title"
+        android:textColor="@color/text_primary"
+        android:textSize="18sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:lineSpacingMultiplier="1.2"
+        android:text="@string/welcome_body"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/setup_key"
+            style="@style/Chip"
+            android:background="@drawable/bg_button"
+            android:text="@string/setup_key"
+            android:textColor="#FF1B1B22" />
+
+        <TextView
+            android:id="@+id/setup_home"
+            style="@style/Chip"
+            android:text="@string/setup_home" />
+    </LinearLayout>
+</LinearLayout>
