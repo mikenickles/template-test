@@ -1,0 +1,27 @@
+name: AI Launcher APK
+
+on:
+  push:
+    paths:
+      - "ai-launcher/**"
+      - ".github/workflows/ai-launcher.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-launcher
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Build debug APK
+        run: ./gradlew --no-daemon assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ai-launcher-debug-apk
+          path: ai-launcher/app/build/outputs/apk/debug/*.apk

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AI Launcher</string>
+    <string name="prompt_hint">Ask Claude or search apps</string>
+    <string name="settings">Settings</string>
+    <string name="api_key_hint">Anthropic API key (sk-ant-…)</string>
+    <string name="model_hint">Model</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="thinking">Thinking…</string>
+    <string name="need_key">Add your Anthropic API key in settings (gear icon) to talk to Claude.</string>
+    <string name="settings_note">Your key is stored only on this device. Pressing Home starts a new conversation.</string>
+</resources>

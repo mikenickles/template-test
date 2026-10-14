@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simple sparkle mark on a rounded tile. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path android:fillColor="#FF1B1B22"
+        android:pathData="M12,2h24a10,10 0 0 1 10,10v24a10,10 0 0 1 -10,10h-24a10,10 0 0 1 -10,-10v-24a10,10 0 0 1 10,-10z" />
+    <path android:fillColor="#FFD97757"
+        android:pathData="M24,8 L27.5,20.5 L40,24 L27.5,27.5 L24,40 L20.5,27.5 L8,24 L20.5,20.5 Z" />
+    <path android:fillColor="#FFF5F5F7"
+        android:pathData="M36,8 L37.2,10.8 L40,12 L37.2,13.2 L36,16 L34.8,13.2 L32,12 L34.8,10.8 Z" />
+</vector>
