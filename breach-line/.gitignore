@@ -1,0 +1,7 @@
+# Godot 4 generated
+.godot/
+/android/
+export/
+*.translation
+# OS
+.DS_Store
