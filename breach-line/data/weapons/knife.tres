@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/weapons/weapon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"knife"
+display_name = "Field Knife"
+short_name = "Knife"
+category = "melee"
+slot = 2
+price = 0
+kill_reward = 1500
+damage = 40.0
+armor_penetration = 0.85
+fire_interval = 0.42
+alt_damage = 65.0
+alt_interval = 1.0
+melee_range = 1.7
+mag_size = 0
+reserve_max = 0
+draw_time = 0.6
+move_speed = 6.35
+model = &"knife"
+fire_sound = "weapons/knife_swing"
+draw_sound = "weapons/knife_draw"
+shell_eject = false
+tracer_every = 0
+view_kick = 0.0
+view_punch = 0.0
+recoil_vertical = 0.0
+recoil_horizontal = 0.0

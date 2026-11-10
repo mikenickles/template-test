@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/weapons/weapon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"sentinel"
+display_name = "Sentinel Carbine"
+short_name = "Sentinel"
+category = "rifle"
+slot = 0
+team = 2
+price = 3000
+kill_reward = 300
+damage = 33.0
+armor_penetration = 0.7
+range_modifier = 0.97
+penetration_power = 1.0
+fire_interval = 0.09
+automatic = true
+mag_size = 30
+reserve_max = 90
+reload_time = 3.0
+draw_time = 1.1
+move_speed = 5.75
+inaccuracy_stand = 0.35
+inaccuracy_crouch = 0.25
+inaccuracy_move = 4.6
+inaccuracy_air = 9.0
+inaccuracy_per_shot = 0.6
+inaccuracy_max = 5.0
+inaccuracy_recovery = 0.4
+recoil_vertical = 0.85
+recoil_climb_shots = 9
+recoil_plateau = 0.18
+recoil_horizontal = 0.7
+recoil_sway_period = 10.0
+recoil_seed = 67
+recoil_reset_time = 0.45
+view_punch = 0.5
+view_kick = 0.7
+model = &"sentinel"
+fire_sound = "weapons/sentinel_shot"
+fire_volume_db = -1.0
+reload_sounds = [[0.4, "weapons/mag_out"], [1.5, "weapons/mag_in"], [2.4, "weapons/bolt_charge"]]
+tracer_every = 3
+muzzle_flash_scale = 0.9

@@ -175,7 +175,7 @@ under Xvfb (`tools/screenshot.sh`).
 | 1 | Architecture, scaffold, autoloads, test runner, docs | **Done** |
 | 2 | Map foundation (layout, builder, collision, navmesh, markers) | **Done** |
 | 3 | Player controller (movement, camera, crouch, jump) | **Done** |
-| 4 | Weapons (firing, recoil, reload, switching, hit detection, FX, audio) | Planned |
+| 4 | Weapons (firing, recoil, reload, switching, hit detection, FX, audio) | **Done** |
 | 5 | Combat AI (navigation, perception, engagement, tactics) | Planned |
 | 6 | Game rules (rounds, bomb, economy, buy menu, HUD, scoring) | Planned |
 | 7 | Visual & audio polish | Planned |
@@ -255,6 +255,54 @@ all five attack routes on the real map via navmesh paths (10–16 s each,
 never stuck). Runner uses `--fixed-fps 60` (deterministic, faster than
 real time).
 
+### Phase 4 — Weapon systems (done)
+
+**Data**: `WeaponData` resources in `data/weapons/` (edit in the
+inspector): Field Knife, P9 Service Pistol, Mk.50 Hand Cannon, Vx-9 SMG,
+Breacher-12 pump shotgun, Ravager AR (attackers), Sentinel Carbine
+(defenders), Longbow bolt sniper (2 zoom levels), Breach Charge. Each defines
+damage, armor penetration, range falloff, wall penetration, fire rate,
+magazine/reserve, reload (magazine or shell-by-shell), draw time, move speed,
+a CS-style inaccuracy model (stand/crouch/move/air/per-shot/recovery,
+scoped) and recoil parameters from which a **deterministic spray pattern**
+is generated (learnable, first shot always on target).
+
+**Runtime**: `WeaponInstance` (ammo, draw/reload state machine, cooldown,
+spray index & accuracy recovery, reload sound cues, pump/bolt cues).
+`WeaponController` (Combatant component): slots, switching (number keys,
+wheel, last-weapon), semi/auto fire, pellets, spread cone, aim punch from the
+pattern (camera shows `view_punch` of it, so players pull down to
+compensate), auto-reload, scope zoom with slower movement, knife slash/stab
+with backstab x2.8, speed limit per weapon.
+`Ballistics`: hitscan against world + props + per-limb `Hitbox` areas,
+range falloff, armor via `DamageModel`, penetration through wood / thin
+metal using exit-point back-tracing (concrete/brick stop bullets), melee
+fan trace.
+
+**Presentation**: `CharacterModel` — procedural soldier per team (khaki/
+orange Breachers with balaclava & goggles, navy/blue Wardens with helmet),
+walk cycle, crouch, air tuck, aim pitch, two-bone arm IK onto the weapon,
+death fall, hitboxes on animated limbs, third-person muzzle flash; the
+local player's body renders shadows only. `WeaponModels` — original
+primitive-built guns with Mag/Bolt/Pump/Slide parts and Muzzle/Eject/Fore
+markers. `ViewModel` — tiny-scale rig (never clips walls) with look sway,
+bob, recoil spring, draw, magazine swap animation, shell reloads, pump/bolt
+cycling, pistol slide lock, knife arcs, muzzle flash quads + light,
+ejected casings. `Fx` — pooled decals, dust/sparks/chips/blood bursts,
+tracers, flash lights, casings with bounce + tink. `PlayerHUD` — dynamic
+crosshair from real inaccuracy, hit markers (red on kill, ping on
+headshot), health/armor/ammo panels, reload bar, scope overlay, damage
+vignette. Camera/viewmodel springs use fixed substeps (`Spring`).
+
+Tests: `test_weapons` (15) — data validity & sounds & balance invariants
+(Ravager one-taps helmets, Sentinel doesn't), ammo/reload timing, shell
+reload + interrupt, semi vs auto cadence, hit groups by aim point, helmet
+absorption, range falloff, wood penetration vs concrete stop, recoil climb
+and recovery, spread by stance, switching/draw/speed/scope, knife +
+backstab, shotgun pellets, kill events, empty-mag auto-reload.
+Visual check: first-person screenshots with rifle and pistol, kill
+confirmed on a target dummy (`tools/game_shot.sh ... --dummies --fire`).
+
 ---
 
 ## 5. Decisions log
@@ -272,6 +320,9 @@ real time).
 | D9 | Ramps under stairs + automatic 0.3 m step-up | Smooth stair motion and navmesh, robust to small lips. |
 | D10 | Explicit texture import settings (`tools/fix_imports.py`) | Runtime-created materials bypass the editor's 3D/normal-map detection; without this textures had no mipmaps or VRAM compression. |
 | D11 | Physics 60 Hz + interpolation; camera top-level in `_process` | Smooth on high-refresh displays without adding look latency. |
+| D12 | Deterministic recoil patterns generated from a few parameters | Skill-based spray control; tuning stays readable in the inspector. |
+| D13 | Tiny-scale viewmodel instead of a second viewport | No wall clipping, no extra render pass or shadow cost (mobile-friendly). |
+| D14 | Hitboxes are `Area3D`s on their own layer, parented to animated limbs | Bullets query them; movement never collides with them; crouch/aim change the target. |
 
 ---
 
@@ -294,8 +345,12 @@ real time).
 - Zero-thickness ramp edges read as 46° walls for the cylinder hull.
 - A texture imported mid-write was marked invalid; reimport + explicit
   import settings.
+- Camera/viewmodel springs (explicit Euler) exploded at very low frame
+  rates, flinging the camera 26 m up — now integrated with fixed substeps.
+- Test runner hung when a suite failed to compile; it now reports and
+  continues.
 
 ## 7. Next steps
 
-- Phase 4: weapons (data, firing, spread/recoil, reload, switching,
-  hitboxes, ballistics/penetration, viewmodels, FX, audio).
+- Phase 5: combat AI (perception, aiming, navigation, tactics).
+- Weapon drop/pickup lands with the Phase 6 game rules.

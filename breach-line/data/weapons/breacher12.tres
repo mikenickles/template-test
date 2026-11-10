@@ -1,0 +1,52 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/weapons/weapon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"breacher12"
+display_name = "Breacher-12 Shotgun"
+short_name = "B-12"
+category = "shotgun"
+slot = 0
+price = 1100
+kill_reward = 900
+damage = 22.0
+armor_penetration = 0.5
+range_modifier = 0.55
+max_range = 60.0
+penetration_power = 0.3
+pellets = 9
+fire_interval = 0.88
+automatic = false
+mag_size = 7
+reserve_max = 32
+shell_reload = true
+reload_time = 0.55
+shell_reload_time = 0.5
+draw_time = 1.0
+move_speed = 5.85
+bolt_action = true
+inaccuracy_stand = 0.9
+inaccuracy_crouch = 0.8
+inaccuracy_move = 1.5
+inaccuracy_air = 6.0
+inaccuracy_per_shot = 0.5
+inaccuracy_max = 3.0
+inaccuracy_recovery = 0.6
+pellet_spread = 3.6
+recoil_vertical = 4.0
+recoil_climb_shots = 3
+recoil_plateau = 0.5
+recoil_horizontal = 0.6
+recoil_sway_period = 4.0
+recoil_seed = 41
+recoil_reset_time = 0.9
+view_punch = 0.65
+view_kick = 3.2
+model = &"breacher12"
+fire_sound = "weapons/breacher12_shot"
+fire_volume_db = 0.0
+reload_sounds = [[0.2, "weapons/shell_insert"]]
+tracer_every = 3
+muzzle_flash_scale = 1.4

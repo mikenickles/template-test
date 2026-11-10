@@ -22,9 +22,11 @@ func _ready() -> void:
 		if not (f.begins_with("test_") and f.ends_with(".gd")) or f == "test_runner.gd" or f == "test_case.gd":
 			continue
 		var script: Script = load(TEST_DIR + f)
-		if script == null:
+		if script == null or not script.can_instantiate():
 			all_failures.append("%s: failed to load" % f)
+			print("  FAIL  %s (script failed to load)" % f)
 			failed += 1
+			total += 1
 			continue
 		var suite: TestCase = script.new()
 		suite.name = f.get_basename()

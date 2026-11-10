@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/weapons/weapon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"hand_cannon"
+display_name = "Mk.50 Hand Cannon"
+short_name = "Mk.50"
+category = "pistol"
+slot = 1
+price = 700
+kill_reward = 300
+damage = 63.0
+armor_penetration = 0.93
+range_modifier = 0.81
+penetration_power = 1.0
+fire_interval = 0.24
+automatic = false
+mag_size = 7
+reserve_max = 35
+reload_time = 2.2
+draw_time = 1.0
+move_speed = 5.9
+inaccuracy_stand = 0.6
+inaccuracy_crouch = 0.45
+inaccuracy_move = 4.5
+inaccuracy_air = 10.0
+inaccuracy_per_shot = 3.2
+inaccuracy_max = 7.0
+inaccuracy_recovery = 0.5
+recoil_vertical = 3.2
+recoil_climb_shots = 4
+recoil_plateau = 0.4
+recoil_horizontal = 0.8
+recoil_sway_period = 4.0
+recoil_seed = 23
+recoil_reset_time = 0.55
+view_punch = 0.6
+view_kick = 2.6
+model = &"hand_cannon"
+fire_sound = "weapons/hand_cannon_shot"
+fire_volume_db = 0.0
+reload_sounds = [[0.3, "weapons/pistol_mag_out"], [1.2, "weapons/pistol_mag_in"], [1.8, "weapons/slide_release"]]
+tracer_every = 1
+muzzle_flash_scale = 1.2

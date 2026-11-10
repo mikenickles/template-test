@@ -1,0 +1,50 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/weapons/weapon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"longbow"
+display_name = "Longbow Sniper Rifle"
+short_name = "Longbow"
+category = "sniper"
+slot = 0
+price = 4750
+kill_reward = 100
+damage = 115.0
+armor_penetration = 0.975
+range_modifier = 0.99
+penetration_power = 2.5
+fire_interval = 1.45
+automatic = false
+bolt_action = true
+mag_size = 5
+reserve_max = 30
+reload_time = 3.6
+draw_time = 1.25
+move_speed = 5.2
+scoped_speed_factor = 0.58
+inaccuracy_stand = 4.5
+inaccuracy_crouch = 4.0
+inaccuracy_move = 9.0
+inaccuracy_air = 16.0
+inaccuracy_per_shot = 4.0
+inaccuracy_max = 10.0
+inaccuracy_recovery = 0.9
+scoped_inaccuracy = 0.06
+recoil_vertical = 2.6
+recoil_climb_shots = 2
+recoil_plateau = 0.5
+recoil_horizontal = 0.3
+recoil_sway_period = 3.0
+recoil_seed = 79
+recoil_reset_time = 1.2
+view_punch = 0.75
+view_kick = 2.2
+zoom_fovs = PackedFloat32Array(30.0, 11.0)
+model = &"longbow"
+fire_sound = "weapons/longbow_shot"
+fire_volume_db = 0.0
+reload_sounds = [[0.45, "weapons/mag_out"], [2.0, "weapons/mag_in"], [2.9, "weapons/bolt_cycle"]]
+tracer_every = 1
+muzzle_flash_scale = 1.4

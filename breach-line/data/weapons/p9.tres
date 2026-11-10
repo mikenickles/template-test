@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/weapons/weapon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"p9"
+display_name = "P9 Service Pistol"
+short_name = "P9"
+category = "pistol"
+slot = 1
+price = 200
+kill_reward = 300
+damage = 30.0
+armor_penetration = 0.5
+range_modifier = 0.85
+penetration_power = 0.6
+fire_interval = 0.15
+automatic = false
+mag_size = 15
+reserve_max = 60
+reload_time = 2.2
+draw_time = 0.9
+move_speed = 6.25
+inaccuracy_stand = 0.55
+inaccuracy_crouch = 0.42
+inaccuracy_move = 2.2
+inaccuracy_air = 7.0
+inaccuracy_per_shot = 0.9
+inaccuracy_max = 4.5
+inaccuracy_recovery = 0.32
+recoil_vertical = 1.1
+recoil_climb_shots = 5
+recoil_plateau = 0.3
+recoil_horizontal = 0.35
+recoil_sway_period = 6.0
+recoil_seed = 11
+recoil_reset_time = 0.38
+view_punch = 0.55
+view_kick = 1.0
+model = &"p9"
+fire_sound = "weapons/p9_shot"
+fire_volume_db = -2.0
+reload_sounds = [[0.25, "weapons/pistol_mag_out"], [1.15, "weapons/pistol_mag_in"], [1.75, "weapons/slide_release"]]
+tracer_every = 4
+muzzle_flash_scale = 0.7

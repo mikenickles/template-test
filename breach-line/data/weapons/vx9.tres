@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/weapons/weapon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"vx9"
+display_name = "Vx-9 SMG"
+short_name = "Vx-9"
+category = "smg"
+slot = 0
+price = 1200
+kill_reward = 600
+damage = 26.0
+armor_penetration = 0.6
+range_modifier = 0.84
+penetration_power = 0.7
+fire_interval = 0.075
+automatic = true
+mag_size = 30
+reserve_max = 120
+reload_time = 2.6
+draw_time = 1.0
+move_speed = 6.1
+inaccuracy_stand = 0.75
+inaccuracy_crouch = 0.55
+inaccuracy_move = 1.6
+inaccuracy_air = 7.0
+inaccuracy_per_shot = 0.4
+inaccuracy_max = 4.0
+inaccuracy_recovery = 0.36
+recoil_vertical = 0.55
+recoil_climb_shots = 9
+recoil_plateau = 0.25
+recoil_horizontal = 0.45
+recoil_sway_period = 8.0
+recoil_seed = 31
+recoil_reset_time = 0.4
+view_punch = 0.5
+view_kick = 0.5
+model = &"vx9"
+fire_sound = "weapons/vx9_shot"
+fire_volume_db = -3.0
+reload_sounds = [[0.35, "weapons/mag_out"], [1.45, "weapons/mag_in"], [2.1, "weapons/bolt_charge"]]
+tracer_every = 3
+muzzle_flash_scale = 0.8

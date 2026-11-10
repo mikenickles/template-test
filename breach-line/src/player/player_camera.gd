@@ -7,6 +7,11 @@ extends Camera3D
 
 var combatant: Combatant
 var brain: PlayerBrain
+## Recoil source; the camera shows `view_punch` of its aim punch plus a
+## short visual kick per shot.
+var weapons: WeaponController
+var _kick := Vector2.ZERO
+var _kick_vel := Vector2.ZERO
 ## View punch in radians (x = pitch, y = yaw); decays toward zero.
 var punch := Vector2.ZERO
 var punch_recovery := 9.0
@@ -29,6 +34,10 @@ func _ready() -> void:
 	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	if combatant:
 		combatant.landed.connect(_on_landed)
+		weapons = combatant.weapons
+		if weapons:
+			weapons.fired.connect(_on_fired)
+			weapons.zoom_changed.connect(func(level: int, zfov: float): zoom_fov = zfov if level > 0 else 0.0)
 
 func snap() -> void:
 	if combatant == null:
@@ -48,9 +57,16 @@ func _process(delta: float) -> void:
 	_bob_amount = move_toward(_bob_amount, clampf(speed / Combatant.RUN_SPEED, 0.0, 1.0) if moving else 0.0, delta * 4.0)
 	_bob_phase += delta * (speed / Combatant.STEP_STRIDE) * PI
 	# Critically damped spring for the landing dip.
-	_land_vel += (-_land_offset * 140.0 - _land_vel * 18.0) * delta
-	_land_offset += _land_vel * delta
-	punch = punch.lerp(Vector2.ZERO, 1.0 - exp(-punch_recovery * delta))
+	var ls := Spring.step(_land_offset, _land_vel, 140.0, 18.0, delta)
+	_land_offset = ls.x
+	_land_vel = ls.y
+	var ks := Spring.step2(_kick, _kick_vel, 220.0, 22.0, delta)
+	_kick = ks[0]
+	_kick_vel = ks[1]
+	if weapons and weapons.active:
+		punch = weapons.aim_punch * weapons.active.data.view_punch + _kick
+	else:
+		punch = punch.lerp(Vector2.ZERO, 1.0 - exp(-punch_recovery * delta)) + _kick
 	# Strafe roll.
 	var local_v := Basis(Vector3.UP, combatant.yaw).inverse() * combatant.velocity
 	_roll = lerpf(_roll, clampf(-local_v.x / 6.0, -1.0, 1.0) * deg_to_rad(0.6), 1.0 - exp(-8.0 * delta))
@@ -67,6 +83,10 @@ func _update_transform(_delta: float) -> void:
 	var p := (brain.look_pitch if brain else combatant.pitch) + punch.x
 	var y := (brain.look_yaw if brain else combatant.yaw) + punch.y
 	rotation = Vector3(clampf(p, deg_to_rad(-89.0), deg_to_rad(89.0)), y, _roll)
+
+func _on_fired(w: WeaponInstance, _impacts: Array, _inacc: float) -> void:
+	var k := deg_to_rad(w.data.view_kick)
+	_kick_vel += Vector2(k * 9.0, randf_range(-k, k) * 3.0)
 
 func _on_landed(fall_speed: float) -> void:
 	_land_vel -= clampf(fall_speed * 0.09, 0.0, 1.4)

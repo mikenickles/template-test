@@ -84,6 +84,14 @@ var _since_jump := 1.0
 var _shape: CylinderShape3D
 var _col: CollisionShape3D
 
+## Weapons/inventory component and third-person body (with hitboxes).
+var weapons: WeaponController
+var model: CharacterModel
+var hitboxes: Array[Hitbox] = []
+## Builds the third-person model + hitboxes (tests may disable for speed).
+var build_model := true
+var _shots_fired := 0
+
 func _init() -> void:
 	floor_max_angle = deg_to_rad(50.0)
 	floor_snap_length = 0.35
@@ -102,6 +110,17 @@ func _ready() -> void:
 	_col.position.y = STAND_HEIGHT * 0.5
 	add_child(_col)
 	set_team(team)
+	weapons = WeaponController.new(self)
+	weapons.name = "Weapons"
+	add_child(weapons)
+	if build_model:
+		model = CharacterModel.new()
+		add_child(model)
+		model.setup(self)
+		hitboxes = model.hitboxes
+		weapons.switched.connect(func(w: WeaponInstance): model.set_weapon(w.data.model if w else &""))
+	weapons.fired.connect(_on_weapon_fired)
+	weapons.melee_swing.connect(_on_melee_swing)
 
 func set_team(t: int) -> void:
 	team = t
@@ -166,8 +185,9 @@ func _physics_process(delta: float) -> void:
 	intent.clear_triggers()
 
 ## Hook for subclasses / components (weapons tick here in later phases).
-func _post_physics(_delta: float) -> void:
-	pass
+func _post_physics(delta: float) -> void:
+	if weapons:
+		weapons.tick(delta, intent)
 
 func _update_crouch(delta: float) -> void:
 	var want := 1.0 if intent.crouch else 0.0
@@ -392,7 +412,12 @@ func spawn_at(xf: Transform3D) -> void:
 	tag_slow = 0.0
 	alive = true
 	health = 100.0
+	last_attacker = null
 	set_team(team)
+	if model:
+		model.reset_pose()
+	if weapons:
+		weapons.aim_punch = Vector2.ZERO
 	if brain and brain.has_method("on_spawned"):
 		brain.on_spawned(self)
 	reset_physics_interpolation()
@@ -430,3 +455,40 @@ func die(info: DamageInfo) -> void:
 ## Subclass/component hook (drop weapons, ragdoll, etc.).
 func _on_died(_info: DamageInfo) -> void:
 	pass
+
+# ---------------------------------------------------------------------------
+# Shot presentation shared by every shooter (impacts, tracers, flashes).
+# ---------------------------------------------------------------------------
+
+func _on_weapon_fired(w: WeaponInstance, pellets: Array, _inacc: float) -> void:
+	_shots_fired += 1
+	if model:
+		model.show_muzzle_flash(w.data.muzzle_flash_scale)
+	var space := get_world_3d().direct_space_state
+	var muzzle := muzzle_position()
+	var tracer := w.data.tracer_every > 0 and _shots_fired % w.data.tracer_every == 0
+	for impacts in pellets:
+		for imp: Dictionary in impacts:
+			if imp.has("pos"):
+				Fx.impact(imp.pos, imp.normal, imp.surface, pellets.size() == 1 or randf() < 0.35)
+				if imp.surface == "flesh":
+					var dir: Vector3 = (imp.pos - muzzle).normalized()
+					Fx.blood_spatter(space, imp.pos, dir)
+		if tracer and not impacts.is_empty():
+			Fx.tracer(muzzle, impacts[-1].get("end", muzzle))
+	if w.data.shell_eject and not w.data.bolt_action and not _is_local_view():
+		var right := Basis(Vector3.UP, yaw) * Vector3.RIGHT
+		Fx.eject_casing(muzzle + right * 0.05, right * 2.2 + Vector3.UP * 1.6, false)
+
+func _on_melee_swing(_w: WeaponInstance, _heavy: bool, impact: Dictionary) -> void:
+	if impact.has("pos"):
+		Fx.impact(impact.pos, impact.normal, impact.surface, false)
+
+## World-space muzzle position (third-person weapon, else near the eye).
+func muzzle_position() -> Vector3:
+	if model and model.has_method("muzzle_global") and not _is_local_view():
+		return model.muzzle_global()
+	return eye_position() + view_direction() * 0.6 + Basis(Vector3.UP, yaw) * Vector3(0.12, -0.12, 0)
+
+func _is_local_view() -> bool:
+	return model != null and model.first_person

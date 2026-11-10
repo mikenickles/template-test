@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/weapons/weapon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"ravager"
+display_name = "Ravager Assault Rifle"
+short_name = "Ravager"
+category = "rifle"
+slot = 0
+team = 1
+price = 2700
+kill_reward = 300
+damage = 36.0
+armor_penetration = 0.775
+range_modifier = 0.98
+penetration_power = 1.0
+fire_interval = 0.1
+automatic = true
+mag_size = 30
+reserve_max = 90
+reload_time = 2.45
+draw_time = 1.1
+move_speed = 5.5
+inaccuracy_stand = 0.42
+inaccuracy_crouch = 0.3
+inaccuracy_move = 5.2
+inaccuracy_air = 10.0
+inaccuracy_per_shot = 0.75
+inaccuracy_max = 5.5
+inaccuracy_recovery = 0.42
+recoil_vertical = 1.05
+recoil_climb_shots = 9
+recoil_plateau = 0.18
+recoil_horizontal = 0.95
+recoil_sway_period = 11.0
+recoil_seed = 53
+recoil_reset_time = 0.48
+view_punch = 0.5
+view_kick = 0.8
+model = &"ravager"
+fire_sound = "weapons/ravager_shot"
+fire_volume_db = 0.0
+reload_sounds = [[0.35, "weapons/mag_out"], [1.35, "weapons/mag_in"], [1.95, "weapons/bolt_charge"]]
+tracer_every = 3
+muzzle_flash_scale = 1.1

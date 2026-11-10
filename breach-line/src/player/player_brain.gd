@@ -15,6 +15,8 @@ var look_pitch := 0.0
 var input_enabled := true
 ## Extra multiplier on look sensitivity (e.g. while scoped).
 var sensitivity_scale := 1.0
+## Dev/test: holds fire for this many ticks regardless of input.
+var debug_fire_frames := 0
 
 var _pending_reload := false
 var _pending_drop := false
@@ -90,6 +92,9 @@ func update_intent(_c: Combatant, intent: CombatIntent, _delta: float) -> void:
 		intent.alt_fire = false
 		intent.use = false
 		# Keep crouch state while a menu is open so you don't pop up.
+	if debug_fire_frames > 0:
+		debug_fire_frames -= 1
+		intent.fire = true
 	intent.yaw = look_yaw
 	intent.pitch = look_pitch
 	intent.reload = _pending_reload
