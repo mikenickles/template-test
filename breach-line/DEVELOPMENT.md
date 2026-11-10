@@ -176,7 +176,7 @@ under Xvfb (`tools/screenshot.sh`).
 | 2 | Map foundation (layout, builder, collision, navmesh, markers) | **Done** |
 | 3 | Player controller (movement, camera, crouch, jump) | **Done** |
 | 4 | Weapons (firing, recoil, reload, switching, hit detection, FX, audio) | **Done** |
-| 5 | Combat AI (navigation, perception, engagement, tactics) | Planned |
+| 5 | Combat AI (navigation, perception, engagement, tactics) | **Done** |
 | 6 | Game rules (rounds, bomb, economy, buy menu, HUD, scoring) | Planned |
 | 7 | Visual & audio polish | Planned |
 | 8 | Testing, optimisation, playable build | Planned |
@@ -303,6 +303,44 @@ backstab, shotgun pellets, kill events, empty-mag auto-reload.
 Visual check: first-person screenshots with rifle and pistol, kill
 confirmed on a target dummy (`tools/game_shot.sh ... --dummies --fire`).
 
+### Phase 5 — Combat AI (done)
+
+Bots write the same `CombatIntent` as the player (no cheating on movement,
+spread or recoil).
+
+- **Perception** (`BotBrain._sense`, every 90–140 ms): view cone
+  (difficulty FOV) + line-of-sight rays to chest, head and legs; hearing
+  through `Events.noise_emitted` (footsteps, jumps, landings, gunshots);
+  shared sightings via `TeamTactics`.
+- **Combat**: reaction delay from acquisition, initial aim error that decays
+  with a settle time, head/chest choice, recoil compensation (fraction of
+  aim punch), firing only when on target; automatic weapons fire range-based
+  bursts (spray close, bursts mid, taps long), semi-autos tap, snipers scope
+  and wait to settle; rifles stop to shoot at range (counter-strafe),
+  close-range strafe-shooting; crouch at range; hold the angle after losing
+  sight; pistol fallback when the primary runs dry; reload when safe; seek
+  hidden navmesh cover when losing a duel.
+- **Movement**: `BotNav` path following with periodic repath and stuck
+  recovery (jump → sidestep → repath); walking (silent) near staging points;
+  **angle checking** — while moving, bots pre-aim known enemy positions that
+  are actually in line of sight.
+- **Team tactics** (`TeamTactics`): attackers pick a site (avoiding
+  repeats), split over its routes (+ optional lurker), stage at the last
+  approach point and execute together (all staged, 9 s after the first
+  arrival, or 55 s), spread to clear the site; plant/fetch/guard hooks for
+  the charge (wired in Phase 6). Defenders take site holds (2 A / 2 B /
+  1 mid), rotate on 2+ sightings at a site, retake via rally points and pick
+  a defuser after a plant. Hunt mode breaks stalemates.
+- **Difficulty** (`BotProfile`): Easy / Normal / Hard / Expert scale reaction
+  (0.6 → 0.15 s), turn speed, aim error and settle, headshot chance, recoil
+  compensation, FOV, burst length, crouch/strafe skill, aggression.
+
+Tests: `test_ai` (5) — walls block perception, normal bot kills an exposed
+enemy at 20 m (~0.8–1.1 s), reaction times respected and ordered by
+difficulty, cover point hidden from the threat, and three full 5v5 bot
+rounds on Sawtooth: decisive eliminations, attackers reach their site, no
+bot stalls on a moving task (latest run: three eliminations, attackers 2–1, kills 9–9 / 9–5 / 9–5 total).
+
 ---
 
 ## 5. Decisions log
@@ -323,6 +361,8 @@ confirmed on a target dummy (`tools/game_shot.sh ... --dummies --fire`).
 | D12 | Deterministic recoil patterns generated from a few parameters | Skill-based spray control; tuning stays readable in the inspector. |
 | D13 | Tiny-scale viewmodel instead of a second viewport | No wall clipping, no extra render pass or shadow cost (mobile-friendly). |
 | D14 | Hitboxes are `Area3D`s on their own layer, parented to animated limbs | Bullets query them; movement never collides with them; crouch/aim change the target. |
+| D15 | Bots use the shared intent + map-authored tactical markers | Fair bots, predictable tuning; markers double as level-design documentation. |
+| D16 | Bots "check angles" toward authored enemy positions while moving | Without it, defenders won every mid crossing for free; makes duels fair and CS-like. |
 
 ---
 
@@ -352,5 +392,5 @@ confirmed on a target dummy (`tools/game_shot.sh ... --dummies --fire`).
 
 ## 7. Next steps
 
-- Phase 5: combat AI (perception, aiming, navigation, tactics).
-- Weapon drop/pickup lands with the Phase 6 game rules.
+- Phase 6: rounds, breach charge, economy, buy menu, HUD, scoring; wire
+  bot plant/defuse/buy.
