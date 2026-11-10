@@ -177,7 +177,7 @@ under Xvfb (`tools/screenshot.sh`).
 | 3 | Player controller (movement, camera, crouch, jump) | **Done** |
 | 4 | Weapons (firing, recoil, reload, switching, hit detection, FX, audio) | **Done** |
 | 5 | Combat AI (navigation, perception, engagement, tactics) | **Done** |
-| 6 | Game rules (rounds, bomb, economy, buy menu, HUD, scoring) | Planned |
+| 6 | Game rules (rounds, bomb, economy, buy menu, HUD, scoring) | **Done** |
 | 7 | Visual & audio polish | Planned |
 | 8 | Testing, optimisation, playable build | Planned |
 
@@ -339,7 +339,53 @@ Tests: `test_ai` (5) — walls block perception, normal bot kills an exposed
 enemy at 20 m (~0.8–1.1 s), reaction times respected and ordered by
 difficulty, cover point hidden from the threat, and three full 5v5 bot
 rounds on Sawtooth: decisive eliminations, attackers reach their site, no
-bot stalls on a moving task (latest run: three eliminations, attackers 2–1, kills 9–9 / 9–5 / 9–5 total).
+bot stalls on a moving task. Outcomes vary by seed (one run: attackers
+won 2 of 3; another: defenders 3 of 3). Early mid duels (~3–5 s) are common;
+side balance is revisited with the full objective in Phase 6/8.
+
+### Phase 6 — Game rules (done)
+
+- **MatchManager** (`src/game/match_manager.gd`): phases FREEZE (6 s, buy) →
+  LIVE (1:55) → PLANTED (40 s) → ROUND_END (5 s) → HALFTIME → MATCH_END.
+  First to 7, max 12 rounds, sides swap after round 6 (scores swap with the
+  squads, money resets, models re-skin). Survivors keep weapons/armor;
+  the dead respawn with knife + P9. Win conditions: elimination (attackers
+  need no survivors only if the charge isn't planted), time expiry,
+  detonation, defuse.
+- **Breach charge** (`Bomb`): carried by a random attacker, dropped on death
+  or with G, picked up by walking over it; planting (3.2 s, hold fire/E with
+  the charge in a site) and defusing (10 s, 5 s with kit, hold E within
+  1.7 m) lock movement and cancel on release; accelerating beeps + blinking
+  LED; explosion with radius damage, flash, scorch.
+- **Economy** (`Economy`, `MatchConfig`): start $800, cap $16,000, win
+  $3,250 (elim/time) / $3,500 (bomb/defuse), loss bonus $1,400 + $500 per
+  consecutive loss (cap $3,400), attackers who survive a time loss get
+  nothing, +$800 team bonus for planting, +$300 plant/defuse, kill rewards
+  per weapon (knife $1,500, SMG $600, shotgun $900, sniper $100).
+- **Buying** (`BuySystem`, `BuyMenu`): B in the buy zone during the first
+  20 s; side-locked rifles, kevlar / kevlar+helmet (helmet-only upgrade
+  $350), defuse kit (Wardens). Bots buy with team-aware logic
+  (`BotBuyer`: pistol-round armor/upgrade, full buy, force buy, eco).
+- **Dropped weapons** (`WorldWeapon`): physics props keeping their ammo;
+  auto-pickup into empty slots, E to swap; dropped on death.
+- **Scoring**: kills, assists (40+ damage), deaths, score, round MVP,
+  kill feed with headshot/penetration markers.
+- **UI**: `MatchHUD` (timer, scores, alive pips, money + change popups,
+  charge status/bar, plant/defuse progress, kill feed, announcements, MVP,
+  radar with spotted enemies and charge), `Scoreboard` (Tab), `BuyMenu`,
+  `PauseMenu` (Esc, pauses the match) with `SettingsPanel`, `EndScreen`,
+  `SpectatorCamera` (follow living teammates after death), `MainMenu`
+  (live map backdrop, side + difficulty selection, settings).
+- Bots: plant at authored plant spots, fetch dropped charges, guard post-
+  plant spots, retake via rally points and defuse (closest defender).
+
+Tests: `test_match` (6) — economy rules, buy rules (side locks, prices,
+helmet upgrade, weapon replacement drop), planting (site + 3.2 s, release
+cancels, movement lock), defuse 10 s / 5 s with kit, explosion radius
+damage, and a full bot-only match (first to 4, swap after 3) asserting the
+match ends, every round is awarded once, the halftime swap happens, the
+charge gets planted, money stays within bounds and kills ≤ deaths.
+Screenshots: freeze-time HUD, buy menu, main menu.
 
 ---
 
@@ -368,6 +414,11 @@ bot stalls on a moving task (latest run: three eliminations, attackers 2–1, ki
 
 ## 6. Known issues
 
+- **Side balance**: bot-only simulations currently favour the defenders
+  (e.g. 5 of 6 rounds in one test match); long sightlines (Long Rail ↔ A
+  site, mid ↔ gatehouse) favour stationary holders. To be measured over
+  many matches and tuned in Phase 8.
+
 - Software-rendered screenshots (lavapipe) run at ~1–2 fps; real GPU
   performance not yet profiled (Phase 8).
 - Some props are simple primitives (workshop car, forklift) — Phase 7.
@@ -392,5 +443,5 @@ bot stalls on a moving task (latest run: three eliminations, attackers 2–1, ki
 
 ## 7. Next steps
 
-- Phase 6: rounds, breach charge, economy, buy menu, HUD, scoring; wire
-  bot plant/defuse/buy.
+- Phase 7: visual & audio polish.
+- Phase 8: balance simulation, performance profiling, export build.

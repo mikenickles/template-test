@@ -95,7 +95,7 @@ func _plan_attack() -> void:
 		bots.erase(carrier)
 		bots.push_front(carrier)
 	var lurker: Combatant = null
-	if bots.size() >= 4 and not mid_routes.is_empty() and rng.randf() < 0.45:
+	if bots.size() >= 4 and not mid_routes.is_empty() and rng.randf() < 0.25:
 		lurker = bots.pop_back()
 	var main_count := ceili(bots.size() * 0.6)
 	for i in bots.size():
@@ -273,7 +273,7 @@ func _update_defense() -> void:
 		var center := map_info.site_center(site)
 		var near := recent_sightings(6.0).filter(func(s): return (s.pos as Vector3).distance_to(center) < 26.0)
 		var carrier_seen := objective != null and objective.bomb_carrier() != null and near.any(func(s): return s.enemy == objective.bomb_carrier())
-		if near.size() >= 2 or carrier_seen:
+		if near.size() >= 3 or carrier_seen:
 			_rotate_to(site)
 			return
 

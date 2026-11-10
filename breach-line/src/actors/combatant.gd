@@ -71,7 +71,9 @@ var crouch_amount := 0.0
 var fatigue := 0.0
 var frozen := false # round freeze time: can look, can't move/fire
 var speed_limit := RUN_SPEED # set by the active weapon
-var speed_scale := 1.0 # e.g. scoped snipers, planting
+var speed_scale := 1.0 # e.g. scoped snipers
+## Planting/defusing: no movement or jumping (owned by the Bomb).
+var move_locked := false
 var tag_slow := 0.0 # brief slow when hit (0..1)
 var was_on_floor := true
 var air_time := 0.0
@@ -101,6 +103,7 @@ func _init() -> void:
 	wall_min_slide_angle = deg_to_rad(5.0)
 
 func _ready() -> void:
+	add_to_group(&"combatants")
 	_shape = CylinderShape3D.new()
 	_shape.radius = RADIUS
 	_shape.height = STAND_HEIGHT
@@ -118,9 +121,27 @@ func _ready() -> void:
 		add_child(model)
 		model.setup(self)
 		hitboxes = model.hitboxes
-		weapons.switched.connect(func(w: WeaponInstance): model.set_weapon(w.data.model if w else &""))
+		weapons.switched.connect(func(w: WeaponInstance): if model: model.set_weapon(w.data.model if w else &""))
 	weapons.fired.connect(_on_weapon_fired)
 	weapons.melee_swing.connect(_on_melee_swing)
+
+## Recreates the third-person model (e.g. after a side swap changes the
+## team's look). Hitboxes are rebuilt with it.
+func rebuild_model() -> void:
+	if not build_model:
+		return
+	var fp := model != null and model.first_person
+	if model:
+		model.queue_free()
+		remove_child(model)
+	model = CharacterModel.new()
+	add_child(model)
+	model.setup(self)
+	hitboxes = model.hitboxes
+	weapons.reset_exclusions()
+	if weapons.active:
+		model.set_weapon(weapons.active.data.model)
+	model.set_first_person(fp)
 
 func set_team(t: int) -> void:
 	team = t
@@ -158,6 +179,8 @@ func is_airborne() -> bool:
 
 ## Current maximum ground speed including walk/crouch/fatigue modifiers.
 func max_speed() -> float:
+	if move_locked:
+		return 0.0
 	var s := speed_limit * speed_scale
 	if intent.walk:
 		s *= WALK_FACTOR
@@ -239,7 +262,7 @@ func _update_movement(delta: float) -> void:
 	var wish_speed := wish.length() * max_speed()
 	var vel_h := Vector3(velocity.x, 0.0, velocity.z)
 
-	var jump_pressed := intent.jump and not _jump_held and not frozen
+	var jump_pressed := intent.jump and not _jump_held and not frozen and not move_locked
 	_jump_held = intent.jump
 	var jumped := false
 	# Coyote time: a jump pressed just after walking off an edge still counts.
@@ -410,6 +433,7 @@ func spawn_at(xf: Transform3D) -> void:
 		_col.position.y = STAND_HEIGHT * 0.5
 	fatigue = 0.0
 	tag_slow = 0.0
+	move_locked = false
 	alive = true
 	health = 100.0
 	last_attacker = null

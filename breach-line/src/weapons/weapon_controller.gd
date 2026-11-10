@@ -15,6 +15,8 @@ signal reload_finished(w: WeaponInstance)
 signal zoom_changed(level: int, fov: float)
 signal hit_confirmed(victim: Combatant, damage: float, hitgroup: int, killed: bool)
 signal inventory_changed()
+## The owner pressed drop with a droppable weapon active (match handles it).
+signal drop_requested(w: WeaponInstance)
 
 const SLOT_ORDER := [GameConst.Slot.PRIMARY, GameConst.Slot.SECONDARY, GameConst.Slot.MELEE, GameConst.Slot.GRENADE, GameConst.Slot.BOMB]
 
@@ -72,6 +74,8 @@ func take(slot: int) -> WeaponInstance:
 	if w == null:
 		return null
 	inventory.erase(slot)
+	if slot == last_slot:
+		last_slot = -1
 	if slot == active_slot:
 		active = null
 		active_slot = -1
@@ -163,6 +167,10 @@ func tick(delta: float, intent: CombatIntent) -> void:
 	_was_reloading = reloading
 	if intent.reload and active.start_reload():
 		_on_reload_started()
+	if intent.drop and not active.data.is_melee():
+		drop_requested.emit(active)
+		if active == null:
+			return
 
 	var fire_pressed := intent.fire and not _trigger_held
 	var alt_pressed := intent.alt_fire and not _alt_held
@@ -215,6 +223,9 @@ func _set_zoom(level: int) -> void:
 	_update_speed()
 	if level > 0:
 		_sound("ui/click", -12.0)
+
+func reset_exclusions() -> void:
+	_exclude.clear()
 
 func exclude_rids() -> Array[RID]:
 	if _exclude.is_empty() and combatant:

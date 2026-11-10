@@ -27,6 +27,9 @@ var bot_difficulty := 1 # 0 easy, 1 normal, 2 hard, 3 expert
 var player_name := "You"
 var crosshair_color := Color(0.4, 1.0, 0.45)
 var crosshair_size := 1.0
+## Team chosen in the main menu for the next match: 0 auto, 1 Breachers,
+## 2 Wardens. Not persisted.
+var pending_team := 0
 
 ## Default bindings: action -> list of key/mouse descriptors.
 const DEFAULT_BINDINGS := {

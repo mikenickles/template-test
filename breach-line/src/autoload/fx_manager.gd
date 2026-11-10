@@ -291,6 +291,20 @@ func _decal(pos: Vector3, normal: Vector3, kind: String, size: float) -> void:
 	d.global_transform = Transform3D(basis.scaled(Vector3(size, size, 1.0)), pos + normal * (0.004 + randf() * 0.002))
 	d.visible = true
 
+## Big explosion: flash, debris/smoke bursts, scorch decal.
+func explosion(pos: Vector3) -> void:
+	_setup()
+	flash_light(pos + Vector3(0, 1.5, 0), 40.0)
+	var l: Array = _lights[(_light_next + LIGHT_POOL - 1) % LIGHT_POOL]
+	l[0].omni_range = 30.0
+	l[1] = 0.5
+	l[2] = 40.0
+	for i in 4:
+		var a := TAU * i / 4.0
+		_burst("dust", pos + Vector3(cos(a), 0.5, sin(a)), Vector3(cos(a), 1.2, sin(a)).normalized())
+		_burst("sparks", pos + Vector3(0, 0.6, 0), Vector3(cos(a), 1.5, sin(a)).normalized())
+	_decal(pos + Vector3(0, 0.02, 0), Vector3.UP, "scorch", 6.0)
+
 func tracer(from: Vector3, to: Vector3) -> void:
 	_setup()
 	var dist := from.distance_to(to)
@@ -359,8 +373,9 @@ func _process(delta: float) -> void:
 		l[1] -= delta
 		if l[1] <= 0.0:
 			l[0].visible = false
+			l[0].omni_range = 7.0
 		else:
-			l[0].light_energy = l[2] * (l[1] / 0.06)
+			l[0].light_energy = l[2] * clampf(l[1] / 0.06, 0.0, 1.0)
 	for c in _casings:
 		var node: MeshInstance3D = c[0]
 		if not node.visible:

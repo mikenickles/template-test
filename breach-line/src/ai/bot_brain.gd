@@ -31,6 +31,9 @@ var target_acquired_at := 0.0
 var heard_pos := Vector3.INF
 var heard_time := -99.0
 var _aim_head := false
+## Which body parts were visible at the last perception tick.
+var _vis_chest := true
+var _vis_head := true
 var _aim_err := Vector2.ZERO
 var _sense_t := 0.0
 var _now := 0.0
@@ -152,6 +155,8 @@ func _sense() -> void:
 	var cos_fov := cos(deg_to_rad(profile.fov * 0.5))
 	var best: Combatant = null
 	var best_score := INF
+	var best_chest := true
+	var best_head := true
 	for e: Combatant in tactics.alive_enemies():
 		var chest := e.global_position + Vector3(0, 1.25 - 0.35 * e.crouch_amount, 0)
 		var d := eye.distance_to(chest)
@@ -161,12 +166,16 @@ func _sense() -> void:
 		var tracking := e == target and _now - target_last_time < 1.0
 		if fwd.dot(dir) < cos_fov and d > 3.5 and not tracking:
 			continue
-		if _los(space, eye, chest) or _los(space, eye, e.eye_position()) or _los(space, eye, e.global_position + Vector3(0, 0.55, 0)):
+		var see_chest := _los(space, eye, chest)
+		var see_head := _los(space, eye, e.eye_position())
+		if see_chest or see_head or _los(space, eye, e.global_position + Vector3(0, 0.55, 0)):
 			tactics.report_enemy(e, e.global_position)
 			var score := d * (0.6 if e == target else 1.0)
 			if score < best_score:
 				best_score = score
 				best = e
+				best_chest = see_chest
+				best_head = see_head
 	if best:
 		var fresh := best != target or _now - target_last_time > 1.2
 		if fresh:
@@ -180,6 +189,8 @@ func _sense() -> void:
 			# Re-acquired after a brief loss: shorter reaction.
 			target_acquired_at = _now - profile.reaction_time * 0.5
 		target = best
+		_vis_chest = best_chest
+		_vis_head = best_head
 		target_visible = true
 		target_last_pos = best.global_position
 		target_last_time = _now
@@ -224,7 +235,11 @@ func _combat(intent: CombatIntent, delta: float) -> bool:
 	state = "engage"
 	if w == null or not w.data.is_gun() or (w.mag == 0 and w.reserve == 0):
 		return true
-	var aim_pt := target.eye_position() + Vector3(0, -0.03, 0) if _aim_head else target.global_position + Vector3(0, 1.22 - 0.38 * target.crouch_amount, 0)
+	# Aim at whatever is actually exposed (head over cover, legs under it).
+	var use_head := (_aim_head and _vis_head) or (_vis_head and not _vis_chest)
+	var aim_pt := target.eye_position() + Vector3(0, -0.03, 0) if use_head else target.global_position + Vector3(0, 1.22 - 0.38 * target.crouch_amount, 0)
+	if not _vis_head and not _vis_chest:
+		aim_pt = target.global_position + Vector3(0, 0.55, 0)
 	_aim_err *= exp(-delta / maxf(profile.settle_time, 0.05))
 	var eye := c.eye_position()
 	var to := aim_pt - eye
@@ -237,7 +252,7 @@ func _combat(intent: CombatIntent, delta: float) -> bool:
 	_turn_rate = profile.turn_speed * 1.4
 	var reacted := _now - target_acquired_at >= profile.reaction_time
 	var err := Vector2(wrapf(_yaw - (_des_yaw - _aim_err.x), -PI, PI), _pitch - (_des_pitch - _aim_err.y)).length()
-	var tol := atan2(0.11 if _aim_head else 0.2, dist) * 1.6 + deg_to_rad(0.4)
+	var tol := atan2(0.11 if use_head else 0.2, dist) * 1.6 + deg_to_rad(0.4)
 	var aimed := err < tol
 	var cat := w.data.category
 	# Snipers scope in before shooting at range.

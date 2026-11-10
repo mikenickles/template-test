@@ -8,7 +8,7 @@ config_version=5
 config/name="Breach Line"
 config/description="Original round-based tactical first-person shooter."
 config/version="0.1.0"
-run/main_scene="res://scenes/game.tscn"
+run/main_scene="res://scenes/main_menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
