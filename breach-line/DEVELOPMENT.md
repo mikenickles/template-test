@@ -424,7 +424,8 @@ positions while holders swept a wide arc. Fix: holding bots now hold real
 angles (pre-aim visible enemy approach points near their assigned facing).
 Result over 36 rounds: **attackers 44% / defenders 56%**, A 8/16, B 8/20
 attacks won, 50% of rounds see a plant, first kills 19:17, median round
-44 s → 39 s. (See the Hard-difficulty run below.)
+44 s → 39 s. Hard difficulty, 30 rounds: **50% / 50%**, B 10/17 and A
+5/13 attacks won, 53% plant rate, first kills 18:12, median round 36 s.
 
 **Performance**:
 - Simulation + AI + scripts (headless, 5v5 live round): **1.71 ms avg /
@@ -442,6 +443,8 @@ attacks won, 50% of rounds see a plant, first kills 19:17, median round
 excluded) and `tools/export.sh`. The Linux release export (73 MB binary +
 39 MB pack) was produced and smoke-tested under Xvfb: main menu renders and
 `--start-game` plays a live round with HUD and bots, no script errors.
+The Windows preset exports a PE32+ x86-64 executable + pack (not
+runnable in this Linux environment, so untested beyond the export).
 Builds are not committed (size); export locally.
 
 **Tests**: 63 automated tests in 9 suites, all passing, plus
