@@ -87,7 +87,12 @@ func _ready() -> void:
 	hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	hint.position = Vector2(80, -60)
 	_ui.add_child(hint)
-	for arg in OS.get_cmdline_user_args():
+	var args := OS.get_cmdline_user_args()
+	if "--start-game" in args:
+		_team = 0
+		_start.call_deferred()
+		return
+	for arg in args:
 		if arg.begins_with("--shot="):
 			_dev_shot(arg.substr(7))
 

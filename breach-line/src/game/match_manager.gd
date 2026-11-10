@@ -193,6 +193,7 @@ func _physics_process(delta: float) -> void:
 			if phase_time <= 0.0:
 				_go_live()
 		Phase.LIVE, Phase.PLANTED:
+			var tm := Prof.begin()
 			round_elapsed += delta
 			if phase == Phase.LIVE:
 				phase_time -= delta
@@ -201,6 +202,7 @@ func _physics_process(delta: float) -> void:
 			bomb.update(delta, alive(T), alive(CT), true)
 			_update_pickups()
 			_check_win()
+			Prof.end("match", tm)
 		Phase.ROUND_END:
 			phase_time -= delta
 			bomb.update(delta, alive(T), alive(CT), false)

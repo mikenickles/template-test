@@ -119,15 +119,21 @@ func update_intent(_cc: Combatant, intent: CombatIntent, delta: float) -> void:
 		return
 	_sense_t -= delta
 	if _sense_t <= 0.0:
+		var ts := Prof.begin()
 		_sense()
+		Prof.end("bot.sense", ts)
 		_sense_t = rng.randf_range(0.09, 0.14)
 	if c.frozen:
 		state = "frozen"
 		_look_at_point(c.eye_position() + c.view_direction() * 10.0, 90.0)
 	else:
+		var tc := Prof.begin()
 		var engaged := _combat(intent, delta)
+		Prof.end("bot.combat", tc)
 		if not engaged:
+			var to := Prof.begin()
 			_objective(intent, delta)
+			Prof.end("bot.objective", to)
 		_weapon_management(intent, engaged)
 	_turn(delta)
 	intent.yaw = _yaw
@@ -519,12 +525,42 @@ func _do_hold(task: Dictionary, delta: float) -> void:
 	if w and w.data.category in ["rifle", "sniper"] and _crouch_engage:
 		_crouch = true
 
+## Holds an angle: pre-aims the enemy approach point (visible from here and
+## within ±75° of the assigned facing) with a small sway, re-evaluated every
+## second or so; otherwise a gentle sweep around the facing.
 func _scan_hold(base_yaw: float, delta: float) -> void:
 	_scan += delta * 0.6
-	var yaw_t := base_yaw + sin(_scan) * deg_to_rad(28.0)
-	_des_yaw = yaw_t
+	_check_t -= delta
+	if _check_t <= 0.0:
+		_check_t = rng.randf_range(0.9, 1.8)
+		_check_point = _find_hold_angle(base_yaw)
+	if _check_point != Vector3.INF:
+		_look_at_point(_check_point, 120.0)
+		_des_yaw += sin(_scan * 1.7) * deg_to_rad(4.0)
+		return
+	_des_yaw = base_yaw + sin(_scan) * deg_to_rad(20.0)
 	_des_pitch = lerpf(_des_pitch, 0.0, 0.1)
 	_turn_rate = 90.0
+
+func _find_hold_angle(base_yaw: float) -> Vector3:
+	var eye := c.eye_position()
+	var fwd := Combatant.dir_from_angles(base_yaw, 0.0)
+	var space := c.get_world_3d().direct_space_state
+	var cands: Array = []
+	for p: Vector3 in _threat_points():
+		var to := p - eye
+		var d := to.length()
+		if d < 5.0 or d > 50.0:
+			continue
+		if fwd.dot(Vector3(to.x, 0, to.z).normalized()) < cos(deg_to_rad(75.0)):
+			continue
+		if _los(space, eye, p):
+			cands.append(p)
+	if cands.is_empty():
+		return Vector3.INF
+	# Mostly the nearest approach, sometimes another visible one.
+	cands.sort_custom(func(a, b): return eye.distance_to(a) < eye.distance_to(b))
+	return cands[0] if rng.randf() < 0.7 else cands[rng.randi_range(0, cands.size() - 1)]
 
 func _do_plant(task: Dictionary, intent: CombatIntent, delta: float) -> void:
 	var pos: Vector3 = task.pos

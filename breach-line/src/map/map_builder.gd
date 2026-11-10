@@ -22,7 +22,7 @@ extends RefCounted
 ## StaticBody3D per surface type (metadata "surface"). Large solids are added
 ## to a single ArrayOccluder3D for occlusion culling.
 
-const CHUNK := 40.0
+const CHUNK := 96.0
 const ROOF_THICK := 0.35
 const FLOOR_THICK := 0.5
 const AO_MIN := 0.58

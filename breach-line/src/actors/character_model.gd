@@ -170,6 +170,8 @@ func _build() -> void:
 		_hb(kn, Hitbox.make_capsule(combatant, C.LEG, 0.075, SHIN + 0.1, Vector3(0, -SHIN * 0.5, 0)))
 		_thigh[side] = th
 		_knee[side] = kn
+	# Collapse the primitive parts under each bone into one mesh per material.
+	_meshes = MeshMerge.merge_tree(self)
 	# Muzzle flash billboard for third-person shots.
 	_flash = MeshInstance3D.new()
 	var q := QuadMesh.new()
@@ -229,6 +231,11 @@ func _physics_process(delta: float) -> void:
 	if _death_t >= 0.0:
 		_animate_death(delta)
 		return
+	var tp := Prof.begin()
+	_animate(delta)
+	Prof.end("model.anim", tp)
+
+func _animate(delta: float) -> void:
 	_yaw = lerp_angle(_yaw, combatant.yaw, 1.0 - exp(-20.0 * delta))
 	rotation.y = _yaw
 	var speed := combatant.horizontal_speed()

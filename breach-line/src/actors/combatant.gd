@@ -95,9 +95,12 @@ var model: CharacterModel
 var hitboxes: Array[Hitbox] = []
 ## Builds the third-person model + hitboxes (tests may disable for speed).
 var build_model := true
+## Global default for build_model (perf experiments / dedicated sims).
+static var default_build_model := true
 var _shots_fired := 0
 
 func _init() -> void:
+	build_model = default_build_model
 	floor_max_angle = deg_to_rad(50.0)
 	floor_snap_length = 0.35
 	floor_stop_on_slope = true
@@ -200,14 +203,22 @@ func _physics_process(delta: float) -> void:
 	if not alive:
 		_physics_dead(delta)
 		return
+	var t0 := Prof.begin()
 	if brain and brain.has_method("update_intent"):
 		brain.update_intent(self, intent, delta)
+	Prof.end("brain", t0)
+	t0 = Prof.begin()
 	yaw = wrapf(intent.yaw, -PI, PI)
 	pitch = clampf(intent.pitch, deg_to_rad(-89.0), deg_to_rad(89.0))
 	_update_crouch(delta)
 	_update_movement(delta)
+	Prof.end("movement", t0)
+	t0 = Prof.begin()
 	_update_footsteps(delta)
+	Prof.end("footsteps", t0)
+	t0 = Prof.begin()
 	_post_physics(delta)
+	Prof.end("weapons", t0)
 	intent.clear_triggers()
 
 ## Hook for subclasses / components (weapons tick here in later phases).

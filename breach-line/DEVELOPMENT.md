@@ -180,7 +180,7 @@ under Xvfb (`tools/screenshot.sh`).
 | 5 | Combat AI (navigation, perception, engagement, tactics) | **Done** |
 | 6 | Game rules (rounds, bomb, economy, buy menu, HUD, scoring) | **Done** |
 | 7 | Visual & audio polish | **Done** |
-| 8 | Testing, optimisation, playable build | Planned |
+| 8 | Testing, optimisation, playable build | **Done** |
 
 ### Phase 1 — Architecture (done)
 
@@ -415,6 +415,39 @@ Verified visually with Forward+ screenshots (foundry shafts, mid, coal
 yard, long, live first-person under fire with HUD feedback). Full suite
 still green (62 tests).
 
+### Phase 8 — Testing, optimisation, playable build (done)
+
+**Balance** (`tools/sim/balance_sim.tscn`, bot-only matches, Normal):
+first runs showed attackers winning 67% — A site fell 15/18 times and
+attackers got the first kill 26:10 because moving bots pre-aimed known
+positions while holders swept a wide arc. Fix: holding bots now hold real
+angles (pre-aim visible enemy approach points near their assigned facing).
+Result over 36 rounds: **attackers 44% / defenders 56%**, A 8/16, B 8/20
+attacks won, 50% of rounds see a plant, first kills 19:17, median round
+44 s → 39 s. (See the Hard-difficulty run below.)
+
+**Performance**:
+- Simulation + AI + scripts (headless, 5v5 live round): **1.71 ms avg /
+  2.47 ms p95 per 60 Hz tick** (budget 16.7 ms). Script share ~1.1 ms
+  (movement 0.33, AI 0.31, model animation 0.15, match 0.12, weapons 0.12).
+  `tools/sim/perf_probe.tscn` reproduces this (`Prof` section timers).
+- Map build ~0.35 s + navmesh bake ~0.05 s at load.
+- Rendering (Forward+, 1280x720, view down mid with 10 players): draw calls
+  1,107 → **751** (objects 1,279 → 887) after merging each procedural
+  model's static parts per material (`MeshMerge`) and larger map chunks
+  (96 m). Characters now cost ~330 draw calls of that (see roadmap).
+- Real-GPU frame times were not measurable here (software Vulkan only).
+
+**Build**: `export_presets.cfg` (Linux + Windows x86_64, tests/tools
+excluded) and `tools/export.sh`. The Linux release export (73 MB binary +
+39 MB pack) was produced and smoke-tested under Xvfb: main menu renders and
+`--start-game` plays a live round with HUD and bots, no script errors.
+Builds are not committed (size); export locally.
+
+**Tests**: 63 automated tests in 9 suites, all passing, plus
+`test_game_flow` — the real game scene end-to-end with a human slot (buy in
+freeze, side lock, pause/resume, death → spectate, respawn next round).
+
 ---
 
 ## 5. Decisions log
@@ -442,10 +475,15 @@ still green (62 tests).
 
 ## 6. Known issues
 
-- **Side balance**: bot-only simulations currently favour the defenders
-  (e.g. 5 of 6 rounds in one test match); long sightlines (Long Rail ↔ A
-  site, mid ↔ gatehouse) favour stationary holders. To be measured over
-  many matches and tuned in Phase 8.
+- **Balance variance**: per-match outcomes swing (small samples); measured
+  over 36 rounds the split is 44/56. Lower mid is the deadliest area for
+  attackers (mid ↔ gatehouse duels); worth watching with human players.
+- **Grenades** (HE/flash/smoke) are not implemented yet (audio exists).
+- **Characters** are rigid primitive assemblies (no skinning, no ragdoll);
+  readable at range but simple up close.
+- **Bots** don't use utility, don't pick up better dropped weapons, and
+  can't jump onto crates (navmesh has no jump links).
+- **Release builds** are not committed; export locally (see README).
 
 - Software-rendered screenshots (lavapipe) run at ~1–2 fps; real GPU
   performance not yet profiled (Phase 8).
@@ -471,5 +509,16 @@ still green (62 tests).
 
 ## 7. Next steps
 
-- Phase 7: visual & audio polish.
-- Phase 8: balance simulation, performance profiling, export build.
+Prioritised roadmap after the eight phases:
+
+1. **Human playtests** on real hardware: sensitivity/FOV defaults, recoil
+   feel, bot difficulty curve, mid balance.
+2. **Grenades** (HE, flash, smoke) incl. bot usage and smoke-blocked sight.
+3. **Skinned characters**: one skinned mesh per soldier (Skeleton3D with
+   rigid weights) — cuts ~300 draw calls in busy views; then ragdolls.
+4. **Mobile build**: touch input source writing `CombatIntent`, Mobile
+   renderer profile (quality Low/Medium), ETC2/ASTC export, UI scaling.
+5. **Content**: a second map using the same builder; more weapon models
+   detail; voice-less radio callouts (HUD) for bots.
+6. **Networking** would sit on the intent layer (inputs are already
+   device-independent and the simulation is deterministic per tick).

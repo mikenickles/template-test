@@ -162,6 +162,7 @@ static func build(model_id: StringName) -> Node3D:
 		&"knife": _knife(root)
 		&"bomb": _bomb(root)
 		_: _box(root, Vector3(0.05, 0.08, 0.4), Vector3(0, 0.03, -0.15), "polymer")
+	MeshMerge.merge_tree(root)
 	return root
 
 static func _ar_grip(root: Node3D, material: String) -> void:

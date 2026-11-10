@@ -233,6 +233,10 @@ func _dev_args() -> void:
 			get_viewport().use_occlusion_culling = false
 		elif arg == "--live":
 			mm.phase_time = 0.01
+		elif arg == "--hide-models":
+			for c in get_tree().get_nodes_in_group(&"combatants"):
+				if (c as Combatant).model:
+					(c as Combatant).model.visible = false
 		elif arg == "--buy":
 			_open_buy.call_deferred()
 		elif arg == "--scoreboard":
@@ -245,6 +249,11 @@ func _dev_args() -> void:
 func _take_shot(path: String, frames: int) -> void:
 	for i in frames:
 		await get_tree().process_frame
+	var rs := RenderingServer
+	print("render: %d draw calls, %d objects, %d primitives in frame" % [
+		rs.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
+		rs.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME),
+		rs.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)])
 	get_viewport().get_texture().get_image().save_png(path)
 	print("saved ", path)
 	get_tree().quit()
