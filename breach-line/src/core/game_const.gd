@@ -17,6 +17,8 @@ const LAYER_BODY_DEFENDERS := 1 << 2
 const LAYER_HITBOX := 1 << 3
 const LAYER_TRIGGER := 1 << 4
 const LAYER_PROP := 1 << 5
+## Invisible movement blockers (railings, map edges): stop bodies, not bullets.
+const LAYER_CLIP := 1 << 6
 
 ## Mask used by hitscan weapons: static world, props and hitboxes.
 const MASK_BULLET := LAYER_WORLD | LAYER_PROP | LAYER_HITBOX
@@ -70,4 +72,4 @@ static func body_layer(team: int) -> int:
 ## gridlock in chokepoints) but enemies block each other, as does the world.
 static func body_mask(team: int) -> int:
 	var enemy := LAYER_BODY_DEFENDERS if team == Team.ATTACKERS else LAYER_BODY_ATTACKERS
-	return LAYER_WORLD | LAYER_PROP | enemy
+	return LAYER_WORLD | LAYER_PROP | LAYER_CLIP | enemy

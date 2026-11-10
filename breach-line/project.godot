@@ -45,10 +45,11 @@ pointing/emulate_touch_from_mouse=false
 3d_physics/layer_4="hitbox"
 3d_physics/layer_5="trigger"
 3d_physics/layer_6="prop"
+3d_physics/layer_7="player_clip"
 
 [navigation]
 
-3d/default_cell_size=0.25
+3d/default_cell_size=0.2
 3d/default_cell_height=0.1
 3d/default_edge_connection_margin=0.5
 
@@ -60,6 +61,8 @@ common/physics_interpolation=true
 common/max_physics_steps_per_frame=8
 
 [rendering]
+
+occlusion_culling/use_occlusion_culling=true
 
 renderer/rendering_method="forward_plus"
 renderer/rendering_method.mobile="mobile"
