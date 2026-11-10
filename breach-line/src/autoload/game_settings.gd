@@ -83,12 +83,23 @@ static func _make_event(desc) -> InputEvent:
 	return k
 
 func _ensure_audio_buses() -> void:
-	for bus_name in ["SFX", "Ambience", "UI"]:
+	for bus_name in ["SFX", "Ambience", "UI", "Reverb"]:
 		if AudioServer.get_bus_index(bus_name) == -1:
 			AudioServer.add_bus()
 			var idx := AudioServer.bus_count - 1
 			AudioServer.set_bus_name(idx, bus_name)
 			AudioServer.set_bus_send(idx, &"Master")
+	var rv := AudioServer.get_bus_index("Reverb")
+	if AudioServer.get_bus_effect_count(rv) == 0:
+		AudioServer.set_bus_send(rv, &"SFX")
+		var rev := AudioEffectReverb.new()
+		rev.room_size = 0.62
+		rev.damping = 0.55
+		rev.spread = 0.8
+		rev.wet = 0.55
+		rev.dry = 0.0
+		rev.predelay_msec = 25.0
+		AudioServer.add_bus_effect(rv, rev)
 	# Gentle bus compression keeps gunfire from clipping in big fights.
 	var sfx := AudioServer.get_bus_index("SFX")
 	if AudioServer.get_bus_effect_count(sfx) == 0:
@@ -164,8 +175,8 @@ func quality_profile() -> Dictionary:
 		Quality.MEDIUM:
 			return {"shadow_size": 2048, "ssao": true, "ssil": false, "sdfgi": false, "glow": true, "msaa": 0, "fog": true, "shadow_distance": 60.0, "render_scale": 1.0}
 		Quality.ULTRA:
-			return {"shadow_size": 4096, "ssao": true, "ssil": true, "sdfgi": true, "glow": true, "msaa": 2, "fog": true, "shadow_distance": 120.0, "render_scale": 1.0}
-	return {"shadow_size": 4096, "ssao": true, "ssil": false, "sdfgi": true, "glow": true, "msaa": 1, "fog": true, "shadow_distance": 90.0, "render_scale": 1.0}
+			return {"shadow_size": 4096, "ssao": true, "ssil": true, "sdfgi": true, "glow": true, "msaa": 2, "fog": true, "volumetric": true, "shadow_distance": 120.0, "render_scale": 1.0}
+	return {"shadow_size": 4096, "ssao": true, "ssil": false, "sdfgi": true, "glow": true, "msaa": 1, "fog": true, "volumetric": true, "shadow_distance": 90.0, "render_scale": 1.0}
 
 func difficulty_name(d: int = -1) -> String:
 	if d < 0:

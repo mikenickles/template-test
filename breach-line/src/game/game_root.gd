@@ -42,6 +42,7 @@ func _ready() -> void:
 	Events.combatant_killed.connect(_on_killed)
 	Events.round_started.connect(_on_round_started)
 	Events.match_ended.connect(_on_match_ended)
+	Events.bomb_exploded.connect(func(pos: Vector3): player_brain.camera.add_shake(clampf(1.4 - pos.distance_to(player.global_position) / 60.0, 0.15, 1.4)))
 	Audio.play_ambience(map.env_def.get("ambience", ""), -10.0)
 	capture_mouse(true)
 	mm.start_match()
@@ -59,6 +60,7 @@ func _create_player(team: int) -> void:
 	player_brain.attach(player)
 	player.model.set_first_person(true)
 	player.weapons.local_player = true
+	Combatant.local = player
 	viewmodel = ViewModel.new()
 	player_brain.camera.add_child(viewmodel)
 	viewmodel.setup(player, player_brain.camera)

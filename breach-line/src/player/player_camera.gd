@@ -11,6 +11,7 @@ var brain: PlayerBrain
 ## short visual kick per shot.
 var weapons: WeaponController
 var _kick := Vector2.ZERO
+var _shake := 0.0
 var _kick_vel := Vector2.ZERO
 ## View punch in radians (x = pitch, y = yaw); decays toward zero.
 var punch := Vector2.ZERO
@@ -60,6 +61,7 @@ func _process(delta: float) -> void:
 	var ls := Spring.step(_land_offset, _land_vel, 140.0, 18.0, delta)
 	_land_offset = ls.x
 	_land_vel = ls.y
+	_shake = maxf(_shake - delta * 1.8, 0.0)
 	var ks := Spring.step2(_kick, _kick_vel, 220.0, 22.0, delta)
 	_kick = ks[0]
 	_kick_vel = ks[1]
@@ -82,7 +84,15 @@ func _update_transform(_delta: float) -> void:
 	global_position = origin + Vector3(0, _eye + bob + _land_offset, 0)
 	var p := (brain.look_pitch if brain else combatant.pitch) + punch.x
 	var y := (brain.look_yaw if brain else combatant.yaw) + punch.y
-	rotation = Vector3(clampf(p, deg_to_rad(-89.0), deg_to_rad(89.0)), y, _roll)
+	var sh := Vector3.ZERO
+	if _shake > 0.0:
+		var t := Time.get_ticks_msec() * 0.001
+		sh = Vector3(sin(t * 47.0), sin(t * 59.0 + 1.3), sin(t * 37.0 + 2.1)) * _shake * _shake * 0.035
+	rotation = Vector3(clampf(p + sh.x, deg_to_rad(-89.0), deg_to_rad(89.0)), y + sh.y, _roll + sh.z)
+
+## Adds trauma (0..1+) that decays quickly; shake ~ trauma^2.
+func add_shake(amount: float) -> void:
+	_shake = clampf(_shake + amount, 0.0, 1.5)
 
 func _on_fired(w: WeaponInstance, _impacts: Array, _inacc: float) -> void:
 	var k := deg_to_rad(w.data.view_kick)

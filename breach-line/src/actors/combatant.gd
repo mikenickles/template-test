@@ -44,6 +44,9 @@ const STEP_STRIDE := 2.0
 const STEP_HEIGHT := 0.3
 const FOOTSTEP_RADIUS := 22.0
 
+## The locally controlled combatant (for near-miss effects); may be null.
+static var local: Combatant = null
+
 @export var team := GameConst.Team.ATTACKERS
 @export var display_name := "Combatant"
 
@@ -500,6 +503,8 @@ func _on_weapon_fired(w: WeaponInstance, pellets: Array, _inacc: float) -> void:
 					Fx.blood_spatter(space, imp.pos, dir)
 		if tracer and not impacts.is_empty():
 			Fx.tracer(muzzle, impacts[-1].get("end", muzzle))
+		if not impacts.is_empty():
+			_near_miss(muzzle, impacts[-1].get("end", muzzle), impacts)
 	if w.data.shell_eject and not w.data.bolt_action and not _is_local_view():
 		var right := Basis(Vector3.UP, yaw) * Vector3.RIGHT
 		Fx.eject_casing(muzzle + right * 0.05, right * 2.2 + Vector3.UP * 1.6, false)
@@ -507,6 +512,24 @@ func _on_weapon_fired(w: WeaponInstance, pellets: Array, _inacc: float) -> void:
 func _on_melee_swing(_w: WeaponInstance, _heavy: bool, impact: Dictionary) -> void:
 	if impact.has("pos"):
 		Fx.impact(impact.pos, impact.normal, impact.surface, false)
+
+## Plays a supersonic crack for the local player when a bullet passes close.
+func _near_miss(from: Vector3, to: Vector3, impacts: Array) -> void:
+	var me := Combatant.local
+	if me == null or me == self or not me.alive or not is_instance_valid(me):
+		return
+	for imp in impacts:
+		if imp.get("victim") == me:
+			return
+	var eye := me.eye_position()
+	var seg := to - from
+	var l2 := seg.length_squared()
+	if l2 < 1.0:
+		return
+	var t := clampf((eye - from).dot(seg) / l2, 0.0, 1.0)
+	var closest := from + seg * t
+	if t > 0.02 and t < 0.98 and closest.distance_to(eye) < 1.6:
+		Audio.play_3d("weapons/bullet_whiz", closest, -2.0, 0.1, 10.0, false)
 
 ## World-space muzzle position (third-person weapon, else near the eye).
 func muzzle_position() -> Vector3:

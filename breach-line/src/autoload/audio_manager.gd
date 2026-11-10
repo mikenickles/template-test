@@ -29,6 +29,9 @@ func _ready() -> void:
 		p.attenuation_filter_db = -18.0
 		p.attenuation_filter_cutoff_hz = 6000.0
 		p.panning_strength = 1.0
+		# Interior reverb zones live on the trigger layer (never the world
+		# layer, which bullets and sight traces use).
+		p.area_mask = GameConst.LAYER_TRIGGER
 		add_child(p)
 		_pool3d.append(p)
 	for i in POOL_2D:

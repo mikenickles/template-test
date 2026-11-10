@@ -14,6 +14,9 @@ var _hit_kill := false
 var _hit_head := false
 var _damage_t := 0.0
 var _crosshair_gap := 6.0
+## Recent hits: [{angle (rad, relative to view), t}]
+var _hit_dirs: Array = []
+var _heartbeat_t := 0.0
 
 var _hp_label: Label
 var _armor_label: Label
@@ -27,7 +30,7 @@ func setup(c: Combatant, cam: PlayerCamera) -> void:
 	weapons = c.weapons
 	camera = cam
 	weapons.hit_confirmed.connect(_on_hit)
-	c.damaged.connect(func(amount: float, _a, _g): _damage_t = clampf(amount / 40.0, 0.25, 1.0))
+	c.damaged.connect(_on_damaged)
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -55,6 +58,15 @@ func _label(font_size: int, align: HorizontalAlignment) -> Label:
 	add_child(l)
 	return l
 
+func _on_damaged(amount: float, attacker: Node, _group: int) -> void:
+	_damage_t = clampf(amount / 40.0, 0.25, 1.0)
+	if attacker is Node3D and attacker != combatant:
+		var to := (attacker as Node3D).global_position - combatant.global_position
+		var world_angle := atan2(-to.x, -to.z)
+		_hit_dirs.append({"angle": world_angle, "t": 1.6})
+		if _hit_dirs.size() > 4:
+			_hit_dirs.pop_front()
+
 func _on_hit(_victim: Combatant, _dmg: float, hitgroup: int, killed: bool) -> void:
 	_hit_t = 0.25 if not killed else 0.45
 	_hit_kill = killed
@@ -66,6 +78,16 @@ func _on_hit(_victim: Combatant, _dmg: float, hitgroup: int, killed: bool) -> vo
 func _process(delta: float) -> void:
 	_hit_t = maxf(_hit_t - delta, 0.0)
 	_damage_t = maxf(_damage_t - delta * 1.6, 0.0)
+	for h in _hit_dirs:
+		h.t -= delta
+	_hit_dirs = _hit_dirs.filter(func(h): return h.t > 0.0)
+	if combatant and combatant.alive and combatant.health <= 25.0:
+		_heartbeat_t -= delta
+		if _heartbeat_t <= 0.0:
+			_heartbeat_t = 1.0
+			Audio.play_2d("player/heartbeat", -10.0)
+	else:
+		_heartbeat_t = 0.0
 	if combatant == null:
 		return
 	var s := size
@@ -113,6 +135,12 @@ func _draw() -> void:
 		_draw_scope(s, c)
 	elif combatant.alive and w and not (w.data.category == "sniper"):
 		_draw_crosshair(c)
+	# Damage direction arcs around the crosshair.
+	for h in _hit_dirs:
+		var rel: float = wrapf(h.angle - (camera.rotation.y if camera else combatant.yaw), -PI, PI)
+		var screen_angle := -rel - PI * 0.5
+		var a := clampf(h.t, 0.0, 1.0)
+		draw_arc(c, 120.0, screen_angle - 0.35, screen_angle + 0.35, 24, Color(1.0, 0.15, 0.1, 0.75 * a), 7.0, true)
 	# Hit marker.
 	if _hit_t > 0.0:
 		var col := Color(1.0, 0.25, 0.2, minf(_hit_t * 5.0, 1.0)) if _hit_kill else Color(1, 1, 1, minf(_hit_t * 5.0, 1.0))

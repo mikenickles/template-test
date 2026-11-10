@@ -6,6 +6,39 @@ class_name WeaponModels
 ##   optional Mag / Bolt / Pump / Slide nodes used by reload animations.
 
 static var _mats: Dictionary = {}
+static var _wear: NoiseTexture2D
+static var _wear_rough: NoiseTexture2D
+
+## Shared seamless noise used as a subtle worn finish (albedo variation +
+## roughness breakup) on weapon materials.
+static func _wear_tex(rough: bool) -> NoiseTexture2D:
+	if rough and _wear_rough:
+		return _wear_rough
+	if not rough and _wear:
+		return _wear
+	var n := FastNoiseLite.new()
+	n.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	n.frequency = 0.035
+	n.fractal_octaves = 5
+	n.seed = 7 if rough else 3
+	var t := NoiseTexture2D.new()
+	t.width = 256
+	t.height = 256
+	t.seamless = true
+	t.noise = n
+	var g := Gradient.new()
+	if rough:
+		g.set_color(0, Color(0.55, 0.55, 0.55))
+		g.set_color(1, Color(1.0, 1.0, 1.0))
+	else:
+		g.set_color(0, Color(0.78, 0.78, 0.78))
+		g.set_color(1, Color(1.0, 1.0, 1.0))
+	t.color_ramp = g
+	if rough:
+		_wear_rough = t
+	else:
+		_wear = t
+	return t
 
 static func mat(id: String) -> StandardMaterial3D:
 	if _mats.has(id):
@@ -13,7 +46,7 @@ static func mat(id: String) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	match id:
 		"gunmetal":
-			m.albedo_color = Color(0.13, 0.135, 0.14)
+			m.albedo_color = Color(0.17, 0.175, 0.18)
 			m.metallic = 0.8
 			m.roughness = 0.38
 		"blued":
@@ -64,6 +97,13 @@ static func mat(id: String) -> StandardMaterial3D:
 			m.roughness = 0.5
 		_:
 			m.albedo_color = Color.MAGENTA
+	if id in ["gunmetal", "blued", "polymer", "tan", "olive", "wood", "steel", "charge"]:
+		m.albedo_texture = _wear_tex(false)
+		m.roughness_texture = _wear_tex(true)
+		m.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+		m.uv1_triplanar = true
+		m.uv1_scale = Vector3(9, 9, 9)
+		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	_mats[id] = m
 	return m
 

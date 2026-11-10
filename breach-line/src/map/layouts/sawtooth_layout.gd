@@ -52,6 +52,7 @@ static func build(b: MapBuilder) -> void:
 	_tunnels_and_coal(b)
 	_workshop(b)
 	_skyline(b)
+	_decals(b)
 	_markers(b)
 	_callouts(b)
 
@@ -81,7 +82,7 @@ static func _zones(b: MapBuilder) -> void:
 	b.door("b_back", MapBuilder.R(-15, -38, -14, -34), {"top": 3.2})
 	b.door("mid_gate", MapBuilder.R(-3, -30, 3, -29), {"top": 4.6, "floor": "asphalt"})
 	# Site B
-	b.zone("b_hall", "B Foundry", MapBuilder.R(-44, -41, -15, -11), {"floor": "concrete_floor", "wall": "brick_dark", "wall_h": 9.0})
+	b.zone("b_hall", "B Foundry", MapBuilder.R(-44, -41, -15, -11), {"floor": "concrete_floor", "wall": "brick_dark", "wall_h": 9.0, "reverb": true, "reverb_amount": 0.8})
 	b.door("scrap_door", MapBuilder.R(-17, 30, -16, 35), {"top": 4.2, "floor": "dirt"})
 	b.zone("scrap_lane", "Scrap Lane", MapBuilder.R(-31, 28, -17, 37), {"floor": "dirt", "wall": "corrugated_rust", "wall_h": 5.0})
 	b.door("tunnel_door", MapBuilder.R(-32, 30, -31, 35), {"top": 3.6, "floor": "dirt"})
@@ -410,6 +411,43 @@ static func _skyline(b: MapBuilder) -> void:
 	MapProps.window_row(b, Vector3(-15, 18, -47.95), Vector3(15, 18, -47.95), Vector3(0, 0, 1), 8, 2.0, 2.0, 3)
 	MapProps.window_row(b, Vector3(-15, 14, -47.95), Vector3(15, 14, -47.95), Vector3(0, 0, 1), 8, 2.0, 2.0)
 	MapProps.window_row(b, Vector3(49.95, 12, -30), Vector3(49.95, 12, -8), Vector3(-1, 0, 0), 6, 2.0, 2.0)
+
+static func _decals(b: MapBuilder) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4242
+	var up := Vector3.UP
+	# Oil stains where vehicles park and machines leak.
+	for p: Vector3 in [Vector3(11.5, 0, 36.5), Vector3(-9.0, 0, 31.0), Vector3(21.0, 0, 33.0), Vector3(2.0, 0, 16.5),
+			Vector3(-33.0, 0, 2.5), Vector3(-31.0, 0, -6.0), Vector3(9.0, 0, 8.0), Vector3(14.0, 0, 8.2), Vector3(-12.0, 0, 3.2), Vector3(-25.5, 0, -18.5)]:
+		var s := rng.randf_range(1.6, 3.2)
+		b.decal(p, up, Vector3(s, 0.6, s * rng.randf_range(0.7, 1.2)), "oil_stain", {"spin": rng.randf() * TAU})
+	# Rain puddles in the open-air streets.
+	for p: Vector3 in [Vector3(-1.5, 0, 22.0), Vector3(1.2, 0, 4.0), Vector3(-2.0, 0, -15.0), Vector3(34.5, 0, 16.0), Vector3(36.0, 0, -3.0),
+			Vector3(-6.0, 0, 33.0), Vector3(6.0, 0, 30.0), Vector3(-36.0, 0, -4.0), Vector3(27.0, 0, 31.0), Vector3(30.0, 0, -15.5)]:
+		var s := rng.randf_range(2.0, 3.6)
+		b.decal(p, up, Vector3(s, 0.6, s * rng.randf_range(0.6, 1.0)), "puddle", {"spin": rng.randf() * TAU})
+	# Floor cracks on concrete.
+	for p: Vector3 in [Vector3(-30.0, 0, -22.0), Vector3(-38.0, 0, -18.0), Vector3(-23.0, 0, -36.0), Vector3(16.0, 0, -38.0),
+			Vector3(28.0, 1.2, -32.0), Vector3(25.0, 0, -15.0), Vector3(-5.0, 0, -36.0), Vector3(12.0, 0, 6.0)]:
+		b.decal(p, up, Vector3(3.0, 1.6, 3.0), "cracks", {"spin": rng.randf() * TAU})
+	# Road markings: dashed centre line down mid, parking bays in the yard.
+	for z in range(-26, 26, 4):
+		b.decal(Vector3(0.0, 0, z + 1.0), up, Vector3(0.18, 0.4, 2.0), "paint_line", {"spin": PI * 0.5, "modulate": Color(0.95, 0.8, 0.35)})
+	for x in [-10.0, -6.0, 6.0, 10.0]:
+		b.decal(Vector3(x, 0, 36.5), up, Vector3(0.14, 0.4, 5.0), "paint_line", {"spin": PI * 0.5})
+	b.decal(Vector3(0.0, 0, 39.2), up, Vector3(26.0, 0.4, 0.16), "paint_line")
+	for z in [-28.0, -33.0]:
+		b.decal(Vector3(-2.0, 0, z), up, Vector3(0.18, 0.4, 6.0), "paint_line", {"spin": PI * 0.5, "modulate": Color(0.95, 0.8, 0.35)})
+	# Grime and rust streaks running down walls.
+	var streaks := [
+		[Vector3(-3.9, 7.0, 15.0), Vector3(1, 0, 0)], [Vector3(-3.9, 7.0, -18.0), Vector3(1, 0, 0)], [Vector3(3.9, 7.0, 21.0), Vector3(-1, 0, 0)],
+		[Vector3(3.9, 7.0, -12.0), Vector3(-1, 0, 0)], [Vector3(30.0, 4.0, -40.9), Vector3(0, 0, 1)], [Vector3(-31.0, 6.5, -40.9), Vector3(0, 0, 1)],
+		[Vector3(-43.9, 7.0, -25.0), Vector3(1, 0, 0)], [Vector3(39.9, 4.5, 20.0), Vector3(-1, 0, 0)], [Vector3(30.1, 4.5, 5.0), Vector3(1, 0, 0)],
+		[Vector3(-15.9, 6.0, 33.0), Vector3(1, 0, 0)], [Vector3(15.9, 6.0, 37.0), Vector3(-1, 0, 0)], [Vector3(0.0, 6.5, -40.9), Vector3(0, 0, 1)],
+	]
+	for st in streaks:
+		var n: Vector3 = st[1]
+		b.decal(st[0], n, Vector3(rng.randf_range(1.5, 2.6), 0.8, rng.randf_range(3.0, 4.5)), "grime_streak", {"spin": 0.0})
 
 # ---------------------------------------------------------------------------
 

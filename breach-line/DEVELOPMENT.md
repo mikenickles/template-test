@@ -14,6 +14,7 @@ architecture, decisions, phase status, known bugs and next steps.
 | Run tests | `tools/run_tests.sh` (optional filter: `tools/run_tests.sh test_map`) |
 | Regenerate textures | `python3 tools/texgen.py` |
 | Regenerate sounds | `python3 tools/sfxgen.py` (needs `pip install scipy`) |
+| Regenerate decals | `python3 tools/decalgen.py` |
 | Fix texture import settings | `python3 tools/fix_imports.py && godot --headless --path . --import` |
 | Map screenshots | `tools/screenshot.sh <out_dir> [views=all] [quality] [frames]` |
 | In-game screenshot | `tools/game_shot.sh <out.png> [frames] [--spawn=x,y,z,yaw]` |
@@ -178,7 +179,7 @@ under Xvfb (`tools/screenshot.sh`).
 | 4 | Weapons (firing, recoil, reload, switching, hit detection, FX, audio) | **Done** |
 | 5 | Combat AI (navigation, perception, engagement, tactics) | **Done** |
 | 6 | Game rules (rounds, bomb, economy, buy menu, HUD, scoring) | **Done** |
-| 7 | Visual & audio polish | Planned |
+| 7 | Visual & audio polish | **Done** |
 | 8 | Testing, optimisation, playable build | Planned |
 
 ### Phase 1 — Architecture (done)
@@ -386,6 +387,33 @@ damage, and a full bot-only match (first to 4, swap after 3) asserting the
 match ends, every round is awarded once, the halftime swap happens, the
 charge gets planted, money stays within bounds and kills ≤ deaths.
 Screenshots: freeze-time HUD, buy menu, main menu.
+
+### Phase 7 — Visual & audio polish (done)
+
+- **Combat feedback**: damage-direction arcs around the crosshair, near-miss
+  supersonic cracks (closest point of each enemy bullet path to your eye),
+  low-health heartbeat, explosion camera shake (trauma model), headshot
+  ping, hit/kill markers, round start/win/lose stingers, money popups.
+- **Audio space**: a `Reverb` bus; every roofed interior (and the foundry
+  hall) gets an Area3D reverb zone on the trigger layer (never the world
+  layer, which bullets and sight traces query) so gunfire indoors rings
+  out; occlusion muffling for sounds behind walls.
+- **Lighting**: volumetric fog on High/Ultra (sun shafts through the
+  foundry glazing, lamp cones, furnace glow), sun volumetric energy, AgX
+  tonemapping, SSAO/SDFGI/glow presets.
+- **Environment detail**: `tools/decalgen.py` generates original decals
+  (oil stains, puddles, worn road paint, wall grime streaks, cracks);
+  `MapBuilder.decal()` places 60+ of them (dashed centre line in mid,
+  parking bays, stains under vehicles/machines, streaks under windows).
+- **Weapons**: shared seamless wear noise (albedo + roughness breakup,
+  object-space triplanar) on all gun materials; lighter gunmetal so
+  silhouettes read.
+- **Characters**: rounded torsos, belts, attacker backpacks, defender radio
+  pouch + antenna.
+
+Verified visually with Forward+ screenshots (foundry shafts, mid, coal
+yard, long, live first-person under fire with HUD feedback). Full suite
+still green (62 tests).
 
 ---
 

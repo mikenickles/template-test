@@ -119,8 +119,17 @@ func _build() -> void:
 	_mesh(_hips, _bx(Vector3(0.34, 0.17, 0.22)), Vector3(0, 0, 0), "pants")
 	_mesh(_hips, _bx(Vector3(0.36, 0.05, 0.24)), Vector3(0, 0.07, 0), "vest")
 	_spine = _node(_hips, "Spine", Vector3(0, 0.08, 0))
-	_mesh(_spine, _bx(Vector3(0.38, 0.5, 0.23)), Vector3(0, 0.25, 0), "jacket")
+	var torso := _mesh(_spine, _cap(0.2, 0.62), Vector3(0, 0.27, 0), "jacket")
+	torso.scale = Vector3(1.0, 1.0, 0.68)
 	_mesh(_spine, _bx(Vector3(0.41, 0.34, 0.28)), Vector3(0, 0.28, 0), "vest")
+	_mesh(_spine, _bx(Vector3(0.36, 0.05, 0.3)), Vector3(0, 0.12, 0), "vest")
+	if att:
+		_mesh(_spine, _bx(Vector3(0.32, 0.42, 0.16)), Vector3(0, 0.3, 0.22), "pants")
+		_mesh(_spine, _bx(Vector3(0.28, 0.08, 0.18)), Vector3(0, 0.52, 0.22), "accent")
+	else:
+		_mesh(_spine, _bx(Vector3(0.1, 0.16, 0.07)), Vector3(0.13, 0.4, 0.17), "boots")
+		var ant := _mesh(_spine, _cap(0.006, 0.42), Vector3(0.15, 0.62, 0.18), "boots")
+		ant.rotation_degrees = Vector3(-8, 0, 0)
 	for i in 3:
 		_mesh(_spine, _bx(Vector3(0.08, 0.1, 0.05)), Vector3(-0.12 + i * 0.12, 0.2, -0.155), "vest")
 	_mesh(_spine, _bx(Vector3(0.3, 0.36, 0.12)), Vector3(0, 0.3, 0.19), "vest")

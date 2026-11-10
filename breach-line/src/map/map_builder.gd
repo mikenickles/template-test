@@ -82,6 +82,25 @@ func _init(geometry_parent: Node3D, decor_parent: Node3D, p_grid: Rect2i, p_seed
 	_solid_h.resize(n)
 	_solid_h.fill(0.0)
 
+## Indoor acoustic zone: positional sounds inside send to the Reverb bus.
+func _add_reverb_zone(r: Rect2i, height: float, amount: float) -> void:
+	var a := Area3D.new()
+	a.name = "Reverb"
+	a.collision_layer = GameConst.LAYER_TRIGGER
+	a.collision_mask = 0
+	a.monitoring = false
+	a.reverb_bus_enabled = true
+	a.reverb_bus_name = &"Reverb"
+	a.reverb_bus_amount = amount
+	a.reverb_bus_uniformity = 0.4
+	var cs := CollisionShape3D.new()
+	var s := BoxShape3D.new()
+	s.size = Vector3(r.size.x, height, r.size.y)
+	cs.shape = s
+	cs.position = Vector3(r.position.x + r.size.x * 0.5, height * 0.5, r.position.y + r.size.y * 0.5)
+	a.add_child(cs)
+	decor.add_child(a)
+
 ## Rect helper using corner coordinates (x0, z0) - (x1, z1).
 static func R(x0: int, z0: int, x1: int, z1: int) -> Rect2i:
 	return Rect2i(x0, z0, x1 - x0, z1 - z0)
@@ -102,6 +121,8 @@ func zone(id: String, display: String, r: Rect2i, o: Dictionary = {}) -> Zone:
 	z.roof_h = o.get("roof", 0.0)
 	z.ceiling_mat = o.get("ceiling", z.ceiling_mat)
 	z.roof_mat = o.get("roof_mat", z.roof_mat)
+	if z.roof_h > 0.0 or o.get("reverb", false):
+		_add_reverb_zone(r, maxf(z.roof_h, z.wall_h), o.get("reverb_amount", 0.6))
 	if z.roof_h > 0.0:
 		z.wall_h = maxf(z.wall_h, z.roof_h + ROOF_THICK)
 	zones.append(z)
@@ -250,6 +271,34 @@ func stairs(x0: float, z0: float, x1: float, z1: float, y_low: float, y_high: fl
 			"-z": a = Vector3(x0, base, z0); b = Vector3(x1, top, lerpf(z1, z0, t0))
 		box(a, b, mat, {"collide": false, "tint": o.get("tint", Color.WHITE), "tint_var": 0.0})
 	ramp(x0, z0, x1, z1, y_low, y_high, dir, mat, {"visible": false, "base": base, "surface": o.get("surface", mats.surface_of(mat))})
+
+## Projected decal (Forward+/Mobile). `normal` is the surface facing
+## direction (UP for floors); `size` is (width, depth along normal, height).
+func decal(pos: Vector3, normal: Vector3, size: Vector3, tex: String, o: Dictionary = {}) -> Decal:
+	var path := "res://assets/decals/%s.png" % tex
+	if not ResourceLoader.exists(path):
+		return null
+	var d := Decal.new()
+	d.texture_albedo = load(path)
+	d.size = size
+	d.modulate = o.get("modulate", Color.WHITE)
+	d.albedo_mix = o.get("mix", 1.0)
+	d.upper_fade = 0.2
+	d.lower_fade = 0.2
+	d.normal_fade = 0.4
+	d.distance_fade_enabled = true
+	d.distance_fade_begin = o.get("fade", 45.0)
+	d.distance_fade_length = 10.0
+	decor.add_child(d)
+	d.global_position = pos
+	# A Decal projects along its local -Y axis.
+	var y := normal.normalized()
+	var ref := Vector3.FORWARD if absf(y.dot(Vector3.FORWARD)) < 0.9 else Vector3.RIGHT
+	var x := ref.cross(y).normalized()
+	var z := x.cross(y).normalized()
+	var basis := Basis(x, y, z).rotated(y, o.get("spin", 0.0))
+	d.global_basis = basis
+	return d
 
 ## Invisible movement blocker (railings, ledges). Bullets and sight pass.
 func clip(a: Vector3, b: Vector3) -> void:

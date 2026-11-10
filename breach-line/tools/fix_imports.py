@@ -60,7 +60,7 @@ def main() -> None:
             continue
         write(p, PARAMS_3D.format(normal=1 if "_normal." in p else 2))
         n += 1
-    for p in sorted(glob.glob("assets/fx/*.png")):
+    for p in sorted(glob.glob("assets/fx/*.png")) + sorted(glob.glob("assets/decals/*.png")):
         write(p, PARAMS_FX)
         n += 1
     print(f"wrote import settings for {n} textures")

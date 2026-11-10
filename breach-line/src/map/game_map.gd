@@ -97,6 +97,7 @@ func setup_environment(e: Dictionary) -> void:
 	sun.shadow_bias = 0.04
 	sun.shadow_normal_bias = 1.2
 	sun.light_angular_distance = 0.4
+	sun.light_volumetric_fog_energy = 1.4
 	RenderingServer.directional_shadow_atlas_set_size(q.shadow_size, true)
 
 	var env := Environment.new()
@@ -137,6 +138,15 @@ func setup_environment(e: Dictionary) -> void:
 	env.fog_density = e.get("fog_density", 0.003)
 	env.fog_aerial_perspective = 0.35
 	env.fog_sky_affect = 0.15
+	# Volumetric fog makes the sun shafts through the foundry glazing and
+	# lamp cones visible (Forward+ desktop presets only).
+	env.volumetric_fog_enabled = q.get("volumetric", false)
+	env.volumetric_fog_density = e.get("volumetric_density", 0.0035)
+	env.volumetric_fog_albedo = Color(0.9, 0.86, 0.8)
+	env.volumetric_fog_anisotropy = 0.55
+	env.volumetric_fog_length = 48.0
+	env.volumetric_fog_ambient_inject = 0.15
+	env.volumetric_fog_sky_affect = 0.0
 	env.adjustment_enabled = true
 	env.adjustment_contrast = 1.06
 	env.adjustment_saturation = 1.08
