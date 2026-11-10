@@ -52,10 +52,13 @@ func build() -> void:
 
 ## Waits until the navigation server has synchronised the baked region
 ## (region updates are processed asynchronously). Returns true when ready.
-func await_navigation_ready(max_frames: int = 300) -> bool:
+func await_navigation_ready(timeout_ms: int = 15000) -> bool:
 	var rid := get_world_3d().navigation_map
 	var probe: Vector3 = info.spawns[GameConst.Team.ATTACKERS][0].origin if info and not info.spawns[GameConst.Team.ATTACKERS].is_empty() else Vector3.ZERO
-	for i in max_frames:
+	# Real-time limit: region iteration runs on worker threads, so frame
+	# counts are meaningless under --fixed-fps.
+	var deadline := Time.get_ticks_msec() + timeout_ms
+	while Time.get_ticks_msec() < deadline:
 		if NavigationServer3D.map_get_iteration_id(rid) > 0:
 			var c := NavigationServer3D.map_get_closest_point(rid, probe)
 			if c.distance_to(probe) < 2.0:

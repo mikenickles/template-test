@@ -182,6 +182,19 @@ func cylinder(xf: Transform3D, radius: float, height: float, mat: String, o: Dic
 ## ("+x", "-x", "+z", "-z"). Bottom at o.base (default 0).
 func ramp(x0: float, z0: float, x1: float, z1: float, y_low: float, y_high: float, dir: String, mat: String, o: Dictionary = {}) -> void:
 	var base: float = o.get("base", 0.0)
+	# Sink a ground-level low edge slightly below the floor so bodies meet the
+	# sloped face rather than a zero-thickness edge (which reads as a wall).
+	if o.get("sink", true) and y_low <= base + 0.001 and y_high > y_low:
+		var sink := 0.08
+		var run := (x1 - x0) if dir.ends_with("x") else (z1 - z0)
+		var ext := sink * run / (y_high - y_low)
+		match dir:
+			"+x": x0 -= ext
+			"-x": x1 += ext
+			"+z": z0 -= ext
+			"-z": z1 += ext
+		y_low -= sink
+		base = minf(base, y_low - 0.02)
 	var hfn := func(x: float, z: float) -> float:
 		var t := 0.0
 		match dir:

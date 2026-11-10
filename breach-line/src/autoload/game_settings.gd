@@ -10,10 +10,10 @@ const SAVE_PATH := "user://settings.cfg"
 enum Quality { LOW, MEDIUM, HIGH, ULTRA }
 
 # Input
-var mouse_sensitivity := 0.0022 # radians per pixel
+var mouse_sensitivity := 0.0015 # radians per pixel
 var invert_y := false
 # Video
-var fov := 90.0
+var fov := 74.0 # vertical degrees (~106 horizontal at 16:9)
 var quality := Quality.HIGH
 var fullscreen := false
 var show_fps := false

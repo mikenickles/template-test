@@ -8,7 +8,7 @@ GODOT="${GODOT:-godot}"
 ARGS=()
 if [[ $# -gt 0 ]]; then ARGS=(-- "--filter=$1"); fi
 LOG="$(mktemp)"
-"$GODOT" --headless --path . res://tests/test_runner.tscn "${ARGS[@]}" 2>&1 | tee "$LOG" | grep -vE "ALSA|audio_driver|dummy driver|audio_server.cpp|^\s+at: (init_output_device|initialize)"
+"$GODOT" --headless --fixed-fps 60 --path . res://tests/test_runner.tscn "${ARGS[@]}" 2>&1 | tee "$LOG" | grep -vE "ALSA|audio_driver|dummy driver|audio_server.cpp|^\s+at: (init_output_device|initialize)"
 STATUS=${PIPESTATUS[0]}
 if grep -qE "SCRIPT ERROR|Parse Error|Failed to load script" "$LOG"; then
   echo "Engine reported script errors (see above)."; STATUS=1

@@ -154,11 +154,11 @@ static func _truck_lane_and_long(b: MapBuilder) -> void:
 static func _a_site(b: MapBuilder) -> void:
 	# Raised loading platform (top 1.2 m) holds the bombsite.
 	b.box(Vector3(21, 0, -36), Vector3(39.5, 1.12, -19), "concrete_wall", {"uv": "world"})
-	b.box(Vector3(20.95, 1.12, -36.05), Vector3(39.55, 1.2, -18.95), "concrete_floor", {"collide": false})
+	b.box(Vector3(20.95, 1.12, -36.05), Vector3(39.55, 1.2, -18.95), "concrete_floor", {"surface": "concrete"})
 	b.box(Vector3(21, 0.9, -18.96), Vector3(33, 1.12, -18.9), "hazard", {"collide": false, "ao": false})
 	# Walkway from the Short exit joins the platform from the west.
 	b.box(Vector3(14, 0, -24), Vector3(21, 1.12, -12), "concrete_wall")
-	b.box(Vector3(14, 1.12, -24.05), Vector3(21, 1.2, -12), "tread", {"collide": false})
+	b.box(Vector3(14, 1.12, -24.05), Vector3(21, 1.2, -12), "tread", {"surface": "metal"})
 	b.box(Vector3(14, 0.9, -24.07), Vector3(21, 1.12, -24.01), "hazard", {"collide": false, "ao": false})
 	# Ramp up from Long, stairs up from the defender lane.
 	b.ramp(33, -19, 39.5, -13, 0.0, 1.2, "-z", "concrete_floor")
@@ -249,7 +249,7 @@ static func _pump_house(b: MapBuilder) -> void:
 	# Stairs rising north to the landing at platform height.
 	b.stairs(15, -7, 22, -2, 0.0, 1.2, "-z", 4, "concrete_wall")
 	b.box(Vector3(15, 0, -11), Vector3(22, 1.12, -7), "concrete_wall")
-	b.box(Vector3(15, 1.12, -11), Vector3(22, 1.2, -7), "tread", {"collide": false})
+	b.box(Vector3(15, 1.12, -11), Vector3(22, 1.2, -7), "tread", {"surface": "metal"})
 	b.box(Vector3(16, 0, -12), Vector3(21, 1.2, -11), "tread")
 	MapProps.tube_light(b, Vector3(18.5, 5.12, -4.0), false, Color(1.0, 0.9, 0.75), 1.3, 8.0, "lamp_warm")
 	MapProps.tube_light(b, Vector3(18.5, 5.12, 1.5), false, Color(1.0, 0.9, 0.75), 1.0, 7.0, "lamp_warm")

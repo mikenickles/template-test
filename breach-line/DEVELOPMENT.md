@@ -13,7 +13,10 @@ architecture, decisions, phase status, known bugs and next steps.
 | Play | `godot --path .` (or open `project.godot` in the Godot 4.7 editor and press F5) |
 | Run tests | `tools/run_tests.sh` (optional filter: `tools/run_tests.sh test_map`) |
 | Regenerate textures | `python3 tools/texgen.py` |
-| Regenerate sounds | `python3 tools/sfxgen.py` |
+| Regenerate sounds | `python3 tools/sfxgen.py` (needs `pip install scipy`) |
+| Fix texture import settings | `python3 tools/fix_imports.py && godot --headless --path . --import` |
+| Map screenshots | `tools/screenshot.sh <out_dir> [views=all] [quality] [frames]` |
+| In-game screenshot | `tools/game_shot.sh <out.png> [frames] [--spawn=x,y,z,yaw]` |
 
 Requirements: Godot **4.7.x** (standard build, not .NET). The project uses the
 Jolt physics engine (built into 4.7) and the Forward+ renderer on desktop;
@@ -170,8 +173,8 @@ under Xvfb (`tools/screenshot.sh`).
 | Phase | Scope | Status |
 |---|---|---|
 | 1 | Architecture, scaffold, autoloads, test runner, docs | **Done** |
-| 2 | Map foundation (layout, builder, collision, navmesh, markers) | Planned |
-| 3 | Player controller (movement, camera, crouch, jump) | Planned |
+| 2 | Map foundation (layout, builder, collision, navmesh, markers) | **Done** |
+| 3 | Player controller (movement, camera, crouch, jump) | **Done** |
 | 4 | Weapons (firing, recoil, reload, switching, hit detection, FX, audio) | Planned |
 | 5 | Combat AI (navigation, perception, engagement, tactics) | Planned |
 | 6 | Game rules (rounds, bomb, economy, buy menu, HUD, scoring) | Planned |
@@ -189,6 +192,69 @@ Asset pipelines (`tools/texgen.py`, `tools/sfxgen.py`) started.
 Tests: `test_core` — damage/armor rules, team helpers, input registration,
 intent semantics, audio buses (9/9 passing).
 
+### Phase 2 — Map foundation (done)
+
+**MapBuilder** (`src/map/map_builder.gd`): playable space is declared as
+zones on a 1 m grid; every non-walkable cell touching a walkable one becomes
+solid, so walls are watertight by construction. Door zones in a 1-cell wall
+gap get automatic lintels; roofed zones get ceilings, and roof height
+changes get headers/edges (no light leaks). Explicit primitives: `box`,
+`box_xf`, `cylinder`, `ramp` (low edge sunk below the floor so bodies meet
+the slope, not an edge), `stairs` (visual steps + smooth collision ramp),
+`clip` (movement-only blockers), lights and `Label3D` signage. Output is
+merged per material per 40 m chunk with world-space UVs and baked contact AO
+in vertex colours; collision is grouped per surface type; large solids feed
+one `ArrayOccluder3D`. `MapProps` provides prefabs (crates, containers,
+boxcar, flatbed, forklift, barrels, pallets, jersey barriers, windows,
+doors, lamps, railings, pipes, I-beams, shelves, machines).
+
+**Sawtooth** (`src/map/layouts/sawtooth_layout.gd`), ~88 x 81 m:
+attacker yard (south) → Truck Lane → Long Rail (Long Doors choke) → A;
+Mid street with gatehouse → Pump House stairs (Short A) / Workshop (B
+Short); Scrap Lane → Tunnels → Coal Yard → B Main; defender court (north)
+with A Gate, Back Hall and Mid Gate. Site A: raised loading platform with
+dispatcher hut, boxcar, walkway, ramp and stairs. Site B: sawtooth-roofed
+foundry with furnace, ladle, press and a mezzanine; south-facing glazing
+throws sun shafts across the site. Markers: 8 spawns/team, buy zones, 5
+attack routes, 11 defender holds, retake rallies, 6 plant spots, post-plant
+and lurk spots, 20+ callout regions, radar data.
+
+**GameMap**: sun (4-split PSSM), procedural sky, AgX tonemapping, SSAO/
+SDFGI/glow/fog per quality preset, navmesh baked at load (~60 ms).
+
+Measured (navmesh paths at rifle speed 5.7 m/s): attackers reach A in
+14.2 s / B in 13.9 s; defenders reach A in 6.8 s / B in 4.9 s. Routes:
+A Long 96 m, A Short 75 m, B Tunnels 79 m, B Short 70 m, Mid 57 m.
+
+Tests: `test_map` (10) — build, spawns valid & clear, sites reachable with
+timing bounds, every route leg and every marker on/reachable via navmesh,
+watertight (horizontal rays from every marker never escape), floor under
+every walkable cell, callouts, surfaces. Visual check: 19 viewpoint
+screenshots rendered with Forward+ (lavapipe).
+
+### Phase 3 — Player controller (done)
+
+`Combatant` (`src/actors/combatant.gd`, CharacterBody3D + cylinder hull):
+Source-style ground accel (6.5) / friction (5.2, stop speed 2 m/s), air
+accel with 0.8 m/s wish cap, jump 6.6 m/s (apex 1.09 m), crouch-jump tuck
+(apex ~1.39 m: 1.15 m crates need a crouch-jump, 1.45 m boxes are
+unreachable), smooth crouch with headroom check, walk (52%, silent), crouch
+(34%), jump fatigue, coyote time, 0.3 m automatic step-up, fall damage above
+12.5 m/s, surface-aware footsteps (+ AI noise events), damage/armor/death
+via `DamageModel`. `PlayerBrain` is the only class reading `Input`
+(discrete actions are event-queued so mouse-wheel presses aren't lost).
+`PlayerCamera` is top-level, positioned each frame from the interpolated
+body transform with immediate mouse look, smoothed eye height, head bob,
+strafe roll, landing spring, view punch and zoom.
+
+Tests: `test_movement` (16) — acceleration time, stopping distance, walk/
+crouch speeds, diagonal cap, jump & crouch-jump apex, crate rules, low
+ceiling crouch lock, air-control bound, fatigue, fall damage, freeze time,
+footsteps (running vs walking), 25 cm step-up vs 45 cm ledge, and walking
+all five attack routes on the real map via navmesh paths (10–16 s each,
+never stuck). Runner uses `--fixed-fps 60` (deterministic, faster than
+real time).
+
 ---
 
 ## 5. Decisions log
@@ -202,13 +268,34 @@ intent semantics, audio buses (9/9 passing).
 | D5 | Map built from a declarative layout script at load time | No editor needed to author; geometry, collision, navmesh, markers and radar all derive from one source. |
 | D6 | Teammates don't collide | Prevents bot traffic jams; common in modern tactical shooters. |
 | D7 | Game lives in `breach-line/` subfolder | Repository already contains an unrelated Astro site; keep them independent. |
+| D8 | Cylinder movement hull, body never rotates | Flat bottom (stand on ledges like Source), round sides slide smoothly; yaw is view-only. |
+| D9 | Ramps under stairs + automatic 0.3 m step-up | Smooth stair motion and navmesh, robust to small lips. |
+| D10 | Explicit texture import settings (`tools/fix_imports.py`) | Runtime-created materials bypass the editor's 3D/normal-map detection; without this textures had no mipmaps or VRAM compression. |
+| D11 | Physics 60 Hz + interpolation; camera top-level in `_process` | Smooth on high-refresh displays without adding look latency. |
 
 ---
 
 ## 6. Known issues
 
-- None yet.
+- Software-rendered screenshots (lavapipe) run at ~1–2 fps; real GPU
+  performance not yet profiled (Phase 8).
+- Some props are simple primitives (workshop car, forklift) — Phase 7.
+- Large unique texture features (asphalt patches) can repeat visibly over
+  wide areas — consider decals/UV rotation in Phase 7.
+
+### Bugs found and fixed
+- `Rect2i.get_center()` returns integers: odd-sized collision boxes were
+  shifted 0.5 m, leaving holes in floors/walls (caught by watertight and
+  floor-coverage tests).
+- Navigation regions sync asynchronously: queries right after baking
+  returned the origin. `GameMap.await_navigation_ready()` waits (real-time).
+- Idle bodies alternated on/off floor each tick, swallowing jump presses —
+  keep a small downward velocity on the ground.
+- Zero-thickness ramp edges read as 46° walls for the cylinder hull.
+- A texture imported mid-write was marked invalid; reimport + explicit
+  import settings.
 
 ## 7. Next steps
 
-- Phase 2: map builder + Sawtooth layout.
+- Phase 4: weapons (data, firing, spread/recoil, reload, switching,
+  hitboxes, ballistics/penetration, viewmodels, FX, audio).
