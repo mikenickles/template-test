@@ -27,7 +27,7 @@ describe("anthropic mapping", () => {
   });
 
   it("reads tool_use blocks back", () => {
-    const parts = fromAnthropicContent([
+    const { parts } = fromAnthropicContent([
       { type: "text", text: "hi", citations: null },
       { type: "tool_use", id: "x", name: "remember", input: { section: "Rules", text: "a" }, caller: { type: "direct" } },
     ] as never);

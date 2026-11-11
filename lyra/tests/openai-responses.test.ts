@@ -78,7 +78,7 @@ describe("OpenAI Responses API", () => {
       { role: "user", parts: [{ type: "tool_result", id: "call_1", name: "gmail__search_mail", content: "0 messages" }] },
     ];
     const second = await p.generate({ ...req, messages }, () => {});
-    expect(second).toEqual({ parts: [{ type: "text", text: "Nothing new." }], stop: "end" });
+    expect(second).toMatchObject({ parts: [{ type: "text", text: "Nothing new." }], stop: "end", searched: false });
     expect(api.bodies[1].input).toEqual([
       { role: "user", content: "Anything from school?" },
       { role: "assistant", content: "Checking your mail." },

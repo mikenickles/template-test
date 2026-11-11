@@ -223,6 +223,7 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
                   )}
                   {!!m.meta.memory?.length && <Notes notes={m.meta.memory} onAction={(i, a) => answerNote(m, i, a)} />}
                   {!!m.meta.tasks?.length && <TaskNotes notes={m.meta.tasks} />}
+                  {!!m.meta.sources?.length && <Sources list={m.meta.sources} />}
                   <span className="sr-only">{clock(d)}</span>
                 </div>
               </Fragment>
@@ -348,6 +349,26 @@ function TaskNotes({ notes }: { notes: TaskNote[] }) {
             {n.kind === "updated" && ` · ${STATUS_LABEL[n.status as keyof typeof STATUS_LABEL] ?? n.status}`}
           </span>
           <Chevron size={16} className="chev" />
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function Sources({ list }: { list: { url: string; title: string }[] }) {
+  const host = (u: string) => {
+    try {
+      return new URL(u).hostname.replace(/^www\./, "");
+    } catch {
+      return u;
+    }
+  };
+  return (
+    <div className="sources" aria-label="Sources">
+      <span className="sources-label">Sources</span>
+      {list.map((s) => (
+        <a key={s.url} className="source" href={s.url} target="_blank" rel="noreferrer noopener" title={s.title}>
+          {host(s.url)}
         </a>
       ))}
     </div>

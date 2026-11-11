@@ -38,6 +38,13 @@ This is **Phase 5**: the main chat, memory, channels, tasks, background workers,
 - **Up next** is for tasks you're tracking but nobody is working on yet.
 - **Safe with email.** In a reply where Lyra read an email, it can't create or change a task; it tells you what it would do and waits for your yes.
 
+### Web search
+
+- **Lyra can look things up.** For news, prices, opening hours, scores and anything that changes, Lyra (and its workers) use your model's own built-in search: Claude's web search, OpenAI's web search, or Gemini's Google Search. There's no extra account or key.
+- **Sources under the reply.** Any reply that searched shows the sites it drew on; tap one to open it.
+- **Same rules as email.** Web pages are other people's words. Lyra reports on them and never follows instructions in them, and in a reply that searched, memory changes wait for your tap and tasks can't be created or started.
+- **Settings → Web search** turns it off. Each search adds a small fee on your model bill. The practice model and your own model server can't search.
+
 ### Calendar and Drive (Phase 5)
 
 - **Calendar:** Lyra (and its workers) can see your events across your calendars: times in your time zone, where, who's coming, and whether you've answered an invite. It can't add, change or answer events.

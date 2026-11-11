@@ -207,6 +207,8 @@ export interface MessageMeta {
   error?: boolean;
   /** Posted by a background worker rather than in reply to a message. */
   worker?: boolean;
+  /** Web pages the reply drew on. */
+  sources?: { url: string; title: string }[];
 }
 
 type Row = Omit<StoredMessage, "meta"> & { meta: string };

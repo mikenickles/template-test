@@ -15,6 +15,7 @@ export function toOpenAIMessages(system: string, messages: Msg[]): OMessage[] {
       );
       out.push({ role: "assistant", content: text || null, ...(calls.length ? { tool_calls: calls } : {}) });
     } else {
+      // other providers' "native" parts are skipped
       for (const p of m.parts) if (p.type === "tool_result") out.push({ role: "tool", tool_call_id: p.id, content: p.content });
       if (text) out.push({ role: "user", content: text });
     }

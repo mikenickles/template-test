@@ -2,7 +2,7 @@ import type { Connectors } from "./connectors/registry.ts";
 import { addMessage, listMessages, type Channel, type ChannelSummary, type DB, type MemoryNote, type StoredMessage, type TaskNote } from "./db.ts";
 import { CHANNEL_SECTIONS, SECTIONS, type Notebook } from "./memory.ts";
 import { buildSystemPrompt, type ChannelDigest } from "./prompt.ts";
-import type { ModelProvider, Msg, Part, ToolDef } from "./providers/types.ts";
+import { uniqueSources, type ModelProvider, type Msg, type Part, type Source, type ToolDef } from "./providers/types.ts";
 import {
   addStep,
   createTask,
@@ -49,6 +49,8 @@ export interface TurnContext {
   provider: ModelProvider;
   userName: string;
   timeZone?: string;
+  /** The model may search the web with its built-in search. */
+  webSearch?: boolean;
 }
 
 const MAIN = "main";
@@ -235,9 +237,11 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
     emit.text(d);
   };
 
+  const sources: Source[] = [];
   const meta = () => ({
     memory: notes,
     ...(taskNotes.length ? { tasks: taskNotes } : {}),
+    ...(sources.length ? { sources: uniqueSources(sources).slice(0, 8) } : {}),
     tools: toolsUsed,
     provider: ctx.provider.id,
     model: ctx.provider.model,
@@ -254,18 +258,28 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
       channel: ctx.channel ? { ...ctx.channel, notebook: (await ctx.workspace.notebook(ctx.channel.id)).read() } : undefined,
       channels: ctx.channel ? channels.map((c) => ({ name: c.name, about: c.about })) : await digests(ctx),
       tasks: describeTasks(listTasks(ctx.db, { status: "open", channelId: ctx.channel ? ctx.channel.id : undefined, limit: 40 }), !ctx.channel),
+      webSearch: !!ctx.webSearch,
     });
 
     for (let step = 0; step < MAX_STEPS; step++) {
       let started = false;
-      const result = await ctx.provider.generate({ system, messages, tools, signal }, (d) => {
-        if (!started && reply.trim()) say("\n\n");
-        started = true;
-        say(d);
-      });
+      const result = await ctx.provider.generate(
+        { system, messages, tools, signal, webSearch: !!ctx.webSearch, onStatus: (l) => emit.status(l) },
+        (d) => {
+          if (!started && reply.trim()) say("\n\n");
+          started = true;
+          say(d);
+        },
+      );
       messages.push({ role: "assistant", parts: result.parts });
+      // Web results are other people's words, just like email.
+      if (result.searched) state.tainted = true;
+      if (result.sources) sources.push(...result.sources);
       const calls = result.parts.filter((p): p is Extract<Part, { type: "tool_call" }> => p.type === "tool_call");
-      if (!calls.length) break;
+      if (!calls.length) {
+        if (result.stop === "pause") continue; // a long search: let the model carry on
+        break;
+      }
 
       const results: Part[] = [];
       for (const call of calls) {

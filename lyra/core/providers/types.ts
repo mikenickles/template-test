@@ -13,7 +13,9 @@ export type Part =
       /** Provider-specific data that must be sent back unchanged (e.g. Gemini thought signatures). */
       meta?: Record<string, unknown>;
     }
-  | { type: "tool_result"; id: string; name: string; content: string; isError?: boolean };
+  | { type: "tool_result"; id: string; name: string; content: string; isError?: boolean }
+  /** A provider's own block (e.g. a web search it ran itself), sent back to that provider unchanged and ignored by others. */
+  | { type: "native"; provider: string; block: unknown };
 
 export interface Msg {
   role: "user" | "assistant";
@@ -33,11 +35,31 @@ export interface GenerateRequest {
   tools: ToolDef[];
   maxTokens?: number;
   signal?: AbortSignal;
+  /** Let the model search the web with its provider's built-in search. */
+  webSearch?: boolean;
+  /** Short progress labels, e.g. "Searching the web". */
+  onStatus?: (label: string) => void;
+}
+
+export interface Source {
+  url: string;
+  title: string;
 }
 
 export interface GenerateResult {
   parts: Part[];
-  stop: "end" | "tool_use" | "max_tokens";
+  /** "pause": the provider stopped mid-way (a long search) and wants to be called again to continue. */
+  stop: "end" | "tool_use" | "max_tokens" | "pause";
+  /** The model searched the web during this call: its answer used outside content. */
+  searched?: boolean;
+  /** Web pages the answer drew on. */
+  sources?: Source[];
+}
+
+/** Keep the first of each URL, in order. */
+export function uniqueSources(list: Source[]): Source[] {
+  const seen = new Set<string>();
+  return list.filter((s) => s.url && !seen.has(s.url) && (seen.add(s.url), true));
 }
 
 export interface ModelProvider {

@@ -65,6 +65,8 @@ export interface AppState {
   providers: ProviderInfo[];
   connectors: ConnectorStatus[];
   keys: { anthropic: boolean; openai: boolean; gemini: boolean; openaiBaseUrl: string };
+  /** Let Lyra and its workers use the model's built-in web search. */
+  webSearch: boolean;
 }
 
 export interface MemoryView {
@@ -91,6 +93,7 @@ export interface SettingsPatch {
   /** A string sets a key, null removes it, missing leaves it alone. */
   keys?: Partial<Record<"anthropic" | "openai" | "gemini", string | null>>;
   openaiBaseUrl?: string;
+  webSearch?: boolean;
 }
 
 const SECRET_KEYS = ["anthropic", "openai", "gemini"] as const;
@@ -190,6 +193,7 @@ export class Lyra {
       userName: () => this.userName,
       timeZone: p.timeZone,
       onEvent: (e) => this.listeners.forEach((l) => l(e)),
+      webSearch: () => this.webSearch,
       flush: () => db.flush(),
     });
   }
@@ -217,6 +221,10 @@ export class Lyra {
 
   private tokenFor(id: GoogleId): TokenSource {
     return this.tokenSources.get(id)!;
+  }
+
+  get webSearch(): boolean {
+    return getSetting(this.db, "webSearch") !== "off";
   }
 
   get userName(): string {
@@ -249,11 +257,13 @@ export class Lyra {
         gemini: !!this.keys.gemini,
         openaiBaseUrl: this.keys.openaiBaseUrl ?? "",
       },
+      webSearch: this.webSearch,
     };
   }
 
   async saveSettings(patch: SettingsPatch): Promise<AppState> {
     if (patch.userName !== undefined) setSetting(this.db, "userName", patch.userName.trim().slice(0, 40));
+    if (patch.webSearch !== undefined) setSetting(this.db, "webSearch", patch.webSearch ? "on" : "off");
     for (const k of SECRET_KEYS) {
       const v = patch.keys?.[k];
       if (v === undefined) continue;
@@ -313,6 +323,7 @@ export class Lyra {
           provider,
           userName: this.userName,
           timeZone: this.p.timeZone,
+          webSearch: this.webSearch,
         },
         clean,
         emit,

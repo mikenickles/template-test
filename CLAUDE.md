@@ -19,6 +19,7 @@ The repo root also holds an Astro blog; Lyra is self-contained in `lyra/`.
 - Workers (Phase 4): `core/workers.ts` (worker_runs table, transcript per run); in-app agent loops, max 2 at once, 20 steps; read-only connector tools + log_progress/update_steps/ask_user/finish; resume interrupted runs on start.
 - Google sign-in: `android/.../GoogleAuthPlugin.java` (Play services Authorization API). Gmail, Calendar, Drive connectors each request only their .readonly scope; `grantIsReadOnly()` rejects any grant with other scopes.
 - Model-agnostic: `core/providers/` (Claude, OpenAI, Gemini, and a `fake` practice provider used by tests).
+- Web search: each provider's built-in search (Anthropic web_search tool, OpenAI Responses web_search, Gemini googleSearch); results mark the turn tainted; sources saved in message meta; Settings toggle.
 - Connectors are MCP servers run in-process over `InMemoryTransport`; tool names are allowlisted in `core/connectors/registry.ts`.
 - Outside content (email, web) is always wrapped with `wrapUntrusted()`; memory writes after reading it become suggestions.
 - Commands (run in `lyra/`): `npm test`, `npm run typecheck`, `npm run build`, `npm run dev`, `npm run smoke` (needs Playwright), `npm run android:apk` (needs Android SDK).

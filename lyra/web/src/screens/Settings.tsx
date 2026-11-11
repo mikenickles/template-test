@@ -115,6 +115,28 @@ export function Settings({
       </section>
 
       <section className="section">
+        <h2 className="section-label">Web</h2>
+        <div className="group">
+          <label className="item">
+            <span className="body">
+              <div className="title">Web search</div>
+              <div className="sub">Lyra and its workers can look things up with your model's built-in search. Each search adds a small fee on your model bill.</div>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              className="switch"
+              checked={state.webSearch}
+              disabled={busy}
+              onChange={(e) => run(() => api.saveSettings({ webSearch: e.target.checked }), e.target.checked ? "Web search on" : "Web search off")}
+            />
+          </label>
+        </div>
+        {provider === "fake" && <p className="hint">The practice model can't search. Pick Claude, OpenAI or Gemini.</p>}
+        {state.keys.openaiBaseUrl && provider === "openai" && <p className="hint">Your own model server doesn't support web search.</p>}
+      </section>
+
+      <section className="section">
         <h2 className="section-label">API keys</h2>
         <div className="keys">
           {KEY_FIELDS.map((k) => {
