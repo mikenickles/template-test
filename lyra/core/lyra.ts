@@ -337,7 +337,7 @@ export class Lyra {
     if (name.toLowerCase() === "main" || name.toLowerCase() === "everything") throw new Error(`"${name}" is taken by the main chat.`);
     const clash = findChannel(this.db, name);
     if (clash && clash.id !== current?.id) throw new Error(`There's already a ${clash.name} channel.`);
-    const about = cleanItem(input.about ?? current?.about ?? "").slice(0, 140);
+    const about = cleanItem(input.about ?? current?.about ?? "").slice(0, 280);
     const icon = (CHANNEL_ICONS as readonly string[]).includes(input.icon ?? "") ? input.icon! : (current?.icon ?? "star");
     return { name, about, icon };
   }

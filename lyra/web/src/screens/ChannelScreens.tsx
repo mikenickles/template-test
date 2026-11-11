@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, type ChannelView } from "../api";
 import { CHANNEL_ICON_NAMES, ChannelIcon, Pencil, Trash } from "../icons";
 import { ago, parse } from "../when";
@@ -69,7 +69,7 @@ function ChannelForm({
         id="ch-about"
         className="field"
         value={v.about}
-        maxLength={140}
+        maxLength={280}
         placeholder="One line, like “Rowan's 7th birthday party”"
         onChange={(e) => setV({ ...v, about: e.target.value })}
       />
@@ -105,28 +105,120 @@ function ChannelForm({
   );
 }
 
-export function NewChannel({ toast, onChange }: { toast: (m: string) => void; onChange: () => void }) {
+/** "New channel" as a dialog over the chat, opened from the menu. */
+export function NewChannelDialog({ onClose, onCreated, toast }: { onClose: () => void; onCreated: (id: number) => void; toast: (m: string) => void }) {
+  const [name, setName] = useState("");
+  const [about, setAbout] = useState("");
+  const [icon, setIcon] = useState("star");
+  const [picking, setPicking] = useState(false);
   const [busy, setBusy] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // let the dialog land before the keyboard opens
+    const t = setTimeout(() => nameRef.current?.focus(), 120);
+    const key = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    addEventListener("keydown", key);
+    return () => {
+      clearTimeout(t);
+      removeEventListener("keydown", key);
+    };
+  }, [onClose]);
+
+  const create = async () => {
+    if (!name.trim() || busy) return;
+    setBusy(true);
+    try {
+      const c = await api.createChannel({ name, about, icon });
+      onCreated(c.id);
+    } catch (e) {
+      toast((e as Error).message);
+      setBusy(false);
+    }
+  };
+
   return (
-    <div className="screen">
-      <h1 className="page-title">New channel</h1>
-      <p className="page-sub">A separate chat for one ongoing subject, with its own notebook. Lyra still remembers things about you in main memory.</p>
-      <ChannelForm
-        initial={{ name: "", about: "", icon: "star" }}
-        submitLabel="Create channel"
-        busy={busy}
-        onSubmit={async (v) => {
-          setBusy(true);
-          try {
-            const c = await api.createChannel(v);
-            onChange();
-            location.hash = `#/c/${c.id}`;
-          } catch (e) {
-            toast((e as Error).message);
-            setBusy(false);
-          }
+    <div className="dialog-layer" role="presentation">
+      <button className="dialog-scrim" aria-label="Cancel" tabIndex={-1} onClick={onClose} />
+      <form
+        className="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="nc-title"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void create();
         }}
-      />
+      >
+        <h2 id="nc-title" className="dialog-title">
+          New channel
+        </h2>
+
+        <div className="dialog-icon">
+          <span className="channel-badge lg">
+            <ChannelIcon name={icon} size={40} />
+          </span>
+          <button type="button" className="btn quiet" aria-expanded={picking} onClick={() => setPicking((v) => !v)}>
+            {picking ? "Done" : "Change icon"}
+          </button>
+        </div>
+        {picking && (
+          <div className="icon-grid" role="radiogroup" aria-label="Icon">
+            {CHANNEL_ICON_NAMES.map((n) => (
+              <button
+                key={n}
+                type="button"
+                role="radio"
+                aria-checked={icon === n}
+                aria-label={LABELS[n] ?? n}
+                className={`icon-choice${icon === n ? " on" : ""}`}
+                onClick={() => {
+                  setIcon(n);
+                  setPicking(false);
+                }}
+              >
+                <ChannelIcon name={n} size={22} />
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="float-field">
+          <input
+            id="nc-name"
+            ref={nameRef}
+            value={name}
+            maxLength={32}
+            placeholder=" "
+            onChange={(e) => setName(e.target.value)}
+            enterKeyHint="next"
+            autoCapitalize="words"
+          />
+          <label htmlFor="nc-name">Name</label>
+        </div>
+
+        <label className="field-label" htmlFor="nc-about" style={{ marginTop: 20 }}>
+          Purpose
+        </label>
+        <textarea
+          id="nc-about"
+          className="field area"
+          value={about}
+          maxLength={280}
+          rows={3}
+          placeholder="What should Lyra know about this channel?"
+          onChange={(e) => setAbout(e.target.value)}
+        />
+
+        <div className="dialog-actions">
+          <button type="button" className="btn quiet" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="btn ink" disabled={busy || !name.trim()}>
+            Create
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

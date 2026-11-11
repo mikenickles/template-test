@@ -5,7 +5,7 @@ import { Drawer } from "./Drawer";
 import { Back, ChannelIcon, MenuIcon } from "./icons";
 import { LyraMark } from "./LyraMark";
 import { Access } from "./screens/Access";
-import { ChannelInfo, NewChannel } from "./screens/ChannelScreens";
+import { ChannelInfo, NewChannelDialog } from "./screens/ChannelScreens";
 import { Chat } from "./screens/Chat";
 import { Memory } from "./screens/Memory";
 import { Settings } from "./screens/Settings";
@@ -13,7 +13,6 @@ import { Settings } from "./screens/Settings";
 export type Route =
   | { name: "chat"; channelId: number | null }
   | { name: "channel-info"; channelId: number }
-  | { name: "new-channel" }
   | { name: "access" }
   | { name: "memory" }
   | { name: "settings" };
@@ -22,7 +21,7 @@ export function readRoute(hash = location.hash): Route {
   const path = hash.replace(/^#\/?/, "").split("?")[0];
   const c = path.match(/^c\/(\d+)(\/info)?$/);
   if (c) return c[2] ? { name: "channel-info", channelId: Number(c[1]) } : { name: "chat", channelId: Number(c[1]) };
-  if (path === "new-channel" || path === "access" || path === "memory" || path === "settings") return { name: path };
+  if (path === "access" || path === "memory" || path === "settings") return { name: path };
   return { name: "chat", channelId: null };
 }
 
@@ -45,6 +44,9 @@ export function App() {
   const [state, setState] = useState<AppState | null>(null);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [drawer, setDrawer] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const creatingRef = useRef(creating);
+  creatingRef.current = creating;
   const [failed, setFailed] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const drawerRef = useRef(drawer);
@@ -64,6 +66,7 @@ export function App() {
   useEffect(() => {
     if (!isNative) return;
     const sub = CapApp.addListener("backButton", () => {
+      if (creatingRef.current) return setCreating(false);
       if (drawerRef.current) return setDrawer(false);
       const to = backFrom(readRoute());
       if (to) location.hash = to;
@@ -114,6 +117,7 @@ export function App() {
         onClose={() => setDrawer(false)}
         channels={channels}
         current={route.name === "chat" ? route.channelId : undefined}
+        onNewChannel={() => setCreating(true)}
       />
       <div className="shell" inert={drawer}>
         <header className="topbar">
@@ -162,7 +166,6 @@ export function App() {
         {route.name === "channel-info" && (
           <ChannelInfo key={route.channelId} id={route.channelId} toast={toast} onChange={refreshChannels} />
         )}
-        {route.name === "new-channel" && <NewChannel toast={toast} onChange={refreshChannels} />}
         {route.name === "access" && <Access state={state} setState={setState} toast={toast} />}
         {route.name === "memory" && <Memory toast={toast} channels={channels} />}
         {route.name === "settings" && <Settings state={state} setState={setState} toast={toast} />}
@@ -173,6 +176,17 @@ export function App() {
           </div>
         )}
       </div>
+      {creating && (
+        <NewChannelDialog
+          toast={toast}
+          onClose={() => setCreating(false)}
+          onCreated={(id) => {
+            setCreating(false);
+            setDrawer(false);
+            void refreshChannels().then(() => (location.hash = `#/c/${id}`));
+          }}
+        />
+      )}
       {/* tapping the slid-aside chat closes the menu */}
       <button className="shell-scrim" aria-label="Close menu" tabIndex={drawer ? 0 : -1} onClick={() => setDrawer(false)} />
     </div>

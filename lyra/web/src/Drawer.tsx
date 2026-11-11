@@ -12,12 +12,14 @@ export function Drawer({
   onClose,
   channels,
   current,
+  onNewChannel,
 }: {
   open: boolean;
   onClose: () => void;
   channels: Channel[];
   /** null = main chat, a number = that channel, undefined = not in a chat */
   current: number | null | undefined;
+  onNewChannel: () => void;
 }) {
   const panel = useRef<HTMLElement>(null);
 
@@ -61,12 +63,12 @@ export function Drawer({
           </li>
         ))}
         <li className="tree-add">
-          <a className="nav-item add" href="#/new-channel" onClick={onClose}>
+          <button type="button" className="nav-item add" onClick={onNewChannel}>
             <span className="nav-icon">
               <Plus size={24} />
             </span>
             <span className="nav-name">New channel</span>
-          </a>
+          </button>
         </li>
       </ul>
       {channels.length === 0 && (
