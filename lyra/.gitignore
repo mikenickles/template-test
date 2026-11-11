@@ -1,7 +1,7 @@
 node_modules/
 web/dist/
-.env
 smoke-shots/
-*.db
-*.db-wal
-*.db-shm
+.env
+# signing keys never go in this public repo
+*.keystore
+*.jks

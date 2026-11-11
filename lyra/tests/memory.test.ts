@@ -1,14 +1,12 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { openDb } from "../server/db.ts";
-import { addItem, cleanItem, listItems, MemoryStore, removeItem, templateMemory } from "../server/memory.ts";
+import { DB } from "../core/db.ts";
+import { addItem, cleanItem, listItems, MemoryStore, removeItem, templateMemory } from "../core/memory.ts";
+import { memStores, SQL } from "./helpers.ts";
 
-const fresh = () => {
-  const dir = mkdtempSync(join(tmpdir(), "lyra-mem-"));
-  const db = openDb(join(dir, "t.db"));
-  return { dir, db, store: new MemoryStore(db, join(dir, "memory.md"), "Sam") };
+const fresh = async () => {
+  const stores = memStores();
+  const db = await DB.open(SQL);
+  return { stores, db, store: await MemoryStore.open(db, stores.texts, "Sam") };
 };
 
 describe("memory file edits", () => {
@@ -52,37 +50,33 @@ describe("memory file edits", () => {
 });
 
 describe("MemoryStore", () => {
-  it("creates the file, snapshots every change, and restores", () => {
-    const { store } = fresh();
+  it("creates the file, snapshots every change, and restores", async () => {
+    const { store } = await fresh();
     const original = store.read();
-    const a = store.remember("People", "Rowan is 7");
+    const a = await store.remember("People", "Rowan is 7");
     expect(a.snapshotId).toBeTypeOf("number");
-    store.remember("Rules", "No calls after 8 PM");
+    await store.remember("Rules", "No calls after 8 PM");
     expect(store.history().map((h) => h.reason)).toEqual(["Saved to Rules: No calls after 8 PM", "Saved to People: Rowan is 7"]);
-    store.restore(a.snapshotId!);
+    await store.restore(a.snapshotId!);
     expect(store.read()).toBe(original);
   });
 
-  it("picks up hand edits on the next read", () => {
-    const { store } = fresh();
-    writeFileSync(store.path, store.read().replace("## Rules\n", "## Rules\n\n- Call me Sam\n"));
-    expect(listItems(store.read(), "Rules")).toEqual(["Call me Sam"]);
+  it("writes memory.md to the app's storage and reads it back on the next start", async () => {
+    const { stores, db, store } = await fresh();
+    await store.remember("Rules", "Call me Sam");
+    expect(stores.raw.texts.get("memory.md")).toContain("- Call me Sam");
+    const again = await MemoryStore.open(db, stores.texts, "Sam");
+    expect(listItems(again.read(), "Rules")).toEqual(["Call me Sam"]);
   });
 
-  it("holds suggestions until accepted", () => {
-    const { store } = fresh();
+  it("holds suggestions until accepted", async () => {
+    const { store } = await fresh();
     const id = store.addSuggestion("Open loops", "School form due Friday");
     expect(listItems(store.read(), "Open loops")).toEqual([]);
-    store.resolveSuggestion(id, true);
+    await store.resolveSuggestion(id, true);
     expect(listItems(store.read(), "Open loops")).toEqual(["School form due Friday"]);
     // answering twice does nothing more
-    store.resolveSuggestion(id, false);
+    await store.resolveSuggestion(id, false);
     expect(store.suggestionStatus(id)).toBe("saved");
-  });
-
-  it("writes the file with private permissions", () => {
-    const { store } = fresh();
-    store.remember("Rules", "x");
-    expect(readFileSync(store.path, "utf8")).toContain("- x");
   });
 });

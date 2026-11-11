@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { scopesAreReadOnly, GMAIL_READONLY } from "../server/connectors/google/oauth.ts";
-import { bodyText, htmlToText, renderThreadMessage, stripQuoted, summarizeListItem, type GmailMessage } from "../server/connectors/gmail/parse.ts";
-import { neutralize, wrapUntrusted } from "../server/untrusted.ts";
+import { scopesAreReadOnly, GMAIL_READONLY } from "../core/connectors/google.ts";
+import { bodyText, htmlToText, renderThreadMessage, stripQuoted, summarizeListItem, type GmailMessage } from "../core/connectors/gmail/parse.ts";
+import { neutralize, wrapUntrusted } from "../core/untrusted.ts";
 
 const b64 = (s: string) => Buffer.from(s).toString("base64url");
 

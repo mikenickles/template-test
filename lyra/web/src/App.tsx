@@ -1,5 +1,6 @@
+import { App as CapApp } from "@capacitor/app";
 import { useCallback, useEffect, useState } from "react";
-import { api, type AppState } from "./api";
+import { api, isNative, type AppState } from "./api";
 import { Back } from "./icons";
 import { LyraMark } from "./LyraMark";
 import { Access } from "./screens/Access";
@@ -29,6 +30,17 @@ export function App() {
     return () => removeEventListener("hashchange", on);
   }, []);
 
+  // Android back button: go back a screen, or leave the app from the chat.
+  useEffect(() => {
+    if (!isNative) return;
+    const sub = CapApp.addListener("backButton", () => {
+      const r = readRoute();
+      if (r === "chat") void CapApp.minimizeApp();
+      else location.hash = r === "memory" ? "#/access" : "#/";
+    });
+    return () => void sub.then((s) => s.remove());
+  }, []);
+
   useEffect(() => {
     api.state().then(setState, () => setFailed(true));
   }, [route]);
@@ -42,7 +54,7 @@ export function App() {
   if (failed && !state)
     return (
       <div className="center-load" style={{ padding: 24, textAlign: "center" }}>
-        Can't reach Lyra. Check that it's running on your computer, then reload.
+        Lyra couldn't start. Close the app and open it again.
       </div>
     );
   if (!state) return <div className="center-load">Loading…</div>;

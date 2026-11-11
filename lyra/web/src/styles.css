@@ -49,6 +49,9 @@
   --shadow: 0 1px 2px rgba(19, 20, 22, 0.04), 0 10px 30px rgba(19, 20, 22, 0.07);
   --content: 680px;
   --ease: 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* Capacitor injects --safe-area-inset-* on Android; browsers use env() */
+  --inset-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --inset-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
 
   color-scheme: light;
 }
@@ -160,7 +163,7 @@ a {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: calc(env(safe-area-inset-top) + var(--s3)) var(--s4) var(--s2);
+  padding: calc(var(--inset-top) + var(--s3)) var(--s4) var(--s2);
   background: var(--bg);
 }
 
@@ -616,7 +619,7 @@ body[data-busy] .orb .vega-halo {
 
 .composer {
   position: relative;
-  padding: var(--s2) var(--s4) calc(env(safe-area-inset-bottom) + var(--s3));
+  padding: var(--s2) var(--s4) calc(var(--inset-bottom) + var(--s3));
 }
 
 .composer-inner {
@@ -1163,7 +1166,7 @@ a.item {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(env(safe-area-inset-bottom) + 100px);
+  bottom: calc(var(--inset-bottom) + 100px);
   transform: translateX(-50%);
   z-index: 20;
   max-width: calc(100% - 32px);
@@ -1201,4 +1204,50 @@ a.item {
   .hello h1 {
     font-size: 52px;
   }
+}
+
+/* settings: fields with an inline action */
+
+.field-row {
+  display: flex;
+  gap: var(--s2);
+  align-items: center;
+}
+
+.field-row .field {
+  flex: 1;
+  min-width: 0;
+}
+
+.keys {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+.key-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s2);
+  margin-bottom: var(--s2);
+  font-weight: 550;
+}
+
+.key-where {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+button.item:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: var(--s2);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
 }

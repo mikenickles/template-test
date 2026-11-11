@@ -8,15 +8,19 @@
 
 ## Lyra (`lyra/`)
 
-Lyra is a personal AI chief-of-staff app, built in phases (see `lyra/README.md` for the phase table).
+Lyra is a personal AI chief-of-staff Android app, built in phases (see `lyra/README.md` for the phase table).
 The repo root also holds an Astro blog; Lyra is self-contained in `lyra/`.
 
-- TypeScript, Node 22. Server: Fastify + SQLite (better-sqlite3), run with `tsx`. App: React + Vite PWA in `lyra/web`.
-- Model-agnostic: `lyra/server/providers/` (Claude, OpenAI, Gemini, and a `fake` practice provider used by tests).
-- Connectors are MCP servers started over stdio; tool names are allowlisted in `connectors/registry.ts`.
+- Phone-only: a Capacitor 8 Android app (`lyra/android`, package `app.lyra.chief`); there is no server.
+- TypeScript. Logic in `lyra/core` (shared by the app and tests); screens in `lyra/web/src` (React + Vite).
+- Storage: SQLite via sql.js saved to app storage; API keys in Android Keystore (`@aparajita/capacitor-secure-storage`).
+- Gmail sign-in: `android/.../GoogleAuthPlugin.java` (Play services Authorization API, gmail.readonly only).
+- Model-agnostic: `core/providers/` (Claude, OpenAI, Gemini, and a `fake` practice provider used by tests).
+- Connectors are MCP servers run in-process over `InMemoryTransport`; tool names are allowlisted in `core/connectors/registry.ts`.
 - Outside content (email, web) is always wrapped with `wrapUntrusted()`; memory writes after reading it become suggestions.
-- Commands (run in `lyra/`): `npm test`, `npm run typecheck`, `npm run build`, `npm run dev`, `npm run smoke` (needs Playwright).
-- UI follows the house design tokens in `lyra/web/src/styles.css`; voice rules live in `lyra/server/voice.md`.
+- Commands (run in `lyra/`): `npm test`, `npm run typecheck`, `npm run build`, `npm run dev`, `npm run smoke` (needs Playwright), `npm run android:apk` (needs Android SDK).
+- This repo is public: never commit signing keys (`*.keystore`, `*.jks` are gitignored).
+- UI follows the design tokens in `lyra/web/src/styles.css`; voice rules live in `lyra/core/voice.md`.
 
 ## Getting Started
 

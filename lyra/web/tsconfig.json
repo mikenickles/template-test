@@ -4,6 +4,7 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "noEmit": true,
     "strict": true,
@@ -11,5 +12,5 @@
     "isolatedModules": true,
     "types": ["vite/client"]
   },
-  "include": ["src"]
+  "include": ["src", "../core"]
 }

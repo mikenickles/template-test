@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { fromAnthropicContent, toAnthropicMessages } from "../server/providers/anthropic.ts";
-import { fromGeminiParts, toGeminiContents } from "../server/providers/gemini.ts";
-import { toOpenAIMessages } from "../server/providers/openai.ts";
-import type { Msg } from "../server/providers/types.ts";
+import { fromAnthropicContent, toAnthropicMessages } from "../core/providers/anthropic.ts";
+import { fromGeminiParts, toGeminiContents } from "../core/providers/gemini.ts";
+import { toOpenAIMessages } from "../core/providers/openai.ts";
+import type { Msg } from "../core/providers/types.ts";
 
 const convo: Msg[] = [
   { role: "user", parts: [{ type: "text", text: "Any mail from school?" }] },
