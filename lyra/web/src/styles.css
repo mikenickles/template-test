@@ -372,14 +372,14 @@ body[data-busy] .orb .vega-halo {
   box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
-.reply > :first-child {
+.reply.headline > :first-child {
   font-size: 21px;
   line-height: 1.3;
   font-weight: 600;
   letter-spacing: -0.015em;
 }
 
-.reply > :first-child + * {
+.reply.headline > :first-child + * {
   margin-top: var(--s3);
 }
 

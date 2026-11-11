@@ -3,7 +3,7 @@ import { api, sendChat, type Channel, type MemoryNote, type Message, type TaskNo
 import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chevron, Minus, Spark, Stop, TasksIcon } from "../icons";
 import { STATUS_LABEL } from "./Tasks";
 import { StarChart, Thinking } from "../LyraMark";
-import { Markdown } from "../markdown";
+import { headline, Markdown } from "../markdown";
 import { clock, dayLabel, parse } from "../when";
 
 interface Pending {
@@ -202,7 +202,7 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
                   {m.role === "user" ? (
                     <div className="bubble">{m.content}</div>
                   ) : (
-                    <div className={`reply${m.meta.error ? " error" : ""}`}>
+                    <div className={`reply${m.meta.error ? " error" : headline(m.content) ? " headline" : ""}`}>
                       <Markdown text={m.content} />
                     </div>
                   )}
@@ -217,7 +217,7 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
           {pending && (
             <div className="row lyra">
               {pending.reply ? (
-                <div className="reply caret">
+                <div className={`reply caret${headline(pending.reply) ? " headline" : ""}`}>
                   <Markdown text={pending.reply} />
                 </div>
               ) : (
