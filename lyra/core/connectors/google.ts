@@ -1,4 +1,28 @@
 export const GMAIL_READONLY = "https://www.googleapis.com/auth/gmail.readonly";
+export const CALENDAR_READONLY = "https://www.googleapis.com/auth/calendar.readonly";
+export const DRIVE_READONLY = "https://www.googleapis.com/auth/drive.readonly";
+
+/** The only Google permissions Lyra will ever accept: reading, plus who you are. */
+const ALLOWED = new Set([
+  GMAIL_READONLY,
+  CALENDAR_READONLY,
+  DRIVE_READONLY,
+  "openid",
+  "email",
+  "profile",
+  "https://www.googleapis.com/auth/userinfo.email",
+  "https://www.googleapis.com/auth/userinfo.profile",
+]);
+
+/**
+ * A grant is usable only if it includes the scope we asked for and nothing
+ * that could change anything. Google can return earlier grants alongside
+ * the new one, so every scope in it is checked.
+ */
+export function grantIsReadOnly(scopes: string[] | string, required: string): boolean {
+  const granted = (Array.isArray(scopes) ? scopes : scopes.split(/\s+/)).filter(Boolean);
+  return granted.includes(required) && granted.every((s) => ALLOWED.has(s));
+}
 
 /** Any of these would let Lyra change or send mail. Phase 1 refuses a grant that carries one. */
 const WRITE_SCOPES = [
@@ -11,7 +35,7 @@ const WRITE_SCOPES = [
 
 export function scopesAreReadOnly(scopes: string[] | string): boolean {
   const granted = (Array.isArray(scopes) ? scopes : scopes.split(/\s+/)).filter(Boolean);
-  return granted.includes(GMAIL_READONLY) && !granted.some((s) => WRITE_SCOPES.includes(s));
+  return grantIsReadOnly(granted, GMAIL_READONLY) && !granted.some((s) => WRITE_SCOPES.includes(s));
 }
 
 export class NeedsConsentError extends Error {
@@ -47,7 +71,7 @@ export class TokenSource {
   async get(): Promise<string> {
     if (this.token && this.token.expires > Date.now()) return this.token.value;
     const r = await this.auth.authorize(this.scopes, false);
-    if (!scopesAreReadOnly(r.grantedScopes)) throw new Error("The Google grant is not read-only, so Lyra won't use it.");
+    if (!grantIsReadOnly(r.grantedScopes, this.scopes[0])) throw new Error("The Google grant is not read-only, so Lyra won't use it.");
     this.token = { value: r.accessToken, expires: Date.now() + 45 * 60_000 };
     return r.accessToken;
   }

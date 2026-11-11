@@ -7,38 +7,16 @@
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { NeedsConsentError, type TokenSource } from "../google.ts";
+import type { TokenSource } from "../google.ts";
+import { AUTH_EXPIRED, googleGet, type Params } from "../google-http.ts";
 import { renderThreadMessage, summarizeListItem, type GmailMessage } from "./parse.ts";
 
 const API = "https://gmail.googleapis.com/gmail/v1/users/me";
-export const AUTH_EXPIRED = "AUTH_EXPIRED";
-
-type Params = Record<string, string | number | string[]>;
+export { AUTH_EXPIRED };
 
 export function gmailClient(tokens: TokenSource, fetchFn: typeof fetch = fetch) {
-  return async function get<T>(path: string, params: Params = {}): Promise<T> {
-    const q = new URLSearchParams();
-    for (const [k, v] of Object.entries(params)) for (const item of Array.isArray(v) ? v : [v]) q.append(k, String(item));
-    const url = `${API}${path}${q.size ? `?${q}` : ""}`;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      let token: string;
-      try {
-        token = await tokens.get();
-      } catch (e) {
-        if (e instanceof NeedsConsentError) throw new Error(`${AUTH_EXPIRED}: ${e.message}`);
-        throw e;
-      }
-      const res = await fetchFn(url, { headers: { authorization: `Bearer ${token}` } });
-      if (res.status === 401) {
-        await tokens.invalidate();
-        if (attempt === 0) continue;
-        throw new Error(`${AUTH_EXPIRED}: Gmail refused the sign-in.`);
-      }
-      if (!res.ok) throw new Error(`Gmail said ${res.status}: ${(await res.text()).slice(0, 200)}`);
-      return (await res.json()) as T;
-    }
-    throw new Error(`${AUTH_EXPIRED}: Gmail refused the sign-in.`);
-  };
+  const g = googleGet(API, "Gmail", tokens, fetchFn);
+  return <T>(path: string, params: Params = {}) => g.json<T>(path, params);
 }
 
 const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });

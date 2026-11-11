@@ -3,6 +3,16 @@ import { api, type AppState, type ConnectorStatus } from "../api";
 import { Calendar, Chevron, File, Mail, Notebook, Plus } from "../icons";
 import { Orb } from "../LyraMark";
 
+type GoogleId = "gmail" | "calendar" | "drive";
+
+const ICONS: Record<GoogleId, ReactNode> = { gmail: <Mail />, calendar: <Calendar />, drive: <File /> };
+const NAMES: Record<GoogleId, string> = { gmail: "Gmail", calendar: "Google Calendar", drive: "Google Drive" };
+const PROMISE: Record<GoogleId, string> = {
+  gmail: "Lyra can now read your mail. It can't send, delete or change anything.",
+  calendar: "Lyra can now see your schedule. It can't add, change or answer events.",
+  drive: "Lyra can now find and read your files. It can't change, share or delete them.",
+};
+
 export function Access({
   state,
   setState,
@@ -13,9 +23,10 @@ export function Access({
   toast: (m: string) => void;
 }) {
   const [memCount, setMemCount] = useState<number | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<GoogleId | null>(null);
   const [notice, setNotice] = useState<{ tone: "good" | "bad"; title: string; body: string } | null>(null);
-  const gmail = state.connectors.find((c) => c.id === "gmail")!;
+  const google = state.connectors.filter((c): c is ConnectorStatus & { id: GoogleId } => c.id in ICONS);
+  const unavailable = google.some((c) => c.state === "unavailable");
 
   useEffect(() => {
     api
@@ -24,24 +35,24 @@ export function Access({
       .catch(() => {});
   }, []);
 
-  const connect = async () => {
-    setBusy(true);
+  const connect = async (id: GoogleId) => {
+    setBusy(id);
     try {
-      setState(await api.connectGmail());
-      setNotice({ tone: "good", title: "Gmail is connected", body: "Lyra can now read your mail. It can't send, delete or change anything." });
+      setState(await api.connectGoogle(id));
+      setNotice({ tone: "good", title: `${NAMES[id]} is connected`, body: PROMISE[id] });
     } catch (e) {
-      setNotice({ tone: "bad", title: "Gmail didn't connect", body: (e as Error).message });
+      setNotice({ tone: "bad", title: `${NAMES[id]} didn't connect`, body: (e as Error).message });
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
 
-  const disconnect = async () => {
-    if (!confirm("Disconnect Gmail? Lyra will stop being able to read your mail.")) return;
+  const disconnect = async (id: GoogleId) => {
+    if (!confirm(`Disconnect ${NAMES[id]}? Lyra will stop being able to use it.`)) return;
     try {
-      setState(await api.disconnectGmail());
+      setState(await api.disconnectGoogle(id));
       setNotice(null);
-      toast("Gmail disconnected");
+      toast(`${NAMES[id]} disconnected`);
     } catch (e) {
       toast((e as Error).message);
     }
@@ -65,11 +76,12 @@ export function Access({
       <section className="section">
         <h2 className="section-label">What Lyra has access to</h2>
         <div className="group">
-          <MailRow c={gmail} busy={busy} onConnect={connect} onDisconnect={disconnect} />
-          <Soon icon={<Calendar />} title="Calendar" when="Coming in phase 5" />
-          <Soon icon={<File />} title="Files and docs" when="Coming in phase 5" />
+          {google.map((c) => (
+            <ConnectorRow key={c.id} c={c} busy={busy === c.id} onConnect={() => connect(c.id)} onDisconnect={() => disconnect(c.id)} />
+          ))}
         </div>
-        {gmail.state === "unavailable" && <p className="hint">Gmail works in the Android app. This browser preview can't sign in to Google.</p>}
+        <p className="hint">Read-only, always. Lyra asks Google only for permission to look, and refuses anything more.</p>
+        {unavailable && <p className="hint">Google sign-in works in the Android app. This browser preview can't connect.</p>}
       </section>
 
       <section className="section">
@@ -93,24 +105,22 @@ export function Access({
   );
 }
 
-function MailRow({
+function ConnectorRow({
   c,
   busy,
   onConnect,
   onDisconnect,
 }: {
-  c: ConnectorStatus;
+  c: ConnectorStatus & { id: GoogleId };
   busy: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
 }) {
   const body = (sub: string, tone = "", on = false) => (
     <>
-      <span className={`tile${on ? " on" : ""}`}>
-        <Mail />
-      </span>
+      <span className={`tile${on ? " on" : ""}`}>{ICONS[c.id]}</span>
       <span className="body">
-        <div className="title">Mail</div>
+        <div className="title">{c.label}</div>
         <div className={`sub ${tone}`}>{sub}</div>
       </span>
     </>
@@ -119,7 +129,7 @@ function MailRow({
   if (c.state === "connected")
     return (
       <div className="item">
-        {body(`Can read your mail${c.account ? ` · ${c.account}` : ""}`, "", true)}
+        {body(`${c.access}${c.account ? ` · ${c.account}` : ""}`, "", true)}
         <button className="btn quiet" onClick={onDisconnect}>
           Disconnect
         </button>
@@ -135,7 +145,7 @@ function MailRow({
   if (c.state === "not_connected")
     return (
       <button className="item" onClick={onConnect} disabled={busy}>
-        {body(busy ? "Opening Google sign-in…" : "Connect Gmail, read-only")}
+        {body(busy ? "Opening Google sign-in…" : `Connect ${NAMES[c.id]}, read-only`)}
         <span className="tile empty">
           <Plus />
         </span>
@@ -145,18 +155,6 @@ function MailRow({
     <div className="item">
       {body("Needs the Android app")}
       <span className="pill">Phone only</span>
-    </div>
-  );
-}
-
-function Soon({ icon, title, when }: { icon: ReactNode; title: string; when: string }) {
-  return (
-    <div className="item">
-      <span className="tile">{icon}</span>
-      <span className="body">
-        <div className="title">{title}</div>
-        <div className="sub">{when}</div>
-      </span>
     </div>
   );
 }

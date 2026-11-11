@@ -79,7 +79,7 @@ try {
 
   await page.getByRole("link", { name: "What Lyra can access" }).click();
   await page.getByText("What Lyra has access to").waitFor();
-  check((await page.getByText("Needs the Android app").count()) === 1, "browser preview says Gmail needs the Android app");
+  check((await page.getByText("Needs the Android app").count()) === 3, "browser preview says Google connections need the Android app");
   await shot("light-3-access");
 
   await page.getByRole("link", { name: /Memory/ }).click();

@@ -2,16 +2,16 @@
 
 Lyra is a personal chief of staff that lives in an Android app. You text it like a trusted assistant; it answers short, leads with the point, and remembers what matters. Everything runs on your phone: there's no server or computer to keep running.
 
-This is **Phase 4**: the main chat, memory, Gmail (read-only), channels, tasks, and background workers.
+This is **Phase 5**: the main chat, memory, channels, tasks, background workers, and read-only Gmail, Google Calendar and Google Drive.
 
 | Phase | What it adds | Status |
 | --- | --- | --- |
 | 1 | Main chat, memory, Gmail read-only | Done |
 | 2 | Channels (Home, Rowan, Games…) | Done |
 | 3 | Tasks page | Done |
-| 4 | Background workers | **Here** |
-| 5 | Calendar and Drive, read-only | Next |
-| 6 | Routines (7am brief, check-ins, watches) | |
+| 4 | Background workers | Done |
+| 5 | Calendar and Drive, read-only | **Here** |
+| 6 | Routines (7am brief, check-ins, watches) | Next |
 | 7 | Approvals, then the first actions that send or book | |
 
 ## What Phase 1 does
@@ -37,6 +37,13 @@ This is **Phase 4**: the main chat, memory, Gmail (read-only), channels, tasks, 
 - **Lyra keeps them.** Hand Lyra something bigger than a quick answer and it adds a task; it marks it Ready for you (with the one question it needs answered) or Done as you talk. A note under the reply links to the task. In a channel, tasks land in that channel, and the channel's page lists its open tasks.
 - **Up next** is for tasks you're tracking but nobody is working on yet.
 - **Safe with email.** In a reply where Lyra read an email, it can't create or change a task; it tells you what it would do and waits for your yes.
+
+### Calendar and Drive (Phase 5)
+
+- **Calendar:** Lyra (and its workers) can see your events across your calendars: times in your time zone, where, who's coming, and whether you've answered an invite. It can't add, change or answer events.
+- **Files:** Lyra can search your Google Drive and read Docs, Sheets (as a table), Slides and text files. It can't read PDFs or images yet, and it can't change, share or delete anything.
+- **Same safety rules as mail.** Each asks Google only for its read-only permission, and Lyra refuses a grant that carries anything more. Event notes and file contents are treated as outside data, never instructions.
+- Disconnecting one keeps the others; Lyra's access is removed at Google when you disconnect the last one.
 
 ### Background workers (Phase 4)
 
@@ -82,22 +89,30 @@ With no key, pick **Practice** to click around.
 
 > **About updates.** Builds are signed with a key that is not in this repository (it's public). To install an update over your current app and keep your chats, the new build must be signed with the same key: attach your `lyra-signing-key.txt` when you ask for a build in a new session. A build signed with a different key won't install until you uninstall the old app, which deletes your data.
 
-## Connect Gmail
+## Connect Gmail, Calendar and Drive
 
 Google needs you to register Lyra once. It takes about ten minutes.
 
 1. Go to <https://console.cloud.google.com/> and create a project (for example "Lyra").
-2. **APIs & Services → Library**: enable the **Gmail API**.
+2. **APIs & Services → Library**: enable the **Gmail API**, the **Google Calendar API** and the **Google Drive API**. (Already set up for Gmail? Just enable the other two.)
 3. **APIs & Services → OAuth consent screen**: choose **External**, fill in the app name and your email, and add yourself under **Test users**.
 4. **APIs & Services → Credentials → Create credentials → OAuth client ID**:
    - Application type: **Android**
    - Package name: `app.lyra.chief`
    - SHA-1 certificate fingerprint: `5C:FE:1D:91:49:21:44:2F:E3:0F:EE:EC:62:9B:5A:BC:21:CF:F4:FB`
-5. In Lyra, tap the Lyra mark at the top of the chat, then **Mail**, and approve read-only access.
+5. In Lyra, tap the Lyra mark at the top of the chat, then **Mail**, **Calendar** or **Files**, and approve read-only access. Each one is asked for separately.
 
 There's no client ID or secret to paste: Google recognizes the app by its package name and signing fingerprint. If you install a build signed with a different key, add its fingerprint as another Android client.
 
 While the Google project is in **Testing** mode, Google expires the approval after 7 days. Lyra shows Mail as needing a reconnect; tap it and approve again.
+
+## Try Phase 5
+
+1. In the Google Cloud project you made for Gmail, enable the **Google Calendar API** and **Google Drive API**.
+2. Install `Lyra-phase5.apk` over your current app. Tap the Lyra mark, then connect **Calendar** and **Files**.
+3. Ask "What's on this weekend?" and "Am I free Thursday afternoon?"
+4. Ask "Find my notes about Rowan's party in Drive and tell me what's left to do."
+5. Hand off something that needs all three: "Check my calendar, mail and files and tell me everything happening for Rowan's party."
 
 ## Try Phase 4
 

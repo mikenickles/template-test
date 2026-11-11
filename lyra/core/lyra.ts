@@ -3,10 +3,13 @@
  * database, memory, model choice, API keys and connectors. It runs inside
  * the Android app; tests and the browser preview run the same code.
  */
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SqlJsStatic } from "sql.js";
 import { CHANNEL_ICONS, runTurn, type TurnEmitter, type Workspace } from "./chat.ts";
 import { createGmailServer, gmailProfile } from "./connectors/gmail/server.ts";
-import { GMAIL_READONLY, scopesAreReadOnly, TokenSource, type GoogleAuth } from "./connectors/google.ts";
+import { createCalendarServer } from "./connectors/calendar/server.ts";
+import { createDriveServer } from "./connectors/drive/server.ts";
+import { CALENDAR_READONLY, DRIVE_READONLY, GMAIL_READONLY, grantIsReadOnly, TokenSource, type GoogleAuth } from "./connectors/google.ts";
 import { Connectors, type ConnectorStatus } from "./connectors/registry.ts";
 import {
   DB,
@@ -92,6 +95,47 @@ export interface SettingsPatch {
 
 const SECRET_KEYS = ["anthropic", "openai", "gemini"] as const;
 
+export type GoogleId = "gmail" | "calendar" | "drive";
+
+/** Lyra's Google connectors. Each asks for one read-only permission. */
+const GOOGLE: {
+  id: GoogleId;
+  label: string;
+  noun: string;
+  access: string;
+  scope: string;
+  allow: string[];
+  labels: Record<string, string>;
+}[] = [
+  {
+    id: "gmail",
+    label: "Mail",
+    noun: "mail",
+    access: "Can read your mail",
+    scope: GMAIL_READONLY,
+    allow: ["search_mail", "read_thread"],
+    labels: { search_mail: "Searching your mail", read_thread: "Reading the thread" },
+  },
+  {
+    id: "calendar",
+    label: "Calendar",
+    noun: "calendar",
+    access: "Can see your schedule",
+    scope: CALENDAR_READONLY,
+    allow: ["list_events", "list_calendars"],
+    labels: { list_events: "Checking your calendar", list_calendars: "Checking your calendars" },
+  },
+  {
+    id: "drive",
+    label: "Files",
+    noun: "Drive",
+    access: "Can read your files",
+    scope: DRIVE_READONLY,
+    allow: ["search_files", "read_file"],
+    labels: { search_files: "Searching your files", read_file: "Reading the file" },
+  },
+];
+
 interface GmailLink {
   email?: string;
   connected_at: string;
@@ -101,7 +145,7 @@ export class Lyra {
   private keys: Keys = {};
   private running: AbortController | undefined;
   private connectors: Connectors;
-  private tokens: TokenSource;
+  private tokenSources = new Map<GoogleId, TokenSource>();
   private notebooks = new Map<number, Promise<Notebook>>();
   private workspace: Workspace;
   readonly workers: Workers;
@@ -119,20 +163,25 @@ export class Lyra {
       createChannel: (input) => this.createChannel(input),
       startTask: (id, note) => void this.workers.start(id, "lyra", note),
     };
-    this.tokens = new TokenSource(p.google, [GMAIL_READONLY]);
-    this.connectors = new Connectors([
-      {
-        id: "gmail",
-        label: "Mail",
-        access: "Can read your mail",
-        allow: ["search_mail", "read_thread"],
-        labels: { search_mail: "Searching your mail", read_thread: "Reading the thread" },
+    for (const g of GOOGLE) this.tokenSources.set(g.id, new TokenSource(p.google, [g.scope]));
+    const servers: Record<GoogleId, () => McpServer> = {
+      gmail: () => createGmailServer(this.tokenFor("gmail"), this.fetch),
+      calendar: () => createCalendarServer(this.tokenFor("calendar"), this.fetch, p.timeZone),
+      drive: () => createDriveServer(this.tokenFor("drive"), this.fetch),
+    };
+    this.connectors = new Connectors(
+      GOOGLE.map((g) => ({
+        id: g.id,
+        label: g.label,
+        access: g.access,
+        allow: g.allow,
+        labels: g.labels,
         available: () => p.google.available,
-        connected: () => !!this.gmail(),
-        account: () => this.gmail()?.email,
-        server: () => createGmailServer(this.tokens, this.fetch),
-      },
-    ]);
+        connected: () => !!this.link(g.id),
+        account: () => this.link(g.id)?.email,
+        server: servers[g.id],
+      })),
+    );
     this.workers = new Workers({
       db,
       workspace: this.workspace,
@@ -161,9 +210,13 @@ export class Lyra {
     return this.p.fetch ?? ((...a) => fetch(...a));
   }
 
-  private gmail(): GmailLink | undefined {
-    const raw = getSetting(this.db, "gmail");
+  private link(id: GoogleId): GmailLink | undefined {
+    const raw = getSetting(this.db, id);
     return raw ? (JSON.parse(raw) as GmailLink) : undefined;
+  }
+
+  private tokenFor(id: GoogleId): TokenSource {
+    return this.tokenSources.get(id)!;
   }
 
   get userName(): string {
@@ -482,36 +535,57 @@ export class Lyra {
     return this.workers.isRunning(id) ? (this.workers.activity.get(id) ?? "Working") : undefined;
   }
 
-  // ---------- Gmail ----------
+  // ---------- Google (Mail, Calendar, Drive) ----------
 
-  async connectGmail(): Promise<AppState> {
-    if (!this.p.google.available) throw new Error("Gmail sign-in works in the Android app.");
-    const r = await this.p.google.authorize([GMAIL_READONLY], true);
-    if (!scopesAreReadOnly(r.grantedScopes)) throw new Error("Google granted more than read-only mail access, so Lyra didn't keep it.");
-    this.tokens.invalidate();
-    const email = r.email ?? (await gmailProfile(this.tokens, this.fetch));
-    setSetting(this.db, "gmail", JSON.stringify({ email, connected_at: new Date().toISOString() } satisfies GmailLink));
+  /** Ask Google for one service's read-only access. */
+  async connectGoogle(id: GoogleId): Promise<AppState> {
+    const g = GOOGLE.find((x) => x.id === id);
+    if (!g) throw new Error("Unknown connection.");
+    if (!this.p.google.available) throw new Error(`${g.label} sign-in works in the Android app.`);
+    const r = await this.p.google.authorize([g.scope], true);
+    if (!grantIsReadOnly(r.grantedScopes, g.scope)) throw new Error(`Google granted more than read-only ${g.noun} access, so Lyra didn't keep it.`);
+    await this.tokenFor(id).invalidate();
+    let email = r.email ?? GOOGLE.map((x) => this.link(x.id)?.email).find(Boolean);
+    if (!email && id === "gmail") email = await gmailProfile(this.tokenFor(id), this.fetch);
+    setSetting(this.db, id, JSON.stringify({ email, connected_at: new Date().toISOString() } satisfies GmailLink));
     await this.connectors.reset();
     await this.db.flush();
     return this.state();
   }
 
-  async disconnectGmail(): Promise<AppState> {
-    try {
-      const email = this.gmail()?.email;
-      if (email && this.p.google.revoke) await this.p.google.revoke([GMAIL_READONLY], email);
-      else {
-        const token = await this.tokens.get();
-        await this.fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token)}`, { method: "POST" });
+  /**
+   * Stop using one service. Google treats Lyra's access as one grant, so it's
+   * only revoked at Google when the last service is disconnected.
+   */
+  async disconnectGoogle(id: GoogleId): Promise<AppState> {
+    const g = GOOGLE.find((x) => x.id === id);
+    if (!g) throw new Error("Unknown connection.");
+    const others = GOOGLE.filter((x) => x.id !== id && this.link(x.id));
+    if (!others.length) {
+      try {
+        const email = this.link(id)?.email;
+        if (email && this.p.google.revoke) await this.p.google.revoke([g.scope], email);
+        else {
+          const token = await this.tokenFor(id).get();
+          await this.fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token)}`, { method: "POST" });
+        }
+      } catch {
+        /* already signed out or offline: forgetting locally is still right */
       }
-    } catch {
-      /* already signed out or offline: forgetting locally is still right */
     }
-    this.tokens.invalidate();
-    this.db.run("DELETE FROM settings WHERE key = 'gmail'");
+    await this.tokenFor(id).invalidate();
+    this.db.run("DELETE FROM settings WHERE key = ?", [id]);
     await this.connectors.reset();
     await this.db.flush();
     return this.state();
+  }
+
+  connectGmail(): Promise<AppState> {
+    return this.connectGoogle("gmail");
+  }
+
+  disconnectGmail(): Promise<AppState> {
+    return this.disconnectGoogle("gmail");
   }
 
   /** Save everything now (the app calls this when it goes to the background). */

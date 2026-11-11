@@ -86,6 +86,8 @@ export const api = {
   taskActivity: async (id: number) => (await ready).taskActivity(id),
   connectGmail: async () => (await ready).connectGmail(),
   disconnectGmail: async () => (await ready).disconnectGmail(),
+  connectGoogle: async (id: "gmail" | "calendar" | "drive") => (await ready).connectGoogle(id),
+  disconnectGoogle: async (id: "gmail" | "calendar" | "drive") => (await ready).disconnectGoogle(id),
 };
 
 export interface StreamHandlers {
