@@ -89,7 +89,8 @@ try {
   // ---- channels ----
   await page.goto(`${base}/#/`);
   await page.getByRole("button", { name: "Channels" }).click();
-  await page.locator(".drawer.open").waitFor();
+  await page.locator(".app.drawer-open").waitFor();
+  await page.waitForTimeout(350);
   await shot("light-6-drawer-empty");
   await page.getByRole("link", { name: "New channel" }).click();
   await page.getByLabel("Name").fill("Rowan");
@@ -108,9 +109,25 @@ try {
   await shot("light-9-channel-chat");
 
   await page.getByRole("button", { name: "Channels" }).click();
-  await page.locator(".drawer.open").waitFor();
-  check((await page.locator(".drawer .nav-item", { hasText: "Rowan" }).count()) === 1, "drawer lists the channel");
+  await page.locator(".app.drawer-open").waitFor();
+  await page.waitForTimeout(350);
+  check((await page.locator(".drawer-panel .nav-item", { hasText: "Rowan" }).count()) === 1, "drawer lists the channel");
+  await page.getByRole("link", { name: "New channel" }).click();
+  await page.getByLabel("Name").fill("Home");
+  await page.getByRole("radio", { name: "Home" }).click();
+  await page.getByRole("button", { name: "Create channel" }).click();
+  await page.getByRole("heading", { name: "Home" }).waitFor();
+  await page.goto(`${base}/#/c/1`);
+  await page.getByText("bounce house").waitFor();
+  await page.getByRole("button", { name: "Channels" }).click();
+  await page.locator(".app.drawer-open").waitFor();
+  await page.waitForTimeout(350);
   await shot("light-10-drawer");
+  await page.locator(".shell-scrim").click({ position: { x: 40, y: 400 } });
+  await page.waitForSelector(".app:not(.drawer-open)");
+  check(true, "tapping the chat closes the drawer");
+  await page.getByRole("button", { name: "Channels" }).click();
+  await page.locator(".app.drawer-open").waitFor();
   await page.getByRole("link", { name: /Everything/ }).click();
   await page.waitForTimeout(300);
   check((await page.locator(".bubble").count()) === 2, "main chat keeps its own history");
@@ -125,7 +142,8 @@ try {
   await page.getByText("bounce house").waitFor();
   await shot("dark-9-channel-chat");
   await page.getByRole("button", { name: "Channels" }).click();
-  await page.locator(".drawer.open").waitFor();
+  await page.locator(".app.drawer-open").waitFor();
+  await page.waitForTimeout(350);
   await shot("dark-10-drawer");
   await page.emulateMedia({ colorScheme: "light" });
 
@@ -134,7 +152,7 @@ try {
   await page.getByRole("button", { name: "Delete channel" }).click();
   await page.getByText("Hi Sam, I'm Lyra.").or(page.locator(".bubble").first()).waitFor();
   await page.getByRole("button", { name: "Channels" }).click();
-  check((await page.locator(".drawer .nav-item", { hasText: "Rowan" }).count()) === 0, "deleting a channel removes it");
+  check((await page.locator(".drawer-panel .nav-item", { hasText: "Rowan" }).count()) === 0, "deleting a channel removes it");
   await page.keyboard.press("Escape");
 
   await page.emulateMedia({ colorScheme: "dark" });

@@ -54,7 +54,7 @@ export function App() {
     const on = () => {
       setRoute(readRoute());
       setDrawer(false);
-      window.scrollTo(0, 0);
+      document.querySelector(".shell")?.scrollTo(0, 0);
     };
     addEventListener("hashchange", on);
     return () => removeEventListener("hashchange", on);
@@ -72,7 +72,14 @@ export function App() {
     return () => void sub.then((s) => s.remove());
   }, []);
 
-  const refreshChannels = useCallback(() => api.channels().then(setChannels).catch(() => {}), []);
+  const refreshChannels = useCallback(
+    () =>
+      api
+        .channels()
+        .then(setChannels)
+        .catch(() => {}),
+    [],
+  );
 
   useEffect(() => {
     api.state().then(setState, () => setFailed(true));
@@ -100,65 +107,73 @@ export function App() {
   const back = backFrom(route);
 
   return (
-    <div className="shell">
-      <header className="topbar">
-        {inChat ? (
-          <button
-            className="ring"
-            aria-label="Channels"
-            aria-expanded={drawer}
-            onClick={() => {
-              void refreshChannels();
-              setDrawer(true);
-            }}
-          >
-            <MenuIcon />
-          </button>
-        ) : (
-          <a className="ring" href={back ?? "#/"} aria-label="Back">
-            <Back />
-          </a>
-        )}
-        {inChat && !channel && (
-          <a className="orb orb-sm" href="#/access" aria-label="What Lyra can access">
-            <LyraMark />
-          </a>
-        )}
-        {inChat && channel && (
-          <a className="channel-chip" href={`#/c/${channel.id}/info`} aria-label={`${channel.name}: channel details`}>
-            <ChannelIcon name={channel.icon} size={18} />
-            <span>{channel.name}</span>
-          </a>
-        )}
-        {!inChat && <span />}
-        {inChat ? (
-          <a className="ring initial" href="#/settings" aria-label="Settings">
-            {initial}
-          </a>
-        ) : (
-          <span />
-        )}
-      </header>
+    <div className={`app${drawer ? " drawer-open" : ""}`}>
+      <Drawer
+        open={drawer}
+        onClose={() => setDrawer(false)}
+        channels={channels}
+        current={route.name === "chat" ? route.channelId : undefined}
+      />
+      <div className="shell" inert={drawer}>
+        <header className="topbar">
+          {inChat ? (
+            <button
+              className="ring"
+              aria-label="Channels"
+              aria-expanded={drawer}
+              onClick={() => {
+                void refreshChannels();
+                setDrawer(true);
+              }}
+            >
+              <MenuIcon />
+            </button>
+          ) : (
+            <a className="ring" href={back ?? "#/"} aria-label="Back">
+              <Back />
+            </a>
+          )}
+          {inChat && !channel && (
+            <a className="orb orb-sm" href="#/access" aria-label="What Lyra can access">
+              <LyraMark />
+            </a>
+          )}
+          {inChat && channel && (
+            <a className="channel-chip" href={`#/c/${channel.id}/info`} aria-label={`${channel.name}: channel details`}>
+              <ChannelIcon name={channel.icon} size={18} />
+              <span>{channel.name}</span>
+            </a>
+          )}
+          {!inChat && <span />}
+          {inChat ? (
+            <a className="ring initial" href="#/settings" aria-label="Settings">
+              {initial}
+            </a>
+          ) : (
+            <span />
+          )}
+        </header>
 
-      {route.name === "chat" && !channelMissing && (
-        <Chat key={route.channelId ?? "main"} userName={state.userName} toast={toast} channel={channel ?? null} />
-      )}
-      {channelMissing && <div className="center-load">Loading…</div>}
-      {route.name === "channel-info" && (
-        <ChannelInfo key={route.channelId} id={route.channelId} toast={toast} onChange={refreshChannels} />
-      )}
-      {route.name === "new-channel" && <NewChannel toast={toast} onChange={refreshChannels} />}
-      {route.name === "access" && <Access state={state} setState={setState} toast={toast} />}
-      {route.name === "memory" && <Memory toast={toast} channels={channels} />}
-      {route.name === "settings" && <Settings state={state} setState={setState} toast={toast} />}
+        {route.name === "chat" && !channelMissing && (
+          <Chat key={route.channelId ?? "main"} userName={state.userName} toast={toast} channel={channel ?? null} />
+        )}
+        {channelMissing && <div className="center-load">Loading…</div>}
+        {route.name === "channel-info" && (
+          <ChannelInfo key={route.channelId} id={route.channelId} toast={toast} onChange={refreshChannels} />
+        )}
+        {route.name === "new-channel" && <NewChannel toast={toast} onChange={refreshChannels} />}
+        {route.name === "access" && <Access state={state} setState={setState} toast={toast} />}
+        {route.name === "memory" && <Memory toast={toast} channels={channels} />}
+        {route.name === "settings" && <Settings state={state} setState={setState} toast={toast} />}
 
-      <Drawer open={drawer} onClose={() => setDrawer(false)} channels={channels} current={route.name === "chat" ? route.channelId : undefined} />
-
-      {toastMsg && (
-        <div className="toast" role="status">
-          {toastMsg}
-        </div>
-      )}
+        {toastMsg && (
+          <div className="toast" role="status">
+            {toastMsg}
+          </div>
+        )}
+      </div>
+      {/* tapping the slid-aside chat closes the menu */}
+      <button className="shell-scrim" aria-label="Close menu" tabIndex={drawer ? 0 : -1} onClick={() => setDrawer(false)} />
     </div>
   );
 }

@@ -26,6 +26,13 @@
   --orb-line: rgba(243, 241, 234, 0.42);
   --orb-star: #f3f1ea;
   --chart-line: #bdb8aa;
+  --drawer-w: min(82vw, 340px);
+  --drawer-bg: #e8e5dc;
+  --drawer-hover: rgba(19, 20, 22, 0.04);
+  --drawer-active: rgba(19, 20, 22, 0.07);
+  --drawer-active-edge: rgba(19, 20, 22, 0.22);
+  --tree-line: #c4bfb2;
+  --scrim: rgba(19, 20, 22, 0.32);
 
   --font: "Bricolage Grotesque Variable", "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
   --text-xs: 12px;
@@ -79,6 +86,12 @@
     --orb-line: rgba(236, 238, 241, 0.38);
     --orb-star: #eceef1;
     --chart-line: #3a404c;
+    --drawer-bg: #08090c;
+    --drawer-hover: rgba(236, 238, 241, 0.05);
+    --drawer-active: rgba(236, 238, 241, 0.09);
+    --drawer-active-edge: rgba(236, 238, 241, 0.2);
+    --tree-line: #343a45;
+    --scrim: rgba(0, 0, 0, 0.45);
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
     color-scheme: dark;
   }
@@ -1310,49 +1323,69 @@ button.item:disabled {
   margin-bottom: 0;
 }
 
-/* drawer */
+/* drawer: sits behind the app; opening it slides the chat aside */
 
-.drawer {
+.app {
   position: fixed;
   inset: 0;
-  z-index: 30;
-  pointer-events: none;
+  overflow: hidden;
+  background: var(--drawer-bg);
 }
 
-.drawer.open {
-  pointer-events: auto;
-}
-
-.drawer .scrim {
+.app > .shell {
   position: absolute;
   inset: 0;
-  background: rgba(10, 11, 14, 0.42);
+  overflow-y: auto;
+  overscroll-behavior-y: none;
+  background: var(--bg);
+  transition:
+    transform 320ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    border-radius 320ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  will-change: transform;
+}
+
+.app.drawer-open > .shell {
+  transform: translateX(var(--drawer-w));
+  border-radius: 36px;
+  overflow: hidden;
+  box-shadow: -1px 0 0 var(--border), var(--shadow);
+}
+
+.shell-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  border-radius: 36px;
+  background: var(--scrim);
   opacity: 0;
-  transition: opacity var(--ease);
+  pointer-events: none;
+  transform: translateX(var(--drawer-w));
+  transition: opacity 320ms ease;
   cursor: default;
 }
 
-.drawer.open .scrim {
+.app.drawer-open .shell-scrim {
   opacity: 1;
+  pointer-events: auto;
 }
 
-.drawer .panel {
+.drawer-panel {
   position: absolute;
   inset: 0 auto 0 0;
-  width: min(84vw, 360px);
+  width: var(--drawer-w);
   display: flex;
   flex-direction: column;
-  gap: var(--s1);
-  padding: calc(var(--inset-top) + var(--s5)) var(--s3) calc(var(--inset-bottom) + var(--s5));
-  background: var(--bg);
-  border-right: 1px solid var(--border);
-  box-shadow: var(--shadow);
+  padding: calc(var(--inset-top) + var(--s6)) var(--s4) calc(var(--inset-bottom) + var(--s5)) var(--s4);
   overflow-y: auto;
-  transform: translateX(-102%);
-  transition: transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  opacity: 0;
+  transform: translateX(-16px);
+  transition:
+    opacity 260ms ease,
+    transform 320ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-.drawer.open .panel {
+.app.drawer-open .drawer-panel {
+  opacity: 1;
   transform: none;
 }
 
@@ -1360,7 +1393,7 @@ button.item:disabled {
   display: flex;
   align-items: center;
   gap: var(--s3);
-  padding: 0 var(--s3) var(--s5);
+  padding: 0 var(--s2) var(--s5);
 }
 
 .drawer-orb {
@@ -1370,56 +1403,46 @@ button.item:disabled {
 }
 
 .drawer-title {
-  font-size: var(--text-lg);
-  font-weight: 650;
+  font-size: 26px;
+  font-weight: 600;
   letter-spacing: -0.02em;
 }
 
-.drawer-label {
-  margin: var(--s5) var(--s3) var(--s2);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.drawer-empty {
-  margin: 0 var(--s3) var(--s3);
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}
-
-.channel-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.drawer-rule {
+  border: 0;
+  height: 1px;
+  background: var(--border);
+  margin: 0 var(--s2) var(--s5);
 }
 
 .nav-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--s3);
   min-height: 56px;
-  padding: var(--s2) var(--s3);
-  border-radius: var(--radius-sm);
+  padding: var(--s2) var(--s4) var(--s2) var(--s3);
+  border-radius: 999px;
+  border: 1px solid transparent;
   color: var(--text);
   text-decoration: none;
-  transition: background var(--ease);
+  transition: background var(--ease), border-color var(--ease);
 }
 
 .nav-item:hover {
-  background: var(--surface);
+  background: var(--drawer-hover);
 }
 
 .nav-item.active {
-  background: var(--surface);
-  box-shadow: inset 0 0 0 1px var(--border);
+  background: var(--drawer-active);
+  border-color: var(--drawer-active-edge);
 }
 
-.nav-item.active .nav-icon {
-  background: var(--accent);
-  color: var(--accent-ink);
+.nav-item.everything {
+  align-items: center;
+  border-radius: 22px;
+  padding-top: var(--s3);
+  padding-bottom: var(--s3);
 }
 
 .nav-item .body {
@@ -1431,18 +1454,34 @@ button.item:disabled {
 .nav-icon {
   flex: none;
   width: 36px;
-  height: 36px;
-  border-radius: 11px;
   display: grid;
   place-items: center;
-  background: var(--surface-2);
-  color: var(--text-muted);
+  color: var(--text);
+}
+
+.everything .nav-icon {
+  color: var(--accent-text);
 }
 
 .nav-name {
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 550;
   line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.everything .nav-sub {
+  white-space: normal;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.everything .nav-name {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .nav-sub {
@@ -1453,17 +1492,55 @@ button.item:disabled {
   white-space: nowrap;
 }
 
-.nav-item.everything {
-  min-height: 64px;
+/* channels hang off Everything, each on its own elbow */
+.tree {
+  list-style: none;
+  margin: var(--s1) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
 }
 
-.nav-item.add .nav-icon {
-  background: transparent;
-  border: 1.5px dashed var(--border);
+.tree li {
+  position: relative;
+  padding-left: 44px;
+}
+
+.tree .branch::before {
+  content: "";
+  position: absolute;
+  left: 30px;
+  top: -2px;
+  width: 16px;
+  height: 30px;
+  border-left: 1.5px solid var(--tree-line);
+  border-bottom: 1.5px solid var(--tree-line);
+  border-bottom-left-radius: 12px;
+}
+
+.tree-add {
+  margin-top: 0;
 }
 
 .nav-item.add .nav-name {
+  font-weight: 550;
+}
+
+.drawer-empty {
+  margin: var(--s3) var(--s3) 0 56px;
+  font-size: var(--text-sm);
   color: var(--text-muted);
+}
+
+.drawer-foot {
+  margin-top: auto;
+  align-self: flex-start;
+  width: 56px;
+  height: 56px;
+  background: var(--surface);
+  border-color: transparent;
+  box-shadow: var(--shadow);
 }
 
 /* channel form */
