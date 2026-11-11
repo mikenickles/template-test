@@ -15,6 +15,7 @@ The repo root also holds an Astro blog; Lyra is self-contained in `lyra/`.
 - TypeScript. Logic in `lyra/core` (shared by the app and tests); screens in `lyra/web/src` (React + Vite).
 - Storage: SQLite via sql.js saved to app storage; API keys in Android Keystore (`@aparajita/capacitor-secure-storage`).
 - Channels (Phase 2): `channels` table, per-channel messages, and a notebook per channel (`core/memory.ts` `Notebook`, scopes "main" / "channel:<id>").
+- Tasks (Phase 3): `core/tasks.ts` (tasks, task_steps, task_log tables); Lyra tools create_task / update_task / list_tasks, refused in email-tainted turns.
 - Gmail sign-in: `android/.../GoogleAuthPlugin.java` (Play services Authorization API, gmail.readonly only).
 - Model-agnostic: `core/providers/` (Claude, OpenAI, Gemini, and a `fake` practice provider used by tests).
 - Connectors are MCP servers run in-process over `InMemoryTransport`; tool names are allowlisted in `core/connectors/registry.ts`.

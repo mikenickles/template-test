@@ -86,6 +86,40 @@ try {
   await page.getByRole("heading", { name: "Memory" }).waitFor();
   await shot("light-4-memory");
 
+  // ---- tasks ----
+  await page.goto(`${base}/#/`);
+  await page.getByRole("link", { name: "Tasks" }).click();
+  await page.getByText("Nothing on your plate.").waitFor();
+  check(true, "tasks tab shows an empty state");
+  await page.getByRole("button", { name: "New task" }).click();
+  await page.getByLabel("Title").fill("Find a plumber for the kitchen leak");
+  await page.getByLabel("Details").fill("Before Monday, under $200");
+  await shot("light-12-new-task");
+  await page.getByRole("button", { name: "Add task" }).click();
+  await page.getByRole("heading", { name: "Find a plumber for the kitchen leak" }).waitFor();
+  check(true, "creates a task and opens it");
+  for (const step of ["Get three quotes", "Check reviews", "Book one"]) {
+    await page.getByLabel("Add a step").fill(step);
+    await page.getByLabel("Add a step").press("Enter");
+    await page.getByText(step, { exact: true }).waitFor();
+  }
+  await page.getByRole("button", { name: "Finish Get three quotes" }).click();
+  await page.getByText("You finished: Get three quotes").waitFor();
+  check(true, "steps can be added and checked, and the log records it");
+  await shot("light-13-task");
+  await page.getByRole("link", { name: "Back" }).click();
+  await page.getByText("1 of 3 steps").waitFor();
+  await shot("light-14-tasks");
+  await page.getByRole("button", { name: "Mark Find a plumber for the kitchen leak done" }).click();
+  await page.getByText("Nothing on your plate.").waitFor();
+  await page.getByRole("tab", { name: "Done" }).click();
+  await page.getByText("Find a plumber for the kitchen leak").waitFor();
+  check(true, "marking done moves a task to the Done tab");
+  await page.getByRole("tab", { name: "Active" }).click();
+  await page.getByRole("link", { name: "Chat" }).click();
+  await page.getByText("practice model").first().waitFor();
+  check(true, "Chat tab goes back to the chat");
+
   // ---- channels ----
   await page.goto(`${base}/#/`);
   await page.getByRole("button", { name: "Channels" }).click();

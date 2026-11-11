@@ -34,6 +34,7 @@ import {
   type ProviderInfo,
 } from "./providers/index.ts";
 import type { ModelProvider } from "./providers/types.ts";
+import * as T from "./tasks.ts";
 
 export interface SecretStore {
   get(key: string): Promise<string | null>;
@@ -385,6 +386,57 @@ export class Lyra {
   async restoreChannelNotebook(id: number, snapshotId: number): Promise<ChannelView> {
     await (await this.notebook(id)).restore(snapshotId);
     return this.channelView(id);
+  }
+
+  // ---------- tasks ----------
+
+  tasks(query: T.TaskQuery = {}): T.TaskRow[] {
+    return T.listTasks(this.db, query);
+  }
+
+  task(id: number): T.TaskDetail {
+    const d = T.taskDetail(this.db, id);
+    if (!d) throw new Error("That task no longer exists.");
+    return d;
+  }
+
+  taskCounts(): Record<T.TaskStatus, number> {
+    return T.taskCounts(this.db);
+  }
+
+  private async saved<R>(r: R): Promise<R> {
+    await this.db.flush();
+    return r;
+  }
+
+  async createTask(input: T.NewTask): Promise<T.TaskRow> {
+    return this.saved(T.createTask(this.db, input, "you"));
+  }
+
+  async updateTask(id: number, patch: T.TaskPatch): Promise<T.TaskDetail> {
+    T.updateTask(this.db, id, patch, "you");
+    return this.saved(this.task(id));
+  }
+
+  async addTaskStep(id: number, text: string): Promise<T.TaskDetail> {
+    if (!T.getTask(this.db, id)) throw new Error("That task no longer exists.");
+    T.addStep(this.db, id, text, true, "you");
+    return this.saved(this.task(id));
+  }
+
+  async setTaskStep(stepId: number, done: boolean): Promise<T.TaskDetail> {
+    const s = T.setStepDone(this.db, stepId, done, "you");
+    return this.saved(this.task(s.task_id));
+  }
+
+  async removeTaskStep(taskId: number, stepId: number): Promise<T.TaskDetail> {
+    T.removeStep(this.db, stepId);
+    return this.saved(this.task(taskId));
+  }
+
+  async deleteTask(id: number): Promise<void> {
+    T.deleteTask(this.db, id);
+    await this.db.flush();
   }
 
   // ---------- Gmail ----------

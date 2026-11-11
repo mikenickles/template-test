@@ -1,6 +1,7 @@
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { api, sendChat, type Channel, type MemoryNote, type Message } from "../api";
-import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Minus, Spark, Stop } from "../icons";
+import { api, sendChat, type Channel, type MemoryNote, type Message, type TaskNote } from "../api";
+import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chevron, Minus, Spark, Stop, TasksIcon } from "../icons";
+import { STATUS_LABEL } from "./Tasks";
 import { StarChart, Thinking } from "../LyraMark";
 import { Markdown } from "../markdown";
 import { clock, dayLabel, parse } from "../when";
@@ -23,16 +24,17 @@ interface ChatProps {
   userName: string;
   toast: (msg: string) => void;
   channel: Channel | null;
+  onTasksChanged?: () => void;
 }
 
 /** Skip re-rendering the whole conversation unless something it shows changed (e.g. while the menu slides). */
 export const Chat = memo(ChatView, (a, b) => {
   const same = (x: Channel | null, y: Channel | null) =>
     x === y || (!!x && !!y && x.id === y.id && x.name === y.name && x.icon === y.icon && x.about === y.about);
-  return a.userName === b.userName && a.toast === b.toast && same(a.channel, b.channel);
+  return a.userName === b.userName && a.toast === b.toast && a.onTasksChanged === b.onTasksChanged && same(a.channel, b.channel);
 });
 
-function ChatView({ userName, toast, channel }: ChatProps) {
+function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
   const channelId = channel?.id ?? null;
   const [messages, setMessages] = useState<Message[] | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -114,8 +116,10 @@ function ChatView({ userName, toast, channel }: ChatProps) {
         text: (d) => setPending((p) => p && { ...p, reply: p.reply + d, status: "" }),
         status: (label) => setPending((p) => p && { ...p, status: label }),
         memory: (note) => setPending((p) => p && { ...p, notes: [...p.notes, note] }),
-        done: (msg, user) =>
-          setMessages((m) => [...(m ?? []).map((x) => (x.id === temp.id && user ? user : x)), msg]),
+        done: (msg, user) => {
+          setMessages((m) => [...(m ?? []).map((x) => (x.id === temp.id && user ? user : x)), msg]);
+          if (msg.meta.tasks?.length) onTasksChanged?.();
+        },
       }, channelId);
     } catch (e) {
       setMessages((m) => (m ?? []).filter((x) => x.id !== temp.id));
@@ -203,6 +207,7 @@ function ChatView({ userName, toast, channel }: ChatProps) {
                     </div>
                   )}
                   {!!m.meta.memory?.length && <Notes notes={m.meta.memory} onAction={(i, a) => answerNote(m, i, a)} />}
+                  {!!m.meta.tasks?.length && <TaskNotes notes={m.meta.tasks} />}
                   <span className="sr-only">{clock(d)}</span>
                 </div>
               </Fragment>
@@ -313,6 +318,23 @@ function Notes({ notes, onAction }: { notes: MemoryNote[]; onAction?: (i: number
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function TaskNotes({ notes }: { notes: TaskNote[] }) {
+  return (
+    <div className="notes">
+      {notes.map((n, i) => (
+        <a className="note task-note" key={i} href={`#/t/${n.id}`}>
+          <TasksIcon size={16} />
+          <span className="what">
+            <b>{n.kind === "created" ? "Task added" : "Task updated"}</b> · {n.title}
+            {n.kind === "updated" && ` · ${STATUS_LABEL[n.status as keyof typeof STATUS_LABEL] ?? n.status}`}
+          </span>
+          <Chevron size={16} className="chev" />
+        </a>
+      ))}
     </div>
   );
 }

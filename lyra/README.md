@@ -2,14 +2,14 @@
 
 Lyra is a personal chief of staff that lives in an Android app. You text it like a trusted assistant; it answers short, leads with the point, and remembers what matters. Everything runs on your phone: there's no server or computer to keep running.
 
-This is **Phase 2**: the main chat, memory, Gmail (read-only), and channels.
+This is **Phase 3**: the main chat, memory, Gmail (read-only), channels, and tasks.
 
 | Phase | What it adds | Status |
 | --- | --- | --- |
 | 1 | Main chat, memory, Gmail read-only | Done |
-| 2 | Channels (Home, Rowan, Games…) | **Here** |
-| 3 | Tasks page | Next |
-| 4 | Background workers | |
+| 2 | Channels (Home, Rowan, Games…) | Done |
+| 3 | Tasks page | **Here** |
+| 4 | Background workers | Next |
 | 5 | Calendar and Drive, read-only | |
 | 6 | Routines (7am brief, check-ins, watches) | |
 | 7 | Approvals, then the first actions that send or book | |
@@ -29,6 +29,14 @@ This is **Phase 2**: the main chat, memory, Gmail (read-only), and channels.
 - **Everything sees across channels.** The main chat gets a short digest of every channel (what it's for, its notebook, its latest messages) and can read more of any channel when it needs to.
 - **Lyra can make one.** Ask "make a channel for the kitchen remodel" and it will. It only suggests a channel otherwise, and never makes one after reading an email.
 - **Details page.** Tap the channel's name at the top to rename it, change its icon, edit its notebook, restore an earlier version, or delete it (its chat and notebook go; main memory stays).
+
+### Tasks (Phase 3)
+
+- **A row for each thing you hand off.** The **Tasks** tab (bottom bar) lists them under **Active** (Ready for you, Working, Up next, Stopped) and **Done**, with search. The badge on the tab counts tasks that are Ready for you.
+- **Steps and a log.** Each task has a brief, a checklist, and a log of everything that happened to it. Tap the circle to mark a task done.
+- **Lyra keeps them.** Hand Lyra something bigger than a quick answer and it adds a task; it marks it Ready for you (with the one question it needs answered) or Done as you talk. A note under the reply links to the task. In a channel, tasks land in that channel, and the channel's page lists its open tasks.
+- **Nothing runs on its own yet.** New tasks wait as **Up next** until background workers arrive in Phase 4; Lyra won't pretend otherwise.
+- **Safe with email.** In a reply where Lyra read an email, it can't create or change a task; it tells you what it would do and waits for your yes.
 
 Nightly promotion of channel notes into main memory, from your memory-per-space spec, arrives with routines in Phase 6.
 
@@ -81,6 +89,16 @@ Google needs you to register Lyra once. It takes about ten minutes.
 There's no client ID or secret to paste: Google recognizes the app by its package name and signing fingerprint. If you install a build signed with a different key, add its fingerprint as another Android client.
 
 While the Google project is in **Testing** mode, Google expires the approval after 7 days. Lyra shows Mail as needing a reconnect; tap it and approve again.
+
+## Try Phase 3
+
+1. Install `Lyra-phase3.apk` over your current app. Your chats and channels stay.
+2. In chat, say "Can you find me a plumber for the kitchen leak before Monday?" A **Task added** note appears; tap it.
+3. Add a step or two, tick one, and see it in the log.
+4. Back in chat: "I need to pick between Ortiz and Lee for the plumber." Lyra should set the task to **Ready for you** with that question, and the Tasks tab gets a badge.
+5. Say "I booked Ortiz." The task should move to **Done**.
+6. In a channel, ask Lyra to take something on. The task should show that channel's name and appear on the channel's page.
+7. Tap **+** on the Tasks tab to add one yourself.
 
 ## Try Phase 2
 

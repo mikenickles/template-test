@@ -9,10 +9,14 @@ import { ChannelInfo, NewChannelDialog } from "./screens/ChannelScreens";
 import { Chat } from "./screens/Chat";
 import { Memory } from "./screens/Memory";
 import { Settings } from "./screens/Settings";
+import { TaskPage, Tasks } from "./screens/Tasks";
+import { ChatIcon, TasksIcon } from "./icons";
 
 export type Route =
   | { name: "chat"; channelId: number | null }
   | { name: "channel-info"; channelId: number }
+  | { name: "tasks" }
+  | { name: "task"; taskId: number }
   | { name: "access" }
   | { name: "memory" }
   | { name: "settings" };
@@ -21,7 +25,9 @@ export function readRoute(hash = location.hash): Route {
   const path = hash.replace(/^#\/?/, "").split("?")[0];
   const c = path.match(/^c\/(\d+)(\/info)?$/);
   if (c) return c[2] ? { name: "channel-info", channelId: Number(c[1]) } : { name: "chat", channelId: Number(c[1]) };
-  if (path === "access" || path === "memory" || path === "settings") return { name: path };
+  const t = path.match(/^t\/(\d+)$/);
+  if (t) return { name: "task", taskId: Number(t[1]) };
+  if (path === "tasks" || path === "access" || path === "memory" || path === "settings") return { name: path };
   return { name: "chat", channelId: null };
 }
 
@@ -34,6 +40,8 @@ function backFrom(r: Route): string | null {
       return `#/c/${r.channelId}`;
     case "memory":
       return "#/access";
+    case "task":
+      return "#/tasks";
     default:
       return "#/";
   }
@@ -76,6 +84,20 @@ export function App() {
   }, []);
 
   // Only re-render when the list actually changed, so opening the menu doesn't redraw the chat mid-slide.
+  const [readyCount, setReadyCount] = useState(0);
+  const refreshCounts = useCallback(() => {
+    api
+      .taskCounts()
+      .then((c) => setReadyCount(c.ready))
+      .catch(() => {});
+  }, []);
+  // The Chat tab returns to whichever chat you were last in.
+  const [lastChat, setLastChat] = useState("#/");
+  useEffect(() => {
+    if (route.name === "chat") setLastChat(route.channelId === null ? "#/" : `#/c/${route.channelId}`);
+    refreshCounts();
+  }, [route, refreshCounts]);
+
   const refreshChannels = useCallback(
     () =>
       api
@@ -105,7 +127,7 @@ export function App() {
   if (!state) return <div className="center-load">Loading…</div>;
 
   const initial = (state.userName !== "you" ? state.userName : "Me").charAt(0).toUpperCase();
-  const inChat = route.name === "chat";
+  const inChat = route.name === "chat" || route.name === "tasks";
   const channel = route.name === "chat" && route.channelId !== null ? channels.find((c) => c.id === route.channelId) : undefined;
   const channelMissing = route.name === "chat" && route.channelId !== null && !channel;
   const back = backFrom(route);
@@ -160,15 +182,39 @@ export function App() {
         </header>
 
         {route.name === "chat" && !channelMissing && (
-          <Chat key={route.channelId ?? "main"} userName={state.userName} toast={toast} channel={channel ?? null} />
+          <Chat key={route.channelId ?? "main"} userName={state.userName} toast={toast} channel={channel ?? null} onTasksChanged={refreshCounts} />
         )}
         {channelMissing && <div className="center-load">Loading…</div>}
         {route.name === "channel-info" && (
           <ChannelInfo key={route.channelId} id={route.channelId} toast={toast} onChange={refreshChannels} />
         )}
+        {route.name === "tasks" && <Tasks toast={toast} channels={channels} onCounts={refreshCounts} />}
+        {route.name === "task" && <TaskPage key={route.taskId} id={route.taskId} toast={toast} onCounts={refreshCounts} />}
         {route.name === "access" && <Access state={state} setState={setState} toast={toast} />}
         {route.name === "memory" && <Memory toast={toast} channels={channels} />}
         {route.name === "settings" && <Settings state={state} setState={setState} toast={toast} />}
+
+        {inChat && (
+          <nav className="tabbar" aria-label="Sections">
+            <div className="tabbar-inner">
+              <a className={`tabbar-item${route.name === "chat" ? " on" : ""}`} href={route.name === "chat" ? "#/" : lastChat} aria-current={route.name === "chat" ? "page" : undefined}>
+                <ChatIcon size={24} />
+                <span>Chat</span>
+              </a>
+              <a className={`tabbar-item${route.name === "tasks" ? " on" : ""}`} href="#/tasks" aria-current={route.name === "tasks" ? "page" : undefined}>
+                <span className="tabbar-icon">
+                  <TasksIcon size={24} />
+                  {readyCount > 0 && (
+                    <span className="badge" aria-label={`${readyCount} ready for you`}>
+                      {readyCount}
+                    </span>
+                  )}
+                </span>
+                <span>Tasks</span>
+              </a>
+            </div>
+          </nav>
+        )}
 
         {toastMsg && (
           <div className="toast" role="status">

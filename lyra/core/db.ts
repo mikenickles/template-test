@@ -46,6 +46,33 @@ export const MIGRATIONS: string[] = [
    CREATE INDEX messages_channel ON messages (channel_id, id);
    ALTER TABLE memory_snapshots ADD COLUMN scope TEXT NOT NULL DEFAULT 'main';
    ALTER TABLE memory_suggestions ADD COLUMN scope TEXT NOT NULL DEFAULT 'main';`,
+  // Phase 3: tasks you hand off, with steps and a log.
+  `CREATE TABLE tasks (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     title TEXT NOT NULL,
+     brief TEXT NOT NULL DEFAULT '',
+     status TEXT NOT NULL DEFAULT 'up_next' CHECK (status IN ('up_next','working','ready','stopped','done')),
+     needs TEXT NOT NULL DEFAULT '',
+     channel_id INTEGER REFERENCES channels(id) ON DELETE SET NULL,
+     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+     done_at TEXT
+   );
+   CREATE INDEX tasks_status ON tasks (status, updated_at);
+   CREATE TABLE task_steps (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+     position INTEGER NOT NULL,
+     text TEXT NOT NULL,
+     done INTEGER NOT NULL DEFAULT 0
+   );
+   CREATE TABLE task_log (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+     at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+     who TEXT NOT NULL CHECK (who IN ('you','lyra','worker')),
+     text TEXT NOT NULL
+   );`,
 ];
 
 const FILE = "lyra.db";
@@ -152,8 +179,17 @@ export interface MemoryNote {
   suggestionId?: number;
 }
 
+/** A task Lyra created or changed during a reply, shown under it. */
+export interface TaskNote {
+  id: number;
+  title: string;
+  kind: "created" | "updated";
+  status: string;
+}
+
 export interface MessageMeta {
   memory?: MemoryNote[];
+  tasks?: TaskNote[];
   tools?: { name: string; ok: boolean }[];
   provider?: string;
   model?: string;

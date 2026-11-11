@@ -161,3 +161,36 @@ export function ChannelIcon({ name, ...p }: P & { name: string }) {
     </Icon>
   );
 }
+export const ChatIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M20 11.5a7.5 7.5 0 01-11 6.6L4 19.5l1.4-4.6A7.5 7.5 0 1120 11.5z" />
+  </Icon>
+);
+export const TasksIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 6.5l1.8 1.8L9 5M4 15.5l1.8 1.8L9 14M12.5 7h7.5M12.5 16h7.5" />
+  </Icon>
+);
+export const Search = (p: P) => (
+  <Icon {...p}>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="M20 20l-4.2-4.2" />
+  </Icon>
+);
+export const Close = (p: P) => (
+  <Icon {...p}>
+    <path d="M6 6l12 12M18 6L6 18" />
+  </Icon>
+);
+export const CheckCircle = ({ done, ...p }: P & { done?: boolean }) => (
+  <Icon {...p}>
+    {done ? (
+      <>
+        <circle cx="12" cy="12" r="9" fill="currentColor" stroke="none" />
+        <path d="M8 12.3l2.7 2.7L16 9.6" stroke="var(--accent-ink)" strokeWidth={2.2} />
+      </>
+    ) : (
+      <circle cx="12" cy="12" r="9" />
+    )}
+  </Icon>
+);

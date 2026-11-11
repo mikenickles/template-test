@@ -3,7 +3,8 @@
  * engine once and exposes the same calls the screens have always used.
  */
 import { App as CapApp } from "@capacitor/app";
-import type { ChannelSummary, MemoryNote as CoreNote, StoredMessage } from "../../core/db";
+import type { ChannelSummary, MemoryNote as CoreNote, StoredMessage, TaskNote as CoreTaskNote } from "../../core/db";
+import type { NewTask, TaskDetail as CoreTaskDetail, TaskPatch, TaskQuery, TaskRow, TaskStatus as CoreStatus } from "../../core/tasks";
 import {
   Lyra,
   type AppState as CoreState,
@@ -22,6 +23,10 @@ export type ConnectorStatus = CoreState["connectors"][number];
 export type ProviderInfo = CoreState["providers"][number];
 export type Channel = ChannelSummary;
 export type ChannelView = CoreChannelView;
+export type Task = TaskRow;
+export type TaskDetail = CoreTaskDetail;
+export type TaskStatus = CoreStatus;
+export type TaskNote = CoreTaskNote;
 export { isNative };
 
 const ready: Promise<Lyra> = createPlatform().then(async (p) => {
@@ -50,6 +55,15 @@ export const api = {
   channelView: async (id: number) => (await ready).channelView(id),
   saveChannelNotebook: async (id: number, content: string) => (await ready).saveChannelNotebook(id, content),
   restoreChannelNotebook: async (id: number, snapshotId: number) => (await ready).restoreChannelNotebook(id, snapshotId),
+  tasks: async (q: TaskQuery = {}) => (await ready).tasks(q),
+  task: async (id: number) => (await ready).task(id),
+  taskCounts: async () => (await ready).taskCounts(),
+  createTask: async (input: NewTask) => (await ready).createTask(input),
+  updateTask: async (id: number, patch: TaskPatch) => (await ready).updateTask(id, patch),
+  addTaskStep: async (id: number, text: string) => (await ready).addTaskStep(id, text),
+  setTaskStep: async (stepId: number, done: boolean) => (await ready).setTaskStep(stepId, done),
+  removeTaskStep: async (taskId: number, stepId: number) => (await ready).removeTaskStep(taskId, stepId),
+  deleteTask: async (id: number) => (await ready).deleteTask(id),
   connectGmail: async () => (await ready).connectGmail(),
   disconnectGmail: async () => (await ready).disconnectGmail(),
 };

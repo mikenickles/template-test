@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { api, type ChannelView } from "../api";
+import { api, type ChannelView, type Task } from "../api";
+import { StatusText } from "./Tasks";
 import { CHANNEL_ICON_NAMES, ChannelIcon, Pencil, Trash } from "../icons";
 import { ago, parse } from "../when";
 
@@ -225,12 +226,14 @@ export function NewChannelDialog({ onClose, onCreated, toast }: { onClose: () =>
 
 export function ChannelInfo({ id, toast, onChange }: { id: number; toast: (m: string) => void; onChange: () => void }) {
   const [view, setView] = useState<ChannelView | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    api.tasks({ channelId: id, status: "open" }).then(setTasks, () => {});
     api.channelView(id).then(setView, (e) => {
       toast(e.message);
       location.hash = "#/";
@@ -321,6 +324,28 @@ export function ChannelInfo({ id, toast, onChange }: { id: number; toast: (m: st
 
       {!editing && (
         <>
+          <section className="section" style={{ marginTop: 0, marginBottom: 48 }}>
+            <h2 className="section-label">
+              Tasks {tasks.length > 0 && <span className="count">{tasks.length}</span>}
+            </h2>
+            {tasks.length ? (
+              <div className="group">
+                {tasks.map((t) => (
+                  <a className="item flat" key={t.id} href={`#/t/${t.id}`}>
+                    <span className="body">
+                      <div className="title">{t.title}</div>
+                      <div className="sub">
+                        <StatusText status={t.status} />
+                      </div>
+                    </span>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p className="mem-empty">No open tasks. Ask Lyra in this channel, or add one on the Tasks tab.</p>
+            )}
+          </section>
+
           <div className="bar">
             <h2 className="section-label" style={{ margin: 0 }}>
               Notebook <span className="count">{total || ""}</span>

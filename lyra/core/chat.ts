@@ -1,8 +1,22 @@
 import type { Connectors } from "./connectors/registry.ts";
-import { addMessage, listMessages, type Channel, type ChannelSummary, type DB, type MemoryNote, type StoredMessage } from "./db.ts";
+import { addMessage, listMessages, type Channel, type ChannelSummary, type DB, type MemoryNote, type StoredMessage, type TaskNote } from "./db.ts";
 import { CHANNEL_SECTIONS, SECTIONS, type Notebook } from "./memory.ts";
 import { buildSystemPrompt, type ChannelDigest } from "./prompt.ts";
 import type { ModelProvider, Msg, Part, ToolDef } from "./providers/types.ts";
+import {
+  addStep,
+  createTask,
+  describeTasks,
+  listTasks,
+  log as logTask,
+  parseStatus,
+  setStepDone,
+  STATUS_LABEL,
+  STATUSES,
+  taskDetail,
+  updateTask,
+  type TaskStatus,
+} from "./tasks.ts";
 
 export const MAX_STEPS = 8;
 const HISTORY = 40;
@@ -85,6 +99,56 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
       },
     },
   ];
+  const statusNames = STATUSES.map((s) => STATUS_LABEL[s]);
+  tools.push(
+    {
+      name: "create_task",
+      description:
+        "Add a task: something the user hands off that takes more than a quick answer, or that they ask you to track. Background workers don't exist yet, so a new task waits as Up next.",
+      schema: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Short and specific, e.g. 'Find a plumber for the kitchen leak'." },
+          details: { type: "string", description: "The brief: what done looks like, limits, anything you already know." },
+          steps: { type: "array", items: { type: "string" }, description: "Optional checklist, a few short steps." },
+          channel: {
+            type: "string",
+            enum: ["none", ...channels.map((c) => c.name)],
+            description: current ? `Defaults to this channel (${current.name}).` : "Defaults to none (the main chat).",
+          },
+        },
+        required: ["title"],
+      },
+    },
+    {
+      name: "update_task",
+      description: "Change a task: its status, what you need from the user, its steps, or add a note to its log.",
+      schema: {
+        type: "object",
+        properties: {
+          id: { type: "integer", description: "The task number, e.g. 12 for #12." },
+          status: { type: "string", enum: statusNames, description: "Ready for you = you need the user's input or review; say what in 'needs'." },
+          needs: { type: "string", description: "With Ready for you: the one question or decision you need from the user." },
+          note: { type: "string", description: "A line for the task's log." },
+          add_steps: { type: "array", items: { type: "string" } },
+          finish_steps: { type: "array", items: { type: "integer" }, description: "Step numbers (1 = first) that are now done." },
+        },
+        required: ["id"],
+      },
+    },
+    {
+      name: "list_tasks",
+      description: "Look up tasks. With an id, returns that task's details, numbered steps and recent log.",
+      schema: {
+        type: "object",
+        properties: {
+          id: { type: "integer" },
+          status: { type: "string", enum: ["Open", ...statusNames] },
+          search: { type: "string" },
+        },
+      },
+    },
+  );
   const others = channels.filter((c) => c.id !== current?.id);
   if (others.length)
     tools.push({
@@ -142,6 +206,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
   addMessage(ctx.db, "user", userText, {}, channelId);
   const messages = historyFor(listMessages(ctx.db, channelId, HISTORY));
   const notes: MemoryNote[] = [];
+  const taskNotes: TaskNote[] = [];
   const toolsUsed: { name: string; ok: boolean }[] = [];
   // Once outside content has been read, notebook changes need the user's tap.
   const state = { tainted: false };
@@ -153,7 +218,13 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
     emit.text(d);
   };
 
-  const meta = () => ({ memory: notes, tools: toolsUsed, provider: ctx.provider.id, model: ctx.provider.model });
+  const meta = () => ({
+    memory: notes,
+    ...(taskNotes.length ? { tasks: taskNotes } : {}),
+    tools: toolsUsed,
+    provider: ctx.provider.id,
+    model: ctx.provider.model,
+  });
 
   try {
     const channels = ctx.workspace.channels();
@@ -165,6 +236,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
       timeZone: ctx.timeZone,
       channel: ctx.channel ? { ...ctx.channel, notebook: (await ctx.workspace.notebook(ctx.channel.id)).read() } : undefined,
       channels: ctx.channel ? channels.map((c) => ({ name: c.name, about: c.about })) : await digests(ctx),
+      tasks: describeTasks(listTasks(ctx.db, { status: "open", channelId: ctx.channel ? ctx.channel.id : undefined, limit: 40 }), !ctx.channel),
     });
 
     for (let step = 0; step < MAX_STEPS; step++) {
@@ -180,7 +252,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
 
       const results: Part[] = [];
       for (const call of calls) {
-        const r = await runTool(ctx, call.name, call.input, state, notes, emit);
+        const r = await runTool(ctx, call.name, call.input, state, notes, emit, taskNotes);
         if (ctx.connectors.owns(call.name) && !r.isError) state.tainted = true;
         toolsUsed.push({ name: call.name, ok: !r.isError });
         results.push({ type: "tool_result", id: call.id, name: call.name, content: r.content, isError: r.isError });
@@ -214,6 +286,7 @@ async function runTool(
   state: { tainted: boolean },
   notes: MemoryNote[],
   emit: TurnEmitter,
+  taskNotes: TaskNote[] = [],
 ): Promise<{ content: string; isError: boolean }> {
   const note = (n: MemoryNote) => {
     notes.push(n);
@@ -268,6 +341,68 @@ async function runTool(
     } catch (e) {
       return fail((e as Error).message);
     }
+  }
+
+  if (name === "create_task" || name === "update_task") {
+    // A task may later be carried out by a worker, so outside content can't create or steer one.
+    if (state.tainted)
+      return fail("Not changed: outside content was read this turn. Tell the user what you'd add or change, and do it once they say yes.");
+    try {
+      if (name === "create_task") {
+        const ch = String(input.channel ?? "").trim();
+        let channelId: number | null = ctx.channel?.id ?? null;
+        if (ch.toLowerCase() === "none") channelId = null;
+        else if (ch) {
+          const found = ctx.workspace.channels().find((c) => c.name.toLowerCase() === ch.toLowerCase());
+          if (!found) return fail(`There's no ${ch} channel.`);
+          channelId = found.id;
+        }
+        const steps = Array.isArray(input.steps) ? input.steps.map(String) : [];
+        const t = createTask(ctx.db, { title: String(input.title ?? ""), brief: String(input.details ?? ""), steps, channelId }, "lyra");
+        taskNotes.push({ id: t.id, title: t.title, kind: "created", status: t.status });
+        return { content: `Added task #${t.id}: ${t.title} (Up next).`, isError: false };
+      }
+      const id = Number(input.id);
+      const detail = taskDetail(ctx.db, id);
+      if (!detail) return fail(`There's no task #${input.id}.`);
+      let status: TaskStatus | undefined;
+      if (input.status !== undefined) {
+        status = parseStatus(input.status);
+        if (!status) return fail(`Status must be one of: ${STATUSES.map((s) => STATUS_LABEL[s]).join(", ")}.`);
+      }
+      for (const s of Array.isArray(input.add_steps) ? input.add_steps : []) addStep(ctx.db, id, String(s), true, "lyra");
+      for (const n of Array.isArray(input.finish_steps) ? input.finish_steps : []) {
+        const step = detail.steps[Number(n) - 1];
+        if (step) setStepDone(ctx.db, step.id, true, "lyra");
+      }
+      if (typeof input.note === "string" && input.note.trim()) logTask(ctx.db, id, "lyra", input.note);
+      const t = updateTask(ctx.db, id, { status, needs: typeof input.needs === "string" ? input.needs : undefined }, "lyra");
+      taskNotes.push({ id: t.id, title: t.title, kind: "updated", status: t.status });
+      return { content: `Updated #${t.id}: ${t.title} is ${STATUS_LABEL[t.status]}.`, isError: false };
+    } catch (e) {
+      return fail((e as Error).message);
+    }
+  }
+
+  if (name === "list_tasks") {
+    if (input.id !== undefined) {
+      const d = taskDetail(ctx.db, Number(input.id));
+      if (!d) return fail(`There's no task #${input.id}.`);
+      const steps = d.steps.map((s, i) => `${i + 1}. [${s.done ? "x" : " "}] ${s.text}`).join("\n");
+      const log = d.log
+        .slice(0, 15)
+        .map((l) => `${l.at.slice(0, 16).replace("T", " ")} ${l.text}`)
+        .join("\n");
+      return {
+        content: `#${d.task.id} ${d.task.title}\nStatus: ${STATUS_LABEL[d.task.status]}${d.task.needs ? ` (needs: ${d.task.needs})` : ""}\nChannel: ${d.task.channel_name ?? "none"}\nDetails: ${d.task.brief || "(none)"}\nSteps:\n${steps || "(none)"}\nLog (newest first):\n${log}`,
+        isError: false,
+      };
+    }
+    const st = String(input.status ?? "Open");
+    const status = st.toLowerCase() === "open" ? "open" : parseStatus(st);
+    if (!status) return fail("Unknown status.");
+    const rows = listTasks(ctx.db, { status, q: typeof input.search === "string" ? input.search : undefined, limit: 30 });
+    return { content: rows.length ? describeTasks(rows, true) : "No tasks match.", isError: false };
   }
 
   if (name === "read_channel") {
