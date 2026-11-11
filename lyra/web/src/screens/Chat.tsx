@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api, sendChat, type Channel, type MemoryNote, type Message } from "../api";
 import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Minus, Spark, Stop } from "../icons";
 import { StarChart, Thinking } from "../LyraMark";
@@ -19,7 +19,20 @@ function greeting(now = new Date()): string {
   return h < 5 ? "Up late" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
 }
 
-export function Chat({ userName, toast, channel }: { userName: string; toast: (msg: string) => void; channel: Channel | null }) {
+interface ChatProps {
+  userName: string;
+  toast: (msg: string) => void;
+  channel: Channel | null;
+}
+
+/** Skip re-rendering the whole conversation unless something it shows changed (e.g. while the menu slides). */
+export const Chat = memo(ChatView, (a, b) => {
+  const same = (x: Channel | null, y: Channel | null) =>
+    x === y || (!!x && !!y && x.id === y.id && x.name === y.name && x.icon === y.icon && x.about === y.about);
+  return a.userName === b.userName && a.toast === b.toast && same(a.channel, b.channel);
+});
+
+function ChatView({ userName, toast, channel }: ChatProps) {
   const channelId = channel?.id ?? null;
   const [messages, setMessages] = useState<Message[] | null>(null);
   const [hasMore, setHasMore] = useState(false);

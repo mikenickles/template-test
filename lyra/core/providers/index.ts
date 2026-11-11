@@ -57,8 +57,13 @@ export async function createProvider(keys: Keys, choice: ProviderChoice): Promis
     }
     case "openai": {
       if (!keys.openai && !keys.openaiBaseUrl) throw new Error("Add an OpenAI API key in Settings first.");
-      const { OpenAIProvider } = await import("./openai.ts");
-      return new OpenAIProvider(keys.openai ?? "local", choice.model, keys.openaiBaseUrl);
+      // Your own server (Ollama, LM Studio) speaks Chat Completions; OpenAI itself gets the Responses API.
+      if (keys.openaiBaseUrl) {
+        const { OpenAIProvider } = await import("./openai.ts");
+        return new OpenAIProvider(keys.openai ?? "local", choice.model, keys.openaiBaseUrl);
+      }
+      const { OpenAIResponsesProvider } = await import("./openai-responses.ts");
+      return new OpenAIResponsesProvider(keys.openai!, choice.model);
     }
     case "gemini": {
       if (!keys.gemini) throw new Error("Add a Gemini API key in Settings first.");

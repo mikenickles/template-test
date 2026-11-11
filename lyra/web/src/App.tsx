@@ -72,11 +72,12 @@ export function App() {
     return () => void sub.then((s) => s.remove());
   }, []);
 
+  // Only re-render when the list actually changed, so opening the menu doesn't redraw the chat mid-slide.
   const refreshChannels = useCallback(
     () =>
       api
         .channels()
-        .then(setChannels)
+        .then((next) => setChannels((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next)))
         .catch(() => {}),
     [],
   );
