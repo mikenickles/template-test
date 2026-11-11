@@ -112,3 +112,52 @@ export const Spark = (p: P) => (
     <path d="M12 3.5c.6 4.4 2.1 5.9 6.5 6.5-4.4.6-5.9 2.1-6.5 6.5-.6-4.4-2.1-5.9-6.5-6.5 4.4-.6 5.9-2.1 6.5-6.5z" />
   </Icon>
 );
+export const MenuIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 7h16M4 12h10M4 17h13" />
+  </Icon>
+);
+export const Pencil = (p: P) => (
+  <Icon {...p}>
+    <path d="M14.5 5.5l4 4M4 20l1-5L15.5 4.5a2.1 2.1 0 013 0l1 1a2.1 2.1 0 010 3L9 19z" />
+  </Icon>
+);
+export const Trash = (p: P) => (
+  <Icon {...p}>
+    <path d="M4.5 7h15M10 11v6M14 11v6M6 7l1 12.5A1.5 1.5 0 008.5 21h7a1.5 1.5 0 001.5-1.5L18 7M9 7V4.5A1.5 1.5 0 0110.5 3h3A1.5 1.5 0 0115 4.5V7" />
+  </Icon>
+);
+export const Layers = (p: P) => (
+  <Icon {...p}>
+    <path d="M12 3.5l8.5 4.5-8.5 4.5L3.5 8z" />
+    <path d="M3.5 12l8.5 4.5 8.5-4.5M3.5 16l8.5 4.5 8.5-4.5" />
+  </Icon>
+);
+
+/** Channel icons: one stroke weight, sized to the text. Keys match core/chat.ts CHANNEL_ICONS. */
+const CHANNEL_PATHS: Record<string, JSX_Paths> = {
+  home: ["M4 11l8-6.5 8 6.5", "M6 9.5V20h12V9.5", "M10 20v-5h4v5"],
+  sprout: ["M12 20v-8", "M12 12c0-4 3-6.5 7-6.5 0 4-3 6.5-7 6.5z", "M12 14c0-3-2.5-5-6-5 0 3 2.5 5 6 5z"],
+  game: ["M7 9h10a4 4 0 014 4v1.5a3 3 0 01-5.3 1.9L14.5 15h-5l-1.2 1.4A3 3 0 013 14.5V13a4 4 0 014-4z", "M8 11.5v3M6.5 13h3", "M15.5 12.5h.01M17.5 14h.01"],
+  heart: ["M12 19.5s-7.5-4.5-7.5-10A4 4 0 0112 7a4 4 0 017.5 2.5c0 5.5-7.5 10-7.5 10z"],
+  work: ["M4 8.5h16v10.5H4z", "M9 8.5V6a1.5 1.5 0 011.5-1.5h3A1.5 1.5 0 0115 6v2.5", "M4 13h16"],
+  travel: ["M3 14.5l18-6.5-6.5 13-2.5-6.5z", "M12 14.5L21 8"],
+  tools: ["M14.5 5.5a4 4 0 00-5 5L4 16l4 4 5.5-5.5a4 4 0 005-5l-2.5 2.5-2.5-.5-.5-2.5z"],
+  book: ["M5 4.5h10.5A3.5 3.5 0 0119 8v11.5H8.5A3.5 3.5 0 015 16z", "M5 16a3.5 3.5 0 013.5-3.5H19"],
+  money: ["M4 7h16v10H4z", "M12 9.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z", "M7 12h.01M17 12h.01"],
+  star: ["M12 3.5l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.9 7.2 18.4l.9-5.4-3.9-3.8 5.4-.8z"],
+};
+type JSX_Paths = string[];
+
+export const CHANNEL_ICON_NAMES = Object.keys(CHANNEL_PATHS);
+
+export function ChannelIcon({ name, ...p }: P & { name: string }) {
+  const paths = CHANNEL_PATHS[name] ?? CHANNEL_PATHS.star;
+  return (
+    <Icon {...p}>
+      {paths.map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </Icon>
+  );
+}

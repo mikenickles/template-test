@@ -86,6 +86,57 @@ try {
   await page.getByRole("heading", { name: "Memory" }).waitFor();
   await shot("light-4-memory");
 
+  // ---- channels ----
+  await page.goto(`${base}/#/`);
+  await page.getByRole("button", { name: "Channels" }).click();
+  await page.locator(".drawer.open").waitFor();
+  await shot("light-6-drawer-empty");
+  await page.getByRole("link", { name: "New channel" }).click();
+  await page.getByLabel("Name").fill("Rowan");
+  await page.getByLabel("What's it for?").fill("Rowan's 7th birthday party");
+  await page.getByRole("radio", { name: "Kids and growing things" }).click();
+  await shot("light-7-new-channel");
+  await page.getByRole("button", { name: "Create channel" }).click();
+  await page.getByRole("heading", { name: "Rowan" }).waitFor();
+  check(true, "creates a channel and opens its chat");
+  await shot("light-8-channel-empty");
+
+  await page.getByPlaceholder("Message Rowan").fill("The bounce house is booked for 10:30");
+  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByText("practice model").waitFor();
+  check((await page.locator(".bubble").count()) === 1, "channel chat starts empty and holds its own messages");
+  await shot("light-9-channel-chat");
+
+  await page.getByRole("button", { name: "Channels" }).click();
+  await page.locator(".drawer.open").waitFor();
+  check((await page.locator(".drawer .nav-item", { hasText: "Rowan" }).count()) === 1, "drawer lists the channel");
+  await shot("light-10-drawer");
+  await page.getByRole("link", { name: /Everything/ }).click();
+  await page.waitForTimeout(300);
+  check((await page.locator(".bubble").count()) === 2, "main chat keeps its own history");
+
+  await page.goto(`${base}/#/c/1/info`);
+  await page.getByText("Lyra saves facts about Rowan here").waitFor();
+  await shot("light-11-channel-info");
+  check(true, "channel page shows its notebook");
+
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto(`${base}/#/c/1`);
+  await page.getByText("bounce house").waitFor();
+  await shot("dark-9-channel-chat");
+  await page.getByRole("button", { name: "Channels" }).click();
+  await page.locator(".drawer.open").waitFor();
+  await shot("dark-10-drawer");
+  await page.emulateMedia({ colorScheme: "light" });
+
+  page.once("dialog", (d) => d.accept());
+  await page.goto(`${base}/#/c/1/info`);
+  await page.getByRole("button", { name: "Delete channel" }).click();
+  await page.getByText("Hi Sam, I'm Lyra.").or(page.locator(".bubble").first()).waitFor();
+  await page.getByRole("button", { name: "Channels" }).click();
+  check((await page.locator(".drawer .nav-item", { hasText: "Rowan" }).count()) === 0, "deleting a channel removes it");
+  await page.keyboard.press("Escape");
+
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto(`${base}/#/`);
   await page.getByText("practice model").waitFor();

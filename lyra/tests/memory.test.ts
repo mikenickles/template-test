@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { DB } from "../core/db.ts";
-import { addItem, cleanItem, listItems, MemoryStore, removeItem, templateMemory } from "../core/memory.ts";
+import { addItem, cleanItem, listItems, mainNotebookSpec, Notebook, removeItem, templateMemory } from "../core/memory.ts";
 import { memStores, SQL } from "./helpers.ts";
 
 const fresh = async () => {
   const stores = memStores();
   const db = await DB.open(SQL);
-  return { stores, db, store: await MemoryStore.open(db, stores.texts, "Sam") };
+  return { stores, db, store: await Notebook.open(db, stores.texts, mainNotebookSpec("Sam")) };
 };
 
 describe("memory file edits", () => {
@@ -49,7 +49,7 @@ describe("memory file edits", () => {
   });
 });
 
-describe("MemoryStore", () => {
+describe("Notebook", () => {
   it("creates the file, snapshots every change, and restores", async () => {
     const { store } = await fresh();
     const original = store.read();
@@ -65,7 +65,7 @@ describe("MemoryStore", () => {
     const { stores, db, store } = await fresh();
     await store.remember("Rules", "Call me Sam");
     expect(stores.raw.texts.get("memory.md")).toContain("- Call me Sam");
-    const again = await MemoryStore.open(db, stores.texts, "Sam");
+    const again = await Notebook.open(db, stores.texts, mainNotebookSpec("Sam"));
     expect(listItems(again.read(), "Rules")).toEqual(["Call me Sam"]);
   });
 

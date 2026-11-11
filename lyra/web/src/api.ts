@@ -3,8 +3,15 @@
  * engine once and exposes the same calls the screens have always used.
  */
 import { App as CapApp } from "@capacitor/app";
-import type { MemoryNote as CoreNote, StoredMessage } from "../../core/db";
-import { Lyra, type AppState as CoreState, type MemoryView as CoreMemory, type SettingsPatch } from "../../core/lyra";
+import type { ChannelSummary, MemoryNote as CoreNote, StoredMessage } from "../../core/db";
+import {
+  Lyra,
+  type AppState as CoreState,
+  type ChannelInput,
+  type ChannelView as CoreChannelView,
+  type MemoryView as CoreMemory,
+  type SettingsPatch,
+} from "../../core/lyra";
 import { createPlatform, isNative } from "./platform";
 
 export type MemoryNote = CoreNote;
@@ -13,6 +20,8 @@ export type AppState = CoreState;
 export type MemoryView = CoreMemory;
 export type ConnectorStatus = CoreState["connectors"][number];
 export type ProviderInfo = CoreState["providers"][number];
+export type Channel = ChannelSummary;
+export type ChannelView = CoreChannelView;
 export { isNative };
 
 const ready: Promise<Lyra> = createPlatform().then(async (p) => {
@@ -25,7 +34,7 @@ const ready: Promise<Lyra> = createPlatform().then(async (p) => {
 
 export const api = {
   state: async () => (await ready).state(),
-  messages: async (before?: number) => ({ messages: (await ready).messages(before) }),
+  messages: async (channelId: number | null, before?: number) => ({ messages: (await ready).messages(channelId, before) }),
   stop: async () => (await ready).stop(),
   memory: async () => (await ready).memoryView(),
   saveMemory: async (content: string) => (await ready).saveMemory(content),
@@ -34,6 +43,13 @@ export const api = {
     message: await (await ready).note(messageId, index, action),
   }),
   saveSettings: async (patch: SettingsPatch) => (await ready).saveSettings(patch),
+  channels: async () => (await ready).channels(),
+  createChannel: async (input: ChannelInput) => (await ready).createChannel(input),
+  updateChannel: async (id: number, input: Partial<ChannelInput>) => (await ready).updateChannel(id, input),
+  deleteChannel: async (id: number) => (await ready).deleteChannel(id),
+  channelView: async (id: number) => (await ready).channelView(id),
+  saveChannelNotebook: async (id: number, content: string) => (await ready).saveChannelNotebook(id, content),
+  restoreChannelNotebook: async (id: number, snapshotId: number) => (await ready).restoreChannelNotebook(id, snapshotId),
   connectGmail: async () => (await ready).connectGmail(),
   disconnectGmail: async () => (await ready).disconnectGmail(),
 };
@@ -46,7 +62,7 @@ export interface StreamHandlers {
 }
 
 /** Send a message; Lyra's reply arrives through the handlers as it's written. */
-export async function sendChat(text: string, h: StreamHandlers): Promise<void> {
-  const { message, user } = await (await ready).chat(text, { text: h.text, status: h.status, memory: h.memory });
+export async function sendChat(text: string, h: StreamHandlers, channelId: number | null = null): Promise<void> {
+  const { message, user } = await (await ready).chat(text, { text: h.text, status: h.status, memory: h.memory }, channelId);
   h.done(message, user);
 }

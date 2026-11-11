@@ -48,7 +48,16 @@ const nativeFiles: BlobStore & TextStore = {
       encoding: typeof data === "string" ? Encoding.UTF8 : undefined,
     });
   },
+  remove: nativeRemove,
 };
+
+async function nativeRemove(name: string) {
+  try {
+    await Filesystem.deleteFile({ path: name, directory: Directory.Data });
+  } catch {
+    /* already gone */
+  }
+}
 
 function idb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -73,6 +82,15 @@ const webFiles: BlobStore & TextStore = {
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction("files", "readwrite");
       tx.objectStore("files").put(data, name);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  },
+  async remove(name: string) {
+    const db = await idb();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("files", "readwrite");
+      tx.objectStore("files").delete(name);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });

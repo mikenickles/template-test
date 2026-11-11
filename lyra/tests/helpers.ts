@@ -14,7 +14,11 @@ export function memStores() {
   const secrets = new Map<string, string>();
   return {
     blobs: { read: async (n) => blobs.get(n) ?? null, write: async (n, b) => void blobs.set(n, b) } satisfies BlobStore,
-    texts: { read: async (n) => texts.get(n) ?? null, write: async (n, t) => void texts.set(n, t) } satisfies TextStore,
+    texts: {
+      read: async (n) => texts.get(n) ?? null,
+      write: async (n, t) => void texts.set(n, t),
+      remove: async (n) => void texts.delete(n),
+    } satisfies TextStore,
     secrets: {
       get: async (k) => secrets.get(k) ?? null,
       set: async (k, v) => void secrets.set(k, v),

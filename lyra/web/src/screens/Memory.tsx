@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { api, type MemoryView } from "../api";
+import { api, type Channel, type MemoryView } from "../api";
+import { ChannelIcon, Chevron } from "../icons";
 import { ago, parse } from "../when";
 
 const BLURB: Record<string, string> = {
@@ -9,7 +10,7 @@ const BLURB: Record<string, string> = {
   "Open loops": "Things waiting on someone",
 };
 
-export function Memory({ toast }: { toast: (m: string) => void }) {
+export function Memory({ toast, channels }: { toast: (m: string) => void; channels: Channel[] }) {
   const [view, setView] = useState<MemoryView | null>(null);
   const [draft, setDraft] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
@@ -98,6 +99,28 @@ export function Memory({ toast }: { toast: (m: string) => void }) {
           )}
         </section>
       ))}
+
+      {channels.length > 0 && (
+        <section className="section">
+          <h2 className="section-label">
+            Channel notebooks <span className="blurb">Facts about one subject each</span>
+          </h2>
+          <div className="group">
+            {channels.map((c) => (
+              <a className="item" key={c.id} href={`#/c/${c.id}/info`}>
+                <span className="tile">
+                  <ChannelIcon name={c.icon} size={20} />
+                </span>
+                <span className="body">
+                  <div className="title">{c.name}</div>
+                  <div className="sub">{c.about || "No description yet"}</div>
+                </span>
+                <Chevron className="chev" />
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
 
       {view.history.length > 0 && (
         <section className="section">

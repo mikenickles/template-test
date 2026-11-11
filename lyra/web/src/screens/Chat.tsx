@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { api, sendChat, type MemoryNote, type Message } from "../api";
-import { ArrowDown, ArrowUp, ArrowUpRight, Minus, Spark, Stop } from "../icons";
+import { api, sendChat, type Channel, type MemoryNote, type Message } from "../api";
+import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Minus, Spark, Stop } from "../icons";
 import { StarChart, Thinking } from "../LyraMark";
 import { Markdown } from "../markdown";
 import { clock, dayLabel, parse } from "../when";
@@ -12,13 +12,15 @@ interface Pending {
 }
 
 const STARTERS = ["What's new in my inbox?", "What do you know about me so far?", "Remember that I prefer short replies"];
+const CHANNEL_STARTERS = ["What's still open here?", "Sum up where this stands", "What have we decided so far?"];
 
 function greeting(now = new Date()): string {
   const h = now.getHours();
   return h < 5 ? "Up late" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
 }
 
-export function Chat({ userName, toast }: { userName: string; toast: (msg: string) => void }) {
+export function Chat({ userName, toast, channel }: { userName: string; toast: (msg: string) => void; channel: Channel | null }) {
+  const channelId = channel?.id ?? null;
   const [messages, setMessages] = useState<Message[] | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
@@ -30,7 +32,7 @@ export function Chat({ userName, toast }: { userName: string; toast: (msg: strin
 
   useEffect(() => {
     api
-      .messages()
+      .messages(channelId)
       .then((r) => {
         setMessages(r.messages);
         setHasMore(r.messages.length >= 60);
@@ -39,7 +41,7 @@ export function Chat({ userName, toast }: { userName: string; toast: (msg: strin
         setMessages([]);
         toast("Couldn't load the chat. Is Lyra running?");
       });
-  }, [toast]);
+  }, [toast, channelId]);
 
   // Lets the orb in the top bar pulse while Lyra is working.
   useEffect(() => {
@@ -78,7 +80,7 @@ export function Chat({ userName, toast }: { userName: string; toast: (msg: strin
     if (!messages?.length) return;
     const el = logRef.current!;
     const before = el.scrollHeight;
-    const r = await api.messages(messages[0].id);
+    const r = await api.messages(channelId, messages[0].id);
     setHasMore(r.messages.length >= 60);
     stick.current = false;
     setMessages((m) => [...r.messages, ...(m ?? [])]);
@@ -91,7 +93,7 @@ export function Chat({ userName, toast }: { userName: string; toast: (msg: strin
     setInput("");
     requestAnimationFrame(grow);
     stick.current = true;
-    const temp: Message = { id: -Date.now(), role: "user", content: text, created_at: new Date().toISOString(), meta: {} };
+    const temp: Message = { id: -Date.now(), role: "user", content: text, created_at: new Date().toISOString(), meta: {}, channel_id: channelId };
     setMessages((m) => [...(m ?? []), temp]);
     setPending({ reply: "", status: "", notes: [] });
     try {
@@ -101,7 +103,7 @@ export function Chat({ userName, toast }: { userName: string; toast: (msg: strin
         memory: (note) => setPending((p) => p && { ...p, notes: [...p.notes, note] }),
         done: (msg, user) =>
           setMessages((m) => [...(m ?? []).map((x) => (x.id === temp.id && user ? user : x)), msg]),
-      });
+      }, channelId);
     } catch (e) {
       setMessages((m) => (m ?? []).filter((x) => x.id !== temp.id));
       setInput(text);
@@ -135,7 +137,26 @@ export function Chat({ userName, toast }: { userName: string; toast: (msg: strin
             </button>
           )}
 
-          {empty && (
+          {empty && channel && (
+            <div className="hello">
+              <span className="channel-badge">
+                <ChannelIcon name={channel.icon} size={30} />
+              </span>
+              <p className="eyebrow">Channel</p>
+              <h1>{channel.name}</h1>
+              <p>{channel.about || "A chat for one ongoing subject, with its own notebook."}</p>
+              <div className="chips">
+                {CHANNEL_STARTERS.map((s) => (
+                  <button key={s} className="chip" onClick={() => send(s)}>
+                    {s}
+                    <ArrowUpRight size={18} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {empty && !channel && (
             <div className="hello">
               <StarChart />
               <p className="eyebrow">{greeting()}</p>
@@ -212,7 +233,7 @@ export function Chat({ userName, toast }: { userName: string; toast: (msg: strin
             ref={boxRef}
             rows={1}
             value={input}
-            placeholder="Message Lyra"
+            placeholder={channel ? `Message ${channel.name}` : "Message Lyra"}
             enterKeyHint="send"
             onChange={(e) => {
               setInput(e.target.value);
@@ -245,11 +266,12 @@ function Notes({ notes, onAction }: { notes: MemoryNote[]; onAction?: (i: number
     <div className="notes">
       {notes.map((n, i) => {
         const section = n.section.toLowerCase();
+        const target = !n.notebookLabel || n.notebookLabel === "Memory" ? section : `${n.notebookLabel}, ${section}`;
         if (n.kind === "suggested")
           return (
             <div className="ask" key={i}>
               <div className="label">
-                <Spark size={14} /> Save to {section}?
+                <Spark size={14} /> Save to {target}?
               </div>
               <div className="fact">{n.text}</div>
               <div className="actions">
@@ -262,7 +284,7 @@ function Notes({ notes, onAction }: { notes: MemoryNote[]; onAction?: (i: number
               </div>
             </div>
           );
-        const verb = n.kind === "saved" ? `Saved to ${section}` : n.kind === "removed" ? `Removed from ${section}` : "Not saved";
+        const verb = n.kind === "saved" ? `Saved to ${target}` : n.kind === "removed" ? `Removed from ${target}` : "Not saved";
         return (
           <div className={`note${n.undone ? " undone" : ""}`} key={i}>
             {n.kind === "removed" || n.kind === "dismissed" ? <Minus size={16} /> : <Spark size={16} />}

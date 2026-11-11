@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { historyFor, runTurn, type TurnContext } from "../core/chat.ts";
 import type { Connectors } from "../core/connectors/registry.ts";
 import { DB, listMessages, type MemoryNote, type StoredMessage } from "../core/db.ts";
-import { listItems, MemoryStore } from "../core/memory.ts";
+import { listItems, mainNotebookSpec, Notebook } from "../core/memory.ts";
 import { FakeProvider } from "../core/providers/fake.ts";
 import type { GenerateResult } from "../core/providers/types.ts";
 import { wrapUntrusted } from "../core/untrusted.ts";
@@ -28,10 +28,16 @@ function stubConnectors(): Connectors & { calls: string[] } {
 
 async function setup(script: GenerateResult[]) {
   const db = await DB.open(SQL);
-  const memory = await MemoryStore.open(db, memStores().texts, "Sam");
+  const memory = await Notebook.open(db, memStores().texts, mainNotebookSpec("Sam"));
   const provider = new FakeProvider(script);
   const connectors = stubConnectors();
-  const ctx: TurnContext = { db, memory, connectors, provider, userName: "Sam", timeZone: "America/Los_Angeles" };
+  const workspace = {
+    main: memory,
+    channels: () => [],
+    notebook: () => Promise.reject(new Error("no channels")),
+    createChannel: () => Promise.reject(new Error("no channels")),
+  };
+  const ctx: TurnContext = { db, workspace, channel: null, connectors, provider, userName: "Sam", timeZone: "America/Los_Angeles" };
   const events = { text: "", status: [] as string[], memory: [] as MemoryNote[] };
   const emit = {
     text: (d: string) => (events.text += d),
@@ -53,7 +59,7 @@ describe("runTurn", () => {
     const saved = await runTurn(t.ctx, "When is Rowan's party?", t.emit);
     expect(t.events.text).toBe("Saturday at 10:30.");
     expect(saved.content).toBe("Saturday at 10:30.");
-    expect(listMessages(t.db).map((m) => m.role)).toEqual(["user", "assistant"]);
+    expect(listMessages(t.db, null).map((m) => m.role)).toEqual(["user", "assistant"]);
   });
 
   it("puts voice, memory and the untrusted-data rule in the system prompt", async () => {
@@ -126,12 +132,12 @@ describe("runTurn", () => {
     const saved = await runTurn(t.ctx, "hi", t.emit);
     expect(saved.meta.error).toBe(true);
     expect(saved.content).toContain("API key was refused");
-    expect(historyFor(listMessages(t.db))).toEqual([{ role: "user", parts: [{ type: "text", text: "hi" }] }]);
+    expect(historyFor(listMessages(t.db, null))).toEqual([{ role: "user", parts: [{ type: "text", text: "hi" }] }]);
   });
 });
 
 describe("historyFor", () => {
-  const m = (id: number, role: "user" | "assistant", content: string): StoredMessage => ({ id, role, content, meta: {}, created_at: "" });
+  const m = (id: number, role: "user" | "assistant", content: string): StoredMessage => ({ id, role, content, meta: {}, created_at: "", channel_id: null });
   it("merges same-role runs and starts with the user", () => {
     expect(historyFor([m(1, "assistant", "a"), m(2, "user", "b"), m(3, "user", "c"), m(4, "assistant", "d")])).toEqual([
       { role: "user", parts: [{ type: "text", text: "b\n\nc" }] },

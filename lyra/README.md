@@ -2,13 +2,13 @@
 
 Lyra is a personal chief of staff that lives in an Android app. You text it like a trusted assistant; it answers short, leads with the point, and remembers what matters. Everything runs on your phone: there's no server or computer to keep running.
 
-This is **Phase 1**: the main chat, memory, and Gmail (read-only).
+This is **Phase 2**: the main chat, memory, Gmail (read-only), and channels.
 
 | Phase | What it adds | Status |
 | --- | --- | --- |
-| 1 | Main chat, memory, Gmail read-only | **Here** |
-| 2 | Channels (Home, Rowan, Games…) | Next |
-| 3 | Tasks page | |
+| 1 | Main chat, memory, Gmail read-only | Done |
+| 2 | Channels (Home, Rowan, Games…) | **Here** |
+| 3 | Tasks page | Next |
 | 4 | Background workers | |
 | 5 | Calendar and Drive, read-only | |
 | 6 | Routines (7am brief, check-ins, watches) | |
@@ -22,12 +22,22 @@ This is **Phase 1**: the main chat, memory, and Gmail (read-only).
 - **Gmail, read-only.** Lyra can search your mail and read threads. It cannot send, delete, label or change anything.
 - **Any model.** Claude, OpenAI or Gemini, switchable in Settings, or your own OpenAI-compatible server (Ollama, LM Studio). There's a practice mode that needs no key.
 
+### Channels (Phase 2)
+
+- **A chat per subject.** Open the menu (top left) for **Everything** (the main chat) and your channels, like Home, Rowan or Games. Each channel has its own chat history.
+- **A notebook per channel.** Each channel keeps its own notes, decisions and open loops. Lyra reads main memory plus that channel's notebook in every reply there, and saves facts about the subject to the channel. Things about you in general (a preference, a person) still go to main memory, even when Lyra learns them in a channel.
+- **Everything sees across channels.** The main chat gets a short digest of every channel (what it's for, its notebook, its latest messages) and can read more of any channel when it needs to.
+- **Lyra can make one.** Ask "make a channel for the kitchen remodel" and it will. It only suggests a channel otherwise, and never makes one after reading an email.
+- **Details page.** Tap the channel's name at the top to rename it, change its icon, edit its notebook, restore an earlier version, or delete it (its chat and notebook go; main memory stays).
+
+Nightly promotion of channel notes into main memory, from your memory-per-space spec, arrives with routines in Phase 6.
+
 ### Where your data lives
 
 | What | Where |
 | --- | --- |
-| Chats, settings, memory history | SQLite file in the app's private storage |
-| `memory.md` | The app's private storage |
+| Chats, channels, settings, memory history | SQLite file in the app's private storage |
+| `memory.md` and each channel's notebook | The app's private storage |
 | API keys | Android's encrypted Keystore |
 | Google sign-in | Google Play services; Lyra only gets short-lived access tokens, never a password or refresh token |
 
@@ -44,7 +54,7 @@ Email is written by other people, so Lyra treats it as data, never as instructio
 
 ## Install on your phone
 
-1. Download `Lyra-phase1.apk` on your Android phone.
+1. Download the latest `Lyra-phaseN.apk` on your Android phone.
 2. Open it. Android asks to allow installs from that app (your browser or files app): allow it, then tap **Install**.
 3. Open Lyra. Tap your initial (top right) for **Settings**, type your name, and paste an API key:
    - Claude: console.anthropic.com
@@ -53,7 +63,7 @@ Email is written by other people, so Lyra treats it as data, never as instructio
 
 With no key, pick **Practice** to click around.
 
-> **About updates.** This build is a debug build signed with a key that isn't stored anywhere permanent, because this repository is public. A later build will likely be signed differently, and Android won't install it over this one: you'd uninstall first, which deletes your chats and memory. Once Lyra has a permanent home for its signing key (a private repo or a GitHub secret), updates will install in place.
+> **About updates.** Builds are signed with a key that is not in this repository (it's public). To install an update over your current app and keep your chats, the new build must be signed with the same key: attach your `lyra-signing-key.txt` when you ask for a build in a new session. A build signed with a different key won't install until you uninstall the old app, which deletes your data.
 
 ## Connect Gmail
 
@@ -71,6 +81,16 @@ Google needs you to register Lyra once. It takes about ten minutes.
 There's no client ID or secret to paste: Google recognizes the app by its package name and signing fingerprint. If you install a build signed with a different key, add its fingerprint as another Android client.
 
 While the Google project is in **Testing** mode, Google expires the approval after 7 days. Lyra shows Mail as needing a reconnect; tap it and approve again.
+
+## Try Phase 2
+
+1. Install `Lyra-phase2.apk` over Phase 1. Your existing chat should still be there, now as **Everything**.
+2. Open the menu (top left) → **New channel**. Make "Rowan" for the birthday party, with the sprout icon.
+3. In Rowan, say "We picked the park, and the cake is from Whole Foods". The notes under the reply should say **Saved to Rowan, decisions**.
+4. In Rowan, say "By the way, I'm off work Fridays". That's about you, so it should land in main memory, not Rowan.
+5. Go back to **Everything** and ask "Where are we with Rowan's party?" Lyra should know without you repeating it.
+6. In Everything, say "Make a channel for the kitchen remodel". It should appear in the menu.
+7. Tap **Rowan** at the top of its chat to see its notebook, rename it, or delete it.
 
 ## Try Phase 1
 
