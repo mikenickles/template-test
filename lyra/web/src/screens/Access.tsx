@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { api, type AppState, type ConnectorStatus } from "../api";
 import { Calendar, Chevron, File, Mail, Notebook, Plus } from "../icons";
-import { LyraMark } from "../LyraMark";
+import { Orb } from "../LyraMark";
 
 const onThisComputer = () => ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
 
@@ -40,11 +40,9 @@ export function Access({
   return (
     <div className="screen">
       <div className="page-head">
-        <div className="round mark" style={{ margin: "0 auto", width: 96, height: 96 }}>
-          <LyraMark size={56} />
-        </div>
+        <Orb size="lg" />
         <h1>Lyra</h1>
-        <p>Your chief of staff, running on your own computer</p>
+        <p>Chief of staff · runs on your own computer</p>
       </div>
 
       {notice.connected && (
@@ -138,7 +136,7 @@ function MailRow({ c, onDisconnect }: { c: ConnectorStatus; onDisconnect: () => 
         {inner("Connect Gmail, read-only", "", false, <span className="tile empty"><Plus /></span>)}
       </a>
     );
-  return <div className="item">{inner(c.state === "not_configured" ? "Not set up yet" : "Not connected", "", false, <span />)}</div>;
+  return <div className="item">{inner(c.state === "not_configured" ? "Not set up yet" : "Not connected", "", false, <span className="pill">{c.state === "not_configured" ? "Setup needed" : "Off"}</span>)}</div>;
 }
 
 function Soon({ icon, title, when }: { icon: ReactNode; title: string; when: string }) {

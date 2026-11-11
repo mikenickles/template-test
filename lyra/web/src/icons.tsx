@@ -102,3 +102,13 @@ export const Clock = (p: P) => (
     <path d="M12 7.5V12l3 2" />
   </Icon>
 );
+export const ArrowUpRight = (p: P) => (
+  <Icon {...p}>
+    <path d="M7 17L17 7M8.5 7H17v8.5" />
+  </Icon>
+);
+export const Spark = (p: P) => (
+  <Icon {...p}>
+    <path d="M12 3.5c.6 4.4 2.1 5.9 6.5 6.5-4.4.6-5.9 2.1-6.5 6.5-.6-4.4-2.1-5.9-6.5-6.5 4.4-.6 5.9-2.1 6.5-6.5z" />
+  </Icon>
+);

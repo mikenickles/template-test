@@ -59,7 +59,7 @@ export function Markdown({ text }: { text: string }) {
     } else if (rows.every((r) => /^\s*\d+[.)]\s+/.test(r))) {
       const start = Number(rows[0].match(/\d+/)![0]);
       out.push(
-        <ol key={key} start={start}>
+        <ol key={key} start={start} style={{ counterReset: `n ${start - 1}` }}>
           {rows.map((r, i) => (
             <li key={i}>{inline(r.replace(/^\s*\d+[.)]\s+/, ""), `${key}-${i}`)}</li>
           ))}

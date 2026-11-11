@@ -56,19 +56,19 @@ export function App() {
         {route === "chat" ? (
           <span />
         ) : (
-          <a className="round" href={back} aria-label="Back">
+          <a className="ring" href={back} aria-label="Back">
             <Back />
           </a>
         )}
         {route === "chat" ? (
-          <a className="round mark" href="#/access" aria-label="What Lyra can access">
+          <a className="orb orb-sm" href="#/access" aria-label="What Lyra can access">
             <LyraMark />
           </a>
         ) : (
           <span />
         )}
         {route === "chat" ? (
-          <a className="round initial" href="#/settings" aria-label="Settings">
+          <a className="ring initial" href="#/settings" aria-label="Settings">
             {initial}
           </a>
         ) : (

@@ -75,7 +75,7 @@ try {
       await page.getByText("Save to open loops?").waitFor();
       await shot("2-chat");
       await page.getByRole("button", { name: "Save", exact: true }).click();
-      await page.getByText("Saved to open loops: School trip form").waitFor();
+      await page.locator(".note", { hasText: "School trip form" }).waitFor();
       check(true, "approving a held suggestion saves it");
       await page.getByRole("button", { name: "Undo" }).first().click();
       await page.getByText("Undone").waitFor();

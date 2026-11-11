@@ -46,7 +46,7 @@ export function Memory({ toast }: { toast: (m: string) => void }) {
   if (draft !== null)
     return (
       <div className="screen">
-        <div className="bar">
+        <div className="bar" style={{ marginBottom: 24 }}>
           <h1 className="page-title">Edit memory</h1>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn quiet" onClick={() => setDraft(null)}>
@@ -66,8 +66,8 @@ export function Memory({ toast }: { toast: (m: string) => void }) {
     );
 
   return (
-    <div className="screen">
-      <div className="bar" style={{ marginBottom: 4 }}>
+    <div className="screen mem-sections">
+      <div className="bar">
         <h1 className="page-title">Memory</h1>
         <button className="btn quiet" onClick={() => setDraft(view.content)}>
           Edit
@@ -81,31 +81,33 @@ export function Memory({ toast }: { toast: (m: string) => void }) {
       {view.sections.map((s) => (
         <section className="section" key={s.name}>
           <h2 className="section-label">
-            {s.name} <span style={{ fontWeight: 400 }}>· {BLURB[s.name]}</span>
+            {s.name}
+            {s.items.length > 0 && <span className="count">{s.items.length}</span>}
+            <span className="blurb">{BLURB[s.name]}</span>
           </h2>
-          <div className="group">
-            {s.items.length ? (
+          {s.items.length ? (
+            <div className="group">
               <ul className="mem-list">
                 {s.items.map((it, i) => (
                   <li key={i}>{it}</li>
                 ))}
               </ul>
-            ) : (
-              <div className="mem-empty">Nothing yet</div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <p className="mem-empty">Nothing yet</p>
+          )}
         </section>
       ))}
 
       {view.history.length > 0 && (
         <section className="section">
-          <button className="section-label link-btn" style={{ margin: 0 }} onClick={() => setShowHistory((v) => !v)}>
+          <button className="btn quiet" onClick={() => setShowHistory((v) => !v)}>
             {showHistory ? "Hide changes" : `Recent changes (${view.history.length})`}
           </button>
           {showHistory && (
             <div className="group" style={{ marginTop: 8 }}>
               {view.history.map((h) => (
-                <div className="item" key={h.id}>
+                <div className="item flat" key={h.id}>
                   <span className="body">
                     <div className="title" style={{ fontSize: 15 }}>
                       {h.reason}

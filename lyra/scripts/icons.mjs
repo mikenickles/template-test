@@ -11,7 +11,7 @@ const page = await browser.newPage();
 for (const [name, size] of [["icon-512.png", 512], ["icon-192.png", 192], ["apple-touch-icon.png", 180]]) {
   await page.setViewportSize({ width: size, height: size });
   // full-bleed square: phones apply their own rounding
-  await page.setContent(`<style>html,body{margin:0;background:#f7f6f3}</style>${svg.replace('rx="14"', 'rx="0"').replace("<svg ", `<svg width="${size}" height="${size}" `)}`);
+  await page.setContent(`<style>html,body{margin:0;background:#131416}</style>${svg.replace('rx="15"', 'rx="0"').replace("<svg ", `<svg width="${size}" height="${size}" `)}`);
   await page.screenshot({ path: new URL(`../web/public/${name}`, import.meta.url).pathname });
 }
 await browser.close();
