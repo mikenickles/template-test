@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, type Channel, type Task, type TaskDetail, type TaskStatus } from "../api";
-import { ChannelIcon, CheckCircle, Close, Pencil, Plus, Search, Trash } from "../icons";
+import { api, onChange, type Channel, type Task, type TaskDetail, type TaskStatus, type WorkerRun } from "../api";
+import { ChannelIcon, CheckCircle, Chevron, Close, Pencil, Plus, Search, Stop, Trash } from "../icons";
+import { Thinking } from "../LyraMark";
+import { Markdown } from "../markdown";
 import { ago, parse } from "../when";
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
@@ -66,6 +68,7 @@ export function Tasks({ toast, channels, onCounts }: { toast: (m: string) => voi
   }, [tab, q, toast]);
 
   useEffect(load, [load]);
+  useEffect(() => onChange((e) => e.type === "task" && load()), [load]);
   useEffect(() => {
     try {
       sessionStorage.setItem("lyra.tasksTab", tab);
@@ -269,14 +272,22 @@ export function TaskPage({ id, toast, onCounts }: { id: number; toast: (m: strin
   const [title, setTitle] = useState("");
   const [brief, setBrief] = useState("");
   const [step, setStep] = useState("");
+  const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState(false);
+  const [activity, setActivity] = useState<string | undefined>();
+  const [runs, setRuns] = useState<WorkerRun[]>([]);
 
-  useEffect(() => {
+  const refresh = useCallback(() => {
     api.task(id).then(setD, (e) => {
       toast(e.message);
       location.hash = "#/tasks";
     });
+    api.taskActivity(id).then(setActivity, () => {});
+    api.workerRuns(id).then(setRuns, () => {});
   }, [id, toast]);
+
+  useEffect(refresh, [refresh]);
+  useEffect(() => onChange((e) => e.type === "task" && e.taskId === id && refresh()), [id, refresh]);
 
   if (!d) return <div className="center-load">Loading…</div>;
   const { task, steps, log } = d;
@@ -298,6 +309,16 @@ export function TaskPage({ id, toast, onCounts }: { id: number; toast: (m: strin
   };
 
   const setStatus = (status: TaskStatus, msg: string) => run(() => api.updateTask(id, { status }), msg);
+  const startWorker = async (note?: string) => {
+    if (await run(() => api.startTask(id, note), note ? "Sent to the worker" : "Worker started")) {
+      setAnswer("");
+      refresh();
+    }
+  };
+  const lastRun = runs.at(-1);
+  const waitingOnYou = task.status === "ready" && lastRun?.status === "waiting";
+  // the worker's latest result, if it finished
+  const result = lastRun?.status === "finished" ? log.find((l) => l.who === "worker" && l.text.startsWith("Result: "))?.text.slice(8) : undefined;
   const chatHref = task.channel_id ? `#/c/${task.channel_id}` : "#/";
 
   return (
@@ -356,13 +377,46 @@ export function TaskPage({ id, toast, onCounts }: { id: number; toast: (m: strin
         </>
       )}
 
+      {activity && (
+        <div className="working-now">
+          <Thinking label={activity} />
+          <button className="btn quiet" disabled={busy} onClick={() => run(() => api.stopTask(id), "Stopped")}>
+            <Stop size={16} /> Stop
+          </button>
+        </div>
+      )}
+
+      {result && task.status !== "done" && (
+        <div className="result-card">
+          <p className="needs-label result-label">What the worker found</p>
+          <div className="reply">
+            <Markdown text={result} />
+          </div>
+        </div>
+      )}
+
       {task.status === "ready" && task.needs && (
         <div className="needs">
-          <p className="needs-label">Lyra needs from you</p>
+          <p className="needs-label">{waitingOnYou ? "The worker is asking" : "Lyra needs from you"}</p>
           <p className="needs-text">{task.needs}</p>
-          <a className="btn ink" href={chatHref}>
-            Answer in chat
-          </a>
+          {waitingOnYou ? (
+            <form
+              className="answer"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (answer.trim()) void startWorker(answer);
+              }}
+            >
+              <input className="field" value={answer} placeholder="Your answer" onChange={(e) => setAnswer(e.target.value)} aria-label="Your answer" />
+              <button className="btn ink" disabled={busy || !answer.trim()}>
+                Send
+              </button>
+            </form>
+          ) : (
+            <a className="btn ink" href={chatHref}>
+              Talk it over in chat
+            </a>
+          )}
         </div>
       )}
 
@@ -399,6 +453,11 @@ export function TaskPage({ id, toast, onCounts }: { id: number; toast: (m: strin
 
       <section className="section">
         <div className="task-actions">
+          {!activity && (task.status === "up_next" || task.status === "stopped") && (
+            <button className="btn primary" disabled={busy} onClick={() => startWorker()}>
+              {runs.length ? "Resume worker" : "Start worker"}
+            </button>
+          )}
           {task.status !== "done" ? (
             <button className="btn ink" disabled={busy} onClick={() => setStatus("done", "Marked done")}>
               Mark done
@@ -408,7 +467,7 @@ export function TaskPage({ id, toast, onCounts }: { id: number; toast: (m: strin
               Reopen
             </button>
           )}
-          {task.status !== "stopped" && task.status !== "done" && (
+          {!activity && task.status !== "stopped" && task.status !== "done" && (
             <button className="btn quiet" disabled={busy} onClick={() => setStatus("stopped", "Stopped")}>
               Stop
             </button>
@@ -432,9 +491,19 @@ export function TaskPage({ id, toast, onCounts }: { id: number; toast: (m: strin
             </li>
           ))}
         </ol>
-        {!log.some((l) => l.who === "worker") && (
+        {runs.length > 0 ? (
+          <a className="item flat worker-link" href={`#/t/${id}/log`}>
+            <span className="body">
+              <div className="title">Worker log</div>
+              <div className="sub">
+                {runs.length} {runs.length === 1 ? "run" : "runs"} · every step the worker took
+              </div>
+            </span>
+            <Chevron className="chev" />
+          </a>
+        ) : (
           <p className="hint" style={{ marginLeft: 0 }}>
-            When background workers arrive (Phase 4), each one writes its progress here.
+            Start a worker and it writes its progress here as it goes.
           </p>
         )}
       </section>
@@ -451,6 +520,89 @@ export function TaskPage({ id, toast, onCounts }: { id: number; toast: (m: strin
           <Trash size={18} /> Delete task
         </button>
       </section>
+    </div>
+  );
+}
+
+const RUN_LABEL: Record<WorkerRun["status"], string> = {
+  running: "Working",
+  waiting: "Waiting for you",
+  finished: "Finished",
+  failed: "Stopped with an error",
+  stopped: "Stopped",
+};
+
+interface LogPart {
+  type: string;
+  text?: string;
+  name?: string;
+  input?: Record<string, unknown>;
+  content?: string;
+  isError?: boolean;
+}
+
+/** Everything a worker did on a task: its thinking out loud, each tool call and what came back. */
+export function WorkerLog({ id }: { id: number }) {
+  const [runs, setRuns] = useState<WorkerRun[] | null>(null);
+  const [title, setTitle] = useState("");
+  const load = useCallback(() => {
+    api.workerRuns(id).then(setRuns, () => setRuns([]));
+    api.task(id).then((d) => setTitle(d.task.title), () => {});
+  }, [id]);
+  useEffect(load, [load]);
+  useEffect(() => onChange((e) => e.type === "task" && e.taskId === id && load()), [id, load]);
+
+  if (!runs) return <div className="center-load">Loading…</div>;
+  const short = (s: string, n = 600) => (s.length > n ? `${s.slice(0, n)}…` : s);
+  const plain = (s: string) => s.replace(/<\/?untrusted_data[^>]*>/g, "").trim();
+
+  return (
+    <div className="screen worker-log">
+      <h1 className="page-title">Worker log</h1>
+      <p className="page-sub">{title}</p>
+      {runs.length === 0 && <p className="mem-empty">No worker has run on this task yet.</p>}
+      {runs.map((r, i) => {
+        const msgs = JSON.parse(r.transcript) as { role: string; parts: LogPart[] }[];
+        return (
+          <section className="section" key={r.id}>
+            <h2 className="section-label">
+              Run {i + 1}{" "}
+              <span className="blurb">
+                {RUN_LABEL[r.status]} · {r.steps} {r.steps === 1 ? "step" : "steps"} · started {ago(parse(r.started_at))}
+              </span>
+            </h2>
+            <ol className="wl">
+              {msgs.flatMap((m, mi) =>
+                m.parts.map((p, pi) => {
+                  const key = `${mi}-${pi}`;
+                  if (p.type === "text" && p.text?.trim())
+                    return (
+                      <li key={key} className={m.role === "user" ? "wl-you" : "wl-think"}>
+                        <span className="wl-kind">{m.role === "user" ? "Instruction" : "Worker"}</span>
+                        <span className="wl-text">{short(p.text)}</span>
+                      </li>
+                    );
+                  if (p.type === "tool_call")
+                    return (
+                      <li key={key} className="wl-call">
+                        <span className="wl-kind">{p.name?.replace("__", " · ")}</span>
+                        <code className="wl-text">{short(JSON.stringify(p.input ?? {}), 300)}</code>
+                      </li>
+                    );
+                  if (p.type === "tool_result")
+                    return (
+                      <li key={key} className={`wl-result${p.isError ? " bad" : ""}`}>
+                        <span className="wl-kind">{p.isError ? "Problem" : "Result"}</span>
+                        <span className="wl-text">{short(plain(p.content ?? ""))}</span>
+                      </li>
+                    );
+                  return null;
+                }),
+              )}
+            </ol>
+          </section>
+        );
+      })}
     </div>
   );
 }

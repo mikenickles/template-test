@@ -1,6 +1,6 @@
 import { App as CapApp } from "@capacitor/app";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, isNative, type AppState, type Channel } from "./api";
+import { api, isNative, onChange, type AppState, type Channel } from "./api";
 import { Drawer } from "./Drawer";
 import { Back, ChannelIcon, MenuIcon } from "./icons";
 import { LyraMark } from "./LyraMark";
@@ -9,7 +9,7 @@ import { ChannelInfo, NewChannelDialog } from "./screens/ChannelScreens";
 import { Chat } from "./screens/Chat";
 import { Memory } from "./screens/Memory";
 import { Settings } from "./screens/Settings";
-import { TaskPage, Tasks } from "./screens/Tasks";
+import { TaskPage, Tasks, WorkerLog } from "./screens/Tasks";
 import { ChatIcon, TasksIcon } from "./icons";
 
 export type Route =
@@ -17,6 +17,7 @@ export type Route =
   | { name: "channel-info"; channelId: number }
   | { name: "tasks" }
   | { name: "task"; taskId: number }
+  | { name: "worker-log"; taskId: number }
   | { name: "access" }
   | { name: "memory" }
   | { name: "settings" };
@@ -25,8 +26,8 @@ export function readRoute(hash = location.hash): Route {
   const path = hash.replace(/^#\/?/, "").split("?")[0];
   const c = path.match(/^c\/(\d+)(\/info)?$/);
   if (c) return c[2] ? { name: "channel-info", channelId: Number(c[1]) } : { name: "chat", channelId: Number(c[1]) };
-  const t = path.match(/^t\/(\d+)$/);
-  if (t) return { name: "task", taskId: Number(t[1]) };
+  const t = path.match(/^t\/(\d+)(\/log)?$/);
+  if (t) return t[2] ? { name: "worker-log", taskId: Number(t[1]) } : { name: "task", taskId: Number(t[1]) };
   if (path === "tasks" || path === "access" || path === "memory" || path === "settings") return { name: path };
   return { name: "chat", channelId: null };
 }
@@ -42,6 +43,8 @@ function backFrom(r: Route): string | null {
       return "#/access";
     case "task":
       return "#/tasks";
+    case "worker-log":
+      return `#/t/${r.taskId}`;
     default:
       return "#/";
   }
@@ -91,6 +94,8 @@ export function App() {
       .then((c) => setReadyCount(c.ready))
       .catch(() => {});
   }, []);
+  // Workers change tasks in the background: keep the badge current.
+  useEffect(() => onChange(() => refreshCounts()), [refreshCounts]);
   // The Chat tab returns to whichever chat you were last in.
   const [lastChat, setLastChat] = useState("#/");
   useEffect(() => {
@@ -190,6 +195,7 @@ export function App() {
         )}
         {route.name === "tasks" && <Tasks toast={toast} channels={channels} onCounts={refreshCounts} />}
         {route.name === "task" && <TaskPage key={route.taskId} id={route.taskId} toast={toast} onCounts={refreshCounts} />}
+        {route.name === "worker-log" && <WorkerLog key={route.taskId} id={route.taskId} />}
         {route.name === "access" && <Access state={state} setState={setState} toast={toast} />}
         {route.name === "memory" && <Memory toast={toast} channels={channels} />}
         {route.name === "settings" && <Settings state={state} setState={setState} toast={toast} />}

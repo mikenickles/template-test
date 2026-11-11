@@ -7,6 +7,7 @@ import {
   addStep,
   createTask,
   describeTasks,
+  getTask,
   listTasks,
   log as logTask,
   parseStatus,
@@ -35,6 +36,8 @@ export interface Workspace {
   channels(): ChannelSummary[];
   notebook(channelId: number): Promise<Notebook>;
   createChannel(input: { name: string; about: string; icon?: string }): Promise<Channel>;
+  /** Hand a task to a background worker. Throws if it can't start (e.g. too many running). */
+  startTask?(id: number, note?: string): void;
 }
 
 export interface TurnContext {
@@ -104,12 +107,16 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
     {
       name: "create_task",
       description:
-        "Add a task: something the user hands off that takes more than a quick answer, or that they ask you to track. Background workers don't exist yet, so a new task waits as Up next.",
+        "Add a task: something the user hands off that takes real work, or that they ask you to track. With start, a background worker begins on it now from your brief and reports back in this chat.",
       schema: {
         type: "object",
         properties: {
           title: { type: "string", description: "Short and specific, e.g. 'Find a plumber for the kitchen leak'." },
-          details: { type: "string", description: "The brief: what done looks like, limits, anything you already know." },
+          details: {
+            type: "string",
+            description: "The written brief the worker starts from: the goal, what done looks like, limits (budget, dates), and everything relevant you already know.",
+          },
+          start: { type: "boolean", description: "Start a background worker on it now (default true). False just tracks it as Up next." },
           steps: { type: "array", items: { type: "string" }, description: "Optional checklist, a few short steps." },
           channel: {
             type: "string",
@@ -133,6 +140,16 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
           add_steps: { type: "array", items: { type: "string" } },
           finish_steps: { type: "array", items: { type: "integer" }, description: "Step numbers (1 = first) that are now done." },
         },
+        required: ["id"],
+      },
+    },
+    {
+      name: "start_task",
+      description:
+        "Start or resume the background worker on a task, e.g. after the user answers the worker's question. Pass their answer or new instructions as note.",
+      schema: {
+        type: "object",
+        properties: { id: { type: "integer" }, note: { type: "string", description: "The user's answer or extra instructions for the worker." } },
         required: ["id"],
       },
     },
@@ -343,7 +360,7 @@ async function runTool(
     }
   }
 
-  if (name === "create_task" || name === "update_task") {
+  if (name === "create_task" || name === "update_task" || name === "start_task") {
     // A task may later be carried out by a worker, so outside content can't create or steer one.
     if (state.tainted)
       return fail("Not changed: outside content was read this turn. Tell the user what you'd add or change, and do it once they say yes.");
@@ -359,8 +376,26 @@ async function runTool(
         }
         const steps = Array.isArray(input.steps) ? input.steps.map(String) : [];
         const t = createTask(ctx.db, { title: String(input.title ?? ""), brief: String(input.details ?? ""), steps, channelId }, "lyra");
-        taskNotes.push({ id: t.id, title: t.title, kind: "created", status: t.status });
-        return { content: `Added task #${t.id}: ${t.title} (Up next).`, isError: false };
+        let started = "";
+        if (input.start !== false && ctx.workspace.startTask) {
+          try {
+            ctx.workspace.startTask(t.id);
+            started = " A worker started on it and will report back here.";
+          } catch (e) {
+            started = ` It's waiting as Up next: ${(e as Error).message}`;
+          }
+        }
+        const fresh = getTask(ctx.db, t.id)!;
+        taskNotes.push({ id: t.id, title: t.title, kind: "created", status: fresh.status });
+        return { content: `Added task #${t.id}: ${t.title}.${started || " It's waiting as Up next."}`, isError: false };
+      }
+      if (name === "start_task") {
+        const t = getTask(ctx.db, Number(input.id));
+        if (!t) return fail(`There's no task #${input.id}.`);
+        if (!ctx.workspace.startTask) return fail("Workers aren't available.");
+        ctx.workspace.startTask(t.id, typeof input.note === "string" ? input.note : undefined);
+        taskNotes.push({ id: t.id, title: t.title, kind: "updated", status: getTask(ctx.db, t.id)!.status });
+        return { content: `The worker is on #${t.id} and will report back here.`, isError: false };
       }
       const id = Number(input.id);
       const detail = taskDetail(ctx.db, id);

@@ -2,15 +2,15 @@
 
 Lyra is a personal chief of staff that lives in an Android app. You text it like a trusted assistant; it answers short, leads with the point, and remembers what matters. Everything runs on your phone: there's no server or computer to keep running.
 
-This is **Phase 3**: the main chat, memory, Gmail (read-only), channels, and tasks.
+This is **Phase 4**: the main chat, memory, Gmail (read-only), channels, tasks, and background workers.
 
 | Phase | What it adds | Status |
 | --- | --- | --- |
 | 1 | Main chat, memory, Gmail read-only | Done |
 | 2 | Channels (Home, Rowan, Games…) | Done |
-| 3 | Tasks page | **Here** |
-| 4 | Background workers | Next |
-| 5 | Calendar and Drive, read-only | |
+| 3 | Tasks page | Done |
+| 4 | Background workers | **Here** |
+| 5 | Calendar and Drive, read-only | Next |
 | 6 | Routines (7am brief, check-ins, watches) | |
 | 7 | Approvals, then the first actions that send or book | |
 
@@ -35,8 +35,17 @@ This is **Phase 3**: the main chat, memory, Gmail (read-only), channels, and tas
 - **A row for each thing you hand off.** The **Tasks** tab (bottom bar) lists them under **Active** (Ready for you, Working, Up next, Stopped) and **Done**, with search. The badge on the tab counts tasks that are Ready for you.
 - **Steps and a log.** Each task has a brief, a checklist, and a log of everything that happened to it. Tap the circle to mark a task done.
 - **Lyra keeps them.** Hand Lyra something bigger than a quick answer and it adds a task; it marks it Ready for you (with the one question it needs answered) or Done as you talk. A note under the reply links to the task. In a channel, tasks land in that channel, and the channel's page lists its open tasks.
-- **Nothing runs on its own yet.** New tasks wait as **Up next** until background workers arrive in Phase 4; Lyra won't pretend otherwise.
+- **Up next** is for tasks you're tracking but nobody is working on yet.
 - **Safe with email.** In a reply where Lyra read an email, it can't create or change a task; it tells you what it would do and waits for your yes.
+
+### Background workers (Phase 4)
+
+- **Hand it off, keep chatting.** When you give Lyra real work, it writes a brief and starts a worker: a separate agent conversation that carries the task out while your chat stays free.
+- **Progress on the task card.** The worker logs what it finds and ticks off steps. The task page shows what it's doing right now, with a **Stop** button, and **Worker log** shows every step it took.
+- **It asks when it must.** If the worker needs a decision, it asks one question; the task becomes Ready for you and the question appears in chat. Answer on the task page or in chat and it carries on.
+- **It reports back** in the chat the task came from (a channel, or Everything), then waits as Ready for you until you mark it done.
+- **Limits.** Two workers at once, 20 steps each before it asks to keep going. Workers can read mail and think; they can't browse the web, send, buy, book or change memory. A worker can't be started from a reply that read an email.
+- **On your phone.** Workers run while Lyra is open. Android pauses apps in the background, so a worker cut off when you close Lyra picks up where it left off the next time you open it.
 
 Nightly promotion of channel notes into main memory, from your memory-per-space spec, arrives with routines in Phase 6.
 
@@ -89,6 +98,15 @@ Google needs you to register Lyra once. It takes about ten minutes.
 There's no client ID or secret to paste: Google recognizes the app by its package name and signing fingerprint. If you install a build signed with a different key, add its fingerprint as another Android client.
 
 While the Google project is in **Testing** mode, Google expires the approval after 7 days. Lyra shows Mail as needing a reconnect; tap it and approve again.
+
+## Try Phase 4
+
+1. Install `Lyra-phase4.apk` over your current app.
+2. With Gmail connected, say "Go through my school emails from this month and tell me every date I need to remember." Lyra should say in one line what it set going, and the Tasks tab shows it **Working**.
+3. Open the task: you'll see what the worker is doing and its log filling in. Tap **Worker log** for every step.
+4. When it's done, the result appears in chat and on the task, and the task is **Ready for you**. Mark it done.
+5. Try something that needs a choice ("Plan a dinner for Saturday, ask me anything you need"). When the worker asks, answer it on the task page.
+6. Start a long task, close Lyra fully, and reopen it: the worker should pick back up.
 
 ## Try Phase 3
 

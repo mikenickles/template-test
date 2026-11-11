@@ -5,6 +5,7 @@
 import { App as CapApp } from "@capacitor/app";
 import type { ChannelSummary, MemoryNote as CoreNote, StoredMessage, TaskNote as CoreTaskNote } from "../../core/db";
 import type { NewTask, TaskDetail as CoreTaskDetail, TaskPatch, TaskQuery, TaskRow, TaskStatus as CoreStatus } from "../../core/tasks";
+import type { WorkerEvent, WorkerRun as CoreRun } from "../../core/workers";
 import {
   Lyra,
   type AppState as CoreState,
@@ -27,6 +28,21 @@ export type Task = TaskRow;
 export type TaskDetail = CoreTaskDetail;
 export type TaskStatus = CoreStatus;
 export type TaskNote = CoreTaskNote;
+export type WorkerRun = CoreRun;
+export type { WorkerEvent };
+
+/** Background activity (workers updating tasks or posting reports). */
+export function onChange(fn: (e: WorkerEvent) => void): () => void {
+  let off: (() => void) | undefined;
+  let cancelled = false;
+  void ready.then((l) => {
+    if (!cancelled) off = l.onChange(fn);
+  });
+  return () => {
+    cancelled = true;
+    off?.();
+  };
+}
 export { isNative };
 
 const ready: Promise<Lyra> = createPlatform().then(async (p) => {
@@ -64,6 +80,10 @@ export const api = {
   setTaskStep: async (stepId: number, done: boolean) => (await ready).setTaskStep(stepId, done),
   removeTaskStep: async (taskId: number, stepId: number) => (await ready).removeTaskStep(taskId, stepId),
   deleteTask: async (id: number) => (await ready).deleteTask(id),
+  startTask: async (id: number, note?: string) => (await ready).startTask(id, note),
+  stopTask: async (id: number) => (await ready).stopTask(id),
+  workerRuns: async (id: number) => (await ready).workerRuns(id),
+  taskActivity: async (id: number) => (await ready).taskActivity(id),
   connectGmail: async () => (await ready).connectGmail(),
   disconnectGmail: async () => (await ready).disconnectGmail(),
 };

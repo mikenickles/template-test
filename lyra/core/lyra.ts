@@ -35,6 +35,7 @@ import {
 } from "./providers/index.ts";
 import type { ModelProvider } from "./providers/types.ts";
 import * as T from "./tasks.ts";
+import { Workers, type WorkerEvent, type WorkerRun } from "./workers.ts";
 
 export interface SecretStore {
   get(key: string): Promise<string | null>;
@@ -103,6 +104,8 @@ export class Lyra {
   private tokens: TokenSource;
   private notebooks = new Map<number, Promise<Notebook>>();
   private workspace: Workspace;
+  readonly workers: Workers;
+  private listeners = new Set<(e: WorkerEvent) => void>();
 
   private constructor(
     private p: Platform,
@@ -114,6 +117,7 @@ export class Lyra {
       channels: () => this.channels(),
       notebook: (id) => this.notebook(id),
       createChannel: (input) => this.createChannel(input),
+      startTask: (id, note) => void this.workers.start(id, "lyra", note),
     };
     this.tokens = new TokenSource(p.google, [GMAIL_READONLY]);
     this.connectors = new Connectors([
@@ -129,6 +133,16 @@ export class Lyra {
         server: () => createGmailServer(this.tokens, this.fetch),
       },
     ]);
+    this.workers = new Workers({
+      db,
+      workspace: this.workspace,
+      connectors: this.connectors,
+      provider: async () => this.p.provider ?? createProvider(this.keys, this.choice()),
+      userName: () => this.userName,
+      timeZone: p.timeZone,
+      onEvent: (e) => this.listeners.forEach((l) => l(e)),
+      flush: () => db.flush(),
+    });
   }
 
   static async start(p: Platform): Promise<Lyra> {
@@ -138,6 +152,8 @@ export class Lyra {
     const lyra = new Lyra(p, db, memory);
     for (const k of SECRET_KEYS) lyra.keys[k] = (await p.secrets.get(`key.${k}`)) ?? undefined;
     lyra.keys.openaiBaseUrl = getSetting(db, "openaiBaseUrl") || undefined;
+    // Workers cut off when the app was closed carry on where they stopped.
+    lyra.workers.resumeInterrupted();
     return lyra;
   }
 
@@ -437,6 +453,33 @@ export class Lyra {
   async deleteTask(id: number): Promise<void> {
     T.deleteTask(this.db, id);
     await this.db.flush();
+  }
+
+  // ---------- workers ----------
+
+  /** Subscribe to background activity (task changes, worker reports). Returns an unsubscribe function. */
+  onChange(fn: (e: WorkerEvent) => void): () => void {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  }
+
+  async startTask(id: number, note?: string): Promise<T.TaskDetail> {
+    this.workers.start(id, "you", note);
+    return this.saved(this.task(id));
+  }
+
+  async stopTask(id: number): Promise<T.TaskDetail> {
+    this.workers.stop(id);
+    await this.workers.done(id);
+    return this.saved(this.task(id));
+  }
+
+  workerRuns(id: number): WorkerRun[] {
+    return this.workers.runs(id);
+  }
+
+  taskActivity(id: number): string | undefined {
+    return this.workers.isRunning(id) ? (this.workers.activity.get(id) ?? "Working") : undefined;
   }
 
   // ---------- Gmail ----------

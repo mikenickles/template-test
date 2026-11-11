@@ -110,6 +110,19 @@ try {
   await page.getByRole("link", { name: "Back" }).click();
   await page.getByText("1 of 3 steps").waitFor();
   await shot("light-14-tasks");
+  await page.getByRole("link", { name: /Find a plumber/ }).click();
+  await page.getByRole("button", { name: "Start worker" }).click();
+  await page.locator(".needs-text", { hasText: "Review the result and mark it done." }).waitFor();
+  check(true, "a worker runs the task and hands it back as Ready for you");
+  await shot("light-15-task-ready");
+  await page.getByRole("link", { name: /Worker log/ }).click();
+  await page.getByText("Run 1").waitFor();
+  check(true, "the worker log shows the run");
+  await shot("light-16-worker-log");
+  await page.getByRole("link", { name: "Back" }).click();
+  await page.getByRole("link", { name: "Back" }).click();
+  await page.locator(".badge").waitFor();
+  check(true, "the Tasks tab shows a badge for tasks ready for you");
   await page.getByRole("button", { name: "Mark Find a plumber for the kitchen leak done" }).click();
   await page.getByText("Nothing on your plate.").waitFor();
   await page.getByRole("tab", { name: "Done" }).click();
@@ -193,7 +206,7 @@ try {
 
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto(`${base}/#/`);
-  await page.getByText("practice model").waitFor();
+  await page.getByText("practice model").first().waitFor();
   await shot("dark-2-chat");
 
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);

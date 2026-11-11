@@ -73,6 +73,17 @@ export const MIGRATIONS: string[] = [
      who TEXT NOT NULL CHECK (who IN ('you','lyra','worker')),
      text TEXT NOT NULL
    );`,
+  // Phase 4: background workers, one run per attempt at a task.
+  `CREATE TABLE worker_runs (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+     status TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running','waiting','finished','failed','stopped')),
+     steps INTEGER NOT NULL DEFAULT 0,
+     transcript TEXT NOT NULL DEFAULT '[]',
+     started_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+     ended_at TEXT
+   );
+   CREATE INDEX worker_runs_task ON worker_runs (task_id, id);`,
 ];
 
 const FILE = "lyra.db";
@@ -194,6 +205,8 @@ export interface MessageMeta {
   provider?: string;
   model?: string;
   error?: boolean;
+  /** Posted by a background worker rather than in reply to a message. */
+  worker?: boolean;
 }
 
 type Row = Omit<StoredMessage, "meta"> & { meta: string };

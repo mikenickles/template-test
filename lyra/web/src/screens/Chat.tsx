@@ -1,5 +1,5 @@
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { api, sendChat, type Channel, type MemoryNote, type Message, type TaskNote } from "../api";
+import { api, onChange, sendChat, type Channel, type MemoryNote, type Message, type TaskNote } from "../api";
 import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chevron, Minus, Spark, Stop, TasksIcon } from "../icons";
 import { STATUS_LABEL } from "./Tasks";
 import { StarChart, Thinking } from "../LyraMark";
@@ -57,6 +57,21 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
         toast("Couldn't load the chat. Is Lyra running?");
       });
   }, [toast, channelId]);
+
+  // A worker finished or asked something in this chat: show it.
+  const pendingRef = useRef(false);
+  pendingRef.current = !!pending;
+  useEffect(
+    () =>
+      onChange((e) => {
+        if (e.type !== "message" || e.channelId !== channelId || pendingRef.current) return;
+        void api.messages(channelId).then((r) => {
+          stick.current = true;
+          setMessages(r.messages);
+        });
+      }),
+    [channelId],
+  );
 
   // Lets the orb in the top bar pulse while Lyra is working.
   useEffect(() => {
