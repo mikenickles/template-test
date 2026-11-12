@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DRIVE_READONLY, TokenSource } from "../core/connectors/google.ts";
-import { compareVersions, newest, parseUpdateName, UpdateSource } from "../core/updates.ts";
+import { compareVersions, joinParts, newest, parseUpdateName, UpdateSource } from "../core/updates.ts";
 
 describe("updates from Drive", () => {
   it("compares versions number by number", () => {
@@ -40,5 +40,17 @@ describe("updates from Drive", () => {
     expect(urls[0]).toContain("name = 'Lyra Updates'");
     expect(urls.every((u) => u.includes("'me' in owners") || u.includes("alt=media"))).toBe(true);
     expect([...(await src.download("a"))]).toEqual([7]);
+  });
+
+  it("puts a phone update uploaded in pieces back together, only once every piece is there", async () => {
+    const p = (n: number, of: number, v = "0.13.0") => ({ id: `id${v}-${n}`, name: `Lyra-${v}.apk.part${n}of${of}`, size: 10 });
+    expect(joinParts([p(1, 3), p(3, 3)])).toEqual([]);
+    const [f] = joinParts([p(2, 3), p(1, 3), p(3, 3), { id: "x", name: "Lyra-0.13.0.apk.part9of3", size: 1 }]);
+    expect(f).toMatchObject({ kind: "apk", version: "0.13.0", parts: ["id0.13.0-1", "id0.13.0-2", "id0.13.0-3"], size: 30 });
+    const bytes: Record<string, number[]> = { "id0.13.0-1": [1, 2], "id0.13.0-2": [3], "id0.13.0-3": [4, 5] };
+    const fetchFn = (async (url: string) => new Response(new Uint8Array(bytes[decodeURIComponent(url).match(/files\/([^?]+)/)![1]]))) as typeof fetch;
+    const auth = { available: true, authorize: async () => ({ accessToken: "t", grantedScopes: [DRIVE_READONLY] }) };
+    const src = new UpdateSource(new TokenSource(auth, [DRIVE_READONLY]), fetchFn);
+    expect([...(await src.fetchUpdate(f))]).toEqual([1, 2, 3, 4, 5]);
   });
 });

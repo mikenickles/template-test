@@ -18,6 +18,41 @@ export interface UpdateFile {
   kind: UpdateKind;
   version: string;
   size: number;
+  /** a phone update uploaded in pieces (Lyra-<v>.apk.part1of4 …), in order */
+  parts?: string[];
+}
+
+/** Lyra-0.12.1.apk.part2of4: one piece of a phone update too big to upload whole. */
+export function parsePartName(name: string): { version: string; part: number; total: number } | null {
+  const m = name.match(/^Lyra-(\d+\.\d+\.\d+)\.apk\.part(\d+)of(\d+)$/);
+  if (!m) return null;
+  const part = Number(m[2]);
+  const total = Number(m[3]);
+  return part >= 1 && part <= total && total <= 50 ? { version: m[1], part, total } : null;
+}
+
+/** Turn complete sets of pieces into one phone update each; incomplete sets are ignored until the rest arrive. */
+export function joinParts(pieces: { id: string; name: string; size: number }[]): UpdateFile[] {
+  const sets = new Map<string, { total: number; ids: Map<number, string>; size: number }>();
+  for (const p of pieces) {
+    const info = parsePartName(p.name);
+    if (!info) continue;
+    const key = `${info.version}/${info.total}`;
+    const set = sets.get(key) ?? { total: info.total, ids: new Map(), size: 0 };
+    if (!set.ids.has(info.part)) {
+      set.ids.set(info.part, p.id);
+      set.size += p.size;
+    }
+    sets.set(key, set);
+  }
+  const out: UpdateFile[] = [];
+  for (const [key, set] of sets) {
+    if (set.ids.size !== set.total) continue;
+    const version = key.split("/")[0];
+    const parts = Array.from({ length: set.total }, (_, i) => set.ids.get(i + 1)!);
+    out.push({ id: parts[0], name: `Lyra-${version}.apk`, kind: "apk", version, size: set.size, parts });
+  }
+  return out;
 }
 
 /** -1, 0 or 1, comparing "0.12.0"-style versions number by number. */
@@ -74,11 +109,26 @@ export class UpdateSource {
         const p = parseUpdateName(f.name);
         if (p) out.push({ id: f.id, name: f.name, size: Number(f.size ?? 0), ...p });
       }
+      out.push(...joinParts(r.files.map((f) => ({ id: f.id, name: f.name, size: Number(f.size ?? 0) }))));
     }
     return out;
   }
 
   async download(id: string): Promise<Uint8Array> {
     return new Uint8Array(await (await this.get(`${API}/${encodeURIComponent(id)}?alt=media`)).arrayBuffer());
+  }
+
+  /** The whole file, putting a split phone update back together. */
+  async fetchUpdate(file: UpdateFile): Promise<Uint8Array> {
+    if (!file.parts) return this.download(file.id);
+    const pieces: Uint8Array[] = [];
+    for (const id of file.parts) pieces.push(await this.download(id));
+    const out = new Uint8Array(pieces.reduce((n, p) => n + p.length, 0));
+    let at = 0;
+    for (const p of pieces) {
+      out.set(p, at);
+      at += p.length;
+    }
+    return out;
   }
 }

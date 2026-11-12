@@ -19,6 +19,11 @@ mkdirSync(out, { recursive: true });
 // the phone app (builds the web app too)
 execFileSync("npm", ["run", "android:apk"], { cwd: root, stdio: ["ignore", "ignore", "inherit"] });
 copyFileSync(join(root, "android/app/build/outputs/apk/debug/app-debug.apk"), join(out, `Lyra-${version}.apk`));
+// uploads from a session are capped near 3 MB, so the APK also goes up in pieces
+const apk = readFileSync(join(out, `Lyra-${version}.apk`));
+const PART = 3_000_000;
+const total = Math.ceil(apk.length / PART);
+for (let i = 0; i < total; i++) writeFileSync(join(out, `Lyra-${version}.apk.part${i + 1}of${total}`), apk.subarray(i * PART, (i + 1) * PART));
 
 // the Windows app's code, from the same build
 const dist = join(root, "web/dist");

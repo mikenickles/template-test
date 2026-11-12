@@ -77,7 +77,7 @@ export async function applyUpdate(lyra: Lyra): Promise<UpdateState> {
   const file = current.file;
   set({ kind: "downloading", file });
   try {
-    const bytes = await lyra.updates().download(file.id);
+    const bytes = await lyra.updates().fetchUpdate(file);
     if (isNative) {
       const r = await installer.installApk(file.name, bytes);
       set(r === "needs-permission" ? { kind: "permission" } : { kind: "available", file });
