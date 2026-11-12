@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { api, type AppState, type ConnectorStatus } from "../api";
-import { Calendar, Chevron, File, Mail, Notebook, Plus, Spark } from "../icons";
+import { Calendar, Chevron, File, Mail, Notebook, Plus, Spark, User } from "../icons";
 import { Orb } from "../LyraMark";
 import { thisDevice } from "../platform";
 import { PinnedList } from "./Pinned";
@@ -93,6 +93,8 @@ export function Access({
         {unavailable && <p className="hint">Google sign-in works in the Android app. This browser preview can't connect.</p>}
       </section>
 
+      {state.contacts !== null && <PhoneContacts state={state} setState={setState} toast={toast} />}
+
       {!unavailable && <WithYourOk state={state} setState={setState} toast={toast} />}
 
       <section className="section">
@@ -123,6 +125,45 @@ export function Access({
         </div>
       </section>
     </div>
+  );
+}
+
+/** Phase 10: look a name up in the phone's contacts. */
+function PhoneContacts({ state, setState, toast }: { state: AppState; setState: (s: AppState) => void; toast: (m: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <section className="section">
+      <div className="group">
+        <label className="item">
+          <span className={`tile${state.contacts ? " on" : ""}`}>
+            <User />
+          </span>
+          <span className="body">
+            <div className="title">Phone contacts</div>
+            <div className="sub">When you mention someone, Lyra can look up their email or number here. One name at a time; it never copies your address book.</div>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            className="switch"
+            checked={!!state.contacts}
+            disabled={busy}
+            onChange={async (e) => {
+              const on = e.target.checked;
+              setBusy(true);
+              try {
+                setState(await api.allowContacts(on));
+                toast(on ? "Lyra can look up your contacts" : "Contacts off");
+              } catch (err) {
+                toast((err as Error).message);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          />
+        </label>
+      </div>
+    </section>
   );
 }
 

@@ -12,6 +12,9 @@ import { createCalendarServer } from "./connectors/calendar/server.ts";
 import { createDriveServer } from "./connectors/drive/server.ts";
 import { CALENDAR_EVENTS, CALENDAR_READONLY, DRIVE_READONLY, GMAIL_COMPOSE, GMAIL_READONLY, grantIsAllowed, TokenSource, type GoogleAuth } from "./connectors/google.ts";
 import * as A from "./actions.ts";
+import * as P from "./people.ts";
+import { runTidy } from "./tidy.ts";
+import { wrapUntrusted } from "./untrusted.ts";
 import { latestIds, searchMessages, todayView, unreadCounts, type SearchHit, type Today } from "./today.ts";
 import { Connectors, type ConnectorStatus } from "./connectors/registry.ts";
 import {
@@ -85,6 +88,13 @@ export interface Platform {
   timeZone?: string;
   /** Tests pass a provider directly instead of choosing one from settings. */
   provider?: ModelProvider;
+  /** The phone's address book (Android only), searched by name. */
+  contacts?: {
+    available: boolean;
+    /** asks Android for permission if needed; false if refused */
+    allow(): Promise<boolean>;
+    find(name: string): Promise<{ name: string; emails: string[]; phones: string[] }[]>;
+  };
 }
 
 export interface AppState {
@@ -110,6 +120,8 @@ export interface AppState {
   proactive: Proactive;
   /** Lyra may propose emails / calendar events (you approve each one). */
   actions: { email: boolean; event: boolean };
+  /** Phone contacts: on/off, or null where there are none (computer, browser). */
+  contacts: boolean | null;
 }
 
 export const PROACTIVE_LEVELS = ["off", "light", "active"] as const;
@@ -185,7 +197,7 @@ export type GoogleId = "gmail" | "calendar" | "drive";
 
 const GOOGLE_LINKS = ["gmail", "calendar", "drive"];
 /** Settings that stay with a device when another device's data arrives through sync. */
-const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications", "actions.gmail", "actions.calendar"];
+const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications", "actions.gmail", "actions.calendar", "contacts"];
 
 /** Phase 9: what Lyra may propose, each turned on by the user in Connections. */
 const ACTION_ACCESS = {
@@ -254,8 +266,39 @@ export class Lyra {
     private db: DB,
     private memory: Notebook,
   ) {
+    const lyra = this;
     this.workspace = {
       main: memory,
+      people: {
+        directory: () => P.describePeople(P.listPeople(this.db)),
+        remember: (input) => {
+          const r = P.rememberPerson(this.db, input as unknown as P.PersonInput);
+          return { id: r.person.id, name: r.person.name, created: r.created };
+        },
+        lookUp: (name) => {
+          const p = P.findPerson(this.db, name);
+          return p ? P.describePerson(p) : null;
+        },
+      },
+      // only while the user has it turned on, on a phone that can
+      get contacts() {
+        return lyra.contactsOn
+          ? {
+              find: async (name: string) => {
+                const hits = await lyra.p.contacts!.find(String(name).slice(0, 80));
+                if (!hits.length) return "No contact by that name.";
+                // the user's own address book; names can still be anything, so it's data, not instructions
+                return wrapUntrusted(
+                  "contacts",
+                  hits
+                    .slice(0, 5)
+                    .map((h) => `- ${h.name}${h.emails.length ? ` · ${h.emails.join(", ")}` : ""}${h.phones.length ? ` · ${h.phones.join(", ")}` : ""}`)
+                    .join("\n"),
+                );
+              },
+            }
+          : undefined;
+      },
       channels: () => this.channels(),
       notebook: (id) => this.notebook(id),
       createChannel: (input) => this.createChannel(input),
@@ -433,6 +476,7 @@ export class Lyra {
       liveVoice: this.liveVoice,
       proactive: this.proactive,
       actions: this.actionsAllowed(),
+      contacts: this.p.contacts?.available ? this.contactsOn : null,
     };
   }
 
@@ -1030,8 +1074,107 @@ export class Lyra {
   tickRoutines(now = new Date()): number[] {
     const started = this.routinesRunner.tick(now);
     this.tickReminders(now);
-    if (!this.tickHeadsUp(now)) this.tickCheckIn(now);
+    if (!this.tickHeadsUp(now) && !this.tickCheckIn(now)) this.tickTidy(now);
     return started;
+  }
+
+  // ---------- the weekly memory tidy-up (Phase 10) ----------
+
+  private tidying = false;
+
+  get tidyOn(): boolean {
+    return getSetting(this.db, "tidy") !== "off";
+  }
+
+  /** Once a week, in the daytime, when there's enough saved to be worth it and the user isn't mid-conversation. */
+  tickTidy(now = new Date()): boolean {
+    if (!this.tidyOn || this.tidying || this.busy) return false;
+    if (!this.p.provider && this.choice().provider === "fake") return false;
+    const local = now.toLocaleTimeString("en-GB", { timeZone: this.p.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    if (local < "09:00" || local >= "20:00" || inQuietHours(local, this.proactive)) return false;
+    const lastAt = getSetting(this.db, "tidyAt");
+    if (lastAt && now.getTime() - new Date(lastAt).getTime() < 7 * 86_400_000) return false;
+    if (this.memory.count() < 12) return false;
+    const lastUser = this.db.get<{ at: string | null }>("SELECT MAX(created_at) AS at FROM messages WHERE role = 'user'")!.at;
+    if (lastUser && now.getTime() - new Date(lastUser).getTime() < 3600_000) return false;
+    setSetting(this.db, "tidyAt", now.toISOString());
+    void this.tidyNow().catch((e) => console.error("[lyra] tidy-up failed", e));
+    return true;
+  }
+
+  /** Tidy now (also the Memory page's button). Posts what changed, or says it's already tidy. */
+  async tidyNow(): Promise<{ changed: boolean; changes: string[] }> {
+    if (this.tidying) throw new Error("Already tidying.");
+    this.tidying = true;
+    try {
+      const provider = metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "proactive", this.db, this.p.timeZone);
+      const before = this.memory.read();
+      const today = new Date().toLocaleDateString("en-US", { timeZone: this.p.timeZone, dateStyle: "full" });
+      const r = await runTidy(provider, before, this.memory.sections, this.userName, today);
+      if (!r || r.content === before) return { changed: false, changes: [] };
+      // the notebook may have changed while the model was thinking: don't overwrite that
+      if (this.memory.read() !== before) return { changed: false, changes: [] };
+      const snapshotId = await this.memory.tidy(r.content);
+      addMessage(this.db, "assistant", `I tidied up my notes about you:\n${r.changes.map((c) => `- ${c}`).join("\n")}`, { tidy: { snapshotId } }, null);
+      this.listeners.forEach((l) => l({ type: "message", channelId: null }));
+      await this.db.flush();
+      return { changed: true, changes: r.changes };
+    } finally {
+      this.tidying = false;
+    }
+  }
+
+  /** Put the notebook back the way it was before that tidy-up. */
+  async undoTidy(messageId: number): Promise<void> {
+    const m = getMessage(this.db, messageId);
+    if (!m?.meta.tidy || m.meta.tidy.undone) throw new Error("Nothing to undo there.");
+    await this.memory.restore(m.meta.tidy.snapshotId);
+    updateMessageMeta(this.db, messageId, { ...m.meta, tidy: { ...m.meta.tidy, undone: true } });
+    this.listeners.forEach((l) => l({ type: "message", channelId: null }));
+    await this.db.flush();
+  }
+
+  async setTidy(on: boolean): Promise<void> {
+    setSetting(this.db, "tidy", on ? "on" : "off");
+    await this.db.flush();
+  }
+
+  // ---------- people (Phase 10) ----------
+
+  people(): P.Person[] {
+    return P.listPeople(this.db);
+  }
+
+  person(id: number): P.Person | undefined {
+    return P.getPerson(this.db, id);
+  }
+
+  async savePerson(id: number | null, patch: Partial<Pick<P.Person, "name" | "aliases" | "emails" | "phones" | "relation" | "notes">>): Promise<P.Person> {
+    const p = id === null ? P.rememberPerson(this.db, { name: patch.name ?? "", relation: patch.relation }).person : P.getPerson(this.db, id);
+    if (!p) throw new Error("That person is no longer here.");
+    const saved = P.updatePerson(this.db, p.id, patch);
+    await this.db.flush();
+    return saved;
+  }
+
+  async deletePerson(id: number): Promise<void> {
+    P.deletePerson(this.db, id);
+    await this.db.flush();
+  }
+
+  /** The phone's contacts are on for this device (and the phone can). */
+  get contactsOn(): boolean {
+    return !!this.p.contacts?.available && getSetting(this.db, "contacts") === "on";
+  }
+
+  async allowContacts(on: boolean): Promise<AppState> {
+    if (on) {
+      if (!this.p.contacts?.available) throw new Error("Contacts work in the Android app.");
+      if (!(await this.p.contacts.allow())) throw new Error("Android didn't allow Lyra to read contacts. You can allow it in your phone's Settings, Apps, Lyra.");
+    }
+    setSetting(this.db, "contacts", on ? "on" : "off");
+    await this.db.flush();
+    return this.state();
   }
 
   // ---------- check-ins: when nothing needs you, Lyra asks for work ----------

@@ -28,6 +28,8 @@ export interface PromptInput {
   tasks?: string;
   /** Reminders and follow-ups still to come, one per line. */
   reminders?: string;
+  /** People cards: the directory, and whether the phone's contacts can be searched. */
+  people?: { directory: string; contacts: boolean };
   /** Emails and events Lyra may propose, and recent proposals with what happened to them. */
   actions?: { allowed: { email: boolean; event: boolean }; recent: string };
   /** The model's built-in web search is on. */
@@ -40,6 +42,19 @@ function cant(p: PromptInput): string {
   if (a?.email) return "You can't delete, archive, label, book, pay for or buy anything, or change the calendar (Calendar events aren't turned on), and emails only go when the user taps the card.";
   if (a?.event) return "You can't send, reply to, delete, archive, label, pay for or buy anything (Mail drafts aren't turned on), and events are only added when the user taps the card.";
   return "You can't send, reply to, delete, archive, label, book, pay for or buy anything yet.";
+}
+
+function peopleSection(p: PromptInput, user: string): string {
+  if (!p.people) return "";
+  return `
+## People
+You keep a card for each person who matters to ${user}: who they are to ${user}, how to reach them, and what you know about them.
+- When ${user} mentions someone who matters, or tells you something about them, save it with remember_person (one fact per call). Facts about a person go on their card, not in the notebook.
+- When ${user} names someone ("email Dana", "what's Mom's birthday?"), check the cards first and use look_up_person for the details${p.people.contacts ? ", then find_contact in their phone's contacts" : ""}. If you can't tell who they mean, ask.
+
+Cards:
+${p.people.directory.trim() ? neutralize(p.people.directory) : "(none yet)"}
+`;
 }
 
 function actionsSection(p: PromptInput, user: string): string {
@@ -153,7 +168,7 @@ ${p.tasks?.trim() ? neutralize(p.tasks) : "(none)"}
 
 Coming up (reminders and follow-ups):
 ${p.reminders?.trim() ? neutralize(p.reminders) : "(none)"}
-${actionsSection(p, user)}
+${actionsSection(p, user)}${peopleSection(p, user)}
 ${
     p.webSearch
       ? `## The web

@@ -225,6 +225,11 @@ export class Notebook {
     return { section: s, text: r.removed, snapshotId: await this.write(r.md, `Removed from ${s}: ${r.removed}`) };
   }
 
+  /** The weekly tidy-up's version of the file. Returns the version that undoes it. */
+  tidy(content: string): Promise<number> {
+    return this.write(content, "Weekly tidy-up");
+  }
+
   /** Whole-file edit from the app. */
   replace(content: string): Promise<number> {
     return this.write(content, "Edited by hand in the app");

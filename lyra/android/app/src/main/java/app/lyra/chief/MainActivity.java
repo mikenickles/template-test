@@ -17,6 +17,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(BackgroundPlugin.class);
         // the home-screen widget's words
         registerPlugin(LyraWidget.WidgetPlugin.class);
+        // looking a name up in your contacts, when you allow it
+        registerPlugin(ContactsPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

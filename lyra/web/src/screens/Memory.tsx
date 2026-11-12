@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { Person } from "../../../core/people";
 import { api, type Channel, type MemoryView } from "../api";
 import { ChannelIcon, Chevron } from "../icons";
 import { ago, parse } from "../when";
@@ -14,10 +15,29 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
   const [view, setView] = useState<MemoryView | null>(null);
   const [draft, setDraft] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [tab, setTab] = useState<"notes" | "people">(() => (location.hash.includes("people") ? "people" : "notes"));
+  const [tidyOn, setTidyOn] = useState<boolean | null>(null);
+  const [tidying, setTidying] = useState(false);
 
   useEffect(() => {
     api.memory().then(setView).catch((e) => toast(e.message));
+    void api.tidyOn().then(setTidyOn, () => {});
   }, [toast]);
+
+  const tidyNow = async () => {
+    setTidying(true);
+    try {
+      const r = await api.tidyNow();
+      if (r.changed) {
+        setView(await api.memory());
+        toast(`Tidied: ${r.changes.length} ${r.changes.length === 1 ? "change" : "changes"}. Undo is in the chat.`);
+      } else toast("Already tidy");
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setTidying(false);
+    }
+  };
 
   if (!view) return <div className="center-load">Loading…</div>;
 
@@ -70,16 +90,29 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
     <div className="screen mem-sections">
       <div className="bar">
         <h1 className="page-title">Memory</h1>
-        <button className="btn quiet" onClick={() => setDraft(view.content)}>
-          Edit
-        </button>
+        {tab === "notes" && (
+          <button className="btn quiet" onClick={() => setDraft(view.content)}>
+            Edit
+          </button>
+        )}
       </div>
       <p className="page-sub">
-        {total ? `${total} ${total === 1 ? "fact" : "facts"}` : "Nothing saved yet"}
-        {last ? ` · changed ${ago(parse(last.created_at))}` : ""}
+        {tab === "people" ? "The people who matter to you, and what Lyra knows about each" : total ? `${total} ${total === 1 ? "fact" : "facts"}` : "Nothing saved yet"}
+        {tab === "notes" && last ? ` · changed ${ago(parse(last.created_at))}` : ""}
       </p>
 
-      {view.sections.map((s) => (
+      <div className="seg-tabs mem-tabs" role="tablist" aria-label="Memory">
+        <button role="tab" aria-selected={tab === "notes"} className={tab === "notes" ? "on" : ""} onClick={() => setTab("notes")}>
+          Notes
+        </button>
+        <button role="tab" aria-selected={tab === "people"} className={tab === "people" ? "on" : ""} onClick={() => setTab("people")}>
+          People
+        </button>
+      </div>
+
+      {tab === "people" && <PeopleList toast={toast} />}
+
+      {tab === "notes" && view.sections.map((s) => (
         <section className="section" key={s.name}>
           <h2 className="section-label">
             {s.name}
@@ -100,7 +133,36 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
         </section>
       ))}
 
-      {channels.length > 0 && (
+      {tab === "notes" && (
+        <section className="section">
+          <h2 className="section-label">Weekly tidy-up</h2>
+          <div className="group">
+            <label className="item">
+              <span className="body">
+                <div className="title">Tidy my notes each week</div>
+                <div className="sub">Lyra merges duplicates, drops what's done or out of date, and tells you what changed in the chat, with an Undo.</div>
+              </span>
+              <input
+                type="checkbox"
+                role="switch"
+                className="switch"
+                checked={!!tidyOn}
+                disabled={tidyOn === null}
+                onChange={(e) => {
+                  const on = e.target.checked;
+                  setTidyOn(on);
+                  void api.setTidy(on).then(() => toast(on ? "Weekly tidy-up on" : "Weekly tidy-up off"));
+                }}
+              />
+            </label>
+          </div>
+          <button className="btn quiet tidy-now" onClick={() => void tidyNow()} disabled={tidying || total < 3}>
+            {tidying ? "Tidying…" : "Tidy up now"}
+          </button>
+        </section>
+      )}
+
+      {tab === "notes" && channels.length > 0 && (
         <section className="section">
           <h2 className="section-label">
             Channel notebooks <span className="blurb">Facts about one subject each</span>
@@ -122,7 +184,7 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
         </section>
       )}
 
-      {view.history.length > 0 && (
+      {tab === "notes" && view.history.length > 0 && (
         <section className="section">
           <button className="btn quiet" onClick={() => setShowHistory((v) => !v)}>
             {showHistory ? "Hide changes" : `Recent changes (${view.history.length})`}
@@ -146,6 +208,123 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
           )}
         </section>
       )}
+    </div>
+  );
+}
+
+const lines = (s: string) => s.split(/\n|,/).map((x) => x.trim()).filter(Boolean);
+
+/** Phase 10: the people who matter, as cards. */
+function PeopleList({ toast }: { toast: (m: string) => void }) {
+  const [people, setPeople] = useState<Person[] | null>(null);
+  const [editing, setEditing] = useState<Person | "new" | null>(null);
+  const load = useCallback(() => void api.people().then(setPeople, () => setPeople([])), []);
+  useEffect(load, [load]);
+  if (!people) return <p className="hint">Loading…</p>;
+  return (
+    <section className="section">
+      {people.length ? (
+        <div className="group">
+          {people.map((p) => (
+            <button className="item" key={p.id} onClick={() => setEditing(p)}>
+              <span className="tile person-initial">{p.name.charAt(0).toUpperCase()}</span>
+              <span className="body">
+                <div className="title">{p.name}</div>
+                <div className="sub">{[p.relation, p.emails[0], p.notes.length ? `${p.notes.length} ${p.notes.length === 1 ? "note" : "notes"}` : ""].filter(Boolean).join(" · ") || "No details yet"}</div>
+              </span>
+              <Chevron className="chev" />
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="mem-empty">No one yet. Tell Lyra about the people who matter (“Dana is my sister, dana@example.com”), or add them here.</p>
+      )}
+      <button className="btn quiet tidy-now" onClick={() => setEditing("new")}>
+        Add a person
+      </button>
+      {editing && (
+        <PersonSheet
+          person={editing === "new" ? null : editing}
+          toast={toast}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            load();
+          }}
+        />
+      )}
+    </section>
+  );
+}
+
+function PersonSheet({ person, toast, onClose, onSaved }: { person: Person | null; toast: (m: string) => void; onClose: () => void; onSaved: () => void }) {
+  const [f, setF] = useState({
+    name: person?.name ?? "",
+    relation: person?.relation ?? "",
+    aliases: person?.aliases.join(", ") ?? "",
+    emails: person?.emails.join(", ") ?? "",
+    phones: person?.phones.join(", ") ?? "",
+    notes: person?.notes.join("\n") ?? "",
+  });
+  const [busy, setBusy] = useState(false);
+  const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
+  const save = async () => {
+    setBusy(true);
+    try {
+      await api.savePerson(person?.id ?? null, {
+        name: f.name,
+        relation: f.relation,
+        aliases: lines(f.aliases),
+        emails: lines(f.emails),
+        phones: lines(f.phones),
+        notes: f.notes.split("\n").map((x) => x.trim()).filter(Boolean),
+      });
+      toast("Saved");
+      onSaved();
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const remove = async () => {
+    if (!person || !confirm(`Remove ${person.name}'s card? Lyra forgets what it noted about them.`)) return;
+    await api.deletePerson(person.id);
+    toast("Removed");
+    onSaved();
+  };
+  const field = (k: keyof typeof f, label: string, multi = false) => (
+    <label className="action-field">
+      <span>{label}</span>
+      {multi ? <textarea rows={5} value={f[k]} onChange={set(k)} /> : <input value={f[k]} onChange={set(k)} />}
+    </label>
+  );
+  return (
+    <div className="dialog-layer sheet-layer" role="presentation">
+      <button className="dialog-scrim" aria-label="Close" tabIndex={-1} onClick={onClose} />
+      <div className="sheet person-sheet" role="dialog" aria-modal="true" aria-label={person ? person.name : "Add a person"}>
+        <div className="action-edit">
+          {field("name", "Name")}
+          {field("relation", "Who they are to you")}
+          {field("emails", "Email")}
+          {field("phones", "Phone")}
+          {field("aliases", "Also called")}
+          {field("notes", "What Lyra knows (one per line)", true)}
+        </div>
+        <div className="action-buttons">
+          <button className="btn primary" disabled={busy || !f.name.trim()} onClick={() => void save()}>
+            Save
+          </button>
+          <button className="btn quiet" onClick={onClose}>
+            Cancel
+          </button>
+          {person && (
+            <button className="btn text" onClick={() => void remove()}>
+              Remove
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -51,6 +51,14 @@ export interface Workspace {
     create(input: RoutineInput): Promise<{ id: number; name: string }>;
     update(id: number, input: Partial<RoutineInput>): Promise<{ id: number; name: string }>;
   };
+  /** People cards (Phase 10). */
+  people?: {
+    directory(): string;
+    remember(input: Record<string, unknown>): { id: number; name: string; created: boolean };
+    lookUp(name: string): string | null;
+  };
+  /** The phone's contacts, looked up by name, when the user turned it on. */
+  contacts?: { find(name: string): Promise<string> };
   /** Emails and events Lyra proposes; the user approves each one on a card. */
   actions?: {
     allowed(): { email: boolean; event: boolean };
@@ -81,6 +89,42 @@ export interface TurnContext {
 }
 
 const MAIN = "main";
+
+/** Phase 10: people cards, and the phone's contacts when allowed. */
+function peopleTools(ws: Workspace): ToolDef[] {
+  if (!ws.people) return [];
+  const tools: ToolDef[] = [
+    {
+      name: "remember_person",
+      description:
+        "Add someone who matters to the user, or add to their card: who they are to the user, an email or phone, another name they go by, or one fact about them. One fact per call.",
+      schema: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Their name as the user says it. Fuller names replace first names on the card." },
+          relation: { type: "string", description: "Who they are to the user: 'sister', 'Rowan's teacher', 'manager at work'." },
+          email: { type: "string" },
+          phone: { type: "string" },
+          alias: { type: "string", description: "Another name they go by: 'Mom'." },
+          fact: { type: "string", description: "One thing worth remembering about them." },
+        },
+        required: ["name"],
+      },
+    },
+    {
+      name: "look_up_person",
+      description: "Everything on someone's card: how to reach them and what you know about them. Use before writing to or about someone.",
+      schema: { type: "object", properties: { name: { type: "string", description: "A name, nickname or email." } }, required: ["name"] },
+    },
+  ];
+  if (ws.contacts)
+    tools.push({
+      name: "find_contact",
+      description: "Look a name up in the user's phone contacts, for an email or number that isn't on a card yet.",
+      schema: { type: "object", properties: { name: { type: "string" } }, required: ["name"] },
+    });
+  return tools;
+}
 
 /** Phase 9: proposing (never doing) an email or a calendar event. Only offered once the user has allowed it. */
 function actionTools(allowed: { email: boolean; event: boolean } | undefined): ToolDef[] {
@@ -399,6 +443,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
   const notes: MemoryNote[] = [];
   const taskNotes: TaskNote[] = [];
   const actionIds: number[] = [];
+  const peopleNotes: { id: number; name: string; created: boolean }[] = [];
   const toolsUsed: { name: string; ok: boolean }[] = [];
   // Once outside content has been read, notebook changes need the user's tap.
   const state = { tainted: false };
@@ -417,6 +462,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
     ...(suggestions.length ? { suggestions } : {}),
     ...(taskNotes.length ? { tasks: taskNotes } : {}),
     ...(actionIds.length ? { actions: actionIds } : {}),
+    ...(peopleNotes.length ? { people: peopleNotes } : {}),
     ...(sources.length ? { sources: uniqueSources(sources).slice(0, 8) } : {}),
     tools: toolsUsed,
     provider: ctx.provider.id,
@@ -425,7 +471,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
 
   try {
     const channels = ctx.workspace.channels();
-    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed()), ...(await ctx.connectors.tools())];
+    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed()), ...peopleTools(ctx.workspace), ...(await ctx.connectors.tools())];
     const system = buildSystemPrompt({
       userName: ctx.userName,
       soul: ctx.soul,
@@ -437,6 +483,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
       tasks: describeTasks(listTasks(ctx.db, { status: "open", channelId: ctx.channel ? ctx.channel.id : undefined, limit: 40 }), !ctx.channel),
       reminders: ctx.workspace.reminders?.list(),
       actions: ctx.workspace.actions ? { allowed: ctx.workspace.actions.allowed(), recent: ctx.workspace.actions.recent() } : undefined,
+      people: ctx.workspace.people ? { directory: ctx.workspace.people.directory(), contacts: !!ctx.workspace.contacts } : undefined,
       webSearch: !!ctx.webSearch,
     });
 
@@ -495,6 +542,34 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
             content: ok ? "Shown as buttons under your reply." : state.tainted ? "Not shown: outside content was read this turn." : "Give one to three short options.",
             isError: !ok,
           });
+          continue;
+        }
+        if (call.name === "remember_person" || call.name === "look_up_person" || call.name === "find_contact") {
+          let content: string;
+          let ok = false;
+          try {
+            const ws = ctx.workspace;
+            if (call.name === "remember_person") {
+              // like the notebook: after reading outside content, a card only changes with the user's word
+              if (state.tainted) throw new Error("Not saved: outside content was read this turn. Ask the user whether to save it, and save it once they say yes.");
+              const r = ws.people!.remember(call.input);
+              const i = peopleNotes.findIndex((n) => n.id === r.id);
+              if (i === -1) peopleNotes.push(r);
+              else peopleNotes[i] = { ...r, created: peopleNotes[i].created || r.created };
+              emit.status(r.created ? `Added ${r.name}` : `Noted about ${r.name}`);
+              content = r.created ? `Added a card for ${r.name}.` : `Updated ${r.name}'s card.`;
+            } else if (call.name === "look_up_person") {
+              content = ws.people!.lookUp(String(call.input.name ?? "")) ?? "No card for that name. Ask the user who they mean, or look in their contacts if you can.";
+            } else {
+              if (!ws.contacts) throw new Error("Contacts aren't turned on.");
+              content = await ws.contacts.find(String(call.input.name ?? ""));
+            }
+            ok = true;
+          } catch (e) {
+            content = (e as Error).message;
+          }
+          toolsUsed.push({ name: call.name, ok });
+          results.push({ type: "tool_result", id: call.id, name: call.name, content, isError: !ok });
           continue;
         }
         if (call.name === "propose_email" || call.name === "propose_event") {

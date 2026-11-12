@@ -16,9 +16,16 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 | 7b | Windows app and hand-off sync through encrypted Google Drive | Done |
 | 8 | Talk your way: live voice, share to Lyra, photos and files | Done |
 | 9 | Approvals and actions: emails and calendar events, each with your tap | Done |
-| 10 | Smarter memory: search past chats, people, weekly tidy-up | Planned |
+| 10 | Smarter memory: people cards, weekly tidy-up, phone contacts (search past chats came with the redesign) | Done |
 | 11 | Works on its own: background routines, "while you were away", widget | Done (Proactive step 3) |
 | 12 | Polish: accent-colored app icon, fixes from testing | Planned |
+| 13 | Docs: documents Lyra writes for you, optionally in Google Docs | Next |
+| 14 | More connectors: other services, with approval cards for anything that writes | Planned |
+| 15 | Research tasks: workers that read web pages and report back with sources | Planned |
+| 16 | Inbox triage: a daily sort of your mail, replies drafted for your OK | Planned |
+| 17 | Playbooks: procedures you teach once and run by name | Planned |
+| 18 | Feedback and learning: thumbs up/down, a monthly "what I've learned" | Planned |
+| 19 | Phone smarts: other apps' notifications, "leaving soon" nudges | Planned |
 
 ### Windows app and sync (Phase 7b)
 
@@ -51,6 +58,12 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - Runs on the routine tick (`Lyra.tickHeadsUp`, `Routines.headsUp`), so like routines it runs on the phone when sync is on, never on the practice model, and not while Lyra is busy. What it said last time is passed to the next check so it doesn't repeat itself (settings `headsUpAt`, `headsUpLast`). Posts are tagged "Heads-up" and notify like a routine.
 - Heads-up and follow-up tokens show on the Usage page as their own kind of work ("proactive").
 - **Check-ins when it's quiet** (on with heads-ups, its own switch): when nothing needs you, Lyra asks for work like a colleague with a free afternoon. It offers one specific project grounded in your memory, mail, calendar and tasks, asks one question to know you better, or asks what it could take off your plate this week, with up to three replies to tap. About once a day on Light, up to twice on Active; only 9:00 to 20:00 and outside quiet hours; never while you're mid-conversation (2 hours), while something is waiting on you or a worker is running, or before you've answered the last one (gives up waiting after 3 days). Your answers go to memory; a yes gets started. Tap-replies are dropped if it read mail or the web. Recent check-ins are passed along so it doesn't repeat itself (`Lyra.tickCheckIn`, `checkInInstructions`, `meta.checkIn`, settings `checkInAt` / `checkInMessage` / `checkInRecent`). The Today view offers "What could you take on for me?" and "Ask me something" when nothing needs you.
+
+### Phase 10: smarter memory
+
+- **People cards** (Memory → People): name, who they are to you, emails, phones, other names, and what Lyra knows about them (`core/people.ts`, table `people`). Lyra adds to them from chat with `remember_person` (one fact at a time; refused after reading mail or the web, like the notebook) and reads one with `look_up_person`; a short directory of everyone is in its instructions, so "email Dana" resolves. A chip under the reply says who was added or updated. Edit or remove any card by hand.
+- **Phone contacts** (Lyra page, phone only, off until you turn it on; Android asks for permission): `find_contact` looks up one name at a time (`ContactsPlugin.java`, at most 5 matches); the address book is never copied. Results are wrapped as outside data.
+- **Weekly tidy-up** (on by default, switch on the Memory page, plus "Tidy up now"): once a week, in the daytime, when at least 12 facts are saved and you're not mid-conversation, Lyra merges duplicates, drops open loops that are done or past, and resolves contradictions in its notebook. The model only returns each section's new item list (`core/tidy.ts` `applyTidy`): no section may grow, at most half can go, sections you added by hand are left alone, and nothing is saved if the notebook changed meanwhile. The change is a version in memory's history and Lyra posts what it changed with an **Undo tidy-up** button.
 
 ### The redesign: Lyra's constellation
 

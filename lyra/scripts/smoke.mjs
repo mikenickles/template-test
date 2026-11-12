@@ -132,6 +132,20 @@ try {
   await page.getByRole("link", { name: /Memory/ }).click();
   await page.getByRole("heading", { name: "Memory" }).waitFor();
   await shot("light-4-memory");
+  check(await page.getByRole("switch", { name: /Tidy my notes each week/ }).isChecked(), "the weekly memory tidy-up is on, with a switch");
+  // ---- people cards ----
+  await page.getByRole("tab", { name: "People" }).click();
+  await page.getByRole("button", { name: "Add a person" }).click();
+  const sheet = page.getByRole("dialog", { name: "Add a person" });
+  await sheet.getByLabel("Name").fill("Dana Ortiz");
+  await sheet.getByLabel("Who they are to you").fill("sister");
+  await sheet.getByLabel("Email").fill("dana@example.com");
+  await sheet.getByLabel("What Lyra knows (one per line)").fill("Birthday is March 3\nAllergic to cats");
+  await sheet.getByRole("button", { name: "Save" }).click();
+  await page.locator(".item", { hasText: "Dana Ortiz" }).waitFor();
+  check((await page.locator(".item", { hasText: "sister · dana@example.com · 2 notes" }).count()) === 1, "people can be added as cards on the Memory page");
+  await shot("light-37-people");
+  await page.getByRole("tab", { name: "Notes" }).click();
 
   // ---- tasks ----
   await page.goto(`${base}/#/`);

@@ -542,6 +542,32 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                   {!!m.meta.memory?.length && <Notes notes={m.meta.memory} onAction={(i, a) => answerNote(m, i, a)} />}
                   {!!m.meta.tasks?.length && <TaskNotes notes={m.meta.tasks} />}
                   {!!m.meta.actions?.length && <ActionCards ids={m.meta.actions} toast={toast} />}
+                  {!!m.meta.people?.length && (
+                    <div className="people-notes">
+                      {m.meta.people.map((p) => (
+                        <a key={p.id} className="person-chip" href="#/memory?people">
+                          {p.created ? `Added ${p.name}` : `Noted about ${p.name}`}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                  {m.meta.tidy && (
+                    <button
+                      className="btn quiet tidy-undo"
+                      disabled={!!m.meta.tidy.undone}
+                      onClick={async () => {
+                        if (!confirm("Put your notes back the way they were before this tidy-up? Anything saved since then is undone too.")) return;
+                        try {
+                          await api.undoTidy(m.id);
+                          toast("Tidy-up undone");
+                        } catch (e) {
+                          toast((e as Error).message);
+                        }
+                      }}
+                    >
+                      {m.meta.tidy.undone ? "Undone" : "Undo tidy-up"}
+                    </button>
+                  )}
                   {!!m.meta.sources?.length && <Sources list={m.meta.sources} />}
                   {!!m.meta.suggestions?.length && m.id === lastId && !pending && (
                     <div className="suggestions" aria-label="Suggested replies">

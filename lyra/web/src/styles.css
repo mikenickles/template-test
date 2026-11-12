@@ -5435,3 +5435,48 @@ button.orb {
 .section .group + .group {
   margin-top: var(--s3);
 }
+
+/* ---------- Phase 10: people and the tidy-up ---------- */
+
+.mem-tabs {
+  margin: var(--s4) 0 var(--s2);
+  align-self: flex-start;
+  display: inline-flex;
+}
+
+.tidy-now {
+  margin-top: var(--s3);
+}
+
+.person-initial {
+  font-weight: 600;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.person-sheet {
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+}
+
+.people-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin: var(--s2) 0 0 22px;
+}
+
+.person-chip {
+  padding: 4px var(--s3);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.tidy-undo {
+  margin: var(--s2) 0 0 22px;
+  align-self: flex-start;
+}

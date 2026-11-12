@@ -147,6 +147,18 @@ export const MIGRATIONS: string[] = [
   // the redesign: a card's chat message (for "jump to it"), and tasks put off until later
   `ALTER TABLE actions ADD COLUMN message_id INTEGER;
    ALTER TABLE tasks ADD COLUMN snoozed_until TEXT;`,
+  // Phase 10: people who matter, as cards
+  `CREATE TABLE people (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     name TEXT NOT NULL,
+     aliases TEXT NOT NULL DEFAULT '[]',
+     emails TEXT NOT NULL DEFAULT '[]',
+     phones TEXT NOT NULL DEFAULT '[]',
+     relation TEXT NOT NULL DEFAULT '',
+     notes TEXT NOT NULL DEFAULT '[]',
+     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+   );`,
 ];
 
 const FILE = "lyra.db";
@@ -302,6 +314,10 @@ export interface MessageMeta {
   actions?: number[];
   /** Lyra checking in when things are quiet: a question, or an offer of something to take on. */
   checkIn?: boolean;
+  /** The weekly memory tidy-up: the version to go back to, and whether it was undone. */
+  tidy?: { snapshotId: number; undone?: boolean };
+  /** People cards added or updated in this reply. */
+  people?: { id: number; name: string; created: boolean }[];
   /** Posted by a heads-up check Lyra ran on its own. */
   headsUp?: boolean;
   /** Next steps Lyra offers as buttons (only on its latest reply). */

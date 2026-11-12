@@ -243,8 +243,22 @@ export async function createPlatform(): Promise<Platform> {
     texts: files,
     secrets: isNative ? nativeSecrets : isDesktop ? deskSecrets! : webSecrets,
     google: isNative ? nativeGoogle : isDesktop ? desktopGoogle : webGoogle,
+    ...(isNative ? { contacts: phoneContacts } : {}),
   };
 }
+
+// ---------- the phone's contacts (looked up by name, only once allowed) ----------
+
+const NativeContacts = registerPlugin<{
+  allow(): Promise<{ allowed: boolean }>;
+  find(o: { name: string }): Promise<{ contacts: { name: string; emails: string[]; phones: string[] }[] }>;
+}>("LyraContacts");
+
+const phoneContacts = {
+  available: true,
+  allow: async () => (await NativeContacts.allow()).allowed,
+  find: async (name: string) => (await NativeContacts.find({ name })).contacts,
+};
 
 // ---------- notifications ----------
 
