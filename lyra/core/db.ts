@@ -236,6 +236,8 @@ export interface MessageMeta {
   sources?: { url: string; title: string }[];
   /** Posted by a scheduled routine. */
   routine?: { id: number; name: string };
+  /** On a user's message: the emoji Lyra reacted with. */
+  reaction?: string;
 }
 
 type Row = Omit<StoredMessage, "meta"> & { meta: string };

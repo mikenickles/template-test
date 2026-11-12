@@ -1,5 +1,5 @@
 import type { Connectors } from "./connectors/registry.ts";
-import { addMessage, listMessages, type Channel, type ChannelSummary, type DB, type MemoryNote, type StoredMessage, type TaskNote } from "./db.ts";
+import { addMessage, listMessages, updateMessageMeta, type Channel, type ChannelSummary, type DB, type MemoryNote, type StoredMessage, type TaskNote } from "./db.ts";
 import { CHANNEL_SECTIONS, SECTIONS, type Notebook } from "./memory.ts";
 import { buildSystemPrompt, type ChannelDigest } from "./prompt.ts";
 import { describeSchedule, type RoutineInput } from "./routines.ts";
@@ -29,7 +29,12 @@ export interface TurnEmitter {
   text(delta: string): void;
   status(label: string): void;
   memory(note: MemoryNote): void;
+  /** Lyra reacted to the user's message with this emoji. */
+  reaction?(emoji: string): void;
 }
+
+/** The reactions Lyra can put on a message, like a tapback. */
+export const REACTIONS = ["❤️", "👍", "😂", "🎉", "😮", "😢", "🙏", "🔥"] as const;
 
 /** What a turn can see and change beyond its own chat: notebooks and channels. */
 export interface Workspace {
@@ -71,6 +76,18 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
     (channels.length ? ` A channel name is that subject's notebook (sections: ${CHANNEL_SECTIONS.join(", ")}).` : "") +
     (current ? ` You're in the ${current.name} channel.` : "");
   const tools: ToolDef[] = [
+    {
+      name: "react",
+      description:
+        "Put an emoji reaction on the user's latest message, the way a friend taps a reaction on a text. " +
+        "Use it now and then when it fits: good news, thanks, a joke, something sad, a win. Not on every message. " +
+        "When nothing more needs saying (\"thanks!\", \"ok cool\"), the reaction can be your whole reply: send no text.",
+      schema: {
+        type: "object",
+        properties: { emoji: { type: "string", enum: [...REACTIONS] } },
+        required: ["emoji"],
+      },
+    },
     {
       name: "remember",
       description: "Save one lasting fact to a notebook. One short line that makes sense on its own.",
@@ -256,7 +273,7 @@ async function digests(ctx: TurnContext): Promise<ChannelDigest[]> {
   const out: ChannelDigest[] = [];
   for (const c of ctx.workspace.channels()) {
     const recent = listMessages(ctx.db, c.id, 4)
-      .filter((m) => !m.meta.error)
+      .filter((m) => !m.meta.error && m.content.trim())
       .map((m) => `${m.role === "user" ? who(ctx) : "Lyra"}: ${clip(m.content.replace(/\s+/g, " "), 160)}`);
     out.push({ name: c.name, about: c.about, notebook: clip((await ctx.workspace.notebook(c.id)).read(), 1200), recent, lastAt: c.last_at });
   }
@@ -270,7 +287,8 @@ async function digests(ctx: TurnContext): Promise<ChannelDigest[]> {
  */
 export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmitter, signal?: AbortSignal): Promise<StoredMessage> {
   const channelId = ctx.channel?.id ?? null;
-  addMessage(ctx.db, "user", userText, {}, channelId);
+  const userMessage = addMessage(ctx.db, "user", userText, {}, channelId);
+  let reacted = false;
   const messages = historyFor(listMessages(ctx.db, channelId, HISTORY));
   const notes: MemoryNote[] = [];
   const taskNotes: TaskNote[] = [];
@@ -332,6 +350,25 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
 
       const results: Part[] = [];
       for (const call of calls) {
+        if (call.name === "react") {
+          const emoji = String(call.input.emoji ?? "");
+          const ok = (REACTIONS as readonly string[]).includes(emoji);
+          if (ok) {
+            reacted = true;
+            userMessage.meta = { ...userMessage.meta, reaction: emoji };
+            updateMessageMeta(ctx.db, userMessage.id, userMessage.meta);
+            emit.reaction?.(emoji);
+          }
+          toolsUsed.push({ name: call.name, ok });
+          results.push({
+            type: "tool_result",
+            id: call.id,
+            name: call.name,
+            content: ok ? "Reacted. Add text only if there's more to say." : `Pick one of: ${REACTIONS.join(" ")}`,
+            isError: !ok,
+          });
+          continue;
+        }
         const r = await runTool(ctx, call.name, call.input, state, notes, emit, taskNotes);
         if (ctx.connectors.owns(call.name) && !r.isError) state.tainted = true;
         toolsUsed.push({ name: call.name, ok: !r.isError });
@@ -340,7 +377,8 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
       messages.push({ role: "user", parts: results });
       if (step === MAX_STEPS - 1) say(`${reply.trim() ? "\n\n" : ""}I stopped there so this doesn't run on. Want me to keep going?`);
     }
-    if (!reply.trim()) say(notes.length ? "Got it." : "Done.");
+    // A reaction alone is a complete reply, like a tapback on a text.
+    if (!reply.trim() && !(reacted && !notes.length && !taskNotes.length)) say(notes.length ? "Got it." : "Done.");
     return addMessage(ctx.db, "assistant", reply.trim(), meta(), channelId);
   } catch (e) {
     const aborted = signal?.aborted;
@@ -559,7 +597,7 @@ async function runTool(
     if (!ch) return fail("There's no channel by that name.");
     emit.status(`Checking ${ch.name}`);
     const n = Math.min(Math.max(Number(input.messages) || 12, 1), 40);
-    const msgs = listMessages(ctx.db, ch.id, n).filter((m) => !m.meta.error);
+    const msgs = listMessages(ctx.db, ch.id, n).filter((m) => !m.meta.error && m.content.trim());
     const book = await ctx.workspace.notebook(ch.id);
     const lines = msgs.map((m) => `[${m.created_at.slice(0, 16).replace("T", " ")}] ${m.role === "user" ? who(ctx) : "Lyra"}: ${m.content}`);
     return {

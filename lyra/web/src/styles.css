@@ -385,6 +385,44 @@ body[data-busy] .orb:has(.avatar)::after {
   overflow-wrap: anywhere;
 }
 
+/* Lyra's tapback on your message: a small badge on the bubble's corner */
+.bubble.reacted {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.reaction {
+  position: absolute;
+  left: -10px;
+  bottom: -16px;
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow:
+    0 0 0 3px var(--bg),
+    var(--shadow);
+  font-size: 17px;
+  line-height: 1;
+  animation: pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reaction {
+    animation: none;
+  }
+}
+
 /* Lyra's replies: open text, first line as the headline */
 .reply {
   position: relative;

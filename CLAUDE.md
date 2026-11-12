@@ -17,6 +17,7 @@ The repo root also holds an Astro blog; Lyra is self-contained in `lyra/`.
 - Channels (Phase 2): `channels` table, per-channel messages, and a notebook per channel (`core/memory.ts` `Notebook`, scopes "main" / "channel:<id>").
 - Tasks (Phase 3): `core/tasks.ts` (tasks, task_steps, task_log tables); Lyra tools create_task / update_task / list_tasks, refused in email-tainted turns.
 - Workers (Phase 4): `core/workers.ts` (worker_runs table, transcript per run); in-app agent loops, max 2 at once, 20 steps; read-only connector tools + log_progress/update_steps/ask_user/finish; resume interrupted runs on start.
+- Reactions: the `react` tool puts one emoji (fixed set, `REACTIONS` in `core/chat.ts`) on the user's message (`meta.reaction`); a reaction alone is a full reply.
 - Routines (Phase 6): `core/routines.ts` (routines, routine_runs); `tickRoutines()` every minute while open + on resume, 12h catch-up; post / nothing_new tools; local-notification reminders (`web/src/platform.ts` notifier).
 - Google sign-in: `android/.../GoogleAuthPlugin.java` (Play services Authorization API). Gmail, Calendar, Drive connectors each request only their .readonly scope; `grantIsReadOnly()` rejects any grant with other scopes.
 - Model-agnostic: `core/providers/` (Claude, OpenAI, Gemini, and a `fake` practice provider used by tests).

@@ -109,11 +109,12 @@ export interface StreamHandlers {
   text(d: string): void;
   status(label: string): void;
   memory(note: MemoryNote): void;
+  reaction?(emoji: string): void;
   done(message: Message, user?: Message): void;
 }
 
 /** Send a message; Lyra's reply arrives through the handlers as it's written. */
 export async function sendChat(text: string, h: StreamHandlers, channelId: number | null = null): Promise<void> {
-  const { message, user } = await (await ready).chat(text, { text: h.text, status: h.status, memory: h.memory }, channelId);
+  const { message, user } = await (await ready).chat(text, { text: h.text, status: h.status, memory: h.memory, reaction: h.reaction }, channelId);
   h.done(message, user);
 }

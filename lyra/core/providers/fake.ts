@@ -34,11 +34,13 @@ export class FakeProvider implements ModelProvider {
     if (result && result.type === "tool_result") {
       if (result.isError) return say(`That didn't work: ${result.content.slice(0, 160)}`);
       if (result.name === "remember") return say("Got it.");
+      if (result.name === "react") return { parts: [], stop: "end" };
       if (result.name === "forget") return say("Done, that's gone.");
       return say(`Here's what I found.\n\n${result.content.replace(/<\/?untrusted_data[^>]*>/g, "").trim().slice(0, 400)}`);
     }
 
     const text = last?.parts.map((p) => (p.type === "text" ? p.text : "")).join("") ?? "";
+    if (/^(thanks|thank you|thx|ty)\b/i.test(text.trim()) && has("react")) return call("react", { emoji: "❤️" });
     const rem = text.match(/^remember(?: that)?[:\s]+(.+)$/i);
     if (rem && has("remember")) return call("remember", { section: "Open loops", text: rem[1] });
     const forget = text.match(/^forget[:\s]+(.+)$/i);

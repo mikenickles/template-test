@@ -131,6 +131,7 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
         text: (d) => setPending((p) => p && { ...p, reply: p.reply + d, status: "" }),
         status: (label) => setPending((p) => p && { ...p, status: label }),
         memory: (note) => setPending((p) => p && { ...p, notes: [...p.notes, note] }),
+        reaction: (emoji) => setMessages((m) => (m ?? []).map((x) => (x.id === temp.id ? { ...x, meta: { ...x.meta, reaction: emoji } } : x))),
         done: (msg, user) => {
           setMessages((m) => [...(m ?? []).map((x) => (x.id === temp.id && user ? user : x)), msg]);
           if (msg.meta.tasks?.length) onTasksChanged?.();
@@ -220,8 +221,15 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
                     </a>
                   )}
                   {m.role === "user" ? (
-                    <div className="bubble">{m.content}</div>
-                  ) : (
+                    <div className={`bubble${m.meta.reaction ? " reacted" : ""}`}>
+                      {m.content}
+                      {m.meta.reaction && (
+                        <span className="reaction" role="img" aria-label={`Lyra reacted ${m.meta.reaction}`}>
+                          {m.meta.reaction}
+                        </span>
+                      )}
+                    </div>
+                  ) : !m.content.trim() && !m.meta.error ? null : (
                     <div className={`reply${m.meta.error ? " error" : headline(m.content) ? " headline" : ""}`}>
                       <Markdown text={m.content} />
                     </div>

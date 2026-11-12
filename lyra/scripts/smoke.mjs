@@ -235,6 +235,13 @@ try {
   await page.getByText("practice model").first().waitFor();
   await shot("dark-2-chat");
 
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.getByPlaceholder("Message Lyra").fill("thanks!");
+  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("img", { name: "Lyra reacted ❤️" }).waitFor();
+  check((await page.locator(".bubble").count()) === 3, "Lyra can react to a message, with no text reply");
+  await shot("light-21-reaction");
+
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   check(!wide, "no sideways scrolling");
   check(errors.length === 0, `no page errors ${errors.join("; ")}`);
