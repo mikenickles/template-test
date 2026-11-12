@@ -164,6 +164,7 @@ a {
 /* ---------- shell ---------- */
 
 .shell {
+  position: relative;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -178,6 +179,24 @@ a {
   align-items: center;
   padding: calc(var(--inset-top) + var(--s3)) var(--s4) var(--s2);
   background: var(--bg);
+}
+
+/* In chat the bar floats over the conversation: messages scroll up under it and fade out, still faintly readable */
+.topbar.floating {
+  position: absolute;
+  inset: 0 0 auto;
+  background: none;
+  pointer-events: none;
+}
+
+.topbar.floating > * {
+  pointer-events: auto;
+}
+
+.topbar.floating .ring {
+  background: var(--surface);
+  border-color: transparent;
+  box-shadow: var(--shadow);
 }
 
 .topbar > :first-child {
@@ -232,8 +251,8 @@ a.orb:active {
 }
 
 .orb-sm {
-  width: 56px;
-  height: 56px;
+  width: 66px;
+  height: 66px;
 }
 
 .orb-lg {
@@ -313,9 +332,10 @@ body[data-busy] .orb:has(.avatar)::after {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 var(--s4) var(--s5);
-  mask-image: linear-gradient(transparent, #000 var(--s5));
-  -webkit-mask-image: linear-gradient(transparent, #000 var(--s5));
+  padding: calc(var(--inset-top) + 96px) var(--s4) var(--s5);
+  --fade: linear-gradient(rgba(0, 0, 0, 0.12) calc(var(--inset-top) + 24px), rgba(0, 0, 0, 0.45) calc(var(--inset-top) + 80px), #000 calc(var(--inset-top) + 150px));
+  mask-image: var(--fade);
+  -webkit-mask-image: var(--fade);
 }
 
 .log-inner {

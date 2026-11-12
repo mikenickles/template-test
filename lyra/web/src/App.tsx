@@ -159,7 +159,7 @@ export function App() {
         onNewChannel={() => setCreating(true)}
       />
       <div className="shell" inert={drawer}>
-        <header className="topbar">
+        <header className={`topbar${route.name === "chat" ? " floating" : ""}`}>
           {inChat ? (
             <button
               className="ring"
