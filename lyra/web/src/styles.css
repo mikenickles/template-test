@@ -1540,15 +1540,23 @@ button.item:disabled {
   background: var(--drawer-bg);
 }
 
-/* Only transform and opacity animate: both run on the GPU, so the slide stays smooth on phones. */
+/* The chat, its shade and its corners all move on one curve, so the slide reads as one piece.
+   Transform and opacity run on the GPU; the corner radius only reshapes the clip. */
+.app {
+  --slide: 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
 .app > .shell {
   position: absolute;
   inset: 0;
   overflow-y: auto;
   overscroll-behavior-y: none;
   background: var(--bg);
+  border-radius: 0;
   transform: translate3d(0, 0, 0);
-  transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition:
+    transform var(--slide),
+    border-radius var(--slide);
   will-change: transform;
   backface-visibility: hidden;
 }
@@ -1567,15 +1575,19 @@ button.item:disabled {
   box-shadow: inset 1px 0 0 var(--border);
   opacity: 0;
   pointer-events: none;
-  transform: translate3d(var(--drawer-w), 0, 0);
-  transition: opacity 300ms ease;
-  will-change: opacity;
+  /* rides along with the chat instead of waiting at the end */
+  transform: translate3d(0, 0, 0);
+  transition:
+    transform var(--slide),
+    opacity var(--slide);
+  will-change: transform, opacity;
   cursor: default;
 }
 
 .app.drawer-open .shell-scrim {
   opacity: 1;
   pointer-events: auto;
+  transform: translate3d(var(--drawer-w), 0, 0);
 }
 
 .drawer-panel {
@@ -1589,8 +1601,8 @@ button.item:disabled {
   opacity: 0;
   transform: translate3d(-24px, 0, 0);
   transition:
-    opacity 240ms ease,
-    transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+    opacity var(--slide),
+    transform var(--slide);
   will-change: transform, opacity;
 }
 
