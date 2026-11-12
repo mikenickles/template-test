@@ -45,6 +45,8 @@ export class FakeProvider implements ModelProvider {
     }
 
     const text = last?.parts.map((p) => (p.type === "text" ? p.text : "")).join("") ?? "";
+    const files = last?.parts.flatMap((p) => (p.type === "file" ? [p.name] : [])) ?? [];
+    if (files.length) return say(`Got ${files.length === 1 ? "it" : "them"}: ${files.join(", ")}.\n\nThe practice model can't look inside. Add an API key in Settings and I'll read it properly.`);
     if (/^(thanks|thank you|thx|ty)\b/i.test(text.trim()) && has("react")) return call("react", { emoji: "❤️" });
     const rem = text.match(/^remember(?: that)?[:\s]+(.+)$/i);
     if (rem && has("remember")) return call("remember", { section: "Open loops", text: rem[1] });

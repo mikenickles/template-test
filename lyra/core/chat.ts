@@ -1,4 +1,5 @@
 import type { Connectors } from "./connectors/registry.ts";
+import { attachmentParts, attachmentReminder, checkAttachments, type Attachment } from "./attachments.ts";
 import { addMessage, listMessages, updateMessageMeta, type Channel, type ChannelSummary, type DB, type MemoryNote, type StoredMessage, type TaskNote } from "./db.ts";
 import { CHANNEL_SECTIONS, SECTIONS, type Notebook } from "./memory.ts";
 import { buildSystemPrompt, type ChannelDigest } from "./prompt.ts";
@@ -254,12 +255,13 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
 export function historyFor(messages: StoredMessage[]): Msg[] {
   const out: Msg[] = [];
   for (const m of messages) {
-    if (m.meta.error || !m.content.trim()) continue;
+    const text = [m.content.trim(), m.meta.attachments?.length ? attachmentReminder(m.meta.attachments) : ""].filter(Boolean).join("\n\n");
+    if (m.meta.error || !text) continue;
     const last = out[out.length - 1];
     if (last?.role === m.role) {
       const t = last.parts[0];
-      if (t.type === "text") t.text += `\n\n${m.content}`;
-    } else out.push({ role: m.role, parts: [{ type: "text", text: m.content }] });
+      if (t.type === "text") t.text += `\n\n${text}`;
+    } else out.push({ role: m.role, parts: [{ type: "text", text }] });
   }
   while (out.length && out[0].role !== "user") out.shift();
   return out;
@@ -285,11 +287,20 @@ async function digests(ctx: TurnContext): Promise<ChannelDigest[]> {
  * let the model answer (calling tools as needed), stream text as it
  * arrives, save the reply.
  */
-export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmitter, signal?: AbortSignal): Promise<StoredMessage> {
+export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmitter, signal?: AbortSignal, attachments: Attachment[] = []): Promise<StoredMessage> {
   const channelId = ctx.channel?.id ?? null;
-  const userMessage = addMessage(ctx.db, "user", userText, {}, channelId);
+  const attached = checkAttachments(attachments);
+  const userMessage = addMessage(ctx.db, "user", userText, attached.length ? { attachments: attached } : {}, channelId);
   let reacted = false;
   const messages = historyFor(listMessages(ctx.db, channelId, HISTORY));
+  if (attached.length) {
+    // this turn the model gets the files themselves, in place of the "attached earlier" note
+    const mine = messages[messages.length - 1];
+    const first = mine.parts[0];
+    const note = attachmentReminder(attached);
+    if (first.type === "text") first.text = first.text.endsWith(note) ? first.text.slice(0, -note.length).trimEnd() : first.text;
+    mine.parts.push(...attachmentParts(attachments, attached));
+  }
   const notes: MemoryNote[] = [];
   const taskNotes: TaskNote[] = [];
   const toolsUsed: { name: string; ok: boolean }[] = [];

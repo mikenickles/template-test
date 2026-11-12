@@ -423,3 +423,33 @@ export const installer = {
   /** Computer: the app started fine on this code (a pack that never gets here is rolled back). */
   started: () => desk?.updates.ok(),
 };
+
+// ---------- voice input and "Share to Lyra" (phone) ----------
+
+const Speech = registerPlugin<{ listen(opts?: { prompt?: string }): Promise<{ text: string }> }>("Speech");
+const ShareTarget = registerPlugin<{
+  take(): Promise<{ text?: string; files?: { name: string; mediaType: string; data: string }[]; skipped?: number }>;
+  addListener(event: "shared", fn: () => void): Promise<{ remove(): Promise<void> }>;
+}>("ShareTarget");
+
+/** Voice typing through Android's speech recognizer. On a computer, Windows' own dictation (Win+H) types into any box. */
+export const voice = {
+  available: isNative,
+  async listen(prompt?: string): Promise<string> {
+    return (await Speech.listen({ prompt })).text.trim();
+  },
+};
+
+/** Text, links, photos and PDFs shared to Lyra from other apps. */
+export const shares = {
+  async take() {
+    if (!isNative) return null;
+    const r = await ShareTarget.take();
+    return r.text || r.files?.length || r.skipped ? { text: r.text, files: r.files ?? [], skipped: r.skipped ?? 0 } : null;
+  },
+  onShared(fn: () => void): () => void {
+    if (!isNative) return () => {};
+    const sub = ShareTarget.addListener("shared", fn);
+    return () => void sub.then((s) => s.remove());
+  },
+};

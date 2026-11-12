@@ -15,7 +15,8 @@ import { TaskPage, Tasks, WorkerLog } from "./screens/Tasks";
 import { RoutinePage } from "./screens/Routines";
 import { SyncConflict } from "./screens/SyncSection";
 import { StatusLine } from "./StatusLine";
-import { appLock, isDesktop, notifier } from "./platform";
+import { deliver } from "./attach";
+import { appLock, isDesktop, notifier, shares } from "./platform";
 import { ChatIcon, TasksIcon } from "./icons";
 
 export type Route =
@@ -175,9 +176,11 @@ export function App() {
       return () => subs.forEach((s) => void s.then((h) => h.remove()));
     }
     // in a browser there's no keyboard event: typing in the message box stands in for it
-    const isBox = (e: Event) => (e.target as HTMLElement | null)?.closest?.(".composer") != null;
+    // only the text field itself: buttons in the message box (attach, remove) don't raise a keyboard
+    const isBox = (e: Event) => (e.target as HTMLElement | null)?.matches?.(".composer textarea") === true;
     const on = (e: FocusEvent) => isBox(e) && setKeyboard(true);
-    const off = (e: FocusEvent) => isBox(e) && setKeyboard(false);
+    // moving from the text field to Send or attach isn't the keyboard closing
+    const off = (e: FocusEvent) => isBox(e) && !(e.relatedTarget as HTMLElement | null)?.closest?.(".composer") && setKeyboard(false);
     addEventListener("focusin", on);
     addEventListener("focusout", off);
     return () => {
@@ -193,6 +196,17 @@ export function App() {
       .taskCounts()
       .then((c) => setReadyCount(c.ready))
       .catch(() => {});
+  }, []);
+  // Shared to Lyra from another app: open the main chat with it in the message box.
+  useEffect(() => {
+    const collect = () =>
+      void shares.take().then((s) => {
+        if (!s) return;
+        if (readRoute().name !== "chat") location.hash = "#/";
+        deliver(s);
+      });
+    collect();
+    return shares.onShared(collect);
   }, []);
   // Tapping a notification opens the chat it's about.
   useEffect(() => notifier.onOpen((hash) => (location.hash = hash)), []);

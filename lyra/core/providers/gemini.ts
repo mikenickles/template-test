@@ -12,6 +12,8 @@ export function toGeminiContents(messages: Msg[]): Content[] {
         switch (p.type) {
           case "native":
             return []; // another provider's own blocks
+          case "file":
+            return [{ inlineData: { mimeType: p.mediaType, data: p.data } }];
           case "text":
             return p.text ? [{ text: p.text }] : [];
           case "tool_call":

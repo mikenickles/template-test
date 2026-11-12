@@ -16,6 +16,7 @@ import {
   type MemoryView as CoreMemory,
   type SettingsPatch,
 } from "../../core/lyra";
+import type { Attachment } from "../../core/attachments";
 import { backupName } from "../../core/backup";
 import type { Platform } from "../../core/lyra";
 import { readSyncState, Sync, type SnapshotInfo, type SyncResult } from "../../core/sync";
@@ -122,7 +123,8 @@ function restartApp(): void {
 
 async function syncNow(lyra: Lyra, opts: { pull?: boolean } = {}): Promise<SyncResult> {
   if (!sync.state.enabled || restarting) return "off";
-  const typing = !!document.querySelector<HTMLTextAreaElement>(".composer textarea")?.value.trim();
+  // a half-written message or a photo waiting to send: not a moment to reload
+  const typing = !!document.querySelector<HTMLTextAreaElement>(".composer textarea")?.value.trim() || !!document.querySelector(".drafts");
   const canPull = opts.pull !== false && !lyra.busy && !typing;
   try {
     const r = await sync.check(canPull);
@@ -349,9 +351,9 @@ export interface StreamHandlers {
 }
 
 /** Send a message; Lyra's reply arrives through the handlers as it's written. */
-export async function sendChat(text: string, h: StreamHandlers, channelId: number | null = null): Promise<void> {
+export async function sendChat(text: string, h: StreamHandlers, channelId: number | null = null, attachments: Attachment[] = []): Promise<void> {
   const lyra = await ready;
-  const { message, user } = await lyra.chat(text, { text: h.text, status: h.status, memory: h.memory, reaction: h.reaction }, channelId);
+  const { message, user } = await lyra.chat(text, { text: h.text, status: h.status, memory: h.memory, reaction: h.reaction }, channelId, attachments);
   h.done(message, user);
   // you switched away while Lyra was writing
   if (message.content.trim()) notice(lyra, "Lyra", firstLine(message.content), chatHash(channelId));

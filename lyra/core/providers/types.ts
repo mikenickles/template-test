@@ -14,6 +14,8 @@ export type Part =
       meta?: Record<string, unknown>;
     }
   | { type: "tool_result"; id: string; name: string; content: string; isError?: boolean }
+  /** A photo or PDF the user attached to this message (base64). Sent to the model for this turn only. */
+  | { type: "file"; mediaType: string; data: string; name: string }
   /** A provider's own block (e.g. a web search it ran itself), sent back to that provider unchanged and ignored by others. */
   | { type: "native"; provider: string; block: unknown };
 

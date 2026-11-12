@@ -18,6 +18,10 @@ export function toAnthropicMessages(messages: Msg[]): AMessage[] {
             return [{ type: "tool_use", id: p.id, name: p.name, input: p.input }];
           case "tool_result":
             return [{ type: "tool_result", tool_use_id: p.id, content: p.content, is_error: p.isError }];
+          case "file":
+            return p.mediaType === "application/pdf"
+              ? [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: p.data }, title: p.name }]
+              : [{ type: "image", source: { type: "base64", media_type: p.mediaType as "image/jpeg" | "image/png" | "image/webp" | "image/gif", data: p.data } }];
           case "native":
             // Claude's own web search blocks go back exactly as they came; other providers' are dropped.
             return p.provider === "anthropic" ? [p.block as ABlock] : [];

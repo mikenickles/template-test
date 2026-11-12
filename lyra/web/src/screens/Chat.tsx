@@ -1,7 +1,9 @@
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api, onChange, sendChat, type Channel, type MemoryNote, type Message, type TaskNote } from "../api";
-import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chevron, Minus, More, Pin, Spark, Stop, TasksIcon } from "../icons";
-import { copyText } from "../platform";
+import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chevron, Close, File as FileIcon, Mic, Minus, More, Pin, Plus, Spark, Stop, TasksIcon } from "../icons";
+import { noteOf, onIncoming, prepare, prepareShared, strip, takeIncoming, type Draft } from "../attach";
+import { MAX_ATTACHMENTS } from "../../../core/attachments";
+import { copyText, isNative, voice } from "../platform";
 import { setChatStatus } from "../StatusLine";
 import { STATUS_LABEL } from "./Tasks";
 import { StarChart, Thinking } from "../LyraMark";
@@ -163,13 +165,92 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
     requestAnimationFrame(() => (el.scrollTop = el.scrollHeight - before));
   };
 
+  // ---- photos and files waiting to be sent with the next message ----
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [attaching, setAttaching] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const filePick = useRef<HTMLInputElement>(null);
+  const photoPick = useRef<HTMLInputElement>(null);
+  const cameraPick = useRef<HTMLInputElement>(null);
+
+  const addDrafts = useCallback(
+    async (make: (() => Promise<Draft>)[]) => {
+      for (const m of make) {
+        try {
+          const d = await m();
+          let full = false;
+          setDrafts((cur) => {
+            full = cur.length >= MAX_ATTACHMENTS;
+            return full ? cur : [...cur, d];
+          });
+          if (full) {
+            toast(`Attach up to ${MAX_ATTACHMENTS} things at a time.`);
+            break;
+          }
+        } catch (e) {
+          toast((e as Error).message);
+        }
+      }
+    },
+    [toast],
+  );
+  const addFiles = useCallback((files: Iterable<File>) => addDrafts([...files].map((f) => () => prepare(f, f.name || "pasted.png"))), [addDrafts]);
+
+  // shared to Lyra from another app: it lands in the message box, ready to send or edit
+  useEffect(() => {
+    const collect = () => {
+      const inc = takeIncoming();
+      if (!inc) return;
+      if (inc.text) {
+        setInput((cur) => (cur.trim() ? `${cur.trim()}\n${inc.text}` : inc.text!));
+        requestAnimationFrame(() => {
+          const el = boxRef.current;
+          if (el) {
+            el.style.height = "auto";
+            el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+          }
+        });
+      }
+      void addDrafts(inc.files.map((f) => () => prepareShared(f)));
+      if (inc.skipped) toast(`${inc.skipped} shared ${inc.skipped === 1 ? "item" : "items"} couldn't be attached (too big, or more than ${MAX_ATTACHMENTS}).`);
+    };
+    collect();
+    return onIncoming(collect);
+  }, [addDrafts, toast]);
+
+  const [listening, setListening] = useState(false);
+  const dictate = async () => {
+    if (listening) return;
+    setListening(true);
+    try {
+      const heard = await voice.listen(channel ? `Speak to ${channel.name}` : "Speak to Lyra");
+      if (heard) {
+        setInput((cur) => (cur.trim() ? `${cur.trim()} ${heard}` : heard));
+        requestAnimationFrame(grow);
+      }
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setListening(false);
+    }
+  };
+
   const send = async (raw: string) => {
     const text = raw.trim();
-    if (!text || pending) return;
+    const files = drafts;
+    if ((!text && !files.length) || pending) return;
     setInput("");
+    setDrafts([]);
     requestAnimationFrame(grow);
     stick.current = true;
-    const temp: Message = { id: -Date.now(), role: "user", content: text, created_at: new Date().toISOString(), meta: {}, channel_id: channelId };
+    const temp: Message = {
+      id: -Date.now(),
+      role: "user",
+      content: text,
+      created_at: new Date().toISOString(),
+      meta: files.length ? { attachments: files.map(noteOf) } : {},
+      channel_id: channelId,
+    };
     setMessages((m) => [...(m ?? []), temp]);
     setPending({ reply: "", status: "", notes: [] });
     try {
@@ -182,10 +263,11 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
           setMessages((m) => [...(m ?? []).map((x) => (x.id === temp.id && user ? user : x)), msg]);
           if (msg.meta.tasks?.length) onTasksChanged?.();
         },
-      }, channelId);
+      }, channelId, files.map(strip));
     } catch (e) {
       setMessages((m) => (m ?? []).filter((x) => x.id !== temp.id));
       setInput(text);
+      setDrafts(files);
       toast((e as Error).message);
     } finally {
       setPending(null);
@@ -351,7 +433,27 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
                       <Pin size={13} /> Pinned
                     </span>
                   )}
-                  {m.role === "user" ? (
+                  {m.role === "user" && !!m.meta.attachments?.length && (
+                    <div className="sent-files">
+                      {m.meta.attachments.map((a, i) =>
+                        a.thumb ? (
+                          <img key={i} className="sent-photo" src={a.thumb} alt={a.name} />
+                        ) : (
+                          <span key={i} className="sent-file">
+                            <FileIcon size={18} />
+                            {a.name}
+                          </span>
+                        ),
+                      )}
+                    </div>
+                  )}
+                  {m.role === "user" && !m.content.trim() ? (
+                    m.meta.reaction ? (
+                      <span className="reaction lone" role="img" aria-label={`Lyra reacted ${m.meta.reaction}`}>
+                        {m.meta.reaction}
+                      </span>
+                    ) : null
+                  ) : m.role === "user" ? (
                     <div className={`bubble${m.meta.reaction ? " reacted" : ""}`} {...holdProps(m)}>
                       {m.content}
                       {m.meta.reaction && (
@@ -390,6 +492,35 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
         </div>
       </div>
 
+      {attaching && (
+        <div className="dialog-layer sheet-layer" role="presentation">
+          <button className="dialog-scrim" aria-label="Close" tabIndex={-1} onClick={() => setAttaching(false)} />
+          <div className="sheet" role="dialog" aria-modal="true" aria-label="Attach">
+            <div className="group">
+              {(
+                [
+                  ["Take a photo", cameraPick],
+                  ["Photo library", photoPick],
+                  ["File (PDF or text)", filePick],
+                ] as const
+              ).map(([label, ref]) => (
+                <button
+                  key={label}
+                  className="item"
+                  onClick={() => {
+                    setAttaching(false);
+                    ref.current?.click();
+                  }}
+                >
+                  <span className="body">
+                    <div className="title">{label}</div>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {acting && <MessageActions message={acting} onAct={(w) => void act(acting, w)} onClose={() => setActing(null)} />}
       <div className="composer" ref={composerRef}>
         {!atBottom && (
@@ -398,12 +529,51 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
           </button>
         )}
         <form
-          className="composer-inner"
+          className={`composer-inner${dragging ? " dragging" : ""}`}
           onSubmit={(e) => {
             e.preventDefault();
             send(input);
           }}
+          onDragOver={(e) => {
+            if (e.dataTransfer.types.includes("Files")) {
+              e.preventDefault();
+              setDragging(true);
+            }
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            if (!e.dataTransfer.files.length) return;
+            e.preventDefault();
+            setDragging(false);
+            void addFiles(e.dataTransfer.files);
+          }}
         >
+          {drafts.length > 0 && (
+            <ul className="drafts" aria-label="Attached">
+              {drafts.map((d) => (
+                <li key={d.id} className={`draft${d.thumb ? " photo" : ""}`}>
+                  {d.thumb ? <img src={d.thumb} alt={d.name} /> : <><FileIcon size={18} /><span>{d.name}</span></>}
+                  <button type="button" aria-label={`Remove ${d.name}`} onClick={() => setDrafts((cur) => cur.filter((x) => x.id !== d.id))}>
+                    <Close size={14} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <button
+            type="button"
+            className="attach"
+            aria-label="Attach a photo or file"
+            aria-expanded={attaching}
+            disabled={!!pending}
+            // a phone offers camera, photos or files; a computer goes straight to the file picker
+            onClick={() => (isNative ? setAttaching(true) : filePick.current?.click())}
+          >
+            <Plus size={22} />
+          </button>
+          <input ref={filePick} type="file" hidden multiple accept="image/*,application/pdf,text/*,.md,.csv,.json,.ics" aria-label="Choose files" onChange={(e) => { void addFiles(e.target.files ?? []); e.target.value = ""; }} />
+          <input ref={photoPick} type="file" hidden multiple accept="image/*" aria-label="Choose photos" onChange={(e) => { void addFiles(e.target.files ?? []); e.target.value = ""; }} />
+          <input ref={cameraPick} type="file" hidden accept="image/*" capture="environment" aria-label="Take a photo" onChange={(e) => { void addFiles(e.target.files ?? []); e.target.value = ""; }} />
           <label htmlFor="msg" className="sr-only">
             Message Lyra
           </label>
@@ -418,6 +588,13 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
               setInput(e.target.value);
               grow();
             }}
+            onPaste={(e) => {
+              // pasting a screenshot or copied image attaches it
+              if (e.clipboardData.files.length) {
+                e.preventDefault();
+                void addFiles(e.clipboardData.files);
+              }
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && !matchMedia("(pointer: coarse)").matches) {
                 e.preventDefault();
@@ -430,9 +607,16 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
               <Stop size={20} />
             </button>
           ) : (
-            <button type="submit" className="send" aria-label="Send" disabled={!input.trim()}>
-              <ArrowUp size={22} strokeWidth={2.25} />
-            </button>
+            <>
+              {voice.available && !input.trim() && !drafts.length && (
+                <button type="button" className={`mic${listening ? " on" : ""}`} aria-label="Speak your message" onClick={() => void dictate()}>
+                  <Mic size={21} />
+                </button>
+              )}
+              <button type="submit" className="send" aria-label="Send" disabled={!input.trim() && !drafts.length}>
+                <ArrowUp size={22} strokeWidth={2.25} />
+              </button>
+            </>
           )}
         </form>
       </div>

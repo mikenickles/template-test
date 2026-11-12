@@ -4029,3 +4029,147 @@ a.status-pill:active {
     display: block;
   }
 }
+
+/* ---------- phase 8: attach, voice, shared files ---------- */
+
+.composer-inner {
+  flex-wrap: wrap;
+  padding-left: 6px;
+}
+
+.composer-inner.dragging {
+  border-color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.composer textarea {
+  padding-left: 2px;
+}
+
+.attach,
+.mic {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  transition: background var(--ease), color var(--ease), transform var(--ease);
+}
+
+.attach:hover,
+.mic:hover {
+  color: var(--text);
+  background: var(--drawer-hover);
+}
+
+.attach:active,
+.mic:active {
+  transform: scale(0.92);
+}
+
+.attach:disabled {
+  opacity: 0.4;
+}
+
+.mic.on {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+
+.drafts {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin: 4px 0 2px;
+  padding: 0 0 0 6px;
+  list-style: none;
+}
+
+.draft {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 220px;
+  min-height: 44px;
+  padding: 0 34px 0 12px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  font-size: var(--text-sm);
+}
+
+.draft span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.draft.photo {
+  padding: 0;
+}
+
+.draft.photo img {
+  display: block;
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  object-fit: cover;
+}
+
+.draft button {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+/* a touch target bigger than the dot */
+.draft button::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+}
+
+.sent-files {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: min(82%, 520px);
+  margin-bottom: 6px;
+}
+
+.sent-photo {
+  display: block;
+  max-width: 180px;
+  max-height: 220px;
+  border-radius: 18px;
+  object-fit: cover;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.sent-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: var(--surface-2);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.reaction.lone {
+  position: static;
+  align-self: flex-end;
+}

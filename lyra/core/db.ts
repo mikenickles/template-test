@@ -266,6 +266,8 @@ export interface MessageMeta {
   reaction?: string;
   /** Pinned by the user, to find again on the chat's info page. */
   pinned?: boolean;
+  /** Photos and files sent with this message (a note each; the file itself isn't kept). */
+  attachments?: import("./attachments.ts").AttachmentNote[];
 }
 
 type Row = Omit<StoredMessage, "meta"> & { meta: string };

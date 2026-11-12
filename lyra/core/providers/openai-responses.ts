@@ -25,6 +25,15 @@ export function toResponsesInput(messages: Msg[]): Item[] {
         out.push({ type: "function_call", call_id: p.id, name: p.name, arguments: JSON.stringify(p.input) });
       } else if (p.type === "tool_result") {
         out.push({ type: "function_call_output", call_id: p.id, output: p.content });
+      } else if (p.type === "file") {
+        out.push({
+          role: "user",
+          content: [
+            p.mediaType === "application/pdf"
+              ? { type: "input_file", filename: p.name, file_data: `data:application/pdf;base64,${p.data}` }
+              : { type: "input_image", image_url: `data:${p.mediaType};base64,${p.data}`, detail: "auto" },
+          ],
+        });
       }
       // "native" parts (another provider's own blocks) have no meaning here and are left out
     }

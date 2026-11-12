@@ -13,9 +13,9 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 | 5 | Calendar and Drive, read-only | Done |
 | 6 | Routines (7am brief, check-ins, watches) | Done |
 | 7 | Safety net: encrypted backup and restore, app lock, message actions | Done |
-| 7b | Windows app and hand-off sync through encrypted Google Drive | **Here** |
-| 8 | Talk your way: voice input, share to Lyra, photos and files | Next |
-| 9 | Approvals and actions: drafts, calendar events, reminders from chat | Planned |
+| 7b | Windows app and hand-off sync through encrypted Google Drive | Done |
+| 8 | Talk your way: voice input, share to Lyra, photos and files | **Here** |
+| 9 | Approvals and actions: drafts, calendar events, reminders from chat | Next |
 | 10 | Smarter memory: search past chats, people, weekly tidy-up | Planned |
 | 11 | Works on its own: background routines, "while you were away", widget | Planned |
 | 12 | Polish: accent-colored app icon, fixes from testing | Planned |
@@ -30,6 +30,12 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Per device.** API keys, Google sign-ins, app lock and notifications stay with each device. With sync on, routines run on the phone only, so nothing posts twice; workers resume only on the device that started them.
 - **Backups on the computer.** Every snapshot the Windows app sends or receives is also saved, encrypted, in `Documents\Lyra Backups` (the newest 20).
 - **Privacy.** Snapshots are AES-256-GCM encrypted with your sync passphrase before upload. The Drive permission (`drive.appdata`) only reaches Lyra's own hidden folder: it can't see or change your files.
+
+### Talk your way (Phase 8)
+
+- **Photos and files.** The **+** in the message box attaches up to four things: a photo you take, photos from your library, a PDF or a text file (on the computer: the file picker, paste, or drag and drop). Photos are resized to 1568px on the long edge before sending. The model gets the file for that one turn; afterwards the message keeps only a note and a small thumbnail (`core/attachments.ts`), so chats, backups and sync stay small. Wording inside an attachment is content, never instructions.
+- **Voice input (phone).** The mic opens Android's own "Speak now" sheet and puts what you said in the message box to edit or send. Lyra never holds the microphone and needs no audio permission (`SpeechPlugin.java`). On Windows, the system's dictation (Win+H) types into the box.
+- **Share to Lyra (phone).** Lyra is in Android's share menu for text, links, photos and PDFs. What you share lands in the main chat's message box; nothing goes to the model until you press Send (`ShareTargetPlugin.java`).
 
 #### Settings and model picker
 

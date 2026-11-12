@@ -17,7 +17,18 @@ export function toOpenAIMessages(system: string, messages: Msg[]): OMessage[] {
     } else {
       // other providers' "native" parts are skipped
       for (const p of m.parts) if (p.type === "tool_result") out.push({ role: "tool", tool_call_id: p.id, content: p.content });
-      if (text) out.push({ role: "user", content: text });
+      const files = m.parts.flatMap((p) => (p.type === "file" ? [p] : []));
+      if (files.length) {
+        // photos go as images; a plain chat-completions server has no way to take a PDF
+        const pdfs = files.filter((f) => f.mediaType === "application/pdf").map((f) => f.name);
+        out.push({
+          role: "user",
+          content: [
+            { type: "text", text: text + (pdfs.length ? `\n[Attached but unreadable by this model server: ${pdfs.join(", ")}. Say so.]` : "") || "(attachment)" },
+            ...files.filter((f) => f.mediaType.startsWith("image/")).map((f) => ({ type: "image_url" as const, image_url: { url: `data:${f.mediaType};base64,${f.data}` } })),
+          ],
+        });
+      } else if (text) out.push({ role: "user", content: text });
     }
   }
   return out;

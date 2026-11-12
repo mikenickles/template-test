@@ -29,6 +29,7 @@ import {
   type StoredMessage,
 } from "./db.ts";
 import { UpdateSource } from "./updates.ts";
+import type { Attachment } from "./attachments.ts";
 import { metered, usageBetween, type UsageRow } from "./usage.ts";
 import { listModels, type ModelOption } from "./providers/models.ts";
 import type { ProviderId } from "./providers/index.ts";
@@ -422,9 +423,9 @@ export class Lyra {
     return listMessages(this.db, channelId, Math.min(limit, 200), before);
   }
 
-  async chat(text: string, emit: TurnEmitter, channelId: number | null = null): Promise<{ message: StoredMessage; user: StoredMessage }> {
+  async chat(text: string, emit: TurnEmitter, channelId: number | null = null, attachments: Attachment[] = []): Promise<{ message: StoredMessage; user: StoredMessage }> {
     const clean = text.trim();
-    if (!clean) throw new Error("Say something first.");
+    if (!clean && !attachments.length) throw new Error("Say something first.");
     if (clean.length > 20_000) throw new Error("That message is too long.");
     if (this.running) throw new Error("Lyra is still answering the last message.");
     const channel = channelId === null ? null : getChannel(this.db, channelId);
@@ -447,6 +448,7 @@ export class Lyra {
         clean,
         emit,
         this.running.signal,
+        attachments,
       );
       return { message, user: listMessages(this.db, channelId, 2)[0] };
     } finally {

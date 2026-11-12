@@ -253,3 +253,10 @@ export const Chart = (p: P) => (
     <path d="M4 20h16M7 20v-6M12 20V6M17 20v-9" strokeWidth={2.2} />
   </Icon>
 );
+
+export const Mic = (p: P) => (
+  <Icon {...p}>
+    <rect x="9" y="3" width="6" height="11" rx="3" />
+    <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
+  </Icon>
+);

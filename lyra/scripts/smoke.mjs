@@ -368,6 +368,46 @@ try {
   check(readingAt > 100 && (await gap()) > 100, "scrolling up yourself is left alone");
   await page.setViewportSize(size);
 
+  // ---- phase 8: photos and files ----
+  await page.goto(`${base}/#/`);
+  await page.locator(".bubble").first().waitFor();
+  const png = await page.evaluate(async () => {
+    const c = document.createElement("canvas");
+    c.width = 2400;
+    c.height = 1200;
+    const g = c.getContext("2d");
+    g.fillStyle = "#c4ef4b";
+    g.fillRect(0, 0, 2400, 1200);
+    g.fillStyle = "#131416";
+    g.font = "160px sans-serif";
+    g.fillText("Field trip Friday", 200, 640);
+    const blob = await new Promise((r) => c.toBlob(r, "image/png"));
+    return [...new Uint8Array(await blob.arrayBuffer())];
+  });
+  await page.getByLabel("Choose files").setInputFiles([
+    { name: "flyer.png", mimeType: "image/png", buffer: Buffer.from(png) },
+    { name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("Bring a packed lunch") },
+  ]);
+  await page.locator(".draft.photo img").waitFor();
+  check((await page.locator(".draft").count()) === 2, "a photo and a text file attach to the message box");
+  await page.getByLabel("Choose files").setInputFiles([{ name: "song.mp3", mimeType: "audio/mpeg", buffer: Buffer.from("x") }]);
+  await page.getByText("Lyra can't read song.mp3").waitFor();
+  check(true, "a file Lyra can't read is refused with a reason");
+  await page.getByRole("button", { name: "Remove notes.txt" }).click();
+  await page.locator(".draft", { hasText: "notes.txt" }).waitFor({ state: "detached" });
+  check((await page.locator(".draft").count()) === 1, "an attachment can be removed before sending");
+  await shot("light-29-attach");
+  await page.getByRole("button", { name: "Send" }).click();
+  await page.locator(".sent-photo").waitFor();
+  await page.getByText("Got it: flyer.jpg").waitFor();
+  check(true, "a photo sends on its own, and Lyra receives it");
+  const sentSize = await page.locator(".sent-photo").evaluate((el) => el.naturalWidth);
+  check(sentSize > 0 && sentSize <= 320, "the chat keeps a small thumbnail, not the full photo");
+  await shot("light-30-photo-sent");
+  await page.reload();
+  await page.locator(".sent-photo").waitFor();
+  check(true, "the photo is still shown after a restart");
+
   // ---- usage: tokens per model, with a graph ----
   await page.goto(`${base}/#/settings`);
   await page.getByRole("link", { name: /Usage.*tokens today/ }).click();
