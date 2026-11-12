@@ -25,7 +25,7 @@ The repo root also holds an Astro blog; Lyra is self-contained in `lyra/`.
 - Outside content (email, web) is always wrapped with `wrapUntrusted()`; memory writes after reading it become suggestions.
 - Commands (run in `lyra/`): `npm test`, `npm run typecheck`, `npm run build`, `npm run dev`, `npm run smoke` (needs Playwright), `npm run android:apk` (needs Android SDK).
 - This repo is public: never commit signing keys (`*.keystore`, `*.jks` are gitignored). The user keeps the key; bump `versionCode` in `android/app/build.gradle` for each release.
-- UI follows the design tokens in `lyra/web/src/styles.css`; voice rules live in `lyra/core/voice.md`.
+- UI follows the design tokens in `lyra/web/src/styles.css`. Lyra's character is `lyra/core/soul.md` (user-editable in app, stored as soul.md); message format rules are `lyra/core/voice.md`. Both go into chat, worker and routine prompts.
 
 ## Getting Started
 

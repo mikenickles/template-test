@@ -9,6 +9,7 @@ import { ChannelInfo, NewChannelDialog } from "./screens/ChannelScreens";
 import { Chat } from "./screens/Chat";
 import { Memory } from "./screens/Memory";
 import { Settings } from "./screens/Settings";
+import { Soul } from "./screens/Soul";
 import { TaskPage, Tasks, WorkerLog } from "./screens/Tasks";
 import { RoutinePage } from "./screens/Routines";
 import { notifier } from "./platform";
@@ -23,6 +24,7 @@ export type Route =
   | { name: "routine"; routineId: number }
   | { name: "access" }
   | { name: "memory" }
+  | { name: "soul" }
   | { name: "settings" };
 
 export function readRoute(hash = location.hash): Route {
@@ -33,7 +35,7 @@ export function readRoute(hash = location.hash): Route {
   if (t) return t[2] ? { name: "worker-log", taskId: Number(t[1]) } : { name: "task", taskId: Number(t[1]) };
   const r = path.match(/^r\/(\d+)$/);
   if (r) return { name: "routine", routineId: Number(r[1]) };
-  if (path === "tasks" || path === "access" || path === "memory" || path === "settings") return { name: path };
+  if (path === "tasks" || path === "access" || path === "memory" || path === "soul" || path === "settings") return { name: path };
   return { name: "chat", channelId: null };
 }
 
@@ -45,6 +47,7 @@ function backFrom(r: Route): string | null {
     case "channel-info":
       return `#/c/${r.channelId}`;
     case "memory":
+    case "soul":
       return "#/access";
     case "task":
       return "#/tasks";
@@ -208,6 +211,7 @@ export function App() {
         {route.name === "routine" && <RoutinePage key={route.routineId} id={route.routineId} toast={toast} channels={channels} />}
         {route.name === "access" && <Access state={state} setState={setState} toast={toast} />}
         {route.name === "memory" && <Memory toast={toast} channels={channels} />}
+        {route.name === "soul" && <Soul toast={toast} userName={state.userName} />}
         {route.name === "settings" && <Settings state={state} setState={setState} toast={toast} />}
 
         {inChat && (

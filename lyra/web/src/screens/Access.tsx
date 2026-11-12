@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { api, type AppState, type ConnectorStatus } from "../api";
-import { Calendar, Chevron, File, Mail, Notebook, Plus } from "../icons";
+import { Calendar, Chevron, File, Mail, Notebook, Plus, Spark } from "../icons";
 import { Orb } from "../LyraMark";
 
 type GoogleId = "gmail" | "calendar" | "drive";
@@ -85,8 +85,18 @@ export function Access({
       </section>
 
       <section className="section">
-        <h2 className="section-label">What Lyra knows</h2>
+        <h2 className="section-label">Who Lyra is, and what it knows</h2>
         <div className="group">
+          <a className="item" href="#/soul">
+            <span className="tile">
+              <Spark />
+            </span>
+            <span className="body">
+              <div className="title">Soul</div>
+              <div className="sub">Lyra's character and how it talks to you</div>
+            </span>
+            <Chevron className="chev" />
+          </a>
           <a className="item" href="#/memory">
             <span className="tile">
               <Notebook />

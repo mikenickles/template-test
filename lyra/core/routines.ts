@@ -14,6 +14,7 @@ import { cleanItem } from "./memory.ts";
 import { uniqueSources, type ModelProvider, type Msg, type Part, type Source, type ToolDef } from "./providers/types.ts";
 import { describeTasks, listTasks } from "./tasks.ts";
 import { neutralize } from "./untrusted.ts";
+import { character } from "./soul.ts";
 import VOICE from "./voice.md?raw";
 
 export const ROUTINE_STEPS = 12;
@@ -235,6 +236,7 @@ export interface RoutineDeps {
   connectors: Connectors;
   provider: () => Promise<ModelProvider>;
   userName: () => string;
+  soul?: () => string | undefined;
   timeZone?: string;
   webSearch?: () => boolean;
   onEvent: (e: RoutineEvent) => void;
@@ -266,7 +268,7 @@ ${search ? "- You can search the web for news and current facts." : "- You can't
 - Never make things up. If a source couldn't be checked (not connected, error), say so in a few words.
 
 # How Lyra writes the message
-${VOICE.replaceAll("{user}", user)}
+${character(d.soul?.(), VOICE, user)}
 
 # What Lyra knows about ${user}
 <memory>

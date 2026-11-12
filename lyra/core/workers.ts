@@ -13,6 +13,7 @@ import { addMessage, getChannel, type DB } from "./db.ts";
 import { uniqueSources, type ModelProvider, type Msg, type Part, type Source, type ToolDef } from "./providers/types.ts";
 import { addStep, getTask, log, setStepDone, STATUS_LABEL, taskDetail, updateTask, type TaskRow } from "./tasks.ts";
 import { neutralize } from "./untrusted.ts";
+import { character } from "./soul.ts";
 import VOICE from "./voice.md?raw";
 
 export const MAX_WORKERS = 2;
@@ -38,6 +39,7 @@ export interface WorkerDeps {
   connectors: Connectors;
   provider: () => Promise<ModelProvider>;
   userName: () => string;
+  soul?: () => string | undefined;
   timeZone?: string;
   /** Activity label shown on the task while the worker runs. */
   onEvent: (e: WorkerEvent) => void;
@@ -100,7 +102,7 @@ ${steps ? `Checklist:\n${neutralize(steps)}` : ""}${task.channel_name ? `\nThis 
 - Never make things up. If you couldn't find something, say so.
 
 # How Lyra writes (for your finish result)
-${VOICE.replaceAll("{user}", user)}
+${character(deps.soul?.(), VOICE, user)}
 
 # What Lyra knows about ${user}
 <memory>

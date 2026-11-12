@@ -133,6 +133,14 @@ try {
   await page.getByText("practice model").first().waitFor();
   check(true, "Chat tab goes back to the chat");
 
+  // ---- soul ----
+  await page.goto(`${base}/#/access`);
+  await page.getByRole("link", { name: /Soul/ }).click();
+  await page.getByText("Friendly and warm.").waitFor();
+  check(true, "the soul page shows who Lyra is");
+  await shot("light-20-soul");
+  await page.goto(`${base}/#/`);
+
   // ---- routines ----
   await page.getByRole("link", { name: "Tasks" }).click();
   await page.getByRole("button", { name: "Routine" }).click();

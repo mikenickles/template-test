@@ -1,5 +1,6 @@
 import type { ConnectorStatus } from "./connectors/registry.ts";
 import { neutralize } from "./untrusted.ts";
+import { character } from "./soul.ts";
 import VOICE from "./voice.md?raw";
 
 /** What the main chat sees of a channel without opening it. */
@@ -13,6 +14,8 @@ export interface ChannelDigest {
 
 export interface PromptInput {
   userName: string;
+  /** Who Lyra is. Defaults to the built-in soul. */
+  soul?: string;
   memory: string;
   connectors: ConnectorStatus[];
   now?: Date;
@@ -77,7 +80,7 @@ export function buildSystemPrompt(p: PromptInput): string {
 
   return `You are Lyra, ${user}'s personal chief of staff. You live in an app on ${user}'s Android phone and they text you there. Right now is ${now} (${tz}).
 
-${VOICE.replaceAll("{user}", user)}
+${character(p.soul, VOICE, user)}
 
 # How you work
 

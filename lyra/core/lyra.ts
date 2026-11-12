@@ -37,6 +37,7 @@ import {
   type ProviderInfo,
 } from "./providers/index.ts";
 import type { ModelProvider } from "./providers/types.ts";
+import { DEFAULT_SOUL } from "./soul.ts";
 import * as T from "./tasks.ts";
 import { Workers, type WorkerEvent, type WorkerRun } from "./workers.ts";
 import * as R from "./routines.ts";
@@ -152,6 +153,7 @@ export class Lyra {
   private running: AbortController | undefined;
   private connectors: Connectors;
   private tokenSources = new Map<GoogleId, TokenSource>();
+  private customSoul: string | undefined;
   private notebooks = new Map<number, Promise<Notebook>>();
   private workspace: Workspace;
   readonly workers: Workers;
@@ -200,6 +202,7 @@ export class Lyra {
       connectors: this.connectors,
       provider: async () => this.p.provider ?? createProvider(this.keys, this.choice()),
       userName: () => this.userName,
+      soul: () => this.customSoul,
       timeZone: p.timeZone,
       onEvent: (e) => this.listeners.forEach((l) => l(e)),
       webSearch: () => this.webSearch,
@@ -211,6 +214,7 @@ export class Lyra {
       connectors: this.connectors,
       provider: async () => this.p.provider ?? createProvider(this.keys, this.choice()),
       userName: () => this.userName,
+      soul: () => this.customSoul,
       timeZone: p.timeZone,
       webSearch: () => this.webSearch,
       onEvent: (e) => this.listeners.forEach((l) => l(e)),
@@ -223,6 +227,7 @@ export class Lyra {
     const userName = getSetting(db, "userName") ?? "you";
     const memory = await Notebook.open(db, p.texts, mainNotebookSpec(userName));
     const lyra = new Lyra(p, db, memory);
+    lyra.customSoul = (await p.texts.read("soul.md"))?.trim() || undefined;
     for (const k of SECRET_KEYS) lyra.keys[k] = (await p.secrets.get(`key.${k}`)) ?? undefined;
     lyra.keys.openaiBaseUrl = getSetting(db, "openaiBaseUrl") || undefined;
     // Workers cut off when the app was closed carry on where they stopped.
@@ -342,6 +347,7 @@ export class Lyra {
           connectors: this.connectors,
           provider,
           userName: this.userName,
+          soul: this.customSoul,
           timeZone: this.p.timeZone,
           webSearch: this.webSearch,
         },
@@ -564,6 +570,34 @@ export class Lyra {
 
   taskActivity(id: number): string | undefined {
     return this.workers.isRunning(id) ? (this.workers.activity.get(id) ?? "Working") : undefined;
+  }
+
+  // ---------- soul ----------
+
+  /** Who Lyra is: the built-in soul, or the user's edited one. */
+  soul(): { content: string; custom: boolean } {
+    return { content: this.customSoul ?? DEFAULT_SOUL, custom: !!this.customSoul };
+  }
+
+  async saveSoul(content: string): Promise<{ content: string; custom: boolean }> {
+    const text = content.trim();
+    if (!text) throw new Error("The soul can't be empty. Use Reset to go back to the original.");
+    if (text.length > 20_000) throw new Error("That's too long. Keep the soul under 20,000 characters.");
+    this.customSoul = text === DEFAULT_SOUL.trim() ? undefined : text;
+    if (this.customSoul) await this.p.texts.write("soul.md", `${text}\n`);
+    else await this.clearSoulFile();
+    return this.soul();
+  }
+
+  async resetSoul(): Promise<{ content: string; custom: boolean }> {
+    this.customSoul = undefined;
+    await this.clearSoulFile();
+    return this.soul();
+  }
+
+  private async clearSoulFile() {
+    if (this.p.texts.remove) await this.p.texts.remove("soul.md");
+    else await this.p.texts.write("soul.md", "");
   }
 
   // ---------- routines ----------

@@ -55,6 +55,7 @@ export interface TurnContext {
   connectors: Connectors;
   provider: ModelProvider;
   userName: string;
+  soul?: string;
   timeZone?: string;
   /** The model may search the web with its built-in search. */
   webSearch?: boolean;
@@ -299,6 +300,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
     const tools = [...memoryTools(channels, ctx.channel), ...(await ctx.connectors.tools())];
     const system = buildSystemPrompt({
       userName: ctx.userName,
+      soul: ctx.soul,
       memory: ctx.workspace.main.read(),
       connectors: ctx.connectors.status(),
       timeZone: ctx.timeZone,

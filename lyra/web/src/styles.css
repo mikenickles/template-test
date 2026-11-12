@@ -2504,3 +2504,35 @@ a.btn {
   padding-left: 0;
   padding-right: 0;
 }
+
+/* the soul, rendered as a readable document */
+.soul-doc {
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.soul-doc p {
+  margin: 0 0 var(--s3);
+}
+
+.soul-doc ul,
+.soul-doc ol {
+  margin: 0 0 var(--s4);
+  padding-left: 1.2em;
+}
+
+.soul-doc li + li {
+  margin-top: var(--s2);
+}
+
+.soul-doc blockquote {
+  margin: 0 0 var(--s4);
+  padding: var(--s3) var(--s4);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.soul-doc blockquote > :last-child {
+  margin-bottom: 0;
+}
