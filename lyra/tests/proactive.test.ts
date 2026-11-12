@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { runTurn, type TurnContext } from "../core/chat.ts";
 import type { Connectors } from "../core/connectors/registry.ts";
 import { DB } from "../core/db.ts";
-import { Lyra, type LyraEvent } from "../core/lyra.ts";
+import { inQuietHours, Lyra, type LyraEvent } from "../core/lyra.ts";
+import { usageBetween } from "../core/usage.ts";
 import { mainNotebookSpec, Notebook } from "../core/memory.ts";
 import { FakeProvider } from "../core/providers/fake.ts";
 import type { GenerateResult } from "../core/providers/types.ts";
@@ -83,6 +84,76 @@ describe("reminders and follow-ups", () => {
     expect(l2.reminders()).toHaveLength(1);
     await l2.chat("never mind the dentist", noop);
     expect(l2.reminders()).toEqual([]);
+  });
+});
+
+describe("heads-ups", () => {
+  /** tomorrow at this Los Angeles hour (always well after "now", whatever time the tests run) */
+  const atLA = (hour: number) => new Date(localToDate(`${inLA(0).slice(0, 10)} ${String(hour).padStart(2, "0")}:00`, LA)!.getTime() + 86_400_000);
+
+  it("are off until turned on, then check on their own and stay quiet when there's nothing", async () => {
+    const provider = new FakeProvider([call("nothing_new", { note: "Inbox quiet" })]);
+    const lyra = await Lyra.start(platform({ provider }));
+    expect(lyra.state().proactive).toEqual({ level: "off", quietStart: "21:00", quietEnd: "07:00" });
+    expect(lyra.tickHeadsUp(atLA(12))).toBe(false);
+
+    await lyra.saveSettings({ proactive: { level: "active" } });
+    // turning it on starts the clock, so nothing runs the same minute
+    expect(lyra.tickHeadsUp(new Date())).toBe(false);
+    const before = lyra.messages(null).length;
+    const noon = atLA(12);
+    expect(lyra.tickHeadsUp(noon)).toBe(true);
+    await lyra.routinesRunner.settle();
+    expect(lyra.messages(null)).toHaveLength(before);
+    expect(provider.requests[0].system).toMatch(/heads-up check/);
+    expect(provider.requests[0].system).toMatch(/Open tasks: anything Ready/);
+    // counted on its own line on the Usage page
+    expect(usageBetween((lyra as unknown as { db: DB }).db, "2000-01-01", "2999-01-01").map((r) => r.source)).toContain("proactive");
+    // the next one waits an hour
+    expect(lyra.tickHeadsUp(new Date(noon.getTime() + 30 * 60_000))).toBe(false);
+  });
+
+  it("posts when something needs you, tagged, with a notification, and remembers it for next time", async () => {
+    const provider = new FakeProvider([call("post", { message: "Dana's waiting on your answer about Friday.\nNext: reply yes or no." }), call("nothing_new", {})]);
+    const lyra = await Lyra.start(platform({ provider }));
+    const events: LyraEvent[] = [];
+    lyra.onChange((e) => events.push(e));
+    await lyra.saveSettings({ proactive: { level: "light", quietStart: "22:00", quietEnd: "06:00" } });
+    const t = atLA(10);
+    lyra.tickHeadsUp(t);
+    await lyra.routinesRunner.settle();
+    const m = lyra.messages(null).at(-1)!;
+    expect(m.content).toMatch(/^Dana's waiting/);
+    expect(m.meta.headsUp).toBe(true);
+    expect(events).toContainEqual({ type: "message", channelId: null, notify: { title: "Heads-up from Lyra", body: "Dana's waiting on your answer about Friday." } });
+    expect(provider.requests[0].system).toMatch(/the bar is high/);
+
+    lyra.tickHeadsUp(new Date(t.getTime() + 4 * 3600_000 + 60_000));
+    await lyra.routinesRunner.settle();
+    expect(provider.requests[1].system).toContain("Dana's waiting on your answer about Friday.");
+  });
+
+  it("keep quiet hours, including ones that wrap past midnight", async () => {
+    expect(inQuietHours("23:30", { quietStart: "21:00", quietEnd: "07:00" })).toBe(true);
+    expect(inQuietHours("06:59", { quietStart: "21:00", quietEnd: "07:00" })).toBe(true);
+    expect(inQuietHours("07:00", { quietStart: "21:00", quietEnd: "07:00" })).toBe(false);
+    expect(inQuietHours("13:00", { quietStart: "12:00", quietEnd: "14:00" })).toBe(true);
+    expect(inQuietHours("13:00", { quietStart: "09:00", quietEnd: "09:00" })).toBe(false);
+
+    const provider = new FakeProvider([call("nothing_new", {})]);
+    const lyra = await Lyra.start(platform({ provider }));
+    await lyra.saveSettings({ proactive: { level: "active" } });
+    const late = atLA(23);
+    expect(lyra.tickHeadsUp(late)).toBe(false);
+    expect(provider.requests).toHaveLength(0);
+    await expect(lyra.saveSettings({ proactive: { quietStart: "9pm" } })).rejects.toThrow(/21:00/);
+    await expect(lyra.saveSettings({ proactive: { level: "always" as never } })).rejects.toThrow(/level/);
+  });
+
+  it("don't run on the practice model", async () => {
+    const lyra = await Lyra.start(platform());
+    await lyra.saveSettings({ proactive: { level: "active" } });
+    expect(lyra.tickHeadsUp(atLA(12))).toBe(false);
   });
 });
 

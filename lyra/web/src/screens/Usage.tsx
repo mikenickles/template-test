@@ -35,7 +35,7 @@ export function Usage() {
     const order = buildSeries(tokens).map((s) => s.key);
     const series = buildSeries(rows, order);
     const slot = (s: Series) => (s.key === "other" ? -1 : order.indexOf(s.key));
-    const sources = { chat: 0, worker: 0, routine: 0 };
+    const sources = { chat: 0, worker: 0, routine: 0, proactive: 0 };
     for (const r of rows) if (r.source !== "voice") sources[r.source] += r.input + r.output;
     return { rows, series, slot, buckets: buildBuckets(range, rows, series, today), sources, voiceSeconds };
   }, [all, range, today]);
@@ -44,7 +44,7 @@ export function Usage() {
   const total = view.series.reduce((n, s) => n + s.total, 0);
   const sum = (k: "input" | "output" | "requests") => view.series.reduce((n, s) => n + s[k], 0);
   const span = RANGES.find((r) => r.id === range)!.span;
-  const parts = ([["Chat", view.sources.chat], ["Workers", view.sources.worker], ["Routines", view.sources.routine]] as const).filter(([, n]) => n > 0);
+  const parts = ([["Chat", view.sources.chat], ["Workers", view.sources.worker], ["Routines", view.sources.routine], ["Heads-ups and follow-ups", view.sources.proactive]] as const).filter(([, n]) => n > 0);
 
   return (
     <div className="usage">

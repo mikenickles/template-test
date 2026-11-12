@@ -236,7 +236,8 @@ export interface RoutineDeps {
   db: DB;
   workspace: Workspace;
   connectors: Connectors;
-  provider: () => Promise<ModelProvider>;
+  /** the model to run with; `source` says which kind of work it's counted as on the Usage page */
+  provider: (source?: "routine" | "proactive") => Promise<ModelProvider>;
   userName: () => string;
   soul?: () => string | undefined;
   timeZone?: string;
@@ -421,18 +422,53 @@ export class Routines {
             // couldn't check (no model, an error): still say so, so the follow-up isn't lost
             if (status === "failed") done(null, note ?? "");
           },
+          "proactive",
         ),
       )
       .catch((e) => console.error("[lyra] follow-up failed", e))
       .finally(() => void this.d.flush());
   }
 
-  private async execute(r: RoutineJob, post: (text: string, sources: Source[]) => void, end: (status: RoutineRun["status"], note?: string) => void): Promise<void> {
+  /**
+   * A heads-up check: like a routine that posts only when there's news, run on
+   * Lyra's own schedule. `done` gets the posted text, or null when it stayed quiet.
+   */
+  headsUp(job: RoutineJob, done: (messageId: number | null, text: string) => void): void {
+    this.headsUpRunning = true;
+    this.queue = this.queue
+      .then(() =>
+        this.execute(
+          job,
+          (text, srcs) => {
+            const msg = addMessage(this.d.db, "assistant", text.trim(), { headsUp: true, ...(srcs.length ? { sources: srcs } : {}) }, null);
+            done(msg.id, text.trim());
+          },
+          (status, note) => {
+            if (status !== "posted") done(null, note ?? "");
+          },
+          "proactive",
+        ),
+      )
+      .catch((e) => console.error("[lyra] heads-up failed", e))
+      .finally(() => {
+        this.headsUpRunning = false;
+        void this.d.flush();
+      });
+  }
+
+  headsUpRunning = false;
+
+  private async execute(
+    r: RoutineJob,
+    post: (text: string, sources: Source[]) => void,
+    end: (status: RoutineRun["status"], note?: string) => void,
+    source: "routine" | "proactive" = "routine",
+  ): Promise<void> {
     const db = this.d.db;
     const sources: Source[] = [];
     const posted = (text: string) => post(text, uniqueSources(sources).slice(0, 8));
     try {
-      const provider = await this.d.provider();
+      const provider = await this.d.provider(source);
       const search = !!this.d.webSearch?.();
       const notebook = r.channel_id ? (await this.d.workspace.notebook(r.channel_id).catch(() => undefined))?.read() : undefined;
       const system = routinePrompt(

@@ -44,6 +44,13 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Suggested next steps.** Lyra can put up to three buttons under its latest reply ("Add it to my tasks", "Remind me Friday"); tapping one sends it as your message.
 - Reminders and follow-ups are listed under **Tasks → Scheduled** (each can be cancelled) and the next one shows under Lyra's avatar. All three are refused in a turn that read email or the web, so outside content can't schedule things or put words in your mouth.
 
+### Proactive, step 2: heads-ups
+
+- **Lyra checks in on its own.** **Settings → Notifications and privacy → Heads-ups**: Off (the default), Light (every 4 hours, only things that matter today) or Active (every hour, a lower bar). Each check looks at new mail, the calendar for the next hours, tasks Ready for you or overdue, and loose ends in memory, and posts only when something needs you: the one thing first, at most three, each with a next step. Most checks stay quiet.
+- **Quiet hours** (21:00 to 07:00 by default, can wrap past midnight): no checks then. Reminders you set still come.
+- Runs on the routine tick (`Lyra.tickHeadsUp`, `Routines.headsUp`), so like routines it runs on the phone when sync is on, never on the practice model, and not while Lyra is busy. What it said last time is passed to the next check so it doesn't repeat itself (settings `headsUpAt`, `headsUpLast`). Posts are tagged "Heads-up" and notify like a routine.
+- Heads-up and follow-up tokens show on the Usage page as their own kind of work ("proactive").
+
 #### Settings and model picker
 
 Settings opens on six areas (AI model, You and appearance, Notifications and privacy, Sync and backup, Connections, Updates), each showing its current state. **AI model** has a card per provider: paste the key, and Lyra asks the provider which models that key can use (`core/providers/models.ts`) and lists them, newest first, chat models only. Tap one to switch. Typing a model name is still there as a fallback, and a local OpenAI-compatible server lists its own models.

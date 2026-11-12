@@ -103,6 +103,28 @@ export interface AppState {
   weatherPlace: WeatherPlace | null;
   /** The voice GPT-Live speaks with in live voice mode. */
   liveVoice: LiveVoice;
+  /** Heads-ups: Lyra checks in on its own and speaks up only when something needs you. */
+  proactive: Proactive;
+}
+
+export const PROACTIVE_LEVELS = ["off", "light", "active"] as const;
+export type ProactiveLevel = (typeof PROACTIVE_LEVELS)[number];
+export interface Proactive {
+  level: ProactiveLevel;
+  /** "HH:MM" local time; no heads-ups from quietStart until quietEnd */
+  quietStart: string;
+  quietEnd: string;
+}
+/** How often a heads-up check runs at each level. */
+export const HEADS_UP_EVERY: Record<ProactiveLevel, number> = { off: 0, light: 4 * 3600_000, active: 3600_000 };
+const PROACTIVE_DEFAULT: Proactive = { level: "off", quietStart: "21:00", quietEnd: "07:00" };
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Is this local "HH:MM" inside quiet hours (which may wrap past midnight)? */
+export function inQuietHours(hhmm: string, p: Pick<Proactive, "quietStart" | "quietEnd">): boolean {
+  const { quietStart: a, quietEnd: b } = p;
+  if (a === b) return false;
+  return a < b ? hhmm >= a && hhmm < b : hhmm >= a || hhmm < b;
 }
 
 export interface WeatherPlace {
@@ -145,6 +167,7 @@ export interface SettingsPatch {
   appLock?: boolean;
   weatherPlace?: WeatherPlace | null;
   liveVoice?: string;
+  proactive?: Partial<Proactive>;
 }
 
 const SECRET_KEYS = ["anthropic", "openai", "gemini"] as const;
@@ -278,7 +301,7 @@ export class Lyra {
       db,
       workspace: this.workspace,
       connectors: this.connectors,
-      provider: async () => metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "routine", db, p.timeZone),
+      provider: async (source = "routine") => metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), source, db, p.timeZone),
       userName: () => this.userName,
       soul: () => this.customSoul,
       timeZone: p.timeZone,
@@ -378,7 +401,17 @@ export class Lyra {
       appLock: getSetting(this.db, "appLock") === "on",
       weatherPlace: this.weatherPlace,
       liveVoice: this.liveVoice,
+      proactive: this.proactive,
     };
+  }
+
+  get proactive(): Proactive {
+    try {
+      const p = { ...PROACTIVE_DEFAULT, ...(JSON.parse(getSetting(this.db, "proactive") || "{}") as Partial<Proactive>) };
+      return (PROACTIVE_LEVELS as readonly string[]).includes(p.level) && HHMM.test(p.quietStart) && HHMM.test(p.quietEnd) ? p : PROACTIVE_DEFAULT;
+    } catch {
+      return PROACTIVE_DEFAULT;
+    }
   }
 
   // ---------- live voice (GPT-Live) ----------
@@ -481,6 +514,15 @@ export class Lyra {
       setSetting(this.db, "weatherPlace", w ? JSON.stringify({ name: w.name.trim().slice(0, 80), latitude: w.latitude, longitude: w.longitude }) : "");
     }
     if (patch.notifications !== undefined) setSetting(this.db, "notifications", patch.notifications ? "on" : "off");
+    if (patch.proactive !== undefined) {
+      const p = { ...this.proactive, ...patch.proactive };
+      if (!(PROACTIVE_LEVELS as readonly string[]).includes(p.level)) throw new Error("That heads-up level isn't one of the choices.");
+      if (!HHMM.test(p.quietStart) || !HHMM.test(p.quietEnd)) throw new Error("Quiet hours need times like 21:00.");
+      const was = this.proactive.level;
+      setSetting(this.db, "proactive", JSON.stringify({ level: p.level, quietStart: p.quietStart, quietEnd: p.quietEnd }));
+      // turning it on (or up) starts the clock now, so the first check isn't instant
+      if (p.level !== "off" && p.level !== was) setSetting(this.db, "headsUpAt", new Date().toISOString());
+    }
     if (patch.accent !== undefined) {
       if (!(ACCENTS as readonly string[]).includes(patch.accent)) throw new Error("That color isn't one of the choices.");
       setSetting(this.db, "accent", patch.accent);
@@ -869,7 +911,45 @@ export class Lyra {
   tickRoutines(now = new Date()): number[] {
     const started = this.routinesRunner.tick(now);
     this.tickReminders(now);
+    this.tickHeadsUp(now);
     return started;
+  }
+
+  // ---------- heads-ups ----------
+
+  /**
+   * Every so often (Settings: Light every 4 hours, Active every hour, never in quiet hours)
+   * Lyra checks mail, calendar, tasks and loose ends, and posts only if something needs the user.
+   * Returns true when a check started.
+   */
+  tickHeadsUp(now = new Date()): boolean {
+    const p = this.proactive;
+    if (p.level === "off") return false;
+    // the practice model can't really check anything
+    if (!this.p.provider && this.choice().provider === "fake") return false;
+    if (this.busy || this.routinesRunner.headsUpRunning) return false;
+    const local = now.toLocaleTimeString("en-GB", { timeZone: this.p.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    if (inQuietHours(local, p)) return false;
+    const lastAt = getSetting(this.db, "headsUpAt");
+    if (lastAt && now.getTime() - new Date(lastAt).getTime() < HEADS_UP_EVERY[p.level]) return false;
+    setSetting(this.db, "headsUpAt", now.toISOString());
+    const sources = this.connectors.status().filter((c) => c.state === "connected").map((c) => c.id);
+    this.routinesRunner.headsUp(
+      {
+        name: "Heads-up check",
+        instructions: headsUpInstructions(sources, this.userName, p.level),
+        last_run_at: lastAt || null,
+        last_summary: getSetting(this.db, "headsUpLast") ?? "",
+        post_mode: "news",
+        channel_id: null,
+      },
+      (messageId, text) => {
+        if (messageId === null) return;
+        setSetting(this.db, "headsUpLast", text.slice(0, 800));
+        this.listeners.forEach((l) => l({ type: "message", channelId: null, notify: { title: "Heads-up from Lyra", body: text.split("\n")[0].slice(0, 160) } }));
+      },
+    );
+    return true;
   }
 
   // ---------- reminders and follow-ups ----------
@@ -1042,4 +1122,23 @@ export class Lyra {
     }
     return { messages, channels: channels.length };
   }
+}
+
+/** What a heads-up check looks for, and how high the bar is for speaking up. */
+export function headsUpInstructions(connected: string[], userName: string, level: ProactiveLevel): string {
+  const user = userName === "you" ? "the user" : userName;
+  const look = [
+    connected.some((c) => /mail/i.test(c)) && "- Mail since the last check: anything from a real person that's waiting on a reply, a deadline, a bill, or a change of plans.",
+    connected.some((c) => /calendar/i.test(c)) && "- Calendar for the next few hours and tomorrow morning: something that needs prep, a clash, an early start, travel time.",
+    "- Open tasks: anything Ready for them, waiting on their answer, or past its due date.",
+    "- Loose ends in memory: something they said they'd do or decide that's now due.",
+  ].filter(Boolean);
+  return `This is a heads-up check: you're looking in on ${user}'s day on your own, without being asked.
+
+Look at:
+${look.join("\n")}
+
+Speak up only for something ${user} would actually want to be interrupted for${level === "light" ? " (the bar is high: only things that matter today)" : ""}. Most checks should end with nothing_new. Skip anything you mentioned last time unless it changed, and skip newsletters, promotions and automated mail.
+
+If you do post: lead with the one thing that matters most, then at most two more, each in a line, and the next step for each. No greeting, no recap of what you checked.`;
 }

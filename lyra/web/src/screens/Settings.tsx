@@ -97,7 +97,7 @@ function SettingsHome({ state }: { state: AppState }) {
   const provider = state.providers.find((p) => p.id === state.choice.provider);
   const connected = state.connectors.filter((c) => c.state === "connected").length;
   const accent = ACCENT_CHOICES.find((a) => a.id === state.accent)?.label ?? "";
-  const alerts = [state.notifications ? "Notifications on" : "Notifications off", ...(isNative ? [state.appLock ? "app lock on" : "app lock off"] : [])].join(", ");
+  const alerts = [state.notifications ? "Notifications on" : "Notifications off", `heads-ups ${state.proactive.level}`, ...(isNative ? [state.appLock ? "app lock on" : "app lock off"] : [])].join(", ");
 
   const rows: { href: string; icon: ReactNode; title: string; sub: string }[] = [
     { href: "#/settings/model", icon: <Cpu />, title: TITLES.model, sub: state.choice.provider === "fake" ? "Practice mode. Add a key to use a real model." : `${provider?.label} · ${state.choice.model}` },
@@ -166,6 +166,56 @@ function YouSection({ state, setState, toast, run, busy }: Omit<Props, "section"
   );
 }
 
+const LEVELS = [
+  { id: "off", label: "Off", sub: "Lyra speaks when spoken to (plus your routines and reminders)." },
+  { id: "light", label: "Light", sub: "Every 4 hours Lyra looks at your mail, calendar and tasks, and only speaks up for something that matters today." },
+  { id: "active", label: "Active", sub: "Every hour, with a lower bar: things coming up, replies people are waiting on, tasks ready for you." },
+] as const;
+
+function HeadsUps({ state, run, busy }: { state: AppState; run: (fn: () => Promise<AppState>, done: string) => Promise<void>; busy: boolean }) {
+  const p = state.proactive;
+  const level = LEVELS.find((l) => l.id === p.level)!;
+  const quiet = (k: "quietStart" | "quietEnd", v: string) => v && v !== p[k] && void run(() => api.saveSettings({ proactive: { [k]: v } }), "Quiet hours saved");
+  return (
+    <section className="section">
+      <h2 className="section-label">Heads-ups</h2>
+      <div className="seg" role="radiogroup" aria-label="Heads-ups">
+        {LEVELS.map((l) => (
+          <button
+            key={l.id}
+            role="radio"
+            aria-checked={p.level === l.id}
+            className={p.level === l.id ? "on" : ""}
+            disabled={busy}
+            onClick={() => p.level !== l.id && void run(() => api.saveSettings({ proactive: { level: l.id } }), l.id === "off" ? "Heads-ups off" : `Heads-ups: ${l.label}`)}
+          >
+            {l.label}
+          </button>
+        ))}
+      </div>
+      <p className="hint">{level.sub}</p>
+      {p.level !== "off" && (
+        <div className="group">
+          <label className="item" htmlFor="quiet-start">
+            <span className="body">
+              <div className="title">Quiet from</div>
+              <div className="sub">No heads-ups overnight. Reminders you set still come.</div>
+            </span>
+            <input id="quiet-start" type="time" className="select" value={p.quietStart} disabled={busy} onChange={(e) => quiet("quietStart", e.target.value)} />
+          </label>
+          <label className="item" htmlFor="quiet-end">
+            <span className="body">
+              <div className="title">Until</div>
+            </span>
+            <input id="quiet-end" type="time" className="select" value={p.quietEnd} disabled={busy} onChange={(e) => quiet("quietEnd", e.target.value)} />
+          </label>
+        </div>
+      )}
+      {p.level !== "off" && <p className="hint">Each check uses some tokens even when it stays quiet. They show on the Usage page under heads-ups. Checks run while Lyra is open{isNative ? "" : ". With sync on, your phone does the checking"}.</p>}
+    </section>
+  );
+}
+
 function AlertsSection({ state, run, busy }: { state: AppState; run: (fn: () => Promise<AppState>, done: string) => Promise<void>; busy: boolean }) {
   return (
     <>
@@ -175,7 +225,7 @@ function AlertsSection({ state, run, busy }: { state: AppState; run: (fn: () => 
           <label className="item">
             <span className="body">
               <div className="title">Notify me</div>
-              <div className="sub">When Lyra finishes a reply after you've switched away, a routine posts news, or a task is ready for you. Plus a reminder at each routine's time.</div>
+              <div className="sub">When Lyra finishes a reply after you've switched away, a routine or heads-up posts news, or a task is ready for you. Plus a reminder at each routine's time.</div>
             </span>
             <input
               type="checkbox"
@@ -195,6 +245,8 @@ function AlertsSection({ state, run, busy }: { state: AppState; run: (fn: () => 
         </div>
         {!isNative && !isDesktop && <p className="hint">Notifications work in the Android and Windows apps.</p>}
       </section>
+
+      <HeadsUps state={state} run={run} busy={busy} />
 
       <section className="section">
         <h2 className="section-label">Privacy</h2>

@@ -282,6 +282,8 @@ export interface MessageMeta {
   voice?: boolean;
   /** Posted by a reminder or a follow-up Lyra set. */
   reminder?: { id: number; kind: "remind" | "follow_up" };
+  /** Posted by a heads-up check Lyra ran on its own. */
+  headsUp?: boolean;
   /** Next steps Lyra offers as buttons (only on its latest reply). */
   suggestions?: string[];
   /** Photos and files sent with this message (a note each; the file itself isn't kept). */

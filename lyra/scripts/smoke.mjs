@@ -60,6 +60,16 @@ try {
   await page.getByRole("link", { name: "Back" }).click();
   await page.getByRole("link", { name: /Notifications and privacy/ }).click();
   check((await page.getByRole("switch", { name: /Notify me/ }).isChecked()) === true, "notifications are on by default");
+  check((await page.getByRole("radio", { name: "Off" }).getAttribute("aria-checked")) === "true", "heads-ups are off until you choose");
+  await page.getByRole("radio", { name: "Light" }).click();
+  await page.getByText("Heads-ups: Light").waitFor();
+  await page.getByLabel("Quiet from").fill("22:30");
+  await page.getByText("Quiet hours saved").waitFor();
+  await shot("light-32-heads-ups");
+  await page.reload();
+  check((await page.getByLabel("Quiet from").inputValue()) === "22:30", "heads-ups can be turned on, with quiet hours that stick");
+  await page.getByRole("radio", { name: "Off" }).click();
+  await page.getByText("Heads-ups off").waitFor();
   await page.getByRole("link", { name: "Back" }).click();
 
   // ---- AI model: add a key, pick from the models it can use (a pretend Claude API) ----
