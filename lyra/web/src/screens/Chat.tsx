@@ -173,7 +173,7 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
   let lastDay = "";
 
   return (
-    <div className="chat" ref={chatRef}>
+    <div className={`chat${channel ? " in-channel" : ""}`} ref={chatRef}>
       <div className="log" ref={logRef} onScroll={onScroll} aria-live="polite">
         <div className="log-inner">
           {hasMore && (

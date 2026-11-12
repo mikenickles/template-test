@@ -214,9 +214,14 @@ export function App() {
             </a>
           )}
           {inChat && channel && (
-            <a className="channel-chip" href={`#/c/${channel.id}/info`} aria-label={`${channel.name}: channel details`}>
-              <ChannelIcon name={channel.icon} size={18} />
-              <span>{channel.name}</span>
+            <a className="channel-head" href={`#/c/${channel.id}/info`} aria-label={`${channel.name}: channel details`}>
+              <span className="orb orb-sm">
+                <Avatar />
+              </span>
+              <span className="channel-chip">
+                <ChannelIcon name={channel.icon} size={16} />
+                <span>{channel.name}</span>
+              </span>
             </a>
           )}
           {!inChat && <span />}
