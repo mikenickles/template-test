@@ -35,6 +35,10 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 
 Settings opens on six areas (AI model, You and appearance, Notifications and privacy, Sync and backup, Connections, Updates), each showing its current state. **AI model** has a card per provider: paste the key, and Lyra asks the provider which models that key can use (`core/providers/models.ts`) and lists them, newest first, chat models only. Tap one to switch. Typing a model name is still there as a fallback, and a local OpenAI-compatible server lists its own models.
 
+#### Usage
+
+**Settings → Usage** shows tokens per model as stacked bars, by day (14 days), week (12) or month (12), with totals (sent, written, requests) and a table of the exact numbers. Lyra records what each provider reports for every chat reply, worker step and routine run (`core/usage.ts`, table `usage`, one row per local day, model and kind of work). Practice-mode numbers are estimates. Counting starts with version 0.14.0.
+
 #### Updates from your Drive
 
 New versions go in a **Lyra Updates** folder in your Google Drive (made with `npm run release`, or `npm run release -- --full` when the desktop shell changed). Both apps check it once a day and from **Settings → Updates**, using the read-only Files connection, and only accept files you own.

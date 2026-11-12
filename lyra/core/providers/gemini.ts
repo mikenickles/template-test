@@ -116,7 +116,10 @@ export class GeminiProvider implements ModelProvider {
     let finish: string | undefined;
     const sources: Source[] = [];
     let searched = false;
+    let usage: { input: number; output: number } | undefined;
     for await (const chunk of stream) {
+      const um = chunk.usageMetadata;
+      if (um) usage = { input: um.promptTokenCount ?? 0, output: (um.candidatesTokenCount ?? 0) + (um.thoughtsTokenCount ?? 0) };
       const cand = chunk.candidates?.[0];
       const g = cand?.groundingMetadata;
       if (g?.webSearchQueries?.length) searched = true;
@@ -134,6 +137,7 @@ export class GeminiProvider implements ModelProvider {
       stop: hasCalls ? "tool_use" : finish === "MAX_TOKENS" ? "max_tokens" : "end",
       searched: searched || sources.length > 0,
       sources: uniqueSources(sources),
+      usage,
     };
   }
 }

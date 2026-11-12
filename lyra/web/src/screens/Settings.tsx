@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from "react";
 import { api, isNative, syncApi, type AppState, type SyncStatus } from "../api";
-import { Bell, Check, Chevron, Cloud, Cpu, Plug, Refresh, User } from "../icons";
+import { Bell, Chart, Check, Chevron, Cloud, Cpu, Plug, Refresh, User } from "../icons";
+import { compact, dayKey } from "../usageData";
+import { Usage } from "./Usage";
 import { appLock, installer, isDesktop, thisDevice } from "../platform";
 import { BackupSection } from "./Backup";
 import { ModelSettings } from "./ModelSettings";
@@ -9,8 +11,8 @@ import { UpdatesSection } from "./UpdatesSection";
 import { WeatherSection } from "./WeatherSection";
 import { useEffect } from "react";
 
-export type SettingsSection = "model" | "you" | "alerts" | "sync" | "about";
-export const SETTINGS_SECTIONS: SettingsSection[] = ["model", "you", "alerts", "sync", "about"];
+export type SettingsSection = "model" | "usage" | "you" | "alerts" | "sync" | "about";
+export const SETTINGS_SECTIONS: SettingsSection[] = ["model", "usage", "you", "alerts", "sync", "about"];
 
 const ACCENT_CHOICES: { id: AppState["accent"]; label: string }[] = [
   { id: "lime", label: "Lime" },
@@ -25,6 +27,7 @@ const ACCENT_CHOICES: { id: AppState["accent"]; label: string }[] = [
 
 const TITLES: Record<SettingsSection, string> = {
   model: "AI model",
+  usage: "Usage",
   you: "You and appearance",
   alerts: "Notifications and privacy",
   sync: "Sync and backup",
@@ -64,6 +67,7 @@ export function Settings({ state, setState, toast, section }: Props) {
           <ModelSettings state={state} run={run} busy={busy} />
         </>
       )}
+      {section === "usage" && <Usage />}
       {section === "you" && <YouSection state={state} setState={setState} toast={toast} run={run} busy={busy} />}
       {section === "alerts" && <AlertsSection state={state} run={run} busy={busy} />}
       {section === "sync" && (
@@ -82,7 +86,10 @@ export function Settings({ state, setState, toast, section }: Props) {
 function SettingsHome({ state }: { state: AppState }) {
   const [sync, setSync] = useState<SyncStatus | null>(null);
   const [version, setVersion] = useState(__LYRA_VERSION__);
+  const [usage, setUsage] = useState<number | null>(null);
   useEffect(() => {
+    const today = dayKey(new Date());
+    void api.usage(today, today).then((rows) => setUsage(rows.reduce((n, r) => n + r.input + r.output, 0)), () => {});
     void syncApi.status().then(setSync, () => {});
     void installer.version().then(setVersion, () => {});
     return syncApi.onChange(() => void syncApi.status().then(setSync, () => {}));
@@ -94,6 +101,7 @@ function SettingsHome({ state }: { state: AppState }) {
 
   const rows: { href: string; icon: ReactNode; title: string; sub: string }[] = [
     { href: "#/settings/model", icon: <Cpu />, title: TITLES.model, sub: state.choice.provider === "fake" ? "Practice mode. Add a key to use a real model." : `${provider?.label} · ${state.choice.model}` },
+    { href: "#/settings/usage", icon: <Chart />, title: TITLES.usage, sub: usage === null ? "Tokens per model, by day, week or month" : usage ? `${compact(usage)} tokens today` : "No tokens used today" },
     { href: "#/settings/you", icon: <User />, title: TITLES.you, sub: [state.userName !== "you" ? state.userName : "Name not set", accent, state.weatherPlace?.name.split(",")[0]].filter(Boolean).join(" · ") },
     { href: "#/settings/alerts", icon: <Bell />, title: TITLES.alerts, sub: alerts },
     { href: "#/settings/sync", icon: <Cloud />, title: TITLES.sync, sub: sync?.enabled ? (sync.lastError ? "Sync needs attention" : `Syncing as ${sync.deviceName}`) : "Sync is off" },

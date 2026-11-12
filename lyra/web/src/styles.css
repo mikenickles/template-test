@@ -3734,3 +3734,298 @@ a.status-pill:active {
 .manual[open] summary {
   margin-bottom: var(--s3);
 }
+
+/* ---------- usage: tokens per model over time ---------- */
+
+:root {
+  /* chart series colors, checked for color-blind separation on these surfaces */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-other: #a8a69c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-other: #6b7280;
+  }
+}
+
+.seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.seg button {
+  min-height: 40px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  transition: background var(--ease), color var(--ease);
+}
+
+.seg button.on {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.usage-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s3);
+  margin: var(--s5) 0;
+}
+
+.usage-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s3) var(--s4);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.usage-tile.hero {
+  grid-column: 1 / -1;
+  padding: var(--s4);
+}
+
+.usage-num {
+  font-size: 40px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-num.sm {
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+
+.usage-cap {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.usage-chart {
+  margin: 0;
+  padding: var(--s4);
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.usage-title {
+  font-weight: 600;
+  margin-bottom: var(--s3);
+}
+
+.usage-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px var(--s4);
+  margin: 0 0 var(--s3);
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.usage-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  overflow-wrap: anywhere;
+}
+
+.swatch-key {
+  flex: none;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.usage-plot {
+  position: relative;
+  touch-action: pan-y;
+}
+
+.usage-plot svg {
+  display: block;
+}
+
+.usage-plot .grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.usage-plot .axis {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+}
+
+.usage-plot .tick {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-plot g.dim path {
+  opacity: 0.4;
+}
+
+.usage-plot path {
+  transition: opacity 120ms ease;
+}
+
+.usage-tip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  min-width: 168px;
+  max-width: 230px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 12.5px;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tip-title {
+  font-weight: 650;
+  margin-bottom: 6px;
+}
+
+.tip-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  line-height: 1.6;
+}
+
+.tip-row.muted {
+  opacity: 0.7;
+}
+
+.tip-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tip-val {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.tip-row.total {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid color-mix(in srgb, var(--bg) 25%, transparent);
+}
+
+.usage-table-wrap {
+  margin-top: var(--s4);
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  overflow-x: auto;
+}
+
+.usage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-table th,
+.usage-table td {
+  padding: 12px var(--s3);
+  text-align: right;
+  white-space: nowrap;
+  border-top: 1px solid var(--border);
+}
+
+.usage-table thead th {
+  border-top: 0;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.usage-table th:first-child {
+  text-align: left;
+  padding-left: var(--s4);
+  min-width: 128px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-weight: 550;
+}
+
+.usage-table thead th:first-child {
+  white-space: nowrap;
+}
+
+.usage-table tbody th {
+  display: flex;
+  align-items: baseline;
+}
+
+.usage-table th,
+.usage-table td {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.usage-table tbody th .swatch-key {
+  margin-right: 8px;
+}
+
+.usage-table td:last-child,
+.usage-table thead th:last-child {
+  padding-right: var(--s4);
+}
+
+.usage-table .strong {
+  font-weight: 650;
+}
+
+/* on a phone, sent and written sit under the model's name instead of in their own columns */
+.usage-sub {
+  display: none;
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 12px;
+}
+
+@media (max-width: 620px) {
+  .usage-table .col-wide {
+    display: none;
+  }
+
+  .usage-sub {
+    display: block;
+  }
+}

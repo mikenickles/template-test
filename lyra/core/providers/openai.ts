@@ -51,6 +51,7 @@ export class OpenAIProvider implements ModelProvider {
       {
         model: this.model,
         stream: true,
+        stream_options: { include_usage: true },
         max_completion_tokens: req.maxTokens ?? 2048,
         messages: toOpenAIMessages(req.system, req.messages),
         ...(req.tools.length
@@ -68,7 +69,9 @@ export class OpenAIProvider implements ModelProvider {
     let text = "";
     let finish: string | null = null;
     const calls = new Map<number, { id: string; name: string; args: string }>();
+    let usage: GenerateResult["usage"];
     for await (const chunk of stream) {
+      if (chunk.usage) usage = { input: chunk.usage.prompt_tokens ?? 0, output: chunk.usage.completion_tokens ?? 0 };
       const choice = chunk.choices[0];
       if (!choice) continue;
       const d = choice.delta;
@@ -91,6 +94,6 @@ export class OpenAIProvider implements ModelProvider {
     for (const [i, c] of [...calls.entries()].sort((a, b) => a[0] - b[0]))
       parts.push({ type: "tool_call", id: c.id || `call_${i}`, name: c.name, input: parseArgs(c.args) });
     const stop = calls.size ? "tool_use" : finish === "length" ? "max_tokens" : "end";
-    return { parts, stop };
+    return { parts, stop, usage };
   }
 }

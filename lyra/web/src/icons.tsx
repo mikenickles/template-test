@@ -247,3 +247,9 @@ export const Plug = (p: P) => (
     <path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4" />
   </Icon>
 );
+
+export const Chart = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 20h16M7 20v-6M12 20V6M17 20v-9" strokeWidth={2.2} />
+  </Icon>
+);

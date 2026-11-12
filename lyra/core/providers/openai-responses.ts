@@ -104,9 +104,13 @@ export class OpenAIResponsesProvider implements ModelProvider {
     let stop: GenerateResult["stop"] = "end";
     const sources: Source[] = [];
     let searched = false;
+    let usage: GenerateResult["usage"];
 
     for await (const ev of stream) {
       switch (ev.type) {
+        case "response.completed":
+          if (ev.response.usage) usage = { input: ev.response.usage.input_tokens ?? 0, output: ev.response.usage.output_tokens ?? 0 };
+          break;
         case "response.output_text.delta":
           text += ev.delta;
           onText(ev.delta);
@@ -139,6 +143,7 @@ export class OpenAIResponsesProvider implements ModelProvider {
         }
         case "response.incomplete":
           stop = "max_tokens";
+          if (ev.response.usage) usage = { input: ev.response.usage.input_tokens ?? 0, output: ev.response.usage.output_tokens ?? 0 };
           break;
         case "response.failed":
           throw new Error(ev.response.error?.message ?? "OpenAI couldn't finish the reply.");
@@ -150,6 +155,6 @@ export class OpenAIResponsesProvider implements ModelProvider {
     const parts: Part[] = [];
     if (text) parts.push({ type: "text", text });
     parts.push(...calls);
-    return { parts, stop: calls.length ? "tool_use" : stop, searched, sources: uniqueSources(sources) };
+    return { parts, stop: calls.length ? "tool_use" : stop, searched, sources: uniqueSources(sources), usage };
   }
 }

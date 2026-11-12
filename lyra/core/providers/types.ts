@@ -54,6 +54,15 @@ export interface GenerateResult {
   searched?: boolean;
   /** Web pages the answer drew on. */
   sources?: Source[];
+  /** Tokens this call used, as the provider counted them. */
+  usage?: Usage;
+}
+
+export interface Usage {
+  /** tokens sent: the prompt, history and tool results (cached ones included) */
+  input: number;
+  /** tokens the model wrote (reasoning included, where the provider bills it) */
+  output: number;
 }
 
 /** Keep the first of each URL, in order. */

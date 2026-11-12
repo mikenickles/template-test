@@ -29,6 +29,7 @@ import {
   type StoredMessage,
 } from "./db.ts";
 import { UpdateSource } from "./updates.ts";
+import { metered, usageBetween, type UsageRow } from "./usage.ts";
 import { listModels, type ModelOption } from "./providers/models.ts";
 import type { ProviderId } from "./providers/index.ts";
 import { decryptBackup, encryptBackup, fromBase64, toBase64, type BackupPayload } from "./backup.ts";
@@ -232,7 +233,7 @@ export class Lyra {
       db,
       workspace: this.workspace,
       connectors: this.connectors,
-      provider: async () => this.p.provider ?? createProvider(this.keys, this.choice()),
+      provider: async () => metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "worker", db, p.timeZone),
       userName: () => this.userName,
       soul: () => this.customSoul,
       timeZone: p.timeZone,
@@ -244,7 +245,7 @@ export class Lyra {
       db,
       workspace: this.workspace,
       connectors: this.connectors,
-      provider: async () => this.p.provider ?? createProvider(this.keys, this.choice()),
+      provider: async () => metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "routine", db, p.timeZone),
       userName: () => this.userName,
       soul: () => this.customSoul,
       timeZone: p.timeZone,
@@ -346,6 +347,11 @@ export class Lyra {
     };
   }
 
+  /** Token usage between two local days (YYYY-MM-DD, inclusive). */
+  usage(from: string, to: string): UsageRow[] {
+    return usageBetween(this.db, from, to);
+  }
+
   /** The models this provider's saved key can use (asked from the provider each time). */
   models(provider: ProviderId): Promise<ModelOption[]> {
     return listModels(this.keys, provider, this.fetch);
@@ -425,7 +431,7 @@ export class Lyra {
     if (channel === undefined) throw new Error("That channel no longer exists.");
     this.running = new AbortController();
     try {
-      const provider = this.p.provider ?? (await createProvider(this.keys, this.choice()));
+      const provider = metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "chat", this.db, this.p.timeZone);
       const message = await runTurn(
         {
           db: this.db,

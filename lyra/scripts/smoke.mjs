@@ -49,7 +49,7 @@ try {
 
   await page.getByRole("link", { name: "Settings" }).click();
   await page.getByRole("link", { name: /AI model.*Practice mode/ }).waitFor();
-  check((await page.locator(".settings-home .item").count()) === 6, "settings opens on six clear areas");
+  check((await page.locator(".settings-home .item").count()) === 7, "settings opens on seven clear areas");
   await shot("light-5-settings");
   await page.getByRole("link", { name: /You and appearance/ }).click();
   await page.getByLabel("What should Lyra call you?").fill("Sam");
@@ -339,6 +339,18 @@ try {
   await page.getByRole("button", { name: "Restore", exact: true }).click();
   await page.locator(".bubble", { hasText: "When is it?" }).waitFor();
   check((await page.locator(".bubble", { hasText: "after the backup" }).count()) === 0, "restore brings back the backed-up chat");
+
+  // ---- usage: tokens per model, with a graph ----
+  await page.goto(`${base}/#/settings`);
+  await page.getByRole("link", { name: /Usage.*tokens today/ }).click();
+  await page.getByText("Tokens per day, by model").waitFor();
+  check((await page.locator(".usage-num").first().textContent()) !== "0", "usage counts the tokens from today's chats");
+  await page.locator(".usage-plot rect").last().hover();
+  await page.locator(".usage-tip", { hasText: "Practice (estimate)" }).waitFor();
+  check(true, "pointing at a bar shows that day's numbers per model");
+  await page.getByRole("tab", { name: "Monthly" }).click();
+  await page.getByText("Tokens per month, by model").waitFor();
+  check((await page.locator(".usage-table tbody tr").count()) >= 1, "weekly and monthly views, with a table of the numbers");
 
   // ---- status under the avatar, with a pretend weather service ----
   await page.route("https://geocoding-api.open-meteo.com/**", (r) =>

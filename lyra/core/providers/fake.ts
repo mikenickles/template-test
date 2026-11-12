@@ -14,6 +14,11 @@ export class FakeProvider implements ModelProvider {
   async generate(req: GenerateRequest, onText: (d: string) => void): Promise<GenerateResult> {
     this.requests.push({ ...req, messages: structuredClone(req.messages) });
     const result = this.script.length ? this.script.shift()! : this.rules(req);
+    // Practice has no real tokens: estimate at four characters each, so the Usage page has something to show.
+    if (!result.usage) {
+      const chars = (parts: Part[]) => parts.reduce((n, p) => n + (p.type === "text" ? p.text.length : JSON.stringify(p).length), 0);
+      result.usage = { input: Math.ceil((req.system.length + req.messages.reduce((n, m) => n + chars(m.parts), 0)) / 4), output: Math.ceil(chars(result.parts) / 4) };
+    }
     for (const p of result.parts) {
       if (p.type !== "text") continue;
       for (const word of p.text.split(/(?<= )/)) onText(word);

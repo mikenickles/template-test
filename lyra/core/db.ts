@@ -109,6 +109,16 @@ export const MIGRATIONS: string[] = [
      note TEXT NOT NULL DEFAULT ''
    );
    CREATE INDEX routine_runs_routine ON routine_runs (routine_id, id);`,
+  `CREATE TABLE usage (
+     day TEXT NOT NULL,
+     provider TEXT NOT NULL,
+     model TEXT NOT NULL,
+     source TEXT NOT NULL,
+     requests INTEGER NOT NULL DEFAULT 0,
+     input INTEGER NOT NULL DEFAULT 0,
+     output INTEGER NOT NULL DEFAULT 0,
+     PRIMARY KEY (day, provider, model, source)
+   );`,
 ];
 
 const FILE = "lyra.db";
