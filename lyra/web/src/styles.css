@@ -888,13 +888,79 @@ body[data-busy] .orb:has(.avatar)::after {
     box-shadow 260ms ease;
 }
 
-/* typing: a faint, hazy glow in the accent color */
-.composer-inner:focus-within {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+/* typing: a faint accent haze that breathes, and a soft highlight that travels around the edge */
+@property --spin {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.composer-inner {
+  position: relative;
+}
+
+.composer-inner::before,
+.composer-inner::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+
+/* the haze lives in the shadow, outside the box */
+.composer-inner::after {
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent),
-    0 0 22px 4px color-mix(in srgb, var(--accent) 26%, transparent),
-    0 0 48px 10px color-mix(in srgb, var(--accent) 10%, transparent);
+    0 0 0 2px color-mix(in srgb, var(--accent) 9%, transparent),
+    0 0 18px 2px color-mix(in srgb, var(--accent) 17%, transparent),
+    0 0 40px 8px color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+/* the travelling highlight: a conic sweep shown only on the border ring */
+.composer-inner::before {
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--spin),
+    transparent 0turn,
+    transparent 0.55turn,
+    color-mix(in srgb, var(--accent) 85%, transparent) 0.75turn,
+    transparent 0.95turn
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+}
+
+.composer-inner:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+
+.composer-inner:focus-within::after {
+  opacity: 1;
+  animation: breathe 3.6s ease-in-out infinite;
+}
+
+.composer-inner:focus-within::before {
+  opacity: 1;
+  animation: spin 6s linear infinite;
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes spin {
+  to {
+    --spin: 1turn;
+  }
 }
 
 .composer textarea {
