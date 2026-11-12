@@ -120,6 +120,10 @@ const SECRET_KEYS = ["anthropic", "openai", "gemini"] as const;
 
 export type GoogleId = "gmail" | "calendar" | "drive";
 
+const GOOGLE_LINKS = ["gmail", "calendar", "drive"];
+/** Settings that stay with a device when another device's data arrives through sync. */
+const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications"];
+
 /** Lyra's Google connectors. Each asks for one read-only permission. */
 const GOOGLE: {
   id: GoogleId;
@@ -238,16 +242,34 @@ export class Lyra {
     });
   }
 
-  static async start(p: Platform): Promise<Lyra> {
+  static async start(p: Platform, opts: { resumeWorkers?: boolean } = {}): Promise<Lyra> {
+    // notebook and soul edits count as changes too (sync's own state file doesn't)
+    const texts = p.texts;
+    let lyraRef: Lyra | undefined;
+    p = {
+      ...p,
+      texts: {
+        ...texts,
+        read: (n) => texts.read(n),
+        write: async (n, t) => {
+          await texts.write(n, t);
+          if (/\.md$/.test(n)) lyraRef?.dataChanged();
+        },
+        ...(texts.remove ? { remove: (n: string) => texts.remove!(n) } : {}),
+      },
+    };
     const db = await DB.open(p.SQL, p.blobs);
     const userName = getSetting(db, "userName") ?? "you";
     const memory = await Notebook.open(db, p.texts, mainNotebookSpec(userName));
     const lyra = new Lyra(p, db, memory);
+    lyraRef = lyra;
+    db.onWrite = () => lyra.dataChanged();
     lyra.customSoul = (await p.texts.read("soul.md"))?.trim() || undefined;
     for (const k of SECRET_KEYS) lyra.keys[k] = (await p.secrets.get(`key.${k}`)) ?? undefined;
     lyra.keys.openaiBaseUrl = getSetting(db, "openaiBaseUrl") || undefined;
-    // Workers cut off when the app was closed carry on where they stopped.
-    lyra.workers.resumeInterrupted();
+    // Workers cut off when the app was closed carry on where they stopped (not after
+    // loading another device's data: those runs belong to that device).
+    if (opts.resumeWorkers !== false) lyra.workers.resumeInterrupted();
     return lyra;
   }
 
@@ -355,10 +377,6 @@ export class Lyra {
     return listMessages(this.db, channelId, Math.min(limit, 200), before);
   }
 
-  get busy(): boolean {
-    return !!this.running;
-  }
-
   async chat(text: string, emit: TurnEmitter, channelId: number | null = null): Promise<{ message: StoredMessage; user: StoredMessage }> {
     const clean = text.trim();
     if (!clean) throw new Error("Say something first.");
@@ -394,6 +412,11 @@ export class Lyra {
 
   stop(): void {
     this.running?.abort();
+  }
+
+  /** A reply is being written or a worker is running: not a moment to swap the data out. */
+  get busy(): boolean {
+    return !!this.running || this.workers.busyCount > 0;
   }
 
   async deleteMessage(id: number): Promise<void> {
@@ -762,6 +785,16 @@ export class Lyra {
 
   // ---------- backup ----------
 
+  private changeListeners = new Set<() => void>();
+  /** Called whenever Lyra's data changes (sync watches this). */
+  onDataChange(fn: () => void): () => void {
+    this.changeListeners.add(fn);
+    return () => this.changeListeners.delete(fn);
+  }
+  private dataChanged() {
+    this.changeListeners.forEach((f) => f());
+  }
+
   /** Everything Lyra knows, encrypted with the passphrase. API keys and Google sign-ins stay out. */
   async backup(passphrase: string): Promise<Uint8Array> {
     await this.db.flush();
@@ -779,9 +812,13 @@ export class Lyra {
    * Replace everything on this phone with a backup. Afterwards this engine is
    * finished: the app must restart (reload) to load the restored data.
    */
-  async restore(file: Uint8Array, passphrase: string): Promise<{ messages: number; channels: number }> {
+  async restore(file: Uint8Array, passphrase: string, opts: { keepThisDevice?: boolean } = {}): Promise<{ messages: number; channels: number }> {
     const payload = await decryptBackup(file, passphrase);
-    // check the database opens, and drop Google sign-ins: they belong to the old phone
+    // Settings that belong to a device, not to Lyra: Google sign-ins are always this
+    // device's own; for sync, this device also keeps its lock and notification choices.
+    const local = opts.keepThisDevice
+      ? this.db.all<{ key: string; value: string }>(`SELECT key, value FROM settings WHERE key IN (${DEVICE_SETTINGS.map(() => "?").join(",")})`, [...DEVICE_SETTINGS])
+      : [];
     let bytes: Uint8Array;
     let channels: { id: number; name: string; about: string }[];
     let messages: number;
@@ -789,7 +826,8 @@ export class Lyra {
       const probe = new this.p.SQL.Database(fromBase64(payload.db));
       messages = Number(probe.exec("SELECT count(*) FROM messages")[0]?.values[0][0] ?? 0);
       channels = (probe.exec("SELECT id, name, about FROM channels")[0]?.values ?? []).map(([id, name, about]) => ({ id: Number(id), name: String(name), about: String(about ?? "") }));
-      probe.run("DELETE FROM settings WHERE key IN ('gmail', 'calendar', 'drive')");
+      probe.run(`DELETE FROM settings WHERE key IN (${(opts.keepThisDevice ? DEVICE_SETTINGS : GOOGLE_LINKS).map((k) => `'${k}'`).join(",")})`);
+      for (const { key, value } of local) probe.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [key, value]);
       bytes = probe.export();
       probe.close();
     } catch {

@@ -2,7 +2,7 @@
 
 Lyra is a personal chief of staff that lives in an Android app. You text it like a trusted assistant; it answers short, leads with the point, and remembers what matters. Everything runs on your phone: there's no server or computer to keep running.
 
-This is **Phase 7**: everything from Phases 1 to 6 (chat, memory, channels, tasks, workers, routines, web search, read-only Google), plus encrypted backups, app lock and message actions.
+This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, memory, channels, tasks, workers, routines, web search, read-only Google), encrypted backups, app lock, message actions, a desktop app for Windows, and sync between your devices.
 
 | Phase | What it adds | Status |
 | --- | --- | --- |
@@ -12,12 +12,29 @@ This is **Phase 7**: everything from Phases 1 to 6 (chat, memory, channels, task
 | 4 | Background workers | Done |
 | 5 | Calendar and Drive, read-only | Done |
 | 6 | Routines (7am brief, check-ins, watches) | Done |
-| 7 | Safety net: encrypted backup and restore, app lock, message actions | **Here** |
+| 7 | Safety net: encrypted backup and restore, app lock, message actions | Done |
+| 7b | Windows app and hand-off sync through encrypted Google Drive | **Here** |
 | 8 | Talk your way: voice input, share to Lyra, photos and files | Next |
 | 9 | Approvals and actions: drafts, calendar events, reminders from chat | Planned |
 | 10 | Smarter memory: search past chats, people, weekly tidy-up | Planned |
 | 11 | Works on its own: background routines, "while you were away", widget | Planned |
 | 12 | Polish: accent-colored app icon, fixes from testing | Planned |
+
+### Windows app and sync (Phase 7b)
+
+- **Lyra for Windows.** The same app in a window (Electron), built for Windows on Arm (`npm run desktop`, output in `build/desktop`). Unzip it anywhere and run `Lyra.exe`; it adds itself to the Start menu. Data lives in `%APPDATA%\Lyra`, API keys are encrypted by Windows (DPAPI) for your account.
+- **Hand-off sync.** Each device keeps a full copy and works on its own. A few seconds after anything changes, the device uploads an encrypted snapshot (the same format as a backup) to Lyra's hidden app folder in your Google Drive. While open, the other device checks every minute and when you come back to it, and loads the newer snapshot (the app restarts to do it, never mid-reply or mid-sentence). `core/sync.ts`, `core/sync-drive.ts`.
+- **Conflicts.** If both devices changed while apart, Lyra asks which version to keep; the other is saved in Drive as a conflict copy. The newest ten snapshots are kept.
+- **Per device.** API keys, Google sign-ins, app lock and notifications stay with each device. With sync on, routines run on the phone only, so nothing posts twice; workers resume only on the device that started them.
+- **Backups on the computer.** Every snapshot the Windows app sends or receives is also saved, encrypted, in `Documents\Lyra Backups` (the newest 20).
+- **Privacy.** Snapshots are AES-256-GCM encrypted with your sync passphrase before upload. The Drive permission (`drive.appdata`) only reaches Lyra's own hidden folder: it can't see or change your files.
+
+#### Set up sync
+
+1. **Google, once for the computer.** In <https://console.cloud.google.com/>, same project as the phone: **APIs & Services → Credentials → Create credentials → OAuth client ID**, type **Desktop app**. In Lyra for Windows: **Settings → Google on this computer**, paste the client ID and secret.
+2. **On the phone:** Settings → Sync → **Turn on sync**. Approve Lyra's sync folder, name the device, choose a sync passphrase.
+3. **On the computer:** Settings → Sync → **Turn on sync**. It finds the phone's copy: enter the same passphrase. Lyra restarts with everything from the phone.
+4. Add your API key on the computer too (keys never sync).
 
 ### Safety net (Phase 7)
 

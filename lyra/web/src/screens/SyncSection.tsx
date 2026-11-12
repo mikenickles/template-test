@@ -1,0 +1,300 @@
+import { useCallback, useEffect, useState } from "react";
+import { MIN_PASSPHRASE } from "../../../core/backup";
+import type { SnapshotInfo } from "../../../core/sync";
+import { syncApi, type SyncStatus } from "../api";
+import { deviceKind, desktopGoogleSetup, isDesktop, openBackupsFolder } from "../platform";
+import { ago, parse } from "../when";
+
+function useSyncStatus(): SyncStatus | null {
+  const [s, setS] = useState<SyncStatus | null>(null);
+  useEffect(() => {
+    const load = () => void syncApi.status().then(setS, () => {});
+    load();
+    return syncApi.onChange(load);
+  }, []);
+  return s;
+}
+
+/** Settings: keep this device and your others in step through an encrypted copy in Google Drive. */
+export function SyncSection({ toast }: { toast: (m: string) => void }) {
+  const s = useSyncStatus();
+  const [busy, setBusy] = useState(false);
+  const [setup, setSetup] = useState<{ existing?: SnapshotInfo } | null>(null);
+
+  const start = async () => {
+    setBusy(true);
+    try {
+      setSetup({ existing: await syncApi.connect() });
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const now = async () => {
+    setBusy(true);
+    try {
+      const r = await syncApi.now();
+      toast(r === "pushed" ? "Synced" : r === "up-to-date" ? "Already up to date" : r === "conflict" ? "Lyra changed on both devices" : r === "busy" ? "Lyra's busy. It'll sync in a moment." : "Synced");
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const off = async () => {
+    if (!confirm("Turn off sync on this device? Everything stays here, and your other devices keep their copies.")) return;
+    await syncApi.disable();
+    toast("Sync is off on this device");
+  };
+
+  if (!s) return null;
+  return (
+    <section className="section">
+      <h2 className="section-label">Sync</h2>
+      <div className="group">
+        {s.enabled ? (
+          <>
+            <div className="item">
+              <span className="body">
+                <div className="title">On · {s.deviceName}</div>
+                <div className={`sub${s.lastError ? " bad" : ""}`}>
+                  {s.lastError
+                    ? `Couldn't sync: ${s.lastError}`
+                    : s.lastSync
+                      ? `Synced ${ago(parse(s.lastSync))}${s.pending ? " · changes waiting" : ""}`
+                      : "Waiting for the first sync"}
+                </div>
+              </span>
+              <button className="btn quiet" onClick={() => void now()} disabled={busy}>
+                Sync now
+              </button>
+            </div>
+            {isDesktop && (
+              <button className="item" onClick={() => void openBackupsFolder()}>
+                <span className="body">
+                  <div className="title">Open backups folder</div>
+                  <div className="sub">Every sync also saves an encrypted copy in Documents, Lyra Backups (the newest 20).</div>
+                </span>
+              </button>
+            )}
+            <button className="item" onClick={() => void off()}>
+              <span className="body">
+                <div className="title bad">Turn off sync</div>
+              </span>
+            </button>
+          </>
+        ) : (
+          <button className="item" onClick={() => void start()} disabled={busy}>
+            <span className="body">
+              <div className="title">{busy ? "Connecting to Google…" : "Turn on sync"}</div>
+              <div className="sub">Your phone and computer keep the same chats, memory and tasks. Each works on its own; changes hand over when both can reach Google Drive.</div>
+            </span>
+          </button>
+        )}
+      </div>
+      <p className="hint">
+        {s.enabled && !s.routinesHere
+          ? "Routines run on your phone while sync is on, so nothing is posted twice."
+          : "Encrypted with your sync passphrase before it leaves this device. Google only stores scrambled data in a hidden Lyra folder, and Lyra can't see your other Drive files through it."}
+      </p>
+      {setup && <SyncSetupDialog existing={setup.existing} toast={toast} onClose={() => setSetup(null)} />}
+    </section>
+  );
+}
+
+function SyncSetupDialog({ existing, toast, onClose }: { existing?: SnapshotInfo; toast: (m: string) => void; onClose: () => void }) {
+  const [name, setName] = useState(deviceKind);
+  const [pass, setPass] = useState("");
+  const [again, setAgain] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const joining = !!existing;
+  const ok = name.trim() && (joining ? pass.length > 0 : pass.length >= MIN_PASSPHRASE && pass === again);
+
+  const go = async () => {
+    if (!ok || busy) return;
+    if (joining && !confirm(`This replaces what Lyra has on this device with what's synced from ${existing!.deviceName}. Continue?`)) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await syncApi.enable(pass, name);
+      if (r !== "pulled") {
+        toast("Sync is on");
+        onClose();
+      }
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="dialog-layer" role="presentation">
+      <button className="dialog-scrim" aria-label="Cancel" tabIndex={-1} onClick={onClose} />
+      <form
+        className="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sy-title"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void go();
+        }}
+      >
+        <h2 id="sy-title" className="dialog-title">
+          {joining ? "Join sync" : "Turn on sync"}
+        </h2>
+        <p className="dialog-text">
+          {joining
+            ? `Lyra is already syncing from ${existing!.deviceName}. Enter the sync passphrase you chose there.`
+            : "Choose a sync passphrase. Every device uses the same one, and nobody can read the synced copy without it. If you forget it, your devices keep working, but a new one can't join."}
+        </p>
+        <div className="float-field">
+          <input id="sy-name" value={name} maxLength={40} placeholder=" " onChange={(e) => setName(e.target.value)} />
+          <label htmlFor="sy-name">This device's name</label>
+        </div>
+        <div className="float-field" style={{ marginTop: 12 }}>
+          <input id="sy-pass" type="password" autoComplete={joining ? "current-password" : "new-password"} value={pass} placeholder=" " autoFocus onChange={(e) => setPass(e.target.value)} />
+          <label htmlFor="sy-pass">Sync passphrase</label>
+        </div>
+        {!joining && (
+          <div className="float-field" style={{ marginTop: 12 }}>
+            <input id="sy-again" type="password" autoComplete="new-password" value={again} placeholder=" " onChange={(e) => setAgain(e.target.value)} />
+            <label htmlFor="sy-again">Type it again</label>
+          </div>
+        )}
+        {!joining && pass.length > 0 && pass.length < MIN_PASSPHRASE && <p className="hint">At least {MIN_PASSPHRASE} characters. A few words works well.</p>}
+        {!joining && again.length > 0 && pass !== again && <p className="hint">The two don't match yet.</p>}
+        {error && (
+          <p className="hint bad" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="dialog-actions">
+          <button type="button" className="btn quiet" onClick={onClose} disabled={busy}>
+            Cancel
+          </button>
+          <button type="submit" className="btn ink" disabled={!ok || busy}>
+            {busy ? "Syncing…" : joining ? "Join" : "Turn on"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/** Shown anywhere in the app when both devices changed while apart. */
+export function SyncConflict() {
+  const s = useSyncStatus();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const pick = useCallback(async (keep: "this" | "other") => {
+    setBusy(true);
+    setError(null);
+    try {
+      await syncApi.resolve(keep);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+  if (!s?.conflict) return null;
+  const other = s.conflict.deviceName;
+  return (
+    <div className="dialog-layer" role="presentation">
+      <div className="dialog-scrim" />
+      <div className="dialog" role="alertdialog" aria-modal="true" aria-labelledby="cf-title">
+        <h2 id="cf-title" className="dialog-title">
+          Lyra changed on both devices
+        </h2>
+        <p className="dialog-text">
+          While they were apart, things changed here and on {other} ({ago(parse(s.conflict.savedAt))}). Pick which version to keep. The other is saved in Drive just in case.
+        </p>
+        {error && (
+          <p className="hint bad" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="dialog-actions">
+          <button className="btn quiet" onClick={() => void pick("this")} disabled={busy}>
+            Keep this {s.deviceName.toLowerCase() === "phone" ? "phone's" : "device's"}
+          </button>
+          <button className="btn ink" onClick={() => void pick("other")} disabled={busy}>
+            Use {other}'s
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Desktop only: the Google Cloud "Desktop app" client this computer signs in with. */
+export function GoogleSetupSection({ toast }: { toast: (m: string) => void }) {
+  const [have, setHave] = useState<boolean | null>(null);
+  const [open, setOpen] = useState(false);
+  const [id, setId] = useState("");
+  const [secret, setSecret] = useState("");
+  useEffect(() => {
+    void desktopGoogleSetup.get().then((c) => setHave(!!c));
+  }, []);
+  if (!isDesktop || have === null) return null;
+
+  const save = async () => {
+    try {
+      await desktopGoogleSetup.set(id, secret);
+      setHave(true);
+      setOpen(false);
+      setId("");
+      setSecret("");
+      toast("Google is set up on this computer");
+    } catch (e) {
+      toast((e as Error).message);
+    }
+  };
+
+  return (
+    <section className="section">
+      <h2 className="section-label">Google on this computer</h2>
+      <div className="group">
+        <button className="item" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+          <span className="body">
+            <div className="title">{have ? "Set up" : "Not set up yet"}</div>
+            <div className="sub">{have ? "Tap to replace the client ID and secret." : "Needed for sync, Mail, Calendar and Files on this computer. One time, about five minutes."}</div>
+          </span>
+        </button>
+      </div>
+      {open && (
+        <div className="setup-box">
+          <ol className="setup-steps">
+            <li>
+              Open <b>console.cloud.google.com</b>, in the same project you made for the phone.
+            </li>
+            <li>
+              <b>APIs &amp; Services → Credentials → Create credentials → OAuth client ID</b>.
+            </li>
+            <li>
+              Application type <b>Desktop app</b>, name it "Lyra for Windows", and create it.
+            </li>
+            <li>Copy the client ID and client secret here.</li>
+          </ol>
+          <label className="field-label" htmlFor="gs-id">
+            Client ID
+          </label>
+          <input id="gs-id" className="field" value={id} onChange={(e) => setId(e.target.value)} placeholder="….apps.googleusercontent.com" autoComplete="off" spellCheck={false} />
+          <label className="field-label" htmlFor="gs-secret" style={{ marginTop: 12 }}>
+            Client secret
+          </label>
+          <input id="gs-secret" className="field" type="password" value={secret} onChange={(e) => setSecret(e.target.value)} autoComplete="off" spellCheck={false} />
+          <button className="btn ink" style={{ marginTop: 16, width: "100%" }} onClick={() => void save()} disabled={!id.trim() || !secret.trim()}>
+            Save
+          </button>
+          <p className="hint">Kept encrypted by Windows for your account. A desktop client's secret isn't a password: it only identifies the app to Google.</p>
+        </div>
+      )}
+    </section>
+  );
+}

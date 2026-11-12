@@ -84,3 +84,11 @@ def status_icon():
         out = RES / f"drawable-{dens}"
         out.mkdir(exist_ok=True)
         img.resize((px, px), Image.LANCZOS).save(out / "ic_stat_lyra.png", optimize=True)
+
+
+def desktop_icons():
+    """Windows app icon (.ico, all sizes) and the window/notification icon (.png)."""
+    out = ROOT / "desktop"
+    big = avatar(256)
+    big.save(out / "icon.png", optimize=True)
+    big.save(out / "icon.ico", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])

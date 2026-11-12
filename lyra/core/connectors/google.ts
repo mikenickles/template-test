@@ -1,12 +1,20 @@
 export const GMAIL_READONLY = "https://www.googleapis.com/auth/gmail.readonly";
 export const CALENDAR_READONLY = "https://www.googleapis.com/auth/calendar.readonly";
 export const DRIVE_READONLY = "https://www.googleapis.com/auth/drive.readonly";
+/** Lyra's own hidden folder in your Drive, for sync. It can't see or change any of your files. */
+export const DRIVE_APPDATA = "https://www.googleapis.com/auth/drive.appdata";
 
-/** The only Google permissions Lyra will ever accept: reading, plus who you are. */
+/**
+ * The only Google permissions Lyra will ever accept: reading, who you are, and
+ * its own hidden sync folder (which holds nothing of yours but Lyra's encrypted
+ * snapshots). Google returns earlier grants alongside new ones, so the sync
+ * permission has to be allowed here or it would spoil every read-only grant.
+ */
 const ALLOWED = new Set([
   GMAIL_READONLY,
   CALENDAR_READONLY,
   DRIVE_READONLY,
+  DRIVE_APPDATA,
   "openid",
   "email",
   "profile",

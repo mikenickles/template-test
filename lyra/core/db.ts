@@ -115,6 +115,8 @@ const FILE = "lyra.db";
 
 export class DB {
   private timer: ReturnType<typeof setTimeout> | undefined;
+  /** Called after any change to the data (sync uses it to know there's something to send). */
+  onWrite?: () => void;
   private saving: Promise<void> = Promise.resolve();
 
   private constructor(
@@ -171,6 +173,7 @@ export class DB {
   }
 
   private changed() {
+    this.onWrite?.();
     if (!this.store) return;
     clearTimeout(this.timer);
     this.timer = setTimeout(() => void this.flush(), this.saveDelay);

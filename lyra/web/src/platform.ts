@@ -21,6 +21,34 @@ import type { TextStore } from "../../core/memory";
 
 export const isNative = Capacitor.isNativePlatform();
 
+/** The Windows app's bridge (desktop/preload.cjs). Missing on the phone and in a browser. */
+interface DesktopBridge {
+  files: { read(name: string): Promise<string | Uint8Array | null>; write(name: string, data: string | Uint8Array): Promise<void>; remove(name: string): Promise<void> };
+  secrets: { get(key: string): Promise<string | null>; set(key: string, value: string): Promise<void>; remove(key: string): Promise<void> };
+  google: { authorize(scopes: string[], interactive: boolean): Promise<{ accessToken: string; grantedScopes: string[]; email?: string }>; signOut(): Promise<void> };
+  backups: { keep(name: string, bytes: Uint8Array): Promise<string>; saveAs(name: string, bytes: Uint8Array): Promise<string | null>; openFolder(): Promise<void> };
+  notify(title: string, body: string, hash: string): Promise<void>;
+  onOpenHash(fn: (hash: string) => void): () => void;
+}
+const desk = (globalThis as { lyraDesktop?: DesktopBridge }).lyraDesktop;
+/** Electron prefixes errors from the desktop side with "Error invoking remote method 'x': Error: ". */
+const clean = <A extends unknown[], R>(fn: (...a: A) => Promise<R>) =>
+  async (...a: A): Promise<R> => {
+    try {
+      return await fn(...a);
+    } catch (e) {
+      throw new Error(((e as Error).message ?? "").replace(/^Error invoking remote method '[^']+': (Error: )?/, ""));
+    }
+  };
+const deskSecrets: SecretStore | undefined = desk && {
+  get: clean((k: string) => desk.secrets.get(k)),
+  set: clean((k: string, v: string) => desk.secrets.set(k, v)),
+  remove: clean((k: string) => desk.secrets.remove(k)),
+};
+export const isDesktop = !!desk;
+/** What this device is called in sync. */
+export const deviceKind = isNative ? "Phone" : isDesktop ? "Computer" : "Browser";
+
 // ---------- files ----------
 
 function toBase64(bytes: Uint8Array): string {
@@ -34,12 +62,16 @@ function fromBase64(b64: string): Uint8Array {
   return Uint8Array.from(bin, (c) => c.charCodeAt(0));
 }
 
+/** Notebooks, the soul and sync's state file are text; the database is binary. */
+const isTextFile = (name: string) => /\.(md|json)$/.test(name);
+
 const nativeFiles: BlobStore & TextStore = {
   async read(name: string) {
     try {
-      const r = await Filesystem.readFile({ path: name, directory: Directory.Data, encoding: name.endsWith(".md") ? Encoding.UTF8 : undefined });
+      const text = isTextFile(name);
+      const r = await Filesystem.readFile({ path: name, directory: Directory.Data, encoding: text ? Encoding.UTF8 : undefined });
       if (typeof r.data !== "string") return null;
-      return (name.endsWith(".md") ? r.data : fromBase64(r.data)) as never;
+      return (text ? r.data : fromBase64(r.data)) as never;
     } catch {
       return null;
     }
@@ -71,6 +103,12 @@ function idb(): Promise<IDBDatabase> {
     req.onerror = () => reject(req.error);
   });
 }
+
+const desktopFiles: BlobStore & TextStore = {
+  read: (name: string) => desk!.files.read(name) as never,
+  write: (name: string, data: Uint8Array | string) => desk!.files.write(name, data),
+  remove: (name: string) => desk!.files.remove(name),
+};
 
 const webFiles: BlobStore & TextStore = {
   async read(name: string) {
@@ -147,6 +185,36 @@ const nativeGoogle: GoogleAuth = {
   revoke: (scopes, email) => NativeGoogle.revoke({ scopes, email }),
 };
 
+/** Desktop: Google's sign-in for desktop apps, in your browser (desktop/main.cjs). */
+const desktopGoogle: GoogleAuth = {
+  available: true,
+  async authorize(scopes, interactive) {
+    try {
+      return await desk!.google.authorize(scopes, interactive);
+    } catch (e) {
+      const msg = (e as Error).message ?? "";
+      if (msg.includes("NEEDS_CONSENT")) throw new NeedsConsentError();
+      // ipc prefixes "Error invoking remote method ...: Error: "
+      throw new Error(msg.replace(/^.*?Error: /, "") || "Google sign-in failed.");
+    }
+  },
+};
+
+/** Desktop only: the "Desktop app" OAuth client from your Google Cloud project. */
+export const desktopGoogleSetup = {
+  async get(): Promise<{ id: string; secret: string } | null> {
+    if (!desk) return null;
+    const raw = await desk.secrets.get("google.client");
+    return raw ? (JSON.parse(raw) as { id: string; secret: string }) : null;
+  },
+  async set(id: string, secret: string): Promise<void> {
+    if (!/^[\w-]+\.apps\.googleusercontent\.com$/.test(id.trim())) throw new Error("That client ID should end with .apps.googleusercontent.com");
+    if (!secret.trim()) throw new Error("Paste the client secret too.");
+    await desk!.secrets.set("google.client", JSON.stringify({ id: id.trim(), secret: secret.trim() }));
+    await desk!.google.signOut(); // a new client needs a fresh approval
+  },
+};
+
 const webGoogle: GoogleAuth = {
   available: false,
   authorize: () => Promise.reject(new Error("Gmail sign-in works in the Android app.")),
@@ -154,13 +222,13 @@ const webGoogle: GoogleAuth = {
 
 export async function createPlatform(): Promise<Platform> {
   const SQL = await initSqlJs({ locateFile: () => wasmUrl });
-  const files = isNative ? nativeFiles : webFiles;
+  const files = isNative ? nativeFiles : isDesktop ? desktopFiles : webFiles;
   return {
     SQL,
     blobs: files,
     texts: files,
-    secrets: isNative ? nativeSecrets : webSecrets,
-    google: isNative ? nativeGoogle : webGoogle,
+    secrets: isNative ? nativeSecrets : isDesktop ? deskSecrets! : webSecrets,
+    google: isNative ? nativeGoogle : isDesktop ? desktopGoogle : webGoogle,
   };
 }
 
@@ -193,7 +261,7 @@ export const notifier = {
 
   /** Replace all routine reminders with the current schedule. */
   async reminders(list: ReminderRoutine[]): Promise<void> {
-    if (!isNative) return;
+    if (!isNative) return; // routines run on the phone
     const active = list.filter((r) => r.enabled);
     const pending = await LocalNotifications.getPending().catch(() => ({ notifications: [] as { id: number }[] }));
     const old = pending.notifications.filter((n) => n.id >= REMINDER_BASE && n.id < NOTICE_BASE);
@@ -216,6 +284,7 @@ export const notifier = {
 
   /** Tell the user about news while Lyra is in the background. */
   async now(title: string, body: string, hash: string): Promise<void> {
+    if (desk) return desk.notify(title, body, hash);
     // never pop the permission question from the background: only send if already allowed
     if (!isNative || (await LocalNotifications.checkPermissions()).display !== "granted") return;
     noticeId = noticeId >= NOTICE_BASE + 90_000 ? NOTICE_BASE : noticeId + 1;
@@ -224,6 +293,7 @@ export const notifier = {
 
   /** Opening a notification goes to the chat it's about. */
   onOpen(fn: (hash: string) => void): () => void {
+    if (desk) return desk.onOpenHash(fn);
     if (!isNative) return () => {};
     const sub = LocalNotifications.addListener("localNotificationActionPerformed", (a) => {
       const hash = (a.notification.extra as { hash?: string } | undefined)?.hash;
@@ -237,6 +307,10 @@ export const notifier = {
 
 /** Hand a backup file to the user: Android's share sheet (Drive, email, Files…), or a download in a browser. */
 export async function shareFile(name: string, bytes: Uint8Array): Promise<void> {
+  if (desk) {
+    await desk.backups.saveAs(name, bytes);
+    return;
+  }
   if (!isNative) {
     const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/octet-stream" }));
     const a = Object.assign(document.createElement("a"), { href: url, download: name });
@@ -283,3 +357,12 @@ export const appLock = {
     }
   },
 };
+
+/** Desktop: keep a copy of each sync snapshot in Documents\\Lyra Backups (newest 20). */
+export async function keepBackupCopy(name: string, bytes: Uint8Array): Promise<void> {
+  if (desk) await desk.backups.keep(name, bytes);
+}
+
+export async function openBackupsFolder(): Promise<void> {
+  await desk?.backups.openFolder();
+}

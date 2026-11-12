@@ -13,6 +13,7 @@ import { Settings } from "./screens/Settings";
 import { Soul } from "./screens/Soul";
 import { TaskPage, Tasks, WorkerLog } from "./screens/Tasks";
 import { RoutinePage } from "./screens/Routines";
+import { SyncConflict } from "./screens/SyncSection";
 import { appLock, notifier } from "./platform";
 import { ChatIcon, TasksIcon } from "./icons";
 
@@ -311,6 +312,7 @@ export function App() {
           }}
         />
       )}
+      <SyncConflict />
       {/* tapping the slid-aside chat closes the menu */}
       <button className="shell-scrim" aria-label="Close menu" tabIndex={drawer ? 0 : -1} onClick={() => setDrawer(false)} />
     </div>

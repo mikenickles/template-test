@@ -17,7 +17,10 @@ import {
   type SettingsPatch,
 } from "../../core/lyra";
 import { backupName } from "../../core/backup";
-import { createPlatform, isNative, notifier, shareFile } from "./platform";
+import type { Platform } from "../../core/lyra";
+import { readSyncState, Sync, type SnapshotInfo, type SyncResult } from "../../core/sync";
+import { DriveSyncRemote } from "../../core/sync-drive";
+import { createPlatform, deviceKind, isDesktop, isNative, keepBackupCopy, notifier, shareFile } from "./platform";
 
 export type MemoryNote = CoreNote;
 export type Message = StoredMessage;
@@ -50,14 +53,164 @@ export function onChange(fn: (e: WorkerEvent) => void): () => void {
 }
 export { isNative };
 
+let platform: Platform;
+let sync: Sync;
+
 const ready: Promise<Lyra> = createPlatform().then(async (p) => {
-  const lyra = await Lyra.start(p);
+  platform = p;
+  const state = await readSyncState(p.texts, deviceKind);
+  // right after loading another device's data, its running workers stay with that device
+  const lyra = await Lyra.start(p, { resumeWorkers: !state.justPulled });
+  sync = new Sync(lyra, new DriveSyncRemote(p.google), p.texts, p.secrets, state);
+  if (isDesktop) sync.onSnapshot = (bytes, info) => void keepBackupCopy(autoName(info.savedAt), bytes).catch(() => {});
+  await sync.started();
   // Save to disk whenever the app leaves the screen.
   if (isNative) void CapApp.addListener("pause", () => void lyra.flush());
   addEventListener("pagehide", () => void lyra.flush());
   watchForNotices(lyra);
+  runRoutines(lyra);
+  watchSync(lyra);
+  // catch up with the other device before showing anything (but don't hang on a slow network)
+  if (state.enabled) await Promise.race([syncNow(lyra), new Promise((r) => setTimeout(r, 6000))]);
   return lyra;
 });
+
+// ---------- routines ----------
+// Routines run on schedule while Lyra is open, and catch up when it's opened. With sync
+// on, only the phone runs them, so the same brief isn't posted twice.
+
+const routinesRunHere = () => !(isDesktop && sync.state.enabled);
+
+function runRoutines(lyra: Lyra): void {
+  const tick = () => {
+    if (!routinesRunHere() || restarting) return;
+    try {
+      lyra.tickRoutines();
+    } catch (e) {
+      console.error("[lyra] routines", e);
+    }
+  };
+  tick();
+  setInterval(tick, 60_000);
+  if (isNative) void CapApp.addListener("resume", tick);
+  else document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && tick());
+}
+
+// ---------- sync ----------
+// Changes upload a few seconds after they happen; while open, Lyra checks for the other
+// device's changes every minute and whenever you come back to it. Loading the other
+// device's data restarts the app, so it never happens mid-reply or mid-sentence.
+
+let restarting = false;
+const syncListeners = new Set<() => void>();
+const syncChanged = () => syncListeners.forEach((f) => f());
+
+/** "Lyra auto 2026-11-12 14-03-22.lyra" */
+function autoName(iso: string): string {
+  const d = new Date(iso || Date.now());
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `Lyra auto ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}.lyra`;
+}
+
+function restartApp(): void {
+  restarting = true;
+  location.replace(`${location.pathname}#/`);
+  location.reload();
+}
+
+async function syncNow(lyra: Lyra, opts: { pull?: boolean } = {}): Promise<SyncResult> {
+  if (!sync.state.enabled || restarting) return "off";
+  const typing = !!document.querySelector<HTMLTextAreaElement>(".composer textarea")?.value.trim();
+  const canPull = opts.pull !== false && !lyra.busy && !typing;
+  try {
+    const r = await sync.check(canPull);
+    if (r === "pulled") restartApp();
+    return r;
+  } catch (e) {
+    console.error("[lyra] sync", e);
+    return "busy";
+  } finally {
+    syncChanged();
+  }
+}
+
+function watchSync(lyra: Lyra): void {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  lyra.onDataChange(() => {
+    if (!sync.state.enabled) return;
+    clearTimeout(timer);
+    timer = setTimeout(() => void syncNow(lyra), 4000);
+  });
+  setInterval(() => document.visibilityState === "visible" && void syncNow(lyra), 60_000);
+  const away = () => void syncNow(lyra, { pull: false }); // send what's new before Android pauses Lyra
+  const back = () => void syncNow(lyra);
+  if (isNative) {
+    void CapApp.addListener("pause", away);
+    void CapApp.addListener("resume", back);
+  } else document.addEventListener("visibilitychange", () => (document.visibilityState === "visible" ? back() : away()));
+}
+
+export interface SyncStatus {
+  enabled: boolean;
+  deviceName: string;
+  lastSync?: string;
+  lastError?: string;
+  pending: boolean;
+  conflict?: SnapshotInfo;
+  routinesHere: boolean;
+}
+
+export const syncApi = {
+  status: async (): Promise<SyncStatus> => {
+    await ready;
+    const s = sync.state;
+    return { enabled: s.enabled, deviceName: s.deviceName, lastSync: s.lastSync, lastError: s.lastError, pending: s.dirty, conflict: s.conflict, routinesHere: routinesRunHere() };
+  },
+  onChange(fn: () => void): () => void {
+    syncListeners.add(fn);
+    return () => syncListeners.delete(fn);
+  },
+  /** Step 1 of turning sync on: approve Lyra's Drive folder; says whether another device already synced. */
+  connect: async (): Promise<SnapshotInfo | undefined> => {
+    await ready;
+    await DriveSyncRemote.connect(platform.google);
+    return sync.existing();
+  },
+  /** Step 2: with a passphrase. Joining loads the other device's data and restarts the app. */
+  enable: async (passphrase: string, deviceName: string): Promise<SyncResult> => {
+    await ready;
+    try {
+      const r = await sync.enable(passphrase, deviceName.trim().slice(0, 40) || deviceKind);
+      if (r === "pulled") restartApp();
+      return r;
+    } finally {
+      syncChanged();
+    }
+  },
+  disable: async () => {
+    await ready;
+    await sync.disable();
+    syncChanged();
+  },
+  now: async (): Promise<SyncResult> => {
+    const lyra = await ready;
+    if (!sync.state.enabled) return "off";
+    const r = await sync.check(!lyra.busy);
+    syncChanged();
+    if (r === "pulled") restartApp();
+    return r;
+  },
+  resolve: async (keep: "this" | "other"): Promise<SyncResult> => {
+    await ready;
+    try {
+      const r = await sync.resolve(keep);
+      if (r === "pulled") restartApp();
+      return r;
+    } finally {
+      syncChanged();
+    }
+  },
+};
 
 // ---------- notifications ----------
 // Lyra only tells you about things while it's out of sight: a reply that finished, a routine's

@@ -3081,3 +3081,28 @@ a.btn {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* ---------- sync and desktop setup ---------- */
+
+.sub.bad {
+  color: var(--bad);
+}
+
+.setup-box {
+  margin-top: var(--s3);
+  padding: var(--s4);
+  border-radius: 22px;
+  background: var(--surface);
+}
+
+.setup-steps {
+  margin: 0 0 var(--s4);
+  padding-left: 1.2em;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.setup-steps b {
+  color: var(--text);
+  font-weight: 600;
+}

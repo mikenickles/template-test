@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api, isNative, type AppState } from "../api";
 import { appLock } from "../platform";
 import { BackupSection } from "./Backup";
+import { GoogleSetupSection, SyncSection } from "./SyncSection";
 import { Check, Chevron, Cpu } from "../icons";
 
 type KeyId = "anthropic" | "openai" | "gemini";
@@ -222,9 +223,11 @@ export function Settings({
             />
           </label>
         </div>
-        {!isNative && <p className="hint">App lock works in the Android app.</p>}
+        {!isNative && <p className="hint">App lock is in the phone app for now.</p>}
       </section>
 
+      <SyncSection toast={toast} />
+      <GoogleSetupSection toast={toast} />
       <BackupSection toast={toast} />
 
       <section className="section">
