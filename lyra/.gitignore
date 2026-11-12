@@ -5,3 +5,4 @@ smoke-shots/
 # signing keys never go in this public repo
 *.keystore
 *.jks
+__pycache__/
