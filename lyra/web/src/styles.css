@@ -854,11 +854,18 @@ body[data-busy] .orb:has(.avatar)::after {
   border-radius: 28px;
   padding: 6px 6px 6px var(--s5);
   box-shadow: var(--shadow);
-  transition: border-color var(--ease);
+  transition:
+    border-color 260ms ease,
+    box-shadow 260ms ease;
 }
 
+/* typing: a faint, hazy glow in the accent color */
 .composer-inner:focus-within {
-  border-color: var(--text-muted);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent),
+    0 0 22px 4px color-mix(in srgb, var(--accent) 26%, transparent),
+    0 0 48px 10px color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .composer textarea {
