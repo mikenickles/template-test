@@ -97,6 +97,121 @@
   }
 }
 
+/* accent colors the user can pick in Settings; set on <html>, and on each swatch to preview it */
+[data-accent="lime"] {
+  --accent: #c4ef4b;
+  --accent-ink: #131416;
+  --accent-soft: #e8f4c2;
+  --accent-text: #4b6a00;
+}
+
+[data-accent="orange"] {
+  --accent: #d2602a;
+  --accent-ink: #ffffff;
+  --accent-soft: #f7ddcc;
+  --accent-text: #a4441a;
+}
+
+[data-accent="yellow"] {
+  --accent: #f3c331;
+  --accent-ink: #131416;
+  --accent-soft: #faedc0;
+  --accent-text: #866200;
+}
+
+[data-accent="red"] {
+  --accent: #e0352e;
+  --accent-ink: #ffffff;
+  --accent-soft: #f9d7d5;
+  --accent-text: #b5231d;
+}
+
+[data-accent="maroon"] {
+  --accent: #7d2230;
+  --accent-ink: #ffffff;
+  --accent-soft: #f0dadd;
+  --accent-text: #7d2230;
+}
+
+[data-accent="navy"] {
+  --accent: #1e3a6b;
+  --accent-ink: #ffffff;
+  --accent-soft: #dae2f0;
+  --accent-text: #1e3a6b;
+}
+
+[data-accent="indigo"] {
+  --accent: #5a5bd8;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2e2fb;
+  --accent-text: #4445b6;
+}
+
+[data-accent="teal"] {
+  --accent: #13897b;
+  --accent-ink: #ffffff;
+  --accent-soft: #d2ede9;
+  --accent-text: #0c6a5f;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-accent="lime"] {
+    --accent: #cbf25c;
+    --accent-ink: #10130a;
+    --accent-soft: #232c14;
+    --accent-text: #cbf25c;
+  }
+
+  [data-accent="orange"] {
+    --accent: #ec7a40;
+    --accent-ink: #1a0b04;
+    --accent-soft: #3a2116;
+    --accent-text: #f29462;
+  }
+
+  [data-accent="yellow"] {
+    --accent: #f6cc48;
+    --accent-ink: #1a1404;
+    --accent-soft: #332a10;
+    --accent-text: #f6cc48;
+  }
+
+  [data-accent="red"] {
+    --accent: #f25c52;
+    --accent-ink: #1c0605;
+    --accent-soft: #3a1714;
+    --accent-text: #f6827a;
+  }
+
+  [data-accent="maroon"] {
+    --accent: #c85a6d;
+    --accent-ink: #1a0609;
+    --accent-soft: #361b20;
+    --accent-text: #e3889a;
+  }
+
+  [data-accent="navy"] {
+    --accent: #7096da;
+    --accent-ink: #0a1020;
+    --accent-soft: #18233b;
+    --accent-text: #94b1e8;
+  }
+
+  [data-accent="indigo"] {
+    --accent: #8c8df2;
+    --accent-ink: #0d0d24;
+    --accent-soft: #23234b;
+    --accent-text: #a7a8f6;
+  }
+
+  [data-accent="teal"] {
+    --accent: #3dc3b1;
+    --accent-ink: #04140f;
+    --accent-soft: #13302c;
+    --accent-text: #62d4c4;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -269,7 +384,7 @@ body[data-busy] .orb .vega-halo {
   animation: pulse 1.6s ease-in-out infinite;
 }
 
-/* the avatar fills the orb; while Lyra works, a lime ring breathes around it */
+/* the avatar fills the orb; while Lyra works, an accent ring breathes around it */
 .orb:has(.avatar) {
   position: relative;
   background: #f1ebe3;
@@ -2628,4 +2743,64 @@ a.btn {
 
 .soul-doc blockquote > :last-child {
   margin-bottom: 0;
+}
+
+/* accent picker in Settings */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s3);
+  padding: var(--s4);
+  border-radius: 22px;
+  background: var(--surface);
+}
+
+.swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.swatch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.swatch-dot {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  display: grid;
+  place-items: center;
+  color: var(--accent-ink);
+  transition: transform var(--ease), box-shadow var(--ease);
+}
+
+.swatch input:checked + .swatch-dot {
+  box-shadow:
+    0 0 0 3px var(--surface),
+    0 0 0 5px var(--text);
+}
+
+.swatch input:checked ~ span:last-child {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.swatch input:focus-visible + .swatch-dot {
+  outline: 2px solid var(--text);
+  outline-offset: 6px;
+}
+
+.swatch:active .swatch-dot {
+  transform: scale(0.92);
 }

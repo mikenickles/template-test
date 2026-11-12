@@ -242,6 +242,23 @@ try {
   check((await page.locator(".bubble").count()) === 3, "Lyra can react to a message, with no text reply");
   await shot("light-21-reaction");
 
+  await page.getByRole("link", { name: "Settings" }).click();
+  await page.locator(".swatch", { hasText: "Burnt orange" }).click();
+  await page.getByText("Burnt orange it is").waitFor();
+  check((await page.evaluate(() => document.documentElement.dataset.accent)) === "orange", "picking an accent color applies it");
+  await shot("light-22-accent-settings");
+  await page.reload();
+  await page.getByRole("radio", { name: "Burnt orange" }).waitFor();
+  check((await page.getByRole("radio", { name: "Burnt orange" }).isChecked()) === true, "the accent color is saved");
+  await page.getByRole("link", { name: "Back" }).click();
+  await page.locator(".bubble").first().waitFor();
+  await shot("light-23-accent-chat");
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto(`${base}/#/tasks`);
+  await page.getByText("Scheduled").first().waitFor().catch(() => {});
+  await shot("dark-23-accent-tasks");
+  await page.emulateMedia({ colorScheme: "light" });
+
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   check(!wide, "no sideways scrolling");
   check(errors.length === 0, `no page errors ${errors.join("; ")}`);

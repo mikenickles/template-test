@@ -28,6 +28,9 @@ describe("Lyra engine", () => {
   it("refuses a provider that isn't set up, and bad model names", async () => {
     const lyra = await Lyra.start(platform());
     await expect(lyra.saveSettings({ provider: "gemini" })).rejects.toThrow(/Gemini API key/);
+    expect(lyra.state().accent).toBe("lime");
+    expect((await lyra.saveSettings({ accent: "maroon" })).accent).toBe("maroon");
+    await expect(lyra.saveSettings({ accent: "chartreuse" })).rejects.toThrow(/choices/);
     await lyra.saveSettings({ keys: { gemini: "g" } });
     await expect(lyra.saveSettings({ provider: "gemini", model: "bad model!" })).rejects.toThrow(/model name/);
     await expect(lyra.saveSettings({ openaiBaseUrl: "ftp://x" })).rejects.toThrow(/http/);

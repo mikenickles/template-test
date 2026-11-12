@@ -135,6 +135,17 @@ export function App() {
     (toast as unknown as { t?: number }).t = window.setTimeout(() => setToastMsg(null), 3200);
   }, []);
 
+  // Keep the chosen accent on <html>, and remember it for the next launch's first paint.
+  useEffect(() => {
+    if (!state) return;
+    document.documentElement.dataset.accent = state.accent;
+    try {
+      localStorage.setItem("lyra.accent", state.accent);
+    } catch {
+      // fine: it's only to avoid a flash on start
+    }
+  }, [state?.accent]);
+
   if (failed && !state)
     return (
       <div className="center-load" style={{ padding: 24, textAlign: "center" }}>

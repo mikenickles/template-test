@@ -71,7 +71,13 @@ export interface AppState {
   keys: { anthropic: boolean; openai: boolean; gemini: boolean; openaiBaseUrl: string };
   /** Let Lyra and its workers use the model's built-in web search. */
   webSearch: boolean;
+  /** The app's accent color, one of ACCENTS. */
+  accent: Accent;
 }
+
+/** Accent colors the user can pick in Settings. The colors themselves live in the app's stylesheet. */
+export const ACCENTS = ["lime", "orange", "yellow", "red", "maroon", "navy", "indigo", "teal"] as const;
+export type Accent = (typeof ACCENTS)[number];
 
 export interface MemoryView {
   content: string;
@@ -98,6 +104,7 @@ export interface SettingsPatch {
   keys?: Partial<Record<"anthropic" | "openai" | "gemini", string | null>>;
   openaiBaseUrl?: string;
   webSearch?: boolean;
+  accent?: string;
 }
 
 const SECRET_KEYS = ["anthropic", "openai", "gemini"] as const;
@@ -283,12 +290,22 @@ export class Lyra {
         openaiBaseUrl: this.keys.openaiBaseUrl ?? "",
       },
       webSearch: this.webSearch,
+      accent: this.accent,
     };
+  }
+
+  get accent(): Accent {
+    const a = getSetting(this.db, "accent");
+    return (ACCENTS as readonly string[]).includes(a ?? "") ? (a as Accent) : "lime";
   }
 
   async saveSettings(patch: SettingsPatch): Promise<AppState> {
     if (patch.userName !== undefined) setSetting(this.db, "userName", patch.userName.trim().slice(0, 40));
     if (patch.webSearch !== undefined) setSetting(this.db, "webSearch", patch.webSearch ? "on" : "off");
+    if (patch.accent !== undefined) {
+      if (!(ACCENTS as readonly string[]).includes(patch.accent)) throw new Error("That color isn't one of the choices.");
+      setSetting(this.db, "accent", patch.accent);
+    }
     for (const k of SECRET_KEYS) {
       const v = patch.keys?.[k];
       if (v === undefined) continue;

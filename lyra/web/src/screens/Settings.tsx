@@ -1,8 +1,19 @@
 import { useState } from "react";
 import { api, isNative, type AppState } from "../api";
-import { Chevron, Cpu } from "../icons";
+import { Check, Chevron, Cpu } from "../icons";
 
 type KeyId = "anthropic" | "openai" | "gemini";
+
+const ACCENT_CHOICES: { id: AppState["accent"]; label: string }[] = [
+  { id: "lime", label: "Lime" },
+  { id: "orange", label: "Burnt orange" },
+  { id: "yellow", label: "Yellow" },
+  { id: "red", label: "Red" },
+  { id: "maroon", label: "Maroon" },
+  { id: "navy", label: "Navy" },
+  { id: "indigo", label: "Indigo" },
+  { id: "teal", label: "Teal" },
+];
 
 const KEY_FIELDS: { id: KeyId; label: string; where: string; placeholder: string }[] = [
   { id: "anthropic", label: "Claude API key", where: "console.anthropic.com", placeholder: "sk-ant-…" },
@@ -77,6 +88,26 @@ export function Settings({
               Save
             </button>
           )}
+        </div>
+      </section>
+
+      <section className="section">
+        <h2 className="section-label">Accent color</h2>
+        <div className="swatches" role="radiogroup" aria-label="Accent color">
+          {ACCENT_CHOICES.map((c) => (
+            <label key={c.id} className="swatch" data-accent={c.id}>
+              <input
+                type="radio"
+                name="accent"
+                value={c.id}
+                checked={state.accent === c.id}
+                disabled={busy}
+                onChange={() => run(() => api.saveSettings({ accent: c.id }), `${c.label} it is`)}
+              />
+              <span className="swatch-dot">{state.accent === c.id && <Check size={20} />}</span>
+              <span>{c.label}</span>
+            </label>
+          ))}
         </div>
       </section>
 
