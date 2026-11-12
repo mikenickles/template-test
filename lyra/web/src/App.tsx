@@ -226,7 +226,7 @@ export function App() {
         {route.name === "settings" && <Settings state={state} setState={setState} toast={toast} />}
 
         {inChat && (
-          <nav className="tabbar" aria-label="Sections">
+          <nav className={`tabbar${route.name === "chat" ? " floating" : ""}`} aria-label="Sections">
             <div className="tabbar-inner">
               <a className={`tabbar-item${route.name === "chat" ? " on" : ""}`} href={route.name === "chat" ? "#/" : lastChat} aria-current={route.name === "chat" ? "page" : undefined}>
                 <ChatIcon size={24} />

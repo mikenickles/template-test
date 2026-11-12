@@ -42,6 +42,18 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
   const [input, setInput] = useState("");
   const [atBottom, setAtBottom] = useState(true);
   const logRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
+  // The composer floats over the chat: keep the log's bottom padding (and fade) matched to its height.
+  useLayoutEffect(() => {
+    const el = composerRef.current;
+    if (!el) return;
+    const set = () => chatRef.current?.style.setProperty("--composer-h", `${el.offsetHeight}px`);
+    set();
+    const watch = new ResizeObserver(set);
+    watch.observe(el);
+    return () => watch.disconnect();
+  }, []);
   const boxRef = useRef<HTMLTextAreaElement>(null);
   const stick = useRef(true);
 
@@ -161,7 +173,7 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
   let lastDay = "";
 
   return (
-    <div className="chat">
+    <div className="chat" ref={chatRef}>
       <div className="log" ref={logRef} onScroll={onScroll} aria-live="polite">
         <div className="log-inner">
           {hasMore && (
@@ -259,7 +271,7 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
         </div>
       </div>
 
-      <div className="composer">
+      <div className="composer" ref={composerRef}>
         {!atBottom && (
           <button className="ring jump" aria-label="Jump to latest" onClick={() => toBottom(true)}>
             <ArrowDown size={20} />
