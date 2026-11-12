@@ -51,6 +51,12 @@ export interface Workspace {
     create(input: RoutineInput): Promise<{ id: number; name: string }>;
     update(id: number, input: Partial<RoutineInput>): Promise<{ id: number; name: string }>;
   };
+  /** One-off reminders and follow-ups. `at` is the user's local time, YYYY-MM-DD HH:MM. */
+  reminders?: {
+    list(): string;
+    create(kind: "remind" | "follow_up", text: string, at: string, channelId: number | null): { id: number; when: string };
+    cancel(id: number): string;
+  };
 }
 
 export interface TurnContext {
@@ -196,6 +202,47 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
   );
   tools.push(
     {
+      name: "set_reminder",
+      description: "Remind the user of something at a time: a phone notification then (even with Lyra closed) and a message here.",
+      schema: {
+        type: "object",
+        properties: {
+          text: { type: "string", description: "What to remind them of, as they'd want to read it: 'Call Dad about Sunday'." },
+          at: { type: "string", description: "The user's local time, YYYY-MM-DD HH:MM." },
+        },
+        required: ["text", "at"],
+      },
+    },
+    {
+      name: "follow_up",
+      description:
+        "Schedule yourself to check back on something left open (a reply the user is waiting for, a delivery, a decision). At that time you check with your tools and post a short update here.",
+      schema: {
+        type: "object",
+        properties: {
+          about: { type: "string", description: "What to check and what the user wants to know, e.g. 'Has Ortiz Plumbing replied with a quote?'" },
+          at: { type: "string", description: "The user's local time, YYYY-MM-DD HH:MM." },
+        },
+        required: ["about", "at"],
+      },
+    },
+    {
+      name: "cancel_reminder",
+      description: "Cancel a reminder or follow-up that's no longer needed. The coming ones are listed in your instructions with their #id.",
+      schema: { type: "object", properties: { id: { type: "number" } }, required: ["id"] },
+    },
+    {
+      name: "suggest_replies",
+      description: "Offer the user up to three next steps as buttons under your reply, written as they'd say them. Tapping one sends it as their message. Write your reply text as usual too.",
+      schema: {
+        type: "object",
+        properties: { options: { type: "array", items: { type: "string", maxLength: 48 }, maxItems: 3 } },
+        required: ["options"],
+      },
+    },
+  );
+  tools.push(
+    {
       name: "create_routine",
       description:
         "Set up a routine: a scheduled check that runs on its own (while Lyra is open or when it next opens) and posts here only when there's news. E.g. a morning brief, a weekly school-mail check, a watch for bills.",
@@ -315,8 +362,10 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
   };
 
   const sources: Source[] = [];
+  let suggestions: string[] = [];
   const meta = () => ({
     memory: notes,
+    ...(suggestions.length ? { suggestions } : {}),
     ...(taskNotes.length ? { tasks: taskNotes } : {}),
     ...(sources.length ? { sources: uniqueSources(sources).slice(0, 8) } : {}),
     tools: toolsUsed,
@@ -336,6 +385,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
       channel: ctx.channel ? { ...ctx.channel, notebook: (await ctx.workspace.notebook(ctx.channel.id)).read() } : undefined,
       channels: ctx.channel ? channels.map((c) => ({ name: c.name, about: c.about })) : await digests(ctx),
       tasks: describeTasks(listTasks(ctx.db, { status: "open", channelId: ctx.channel ? ctx.channel.id : undefined, limit: 40 }), !ctx.channel),
+      reminders: ctx.workspace.reminders?.list(),
       webSearch: !!ctx.webSearch,
     });
 
@@ -376,6 +426,22 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
             id: call.id,
             name: call.name,
             content: ok ? "Reacted. Add text only if there's more to say." : `Pick one of: ${REACTIONS.join(" ")}`,
+            isError: !ok,
+          });
+          continue;
+        }
+        if (call.name === "suggest_replies") {
+          // a button the user taps becomes their own message, so outside content can't write one
+          const list = Array.isArray(call.input.options) ? call.input.options : [];
+          const clean = list.map((o) => String(o).replace(/\s+/g, " ").trim()).filter((o) => o && o.length <= 60).slice(0, 3);
+          const ok = !state.tainted && clean.length > 0;
+          if (ok) suggestions = clean;
+          toolsUsed.push({ name: call.name, ok });
+          results.push({
+            type: "tool_result",
+            id: call.id,
+            name: call.name,
+            content: ok ? "Shown as buttons under your reply." : state.tainted ? "Not shown: outside content was read this turn." : "Give one to three short options.",
             isError: !ok,
           });
           continue;
@@ -526,6 +592,27 @@ async function runTool(
       const t = updateTask(ctx.db, id, { status, needs: typeof input.needs === "string" ? input.needs : undefined }, "lyra");
       taskNotes.push({ id: t.id, title: t.title, kind: "updated", status: t.status });
       return { content: `Updated #${t.id}: ${t.title} is ${STATUS_LABEL[t.status]}.`, isError: false };
+    } catch (e) {
+      return fail((e as Error).message);
+    }
+  }
+
+  if (name === "set_reminder" || name === "follow_up" || name === "cancel_reminder") {
+    const rs = ctx.workspace.reminders;
+    if (!rs) return fail("Reminders aren't available.");
+    if (name === "cancel_reminder") {
+      try {
+        return { content: rs.cancel(Number(input.id)), isError: false };
+      } catch (e) {
+        return fail((e as Error).message);
+      }
+    }
+    if (state.tainted) return fail("Not set: outside content was read this turn. Tell the user what you'd set and when, and set it once they say yes.");
+    const kind = name === "set_reminder" ? "remind" : "follow_up";
+    try {
+      const r = rs.create(kind, String((kind === "remind" ? input.text : input.about) ?? ""), String(input.at ?? ""), ctx.channel?.id ?? null);
+      emit.status(kind === "remind" ? `Reminder set for ${r.when}` : `Follow-up set for ${r.when}`);
+      return { content: `Set (#${r.id}) for ${r.when}.`, isError: false };
     } catch (e) {
       return fail((e as Error).message);
     }

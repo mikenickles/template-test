@@ -43,7 +43,7 @@ function useStatusItems(state: AppState): StatusItem[] {
     let alive = true;
     const load = async () => {
       try {
-        const [working, routines, counts] = await Promise.all([api.tasks({ status: "working", limit: 3 }), api.routines(), api.taskCounts()]);
+        const [working, routines, counts, reminders] = await Promise.all([api.tasks({ status: "working", limit: 3 }), api.routines(), api.taskCounts(), api.reminders()]);
         const items: StatusItem[] = [
           ...(working.length
             ? [{ key: "work", text: workingText(working[0].title, working.length), live: true, href: working.length === 1 ? `#/t/${working[0].id}` : "#/tasks" }]
@@ -51,7 +51,11 @@ function useStatusItems(state: AppState): StatusItem[] {
           ...routines.filter((r) => r.running).map((r) => ({ key: `r${r.id}`, text: routineText(r.name), live: true, href: `#/r/${r.id}` })),
         ];
         if (counts.ready) items.push({ key: "ready", text: readyText(counts.ready), href: "#/tasks" });
-        const next = upNext(routines);
+        // the soonest of routines, reminders and follow-ups
+        const next = upNext([
+          ...routines,
+          ...reminders.map((r) => ({ name: r.kind === "remind" ? "Reminder" : "Check back", enabled: 1, next_run_at: r.due_at })),
+        ]);
         if (next) items.push({ key: "next", text: next });
         if (alive) setBackground(items);
       } catch {
@@ -59,7 +63,7 @@ function useStatusItems(state: AppState): StatusItem[] {
       }
     };
     void load();
-    const off = onChange(() => void load());
+    const off = onChange(() => void load()); // tasks, routines and reminders all announce changes
     const t = setInterval(() => void load(), 60_000);
     return () => {
       alive = false;

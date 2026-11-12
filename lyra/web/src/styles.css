@@ -4414,3 +4414,38 @@ a.status-pill:active {
   -webkit-backdrop-filter: blur(7px) saturate(1.15);
   backdrop-filter: blur(7px) saturate(1.15);
 }
+
+/* ---------- proactive: suggested next steps ---------- */
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin: var(--s3) 0 0 22px;
+}
+
+.suggestion {
+  min-height: 40px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--accent-text) 45%, var(--border));
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 550;
+  font-size: var(--text-sm);
+  text-align: left;
+  animation: status-in 280ms ease both;
+  transition: background var(--ease), transform var(--ease);
+}
+
+.suggestion:hover {
+  background: var(--accent-soft);
+}
+
+.suggestion:active {
+  transform: scale(0.97);
+}
+
+.group.reminders {
+  margin-bottom: var(--s3);
+}

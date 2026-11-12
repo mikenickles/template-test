@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, onChange, type Channel, type Routine, type RoutineRun } from "../api";
-import { ChannelIcon, Chevron, Clock, Plus, Trash } from "../icons";
+import { api, onChange, type Channel, type Reminder, type Routine, type RoutineRun } from "../api";
+import { Bell, ChannelIcon, Chevron, Clock, Close, Plus, Trash } from "../icons";
 import { Thinking } from "../LyraMark";
 import { ago, parse } from "../when";
 
@@ -31,6 +31,10 @@ function nextLabel(r: Routine): string {
 /** The "Scheduled" section of the Tasks tab. */
 export function ScheduledSection({ toast }: { toast: (m: string) => void }) {
   const [rows, setRows] = useState<Routine[] | null>(null);
+  const [soon, setSoon] = useState<Reminder[]>([]);
+  const loadSoon = useCallback(() => void api.reminders().then(setSoon, () => {}), []);
+  useEffect(loadSoon, [loadSoon]);
+  useEffect(() => onChange((e) => e.type === "reminder" && loadSoon()), [loadSoon]);
   const [open, setOpen] = useState(() => sessionStorage.getItem("lyra.scheduledOpen") !== "0");
   const [adding, setAdding] = useState(false);
   const load = useCallback(() => void api.routines().then(setRows, () => setRows([])), []);
@@ -58,13 +62,44 @@ export function ScheduledSection({ toast }: { toast: (m: string) => void }) {
     <section className="task-group scheduled">
       <div className="bar">
         <button className="section-label link-like" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-          Scheduled {rows && rows.length > 0 && <span className="count">{rows.length}</span>}
+          Scheduled {rows && rows.length + soon.length > 0 && <span className="count">{rows.length + soon.length}</span>}
           <Chevron size={14} className={`fold${open ? " open" : ""}`} />
         </button>
         <button className="btn quiet small-btn" onClick={() => setAdding(true)}>
           <Plus size={16} /> Routine
         </button>
       </div>
+      {open && soon.length > 0 && (
+        <div className="group reminders">
+          {soon.map((r) => (
+            <div className="item" key={`r${r.id}`}>
+              <span className="tile">{r.kind === "remind" ? <Bell size={20} /> : <Clock size={20} />}</span>
+              <span className="body">
+                <div className="title">{r.text}</div>
+                <div className="sub">
+                  {r.kind === "remind" ? "Reminder" : "Lyra checks back"} · {whenLabel(r.due_at)}
+                  {r.channel_name ? ` · ${r.channel_name}` : ""}
+                </div>
+              </span>
+              <button
+                className="icon-btn"
+                aria-label={`Cancel ${r.kind === "remind" ? "reminder" : "follow-up"}: ${r.text}`}
+                onClick={async () => {
+                  try {
+                    await api.cancelReminder(r.id);
+                    toast("Cancelled");
+                    loadSoon();
+                  } catch (e) {
+                    toast((e as Error).message);
+                  }
+                }}
+              >
+                <Close size={18} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       {open &&
         (rows?.length ? (
           <div className="group">
@@ -358,4 +393,14 @@ export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: st
       </section>
     </div>
   );
+}
+
+/** "Today 4:00 PM", "Tomorrow 9:00 AM", "Thu, Nov 20, 9:00 AM" */
+function whenLabel(iso: string, now = new Date()): string {
+  const d = parse(iso);
+  const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  const days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86400_000);
+  if (days === 0) return `Today ${time}`;
+  if (days === 1) return `Tomorrow ${time}`;
+  return `${d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}, ${time}`;
 }

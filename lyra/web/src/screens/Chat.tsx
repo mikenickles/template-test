@@ -352,6 +352,8 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI }: ChatP
   if (!messages) return <div className="center-load">Loading…</div>;
 
   const empty = messages.length === 0 && !pending;
+  // suggestions only show under Lyra's latest reply, while it's the last thing said
+  const lastId = messages.at(-1)?.role === "assistant" ? messages.at(-1)!.id : -1;
   let lastDay = "";
 
   return (
@@ -431,6 +433,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI }: ChatP
                       {m.meta.routine.name}
                     </a>
                   )}
+                  {m.meta.reminder && <span className="routine-tag">{m.meta.reminder.kind === "remind" ? "Reminder" : "Follow-up"}</span>}
                   {m.meta.pinned && (
                     <span className="pin-tag">
                       <Pin size={13} /> Pinned
@@ -473,6 +476,15 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI }: ChatP
                   {!!m.meta.memory?.length && <Notes notes={m.meta.memory} onAction={(i, a) => answerNote(m, i, a)} />}
                   {!!m.meta.tasks?.length && <TaskNotes notes={m.meta.tasks} />}
                   {!!m.meta.sources?.length && <Sources list={m.meta.sources} />}
+                  {!!m.meta.suggestions?.length && m.id === lastId && !pending && (
+                    <div className="suggestions" aria-label="Suggested replies">
+                      {m.meta.suggestions.map((s) => (
+                        <button key={s} className="suggestion" onClick={() => void send(s)}>
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <span className="sr-only">{clock(d)}</span>
                 </div>
               </Fragment>

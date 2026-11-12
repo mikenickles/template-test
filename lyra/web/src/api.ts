@@ -39,6 +39,7 @@ export type TaskNote = CoreTaskNote;
 export type WorkerRun = CoreRun;
 export type Routine = RoutineRow & { schedule: string; running: boolean };
 export type RoutineRun = CoreRoutineRun;
+export type { Reminder } from "../../core/reminders";
 export type { WorkerEvent };
 
 /** Background activity (workers updating tasks or posting reports). */
@@ -239,7 +240,9 @@ function notice(lyra: Lyra, title: string, body: string, hash: string): void {
 }
 
 function syncReminders(lyra: Lyra): void {
-  void notifier.reminders(lyra.state().notifications ? lyra.routines() : []).catch(() => {});
+  const on = lyra.state().notifications;
+  void notifier.reminders(on ? lyra.routines() : []).catch(() => {});
+  void notifier.oneOffs(on ? lyra.reminders() : []).catch(() => {});
 }
 
 function watchForNotices(lyra: Lyra): void {
@@ -247,8 +250,15 @@ function watchForNotices(lyra: Lyra): void {
   // only a task that just became "Ready for you" is news
   const seen = new Map(lyra.tasks({}).map((t) => [t.id, t.status]));
   lyra.onChange((e) => {
-    if (e.type === "routine") return syncReminders(lyra);
-    if (e.type === "message" && "notify" in e && e.notify) return notice(lyra, e.notify.title, e.notify.body, chatHash(e.channelId));
+    if (e.type === "routine" || e.type === "reminder") return syncReminders(lyra);
+    if (e.type === "message" && "notify" in e && e.notify) {
+      // reminders: the phone already showed its scheduled notification; on a computer, say it even while Lyra is open
+      if (e.notify.scheduled) {
+        if (!isNative && lyra.state().notifications) void notifier.now(e.notify.title, e.notify.body, chatHash(e.channelId)).catch(() => {});
+        return;
+      }
+      return notice(lyra, e.notify.title, e.notify.body, chatHash(e.channelId));
+    }
     if (e.type === "task") {
       let d: ReturnType<Lyra["task"]> | undefined;
       try {
@@ -321,6 +331,8 @@ export const api = {
   setTaskStep: async (stepId: number, done: boolean) => (await ready).setTaskStep(stepId, done),
   removeTaskStep: async (taskId: number, stepId: number) => (await ready).removeTaskStep(taskId, stepId),
   deleteTask: async (id: number) => (await ready).deleteTask(id),
+  reminders: async () => (await ready).reminders(),
+  cancelReminder: async (id: number) => (await ready).cancelReminder(id),
   startTask: async (id: number, note?: string) => {
     const lyra = await ready;
     // a good moment to ask: the worker may finish while you're away

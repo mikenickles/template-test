@@ -119,6 +119,18 @@ export const MIGRATIONS: string[] = [
      output INTEGER NOT NULL DEFAULT 0,
      PRIMARY KEY (day, provider, model, source)
    );`,
+  `CREATE TABLE reminders (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     kind TEXT NOT NULL CHECK (kind IN ('remind','follow_up')),
+     text TEXT NOT NULL,
+     due_at TEXT NOT NULL,
+     channel_id INTEGER REFERENCES channels(id) ON DELETE SET NULL,
+     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','done','cancelled')),
+     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+     done_at TEXT,
+     message_id INTEGER
+   );
+   CREATE INDEX reminders_due ON reminders (status, due_at);`,
 ];
 
 const FILE = "lyra.db";
@@ -268,6 +280,10 @@ export interface MessageMeta {
   pinned?: boolean;
   /** Said aloud in a live voice call. */
   voice?: boolean;
+  /** Posted by a reminder or a follow-up Lyra set. */
+  reminder?: { id: number; kind: "remind" | "follow_up" };
+  /** Next steps Lyra offers as buttons (only on its latest reply). */
+  suggestions?: string[];
   /** Photos and files sent with this message (a note each; the file itself isn't kept). */
   attachments?: import("./attachments.ts").AttachmentNote[];
 }

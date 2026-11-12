@@ -37,6 +37,13 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Live voice.** **Talk** in the message box starts a spoken conversation using OpenAI's GPT-Live (`gpt-live-1`, about $0.05 a minute while a call is open; needs an OpenAI API key, whichever model you chat with). Audio goes between your device and OpenAI over WebRTC. GPT-Live does the talking; when you ask for something that needs Lyra's tools (mail, calendar, memory, tasks, the web) it delegates, Lyra's engine does it with your chat model under the same safety rules as typed chat, and the answer is handed back to be spoken (`core/live.ts`, `web/src/voiceCall.ts`). The conversation is saved in the chat as text, and the minutes and estimated cost show on the Usage page. Pick the voice in Settings, AI model. The microphone is only used while a call is open.
 - **Share to Lyra (phone).** Lyra is in Android's share menu for text, links, photos and PDFs. What you share lands in the main chat's message box; nothing goes to the model until you press Send (`ShareTargetPlugin.java`).
 
+### Proactive, step 1: reminders, follow-ups, next steps
+
+- **Reminders from chat.** "Remind me at 4 to call Dad" sets a reminder (`core/reminders.ts`, table `reminders`). The phone schedules a notification for that time, so it arrives with Lyra closed; a "Reminder" message lands in the chat when Lyra is next open. Times are the user's local time, converted with the device's time zone (daylight saving included).
+- **Follow-ups Lyra sets itself.** When something is left open (a reply you're waiting for, a delivery), Lyra can schedule a check-back. At that time it runs like a one-off routine: checks with its tools and posts a short update tagged "Follow-up".
+- **Suggested next steps.** Lyra can put up to three buttons under its latest reply ("Add it to my tasks", "Remind me Friday"); tapping one sends it as your message.
+- Reminders and follow-ups are listed under **Tasks → Scheduled** (each can be cancelled) and the next one shows under Lyra's avatar. All three are refused in a turn that read email or the web, so outside content can't schedule things or put words in your mouth.
+
 #### Settings and model picker
 
 Settings opens on six areas (AI model, You and appearance, Notifications and privacy, Sync and backup, Connections, Updates), each showing its current state. **AI model** has a card per provider: paste the key, and Lyra asks the provider which models that key can use (`core/providers/models.ts`) and lists them, newest first, chat models only. Tap one to switch. Typing a model name is still there as a fallback, and a local OpenAI-compatible server lists its own models.

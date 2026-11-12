@@ -228,7 +228,9 @@ export function deleteRoutine(db: DB, id: number): void {
 
 export type RoutineEvent =
   | { type: "routine"; routineId: number }
-  | { type: "message"; channelId: number | null; notify?: { title: string; body: string } };
+  | { type: "message"; channelId: number | null; notify?: { title: string; body: string; scheduled?: boolean } }
+  /** reminders were added, changed or happened */
+  | { type: "reminder" };
 
 export interface RoutineDeps {
   db: DB;
@@ -243,7 +245,10 @@ export interface RoutineDeps {
   flush: () => Promise<void>;
 }
 
-function routinePrompt(r: RoutineRow, d: RoutineDeps, search: boolean, memory: string, tasks: string, notebook?: string): string {
+/** What the runner needs from a routine (or a one-off follow-up dressed as one). */
+export type RoutineJob = Pick<RoutineRow, "name" | "instructions" | "last_run_at" | "last_summary" | "post_mode" | "channel_id">;
+
+function routinePrompt(r: RoutineJob, d: RoutineDeps, search: boolean, memory: string, tasks: string, notebook?: string): string {
   const user = d.userName() === "you" ? "the user" : d.userName();
   const tz = d.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const now = new Date().toLocaleString("en-US", { timeZone: tz, dateStyle: "full", timeStyle: "short" });
@@ -378,16 +383,54 @@ export class Routines {
       ]);
       db.run("UPDATE routines SET last_run_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?", [id]);
     };
-    const sources: Source[] = [];
-    const post = (text: string) => {
+    const post = (text: string, srcs: Source[]) => {
       const channelId = r.channel_id && getChannel(db, r.channel_id) ? r.channel_id : null;
-      const srcs = uniqueSources(sources).slice(0, 8);
       const msg = addMessage(db, "assistant", text.trim(), { routine: { id: r.id, name: r.name }, ...(srcs.length ? { sources: srcs } : {}) }, channelId);
       db.run("UPDATE routines SET last_summary = ? WHERE id = ?", [text.trim().slice(0, 800), id]);
       end("posted", "", msg.id);
       this.d.onEvent({ type: "message", channelId, notify: { title: r.name, body: text.trim().split("\n")[0].slice(0, 160) } });
     };
+    await this.execute(r, post, end);
+  }
 
+  /**
+   * Lyra checks back on something it said it would (a follow-up), with the same
+   * tools and rules as a routine, and always posts a short update.
+   */
+  followUp(job: { text: string; createdAt: string; channelId: number | null }, done: (messageId: number | null, text: string) => void): void {
+    const tz = this.d.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const set = new Date(job.createdAt).toLocaleString("en-US", { timeZone: tz, dateStyle: "medium", timeStyle: "short" });
+    const routine: RoutineJob = {
+      name: "Follow-up",
+      instructions: `Earlier (${set}) you told the user you'd check back on this, and now is the time:\n${job.text}\n\nCheck what you can with your tools (mail, calendar, files, the web), then post a short update: what changed, or that nothing has yet, and the one obvious next step if there is one. Don't repeat the whole backstory.`,
+      last_run_at: null,
+      last_summary: "",
+      post_mode: "always",
+      channel_id: job.channelId,
+    };
+    this.queue = this.queue
+      .then(() =>
+        this.execute(
+          routine,
+          (text, srcs) => {
+            const channelId = job.channelId && getChannel(this.d.db, job.channelId) ? job.channelId : null;
+            const msg = addMessage(this.d.db, "assistant", text.trim(), srcs.length ? { sources: srcs } : {}, channelId);
+            done(msg.id, text.trim());
+          },
+          (status, note) => {
+            // couldn't check (no model, an error): still say so, so the follow-up isn't lost
+            if (status === "failed") done(null, note ?? "");
+          },
+        ),
+      )
+      .catch((e) => console.error("[lyra] follow-up failed", e))
+      .finally(() => void this.d.flush());
+  }
+
+  private async execute(r: RoutineJob, post: (text: string, sources: Source[]) => void, end: (status: RoutineRun["status"], note?: string) => void): Promise<void> {
+    const db = this.d.db;
+    const sources: Source[] = [];
+    const posted = (text: string) => post(text, uniqueSources(sources).slice(0, 8));
     try {
       const provider = await this.d.provider();
       const search = !!this.d.webSearch?.();
@@ -412,7 +455,7 @@ export class Routines {
           if (result.stop === "pause") continue;
           const text = result.parts.map((p) => (p.type === "text" ? p.text : "")).join("").trim();
           // Talking without the tools: post it if this routine always posts, otherwise stay quiet.
-          if (r.post_mode === "always" && text) post(text);
+          if (r.post_mode === "always" && text) posted(text);
           else end("quiet", text.slice(0, 200) || "Nothing new.");
           return;
         }
@@ -424,7 +467,7 @@ export class Routines {
               results.push({ type: "tool_result", id: call.id, name: call.name, content: "The message is empty.", isError: true });
               continue;
             }
-            post(text);
+            posted(text);
             return;
           }
           if (call.name === "nothing_new" && r.post_mode === "news") {

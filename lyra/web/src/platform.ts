@@ -242,9 +242,10 @@ export async function createPlatform(): Promise<Platform> {
 
 // ---------- notifications ----------
 
-/** Reminder notifications at each routine's times; ids 100000+ are Lyra's reminders, 200000+ one-off notices. */
+/** Routine reminders are ids 100000+, one-off notices 200000+, reminders and follow-ups 300000+. */
 const REMINDER_BASE = 100_000;
 const NOTICE_BASE = 200_000;
+const ONE_OFF_BASE = 300_000;
 let noticeId = NOTICE_BASE;
 
 async function allowed(): Promise<boolean> {
@@ -288,6 +289,26 @@ export const notifier = {
       }),
     );
     await LocalNotifications.schedule({ notifications });
+  },
+
+  /** Schedule a notification for each reminder and follow-up, so they arrive even with Lyra closed. */
+  async oneOffs(list: { id: number; kind: "remind" | "follow_up"; text: string; due_at: string; channel_id: number | null }[]): Promise<void> {
+    if (!isNative) return;
+    const pending = await LocalNotifications.getPending().catch(() => ({ notifications: [] as { id: number }[] }));
+    const old = pending.notifications.filter((n) => n.id >= ONE_OFF_BASE && n.id < ONE_OFF_BASE + 1_000_000);
+    if (old.length) await LocalNotifications.cancel({ notifications: old.map((n) => ({ id: n.id })) });
+    const future = list.filter((r) => new Date(r.due_at).getTime() > Date.now() + 5_000);
+    if (!future.length || (await LocalNotifications.checkPermissions()).display !== "granted") return;
+    await LocalNotifications.schedule({
+      notifications: future.map((r) => ({
+        id: ONE_OFF_BASE + (r.id % 1_000_000),
+        title: r.kind === "remind" ? "Reminder" : "Lyra is checking back",
+        body: r.kind === "remind" ? r.text : `${r.text} Open Lyra for the update.`,
+        // allowWhileIdle so a reminder isn't held back by battery saving
+        schedule: { at: new Date(r.due_at), allowWhileIdle: true },
+        extra: { hash: r.channel_id ? `#/c/${r.channel_id}` : "#/" },
+      })),
+    });
   },
 
   /** Tell the user about news while Lyra is in the background. */

@@ -487,6 +487,29 @@ try {
   await page.getByText("1 min with GPT-Live · about $0.06").waitFor();
   check(true, "the call's minutes and estimated cost show on the Usage page");
 
+  // ---- proactive: reminders and suggested next steps ----
+  await page.goto(`${base}/#/`);
+  await page.locator(".bubble").first().waitFor();
+  await page.getByPlaceholder("Message Lyra").fill("Remind me in 90 minutes to stretch");
+  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByText("Okay, I'll remind you.").waitFor();
+  await page.locator(".status-pill", { hasText: /Reminder at/ }).waitFor({ timeout: 15_000 });
+  check(true, "a reminder set in chat shows as what's next under Lyra's avatar");
+  await page.getByPlaceholder("Message Lyra").fill("What's next?");
+  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Remind me Friday" }).waitFor();
+  await shot("light-32-suggestions");
+  await page.getByRole("button", { name: "Add it to my tasks" }).click();
+  await page.locator(".bubble", { hasText: "Add it to my tasks" }).waitFor();
+  await page.getByRole("button", { name: "Remind me Friday" }).waitFor({ state: "detached" });
+  check(true, "suggested next steps are buttons that send as your message, then go away");
+  await page.goto(`${base}/#/tasks`);
+  await page.locator(".reminders .item", { hasText: "stretch" }).waitFor();
+  await shot("light-33-scheduled-reminder");
+  await page.getByRole("button", { name: /Cancel reminder: stretch/ }).click();
+  await page.locator(".reminders .item", { hasText: "stretch" }).waitFor({ state: "detached" });
+  check(true, "reminders are listed under Scheduled and can be cancelled");
+
   // ---- usage: tokens per model, with a graph ----
   await page.goto(`${base}/#/settings`);
   await page.getByRole("link", { name: /Usage.*tokens today/ }).click();

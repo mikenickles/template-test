@@ -30,6 +30,17 @@ import {
   type StoredMessage,
 } from "./db.ts";
 import { UpdateSource } from "./updates.ts";
+import {
+  cancelReminder,
+  createReminder,
+  describeDue,
+  describeReminders,
+  dueReminders,
+  finishReminder,
+  localToDate,
+  pendingReminders,
+  type Reminder,
+} from "./reminders.ts";
 import type { Attachment } from "./attachments.ts";
 import { localDay, metered, recordUsage, usageBetween, type UsageRow } from "./usage.ts";
 import { LIVE_MODEL, LIVE_VOICES, liveSession, type LiveVoice } from "./live.ts";
@@ -53,6 +64,7 @@ import { Workers, type WorkerEvent, type WorkerRun } from "./workers.ts";
 import * as R from "./routines.ts";
 
 export type LyraEvent = WorkerEvent | R.RoutineEvent;
+export type { Reminder } from "./reminders.ts";
 
 export interface SecretStore {
   get(key: string): Promise<string | null>;
@@ -210,6 +222,21 @@ export class Lyra {
       notebook: (id) => this.notebook(id),
       createChannel: (input) => this.createChannel(input),
       startTask: (id, note) => void this.workers.start(id, "lyra", note),
+      reminders: {
+        list: () => describeReminders(pendingReminders(this.db), this.p.timeZone),
+        create: (kind, text, at, channelId) => {
+          const when = localToDate(at, this.p.timeZone);
+          if (!when) throw new Error("That time doesn't look right. Use YYYY-MM-DD HH:MM in the user's local time.");
+          const r = createReminder(this.db, { kind, text, at: when, channelId });
+          this.listeners.forEach((l) => l({ type: "reminder" }));
+          return { id: r.id, when: describeDue(when, this.p.timeZone) };
+        },
+        cancel: (id) => {
+          const r = cancelReminder(this.db, id);
+          this.listeners.forEach((l) => l({ type: "reminder" }));
+          return `Cancelled: ${r.text}`;
+        },
+      },
       routines: {
         list: () => this.routines(),
         create: (input) => this.createRoutine(input),
@@ -840,7 +867,52 @@ export class Lyra {
 
   /** Called every minute while the app is open, and when it opens: runs anything due. */
   tickRoutines(now = new Date()): number[] {
-    return this.routinesRunner.tick(now);
+    const started = this.routinesRunner.tick(now);
+    this.tickReminders(now);
+    return started;
+  }
+
+  // ---------- reminders and follow-ups ----------
+
+  reminders(): Reminder[] {
+    return pendingReminders(this.db);
+  }
+
+  async cancelReminder(id: number): Promise<void> {
+    cancelReminder(this.db, id);
+    this.listeners.forEach((l) => l({ type: "reminder" }));
+    await this.db.flush();
+  }
+
+  /** Post what's due: reminders as a message, follow-ups after Lyra has checked. */
+  private tickReminders(now: Date): void {
+    const due = dueReminders(this.db, now);
+    if (!due.length) return;
+    for (const r of due) {
+      // marked first, so a second tick can't post it twice
+      finishReminder(this.db, r.id, null);
+      const late = now.getTime() - new Date(r.due_at).getTime() > 10 * 60_000 ? ` (was due ${describeDue(new Date(r.due_at), this.p.timeZone, now)})` : "";
+      const channelId = r.channel_id && getChannel(this.db, r.channel_id) ? r.channel_id : null;
+      const announce = (messageId: number, title: string, body: string) => {
+        this.db.run("UPDATE reminders SET message_id = ? WHERE id = ?", [messageId, r.id]);
+        const m = getMessage(this.db, messageId);
+        if (m) updateMessageMeta(this.db, messageId, { ...m.meta, reminder: { id: r.id, kind: r.kind } });
+        // the phone already showed a scheduled notification at the time
+        this.listeners.forEach((l) => l({ type: "message", channelId, notify: { title, body: body.split("\n")[0].slice(0, 160), scheduled: true } }));
+        void this.db.flush();
+      };
+      if (r.kind === "remind") {
+        const msg = addMessage(this.db, "assistant", `Reminder: ${r.text}${late}`, {}, channelId);
+        announce(msg.id, "Reminder", r.text);
+      } else {
+        this.routinesRunner.followUp({ text: r.text, createdAt: r.created_at, channelId }, (messageId, text) => {
+          const id = messageId ?? addMessage(this.db, "assistant", `I said I'd check on this: ${r.text}\n\nI couldn't just now${text ? ` (${text})` : ""}. Want me to try again later?`, {}, channelId).id;
+          announce(id, "Lyra followed up", text || r.text);
+        });
+      }
+    }
+    this.listeners.forEach((l) => l({ type: "reminder" }));
+    void this.db.flush();
   }
 
   // ---------- Google (Mail, Calendar, Drive) ----------

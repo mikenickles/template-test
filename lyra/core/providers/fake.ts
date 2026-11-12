@@ -40,6 +40,8 @@ export class FakeProvider implements ModelProvider {
       if (result.isError) return say(`That didn't work: ${result.content.slice(0, 160)}`);
       if (result.name === "remember") return say("Got it.");
       if (result.name === "react") return { parts: [], stop: "end" };
+      if (result.name === "set_reminder") return say("Okay, I'll remind you.");
+      if (result.name === "suggest_replies") return say("Here are a couple of next steps.");
       if (result.name === "forget") return say("Done, that's gone.");
       return say(`Here's what I found.\n\n${result.content.replace(/<\/?untrusted_data[^>]*>/g, "").trim().slice(0, 400)}`);
     }
@@ -48,6 +50,14 @@ export class FakeProvider implements ModelProvider {
     const files = last?.parts.flatMap((p) => (p.type === "file" ? [p.name] : [])) ?? [];
     if (files.length) return say(`Got ${files.length === 1 ? "it" : "them"}: ${files.join(", ")}.\n\nThe practice model can't look inside. Add an API key in Settings and I'll read it properly.`);
     if (/^(thanks|thank you|thx|ty)\b/i.test(text.trim()) && has("react")) return call("react", { emoji: "❤️" });
+    // "remind me in 5 minutes to stretch": the practice model can set reminders
+    const remind = text.match(/^remind me in (\d+) min(?:ute)?s? to (.+)$/i);
+    if (remind && has("set_reminder")) {
+      const at = new Date(Date.now() + Number(remind[1]) * 60_000);
+      const p2 = (n: number) => String(n).padStart(2, "0");
+      return call("set_reminder", { text: remind[2], at: `${at.getFullYear()}-${p2(at.getMonth() + 1)}-${p2(at.getDate())} ${p2(at.getHours())}:${p2(at.getMinutes())}` });
+    }
+    if (/^what('s| is) next/i.test(text) && has("suggest_replies")) return call("suggest_replies", { options: ["Add it to my tasks", "Remind me Friday"] });
     const rem = text.match(/^remember(?: that)?[:\s]+(.+)$/i);
     if (rem && has("remember")) return call("remember", { section: "Open loops", text: rem[1] });
     const forget = text.match(/^forget[:\s]+(.+)$/i);
