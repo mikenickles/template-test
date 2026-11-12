@@ -250,6 +250,41 @@ body[data-busy] .orb .vega-halo {
   animation: pulse 1.6s ease-in-out infinite;
 }
 
+/* the avatar fills the orb; while Lyra works, a lime ring breathes around it */
+.orb:has(.avatar) {
+  position: relative;
+  background: #f1ebe3;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  user-select: none;
+}
+
+.orb:has(.avatar)::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+body[data-busy] .orb:has(.avatar)::after {
+  animation: ring 1.6s ease-in-out infinite;
+}
+
+@keyframes ring {
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
 @keyframes pulse {
   50% {
     transform: scale(1.7);

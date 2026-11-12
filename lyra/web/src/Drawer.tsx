@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { Channel } from "./api";
 import { ChannelIcon, Layers, Notebook, Plus } from "./icons";
-import { LyraMark } from "./LyraMark";
+import { Avatar } from "./LyraMark";
 
 /**
  * The channel menu. It sits behind the app; opening it slides the chat aside.
@@ -35,7 +35,7 @@ export function Drawer({
     <nav className="drawer-panel" ref={panel} aria-label="Channels" aria-hidden={!open} inert={!open}>
       <div className="drawer-head">
         <span className="orb drawer-orb">
-          <LyraMark size={22} />
+          <Avatar />
         </span>
         <span className="drawer-title">Lyra</span>
       </div>

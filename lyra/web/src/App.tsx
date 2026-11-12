@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, isNative, onChange, type AppState, type Channel } from "./api";
 import { Drawer } from "./Drawer";
 import { Back, ChannelIcon, MenuIcon } from "./icons";
-import { LyraMark } from "./LyraMark";
+import { Avatar } from "./LyraMark";
 import { Access } from "./screens/Access";
 import { ChannelInfo, NewChannelDialog } from "./screens/ChannelScreens";
 import { Chat } from "./screens/Chat";
@@ -179,7 +179,7 @@ export function App() {
           )}
           {inChat && !channel && (
             <a className="orb orb-sm" href="#/access" aria-label="What Lyra can access">
-              <LyraMark />
+              <Avatar />
             </a>
           )}
           {inChat && channel && (

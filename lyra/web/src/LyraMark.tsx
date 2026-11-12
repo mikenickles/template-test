@@ -1,3 +1,5 @@
+import avatarUrl from "./assets/avatar.webp";
+
 /**
  * Lyra's identity is the Lyra constellation: Vega, the bright star,
  * and the small parallelogram below it. Three uses:
@@ -28,10 +30,15 @@ export function LyraMark({ size = 30 }: { size?: number }) {
   );
 }
 
+/** Lyra's face: the avatar artwork, round. */
+export function Avatar() {
+  return <img className="avatar" src={avatarUrl} alt="" draggable={false} />;
+}
+
 export function Orb({ size = "sm" }: { size?: "sm" | "lg" }) {
   return (
     <span className={`orb orb-${size}`}>
-      <LyraMark size={size === "lg" ? 52 : 30} />
+      <Avatar />
     </span>
   );
 }
