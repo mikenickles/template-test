@@ -45,19 +45,19 @@ def main():
     for d in sorted(RES.iterdir()):
         if not d.is_dir():
             continue
-        for name in ("ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png", "splash.png"):
+        for name in ("ic_launcher.webp", "ic_launcher_round.webp", "ic_launcher_foreground.webp", "splash.webp"):
             f = d / name
             if not f.exists():
                 continue
             w, h = Image.open(f).size
-            if name in ("ic_launcher.png", "ic_launcher_round.png"):
+            if name in ("ic_launcher.webp", "ic_launcher_round.webp"):
                 img = on((w, h), (0, 0, 0, 0), w)
-            elif name == "ic_launcher_foreground.png":
+            elif name == "ic_launcher_foreground.webp":
                 # adaptive icons show the middle 72 of 108 units; fill that circle
                 img = on((w, h), (0, 0, 0, 0), round(w * 72 / 108))
             else:
                 img = on((w, h), INK, round(min(w, h) * 0.32))
-            img.save(f, optimize=True)
+            img.save(f, "WEBP", quality=90, method=6)
             print(f"  {d.name}/{name} {w}x{h}")
 
 
