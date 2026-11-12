@@ -252,6 +252,7 @@ try {
   check((await page.getByRole("radio", { name: "Burnt orange" }).isChecked()) === true, "the accent color is saved");
   await page.getByRole("link", { name: "Back" }).click();
   await page.locator(".bubble").first().waitFor();
+  check((await page.locator(".topbar .avatar").getAttribute("src")).includes("avatar-orange"), "the avatar's glow follows the accent color");
   await shot("light-23-accent-chat");
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto(`${base}/#/tasks`);

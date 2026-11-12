@@ -1,11 +1,14 @@
 """Builds Lyra's avatar assets from design/avatar-source.png (the artwork).
 
 Run: python3 scripts/avatar.py
-- web/src/assets/avatar.webp: the round avatar used inside the app
+- web/src/assets/avatar-<accent>.webp: the round avatar used inside the app,
+  one per accent color, with the headphone glow recolored (scripts/avatar_tint.py)
 - android launcher icons (legacy, round, adaptive foreground) and splash screens
 """
 from pathlib import Path
 from PIL import Image, ImageDraw
+
+from avatar_tint import GLOW, tint
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "design" / "avatar-source.png"
@@ -36,7 +39,9 @@ def on(canvas_size, bg, inner: int):
 
 
 def main():
-    avatar(288).save(ROOT / "web" / "src" / "assets" / "avatar.webp", quality=88, method=6)
+    base = avatar(288)
+    for accent in GLOW:
+        tint(base, accent).save(ROOT / "web" / "src" / "assets" / f"avatar-{accent}.webp", quality=88, method=6)
     for d in sorted(RES.iterdir()):
         if not d.is_dir():
             continue
