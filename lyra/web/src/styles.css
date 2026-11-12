@@ -888,7 +888,7 @@ body[data-busy] .orb:has(.avatar)::after {
     box-shadow 260ms ease;
 }
 
-/* typing: a faint accent haze that breathes, and a soft highlight that travels around the edge */
+/* always on: a faint accent haze that breathes, and a soft highlight that travels around the edge */
 @property --spin {
   syntax: "<angle>";
   inherits: false;
@@ -937,16 +937,16 @@ body[data-busy] .orb:has(.avatar)::after {
     linear-gradient(#000 0 0);
 }
 
-.composer-inner:focus-within {
+.composer-inner {
   border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
 }
 
-.composer-inner:focus-within::after {
+.composer-inner::after {
   opacity: 1;
   animation: breathe 3.6s ease-in-out infinite;
 }
 
-.composer-inner:focus-within::before {
+.composer-inner::before {
   opacity: 1;
   animation: spin 6s linear infinite;
 }
