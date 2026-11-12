@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { runTurn, type TurnContext } from "../core/chat.ts";
 import type { Connectors } from "../core/connectors/registry.ts";
-import { DB } from "../core/db.ts";
+import { awaySince } from "../core/away.ts";
+import { addMessage, DB } from "../core/db.ts";
+import { createTask, updateTask } from "../core/tasks.ts";
 import { inQuietHours, Lyra, type LyraEvent } from "../core/lyra.ts";
 import { usageBetween } from "../core/usage.ts";
 import { mainNotebookSpec, Notebook } from "../core/memory.ts";
@@ -154,6 +156,29 @@ describe("heads-ups", () => {
     const lyra = await Lyra.start(platform());
     await lyra.saveSettings({ proactive: { level: "active" } });
     expect(lyra.tickHeadsUp(atLA(12))).toBe(false);
+  });
+});
+
+describe("while you were away", () => {
+  it("lists what Lyra did on its own since you left, not the conversation", async () => {
+    const db = await DB.open(SQL);
+    addMessage(db, "user", "hello");
+    addMessage(db, "assistant", "Hi Sam.");
+    addMessage(db, "assistant", "Your **7am brief**: two meetings.", { routine: { id: 1, name: "Morning brief" } });
+    addMessage(db, "assistant", "Dana is waiting on Friday.\nNext: reply.", { headsUp: true });
+    addMessage(db, "assistant", "Reminder: Call Dad", { reminder: { id: 1, kind: "remind" } });
+    const t = createTask(db, { title: "Find a plumber" }, "lyra");
+    updateTask(db, t.id, { status: "ready", needs: "Pick one of three quotes" }, "lyra");
+    const { items, more } = awaySince(db, "2000-01-01T00:00:00Z");
+    expect(items.map((i) => [i.label, i.text])).toEqual([
+      ["Morning brief", "Your 7am brief: two meetings."],
+      ["Heads-up", "Dana is waiting on Friday. Next: reply."],
+      ["Reminder", "Call Dad"],
+      ["Ready for you", "Find a plumber: Pick one of three quotes"],
+    ]);
+    expect(more).toBe(0);
+    expect(awaySince(db, "2999-01-01T00:00:00Z").items).toEqual([]);
+    expect(awaySince(db, "2000-01-01T00:00:00Z", 2)).toMatchObject({ more: 2, items: [{ label: "Reminder" }, { label: "Ready for you" }] });
   });
 });
 

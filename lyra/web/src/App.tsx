@@ -15,6 +15,7 @@ import { TaskPage, Tasks, WorkerLog } from "./screens/Tasks";
 import { RoutinePage } from "./screens/Routines";
 import { SyncConflict } from "./screens/SyncSection";
 import { StatusLine } from "./StatusLine";
+import { AwaySheet } from "./Away";
 import { deliver } from "./attach";
 import { appLock, isDesktop, notifier, shares } from "./platform";
 import { ChatIcon, TasksIcon } from "./icons";
@@ -390,6 +391,7 @@ export function App() {
         />
       )}
       <SyncConflict />
+      <AwaySheet />
       {/* tapping the slid-aside chat closes the menu */}
       {!wide && <button className="shell-scrim" aria-label="Close menu" tabIndex={drawer ? 0 : -1} onClick={() => setDrawer(false)} />}
     </div>

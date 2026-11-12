@@ -38,6 +38,24 @@
 
         </activity>
 
+        <!-- Keep watch (Settings): keeps Lyra running in the background, with a quiet notification -->
+        <service
+            android:name=".KeepWatchService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Runs the user's own scheduled routines and reminders while the app is in the background, at their request." />
+        </service>
+        <receiver android:name=".BackgroundPlugin$TickReceiver" android:exported="false" />
+        <!-- the home-screen widget -->
+        <receiver android:name=".LyraWidget" android:exported="false" android:label="Lyra">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/lyra_widget_info" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -58,4 +76,8 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- updates from your Drive: Android still asks you to confirm each install -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Keep watch: a foreground service (with its notification) and short wake-ups every 15 minutes -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 </manifest>

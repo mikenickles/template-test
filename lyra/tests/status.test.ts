@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chatText, readyText, routineText, shortTime, STATUS_MAX, upNext, weatherText, workingText } from "../web/src/statusText.ts";
+import { chatText, readyText, routineText, shortTime, STATUS_MAX, upNext, weatherText, widgetWords, workingText } from "../web/src/statusText.ts";
 import { describeWeather } from "../web/src/weather.ts";
 
 const fits = (s: string) => expect([...s].length, s).toBeLessThanOrEqual(STATUS_MAX);
@@ -41,5 +41,19 @@ describe("status line wording", () => {
     const now = new Date(2026, 10, 12, 6, 0);
     expect(upNext([{ name: "Morning brief", enabled: 1, next_run_at: new Date(2026, 10, 12, 7, 0).toISOString() }], now)).toBe("Morning brief at 7 AM");
     expect(upNext([{ name: "Morning brief", enabled: 0, next_run_at: new Date(2026, 10, 12, 7, 0).toISOString() }], now)).toBeNull();
+  });
+});
+
+describe("the home-screen widget", () => {
+  const now = new Date("2026-11-12T10:00:00");
+  it("says what's happening, what's ready or what's next, always fitting", () => {
+    expect(widgetWords({ working: [{ title: LONG }], ready: 2, upcoming: [] }, now).status).toMatch(/^Working/);
+    expect(widgetWords({ working: [], ready: 2, upcoming: [] }, now).status).toBe("2 things ready for you");
+    const next = widgetWords({ working: [], ready: 0, upcoming: [{ name: "Morning brief", enabled: 1, next_run_at: "2026-11-12T16:00:00" }] }, now);
+    expect(next.status).toMatch(/^Morning brief at 4/);
+    const idle = widgetWords({ working: [], ready: 0, upcoming: [] }, now);
+    for (const s of [next.status, idle.status]) fits(s);
+    expect(idle.detail).toBe("Tap to talk to Lyra");
+    expect(widgetWords({ working: [], ready: 0, upcoming: [], latest: { label: "Heads-up", text: "Dana is waiting" } }, now).detail).toBe("Heads-up: Dana is waiting");
   });
 });

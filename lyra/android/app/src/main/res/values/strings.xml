@@ -4,4 +4,5 @@
     <string name="title_activity_main">Lyra</string>
     <string name="package_name">app.lyra.chief</string>
     <string name="custom_url_scheme">app.lyra.chief</string>
+    <string name="widget_description">What Lyra is doing, what\'s ready for you, and what\'s next</string>
 </resources>

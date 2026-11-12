@@ -78,6 +78,22 @@ await page.locator(".pin-tag").first().waitFor();
 check(true, "the hover button on a message opens copy, pin and delete");
 await page.waitForTimeout(800); // let it save
 await page.screenshot({ path: join(shots, "desktop-2-chat.png") });
+
+// closing the window keeps Lyra running in the tray; the setting turns that off
+check((await page.evaluate(() => window.lyraDesktop.shell.prefs())).tray === true, "keeping running in the tray is on by default");
+await page.goto("app://lyra/index.html#/settings/alerts");
+const traySwitch = page.getByRole("switch", { name: /Keep running in the tray/ });
+check(await traySwitch.isChecked(), "Settings shows the tray switch");
+await page.screenshot({ path: join(shots, "desktop-6-background.png") });
+await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close());
+await page.waitForTimeout(500);
+check(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length === 1 && !BrowserWindow.getAllWindows()[0].isVisible()), "closing the window hides Lyra to the tray instead of quitting");
+await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].show());
+await traySwitch.click();
+await page.getByText("Closing the window quits Lyra").waitFor();
+check((await page.evaluate(() => window.lyraDesktop.shell.prefs())).tray === false, "the tray can be turned off");
+await traySwitch.click();
+await page.getByText("Lyra stays in the tray").waitFor();
 await app.close();
 
 const dataDir = join(home, ".config", "Lyra", "data");

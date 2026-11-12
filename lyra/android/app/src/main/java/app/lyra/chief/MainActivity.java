@@ -13,6 +13,10 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(ApkInstallerPlugin.class);
         // things shared to Lyra from other apps
         registerPlugin(ShareTargetPlugin.class);
+        // keeping watch in the background (routines, heads-ups) when you turn it on
+        registerPlugin(BackgroundPlugin.class);
+        // the home-screen widget's words
+        registerPlugin(LyraWidget.WidgetPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

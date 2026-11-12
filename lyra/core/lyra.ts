@@ -3,6 +3,7 @@
  * database, memory, model choice, API keys and connectors. It runs inside
  * the Android app; tests and the browser preview run the same code.
  */
+import { awaySince, type AwayItem } from "./away.ts";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SqlJsStatic } from "sql.js";
 import { CHANNEL_ICONS, runTurn, type TurnEmitter, type Workspace } from "./chat.ts";
@@ -953,6 +954,11 @@ export class Lyra {
   }
 
   // ---------- reminders and follow-ups ----------
+
+  /** What Lyra did on its own since then: routine posts, heads-ups, reminders, tasks now ready. */
+  away(since: string): { items: AwayItem[]; more: number } {
+    return awaySince(this.db, since);
+  }
 
   reminders(): Reminder[] {
     return pendingReminders(this.db);

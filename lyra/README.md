@@ -14,10 +14,10 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 | 6 | Routines (7am brief, check-ins, watches) | Done |
 | 7 | Safety net: encrypted backup and restore, app lock, message actions | Done |
 | 7b | Windows app and hand-off sync through encrypted Google Drive | Done |
-| 8 | Talk your way: voice input, share to Lyra, photos and files | **Here** |
-| 9 | Approvals and actions: drafts, calendar events, reminders from chat | Next |
+| 8 | Talk your way: live voice, share to Lyra, photos and files | Done |
+| 9 | Approvals and actions: drafts, calendar events | Next |
 | 10 | Smarter memory: search past chats, people, weekly tidy-up | Planned |
-| 11 | Works on its own: background routines, "while you were away", widget | Planned |
+| 11 | Works on its own: background routines, "while you were away", widget | Done (Proactive step 3) |
 | 12 | Polish: accent-colored app icon, fixes from testing | Planned |
 
 ### Windows app and sync (Phase 7b)
@@ -50,6 +50,13 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Quiet hours** (21:00 to 07:00 by default, can wrap past midnight): no checks then. Reminders you set still come.
 - Runs on the routine tick (`Lyra.tickHeadsUp`, `Routines.headsUp`), so like routines it runs on the phone when sync is on, never on the practice model, and not while Lyra is busy. What it said last time is passed to the next check so it doesn't repeat itself (settings `headsUpAt`, `headsUpLast`). Posts are tagged "Heads-up" and notify like a routine.
 - Heads-up and follow-up tokens show on the Usage page as their own kind of work ("proactive").
+
+### Proactive, step 3: works with the app closed
+
+- **Phone: Keep watch** (Settings → Notifications and privacy → In the background, off by default). Starts a quiet foreground service (`KeepWatchService.java`, a "Lyra is keeping watch" notification at the lowest importance) so Android doesn't freeze Lyra in the background, and wakes it every 15 minutes (`BackgroundPlugin.java`: an inexact `setAndAllowWhileIdle` alarm plus a wake lock of at most 3 minutes). The app's own code gets a `lyraBackgroundTick` event, runs whatever is due (routines, heads-ups, reminders, follow-ups), saves, sends to sync, and lets the phone sleep. Swiping Lyra out of recent apps stops it until it's opened again; it comes back on by itself then.
+- **Windows: the tray.** Closing the window leaves Lyra running in the tray (Quit is in the tray icon's menu), and it can open with Windows, straight into the tray (`--hidden`). Prefs live in `shell.json` in the app's folder. Needs the Windows shell 3 (`SHELL_VERSION`), so the full zip once.
+- **While you were away.** Coming back after 20 minutes or more, a sheet lists what Lyra did on its own meanwhile: routine posts, heads-ups, reminders, follow-ups, tasks now ready (`core/away.ts`, `web/src/Away.tsx`). Built from what's saved, no model call. Nothing to show, no sheet.
+- **Home-screen widget** (Android): Lyra's avatar in your accent color, its status (what it's working on, what's ready, what's next; always fits) and the latest thing it posted on its own today. Tap to open Lyra. `LyraWidget.java`, fed by `web/src/widget.ts` (wording `widgetWords` in `statusText.ts`).
 
 #### Settings and model picker
 

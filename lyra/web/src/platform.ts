@@ -29,12 +29,18 @@ interface DesktopBridge {
   backups: { keep(name: string, bytes: Uint8Array): Promise<string>; saveAs(name: string, bytes: Uint8Array): Promise<string | null>; openFolder(): Promise<void> };
   notify(title: string, body: string, hash: string): Promise<void>;
   onOpenHash(fn: (hash: string) => void): () => void;
+  /** shell 3 and later */
+  shell?: { prefs(): Promise<ShellPrefs>; setPrefs(p: Partial<ShellPrefs>): Promise<ShellPrefs> };
   updates: {
     info(): Promise<{ shellVersion: number; bundledVersion: string; runningVersion: string }>;
     installPack(bytes: Uint8Array): Promise<{ installed: boolean; needsFullInstall: boolean; version: string }>;
     ok(): Promise<void>;
     relaunch(): Promise<void>;
   };
+}
+interface ShellPrefs {
+  tray: boolean;
+  openAtLogin: boolean;
 }
 const desk = (globalThis as { lyraDesktop?: DesktopBridge }).lyraDesktop;
 /** Electron prefixes errors from the desktop side with "Error invoking remote method 'x': Error: ". */
@@ -474,5 +480,51 @@ export const shares = {
     if (!isNative) return () => {};
     const sub = ShareTarget.addListener("shared", fn);
     return () => void sub.then((s) => s.remove());
+  },
+};
+
+// ---------- working in the background ----------
+// Phone: "Keep watch" runs a quiet foreground service so Lyra keeps going in the background,
+// woken every 15 minutes. Computer: closing the window leaves Lyra in the tray.
+
+const NativeBackground = registerPlugin<{
+  status(): Promise<{ on: boolean }>;
+  set(o: { on: boolean }): Promise<{ on: boolean }>;
+  done(): Promise<void>;
+}>("LyraBackground");
+
+export interface BackgroundState {
+  /** keeps working with the app out of sight */
+  on: boolean;
+  /** computer only: starts with Windows, in the tray */
+  atLogin?: boolean;
+}
+
+export const background = {
+  /** null: this device can't (a browser, or a Windows app from before the tray) */
+  async state(): Promise<BackgroundState | null> {
+    if (isNative) return { on: (await NativeBackground.status()).on };
+    if (desk?.shell) {
+      const p = await desk.shell.prefs();
+      return { on: p.tray, atLogin: p.openAtLogin };
+    }
+    return null;
+  },
+  async set(s: Partial<BackgroundState>): Promise<BackgroundState | null> {
+    if (isNative) return { on: (await NativeBackground.set({ on: !!s.on })).on };
+    if (desk?.shell) {
+      const p = await desk.shell.setPrefs({ ...(s.on !== undefined ? { tray: s.on } : {}), ...(s.atLogin !== undefined ? { openAtLogin: s.atLogin } : {}) });
+      return { on: p.tray, atLogin: p.openAtLogin };
+    }
+    return null;
+  },
+  /** phone: the 15-minute wake-up; `run` does what's due, then the phone may sleep again */
+  onTick(run: () => Promise<void>): void {
+    if (!isNative) return;
+    addEventListener("lyraBackgroundTick", () => {
+      void run()
+        .catch(() => {})
+        .finally(() => void NativeBackground.done().catch(() => {}));
+    });
   },
 };

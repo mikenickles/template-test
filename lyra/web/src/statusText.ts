@@ -40,3 +40,13 @@ export function upNext(routines: { name: string; enabled: number; next_run_at: s
     : fit(`${next.name} tomorrow ${t}`, `${next.name} at ${t}`, `Tomorrow ${t}`);
 }
 
+
+/** The home-screen widget: a status that always fits, and the latest thing Lyra posted on its own. */
+export function widgetWords(
+  d: { working: { title: string }[]; ready: number; upcoming: { name: string; enabled: number; next_run_at: string | null }[]; latest?: { label: string; text: string } },
+  now = new Date(),
+): { status: string; detail: string } {
+  const next = upNext(d.upcoming, now);
+  const status = d.working.length ? workingText(d.working[0].title, d.working.length) : d.ready ? readyText(d.ready) : (next ?? fit("Here when you need me", "Here for you"));
+  return { status, detail: d.latest ? `${d.latest.label}: ${d.latest.text}` : "Tap to talk to Lyra" };
+}

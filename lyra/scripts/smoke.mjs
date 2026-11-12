@@ -204,6 +204,20 @@ try {
   check(true, "the routine's post shows in chat with its name");
   await shot("light-19-routine-post");
 
+  // ---- while you were away: back after a couple of hours, the routine's post is summed up ----
+  await page.evaluate(() => localStorage.setItem("lyra.leftAt", new Date(Date.now() - 2 * 3600_000).toISOString()));
+  await page.reload();
+  const away = page.getByRole("dialog", { name: "While you were away" });
+  await away.waitFor();
+  check((await away.locator(".away-item", { hasText: "Morning brief" }).count()) === 1, "coming back after a while shows what Lyra did meanwhile");
+  await shot("light-33-away");
+  await away.getByRole("button", { name: "Got it" }).click();
+  await away.waitFor({ state: "detached" });
+  await page.reload();
+  await page.locator(".bubble").first().waitFor();
+  await page.waitForTimeout(500);
+  check((await page.getByRole("dialog", { name: "While you were away" }).count()) === 0, "a quick reload doesn't show it again");
+
   // ---- channels ----
   await page.goto(`${base}/#/`);
   await page.getByRole("button", { name: "Channels" }).click();

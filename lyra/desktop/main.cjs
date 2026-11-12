@@ -1,7 +1,7 @@
 // Lyra for Windows (and other desktops): the same app as the phone, in a window.
 // This file is the desktop "shell": it serves the built app, stores files on disk,
 // keeps secrets with the OS (DPAPI on Windows), and signs in to Google.
-const { app, BrowserWindow, Notification, dialog, ipcMain, nativeTheme, net, protocol, safeStorage, shell } = require("electron");
+const { app, BrowserWindow, Menu, Notification, Tray, dialog, ipcMain, nativeImage, nativeTheme, net, protocol, safeStorage, shell } = require("electron");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const http = require("node:http");
@@ -14,7 +14,8 @@ const BUNDLED_DIST = path.join(__dirname, "dist");
 // code in dist (sandboxed web code); a change to the shell needs a full install, and
 // raising this number makes older shells refuse packs that need the new one.
 // 2: lets the app use the microphone for live voice.
-const SHELL_VERSION = 2;
+// 3: keeps running in the tray when the window is closed, and can open at sign-in.
+const SHELL_VERSION = 3;
 let DIST = BUNDLED_DIST;
 let activeVersion = null;
 const ICON = path.join(__dirname, "icon.png");
@@ -287,8 +288,9 @@ const themeColors = () =>
   nativeTheme.shouldUseDarkColors ? { bg: "#0d0f13", symbol: "#eceef1" } : { bg: "#f3f1ea", symbol: "#131416" };
 const overlay = () => ({ color: themeColors().bg, symbolColor: themeColors().symbol, height: 52 });
 
-function createWindow() {
+function createWindow(show = true) {
   win = new BrowserWindow({
+    show,
     width: 1180,
     height: 800,
     minWidth: 400,
@@ -325,14 +327,82 @@ function createWindow() {
     }
   });
   void win.loadURL("app://lyra/index.html");
+  // closing the window keeps Lyra running in the tray (Quit is in the tray's menu)
+  win.on("close", (e) => {
+    if (quitting || !prefs.tray) return;
+    e.preventDefault();
+    win.hide();
+    if (!prefs.toldAboutTray && Notification.isSupported()) {
+      prefs.toldAboutTray = true;
+      void savePrefs();
+      new Notification({ title: "Lyra is still running", body: "It keeps your routines and heads-ups going from the tray. Right-click its icon to quit.", icon: ICON }).show();
+    }
+  });
   win.on("closed", () => (win = null));
 }
 
-app.on("second-instance", () => {
-  if (!win) return;
+app.on("second-instance", () => showWindow());
+
+function showWindow() {
+  if (!win) return createWindow(true);
   if (win.isMinimized()) win.restore();
+  win.show();
   win.focus();
+}
+
+// ---------- the tray: Lyra keeps running (routines, heads-ups, sync) with the window closed ----------
+
+let tray = null;
+let quitting = false;
+const prefsFile = () => path.join(app.getPath("userData"), "shell.json");
+function readPrefs() {
+  try {
+    return { tray: true, openAtLogin: false, toldAboutTray: false, ...JSON.parse(fs.readFileSync(prefsFile(), "utf8")) };
+  } catch {
+    return { tray: true, openAtLogin: false, toldAboutTray: false };
+  }
+}
+let prefs = { tray: true, openAtLogin: false, toldAboutTray: false };
+const savePrefs = () => writeAtomic(prefsFile(), JSON.stringify(prefs));
+
+function updateTray() {
+  if (!prefs.tray) {
+    tray?.destroy();
+    tray = null;
+    return;
+  }
+  if (tray) return;
+  tray = new Tray(nativeImage.createFromPath(ICON).resize({ width: 32, height: 32 }));
+  tray.setToolTip("Lyra");
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: "Open Lyra", click: () => showWindow() },
+      { type: "separator" },
+      { label: "Quit Lyra", click: () => app.quit() },
+    ]),
+  );
+  tray.on("click", () => showWindow());
+}
+
+function applyLogin() {
+  // Windows only: start with Windows, straight into the tray
+  if (process.platform !== "win32" || !app.isPackaged) return;
+  app.setLoginItemSettings({ openAtLogin: prefs.openAtLogin, args: ["--hidden"] });
+}
+
+ipcMain.handle("shell:prefs", () => ({ tray: prefs.tray, openAtLogin: prefs.openAtLogin }));
+ipcMain.handle("shell:setPrefs", async (_e, p) => {
+  if (typeof p?.tray === "boolean") prefs.tray = p.tray;
+  if (typeof p?.openAtLogin === "boolean") prefs.openAtLogin = p.openAtLogin;
+  // opening at sign-in only makes sense if closing doesn't quit
+  if (!prefs.tray) prefs.openAtLogin = false;
+  await savePrefs();
+  updateTray();
+  applyLogin();
+  return { tray: prefs.tray, openAtLogin: prefs.openAtLogin };
 });
+
+app.on("before-quit", () => (quitting = true));
 
 // What the page may load and talk to: its own files, and HTTPS (the model APIs, Google).
 // http is allowed only for a model server you run yourself (Ollama, LM Studio).
@@ -450,11 +520,17 @@ app.whenReady().then(() => {
     return new Response(r.body, { status: r.status, headers });
   });
   startMenuShortcut();
-  createWindow();
+  prefs = readPrefs();
+  updateTray();
+  applyLogin();
+  // started with Windows: straight to the tray, no window popping up
+  createWindow(!(process.argv.includes("--hidden") && prefs.tray));
   // only what Lyra uses: notifications, the clipboard, and the microphone for live voice (never the camera)
   win.webContents.session.setPermissionRequestHandler((_wc, perm, cb, details) =>
     cb(perm === "notifications" || perm === "clipboard-sanitized-write" || (perm === "media" && (details.mediaTypes ?? []).every((t) => t === "audio"))),
   );
 });
 
-app.on("window-all-closed", () => app.quit());
+app.on("window-all-closed", () => {
+  if (!prefs.tray) app.quit();
+});

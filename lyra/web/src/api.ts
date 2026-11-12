@@ -22,7 +22,8 @@ import type { Platform } from "../../core/lyra";
 import { readSyncState, Sync, type SnapshotInfo, type SyncResult } from "../../core/sync";
 import { DriveSyncRemote } from "../../core/sync-drive";
 import { applyUpdate, checkForUpdate, watchForUpdates } from "./updater";
-import { createPlatform, deviceKind, isDesktop, isNative, keepBackupCopy, notifier, shareFile } from "./platform";
+import { watchWidget } from "./widget";
+import { background, createPlatform, deviceKind, isDesktop, isNative, keepBackupCopy, notifier, shareFile } from "./platform";
 
 export type MemoryNote = CoreNote;
 export type Message = StoredMessage;
@@ -74,6 +75,7 @@ const ready: Promise<Lyra> = createPlatform().then(async (p) => {
   runRoutines(lyra);
   watchSync(lyra);
   watchForUpdates(lyra);
+  watchWidget(lyra);
   // catch up with the other device before showing anything (but don't hang on a slow network)
   if (state.enabled) await Promise.race([syncNow(lyra), new Promise((r) => setTimeout(r, 6000))]);
   return lyra;
@@ -96,6 +98,13 @@ function runRoutines(lyra: Lyra): void {
   };
   tick();
   setInterval(tick, 60_000);
+  // the phone keeping watch in the background: run what's due, give it a couple of minutes to finish, save, send to sync
+  background.onTick(async () => {
+    tick();
+    await Promise.race([lyra.routinesRunner.settle(), new Promise((r) => setTimeout(r, 150_000))]);
+    await lyra.flush();
+    if (sync.state.enabled) await syncNow(lyra, { pull: false });
+  });
   if (isNative) void CapApp.addListener("resume", tick);
   else document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && tick());
 }
@@ -295,6 +304,7 @@ export const api = {
   liveExchange: async (user: string, assistant: string, channelId: number | null) => (await ready).liveExchange(user, assistant, channelId),
   liveEnded: async (seconds: number) => (await ready).liveEnded(seconds),
   usage: async (from: string, to: string) => (await ready).usage(from, to),
+  away: async (since: string) => (await ready).away(since),
   models: async (provider: "anthropic" | "openai" | "gemini" | "fake") => (await ready).models(provider),
   deleteMessage: async (id: number) => (await ready).deleteMessage(id),
   pinMessage: async (id: number, pinned: boolean) => (await ready).pinMessage(id, pinned),

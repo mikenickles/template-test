@@ -3,7 +3,7 @@ import { api, isNative, syncApi, type AppState, type SyncStatus } from "../api";
 import { Bell, Chart, Check, Chevron, Cloud, Cpu, Plug, Refresh, User } from "../icons";
 import { compact, dayKey } from "../usageData";
 import { Usage } from "./Usage";
-import { appLock, installer, isDesktop, thisDevice } from "../platform";
+import { appLock, background, installer, isDesktop, thisDevice, type BackgroundState } from "../platform";
 import { BackupSection } from "./Backup";
 import { ModelSettings } from "./ModelSettings";
 import { GoogleSetupSection, SyncSection } from "./SyncSection";
@@ -69,7 +69,7 @@ export function Settings({ state, setState, toast, section }: Props) {
       )}
       {section === "usage" && <Usage />}
       {section === "you" && <YouSection state={state} setState={setState} toast={toast} run={run} busy={busy} />}
-      {section === "alerts" && <AlertsSection state={state} run={run} busy={busy} />}
+      {section === "alerts" && <AlertsSection state={state} run={run} busy={busy} toast={toast} />}
       {section === "sync" && (
         <>
           <SyncSection toast={toast} />
@@ -211,12 +211,84 @@ function HeadsUps({ state, run, busy }: { state: AppState; run: (fn: () => Promi
           </label>
         </div>
       )}
-      {p.level !== "off" && <p className="hint">Each check uses some tokens even when it stays quiet. They show on the Usage page under heads-ups. Checks run while Lyra is open{isNative ? "" : ". With sync on, your phone does the checking"}.</p>}
+      {p.level !== "off" && <p className="hint">Each check uses some tokens even when it stays quiet. They show on the Usage page under heads-ups. Checks run while Lyra is open, or in the background with {isNative ? "Keep watch" : "the tray"} (below){isNative ? "" : ". With sync on, your phone does the checking"}.</p>}
     </section>
   );
 }
 
-function AlertsSection({ state, run, busy }: { state: AppState; run: (fn: () => Promise<AppState>, done: string) => Promise<void>; busy: boolean }) {
+/** Keep working with the app out of sight: the phone's "Keep watch", the computer's tray. */
+function BackgroundSection({ toast }: { toast: (m: string) => void }) {
+  const [bg, setBg] = useState<BackgroundState | null | undefined>(undefined);
+  const [routinesHere, setRoutinesHere] = useState(true);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    void background.state().then(setBg, () => setBg(null));
+    void syncApi.status().then((s) => setRoutinesHere(s.routinesHere), () => {});
+  }, []);
+  if (bg === undefined || (!isNative && !isDesktop)) return null;
+  const change = async (patch: Partial<BackgroundState>, done: string) => {
+    setBusy(true);
+    try {
+      setBg(await background.set(patch));
+      toast(done);
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="section">
+      <h2 className="section-label">In the background</h2>
+      {bg === null ? (
+        <p className="hint">Keeping Lyra running in the tray needs the newest Windows app. Get it from Settings, Updates.</p>
+      ) : (
+        <>
+          <div className="group">
+            <label className="item">
+              <span className="body">
+                <div className="title">{isNative ? "Keep watch" : "Keep running in the tray"}</div>
+                <div className="sub">
+                  {isNative
+                    ? "Routines, heads-ups and follow-ups keep running after you leave Lyra, checked every 15 minutes. Android shows a small \u201ckeeping watch\u201d notification while it's on. Uses a little more battery."
+                    : "Closing the window leaves Lyra in the tray, so routines, heads-ups and sync keep going. Quit from the tray icon."}
+                </div>
+              </span>
+              <input
+                type="checkbox"
+                role="switch"
+                className="switch"
+                checked={bg.on}
+                disabled={busy}
+                onChange={(e) => void change({ on: e.target.checked }, e.target.checked ? (isNative ? "Keeping watch" : "Lyra stays in the tray") : isNative ? "Stopped keeping watch" : "Closing the window quits Lyra")}
+              />
+            </label>
+            {isDesktop && (
+              <label className="item">
+                <span className="body">
+                  <div className="title">Open when Windows starts</div>
+                  <div className="sub">Starts quietly in the tray when you sign in.</div>
+                </span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  className="switch"
+                  checked={!!bg.atLogin}
+                  disabled={busy || !bg.on}
+                  onChange={(e) => void change({ atLogin: e.target.checked }, e.target.checked ? "Lyra opens with Windows" : "Lyra won't open with Windows")}
+                />
+              </label>
+            )}
+          </div>
+          {isNative && <p className="hint">Swiping Lyra away from your recent apps stops it until you open it again.</p>}
+          {isDesktop && !routinesHere && <p className="hint">With sync on, your phone runs routines and heads-ups. The tray keeps sync and notifications going here.</p>}
+        </>
+      )}
+    </section>
+  );
+}
+
+function AlertsSection({ state, run, busy, toast }: { state: AppState; run: (fn: () => Promise<AppState>, done: string) => Promise<void>; busy: boolean; toast: (m: string) => void }) {
   return (
     <>
       <section className="section">
@@ -247,6 +319,7 @@ function AlertsSection({ state, run, busy }: { state: AppState; run: (fn: () => 
       </section>
 
       <HeadsUps state={state} run={run} busy={busy} />
+      <BackgroundSection toast={toast} />
 
       <section className="section">
         <h2 className="section-label">Privacy</h2>

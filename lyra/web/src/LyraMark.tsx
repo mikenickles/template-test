@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 // one avatar per accent color: the headphone glow matches the accent
 const AVATARS = import.meta.glob<string>("./assets/avatar-*.webp", { eager: true, import: "default" });
-const avatarFor = (accent: string) => AVATARS[`./assets/avatar-${accent}.webp`] ?? AVATARS["./assets/avatar-lime.webp"];
+export const avatarFor = (accent: string) => AVATARS[`./assets/avatar-${accent}.webp`] ?? AVATARS["./assets/avatar-lime.webp"];
 
 /** The accent color set on <html>, kept current when it changes in Settings. */
 function useAccent(): string {

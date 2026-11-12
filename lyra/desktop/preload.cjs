@@ -29,6 +29,11 @@ contextBridge.exposeInMainWorld("lyraDesktop", {
     return () => ipcRenderer.removeListener("open-hash", h);
   },
   info: () => ipcRenderer.invoke("app:info"),
+  // keep running in the tray, open at sign-in (shell 3)
+  shell: {
+    prefs: () => ipcRenderer.invoke("shell:prefs"),
+    setPrefs: (p) => ipcRenderer.invoke("shell:setPrefs", p),
+  },
   updates: {
     info: () => ipcRenderer.invoke("updates:info"),
     installPack: (bytes) => ipcRenderer.invoke("updates:installPack", bytes),
