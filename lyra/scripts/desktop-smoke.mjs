@@ -41,7 +41,7 @@ await page.keyboard.press("Control+n");
 await page.getByRole("heading", { name: "New channel" }).waitFor();
 await page.getByLabel("Name").fill("Home");
 await page.getByRole("button", { name: "Create", exact: true }).click();
-await page.locator(".drawer-panel .nav-item", { hasText: "Home" }).waitFor();
+await page.locator(".drawer-panel .star-row", { hasText: "Home" }).waitFor();
 check(true, "Ctrl+N makes a channel, and it appears in the sidebar");
 await page.locator(".drawer-panel .nav-item.side", { hasText: "Settings" }).click();
 await page.getByRole("link", { name: /Sync and backup/ }).click();

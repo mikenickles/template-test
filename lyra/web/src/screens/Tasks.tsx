@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { api, onChange, type Channel, type Task, type TaskDetail, type TaskStatus, type WorkerRun } from "../api";
-import { ChannelIcon, CheckCircle, Chevron, Close, Pencil, Plus, Search, Stop, Trash } from "../icons";
+import { ChannelIcon, CheckCircle, Chevron, Close, Pencil, Plus, Search, Star, Stop, Trash } from "../icons";
 import { Thinking } from "../LyraMark";
 import { Markdown } from "../markdown";
 import { ScheduledSection } from "./Routines";
@@ -53,7 +54,112 @@ function TaskRowView({ t, onToggle }: { t: Task; onToggle: (t: Task) => void }) 
   );
 }
 
-export function Tasks({ toast, channels, onCounts }: { toast: (m: string) => void; channels: Channel[]; onCounts: () => void }) {
+/** Tomorrow at 9 in the morning, this device's time: when a "Later" task comes back. */
+function tomorrowMorning(now = new Date()): Date {
+  const d = new Date(now);
+  d.setDate(d.getDate() + 1);
+  d.setHours(9, 0, 0, 0);
+  return d;
+}
+
+const snoozed = (t: Task) => !!t.snoozed_until && new Date(t.snoozed_until).getTime() > Date.now();
+
+/** A ready task: a card that stands out, since it's waiting on you. */
+function ReadyCard({ t }: { t: Task }) {
+  return (
+    <a className="ready-card" href={`#/t/${t.id}`}>
+      <Star size={20} className="ready-star" />
+      <span className="ready-body">
+        <span className="task-title">{t.title}</span>
+        <span className="task-sub">{t.needs || (t.channel_name ? t.channel_name : "Lyra finished its part")}</span>
+      </span>
+      <Chevron size={18} className="chev" />
+    </a>
+  );
+}
+
+/** Swipe left to put a task off until tomorrow, or mark it done. */
+function SwipeRow({ children, onLater, onDone, laterLabel = "Later" }: { children: ReactNode; onLater: () => void; onDone: () => void; laterLabel?: string }) {
+  const WIDTH = 152;
+  const [dx, setDx] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const start = useRef<{ x: number; y: number; dx: number; locked: boolean } | null>(null);
+  // the click that ends a drag isn't a tap
+  const dragged = useRef(false);
+  const open = dx <= -WIDTH / 2;
+  return (
+    <div className="swipe">
+      <div className="swipe-actions" aria-hidden={!open}>
+        <button type="button" className="swipe-later" tabIndex={open ? 0 : -1} onClick={() => (setDx(0), onLater())}>
+          {laterLabel}
+        </button>
+        <button type="button" className="swipe-done" tabIndex={open ? 0 : -1} onClick={() => (setDx(0), onDone())}>
+          Done
+        </button>
+      </div>
+      <div
+        className={`swipe-front${dragging ? " dragging" : ""}`}
+        style={{ transform: `translateX(${dx}px)` }}
+        onDragStart={(e) => e.preventDefault()}
+        onPointerDown={(e) => {
+          if (e.pointerType === "mouse" && e.button !== 0) return;
+          dragged.current = false;
+          start.current = { x: e.clientX, y: e.clientY, dx, locked: false };
+        }}
+        onPointerMove={(e) => {
+          const s = start.current;
+          if (!s) return;
+          const mx = e.clientX - s.x;
+          const my = e.clientY - s.y;
+          if (!s.locked) {
+            if (Math.abs(my) > 10 && Math.abs(my) > Math.abs(mx)) return void (start.current = null); // scrolling
+            if (Math.abs(mx) < 8) return;
+            s.locked = true;
+            dragged.current = true;
+            setDragging(true);
+            (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+          }
+          setDx(Math.max(-WIDTH - 24, Math.min(0, s.dx + mx)));
+        }}
+        onPointerUp={() => {
+          if (start.current?.locked) setDx((d) => (d < -WIDTH / 2 ? -WIDTH : 0));
+          start.current = null;
+          setDragging(false);
+        }}
+        onPointerCancel={() => {
+          start.current = null;
+          setDragging(false);
+          setDx(0);
+        }}
+        onClickCapture={(e) => {
+          if (dragged.current) {
+            dragged.current = false;
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
+          // a tap on an open row closes it instead of opening the task
+          if (dx !== 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            setDx(0);
+          }
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Puts children in the top bar's middle/right on the phone, or in the page on a computer. */
+function TopSlot({ id, children }: { id: string; children: ReactNode }) {
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => setSlot(document.getElementById(id)), [id]);
+  return slot ? createPortal(children, slot) : <>{children}</>;
+}
+
+export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: string) => void; channels: Channel[]; onCounts: () => void; wide?: boolean }) {
   const [tab, setTab] = useState<"active" | "done">(() => (sessionStorage.getItem("lyra.tasksTab") === "done" ? "done" : "active"));
   const [rows, setRows] = useState<Task[] | null>(null);
   const [q, setQ] = useState("");
@@ -92,29 +198,64 @@ export function Tasks({ toast, channels, onCounts }: { toast: (m: string) => voi
     }
   };
 
-  const groups = tab === "active" ? ACTIVE_ORDER.map((s) => ({ status: s, items: (rows ?? []).filter((r) => r.status === s) })) : [];
+  const later = async (t: Task) => {
+    try {
+      await api.snoozeTask(t.id, tomorrowMorning().toISOString());
+      toast("Back tomorrow morning");
+      load();
+    } catch (e) {
+      toast((e as Error).message);
+    }
+  };
+  const bringBack = async (t: Task) => {
+    try {
+      await api.snoozeTask(t.id, null);
+      toast("Back in Up next");
+      load();
+    } catch (e) {
+      toast((e as Error).message);
+    }
+  };
+
+  const awake = (rows ?? []).filter((r) => !snoozed(r));
+  const groups = tab === "active" ? ACTIVE_ORDER.map((s) => ({ status: s, items: awake.filter((r) => r.status === s) })) : [];
+  const putOff = tab === "active" ? (rows ?? []).filter(snoozed) : [];
+
+  const seg = (
+    <div className="seg-tabs" role="tablist" aria-label="Tasks">
+      {(["active", "done"] as const).map((k) => (
+        <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>
+          {k === "active" ? "Active" : "Done"}
+        </button>
+      ))}
+    </div>
+  );
+  const searchBtn = (
+    <button
+      className="ring"
+      aria-label={searching ? "Close search" : "Search tasks"}
+      onClick={() => {
+        if (searching) setQ("");
+        setSearching((v) => !v);
+      }}
+    >
+      {searching ? <Close size={20} /> : <Search size={20} />}
+    </button>
+  );
 
   return (
     <div className="screen tasks-screen">
-      <div className="tasks-head">
-        <div className="tabs" role="tablist">
-          {(["active", "done"] as const).map((k) => (
-            <button key={k} role="tab" aria-selected={tab === k} className={`tab${tab === k ? " on" : ""}`} onClick={() => setTab(k)}>
-              {k === "active" ? "Active" : "Done"}
-            </button>
-          ))}
+      {wide ? (
+        <div className="tasks-head">
+          {seg}
+          {searchBtn}
         </div>
-        <button
-          className="icon-btn"
-          aria-label={searching ? "Close search" : "Search tasks"}
-          onClick={() => {
-            if (searching) setQ("");
-            setSearching((v) => !v);
-          }}
-        >
-          {searching ? <Close size={22} /> : <Search size={22} />}
-        </button>
-      </div>
+      ) : (
+        <>
+          <TopSlot id="topbar-center">{seg}</TopSlot>
+          <TopSlot id="topbar-right">{searchBtn}</TopSlot>
+        </>
+      )}
 
       {searching && (
         <input ref={searchRef} className="field search" type="search" placeholder="Search tasks" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search tasks" />
@@ -130,18 +271,42 @@ export function Tasks({ toast, channels, onCounts }: { toast: (m: string) => voi
           {!q && tab === "active" && <p>Hand Lyra something in chat, like “find me a plumber before Monday”, or tap + to add a task yourself.</p>}
         </div>
       ) : tab === "active" ? (
-        groups
-          .filter((g) => g.items.length)
-          .map((g) => (
-            <section className="task-group" key={g.status}>
+        <>
+          {groups
+            .filter((g) => g.items.length)
+            .map((g) => (
+              <section className={`task-group g-${g.status}`} key={g.status}>
+                <h2 className="section-label">
+                  {STATUS_LABEL[g.status]} <span className="count">{g.items.length}</span>
+                </h2>
+                {g.items.map((t) =>
+                  t.status === "ready" ? (
+                    <SwipeRow key={t.id} onLater={() => void later(t)} onDone={() => void toggle(t)}>
+                      <ReadyCard t={t} />
+                    </SwipeRow>
+                  ) : t.status === "working" ? (
+                    <TaskRowView key={t.id} t={t} onToggle={toggle} />
+                  ) : (
+                    <SwipeRow key={t.id} onLater={() => void later(t)} onDone={() => void toggle(t)}>
+                      <TaskRowView t={t} onToggle={toggle} />
+                    </SwipeRow>
+                  ),
+                )}
+              </section>
+            ))}
+          {putOff.length > 0 && (
+            <section className="task-group g-later">
               <h2 className="section-label">
-                {STATUS_LABEL[g.status]} <span className="count">{g.items.length}</span>
+                Later <span className="count">{putOff.length}</span>
               </h2>
-              {g.items.map((t) => (
-                <TaskRowView key={t.id} t={t} onToggle={toggle} />
+              {putOff.map((t) => (
+                <SwipeRow key={t.id} laterLabel="Now" onLater={() => void bringBack(t)} onDone={() => void toggle(t)}>
+                  <TaskRowView t={t} onToggle={toggle} />
+                </SwipeRow>
               ))}
             </section>
-          ))
+          )}
+        </>
       ) : (
         <section className="task-group">
           {rows.map((t) => (

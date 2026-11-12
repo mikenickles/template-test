@@ -122,7 +122,8 @@ try {
   await page.getByText("Undone").waitFor();
   check(true, "undo from chat works");
 
-  await page.getByRole("link", { name: "What Lyra can access" }).click();
+  await page.getByRole("button", { name: "Channels" }).click();
+  await page.locator(".drawer-sections").getByRole("link", { name: "Lyra" }).click();
   await page.getByText("What Lyra has access to").waitFor();
   check((await page.getByText("Needs the Android app").count()) === 3, "browser preview says Google connections need the Android app");
   await shot("light-3-access");
@@ -168,8 +169,17 @@ try {
   await page.getByRole("link", { name: "Back" }).click();
   await page.locator(".badge").waitFor();
   check(true, "the Tasks tab shows a badge for tasks ready for you");
-  await page.getByRole("button", { name: "Mark Find a plumber for the kitchen leak done" }).click();
+  // a ready task is a card: swipe it left, then Done
+  check((await page.locator(".ready-card", { hasText: "Find a plumber" }).count()) === 1, "a task that's ready for you stands out as a card");
+  const card = await page.locator(".ready-card").boundingBox();
+  await page.mouse.move(card.x + card.width - 30, card.y + card.height / 2);
+  await page.mouse.down();
+  for (let i = 1; i <= 8; i++) await page.mouse.move(card.x + card.width - 30 - i * 25, card.y + card.height / 2);
+  await page.mouse.up();
+  await shot("light-34-swipe");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
   await page.getByText("Nothing on your plate.").waitFor();
+  check(true, "swiping a task reveals Later and Done");
   await page.getByRole("tab", { name: "Done" }).click();
   await page.getByText("Find a plumber for the kitchen leak").waitFor();
   check(true, "marking done moves a task to the Done tab");
@@ -218,6 +228,17 @@ try {
   await page.waitForTimeout(500);
   check((await page.getByRole("dialog", { name: "While you were away" }).count()) === 0, "a quick reload doesn't show it again");
 
+  // ---- Today: tap Lyra's face in the main chat ----
+  await page.getByRole("button", { name: "Today" }).click();
+  const today = page.getByRole("region", { name: "Today" });
+  await today.waitFor();
+  await today.locator(".today-item", { hasText: "Morning brief" }).first().waitFor();
+  check(true, "the Today view lists what Lyra did and what's coming");
+  await shot("light-35-today");
+  await today.getByRole("button", { name: "Back to the conversation" }).click();
+  await today.waitFor({ state: "detached" });
+  check(true, "Today flips back to the conversation");
+
   // ---- channels ----
   await page.goto(`${base}/#/`);
   await page.getByRole("button", { name: "Channels" }).click();
@@ -241,10 +262,21 @@ try {
   check((await page.locator(".bubble").count()) === 1, "channel chat starts empty and holds its own messages");
   await shot("light-9-channel-chat");
 
+  // ---- search every chat from the menu, and jump to the message ----
+  await page.goto(`${base}/#/`);
+  await page.getByRole("button", { name: "Channels" }).click();
+  await page.getByRole("searchbox", { name: "Search all chats" }).fill("bounce house");
+  await page.locator(".search-hit", { hasText: "bounce house" }).first().waitFor();
+  check((await page.locator(".search-hit .search-where", { hasText: "Rowan" }).count()) >= 1, "search finds messages in any channel");
+  await shot("light-36-search");
+  await page.locator(".search-hit", { hasText: "bounce house" }).first().click();
+  await page.locator(".row.focused", { hasText: "bounce house" }).waitFor();
+  check(true, "tapping a result opens that chat at the message");
+
   await page.getByRole("button", { name: "Channels" }).click();
   await page.locator(".app.drawer-open").waitFor();
   await page.waitForTimeout(350);
-  check((await page.locator(".drawer-panel .nav-item", { hasText: "Rowan" }).count()) === 1, "drawer lists the channel");
+  check((await page.locator(".drawer-panel .star-row", { hasText: "Rowan" }).count()) === 1, "drawer lists the channel");
   await page.getByRole("button", { name: "New channel" }).click();
   await page.getByLabel("Name").fill("Home");
   await page.getByRole("button", { name: "Change icon" }).click();
@@ -286,7 +318,7 @@ try {
   await page.getByRole("button", { name: "Delete channel" }).click();
   await page.getByText("Hi Sam, I'm Lyra.").or(page.locator(".bubble").first()).waitFor();
   await page.getByRole("button", { name: "Channels" }).click();
-  check((await page.locator(".drawer-panel .nav-item", { hasText: "Rowan" }).count()) === 0, "deleting a channel removes it");
+  check((await page.locator(".drawer-panel .star-row", { hasText: "Rowan" }).count()) === 0, "deleting a channel removes it");
   await page.keyboard.press("Escape");
 
   await page.emulateMedia({ colorScheme: "dark" });
@@ -327,7 +359,8 @@ try {
   await page.getByRole("button", { name: "Pin", exact: true }).click();
   await page.locator(".pin-tag").first().waitFor();
   check(true, "long-press pins a message");
-  await page.getByRole("link", { name: "What Lyra can access" }).click();
+  await page.getByRole("button", { name: "Channels" }).click();
+  await page.locator(".drawer-sections").getByRole("link", { name: "Lyra" }).click();
   await page.locator(".pinned-item", { hasText: "When is it?" }).waitFor();
   check(true, "pinned messages show on the info page");
   await shot("light-25-pinned");

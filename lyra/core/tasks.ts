@@ -30,6 +30,8 @@ export interface Task {
   created_at: string;
   updated_at: string;
   done_at: string | null;
+  /** put off ("Later"): out of Up next until this time */
+  snoozed_until: string | null;
 }
 
 export interface TaskRow extends Task {
@@ -252,4 +254,14 @@ export function describeTasks(rows: TaskRow[], withChannel: boolean): string {
       return `- ${bits.join(" ")}`;
     })
     .join("\n");
+}
+
+/** "Later": out of Up next until `until` (null brings it back now). */
+export function snoozeTask(db: DB, id: number, until: Date | null, who: Who = "you"): TaskRow {
+  const t = getTask(db, id);
+  if (!t) throw new Error("That task no longer exists.");
+  if (until && Number.isNaN(until.getTime())) throw new Error("That time doesn't look right.");
+  db.run("UPDATE tasks SET snoozed_until = ? WHERE id = ?", [until ? until.toISOString() : null, id]);
+  if (until) log(db, id, who, `${who === "you" ? "You" : "Lyra"} put it off until later.`);
+  return getTask(db, id)!;
 }

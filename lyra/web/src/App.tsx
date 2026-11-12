@@ -18,10 +18,10 @@ import { StatusLine } from "./StatusLine";
 import { AwaySheet } from "./Away";
 import { deliver } from "./attach";
 import { appLock, isDesktop, notifier, shares } from "./platform";
-import { ChatIcon, TasksIcon } from "./icons";
+import { Star, TasksIcon } from "./icons";
 
 export type Route =
-  | { name: "chat"; channelId: number | null }
+  | { name: "chat"; channelId: number | null; focus?: number }
   | { name: "channel-info"; channelId: number }
   | { name: "tasks" }
   | { name: "task"; taskId: number }
@@ -33,9 +33,11 @@ export type Route =
   | { name: "settings"; section?: SettingsSection };
 
 export function readRoute(hash = location.hash): Route {
-  const path = hash.replace(/^#\/?/, "").split("?")[0];
+  const [path, query = ""] = hash.replace(/^#\/?/, "").split("?");
+  // "?m=123": a message to jump to
+  const m = Number(new URLSearchParams(query).get("m")) || undefined;
   const c = path.match(/^c\/(\d+)(\/info)?$/);
-  if (c) return c[2] ? { name: "channel-info", channelId: Number(c[1]) } : { name: "chat", channelId: Number(c[1]) };
+  if (c) return c[2] ? { name: "channel-info", channelId: Number(c[1]) } : { name: "chat", channelId: Number(c[1]), focus: m };
   const t = path.match(/^t\/(\d+)(\/log)?$/);
   if (t) return t[2] ? { name: "worker-log", taskId: Number(t[1]) } : { name: "task", taskId: Number(t[1]) };
   const r = path.match(/^r\/(\d+)$/);
@@ -43,7 +45,7 @@ export function readRoute(hash = location.hash): Route {
   const s = path.match(/^settings\/(\w+)$/);
   if (s && (SETTINGS_SECTIONS as string[]).includes(s[1])) return { name: "settings", section: s[1] as SettingsSection };
   if (path === "tasks" || path === "access" || path === "memory" || path === "soul" || path === "settings") return { name: path };
-  return { name: "chat", channelId: null };
+  return { name: "chat", channelId: null, focus: m };
 }
 
 /** Where the back button (on screen or Android's) goes from each screen. */
@@ -302,11 +304,18 @@ export function App() {
               <Back />
             </a>
           )}
-          {inChat && !channel && (
+          {route.name === "tasks" && <div className="topbar-slot" id="topbar-center" />}
+          {route.name === "chat" && !channel && (
             <div className="avatar-stack">
-              <a className="orb orb-sm" href="#/access" aria-label="What Lyra can access">
-                <Avatar />
-              </a>
+              {route.name === "chat" ? (
+                <button type="button" className="orb orb-sm" aria-label="Today" title="Today" onClick={() => dispatchEvent(new Event("lyra:today"))}>
+                  <Avatar />
+                </button>
+              ) : (
+                <a className="orb orb-sm" href="#/" aria-label="Chat">
+                  <Avatar />
+                </a>
+              )}
               <StatusLine state={state} />
             </div>
           )}
@@ -317,7 +326,6 @@ export function App() {
                   <Avatar />
                 </span>
                 <span className="channel-chip">
-                  <ChannelIcon name={channel.icon} size={16} />
                   <span>{channel.name}</span>
                 </span>
               </a>
@@ -325,7 +333,9 @@ export function App() {
             </div>
           )}
           {!inChat && <span />}
-          {inChat ? (
+          {route.name === "tasks" ? (
+            <div className="topbar-slot" id="topbar-right" />
+          ) : inChat ? (
             <a className="ring initial" href="#/settings" aria-label="Settings">
               {initial}
             </a>
@@ -336,13 +346,13 @@ export function App() {
         )}
 
         {route.name === "chat" && !channelMissing && (
-          <Chat key={route.channelId ?? "main"} hasOpenAI={state.keys.openai} userName={state.userName} toast={toast} channel={channel ?? null} onTasksChanged={refreshCounts} />
+          <Chat key={route.channelId ?? "main"} focus={route.focus} hasOpenAI={state.keys.openai} userName={state.userName} toast={toast} channel={channel ?? null} onTasksChanged={refreshCounts} />
         )}
         {channelMissing && <div className="center-load">Loading…</div>}
         {route.name === "channel-info" && (
           <ChannelInfo key={route.channelId} id={route.channelId} toast={toast} onChange={refreshChannels} />
         )}
-        {route.name === "tasks" && <Tasks toast={toast} channels={channels} onCounts={refreshCounts} />}
+        {route.name === "tasks" && <Tasks toast={toast} channels={channels} onCounts={refreshCounts} wide={wide} />}
         {route.name === "task" && <TaskPage key={route.taskId} id={route.taskId} toast={toast} onCounts={refreshCounts} />}
         {route.name === "worker-log" && <WorkerLog key={route.taskId} id={route.taskId} />}
         {route.name === "routine" && <RoutinePage key={route.routineId} id={route.routineId} toast={toast} channels={channels} />}
@@ -354,13 +364,24 @@ export function App() {
         {inChat && !wide && (
           <nav className={`tabbar${route.name === "chat" ? " floating" : ""}`} aria-label="Sections">
             <div className="tabbar-inner">
-              <a className={`tabbar-item${route.name === "chat" ? " on" : ""}`} href={route.name === "chat" ? "#/" : lastChat} aria-current={route.name === "chat" ? "page" : undefined}>
-                <ChatIcon size={24} />
+              <a
+                className={`tabbar-item${route.name === "chat" ? " on" : ""}`}
+                href={route.name === "chat" ? "#/" : lastChat}
+                aria-current={route.name === "chat" ? "page" : undefined}
+                onClick={(e) => {
+                  // already in the main chat: Chat flips between Today and the conversation
+                  if (route.name === "chat" && route.channelId === null) {
+                    e.preventDefault();
+                    dispatchEvent(new Event("lyra:today"));
+                  }
+                }}
+              >
+                <Star size={18} />
                 <span>Chat</span>
               </a>
               <a className={`tabbar-item${route.name === "tasks" ? " on" : ""}`} href="#/tasks" aria-current={route.name === "tasks" ? "page" : undefined}>
                 <span className="tabbar-icon">
-                  <TasksIcon size={24} />
+                  <TasksIcon size={20} />
                   {readyCount > 0 && (
                     <span className="badge" aria-label={`${readyCount} ready for you`}>
                       {readyCount}
@@ -482,6 +503,11 @@ function DeskBar({ route, channel, back }: { route: Route; channel?: Channel; ba
         </div>
       )}
       <span className="desk-drag" />
+      {inChat && !channel && (
+        <button type="button" className="desk-action" aria-label="Today" title="Today" onClick={() => dispatchEvent(new Event("lyra:today"))}>
+          <Star size={18} />
+        </button>
+      )}
       {inChat && (
         <a className="desk-action" href={channel ? `#/c/${channel.id}/info` : "#/access"} aria-label={channel ? `${channel.name}: channel details` : "What Lyra can access"} title="Details">
           <Info size={20} />

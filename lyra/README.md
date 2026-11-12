@@ -51,6 +51,14 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - Runs on the routine tick (`Lyra.tickHeadsUp`, `Routines.headsUp`), so like routines it runs on the phone when sync is on, never on the practice model, and not while Lyra is busy. What it said last time is passed to the next check so it doesn't repeat itself (settings `headsUpAt`, `headsUpLast`). Posts are tagged "Heads-up" and notify like a routine.
 - Heads-up and follow-up tokens show on the Usage page as their own kind of work ("proactive").
 
+### The redesign: Lyra's constellation
+
+- **Today view.** The top of the main chat when you come back after 30 minutes or more (or tap Lyra's face, the Chat tab, or Everything in the menu; on a computer, the star in the title bar). It leads with how many things need you, then lists them as stars on a gentle zigzag line: tasks ready for you and emails or events waiting for your OK (bright), what Lyra posted on its own lately, and what's coming up in the next day. Quick buttons: Brief me, What's on today?, What needs a reply? Built from what's saved, no model call (`core/today.ts` `todayView`, `web/src/Today.tsx`).
+- **Channels as a constellation.** The menu shows Everything and each channel as stars joined by a thin line; a channel with new messages from Lyra glows and says "2 new" (counted per device since you last looked: `unreadCounts`, `web/src/seen.ts`). Tasks, Memory, Lyra and Settings sit along the bottom.
+- **Search all chats** from the menu: every word must match; tapping a result opens that chat at the message, highlighted (`searchMessages`, route `?m=<id>`).
+- **Chat.** A star beside Lyra's replies instead of a dot, star day dividers, the channel name under Lyra's face, a quiet Talk icon, a slimmer tab bar.
+- **Tasks.** Active/Done as a segmented control in the top bar, tasks ready for you as cards, and swipe left on a task for **Later** (back tomorrow at 9, in a Later group until then; `snoozed_until`) or **Done**.
+
 ### Phase 9: emails and events, with your OK each time
 
 - **Off until you turn it on**, per service, on the Lyra page under **With your OK each time**: "Write emails" asks Google for `gmail.compose`, "Add calendar events" for `calendar.events`. Each is the narrowest Google permission that can do the job; anything wider (all of Gmail, modify/delete, full Calendar or Drive) is still refused (`grantIsAllowed` in `core/connectors/google.ts`).

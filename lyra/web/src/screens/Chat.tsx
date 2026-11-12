@@ -6,6 +6,9 @@ import { MAX_ATTACHMENTS } from "../../../core/attachments";
 import { copyText, isNative, liveVoice } from "../platform";
 import { VoiceOverlay } from "../VoiceOverlay";
 import { ActionCards } from "../ActionCard";
+import { TodayView } from "../Today";
+import { markSeen } from "../seen";
+import { Star } from "../icons";
 import { setChatStatus } from "../StatusLine";
 import { STATUS_LABEL } from "./Tasks";
 import { StarChart, Thinking } from "../LyraMark";
@@ -33,16 +36,21 @@ interface ChatProps {
   toast: (msg: string) => void;
   channel: Channel | null;
   onTasksChanged?: () => void;
+  /** a message to scroll to and highlight (from search or the Today view) */
+  focus?: number;
 }
+
+/** Coming back to the main chat after this long opens the Today view. */
+const TODAY_AFTER = 30 * 60_000;
 
 /** Skip re-rendering the whole conversation unless something it shows changed (e.g. while the menu slides). */
 export const Chat = memo(ChatView, (a, b) => {
   const same = (x: Channel | null, y: Channel | null) =>
     x === y || (!!x && !!y && x.id === y.id && x.name === y.name && x.icon === y.icon && x.about === y.about);
-  return a.hasOpenAI === b.hasOpenAI && a.userName === b.userName && a.toast === b.toast && a.onTasksChanged === b.onTasksChanged && same(a.channel, b.channel);
+  return a.focus === b.focus && a.hasOpenAI === b.hasOpenAI && a.userName === b.userName && a.toast === b.toast && a.onTasksChanged === b.onTasksChanged && same(a.channel, b.channel);
 });
 
-function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI }: ChatProps) {
+function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }: ChatProps) {
   const channelId = channel?.id ?? null;
   const [messages, setMessages] = useState<Message[] | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -64,6 +72,35 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI }: ChatP
   }, []);
   const boxRef = useRef<HTMLTextAreaElement>(null);
   const stick = useRef(true);
+
+  // ---- the Today view (main chat only) ----
+  const [showToday, setShowToday] = useState(false);
+  const todayDecided = useRef(false);
+  useEffect(() => {
+    if (channel || todayDecided.current || !messages) return;
+    todayDecided.current = true;
+    const last = messages.at(-1);
+    if (last && !focus && Date.now() - parse(last.created_at).getTime() > TODAY_AFTER) setShowToday(true);
+  }, [messages, channel, focus]);
+  useEffect(() => {
+    if (channel) return;
+    const toggle = () => setShowToday((v) => !v);
+    addEventListener("lyra:today", toggle);
+    return () => removeEventListener("lyra:today", toggle);
+  }, [channel]);
+  useEffect(() => {
+    if (showToday) logRef.current?.scrollTo({ top: 0 });
+    else {
+      stick.current = true;
+      requestAnimationFrame(() => logRef.current?.scrollTo({ top: logRef.current.scrollHeight }));
+    }
+  }, [showToday]);
+
+  // what's on screen counts as seen (for the "new" marks in the menu)
+  useEffect(() => {
+    const last = messages?.at(-1);
+    if (last && last.id > 0 && document.visibilityState === "visible") markSeen(channelId, last.id);
+  }, [messages, channelId]);
 
   useEffect(() => {
     api
@@ -169,6 +206,24 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI }: ChatP
     requestAnimationFrame(() => (el.scrollTop = el.scrollHeight - before));
   };
 
+  // jump to one message (from search or the Today view), loading earlier pages if needed
+  const focusTries = useRef(0);
+  useEffect(() => {
+    focusTries.current = 0;
+  }, [focus]);
+  useEffect(() => {
+    if (!focus || !messages) return;
+    const el = logRef.current?.querySelector<HTMLElement>(`[data-mid="${focus}"]`);
+    if (el) {
+      stick.current = false;
+      setShowToday(false);
+      requestAnimationFrame(() => el.scrollIntoView({ block: "center" }));
+      return;
+    }
+    if (hasMore && focusTries.current++ < 10) void loadEarlier();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus, messages, hasMore]);
+
   // ---- photos and files waiting to be sent with the next message ----
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [attaching, setAttaching] = useState(false);
@@ -243,6 +298,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI }: ChatP
     const text = raw.trim();
     const files = drafts;
     if ((!text && !files.length) || pending) return;
+    setShowToday(false);
     setInput("");
     setDrafts([]);
     requestAnimationFrame(grow);
@@ -371,7 +427,9 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI }: ChatP
         aria-live="polite"
       >
         <div className="log-inner">
-          {hasMore && (
+          {showToday && !channel && <TodayView onSend={(t) => void send(t)} onShowChat={() => setShowToday(false)} hasChat={messages.length > 0} />}
+
+          {hasMore && !showToday && (
             <button className="chip small" onClick={loadEarlier}>
               Show earlier messages
             </button>
@@ -413,7 +471,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI }: ChatP
             </div>
           )}
 
-          {messages.map((m) => {
+          {!showToday && messages.map((m) => {
             // a reaction on its own is shown on your message; its empty reply takes no room
             if (m.role === "assistant" && !m.content.trim() && !m.meta.error && !m.meta.memory?.length && !m.meta.tasks?.length) return null;
             const d = parse(m.created_at);
@@ -422,8 +480,13 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI }: ChatP
             lastDay = day;
             return (
               <Fragment key={m.id}>
-                {showDay && <div className="day">{day}</div>}
-                <div className={`row ${m.role === "user" ? "user" : "lyra"}`}>
+                {showDay && (
+                  <div className="day">
+                    <Star size={10} />
+                    {day}
+                  </div>
+                )}
+                <div className={`row ${m.role === "user" ? "user" : "lyra"}${m.id === focus ? " focused" : ""}`} data-mid={m.id}>
                   {m.id > 0 && (m.content.trim() || m.role === "user") && (
                     <button className="msg-more" aria-label="Message actions" title="Copy, pin or delete" onClick={() => setActing(m)}>
                       <More size={18} />
@@ -628,9 +691,8 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI }: ChatP
           ) : (
             <>
               {canTalk && !input.trim() && !drafts.length && (
-                <button type="button" className="talk" aria-label="Talk with Lyra" onClick={() => void talk()}>
-                  <Wave size={20} />
-                  <span>Talk</span>
+                <button type="button" className="talk" aria-label="Talk with Lyra" title="Talk with Lyra" onClick={() => void talk()}>
+                  <Wave size={21} />
                 </button>
               )}
               <button type="submit" className="send" aria-label="Send" disabled={!input.trim() && !drafts.length}>

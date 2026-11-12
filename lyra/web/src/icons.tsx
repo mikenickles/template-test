@@ -266,3 +266,10 @@ export const Wave = (p: P) => (
     <path d="M4 10v4M8 6v12M12 9v6M16 4v16M20 10v4" strokeWidth={2.2} />
   </Icon>
 );
+
+/** Lyra's four-point star (Vega), filled. */
+export const Star = (p: P) => (
+  <Icon {...p} fill="currentColor" stroke="none">
+    <path d="M12 2c.8 6.3 3.7 9.2 10 10-6.3.8-9.2 3.7-10 10-.8-6.3-3.7-9.2-10-10 6.3-.8 9.2-3.7 10-10z" />
+  </Icon>
+);

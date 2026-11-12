@@ -12,6 +12,7 @@ import { createCalendarServer } from "./connectors/calendar/server.ts";
 import { createDriveServer } from "./connectors/drive/server.ts";
 import { CALENDAR_EVENTS, CALENDAR_READONLY, DRIVE_READONLY, GMAIL_COMPOSE, GMAIL_READONLY, grantIsAllowed, TokenSource, type GoogleAuth } from "./connectors/google.ts";
 import * as A from "./actions.ts";
+import { latestIds, searchMessages, todayView, unreadCounts, type SearchHit, type Today } from "./today.ts";
 import { Connectors, type ConnectorStatus } from "./connectors/registry.ts";
 import {
   DB,
@@ -459,6 +460,31 @@ export class Lyra {
     return this.state();
   }
 
+  /** The Today view: what needs the user, what Lyra said lately, what's coming up. */
+  today(): Today {
+    return todayView(this.db, { timeZone: this.p.timeZone });
+  }
+
+  searchMessages(q: string): SearchHit[] {
+    return searchMessages(this.db, q);
+  }
+
+  unread(seen: Record<string, number>): Record<string, number> {
+    return unreadCounts(this.db, seen);
+  }
+
+  latestMessageIds(): Record<string, number> {
+    return latestIds(this.db);
+  }
+
+  /** "Later" on a task: out of Up next until tomorrow morning (or null: back now). */
+  async snoozeTask(id: number, until: string | null): Promise<T.TaskRow> {
+    const t = T.snoozeTask(this.db, id, until ? new Date(until) : null);
+    this.listeners.forEach((l) => l({ type: "task", taskId: id }));
+    await this.db.flush();
+    return t;
+  }
+
   action(id: number): A.ActionRow | undefined {
     return A.getAction(this.db, id);
   }
@@ -677,6 +703,8 @@ export class Lyra {
         this.running.signal,
         attachments,
       );
+      // the cards in this reply know where they are, for "jump to it" from Today
+      for (const id of message.meta.actions ?? []) this.db.run("UPDATE actions SET message_id = ? WHERE id = ?", [message.id, id]);
       return { message, user: listMessages(this.db, channelId, 2)[0] };
     } finally {
       this.running = undefined;

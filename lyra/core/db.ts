@@ -144,6 +144,9 @@ export const MIGRATIONS: string[] = [
      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
      decided_at TEXT
    );`,
+  // the redesign: a card's chat message (for "jump to it"), and tasks put off until later
+  `ALTER TABLE actions ADD COLUMN message_id INTEGER;
+   ALTER TABLE tasks ADD COLUMN snoozed_until TEXT;`,
 ];
 
 const FILE = "lyra.db";
