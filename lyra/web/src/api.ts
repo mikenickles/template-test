@@ -5,7 +5,9 @@
 import { App as CapApp } from "@capacitor/app";
 import type { ChannelSummary, MemoryNote as CoreNote, StoredMessage, TaskNote as CoreTaskNote } from "../../core/db";
 import type { NewTask, TaskDetail as CoreTaskDetail, TaskPatch, TaskQuery, TaskRow, TaskStatus as CoreStatus } from "../../core/tasks";
-import type { WorkerEvent, WorkerRun as CoreRun } from "../../core/workers";
+import type { WorkerRun as CoreRun } from "../../core/workers";
+import type { LyraEvent as WorkerEvent } from "../../core/lyra";
+import type { RoutineInput, RoutineRow, RoutineRun as CoreRoutineRun } from "../../core/routines";
 import {
   Lyra,
   type AppState as CoreState,
@@ -14,7 +16,7 @@ import {
   type MemoryView as CoreMemory,
   type SettingsPatch,
 } from "../../core/lyra";
-import { createPlatform, isNative } from "./platform";
+import { createPlatform, isNative, notifier } from "./platform";
 
 export type MemoryNote = CoreNote;
 export type Message = StoredMessage;
@@ -29,6 +31,8 @@ export type TaskDetail = CoreTaskDetail;
 export type TaskStatus = CoreStatus;
 export type TaskNote = CoreTaskNote;
 export type WorkerRun = CoreRun;
+export type Routine = RoutineRow & { schedule: string; running: boolean };
+export type RoutineRun = CoreRoutineRun;
 export type { WorkerEvent };
 
 /** Background activity (workers updating tasks or posting reports). */
@@ -84,6 +88,14 @@ export const api = {
   stopTask: async (id: number) => (await ready).stopTask(id),
   workerRuns: async (id: number) => (await ready).workerRuns(id),
   taskActivity: async (id: number) => (await ready).taskActivity(id),
+  routines: async () => (await ready).routines(),
+  routine: async (id: number) => (await ready).routine(id),
+  routinePresets: async () => (await ready).routinePresets(),
+  addPreset: async (key: string) => (await ready).addPreset(key),
+  createRoutine: async (input: RoutineInput) => (await ready).createRoutine(input),
+  updateRoutine: async (id: number, input: Partial<RoutineInput>) => (await ready).updateRoutine(id, input),
+  deleteRoutine: async (id: number) => (await ready).deleteRoutine(id),
+  runRoutine: async (id: number) => (await ready).runRoutine(id),
   connectGmail: async () => (await ready).connectGmail(),
   disconnectGmail: async () => (await ready).disconnectGmail(),
   connectGoogle: async (id: "gmail" | "calendar" | "drive") => (await ready).connectGoogle(id),

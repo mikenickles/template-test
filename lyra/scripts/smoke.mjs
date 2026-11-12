@@ -133,6 +133,24 @@ try {
   await page.getByText("practice model").first().waitFor();
   check(true, "Chat tab goes back to the chat");
 
+  // ---- routines ----
+  await page.getByRole("link", { name: "Tasks" }).click();
+  await page.getByRole("button", { name: "Routine" }).click();
+  await page.getByRole("button", { name: /Morning brief/ }).click();
+  await page.getByText("Morning brief added").waitFor();
+  await page.locator(".scheduled .item", { hasText: "Morning brief" }).waitFor();
+  check((await page.getByRole("switch", { name: "Morning brief on" }).isChecked()) === true, "adds the morning brief, switched on");
+  await shot("light-17-scheduled");
+  await page.getByRole("link", { name: /Morning brief/ }).click();
+  await page.getByRole("button", { name: "Run now" }).click();
+  await page.locator(".log-list", { hasText: "Posted" }).waitFor();
+  check(true, "Run now posts the routine");
+  await shot("light-18-routine");
+  await page.goto(`${base}/#/`);
+  await page.locator(".routine-tag", { hasText: "Morning brief" }).waitFor();
+  check(true, "the routine's post shows in chat with its name");
+  await shot("light-19-routine-post");
+
   // ---- channels ----
   await page.goto(`${base}/#/`);
   await page.getByRole("button", { name: "Channels" }).click();

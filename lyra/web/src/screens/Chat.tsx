@@ -214,6 +214,11 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
               <Fragment key={m.id}>
                 {showDay && <div className="day">{day}</div>}
                 <div className={`row ${m.role === "user" ? "user" : "lyra"}`}>
+                  {m.meta.routine && (
+                    <a className="routine-tag" href={`#/r/${m.meta.routine.id}`}>
+                      {m.meta.routine.name}
+                    </a>
+                  )}
                   {m.role === "user" ? (
                     <div className="bubble">{m.content}</div>
                   ) : (

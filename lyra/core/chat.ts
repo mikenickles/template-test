@@ -2,6 +2,7 @@ import type { Connectors } from "./connectors/registry.ts";
 import { addMessage, listMessages, type Channel, type ChannelSummary, type DB, type MemoryNote, type StoredMessage, type TaskNote } from "./db.ts";
 import { CHANNEL_SECTIONS, SECTIONS, type Notebook } from "./memory.ts";
 import { buildSystemPrompt, type ChannelDigest } from "./prompt.ts";
+import { describeSchedule, type RoutineInput } from "./routines.ts";
 import { uniqueSources, type ModelProvider, type Msg, type Part, type Source, type ToolDef } from "./providers/types.ts";
 import {
   addStep,
@@ -38,6 +39,12 @@ export interface Workspace {
   createChannel(input: { name: string; about: string; icon?: string }): Promise<Channel>;
   /** Hand a task to a background worker. Throws if it can't start (e.g. too many running). */
   startTask?(id: number, note?: string): void;
+  /** Scheduled routines. */
+  routines?: {
+    list(): { id: number; name: string; schedule: string; enabled: number; post_mode: string; channel_name: string | null }[];
+    create(input: RoutineInput): Promise<{ id: number; name: string }>;
+    update(id: number, input: Partial<RoutineInput>): Promise<{ id: number; name: string }>;
+  };
 }
 
 export interface TurnContext {
@@ -166,6 +173,46 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
           search: { type: "string" },
         },
       },
+    },
+  );
+  tools.push(
+    {
+      name: "create_routine",
+      description:
+        "Set up a routine: a scheduled check that runs on its own (while Lyra is open or when it next opens) and posts here only when there's news. E.g. a morning brief, a weekly school-mail check, a watch for bills.",
+      schema: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Short, e.g. 'Friday school check'." },
+          instructions: { type: "string", description: "What to check and what counts as worth posting. Written for the assistant that will run it." },
+          times: { type: "string", description: "Local times, HH:MM, comma-separated, e.g. '07:00' or '08:00,20:00'." },
+          days: { type: "string", description: "Days as digits, 0 = Sunday … 6 = Saturday. '0123456' every day, '12345' weekdays." },
+          always_post: { type: "boolean", description: "Post every run (like a daily brief) instead of only when there's news." },
+          channel: { type: "string", enum: ["none", ...channels.map((c) => c.name)], description: current ? `Defaults to this channel (${current.name}).` : "Where it posts. Defaults to the main chat." },
+        },
+        required: ["name", "instructions", "times"],
+      },
+    },
+    {
+      name: "update_routine",
+      description: "Change, pause or resume a routine. Pass only what changes.",
+      schema: {
+        type: "object",
+        properties: {
+          id: { type: "integer" },
+          enabled: { type: "boolean" },
+          times: { type: "string" },
+          days: { type: "string" },
+          instructions: { type: "string" },
+          name: { type: "string" },
+        },
+        required: ["id"],
+      },
+    },
+    {
+      name: "list_routines",
+      description: "See the user's routines with their schedules.",
+      schema: { type: "object", properties: {} },
     },
   );
   const others = channels.filter((c) => c.id !== current?.id);
@@ -428,6 +475,57 @@ async function runTool(
       const t = updateTask(ctx.db, id, { status, needs: typeof input.needs === "string" ? input.needs : undefined }, "lyra");
       taskNotes.push({ id: t.id, title: t.title, kind: "updated", status: t.status });
       return { content: `Updated #${t.id}: ${t.title} is ${STATUS_LABEL[t.status]}.`, isError: false };
+    } catch (e) {
+      return fail((e as Error).message);
+    }
+  }
+
+  if (name === "create_routine" || name === "update_routine" || name === "list_routines") {
+    const rs = ctx.workspace.routines;
+    if (!rs) return fail("Routines aren't available.");
+    if (name === "list_routines") {
+      const list = rs.list();
+      return {
+        content: list.length
+          ? list
+              .map((r) => `- #${r.id} ${r.name}: ${r.schedule}${r.enabled ? "" : " (paused)"}, ${r.post_mode === "always" ? "always posts" : "posts only news"}${r.channel_name ? `, in ${r.channel_name}` : ""}`)
+              .join("\n")
+          : "No routines yet.",
+        isError: false,
+      };
+    }
+    // A routine keeps running unattended, so outside content can't set one up or change it.
+    if (state.tainted) return fail("Not changed: outside content was read this turn. Tell the user what you'd set up, and do it once they say yes.");
+    try {
+      if (name === "create_routine") {
+        const ch = String(input.channel ?? "").trim();
+        let channelId: number | null = ctx.channel?.id ?? null;
+        if (ch.toLowerCase() === "none") channelId = null;
+        else if (ch) {
+          const found = ctx.workspace.channels().find((c) => c.name.toLowerCase() === ch.toLowerCase());
+          if (!found) return fail(`There's no ${ch} channel.`);
+          channelId = found.id;
+        }
+        const r = await rs.create({
+          name: String(input.name ?? ""),
+          instructions: String(input.instructions ?? ""),
+          times: String(input.times ?? ""),
+          days: typeof input.days === "string" ? input.days : "0123456",
+          postMode: input.always_post ? "always" : "news",
+          channelId,
+        });
+        emit.status(`Set up ${r.name}`);
+        const sched = describeSchedule(String(input.times ?? ""), typeof input.days === "string" ? input.days : "0123456");
+        return { content: `Routine #${r.id} "${r.name}" set: ${sched}. It's on the Tasks tab under Scheduled.`, isError: false };
+      }
+      const patch: Partial<RoutineInput> = {};
+      if (typeof input.enabled === "boolean") patch.enabled = input.enabled;
+      if (typeof input.times === "string") patch.times = input.times;
+      if (typeof input.days === "string") patch.days = input.days;
+      if (typeof input.instructions === "string") patch.instructions = input.instructions;
+      if (typeof input.name === "string") patch.name = input.name;
+      const r = await rs.update(Number(input.id), patch);
+      return { content: `Updated routine #${r.id} "${r.name}".`, isError: false };
     } catch (e) {
       return fail((e as Error).message);
     }

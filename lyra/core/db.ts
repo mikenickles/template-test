@@ -84,6 +84,31 @@ export const MIGRATIONS: string[] = [
      ended_at TEXT
    );
    CREATE INDEX worker_runs_task ON worker_runs (task_id, id);`,
+  // Phase 6: routines that run on a schedule and post only when there's news.
+  `CREATE TABLE routines (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     name TEXT NOT NULL,
+     instructions TEXT NOT NULL,
+     times TEXT NOT NULL,
+     days TEXT NOT NULL DEFAULT '0123456',
+     post_mode TEXT NOT NULL DEFAULT 'news' CHECK (post_mode IN ('always','news')),
+     channel_id INTEGER REFERENCES channels(id) ON DELETE SET NULL,
+     enabled INTEGER NOT NULL DEFAULT 1,
+     next_run_at TEXT,
+     last_run_at TEXT,
+     last_summary TEXT NOT NULL DEFAULT '',
+     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+   );
+   CREATE TABLE routine_runs (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     routine_id INTEGER NOT NULL REFERENCES routines(id) ON DELETE CASCADE,
+     started_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+     ended_at TEXT,
+     status TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running','posted','quiet','failed','missed')),
+     message_id INTEGER,
+     note TEXT NOT NULL DEFAULT ''
+   );
+   CREATE INDEX routine_runs_routine ON routine_runs (routine_id, id);`,
 ];
 
 const FILE = "lyra.db";
@@ -209,6 +234,8 @@ export interface MessageMeta {
   worker?: boolean;
   /** Web pages the reply drew on. */
   sources?: { url: string; title: string }[];
+  /** Posted by a scheduled routine. */
+  routine?: { id: number; name: string };
 }
 
 type Row = Omit<StoredMessage, "meta"> & { meta: string };

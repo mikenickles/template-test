@@ -39,6 +39,9 @@ import {
 import type { ModelProvider } from "./providers/types.ts";
 import * as T from "./tasks.ts";
 import { Workers, type WorkerEvent, type WorkerRun } from "./workers.ts";
+import * as R from "./routines.ts";
+
+export type LyraEvent = WorkerEvent | R.RoutineEvent;
 
 export interface SecretStore {
   get(key: string): Promise<string | null>;
@@ -152,7 +155,8 @@ export class Lyra {
   private notebooks = new Map<number, Promise<Notebook>>();
   private workspace: Workspace;
   readonly workers: Workers;
-  private listeners = new Set<(e: WorkerEvent) => void>();
+  private listeners = new Set<(e: LyraEvent) => void>();
+  readonly routinesRunner: R.Routines;
 
   private constructor(
     private p: Platform,
@@ -165,6 +169,11 @@ export class Lyra {
       notebook: (id) => this.notebook(id),
       createChannel: (input) => this.createChannel(input),
       startTask: (id, note) => void this.workers.start(id, "lyra", note),
+      routines: {
+        list: () => this.routines(),
+        create: (input) => this.createRoutine(input),
+        update: (id, input) => this.updateRoutine(id, input),
+      },
     };
     for (const g of GOOGLE) this.tokenSources.set(g.id, new TokenSource(p.google, [g.scope]));
     const servers: Record<GoogleId, () => McpServer> = {
@@ -194,6 +203,17 @@ export class Lyra {
       timeZone: p.timeZone,
       onEvent: (e) => this.listeners.forEach((l) => l(e)),
       webSearch: () => this.webSearch,
+      flush: () => db.flush(),
+    });
+    this.routinesRunner = new R.Routines({
+      db,
+      workspace: this.workspace,
+      connectors: this.connectors,
+      provider: async () => this.p.provider ?? createProvider(this.keys, this.choice()),
+      userName: () => this.userName,
+      timeZone: p.timeZone,
+      webSearch: () => this.webSearch,
+      onEvent: (e) => this.listeners.forEach((l) => l(e)),
       flush: () => db.flush(),
     });
   }
@@ -522,7 +542,7 @@ export class Lyra {
   // ---------- workers ----------
 
   /** Subscribe to background activity (task changes, worker reports). Returns an unsubscribe function. */
-  onChange(fn: (e: WorkerEvent) => void): () => void {
+  onChange(fn: (e: LyraEvent) => void): () => void {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
   }
@@ -544,6 +564,58 @@ export class Lyra {
 
   taskActivity(id: number): string | undefined {
     return this.workers.isRunning(id) ? (this.workers.activity.get(id) ?? "Working") : undefined;
+  }
+
+  // ---------- routines ----------
+
+  routines(): (R.RoutineRow & { schedule: string; running: boolean })[] {
+    return R.listRoutines(this.db).map((r) => ({ ...r, schedule: R.describeSchedule(r.times, r.days), running: this.routinesRunner.isRunning(r.id) }));
+  }
+
+  routine(id: number): { routine: R.RoutineRow & { schedule: string; running: boolean }; runs: R.RoutineRun[] } {
+    const r = this.routines().find((x) => x.id === id);
+    if (!r) throw new Error("That routine no longer exists.");
+    return { routine: r, runs: R.routineRuns(this.db, id) };
+  }
+
+  routinePresets() {
+    const have = new Set(R.listRoutines(this.db).map((r) => r.name.toLowerCase()));
+    return R.PRESETS.map((p) => ({ ...p, added: have.has(p.name.toLowerCase()) }));
+  }
+
+  async createRoutine(input: R.RoutineInput): Promise<R.RoutineRow> {
+    const r = R.createRoutine(this.db, input);
+    await this.db.flush();
+    this.listeners.forEach((l) => l({ type: "routine", routineId: r.id }));
+    return r;
+  }
+
+  async addPreset(key: string): Promise<R.RoutineRow> {
+    const p = R.PRESETS.find((x) => x.key === key);
+    if (!p) throw new Error("Unknown routine.");
+    return this.createRoutine(p);
+  }
+
+  async updateRoutine(id: number, input: Partial<R.RoutineInput>): Promise<R.RoutineRow> {
+    const r = R.updateRoutine(this.db, id, input);
+    await this.db.flush();
+    this.listeners.forEach((l) => l({ type: "routine", routineId: id }));
+    return r;
+  }
+
+  async deleteRoutine(id: number): Promise<void> {
+    R.deleteRoutine(this.db, id);
+    await this.db.flush();
+    this.listeners.forEach((l) => l({ type: "routine", routineId: id }));
+  }
+
+  runRoutine(id: number): void {
+    this.routinesRunner.runNow(id);
+  }
+
+  /** Called every minute while the app is open, and when it opens: runs anything due. */
+  tickRoutines(now = new Date()): number[] {
+    return this.routinesRunner.tick(now);
   }
 
   // ---------- Google (Mail, Calendar, Drive) ----------

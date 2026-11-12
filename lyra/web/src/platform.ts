@@ -8,6 +8,7 @@
 import { SecureStorage } from "@aparajita/capacitor-secure-storage";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { Directory, Encoding, Filesystem } from "@capacitor/filesystem";
+import { LocalNotifications } from "@capacitor/local-notifications";
 import initSqlJs from "sql.js";
 import wasmUrl from "sql.js/dist/sql-wasm.wasm?url";
 import { NeedsConsentError, type GoogleAuth } from "../../core/connectors/google";
@@ -159,3 +160,68 @@ export async function createPlatform(): Promise<Platform> {
     google: isNative ? nativeGoogle : webGoogle,
   };
 }
+
+// ---------- notifications ----------
+
+/** Reminder notifications at each routine's times; ids 100000+ are Lyra's reminders, 200000+ one-off notices. */
+const REMINDER_BASE = 100_000;
+const NOTICE_BASE = 200_000;
+let noticeId = NOTICE_BASE;
+
+async function allowed(): Promise<boolean> {
+  if (!isNative) return false;
+  let p = await LocalNotifications.checkPermissions();
+  if (p.display === "prompt" || p.display === "prompt-with-rationale") p = await LocalNotifications.requestPermissions();
+  return p.display === "granted";
+}
+
+export interface ReminderRoutine {
+  id: number;
+  name: string;
+  times: string;
+  days: string;
+  enabled: number;
+  channel_id: number | null;
+}
+
+export const notifier = {
+  /** Replace all routine reminders with the current schedule. */
+  async reminders(list: ReminderRoutine[]): Promise<void> {
+    if (!isNative) return;
+    const active = list.filter((r) => r.enabled);
+    const pending = await LocalNotifications.getPending().catch(() => ({ notifications: [] as { id: number }[] }));
+    const old = pending.notifications.filter((n) => n.id >= REMINDER_BASE && n.id < NOTICE_BASE);
+    if (old.length) await LocalNotifications.cancel({ notifications: old.map((n) => ({ id: n.id })) });
+    if (!active.length || !(await allowed())) return;
+    const notifications = active.flatMap((r) =>
+      r.times.split(",").flatMap((t, ti) => {
+        const [hour, minute] = t.split(":").map(Number);
+        return r.days.split("").map((d) => ({
+          id: REMINDER_BASE + r.id * 100 + Number(d) * 10 + ti,
+          title: r.name,
+          body: "Tap to open Lyra and it'll run now.",
+          schedule: { on: { weekday: Number(d) + 1, hour, minute }, allowWhileIdle: false },
+          extra: { hash: r.channel_id ? `#/c/${r.channel_id}` : "#/" },
+        }));
+      }),
+    );
+    await LocalNotifications.schedule({ notifications });
+  },
+
+  /** Tell the user about news while Lyra is in the background. */
+  async now(title: string, body: string, hash: string): Promise<void> {
+    if (!(await allowed())) return;
+    noticeId = noticeId >= NOTICE_BASE + 90_000 ? NOTICE_BASE : noticeId + 1;
+    await LocalNotifications.schedule({ notifications: [{ id: noticeId, title, body, extra: { hash } }] });
+  },
+
+  /** Opening a notification goes to the chat it's about. */
+  onOpen(fn: (hash: string) => void): () => void {
+    if (!isNative) return () => {};
+    const sub = LocalNotifications.addListener("localNotificationActionPerformed", (a) => {
+      const hash = (a.notification.extra as { hash?: string } | undefined)?.hash;
+      if (hash) fn(hash);
+    });
+    return () => void sub.then((s) => s.remove());
+  },
+};

@@ -3,6 +3,7 @@ import { api, onChange, type Channel, type Task, type TaskDetail, type TaskStatu
 import { ChannelIcon, CheckCircle, Chevron, Close, Pencil, Plus, Search, Stop, Trash } from "../icons";
 import { Thinking } from "../LyraMark";
 import { Markdown } from "../markdown";
+import { ScheduledSection } from "./Routines";
 import { ago, parse } from "../when";
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
@@ -148,6 +149,8 @@ export function Tasks({ toast, channels, onCounts }: { toast: (m: string) => voi
           ))}
         </section>
       )}
+
+      {tab === "active" && !q && <ScheduledSection toast={toast} />}
 
       <button className="fab" aria-label="New task" onClick={() => setCreating(true)}>
         <Plus size={28} strokeWidth={2} />

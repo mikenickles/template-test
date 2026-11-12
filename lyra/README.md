@@ -2,7 +2,7 @@
 
 Lyra is a personal chief of staff that lives in an Android app. You text it like a trusted assistant; it answers short, leads with the point, and remembers what matters. Everything runs on your phone: there's no server or computer to keep running.
 
-This is **Phase 5**: the main chat, memory, channels, tasks, background workers, and read-only Gmail, Google Calendar and Google Drive.
+This is **Phase 6**: the main chat, memory, channels, tasks, background workers, routines, web search, and read-only Gmail, Google Calendar and Google Drive.
 
 | Phase | What it adds | Status |
 | --- | --- | --- |
@@ -10,9 +10,9 @@ This is **Phase 5**: the main chat, memory, channels, tasks, background workers,
 | 2 | Channels (Home, Rowan, Games…) | Done |
 | 3 | Tasks page | Done |
 | 4 | Background workers | Done |
-| 5 | Calendar and Drive, read-only | **Here** |
-| 6 | Routines (7am brief, check-ins, watches) | Next |
-| 7 | Approvals, then the first actions that send or book | |
+| 5 | Calendar and Drive, read-only | Done |
+| 6 | Routines (7am brief, check-ins, watches) | **Here** |
+| 7 | Approvals, then the first actions that send or book | Next |
 
 ## What Phase 1 does
 
@@ -37,6 +37,14 @@ This is **Phase 5**: the main chat, memory, channels, tasks, background workers,
 - **Lyra keeps them.** Hand Lyra something bigger than a quick answer and it adds a task; it marks it Ready for you (with the one question it needs answered) or Done as you talk. A note under the reply links to the task. In a channel, tasks land in that channel, and the channel's page lists its open tasks.
 - **Up next** is for tasks you're tracking but nobody is working on yet.
 - **Safe with email.** In a reply where Lyra read an email, it can't create or change a task; it tells you what it would do and waits for your yes.
+
+### Routines (Phase 6)
+
+- **Scheduled checks that post only when there's news.** On the Tasks tab, under **Scheduled**, tap **+ Routine** for a ready-made one: **Morning brief** (7:00 every day, always posts), **Evening check-in** (weekdays 5:30, only if something needs you), **Bills watch** and **Security watch** (only new items). Or ask Lyra: "every Friday at 4, check whether the school sent anything".
+- **Each routine** has a schedule, what it checks, whether it always posts or only on news, and which chat it posts in. Its page has **Run now**, pause, edit and a history of every run (posted, nothing new, missed, didn't finish).
+- **Posts are labelled** with the routine's name in the chat, and carry sources when they used the web.
+- **Read-only.** Routines read mail, calendar, files and the web; they can't change memory, create tasks, send or pay. A routine can't be set up from a reply that read an email.
+- **On your phone.** Android doesn't let apps think in the background. At each routine's time you get a notification; Lyra runs the routine while it's open, or as soon as you open it. A routine missed by more than 12 hours is skipped and noted. If Lyra is open but in the background when a routine posts, you get a notification with the first line.
 
 ### Web search
 
@@ -112,6 +120,14 @@ Google needs you to register Lyra once. It takes about ten minutes.
 There's no client ID or secret to paste: Google recognizes the app by its package name and signing fingerprint. If you install a build signed with a different key, add its fingerprint as another Android client.
 
 While the Google project is in **Testing** mode, Google expires the approval after 7 days. Lyra shows Mail as needing a reconnect; tap it and approve again.
+
+## Try Phase 6
+
+1. Install `Lyra-phase6.apk` over your current app. Allow notifications when asked.
+2. Tasks tab → **Scheduled** → **+ Routine** → **Morning brief**. Open it and tap **Run now**: the brief appears in chat, labelled "Morning brief".
+3. Add **Bills watch** and run it: with no new bills it should stay quiet ("Nothing new" in its history).
+4. In chat: "Every Sunday at 6pm, tell me what's on my calendar next week." Check it under Scheduled.
+5. Tomorrow at 7, tap the notification: Lyra opens and the brief arrives.
 
 ## Try Phase 5
 
