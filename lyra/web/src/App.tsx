@@ -1,4 +1,5 @@
 import { App as CapApp } from "@capacitor/app";
+import { Keyboard } from "@capacitor/keyboard";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, isNative, onChange, type AppState, type Channel } from "./api";
 import { Drawer } from "./Drawer";
@@ -96,6 +97,25 @@ export function App() {
     return () => void sub.then((s) => s.remove());
   }, []);
 
+  // While the keyboard is up, the tab bar hides and the message box sits right on the keyboard.
+  const [keyboard, setKeyboard] = useState(false);
+  useEffect(() => {
+    if (isNative) {
+      const subs = [Keyboard.addListener("keyboardWillShow", () => setKeyboard(true)), Keyboard.addListener("keyboardWillHide", () => setKeyboard(false))];
+      return () => subs.forEach((s) => void s.then((h) => h.remove()));
+    }
+    // in a browser there's no keyboard event: typing in the message box stands in for it
+    const isBox = (e: Event) => (e.target as HTMLElement | null)?.closest?.(".composer") != null;
+    const on = (e: FocusEvent) => isBox(e) && setKeyboard(true);
+    const off = (e: FocusEvent) => isBox(e) && setKeyboard(false);
+    addEventListener("focusin", on);
+    addEventListener("focusout", off);
+    return () => {
+      removeEventListener("focusin", on);
+      removeEventListener("focusout", off);
+    };
+  }, []);
+
   // Only re-render when the list actually changed, so opening the menu doesn't redraw the chat mid-slide.
   const [readyCount, setReadyCount] = useState(0);
   const refreshCounts = useCallback(() => {
@@ -161,7 +181,7 @@ export function App() {
   const back = backFrom(route);
 
   return (
-    <div className={`app${drawer ? " drawer-open" : ""}`}>
+    <div className={`app${drawer ? " drawer-open" : ""}${keyboard ? " keyboard-open" : ""}`}>
       <Drawer
         open={drawer}
         onClose={() => setDrawer(false)}

@@ -2012,6 +2012,15 @@ button.nav-item {
   pointer-events: auto;
 }
 
+/* typing: the tab bar steps aside and the message box sits right on the keyboard */
+.keyboard-open .tabbar.floating {
+  display: none;
+}
+
+.keyboard-open .chat {
+  --tabbar-h: 0px;
+}
+
 .tabbar-inner {
   max-width: 420px;
   margin: 0 auto;
