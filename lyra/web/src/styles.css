@@ -347,6 +347,7 @@ a {
 .initial {
   font-weight: 650;
   font-size: 17px;
+  color: var(--accent-text);
 }
 
 /* the orb: Lyra's night-sky disc */
@@ -899,7 +900,7 @@ body[data-busy] .orb:has(.avatar)::after {
 
 .send:disabled {
   background: transparent;
-  color: var(--text-muted);
+  color: var(--accent-text);
   cursor: default;
 }
 
