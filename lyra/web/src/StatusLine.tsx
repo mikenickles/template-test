@@ -86,7 +86,7 @@ function useStatusItems(state: AppState): StatusItem[] {
 
   const update = useSyncExternalStore(onUpdateState, updateState);
   const items: StatusItem[] = [];
-  if (update.kind === "available" || update.kind === "ready") items.push({ key: "update", text: update.kind === "ready" ? "Restart to update" : "Update ready", href: "#/settings?updates" });
+  if (update.kind === "available" || update.kind === "ready") items.push({ key: "update", text: update.kind === "ready" ? "Restart to update" : "Update ready", href: "#/settings/about" });
   if (chat) items.push({ key: "chat", text: chatText(chat), live: true });
   items.push(...background);
   if (weather) items.push(weather);

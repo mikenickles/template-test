@@ -9,7 +9,7 @@ import { Access } from "./screens/Access";
 import { ChannelInfo, NewChannelDialog } from "./screens/ChannelScreens";
 import { Chat } from "./screens/Chat";
 import { Memory } from "./screens/Memory";
-import { Settings } from "./screens/Settings";
+import { Settings, SETTINGS_SECTIONS, type SettingsSection } from "./screens/Settings";
 import { Soul } from "./screens/Soul";
 import { TaskPage, Tasks, WorkerLog } from "./screens/Tasks";
 import { RoutinePage } from "./screens/Routines";
@@ -28,7 +28,7 @@ export type Route =
   | { name: "access" }
   | { name: "memory" }
   | { name: "soul" }
-  | { name: "settings" };
+  | { name: "settings"; section?: SettingsSection };
 
 export function readRoute(hash = location.hash): Route {
   const path = hash.replace(/^#\/?/, "").split("?")[0];
@@ -38,6 +38,8 @@ export function readRoute(hash = location.hash): Route {
   if (t) return t[2] ? { name: "worker-log", taskId: Number(t[1]) } : { name: "task", taskId: Number(t[1]) };
   const r = path.match(/^r\/(\d+)$/);
   if (r) return { name: "routine", routineId: Number(r[1]) };
+  const s = path.match(/^settings\/(\w+)$/);
+  if (s && (SETTINGS_SECTIONS as string[]).includes(s[1])) return { name: "settings", section: s[1] as SettingsSection };
   if (path === "tasks" || path === "access" || path === "memory" || path === "soul" || path === "settings") return { name: path };
   return { name: "chat", channelId: null };
 }
@@ -58,6 +60,8 @@ function backFrom(r: Route): string | null {
       return `#/t/${r.taskId}`;
     case "routine":
       return "#/tasks";
+    case "settings":
+      return r.section ? "#/settings" : "#/";
     default:
       return "#/";
   }
@@ -330,7 +334,7 @@ export function App() {
         {route.name === "access" && <Access state={state} setState={setState} toast={toast} />}
         {route.name === "memory" && <Memory toast={toast} channels={channels} />}
         {route.name === "soul" && <Soul toast={toast} userName={state.userName} />}
-        {route.name === "settings" && <Settings state={state} setState={setState} toast={toast} />}
+        {route.name === "settings" && <Settings key={route.section ?? "home"} state={state} setState={setState} toast={toast} section={route.section} />}
 
         {inChat && !wide && (
           <nav className={`tabbar${route.name === "chat" ? " floating" : ""}`} aria-label="Sections">
@@ -446,7 +450,7 @@ function LockScreen({ onUnlock }: { onUnlock: () => void }) {
  */
 function DeskBar({ route, channel, back }: { route: Route; channel?: Channel; back: string | null }) {
   const inChat = route.name === "chat";
-  const sub = !inChat && route.name !== "tasks" && route.name !== "settings" && route.name !== "access" && route.name !== "memory";
+  const sub = !inChat && route.name !== "tasks" && !(route.name === "settings" && !route.section) && route.name !== "access" && route.name !== "memory";
   return (
     <header className="deskbar">
       {sub && back && (

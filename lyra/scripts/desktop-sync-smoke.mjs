@@ -79,8 +79,8 @@ async function device(name) {
     await page.locator(".bubble", { hasText: text }).waitFor();
   };
   const settings = async () => {
-    await page.goto("app://lyra/index.html#/settings");
-    await page.getByRole("heading", { name: "Settings" }).waitFor();
+    await page.goto("app://lyra/index.html#/settings/sync");
+    await page.getByRole("heading", { name: "Sync and backup" }).waitFor();
   };
   const shows = async (text) => {
     await page.goto("app://lyra/index.html#/");

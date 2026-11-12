@@ -31,6 +31,10 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Backups on the computer.** Every snapshot the Windows app sends or receives is also saved, encrypted, in `Documents\Lyra Backups` (the newest 20).
 - **Privacy.** Snapshots are AES-256-GCM encrypted with your sync passphrase before upload. The Drive permission (`drive.appdata`) only reaches Lyra's own hidden folder: it can't see or change your files.
 
+#### Settings and model picker
+
+Settings opens on six areas (AI model, You and appearance, Notifications and privacy, Sync and backup, Connections, Updates), each showing its current state. **AI model** has a card per provider: paste the key, and Lyra asks the provider which models that key can use (`core/providers/models.ts`) and lists them, newest first, chat models only. Tap one to switch. Typing a model name is still there as a fallback, and a local OpenAI-compatible server lists its own models.
+
 #### Updates from your Drive
 
 New versions go in a **Lyra Updates** folder in your Google Drive (made with `npm run release`, or `npm run release -- --full` when the desktop shell changed). Both apps check it once a day and from **Settings → Updates**, using the read-only Files connection, and only accept files you own.

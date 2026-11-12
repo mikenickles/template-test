@@ -3543,3 +3543,194 @@ a.status-pill:active {
   font-weight: 600;
   color: var(--accent-text);
 }
+
+/* ---------- settings: home rows, provider cards, model list ---------- */
+
+.settings-home .item {
+  min-height: 72px;
+}
+
+.providers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+.provider {
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  overflow: hidden;
+}
+
+.provider.using {
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent-text) 55%, var(--border));
+}
+
+.provider-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s4);
+  text-align: left;
+  border-radius: 22px;
+}
+
+.provider-head .body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.provider-head .title {
+  font-weight: 650;
+  font-size: 17px;
+}
+
+.provider-head .sub {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.provider-head .chev {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform var(--ease);
+}
+
+.provider-head .chev.down {
+  transform: rotate(90deg);
+}
+
+.provider-head.practice {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.provider-head.practice.using {
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent-text) 55%, var(--border));
+}
+
+.provider-body {
+  padding: 0 var(--s4) var(--s4);
+}
+
+.provider-body .key-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--s2);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.models-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin: var(--s5) 0 var(--s2);
+}
+
+.key-head-text {
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.models-filter {
+  max-width: 190px;
+  min-height: 38px;
+  padding: 0 var(--s3);
+  font-size: var(--text-sm);
+}
+
+.models {
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1px var(--border);
+  overflow: hidden;
+}
+
+.model {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 52px;
+  padding: 8px var(--s4);
+  text-align: left;
+  border-top: 1px solid var(--border);
+  transition: background var(--ease);
+}
+
+.model:first-child {
+  border-top: 0;
+}
+
+.model .body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.model-name {
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+
+.model-id {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+.model.on {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.model.on .model-id {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.model:not(.on):hover {
+  background: var(--drawer-hover);
+}
+
+.models-note {
+  margin: var(--s2) 0;
+}
+
+.models-more {
+  padding: var(--s3) var(--s4);
+  text-align: left;
+  border-top: 1px solid var(--border);
+}
+
+.link {
+  color: var(--accent-text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.manual {
+  margin-top: var(--s4);
+}
+
+.manual summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 550;
+}
+
+.manual[open] summary {
+  margin-bottom: var(--s3);
+}

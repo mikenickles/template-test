@@ -73,7 +73,7 @@ export function Access({
           <strong>{notice.title}</strong>
           {notice.body}
           {/Google on this computer/.test(notice.body) && (
-            <a className="banner-link" href="#/settings?google">
+            <a className="banner-link" href="#/settings/sync?google">
               Open Google setup
             </a>
           )}

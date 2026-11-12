@@ -48,14 +48,47 @@ try {
   await shot("light-1-welcome");
 
   await page.getByRole("link", { name: "Settings" }).click();
+  await page.getByRole("link", { name: /AI model.*Practice mode/ }).waitFor();
+  check((await page.locator(".settings-home .item").count()) === 6, "settings opens on six clear areas");
+  await shot("light-5-settings");
+  await page.getByRole("link", { name: /You and appearance/ }).click();
   await page.getByLabel("What should Lyra call you?").fill("Sam");
   await page.getByRole("button", { name: "Save" }).first().click();
   await page.getByText("Saved", { exact: true }).first().waitFor();
   check(true, "settings saves your name");
-  await shot("light-5-settings");
-
+  await page.getByRole("link", { name: "Back" }).click();
+  await page.getByRole("link", { name: /Notifications and privacy/ }).click();
   check((await page.getByRole("switch", { name: /Notify me/ }).isChecked()) === true, "notifications are on by default");
   await page.getByRole("link", { name: "Back" }).click();
+
+  // ---- AI model: add a key, pick from the models it can use (a pretend Claude API) ----
+  await page.route("https://api.anthropic.com/v1/models**", (r) =>
+    r.fulfill({
+      json: {
+        data: [
+          { id: "claude-sonnet-test", display_name: "Claude Sonnet Test", created_at: "2026-05-01T00:00:00Z" },
+          { id: "claude-haiku-test", display_name: "Claude Haiku Test", created_at: "2026-03-01T00:00:00Z" },
+        ],
+      },
+    }),
+  );
+  await page.getByRole("link", { name: /AI model/ }).click();
+  await page.locator("#key-anthropic").fill("sk-ant-smoke-test");
+  await page.locator(".provider", { has: page.locator("#key-anthropic") }).getByRole("button", { name: "Save" }).click();
+  await page.getByText("Key saved").waitFor();
+  await page.getByRole("radio", { name: /Claude Haiku Test/ }).waitFor();
+  check((await page.getByRole("radio").count()) === 2, "adding a key lists the models it can use");
+  await page.getByRole("radio", { name: /Claude Sonnet Test/ }).click();
+  await page.getByText("Lyra now uses Claude Sonnet Test").waitFor();
+  check((await page.getByRole("radio", { name: /Claude Sonnet Test/ }).getAttribute("aria-checked")) === "true", "tapping a model switches to it, no typing");
+  await shot("light-5b-model");
+  await page.getByRole("link", { name: "Back" }).click();
+  await page.getByRole("link", { name: /AI model.*Claude · claude-sonnet-test/ }).waitFor();
+  check(true, "the settings front page shows the model in use");
+  await page.getByRole("link", { name: /AI model/ }).click();
+  await page.getByRole("button", { name: /Practice/ }).click();
+  await page.getByText("Lyra now uses Practice").waitFor();
+  await page.goto(`${base}/#/`);
   await page.getByText("Hi Sam, I'm Lyra.").waitFor();
   check(true, "greeting uses your name");
 
@@ -243,7 +276,7 @@ try {
   check((await page.locator(".bubble").count()) === 3, "Lyra can react to a message, with no text reply");
   await shot("light-21-reaction");
 
-  await page.getByRole("link", { name: "Settings" }).click();
+  await page.goto(`${base}/#/settings/you`);
   await page.locator(".swatch", { hasText: "Burnt orange" }).click();
   await page.getByText("Burnt orange it is").waitFor();
   check((await page.evaluate(() => document.documentElement.dataset.accent)) === "orange", "picking an accent color applies it");
@@ -251,7 +284,7 @@ try {
   await page.reload();
   await page.getByRole("radio", { name: "Burnt orange" }).waitFor();
   check((await page.getByRole("radio", { name: "Burnt orange" }).isChecked()) === true, "the accent color is saved");
-  await page.getByRole("link", { name: "Back" }).click();
+  await page.goto(`${base}/#/`);
   await page.locator(".bubble").first().waitFor();
   check((await page.locator(".topbar .avatar").getAttribute("src")).includes("avatar-orange"), "the avatar's glow follows the accent color");
   await shot("light-23-accent-chat");
@@ -282,7 +315,7 @@ try {
   check((await page.locator(".bubble").count()) === before - 1, "deleting a message removes it");
 
   // ---- phase 7: backup, then restore it over a changed chat ----
-  await page.getByRole("link", { name: "Settings" }).click();
+  await page.goto(`${base}/#/settings/sync`);
   await page.getByRole("button", { name: /Back up Lyra/ }).click();
   await page.getByLabel("Passphrase").fill("correct horse battery");
   await page.getByLabel("Type it again").fill("correct horse battery");
@@ -291,11 +324,11 @@ try {
   const backupPath = join(shots, "test-backup.lyra");
   await download.saveAs(backupPath);
   check(download.suggestedFilename().endsWith(".lyra"), "backup makes an encrypted .lyra file");
-  await page.getByRole("link", { name: "Back" }).click();
+  await page.goto(`${base}/#/`);
   await page.getByPlaceholder("Message Lyra").fill("This one is after the backup");
   await page.getByRole("button", { name: "Send" }).click();
   await page.locator(".bubble", { hasText: "after the backup" }).waitFor();
-  await page.getByRole("link", { name: "Settings" }).click();
+  await page.goto(`${base}/#/settings/sync`);
   page.on("dialog", (d) => d.accept());
   await page.getByLabel("Backup file").setInputFiles(backupPath);
   await page.getByLabel("Passphrase").fill("not the passphrase");
@@ -312,7 +345,7 @@ try {
     r.fulfill({ json: { results: [{ name: "Boston", admin1: "Massachusetts", country_code: "US", latitude: 42.36, longitude: -71.06 }] } }),
   );
   await page.route("https://api.open-meteo.com/**", (r) => r.fulfill({ json: { current: { temperature_2m: 58.4, weather_code: 2, is_day: 1 } } }));
-  await page.goto(`${base}/#/settings`);
+  await page.goto(`${base}/#/settings/you`);
   await page.getByLabel("Your city").fill("Boston");
   await page.getByRole("button", { name: "Find" }).click();
   await page.getByRole("button", { name: /Boston, Massachusetts/ }).click();

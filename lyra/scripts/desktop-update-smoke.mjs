@@ -62,7 +62,7 @@ const before = await running(page);
 await page.goto("app://lyra/index.html#/access");
 await page.locator(".item", { hasText: "Files" }).click();
 await page.getByText("Google Drive is connected").waitFor();
-await page.goto("app://lyra/index.html#/settings");
+await page.goto("app://lyra/index.html#/settings/about");
 await page.locator("section", { hasText: "Updates" }).getByRole("button", { name: "Check" }).click();
 await page.getByText(`Lyra ${NEW} is in your Drive.`).waitFor();
 check(true, "finds a newer version in the Lyra Updates folder");

@@ -277,6 +277,7 @@ export const api = {
     if (patch.notifications !== undefined) syncReminders(lyra);
     return s;
   },
+  models: async (provider: "anthropic" | "openai" | "gemini" | "fake") => (await ready).models(provider),
   deleteMessage: async (id: number) => (await ready).deleteMessage(id),
   pinMessage: async (id: number, pinned: boolean) => (await ready).pinMessage(id, pinned),
   pinned: async (channelId: number | null) => (await ready).pinned(channelId),

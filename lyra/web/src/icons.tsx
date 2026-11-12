@@ -214,3 +214,36 @@ export const More = (p: P) => (
     <path d="M6 12h.01M12 12h.01M18 12h.01" strokeWidth={2.6} />
   </Icon>
 );
+
+export const User = (p: P) => (
+  <Icon {...p}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5" />
+  </Icon>
+);
+
+export const Bell = (p: P) => (
+  <Icon {...p}>
+    <path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z" />
+    <path d="M10 20a2 2 0 0 0 4 0" />
+  </Icon>
+);
+
+export const Cloud = (p: P) => (
+  <Icon {...p}>
+    <path d="M7 18a4.5 4.5 0 0 1-.5-8.97A6 6 0 0 1 18 10.5a3.75 3.75 0 0 1-.5 7.5z" />
+  </Icon>
+);
+
+export const Refresh = (p: P) => (
+  <Icon {...p}>
+    <path d="M20 12a8 8 0 1 1-2.34-5.66" />
+    <path d="M20 4v5h-5" />
+  </Icon>
+);
+
+export const Plug = (p: P) => (
+  <Icon {...p}>
+    <path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4" />
+  </Icon>
+);

@@ -29,6 +29,8 @@ import {
   type StoredMessage,
 } from "./db.ts";
 import { UpdateSource } from "./updates.ts";
+import { listModels, type ModelOption } from "./providers/models.ts";
+import type { ProviderId } from "./providers/index.ts";
 import { decryptBackup, encryptBackup, fromBase64, toBase64, type BackupPayload } from "./backup.ts";
 import { channelNotebookSpec, cleanItem, mainNotebookSpec, Notebook, type Snapshot, type TextStore } from "./memory.ts";
 import {
@@ -342,6 +344,11 @@ export class Lyra {
       appLock: getSetting(this.db, "appLock") === "on",
       weatherPlace: this.weatherPlace,
     };
+  }
+
+  /** The models this provider's saved key can use (asked from the provider each time). */
+  models(provider: ProviderId): Promise<ModelOption[]> {
+    return listModels(this.keys, provider, this.fetch);
   }
 
   get weatherPlace(): WeatherPlace | null {
