@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scopesAreReadOnly, GMAIL_READONLY } from "../core/connectors/google.ts";
+import { CALENDAR_EVENTS, GMAIL_COMPOSE, GMAIL_READONLY, grantIsAllowed } from "../core/connectors/google.ts";
 import { bodyText, htmlToText, renderThreadMessage, stripQuoted, summarizeListItem, type GmailMessage } from "../core/connectors/gmail/parse.ts";
 import { neutralize, wrapUntrusted } from "../core/untrusted.ts";
 
@@ -71,11 +71,15 @@ describe("untrusted wrapping", () => {
 });
 
 describe("google scopes", () => {
-  it("accepts read-only and rejects anything that can write", () => {
-    expect(scopesAreReadOnly(GMAIL_READONLY)).toBe(true);
-    expect(scopesAreReadOnly(`${GMAIL_READONLY} openid`)).toBe(true);
-    expect(scopesAreReadOnly(`${GMAIL_READONLY} https://www.googleapis.com/auth/gmail.send`)).toBe(false);
-    expect(scopesAreReadOnly("https://mail.google.com/")).toBe(false);
-    expect(scopesAreReadOnly("")).toBe(false);
+  it("accepts reading plus the two approve-each-one permissions, and refuses anything wider", () => {
+    expect(grantIsAllowed(GMAIL_READONLY, GMAIL_READONLY)).toBe(true);
+    expect(grantIsAllowed(`${GMAIL_READONLY} openid`, GMAIL_READONLY)).toBe(true);
+    // turning on drafts doesn't spoil the read-only connection (Google returns both)
+    expect(grantIsAllowed(`${GMAIL_READONLY} ${GMAIL_COMPOSE} ${CALENDAR_EVENTS}`, GMAIL_READONLY)).toBe(true);
+    expect(grantIsAllowed(`${GMAIL_READONLY} https://www.googleapis.com/auth/gmail.send`, GMAIL_READONLY)).toBe(false);
+    expect(grantIsAllowed(`${GMAIL_READONLY} https://www.googleapis.com/auth/gmail.modify`, GMAIL_READONLY)).toBe(false);
+    expect(grantIsAllowed(`${GMAIL_READONLY} https://www.googleapis.com/auth/calendar`, GMAIL_READONLY)).toBe(false);
+    expect(grantIsAllowed("https://mail.google.com/", GMAIL_READONLY)).toBe(false);
+    expect(grantIsAllowed("", GMAIL_READONLY)).toBe(false);
   });
 });

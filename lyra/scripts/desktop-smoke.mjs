@@ -79,6 +79,48 @@ check(true, "the hover button on a message opens copy, pin and delete");
 await page.waitForTimeout(800); // let it save
 await page.screenshot({ path: join(shots, "desktop-2-chat.png") });
 
+// ---- an email for your OK: nothing goes until you tap Send (pretend Google) ----
+const sent = [];
+await app.evaluate(({ ipcMain }) => {
+  ipcMain.removeHandler("google:authorize");
+  const granted = new Set();
+  ipcMain.handle("google:authorize", (_e, scopes) => {
+    scopes.forEach((x) => granted.add(x));
+    return { accessToken: "tok", grantedScopes: [...granted, "openid"], email: "sam@example.com" };
+  });
+});
+await page.route("https://gmail.googleapis.com/**", (r) => {
+  const u = r.request().url();
+  if (u.endsWith("/messages/send")) {
+    sent.push(JSON.parse(r.request().postData()));
+    return r.fulfill({ json: { id: "m1", threadId: "t9" } });
+  }
+  if (u.includes("/profile")) return r.fulfill({ json: { emailAddress: "sam@example.com" } });
+  return r.fulfill({ json: {} });
+});
+await page.goto("app://lyra/index.html#/access");
+await page.getByRole("button", { name: /Connect Gmail/ }).click();
+await page.getByText("Gmail is connected").waitFor();
+await page.getByRole("switch", { name: /Write emails/ }).click();
+await page.getByText("Lyra can write emails for your OK").waitFor();
+await page.screenshot({ path: join(shots, "desktop-7-with-your-ok.png") });
+await page.goto("app://lyra/index.html#/");
+await page.getByPlaceholder("Message Lyra").fill("email dana@example.com saying Yes, Friday works.");
+await page.getByRole("button", { name: "Send" }).click();
+const card = page.getByRole("group", { name: "Email for your OK" });
+await card.waitFor();
+await page.waitForTimeout(500);
+check(sent.length === 0 && (await card.getByText("dana@example.com").isVisible()), "Lyra's email shows as a card with who it goes to, and nothing is sent yet");
+await card.getByRole("button", { name: "Edit" }).click();
+await card.getByLabel("Message").fill("Yes, Friday works. See you then!");
+await page.screenshot({ path: join(shots, "desktop-8-email-card.png") });
+await card.getByRole("button", { name: "Send", exact: true }).click();
+await card.getByText(/^Sent ·/).waitFor();
+const raw = Buffer.from(sent[0]?.raw ?? "", "base64url").toString("utf8");
+const sentBody = Buffer.from(raw.split("\r\n\r\n")[1] ?? "", "base64").toString("utf8");
+check(sent.length === 1 && raw.includes("To: dana@example.com") && sentBody === "Yes, Friday works. See you then!", "tapping Send sends it once, with your edits");
+check((await card.getByRole("button", { name: "Send", exact: true }).count()) === 0, "a sent email can't be sent again from the card");
+
 // closing the window keeps Lyra running in the tray; the setting turns that off
 check((await page.evaluate(() => window.lyraDesktop.shell.prefs())).tray === true, "keeping running in the tray is on by default");
 await page.goto("app://lyra/index.html#/settings/alerts");

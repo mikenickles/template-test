@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { describeEvent, toInstant } from "../core/connectors/calendar/server.ts";
 import { driveQuery, isTextual } from "../core/connectors/drive/server.ts";
-import { CALENDAR_READONLY, DRIVE_READONLY, GMAIL_READONLY, grantIsReadOnly } from "../core/connectors/google.ts";
+import { CALENDAR_READONLY, DRIVE_READONLY, GMAIL_READONLY, grantIsAllowed } from "../core/connectors/google.ts";
 import { Lyra } from "../core/lyra.ts";
 import { fakeGoogle, memStores, platform } from "./helpers.ts";
 
@@ -44,12 +44,14 @@ function fakeApis() {
 }
 
 describe("read-only Google grants", () => {
-  it("accepts only read-only scopes, including earlier ones Google returns together", () => {
-    expect(grantIsReadOnly([CALENDAR_READONLY], CALENDAR_READONLY)).toBe(true);
-    expect(grantIsReadOnly([GMAIL_READONLY, CALENDAR_READONLY, DRIVE_READONLY, "openid"], DRIVE_READONLY)).toBe(true);
-    expect(grantIsReadOnly([GMAIL_READONLY], CALENDAR_READONLY)).toBe(false);
-    expect(grantIsReadOnly([CALENDAR_READONLY, "https://www.googleapis.com/auth/calendar.events"], CALENDAR_READONLY)).toBe(false);
-    expect(grantIsReadOnly([DRIVE_READONLY, "https://www.googleapis.com/auth/drive"], DRIVE_READONLY)).toBe(false);
+  it("accepts read-only scopes (plus approve-each-one ones), including earlier ones Google returns together", () => {
+    expect(grantIsAllowed([CALENDAR_READONLY], CALENDAR_READONLY)).toBe(true);
+    expect(grantIsAllowed([GMAIL_READONLY, CALENDAR_READONLY, DRIVE_READONLY, "openid"], DRIVE_READONLY)).toBe(true);
+    expect(grantIsAllowed([GMAIL_READONLY], CALENDAR_READONLY)).toBe(false);
+    // adding events (Phase 9, approved one by one) is allowed alongside; full calendar control is not
+    expect(grantIsAllowed([CALENDAR_READONLY, "https://www.googleapis.com/auth/calendar.events"], CALENDAR_READONLY)).toBe(true);
+    expect(grantIsAllowed([CALENDAR_READONLY, "https://www.googleapis.com/auth/calendar"], CALENDAR_READONLY)).toBe(false);
+    expect(grantIsAllowed([DRIVE_READONLY, "https://www.googleapis.com/auth/drive"], DRIVE_READONLY)).toBe(false);
   });
 });
 

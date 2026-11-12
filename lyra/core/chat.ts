@@ -51,6 +51,13 @@ export interface Workspace {
     create(input: RoutineInput): Promise<{ id: number; name: string }>;
     update(id: number, input: Partial<RoutineInput>): Promise<{ id: number; name: string }>;
   };
+  /** Emails and events Lyra proposes; the user approves each one on a card. */
+  actions?: {
+    allowed(): { email: boolean; event: boolean };
+    propose(kind: "email" | "event", input: Record<string, unknown>, tainted: boolean, channelId: number | null): { id: number; summary: string };
+    /** recent proposals and what happened to them, one per line */
+    recent(): string;
+  };
   /** One-off reminders and follow-ups. `at` is the user's local time, YYYY-MM-DD HH:MM. */
   reminders?: {
     list(): string;
@@ -74,6 +81,47 @@ export interface TurnContext {
 }
 
 const MAIN = "main";
+
+/** Phase 9: proposing (never doing) an email or a calendar event. Only offered once the user has allowed it. */
+function actionTools(allowed: { email: boolean; event: boolean } | undefined): ToolDef[] {
+  const tools: ToolDef[] = [];
+  if (allowed?.email)
+    tools.push({
+      name: "propose_email",
+      description:
+        "Write an email for the user to approve. It appears as a card under your reply showing exactly who it goes to and what it says; the user taps Send, Save to Drafts or Not now, and can edit it first. Nothing is sent until they tap. Write it in the user's voice, signed as them.",
+      schema: {
+        type: "object",
+        properties: {
+          to: { type: "array", items: { type: "string" }, description: "Email addresses." },
+          cc: { type: "array", items: { type: "string" } },
+          subject: { type: "string", description: "Leave empty when replying in a thread (it keeps the thread's subject)." },
+          body: { type: "string", description: "Plain text." },
+          reply_to_thread: { type: "string", description: "To reply in an existing email thread: its thread id from search_mail." },
+        },
+        required: ["to", "body"],
+      },
+    });
+  if (allowed?.event)
+    tools.push({
+      name: "propose_event",
+      description:
+        "Put an event on the user's Google Calendar, for them to approve. It appears as a card under your reply; the user taps Add or Not now, and can edit it first. Check for clashes first. Attendees get an invitation email when it's added, so only include people the user asked to invite.",
+      schema: {
+        type: "object",
+        properties: {
+          title: { type: "string" },
+          start: { type: "string", description: "The user's local time, YYYY-MM-DD HH:MM, or YYYY-MM-DD for an all-day event." },
+          end: { type: "string", description: "Same format. For all-day, the last day. Defaults to an hour after start." },
+          location: { type: "string" },
+          description: { type: "string" },
+          attendees: { type: "array", items: { type: "string" }, description: "Email addresses to invite." },
+        },
+        required: ["title", "start"],
+      },
+    });
+  return tools;
+}
 
 function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolDef[] {
   const notebooks = [MAIN, ...channels.map((c) => c.name)];
@@ -350,6 +398,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
   }
   const notes: MemoryNote[] = [];
   const taskNotes: TaskNote[] = [];
+  const actionIds: number[] = [];
   const toolsUsed: { name: string; ok: boolean }[] = [];
   // Once outside content has been read, notebook changes need the user's tap.
   const state = { tainted: false };
@@ -367,6 +416,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
     memory: notes,
     ...(suggestions.length ? { suggestions } : {}),
     ...(taskNotes.length ? { tasks: taskNotes } : {}),
+    ...(actionIds.length ? { actions: actionIds } : {}),
     ...(sources.length ? { sources: uniqueSources(sources).slice(0, 8) } : {}),
     tools: toolsUsed,
     provider: ctx.provider.id,
@@ -375,7 +425,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
 
   try {
     const channels = ctx.workspace.channels();
-    const tools = [...memoryTools(channels, ctx.channel), ...(await ctx.connectors.tools())];
+    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed()), ...(await ctx.connectors.tools())];
     const system = buildSystemPrompt({
       userName: ctx.userName,
       soul: ctx.soul,
@@ -386,6 +436,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
       channels: ctx.channel ? channels.map((c) => ({ name: c.name, about: c.about })) : await digests(ctx),
       tasks: describeTasks(listTasks(ctx.db, { status: "open", channelId: ctx.channel ? ctx.channel.id : undefined, limit: 40 }), !ctx.channel),
       reminders: ctx.workspace.reminders?.list(),
+      actions: ctx.workspace.actions ? { allowed: ctx.workspace.actions.allowed(), recent: ctx.workspace.actions.recent() } : undefined,
       webSearch: !!ctx.webSearch,
     });
 
@@ -444,6 +495,27 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
             content: ok ? "Shown as buttons under your reply." : state.tainted ? "Not shown: outside content was read this turn." : "Give one to three short options.",
             isError: !ok,
           });
+          continue;
+        }
+        if (call.name === "propose_email" || call.name === "propose_event") {
+          // Only a proposal: the card shows exactly what happens, and nothing does until the user taps.
+          // Allowed after reading mail (replying needs that), but the card warns the user to check it.
+          let content: string;
+          let ok = false;
+          try {
+            if (actionIds.length >= 3) throw new Error("That's three for one reply. Let the user deal with these first.");
+            const a = ctx.workspace.actions;
+            if (!a) throw new Error("Not available.");
+            const r = a.propose(call.name === "propose_email" ? "email" : "event", call.input, state.tainted, ctx.channel?.id ?? null);
+            actionIds.push(r.id);
+            ok = true;
+            emit.status(call.name === "propose_email" ? "Email ready for your OK" : "Event ready for your OK");
+            content = `Ready for the user's OK as a card under your reply (#${r.id}: ${r.summary}). It is NOT sent or added yet: say it's ready for them to check, never that it's done.`;
+          } catch (e) {
+            content = (e as Error).message;
+          }
+          toolsUsed.push({ name: call.name, ok });
+          results.push({ type: "tool_result", id: call.id, name: call.name, content, isError: !ok });
           continue;
         }
         const r = await runTool(ctx, call.name, call.input, state, notes, emit, taskNotes);

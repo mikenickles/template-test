@@ -131,6 +131,19 @@ export const MIGRATIONS: string[] = [
      message_id INTEGER
    );
    CREATE INDEX reminders_due ON reminders (status, due_at);`,
+  // Phase 9: emails and events Lyra proposes; done only after the user's tap
+  `CREATE TABLE actions (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     kind TEXT NOT NULL CHECK (kind IN ('email','event')),
+     status TEXT NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed','working','done','declined')),
+     payload TEXT NOT NULL,
+     result TEXT,
+     error TEXT,
+     tainted INTEGER NOT NULL DEFAULT 0,
+     channel_id INTEGER REFERENCES channels(id) ON DELETE SET NULL,
+     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+     decided_at TEXT
+   );`,
 ];
 
 const FILE = "lyra.db";
@@ -282,6 +295,8 @@ export interface MessageMeta {
   voice?: boolean;
   /** Posted by a reminder or a follow-up Lyra set. */
   reminder?: { id: number; kind: "remind" | "follow_up" };
+  /** Emails and events proposed in this reply (cards with Send / Add, done only on the user's tap). */
+  actions?: number[];
   /** Posted by a heads-up check Lyra ran on its own. */
   headsUp?: boolean;
   /** Next steps Lyra offers as buttons (only on its latest reply). */

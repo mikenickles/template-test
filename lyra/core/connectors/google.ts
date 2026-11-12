@@ -1,20 +1,31 @@
 export const GMAIL_READONLY = "https://www.googleapis.com/auth/gmail.readonly";
 export const CALENDAR_READONLY = "https://www.googleapis.com/auth/calendar.readonly";
 export const DRIVE_READONLY = "https://www.googleapis.com/auth/drive.readonly";
+/**
+ * Phase 9, each only if the user turns it on in Connections: write emails (as drafts, or
+ * sent) and add calendar events. Lyra's model never gets a tool that uses these; the app
+ * uses them only after the user taps Send / Save to Drafts / Add on a card in the chat.
+ */
+export const GMAIL_COMPOSE = "https://www.googleapis.com/auth/gmail.compose";
+export const CALENDAR_EVENTS = "https://www.googleapis.com/auth/calendar.events";
 /** Lyra's own hidden folder in your Drive, for sync. It can't see or change any of your files. */
 export const DRIVE_APPDATA = "https://www.googleapis.com/auth/drive.appdata";
 
 /**
- * The only Google permissions Lyra will ever accept: reading, who you are, and
- * its own hidden sync folder (which holds nothing of yours but Lyra's encrypted
- * snapshots). Google returns earlier grants alongside new ones, so the sync
- * permission has to be allowed here or it would spoil every read-only grant.
+ * The only Google permissions Lyra will ever accept: reading, who you are, its own
+ * hidden sync folder (which holds nothing of yours but Lyra's encrypted snapshots),
+ * and the two approve-each-one permissions above. Google returns earlier grants
+ * alongside new ones, so each of these has to be allowed here or it would spoil
+ * every read-only grant. Anything wider (all of Gmail, deleting, all of Drive or
+ * Calendar settings) is refused.
  */
 const ALLOWED = new Set([
   GMAIL_READONLY,
   CALENDAR_READONLY,
   DRIVE_READONLY,
   DRIVE_APPDATA,
+  GMAIL_COMPOSE,
+  CALENDAR_EVENTS,
   "openid",
   "email",
   "profile",
@@ -24,27 +35,14 @@ const ALLOWED = new Set([
 
 /**
  * A grant is usable only if it includes the scope we asked for and nothing
- * that could change anything. Google can return earlier grants alongside
- * the new one, so every scope in it is checked.
+ * beyond the list above. Google can return earlier grants alongside the new
+ * one, so every scope in it is checked.
  */
-export function grantIsReadOnly(scopes: string[] | string, required: string): boolean {
+export function grantIsAllowed(scopes: string[] | string, required: string): boolean {
   const granted = (Array.isArray(scopes) ? scopes : scopes.split(/\s+/)).filter(Boolean);
   return granted.includes(required) && granted.every((s) => ALLOWED.has(s));
 }
 
-/** Any of these would let Lyra change or send mail. Phase 1 refuses a grant that carries one. */
-const WRITE_SCOPES = [
-  "https://mail.google.com/",
-  "https://www.googleapis.com/auth/gmail.modify",
-  "https://www.googleapis.com/auth/gmail.send",
-  "https://www.googleapis.com/auth/gmail.compose",
-  "https://www.googleapis.com/auth/gmail.insert",
-];
-
-export function scopesAreReadOnly(scopes: string[] | string): boolean {
-  const granted = (Array.isArray(scopes) ? scopes : scopes.split(/\s+/)).filter(Boolean);
-  return grantIsReadOnly(granted, GMAIL_READONLY) && !granted.some((s) => WRITE_SCOPES.includes(s));
-}
 
 export class NeedsConsentError extends Error {
   constructor(message = "Google needs you to approve Lyra again.") {
@@ -79,7 +77,7 @@ export class TokenSource {
   async get(): Promise<string> {
     if (this.token && this.token.expires > Date.now()) return this.token.value;
     const r = await this.auth.authorize(this.scopes, false);
-    if (!grantIsReadOnly(r.grantedScopes, this.scopes[0])) throw new Error("The Google grant is not read-only, so Lyra won't use it.");
+    if (!grantIsAllowed(r.grantedScopes, this.scopes[0])) throw new Error("The Google grant includes more than Lyra asked for, so Lyra won't use it.");
     this.token = { value: r.accessToken, expires: Date.now() + 45 * 60_000 };
     return r.accessToken;
   }

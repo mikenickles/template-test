@@ -43,6 +43,7 @@ export class FakeProvider implements ModelProvider {
       if (result.name === "set_reminder") return say("Okay, I'll remind you.");
       if (result.name === "suggest_replies") return say("Here are a couple of next steps.");
       if (result.name === "forget") return say("Done, that's gone.");
+      if (result.name === "propose_email" || result.name === "propose_event") return say("It's ready for you to check.");
       return say(`Here's what I found.\n\n${result.content.replace(/<\/?untrusted_data[^>]*>/g, "").trim().slice(0, 400)}`);
     }
 
@@ -62,6 +63,9 @@ export class FakeProvider implements ModelProvider {
     if (rem && has("remember")) return call("remember", { section: "Open loops", text: rem[1] });
     const forget = text.match(/^forget[:\s]+(.+)$/i);
     if (forget && has("forget")) return call("forget", { section: "Open loops", match: forget[1] });
+    // "email dana@example.com saying yes to Friday": the practice model can propose an email (the user still taps Send)
+    const mail = text.match(/^e-?mail (\S+@\S+) saying (.+)$/i);
+    if (mail && has("propose_email")) return call("propose_email", { to: [mail[1]], subject: "Quick note", body: mail[2] });
     if (/\b(e-?mail|inbox|mail)\b/i.test(text) && has("gmail__search_mail"))
       return call("gmail__search_mail", { query: "newer_than:7d", max_results: 5 });
     return say(

@@ -4499,3 +4499,151 @@ a.status-pill:active {
   width: 100%;
   margin-top: var(--s4);
 }
+
+/* ---------- emails and events for your OK ---------- */
+
+.btn.text {
+  padding: 0 var(--s3);
+  color: var(--text-muted);
+}
+
+.actions-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  margin-top: var(--s3);
+}
+
+.action-card {
+  padding: var(--s4);
+  border-radius: 22px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+}
+
+.action-card.proposed {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+
+.action-card.declined {
+  opacity: 0.6;
+}
+
+.action-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s3);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.action-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent-text);
+}
+
+.action-state {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.action-line {
+  display: flex;
+  gap: var(--s2);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  margin-bottom: 2px;
+}
+
+.action-line span {
+  flex: none;
+  width: 58px;
+  color: var(--text-muted);
+}
+
+.action-line b {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.action-text {
+  margin: var(--s3) 0 0;
+  white-space: pre-wrap;
+  line-height: 1.45;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.action-title {
+  font-weight: 600;
+  font-size: 17px;
+}
+
+.action-sub {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  margin-top: 2px;
+}
+
+.action-warn,
+.action-error {
+  margin: 0 0 var(--s3);
+  padding: var(--s2) var(--s3);
+  border-radius: 12px;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  background: color-mix(in srgb, var(--bad) 10%, transparent);
+  color: var(--text);
+}
+
+.action-error {
+  margin: var(--s3) 0 0;
+  color: var(--bad);
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s4);
+}
+
+.action-link {
+  display: inline-block;
+  margin-top: var(--s3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.action-edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.action-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.action-field input,
+.action-field textarea {
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  resize: vertical;
+}

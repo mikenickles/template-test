@@ -5,6 +5,7 @@ import { noteOf, onIncoming, prepare, prepareShared, strip, takeIncoming, type D
 import { MAX_ATTACHMENTS } from "../../../core/attachments";
 import { copyText, isNative, liveVoice } from "../platform";
 import { VoiceOverlay } from "../VoiceOverlay";
+import { ActionCards } from "../ActionCard";
 import { setChatStatus } from "../StatusLine";
 import { STATUS_LABEL } from "./Tasks";
 import { StarChart, Thinking } from "../LyraMark";
@@ -476,6 +477,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI }: ChatP
                   )}
                   {!!m.meta.memory?.length && <Notes notes={m.meta.memory} onAction={(i, a) => answerNote(m, i, a)} />}
                   {!!m.meta.tasks?.length && <TaskNotes notes={m.meta.tasks} />}
+                  {!!m.meta.actions?.length && <ActionCards ids={m.meta.actions} toast={toast} />}
                   {!!m.meta.sources?.length && <Sources list={m.meta.sources} />}
                   {!!m.meta.suggestions?.length && m.id === lastId && !pending && (
                     <div className="suggestions" aria-label="Suggested replies">

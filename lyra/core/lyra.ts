@@ -10,7 +10,8 @@ import { CHANNEL_ICONS, runTurn, type TurnEmitter, type Workspace } from "./chat
 import { createGmailServer, gmailProfile } from "./connectors/gmail/server.ts";
 import { createCalendarServer } from "./connectors/calendar/server.ts";
 import { createDriveServer } from "./connectors/drive/server.ts";
-import { CALENDAR_READONLY, DRIVE_READONLY, GMAIL_READONLY, grantIsReadOnly, TokenSource, type GoogleAuth } from "./connectors/google.ts";
+import { CALENDAR_EVENTS, CALENDAR_READONLY, DRIVE_READONLY, GMAIL_COMPOSE, GMAIL_READONLY, grantIsAllowed, TokenSource, type GoogleAuth } from "./connectors/google.ts";
+import * as A from "./actions.ts";
 import { Connectors, type ConnectorStatus } from "./connectors/registry.ts";
 import {
   DB,
@@ -106,6 +107,8 @@ export interface AppState {
   liveVoice: LiveVoice;
   /** Heads-ups: Lyra checks in on its own and speaks up only when something needs you. */
   proactive: Proactive;
+  /** Lyra may propose emails / calendar events (you approve each one). */
+  actions: { email: boolean; event: boolean };
 }
 
 export const PROACTIVE_LEVELS = ["off", "light", "active"] as const;
@@ -177,7 +180,13 @@ export type GoogleId = "gmail" | "calendar" | "drive";
 
 const GOOGLE_LINKS = ["gmail", "calendar", "drive"];
 /** Settings that stay with a device when another device's data arrives through sync. */
-const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications"];
+const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications", "actions.gmail", "actions.calendar"];
+
+/** Phase 9: what Lyra may propose, each turned on by the user in Connections. */
+const ACTION_ACCESS = {
+  email: { link: "gmail" as GoogleId, setting: "actions.gmail", scope: GMAIL_COMPOSE, what: "draft and send mail" },
+  event: { link: "calendar" as GoogleId, setting: "actions.calendar", scope: CALENDAR_EVENTS, what: "add calendar events" },
+};
 
 /** Lyra's Google connectors. Each asks for one read-only permission. */
 const GOOGLE: {
@@ -246,6 +255,19 @@ export class Lyra {
       notebook: (id) => this.notebook(id),
       createChannel: (input) => this.createChannel(input),
       startTask: (id, note) => void this.workers.start(id, "lyra", note),
+      actions: {
+        allowed: () => this.actionsAllowed(),
+        propose: (kind, input, tainted, channelId) => {
+          if (!this.actionsAllowed()[kind]) throw new Error(`You can't ${ACTION_ACCESS[kind].what} yet: the user can turn it on in Connections.`);
+          const payload = kind === "email" ? A.checkEmail(input) : A.checkEvent(input, this.p.timeZone);
+          const row = A.createAction(this.db, kind, payload, tainted, channelId);
+          return { id: row.id, summary: A.describeAction(row, this.p.timeZone) };
+        },
+        recent: () =>
+          A.recentActions(this.db)
+            .map((a) => `- #${a.id} ${A.describeAction(a, this.p.timeZone)}: ${a.status === "done" ? (a.result?.did ?? "done") : a.status === "declined" ? "the user said not now" : a.error ? `not done yet (last try failed: ${a.error})` : "waiting for the user's tap"}`)
+            .join("\n"),
+      },
       reminders: {
         list: () => describeReminders(pendingReminders(this.db), this.p.timeZone),
         create: (kind, text, at, channelId) => {
@@ -340,6 +362,8 @@ export class Lyra {
     // Workers cut off when the app was closed carry on where they stopped (not after
     // loading another device's data: those runs belong to that device).
     if (opts.resumeWorkers !== false) lyra.workers.resumeInterrupted();
+    // an email or event cut off mid-send: back to the user, who can check Gmail/Calendar first
+    db.run("UPDATE actions SET status = 'proposed', error = ? WHERE status = 'working'", ["Lyra was closed while doing this. Check it didn't go through before trying again."]);
     return lyra;
   }
 
@@ -403,7 +427,69 @@ export class Lyra {
       weatherPlace: this.weatherPlace,
       liveVoice: this.liveVoice,
       proactive: this.proactive,
+      actions: this.actionsAllowed(),
     };
+  }
+
+  // ---------- actions: emails and events, done only on the user's tap ----------
+
+  private actionTokens = { email: undefined as TokenSource | undefined, event: undefined as TokenSource | undefined };
+
+  private actionToken(kind: A.ActionKind): TokenSource {
+    return (this.actionTokens[kind] ??= new TokenSource(this.p.google, [ACTION_ACCESS[kind].scope]));
+  }
+
+  actionsAllowed(): { email: boolean; event: boolean } {
+    const on = (k: A.ActionKind) => !!this.link(ACTION_ACCESS[k].link) && getSetting(this.db, ACTION_ACCESS[k].setting) === "on";
+    return { email: on("email"), event: on("event") };
+  }
+
+  /** Turn on (asks Google for that one permission) or off. */
+  async allowActions(kind: A.ActionKind, on: boolean): Promise<AppState> {
+    const a = ACTION_ACCESS[kind];
+    if (on) {
+      if (!this.link(a.link)) throw new Error(`Connect ${a.link === "gmail" ? "Mail" : "Calendar"} first.`);
+      if (!this.p.google.available) throw new Error("Google sign-in isn't available here.");
+      const r = await this.p.google.authorize([a.scope], true);
+      if (!grantIsAllowed(r.grantedScopes, a.scope)) throw new Error("Google granted more than Lyra asked for, so Lyra didn't keep it.");
+      await this.actionToken(kind).invalidate();
+    }
+    setSetting(this.db, a.setting, on ? "on" : "off");
+    await this.db.flush();
+    return this.state();
+  }
+
+  action(id: number): A.ActionRow | undefined {
+    return A.getAction(this.db, id);
+  }
+
+  /**
+   * The user's tap on a card: send / save as a draft / add to the calendar, or not now.
+   * `edited` is the card's fields if the user changed them; they're checked again.
+   */
+  async decideAction(id: number, choice: "send" | "draft" | "add" | "decline", edited?: Record<string, unknown>): Promise<A.ActionRow> {
+    const a = A.getAction(this.db, id);
+    if (!a) throw new Error("That's no longer here.");
+    if (!A.claimAction(this.db, id)) throw new Error(a.status === "done" ? "That's already done." : a.status === "declined" ? "You said not now to that one." : "That's already being done.");
+    if (choice === "decline") {
+      A.finishAction(this.db, id, { status: "declined" });
+    } else {
+      try {
+        const payload = edited ? (a.kind === "email" ? A.checkEmail(edited) : A.checkEvent(edited, this.p.timeZone)) : a.payload;
+        if (!this.actionsAllowed()[a.kind]) throw new Error(`Lyra isn't allowed to ${ACTION_ACCESS[a.kind].what} on ${this.p.google.available ? "this device" : "here"}. Turn it on in Connections, then try again.`);
+        const deps: A.ActionDeps = { fetch: this.fetch, compose: this.actionToken("email"), mailRead: this.tokenFor("gmail"), events: this.actionToken("event"), timeZone: this.p.timeZone };
+        const result =
+          a.kind === "email"
+            ? await A.doEmail(deps, payload as A.EmailDraft, choice === "draft" ? "draft" : "send")
+            : await A.doEvent(deps, payload as A.EventDraft);
+        A.finishAction(this.db, id, { status: "done", payload, result });
+      } catch (e) {
+        A.finishAction(this.db, id, { status: "proposed", error: (e as Error).message.slice(0, 300) });
+      }
+    }
+    await this.db.flush();
+    this.listeners.forEach((l) => l({ type: "message", channelId: a.channel_id }));
+    return A.getAction(this.db, id)!;
   }
 
   get proactive(): Proactive {
@@ -1009,7 +1095,7 @@ export class Lyra {
     if (!g) throw new Error("Unknown connection.");
     if (!this.p.google.available) throw new Error(`${g.label} sign-in works in the Android app.`);
     const r = await this.p.google.authorize([g.scope], true);
-    if (!grantIsReadOnly(r.grantedScopes, g.scope)) throw new Error(`Google granted more than read-only ${g.noun} access, so Lyra didn't keep it.`);
+    if (!grantIsAllowed(r.grantedScopes, g.scope)) throw new Error(`Google granted more than read-only ${g.noun} access, so Lyra didn't keep it.`);
     await this.tokenFor(id).invalidate();
     let email = r.email ?? GOOGLE.map((x) => this.link(x.id)?.email).find(Boolean);
     if (!email && id === "gmail") email = await gmailProfile(this.tokenFor(id), this.fetch);
@@ -1041,6 +1127,7 @@ export class Lyra {
     }
     await this.tokenFor(id).invalidate();
     this.db.run("DELETE FROM settings WHERE key = ?", [id]);
+    for (const k of ["email", "event"] as const) if (ACTION_ACCESS[k].link === id) this.db.run("DELETE FROM settings WHERE key = ?", [ACTION_ACCESS[k].setting]);
     await this.connectors.reset();
     await this.db.flush();
     return this.state();

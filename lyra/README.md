@@ -15,7 +15,7 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 | 7 | Safety net: encrypted backup and restore, app lock, message actions | Done |
 | 7b | Windows app and hand-off sync through encrypted Google Drive | Done |
 | 8 | Talk your way: live voice, share to Lyra, photos and files | Done |
-| 9 | Approvals and actions: drafts, calendar events | Next |
+| 9 | Approvals and actions: emails and calendar events, each with your tap | Done |
 | 10 | Smarter memory: search past chats, people, weekly tidy-up | Planned |
 | 11 | Works on its own: background routines, "while you were away", widget | Done (Proactive step 3) |
 | 12 | Polish: accent-colored app icon, fixes from testing | Planned |
@@ -50,6 +50,14 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Quiet hours** (21:00 to 07:00 by default, can wrap past midnight): no checks then. Reminders you set still come.
 - Runs on the routine tick (`Lyra.tickHeadsUp`, `Routines.headsUp`), so like routines it runs on the phone when sync is on, never on the practice model, and not while Lyra is busy. What it said last time is passed to the next check so it doesn't repeat itself (settings `headsUpAt`, `headsUpLast`). Posts are tagged "Heads-up" and notify like a routine.
 - Heads-up and follow-up tokens show on the Usage page as their own kind of work ("proactive").
+
+### Phase 9: emails and events, with your OK each time
+
+- **Off until you turn it on**, per service, on the Lyra page under **With your OK each time**: "Write emails" asks Google for `gmail.compose`, "Add calendar events" for `calendar.events`. Each is the narrowest Google permission that can do the job; anything wider (all of Gmail, modify/delete, full Calendar or Drive) is still refused (`grantIsAllowed` in `core/connectors/google.ts`).
+- **Lyra only proposes.** With one turned on, the chat model gets `propose_email` / `propose_event`. They only save a proposal (`core/actions.ts`, table `actions`) and put a card under the reply showing exactly what will happen: who it goes to, the subject and text, or the event's time, place and guests. The model has no tool that sends or adds anything.
+- **You tap.** Send, Save to Drafts, Edit or Not now on an email; Add (or "Add and invite 2") on an event. Only then does the app call Gmail or Calendar (`Lyra.decideAction`). Each proposal can be done once (claimed first, so two taps or two devices can't send it twice). Edits are checked again before anything goes. Replies stay in their thread (In-Reply-To, References). Guests are only invited if they're on the card.
+- **After reading mail or the web**, proposals are still allowed (a reply needs the email it answers) but the card warns you to check who it goes to; the prompt tells Lyra never to take an address from an email or page that asks.
+- Lyra sees recent proposals and what happened to them, so it never says something went out when it didn't. If Lyra is closed mid-send, the card comes back with a note to check before trying again.
 
 ### Proactive, step 3: works with the app closed
 

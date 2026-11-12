@@ -367,6 +367,9 @@ export const api = {
   disconnectGmail: async () => (await ready).disconnectGmail(),
   connectGoogle: async (id: "gmail" | "calendar" | "drive") => (await ready).connectGoogle(id),
   disconnectGoogle: async (id: "gmail" | "calendar" | "drive") => (await ready).disconnectGoogle(id),
+  allowActions: async (kind: "email" | "event", on: boolean) => (await ready).allowActions(kind, on),
+  action: async (id: number) => (await ready).action(id),
+  decideAction: async (id: number, choice: "send" | "draft" | "add" | "decline", edited?: Record<string, unknown>) => (await ready).decideAction(id, choice, edited),
 };
 
 export interface StreamHandlers {

@@ -10,8 +10,8 @@ type GoogleId = "gmail" | "calendar" | "drive";
 const ICONS: Record<GoogleId, ReactNode> = { gmail: <Mail />, calendar: <Calendar />, drive: <File /> };
 const NAMES: Record<GoogleId, string> = { gmail: "Gmail", calendar: "Google Calendar", drive: "Google Drive" };
 const PROMISE: Record<GoogleId, string> = {
-  gmail: "Lyra can now read your mail. It can't send, delete or change anything.",
-  calendar: "Lyra can now see your schedule. It can't add, change or answer events.",
+  gmail: "Lyra can now read your mail. It can't send, delete or change anything on its own.",
+  calendar: "Lyra can now see your schedule. It can't add, change or answer events on its own.",
   drive: "Lyra can now find and read your files. It can't change, share or delete them.",
 };
 
@@ -89,9 +89,11 @@ export function Access({
             <ConnectorRow key={c.id} c={c} busy={busy === c.id} onConnect={() => connect(c.id)} onDisconnect={() => disconnect(c.id)} />
           ))}
         </div>
-        <p className="hint">Read-only, always. Lyra asks Google only for permission to look, and refuses anything more.</p>
+        <p className="hint">On its own, Lyra can only look. Anything that writes needs your tap each time (below), and Lyra refuses any wider permission.</p>
         {unavailable && <p className="hint">Google sign-in works in the Android app. This browser preview can't connect.</p>}
       </section>
+
+      {!unavailable && <WithYourOk state={state} setState={setState} toast={toast} />}
 
       <section className="section">
         <h2 className="section-label">Who Lyra is, and what it knows</h2>
@@ -121,6 +123,66 @@ export function Access({
         </div>
       </section>
     </div>
+  );
+}
+
+/** Phase 9: Lyra may write emails and add events, each one only when you tap. */
+function WithYourOk({ state, setState, toast }: { state: AppState; setState: (s: AppState) => void; toast: (m: string) => void }) {
+  const [busy, setBusy] = useState<"email" | "event" | null>(null);
+  const linked = (id: GoogleId) => state.connectors.find((c) => c.id === id)?.state === "connected";
+  const rows = [
+    {
+      kind: "email" as const,
+      link: "gmail" as GoogleId,
+      title: "Write emails",
+      sub: "Lyra writes emails and replies for you to check. Each one goes only when you tap Send (or Save to Drafts).",
+      need: "Connect Gmail first",
+      on: "Lyra can write emails for your OK",
+    },
+    {
+      kind: "event" as const,
+      link: "calendar" as GoogleId,
+      title: "Add calendar events",
+      sub: "Lyra suggests events; each is added only when you tap Add. Guests are invited only if you asked.",
+      need: "Connect Google Calendar first",
+      on: "Lyra can add events with your OK",
+    },
+  ];
+  const flip = async (kind: "email" | "event", on: boolean, done: string) => {
+    setBusy(kind);
+    try {
+      setState(await api.allowActions(kind, on));
+      toast(done);
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <section className="section">
+      <h2 className="section-label">With your OK each time</h2>
+      <div className="group">
+        {rows.map((r) => (
+          <label className="item" key={r.kind}>
+            <span className={`tile${state.actions[r.kind] ? " on" : ""}`}>{ICONS[r.link]}</span>
+            <span className="body">
+              <div className="title">{r.title}</div>
+              <div className="sub">{linked(r.link) ? r.sub : r.need}</div>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              className="switch"
+              checked={state.actions[r.kind]}
+              disabled={busy !== null || !linked(r.link)}
+              onChange={(e) => void flip(r.kind, e.target.checked, e.target.checked ? r.on : `${r.title}: off`)}
+            />
+          </label>
+        ))}
+      </div>
+      <p className="hint">Turning one on asks Google for that one permission. Lyra uses it only after your tap, never on its own, and never because an email or web page asked. Turning it off stops Lyra offering; to remove Google's permission too, disconnect that service.</p>
+    </section>
   );
 }
 
