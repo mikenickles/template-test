@@ -3,6 +3,7 @@ import { api, isNative, type AppState } from "../api";
 import { appLock, isDesktop, thisDevice } from "../platform";
 import { BackupSection } from "./Backup";
 import { GoogleSetupSection, SyncSection } from "./SyncSection";
+import { WeatherSection } from "./WeatherSection";
 import { Check, Chevron, Cpu } from "../icons";
 
 type KeyId = "anthropic" | "openai" | "gemini";
@@ -113,6 +114,8 @@ export function Settings({
           ))}
         </div>
       </section>
+
+      <WeatherSection state={state} setState={setState} toast={toast} />
 
       <section className="section">
         <h2 className="section-label">Model</h2>

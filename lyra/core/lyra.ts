@@ -80,6 +80,14 @@ export interface AppState {
   notifications: boolean;
   /** Ask for fingerprint, face or the phone's PIN to open Lyra. */
   appLock: boolean;
+  /** Where the status line's weather is for (set in Settings); null = no weather. */
+  weatherPlace: WeatherPlace | null;
+}
+
+export interface WeatherPlace {
+  name: string;
+  latitude: number;
+  longitude: number;
 }
 
 /** Accent colors the user can pick in Settings. The colors themselves live in the app's stylesheet. */
@@ -114,6 +122,7 @@ export interface SettingsPatch {
   accent?: string;
   notifications?: boolean;
   appLock?: boolean;
+  weatherPlace?: WeatherPlace | null;
 }
 
 const SECRET_KEYS = ["anthropic", "openai", "gemini"] as const;
@@ -324,7 +333,17 @@ export class Lyra {
       accent: this.accent,
       notifications: getSetting(this.db, "notifications") !== "off",
       appLock: getSetting(this.db, "appLock") === "on",
+      weatherPlace: this.weatherPlace,
     };
+  }
+
+  get weatherPlace(): WeatherPlace | null {
+    try {
+      const raw = getSetting(this.db, "weatherPlace");
+      return raw ? (JSON.parse(raw) as WeatherPlace) : null;
+    } catch {
+      return null;
+    }
   }
 
   get accent(): Accent {
@@ -336,6 +355,12 @@ export class Lyra {
     if (patch.userName !== undefined) setSetting(this.db, "userName", patch.userName.trim().slice(0, 40));
     if (patch.webSearch !== undefined) setSetting(this.db, "webSearch", patch.webSearch ? "on" : "off");
     if (patch.appLock !== undefined) setSetting(this.db, "appLock", patch.appLock ? "on" : "off");
+    if (patch.weatherPlace !== undefined) {
+      const w = patch.weatherPlace;
+      if (w && !(w.name?.trim() && Number.isFinite(w.latitude) && Number.isFinite(w.longitude) && Math.abs(w.latitude) <= 90 && Math.abs(w.longitude) <= 180))
+        throw new Error("That place doesn't look right.");
+      setSetting(this.db, "weatherPlace", w ? JSON.stringify({ name: w.name.trim().slice(0, 80), latitude: w.latitude, longitude: w.longitude }) : "");
+    }
     if (patch.notifications !== undefined) setSetting(this.db, "notifications", patch.notifications ? "on" : "off");
     if (patch.accent !== undefined) {
       if (!(ACCENTS as readonly string[]).includes(patch.accent)) throw new Error("That color isn't one of the choices.");

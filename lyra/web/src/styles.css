@@ -3427,3 +3427,119 @@ a.btn {
   z-index: 100;
   -webkit-app-region: drag;
 }
+
+/* ---------- Lyra's status, under its avatar ---------- */
+
+.avatar-stack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* hangs below the avatar without making the top bar taller */
+.avatar-stack > .status-line {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* in a channel the name sits under the avatar; the status goes under the name */
+.avatar-stack.in-channel > .status-line {
+  top: calc(100% + 30px);
+}
+
+.status-line {
+  pointer-events: none;
+}
+
+.status-pill {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px 4px 9px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 550;
+  line-height: 1.2;
+  /* every status is written to fit: it never wraps or gets cut off */
+  white-space: nowrap;
+  color: var(--text-muted);
+  text-decoration: none;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 1px var(--border);
+  animation: status-in 280ms ease both;
+}
+
+a.status-pill:active {
+  transform: scale(0.97);
+}
+
+@keyframes status-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+
+.status-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text-muted) 60%, transparent);
+}
+
+.status-dot.live {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  animation: status-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes status-pulse {
+  50% {
+    box-shadow: 0 0 0 5px transparent;
+  }
+}
+
+/* chat starts a little lower so the status has room */
+.chat .log {
+  padding-top: calc(var(--inset-top) + 118px);
+}
+
+.chat.in-channel .log {
+  padding-top: calc(var(--inset-top) + 150px);
+}
+
+/* desktop: under "Lyra" in the sidebar, like a messenger's status */
+.drawer-name {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.status-line.in-side .status-pill {
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  font-size: 12.5px;
+}
+
+.app.desk .drawer-head {
+  align-items: center;
+}
+
+.banner-link {
+  display: inline-block;
+  margin-top: var(--s2);
+  font-weight: 600;
+  color: var(--accent-text);
+}

@@ -307,6 +307,28 @@ try {
   await page.locator(".bubble", { hasText: "When is it?" }).waitFor();
   check((await page.locator(".bubble", { hasText: "after the backup" }).count()) === 0, "restore brings back the backed-up chat");
 
+  // ---- status under the avatar, with a pretend weather service ----
+  await page.route("https://geocoding-api.open-meteo.com/**", (r) =>
+    r.fulfill({ json: { results: [{ name: "Boston", admin1: "Massachusetts", country_code: "US", latitude: 42.36, longitude: -71.06 }] } }),
+  );
+  await page.route("https://api.open-meteo.com/**", (r) => r.fulfill({ json: { current: { temperature_2m: 58.4, weather_code: 2, is_day: 1 } } }));
+  await page.goto(`${base}/#/settings`);
+  await page.getByLabel("Your city").fill("Boston");
+  await page.getByRole("button", { name: "Find" }).click();
+  await page.getByRole("button", { name: /Boston, Massachusetts/ }).click();
+  await page.getByText("Weather for Boston, Massachusetts").waitFor();
+  check(true, "picking a city for the weather");
+  await page.goto(`${base}/#/`);
+  await page.locator(".status-pill", { hasText: "58° · Partly cloudy" }).waitFor({ timeout: 20_000 });
+  check(true, "the weather shows under Lyra's avatar");
+  const statuses = await page.locator(".status-text").allTextContents();
+  check(statuses.every((t) => [...t].length <= 24), "the status always fits, never cut off");
+  await shot("light-27-status");
+  await page.goto(`${base}/#/c/2`);
+  await page.locator(".avatar-stack.in-channel .status-pill").waitFor();
+  await shot("light-28-status-channel");
+  check(true, "channels show the status under the channel name");
+
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   check(!wide, "no sideways scrolling");
   check(errors.length === 0, `no page errors ${errors.join("; ")}`);

@@ -72,6 +72,11 @@ export function Access({
         <div className={`banner ${notice.tone}`} role={notice.tone === "bad" ? "alert" : "status"}>
           <strong>{notice.title}</strong>
           {notice.body}
+          {/Google on this computer/.test(notice.body) && (
+            <a className="banner-link" href="#/settings?google">
+              Open Google setup
+            </a>
+          )}
         </div>
       )}
 

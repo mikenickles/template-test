@@ -14,6 +14,7 @@ import { Soul } from "./screens/Soul";
 import { TaskPage, Tasks, WorkerLog } from "./screens/Tasks";
 import { RoutinePage } from "./screens/Routines";
 import { SyncConflict } from "./screens/SyncSection";
+import { StatusLine } from "./StatusLine";
 import { appLock, isDesktop, notifier } from "./platform";
 import { ChatIcon, TasksIcon } from "./icons";
 
@@ -258,6 +259,7 @@ export function App() {
         route={route.name}
         readyCount={readyCount}
         initial={initial}
+        status={wide ? <StatusLine state={state} className="in-side" /> : undefined}
       />
       <div className="shell" inert={drawer && !wide}>
         {wide ? (
@@ -282,20 +284,26 @@ export function App() {
             </a>
           )}
           {inChat && !channel && (
-            <a className="orb orb-sm" href="#/access" aria-label="What Lyra can access">
-              <Avatar />
-            </a>
+            <div className="avatar-stack">
+              <a className="orb orb-sm" href="#/access" aria-label="What Lyra can access">
+                <Avatar />
+              </a>
+              <StatusLine state={state} />
+            </div>
           )}
           {inChat && channel && (
-            <a className="channel-head" href={`#/c/${channel.id}/info`} aria-label={`${channel.name}: channel details`}>
-              <span className="orb orb-sm">
-                <Avatar />
-              </span>
-              <span className="channel-chip">
-                <ChannelIcon name={channel.icon} size={16} />
-                <span>{channel.name}</span>
-              </span>
-            </a>
+            <div className="avatar-stack in-channel">
+              <a className="channel-head" href={`#/c/${channel.id}/info`} aria-label={`${channel.name}: channel details`}>
+                <span className="orb orb-sm">
+                  <Avatar />
+                </span>
+                <span className="channel-chip">
+                  <ChannelIcon name={channel.icon} size={16} />
+                  <span>{channel.name}</span>
+                </span>
+              </a>
+              <StatusLine state={state} />
+            </div>
           )}
           {!inChat && <span />}
           {inChat ? (

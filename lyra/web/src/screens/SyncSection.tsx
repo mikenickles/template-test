@@ -235,7 +235,8 @@ export function SyncConflict() {
 /** Desktop only: the Google Cloud "Desktop app" client this computer signs in with. */
 export function GoogleSetupSection({ toast }: { toast: (m: string) => void }) {
   const [have, setHave] = useState<boolean | null>(null);
-  const [open, setOpen] = useState(false);
+  // arriving from "Open Google setup": open this section and bring it into view
+  const [open, setOpen] = useState(() => location.hash.includes("google"));
   const [id, setId] = useState("");
   const [secret, setSecret] = useState("");
   useEffect(() => {
@@ -257,7 +258,7 @@ export function GoogleSetupSection({ toast }: { toast: (m: string) => void }) {
   };
 
   return (
-    <section className="section">
+    <section className="section" ref={(el) => void (open && location.hash.includes("google") && el?.scrollIntoView({ block: "start" }))}>
       <h2 className="section-label">Google on this computer</h2>
       <div className="group">
         <button className="item" onClick={() => setOpen((v) => !v)} aria-expanded={open}>

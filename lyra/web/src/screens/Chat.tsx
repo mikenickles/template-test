@@ -2,6 +2,7 @@ import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useRef, useSta
 import { api, onChange, sendChat, type Channel, type MemoryNote, type Message, type TaskNote } from "../api";
 import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chevron, Minus, More, Pin, Spark, Stop, TasksIcon } from "../icons";
 import { copyText } from "../platform";
+import { setChatStatus } from "../StatusLine";
 import { STATUS_LABEL } from "./Tasks";
 import { StarChart, Thinking } from "../LyraMark";
 import { headline, Markdown } from "../markdown";
@@ -158,6 +159,12 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
       setPending(null);
     }
   };
+
+  // what Lyra is doing, for the status under its avatar
+  useEffect(() => {
+    setChatStatus(pending ? pending.status || (pending.reply ? "Writing" : "Thinking") : null);
+  }, [pending]);
+  useEffect(() => () => setChatStatus(null), []);
 
   // long-press a message: copy, pin or delete it
   const [acting, setActing] = useState<Message | null>(null);

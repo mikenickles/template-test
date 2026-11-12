@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import type { Channel } from "./api";
 import { ChannelIcon, Gear, Layers, Notebook, Plus, Spark, TasksIcon } from "./icons";
 import { Avatar } from "./LyraMark";
@@ -17,6 +17,7 @@ export function Drawer({
   route = "",
   readyCount = 0,
   initial = "",
+  status,
 }: {
   open: boolean;
   onClose: () => void;
@@ -30,6 +31,8 @@ export function Drawer({
   route?: string;
   readyCount?: number;
   initial?: string;
+  /** Desktop: Lyra's status, under its name */
+  status?: ReactNode;
 }) {
   const panel = useRef<HTMLElement>(null);
 
@@ -47,7 +50,10 @@ export function Drawer({
         <span className="orb drawer-orb">
           <Avatar />
         </span>
-        <span className="drawer-title">Lyra</span>
+        <span className="drawer-name">
+          <span className="drawer-title">Lyra</span>
+          {status}
+        </span>
       </div>
       <hr className="drawer-rule" />
 
