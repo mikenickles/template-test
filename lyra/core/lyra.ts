@@ -28,6 +28,7 @@ import {
   type ChannelSummary,
   type StoredMessage,
 } from "./db.ts";
+import { UpdateSource } from "./updates.ts";
 import { decryptBackup, encryptBackup, fromBase64, toBase64, type BackupPayload } from "./backup.ts";
 import { channelNotebookSpec, cleanItem, mainNotebookSpec, Notebook, type Snapshot, type TextStore } from "./memory.ts";
 import {
@@ -291,7 +292,13 @@ export class Lyra {
     return raw ? (JSON.parse(raw) as GmailLink) : undefined;
   }
 
-  private tokenFor(id: GoogleId): TokenSource {
+/** Updates from your Drive's "Lyra Updates" folder, through the read-only Files connection. */
+  updates(): UpdateSource {
+    if (!this.link("drive")) throw new Error("Connect Files (Google Drive) on the Lyra page to get updates.");
+    return new UpdateSource(this.tokenFor("drive"), this.fetch);
+  }
+
+    private tokenFor(id: GoogleId): TokenSource {
     return this.tokenSources.get(id)!;
   }
 

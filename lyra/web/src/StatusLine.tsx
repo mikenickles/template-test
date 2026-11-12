@@ -7,6 +7,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { api, onChange, type AppState } from "./api";
 import { chatText, readyText, routineText, upNext, weatherText, workingText } from "./statusText";
 import { currentWeather } from "./weather";
+import { onUpdateState, updateState } from "./updater";
 
 // ---- what the chat is doing (set by the chat screen) ----
 let chatStatus: string | null = null;
@@ -83,7 +84,9 @@ function useStatusItems(state: AppState): StatusItem[] {
     };
   }, [place?.latitude, place?.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const update = useSyncExternalStore(onUpdateState, updateState);
   const items: StatusItem[] = [];
+  if (update.kind === "available" || update.kind === "ready") items.push({ key: "update", text: update.kind === "ready" ? "Restart to update" : "Update ready", href: "#/settings?updates" });
   if (chat) items.push({ key: "chat", text: chatText(chat), live: true });
   items.push(...background);
   if (weather) items.push(weather);

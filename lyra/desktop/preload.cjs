@@ -29,4 +29,10 @@ contextBridge.exposeInMainWorld("lyraDesktop", {
     return () => ipcRenderer.removeListener("open-hash", h);
   },
   info: () => ipcRenderer.invoke("app:info"),
+  updates: {
+    info: () => ipcRenderer.invoke("updates:info"),
+    installPack: (bytes) => ipcRenderer.invoke("updates:installPack", bytes),
+    ok: () => ipcRenderer.invoke("updates:ok"),
+    relaunch: () => ipcRenderer.invoke("app:relaunch"),
+  },
 });

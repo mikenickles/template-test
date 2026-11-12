@@ -9,6 +9,8 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         // Lyra's own native plugin: Google sign-in through Play services.
         registerPlugin(GoogleAuthPlugin.class);
+        // and installing updates from your Drive (Android asks you to confirm each one)
+        registerPlugin(ApkInstallerPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

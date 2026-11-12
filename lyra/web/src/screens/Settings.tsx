@@ -4,6 +4,7 @@ import { appLock, isDesktop, thisDevice } from "../platform";
 import { BackupSection } from "./Backup";
 import { GoogleSetupSection, SyncSection } from "./SyncSection";
 import { WeatherSection } from "./WeatherSection";
+import { UpdatesSection } from "./UpdatesSection";
 import { Check, Chevron, Cpu } from "../icons";
 
 type KeyId = "anthropic" | "openai" | "gemini";
@@ -230,6 +231,7 @@ export function Settings({
         {!isNative && <p className="hint">App lock is in the phone app for now.</p>}
       </section>
 
+      <UpdatesSection />
       <SyncSection toast={toast} />
       <GoogleSetupSection toast={toast} />
       <BackupSection toast={toast} />

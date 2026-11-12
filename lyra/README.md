@@ -31,6 +31,13 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Backups on the computer.** Every snapshot the Windows app sends or receives is also saved, encrypted, in `Documents\Lyra Backups` (the newest 20).
 - **Privacy.** Snapshots are AES-256-GCM encrypted with your sync passphrase before upload. The Drive permission (`drive.appdata`) only reaches Lyra's own hidden folder: it can't see or change your files.
 
+#### Updates from your Drive
+
+New versions go in a **Lyra Updates** folder in your Google Drive (made with `npm run release`, or `npm run release -- --full` when the desktop shell changed). Both apps check it once a day and from **Settings → Updates**, using the read-only Files connection, and only accept files you own.
+
+- **Phone:** downloads `Lyra-<version>.apk` and opens Android's install screen (you confirm; Android refuses an APK signed with a different key). The first time, allow Lyra to install apps.
+- **Windows:** downloads `Lyra-app-<version>.lyrapack` (a few MB: the app's own code, no new native code) and runs it after **Restart**. A pack that doesn't finish starting is rolled back. A change to the Windows shell (`SHELL_VERSION` in `desktop/main.cjs`) needs the full zip once.
+
 #### Set up sync
 
 1. **Google, once for the computer.** In <https://console.cloud.google.com/>, same project as the phone: **APIs & Services → Credentials → Create credentials → OAuth client ID**, type **Desktop app**. In Lyra for Windows: **Settings → Google on this computer**, paste the client ID and secret.

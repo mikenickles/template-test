@@ -9,7 +9,13 @@ const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 
 const APP_ID = "app.lyra.chief";
-const DIST = path.join(__dirname, "dist");
+const BUNDLED_DIST = path.join(__dirname, "dist");
+// This file and preload.cjs are the "shell". Updates from Drive replace only the app's
+// code in dist (sandboxed web code); a change to the shell needs a full install, and
+// raising this number makes older shells refuse packs that need the new one.
+const SHELL_VERSION = 1;
+let DIST = BUNDLED_DIST;
+let activeVersion = null;
 const ICON = path.join(__dirname, "icon.png");
 
 app.setAppUserModelId(APP_ID);
@@ -343,7 +349,90 @@ const CSP = [
   "frame-src 'none'",
 ].join("; ");
 
+// ---------- updates: app packs from your Drive ----------
+
+const packsDir = () => path.join(app.getPath("userData"), "app-packs");
+const currentFile = () => path.join(packsDir(), "current.json");
+const cmpVersions = (a, b) => {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) if ((pa[i] ?? 0) !== (pb[i] ?? 0)) return (pa[i] ?? 0) > (pb[i] ?? 0) ? 1 : -1;
+  return 0;
+};
+
+/** The newest installed pack this shell can run, or null for the code that came with the app. */
+function choosePack() {
+  try {
+    const cur = JSON.parse(fs.readFileSync(currentFile(), "utf8"));
+    if (cur.trial && cur.tried) {
+      // last start on this pack never reached "ok": go back to the built-in code
+      fs.rmSync(currentFile(), { force: true });
+      return null;
+    }
+    if (cmpVersions(cur.version, app.getVersion()) <= 0 || cur.minShell > SHELL_VERSION) return null;
+    const dir = path.join(packsDir(), cur.version, "dist");
+    if (!fs.existsSync(path.join(dir, "index.html"))) return null;
+    if (cur.trial) fs.writeFileSync(currentFile(), JSON.stringify({ ...cur, tried: true }));
+    return { version: cur.version, dir };
+  } catch {
+    return null;
+  }
+}
+
+ipcMain.handle("updates:info", () => ({ shellVersion: SHELL_VERSION, bundledVersion: app.getVersion(), runningVersion: activeVersion ?? app.getVersion() }));
+
+// the app started fine on a new pack: keep it
+ipcMain.handle("updates:ok", () => {
+  try {
+    const cur = JSON.parse(fs.readFileSync(currentFile(), "utf8"));
+    if (cur.trial) fs.writeFileSync(currentFile(), JSON.stringify({ version: cur.version, minShell: cur.minShell }));
+  } catch {
+    // no pack: nothing to confirm
+  }
+});
+
+ipcMain.handle("updates:installPack", async (_e, bytes) => {
+  const zlib = require("node:zlib");
+  let pack;
+  try {
+    const raw = zlib.gunzipSync(Buffer.from(bytes), { maxOutputLength: 80 * 1024 * 1024 });
+    pack = JSON.parse(raw.toString("utf8"));
+  } catch {
+    throw new Error("That update file is damaged.");
+  }
+  if (pack.format !== "lyra-pack" || !/^\d+\.\d+\.\d+$/.test(pack.version) || typeof pack.files !== "object") throw new Error("That isn't a Lyra update.");
+  if (pack.minShell > SHELL_VERSION) return { installed: false, needsFullInstall: true, version: pack.version };
+  const names = Object.keys(pack.files);
+  if (!names.includes("dist/index.html") || !names.every((n) => /^dist\/[\w\-.\/]+$/.test(n) && !n.includes(".."))) throw new Error("That update has unexpected files.");
+  const root = path.join(packsDir(), pack.version);
+  const tmp = `${root}.tmp`;
+  await fs.promises.rm(tmp, { recursive: true, force: true });
+  for (const n of names) {
+    const file = path.join(tmp, n);
+    await fs.promises.mkdir(path.dirname(file), { recursive: true });
+    await fs.promises.writeFile(file, Buffer.from(pack.files[n], "base64"));
+  }
+  await fs.promises.rm(root, { recursive: true, force: true });
+  await fs.promises.rename(tmp, root);
+  await writeAtomic(currentFile(), JSON.stringify({ version: pack.version, minShell: pack.minShell, trial: true }));
+  // drop older packs
+  for (const d of await fs.promises.readdir(packsDir())) {
+    if (/^\d+\.\d+\.\d+$/.test(d) && d !== pack.version) await fs.promises.rm(path.join(packsDir(), d), { recursive: true, force: true });
+  }
+  return { installed: true, needsFullInstall: false, version: pack.version };
+});
+
+ipcMain.handle("app:relaunch", () => {
+  app.relaunch();
+  app.exit(0);
+});
+
 app.whenReady().then(() => {
+  const pack = choosePack();
+  if (pack) {
+    DIST = pack.dir;
+    activeVersion = pack.version;
+  }
   // only for automated tests on Linux machines with no keyring; Windows always has DPAPI
   if (process.platform === "linux" && process.env.LYRA_DESKTOP_TEST === "1") safeStorage.setUsePlainTextEncryption?.(true);
   // the built app, served from inside Lyra (no web server, nothing exposed)

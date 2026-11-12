@@ -29,6 +29,12 @@ interface DesktopBridge {
   backups: { keep(name: string, bytes: Uint8Array): Promise<string>; saveAs(name: string, bytes: Uint8Array): Promise<string | null>; openFolder(): Promise<void> };
   notify(title: string, body: string, hash: string): Promise<void>;
   onOpenHash(fn: (hash: string) => void): () => void;
+  updates: {
+    info(): Promise<{ shellVersion: number; bundledVersion: string; runningVersion: string }>;
+    installPack(bytes: Uint8Array): Promise<{ installed: boolean; needsFullInstall: boolean; version: string }>;
+    ok(): Promise<void>;
+    relaunch(): Promise<void>;
+  };
 }
 const desk = (globalThis as { lyraDesktop?: DesktopBridge }).lyraDesktop;
 /** Electron prefixes errors from the desktop side with "Error invoking remote method 'x': Error: ". */
@@ -385,3 +391,35 @@ export async function keepBackupCopy(name: string, bytes: Uint8Array): Promise<v
 export async function openBackupsFolder(): Promise<void> {
   await desk?.backups.openFolder();
 }
+
+// ---------- updates ----------
+
+interface ApkInstallerPlugin {
+  canInstall(): Promise<{ allowed: boolean }>;
+  openInstallSettings(): Promise<void>;
+  install(opts: { name: string }): Promise<void>;
+}
+const ApkInstaller = registerPlugin<ApkInstallerPlugin>("ApkInstaller");
+
+/** How this device installs an update it found in Drive. */
+export const installer = {
+  /** The version running now (on the computer, a pack can be newer than the app that came in the zip). */
+  async version(): Promise<string> {
+    return desk ? (await desk.updates.info()).runningVersion : __LYRA_VERSION__;
+  },
+  /** Phone: save the APK and open Android's installer (it asks you to confirm). */
+  async installApk(name: string, bytes: Uint8Array): Promise<"opened" | "needs-permission"> {
+    if (!(await ApkInstaller.canInstall()).allowed) {
+      await ApkInstaller.openInstallSettings();
+      return "needs-permission";
+    }
+    await Filesystem.writeFile({ path: name, data: toBase64(bytes), directory: Directory.Cache });
+    await ApkInstaller.install({ name });
+    return "opened";
+  },
+  /** Computer: unpack the new app code; it runs after a restart. */
+  installPack: (bytes: Uint8Array) => desk!.updates.installPack(bytes),
+  relaunch: () => desk!.updates.relaunch(),
+  /** Computer: the app started fine on this code (a pack that never gets here is rolled back). */
+  started: () => desk?.updates.ok(),
+};

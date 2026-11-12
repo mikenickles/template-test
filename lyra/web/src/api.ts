@@ -20,6 +20,7 @@ import { backupName } from "../../core/backup";
 import type { Platform } from "../../core/lyra";
 import { readSyncState, Sync, type SnapshotInfo, type SyncResult } from "../../core/sync";
 import { DriveSyncRemote } from "../../core/sync-drive";
+import { applyUpdate, checkForUpdate, watchForUpdates } from "./updater";
 import { createPlatform, deviceKind, isDesktop, isNative, keepBackupCopy, notifier, shareFile } from "./platform";
 
 export type MemoryNote = CoreNote;
@@ -70,6 +71,7 @@ const ready: Promise<Lyra> = createPlatform().then(async (p) => {
   watchForNotices(lyra);
   runRoutines(lyra);
   watchSync(lyra);
+  watchForUpdates(lyra);
   // catch up with the other device before showing anything (but don't hang on a slow network)
   if (state.enabled) await Promise.race([syncNow(lyra), new Promise((r) => setTimeout(r, 6000))]);
   return lyra;
@@ -159,6 +161,11 @@ export interface SyncStatus {
   conflict?: SnapshotInfo;
   routinesHere: boolean;
 }
+
+export const updatesApi = {
+  check: async () => checkForUpdate(await ready),
+  apply: async () => applyUpdate(await ready),
+};
 
 export const syncApi = {
   status: async (): Promise<SyncStatus> => {

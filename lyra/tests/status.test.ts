@@ -13,6 +13,8 @@ describe("status line wording", () => {
     fits(workingText(LONG, 12));
     for (const name of ["Morning brief", "Bills watch", LONG]) fits(routineText(name));
     for (const n of [1, 2, 9, 12, 140]) fits(readyText(n));
+    fits("Update ready");
+    fits("Restart to update");
     for (let code = 0; code < 100; code++) {
       const w = describeWeather(code);
       fits(weatherText(w.icon, -40, w.text));
