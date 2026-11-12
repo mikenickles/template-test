@@ -13,7 +13,8 @@ const BUNDLED_DIST = path.join(__dirname, "dist");
 // This file and preload.cjs are the "shell". Updates from Drive replace only the app's
 // code in dist (sandboxed web code); a change to the shell needs a full install, and
 // raising this number makes older shells refuse packs that need the new one.
-const SHELL_VERSION = 1;
+// 2: lets the app use the microphone for live voice.
+const SHELL_VERSION = 2;
 let DIST = BUNDLED_DIST;
 let activeVersion = null;
 const ICON = path.join(__dirname, "icon.png");
@@ -450,8 +451,10 @@ app.whenReady().then(() => {
   });
   startMenuShortcut();
   createWindow();
-  // only what Lyra uses: notifications and the clipboard
-  win.webContents.session.setPermissionRequestHandler((_wc, perm, cb) => cb(perm === "notifications" || perm === "clipboard-sanitized-write"));
+  // only what Lyra uses: notifications, the clipboard, and the microphone for live voice (never the camera)
+  win.webContents.session.setPermissionRequestHandler((_wc, perm, cb, details) =>
+    cb(perm === "notifications" || perm === "clipboard-sanitized-write" || (perm === "media" && (details.mediaTypes ?? []).every((t) => t === "audio"))),
+  );
 });
 
 app.on("window-all-closed", () => app.quit());

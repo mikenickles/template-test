@@ -125,7 +125,8 @@ async function syncNow(lyra: Lyra, opts: { pull?: boolean } = {}): Promise<SyncR
   if (!sync.state.enabled || restarting) return "off";
   // a half-written message or a photo waiting to send: not a moment to reload
   const typing = !!document.querySelector<HTMLTextAreaElement>(".composer textarea")?.value.trim() || !!document.querySelector(".drafts");
-  const canPull = opts.pull !== false && !lyra.busy && !typing;
+  // nor in the middle of a voice call
+  const canPull = opts.pull !== false && !lyra.busy && !typing && !document.body.dataset.call;
   try {
     const r = await sync.check(canPull);
     if (r === "pulled") restartApp();
@@ -279,6 +280,10 @@ export const api = {
     if (patch.notifications !== undefined) syncReminders(lyra);
     return s;
   },
+  startLive: async (offerSdp: string, channelId: number | null) => (await ready).startLive(offerSdp, channelId),
+  liveDelegate: async (request: string, channelId: number | null) => (await ready).liveDelegate(request, channelId),
+  liveExchange: async (user: string, assistant: string, channelId: number | null) => (await ready).liveExchange(user, assistant, channelId),
+  liveEnded: async (seconds: number) => (await ready).liveEnded(seconds),
   usage: async (from: string, to: string) => (await ready).usage(from, to),
   models: async (provider: "anthropic" | "openai" | "gemini" | "fake") => (await ready).models(provider),
   deleteMessage: async (id: number) => (await ready).deleteMessage(id),

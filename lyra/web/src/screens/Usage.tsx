@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { UsageRow } from "../../../core/usage";
+import { LIVE_PRICE_PER_MINUTE } from "../../../core/live";
 import { api } from "../api";
 import { buildBuckets, buildSeries, compact, niceScale, rangeDays, type Bucket, type Series, type UsageRange } from "../usageData";
 
@@ -26,14 +27,17 @@ export function Usage() {
   const view = useMemo(() => {
     if (!all) return null;
     const [from] = rangeDays(range, today);
-    const rows = all.filter((r) => r.day >= from);
+    // live voice is billed by the minute, not in tokens: it gets its own line, outside the graph
+    const voiceSeconds = all.filter((r) => r.day >= from && r.source === "voice").reduce((n, r) => n + r.input, 0);
+    const tokens = all.filter((r) => r.source !== "voice");
+    const rows = tokens.filter((r) => r.day >= from);
     // a model keeps its color whichever range is showing
-    const order = buildSeries(all).map((s) => s.key);
+    const order = buildSeries(tokens).map((s) => s.key);
     const series = buildSeries(rows, order);
     const slot = (s: Series) => (s.key === "other" ? -1 : order.indexOf(s.key));
     const sources = { chat: 0, worker: 0, routine: 0 };
-    for (const r of rows) sources[r.source] += r.input + r.output;
-    return { rows, series, slot, buckets: buildBuckets(range, rows, series, today), sources };
+    for (const r of rows) if (r.source !== "voice") sources[r.source] += r.input + r.output;
+    return { rows, series, slot, buckets: buildBuckets(range, rows, series, today), sources, voiceSeconds };
   }, [all, range, today]);
 
   if (!view) return <p className="hint">Loading…</p>;
@@ -73,6 +77,18 @@ export function Usage() {
         </div>
       </div>
 
+      {view.voiceSeconds > 0 && (
+        <div className="group" style={{ marginBottom: 20 }}>
+          <div className="item">
+            <span className="body">
+              <div className="title">Live voice</div>
+              <div className="sub">
+                {Math.max(1, Math.round(view.voiceSeconds / 60))} min with GPT-Live · about ${((view.voiceSeconds / 60) * LIVE_PRICE_PER_MINUTE).toFixed(2)} at ${LIVE_PRICE_PER_MINUTE.toFixed(2)} a minute
+              </div>
+            </span>
+          </div>
+        </div>
+      )}
       {total === 0 ? (
         <p className="mem-empty">No usage in this period yet. Lyra counts tokens from every reply, worker and routine, starting with this version.</p>
       ) : (

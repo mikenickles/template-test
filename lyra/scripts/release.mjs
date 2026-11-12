@@ -11,7 +11,10 @@ import { gzipSync } from "node:zlib";
 const root = resolve(import.meta.dirname, "..");
 const full = process.argv.includes("--full");
 const version = readFileSync(join(root, "android/app/build.gradle"), "utf8").match(/versionName "([^"]+)"/)[1];
-const minShell = Number(readFileSync(join(root, "desktop/main.cjs"), "utf8").match(/const SHELL_VERSION = (\d+);/)[1]);
+// The oldest Windows shell this app code runs on. Raise it only when the app can't work
+// without something new in desktop/main.cjs (features that merely need a newer shell,
+// like live voice, check for it themselves and stay hidden on older ones).
+const minShell = 1;
 const out = join(root, "build/release");
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });

@@ -31,7 +31,8 @@ const check = (cond, what) => {
   console.log(`  ok  ${what}`);
 };
 
-const browser = await chromium.launch();
+// a pretend microphone, so live voice can be tested
+const browser = await chromium.launch({ args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"] });
 try {
   const ctx = await browser.newContext({ ...devices["Pixel 7"], colorScheme: "light" });
   const page = await ctx.newPage();
@@ -407,6 +408,84 @@ try {
   await page.reload();
   await page.locator(".sent-photo").waitFor();
   check(true, "the photo is still shown after a restart");
+
+  // ---- live voice, against a pretend GPT-Live living in this page ----
+  // It answers the call over a real WebRTC connection and plays a scripted conversation,
+  // so the microphone, connection, captions, delegation and saving all run for real.
+  await ctx.grantPermissions(["microphone"]);
+  await page.route("https://api.openai.com/v1/models", (r) => r.fulfill({ json: { data: [{ id: "gpt-6-astra", created: 2 }] } }));
+  await page.addInitScript(() => {
+    const realFetch = window.fetch.bind(window);
+    window.__live = { got: [], body: null };
+    window.fetch = async (url, init) => {
+      if (String(url) !== "https://api.openai.com/v1/live/sessions") return realFetch(url, init);
+      const body = JSON.parse(init.body);
+      window.__live.body = body;
+      window.__live.auth = init.headers.Authorization;
+      const remote = new RTCPeerConnection();
+      window.__live.remote = remote;
+      remote.ondatachannel = (e) => {
+        const ch = e.channel;
+        const say = (ev, ms) => setTimeout(() => ch.readyState === "open" && ch.send(JSON.stringify(ev)), ms);
+        ch.onmessage = (m) => window.__live.got.push(JSON.parse(m.data));
+        ch.onopen = () => {
+          say({ type: "session.started" }, 50);
+          say({ type: "session.input_transcript.delta", delta: "How are you " }, 300);
+          say({ type: "session.input_transcript.delta", delta: "today?" }, 400);
+          say({ type: "session.output_transcript.delta", delta: "Doing well, thanks." }, 700);
+          say({ type: "session.input_transcript.delta", delta: "What's on my list?" }, 1300);
+          say({ type: "session.output_transcript.delta", delta: "One sec." }, 1500);
+          say({ type: "session.delegation.created", delegation: { id: "dlg_1", target: "client", type: "delegation" } }, 1600);
+          say({ type: "session.usage.updated", usage: { seconds: 75 } }, 1700);
+        };
+      };
+      await remote.setRemoteDescription({ type: "offer", sdp: body.transport.sdp });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => remote.addTrack(t, stream));
+      const answer = await remote.createAnswer();
+      await remote.setLocalDescription(answer);
+      // candidates travel inside the answer, as with the real service
+      await new Promise((ok) => (remote.iceGatheringState === "complete" ? ok() : remote.addEventListener("icegatheringstatechange", () => remote.iceGatheringState === "complete" && ok())));
+      return new Response(JSON.stringify({ session: { id: "live_test" }, transport: { type: "webrtc", sdp: remote.localDescription.sdp } }), { status: 200, headers: { "Content-Type": "application/json" } });
+    };
+  });
+  await page.goto(`${base}/#/`);
+  await page.reload();
+  await page.locator(".bubble").first().waitFor();
+  await page.getByRole("button", { name: "Talk with Lyra" }).click();
+  await page.getByText("Add an OpenAI API key in Settings").waitFor();
+  check((await page.locator(".voice").count()) === 0, "live voice asks for an OpenAI key first, and doesn't start a call without one");
+  await page.goto(`${base}/#/settings/model`);
+  await page.locator(".provider-head", { hasText: "OpenAI" }).click();
+  await page.locator("#key-openai").fill("sk-live-smoke");
+  await page.locator(".provider", { has: page.locator("#key-openai") }).getByRole("button", { name: "Save" }).click();
+  await page.getByText("Key saved").waitFor();
+  await page.getByRole("button", { name: /Practice/ }).click();
+  await page.getByText("Lyra now uses Practice").waitFor();
+  await page.getByLabel("Lyra's voice").selectOption("cedar");
+  await page.getByText("Voice set to cedar").waitFor();
+  await page.goto(`${base}/#/`);
+  await page.locator(".bubble").first().waitFor();
+  const before8 = await page.locator(".bubble").count();
+  await page.getByRole("button", { name: "Talk with Lyra" }).click();
+  await page.getByRole("dialog", { name: "Live voice with Lyra" }).waitFor();
+  await page.getByText("Doing well, thanks.").waitFor();
+  check(true, "a live call connects and shows what's being said");
+  await shot("light-31-voice");
+  // the delegated question went through Lyra's engine, and the answer went back for that delegation
+  await page.waitForFunction(() => window.__live.got.some((e) => e.type === "session.instructions.append" && e.delegation_id === "dlg_1"));
+  const live = await page.evaluate(() => ({ auth: window.__live.auth, model: window.__live.body.session.model, voice: window.__live.body.session.audio.output.voice, told: window.__live.body.session.instructions.includes("chief of staff"), back: window.__live.got.find((e) => e.delegation_id === "dlg_1").content }));
+  check(live.model === "gpt-live-1" && live.voice === "cedar" && live.told && live.auth === "Bearer sk-live-smoke", "the call starts GPT-Live with Lyra's character and the chosen voice");
+  check(live.back.includes("practice model"), "a request that needs Lyra's tools is done by the engine and handed back to be spoken");
+  await page.getByRole("button", { name: "Mute" }).click();
+  await page.getByText("Muted", { exact: true }).waitFor();
+  await page.getByRole("button", { name: "End", exact: true }).click();
+  await page.getByRole("dialog", { name: "Live voice with Lyra" }).waitFor({ state: "detached" });
+  await page.locator(".bubble", { hasText: "What's on my list?" }).waitFor();
+  check((await page.locator(".bubble", { hasText: "How are you today?" }).count()) === 1 && (await page.locator(".bubble").count()) === before8 + 2, "the conversation is saved in the chat as text, once");
+  await page.goto(`${base}/#/settings/usage`);
+  await page.getByText("1 min with GPT-Live · about $0.06").waitFor();
+  check(true, "the call's minutes and estimated cost show on the Usage page");
 
   // ---- usage: tokens per model, with a graph ----
   await page.goto(`${base}/#/settings`);

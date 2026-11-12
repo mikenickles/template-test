@@ -4173,3 +4173,244 @@ a.status-pill:active {
   position: static;
   align-self: flex-end;
 }
+
+/* ---------- live voice ---------- */
+
+.talk {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 14px 0 12px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 650;
+  font-size: var(--text-sm);
+  transition: transform var(--ease);
+}
+
+.talk:active {
+  transform: scale(0.95);
+}
+
+.select {
+  flex: none;
+  min-height: 40px;
+  padding: 0 var(--s3);
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.voice {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--inset-top) + var(--s4)) var(--s5) calc(var(--inset-bottom) + var(--s6));
+  background: var(--bg);
+  animation: fade 220ms ease both;
+  -webkit-app-region: no-drag;
+}
+
+.voice-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s3);
+  /* clear of the Windows buttons in the desktop app */
+  padding-right: calc(100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px));
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.voice-where {
+  font-weight: 650;
+  color: var(--text);
+}
+
+.voice-clock {
+  font-variant-numeric: tabular-nums;
+}
+
+.voice-center {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s4);
+  text-align: center;
+}
+
+/* the ring around Lyra shows who has the floor */
+.voice-orb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 180px;
+  height: 180px;
+}
+
+.voice-orb .orb {
+  width: 132px;
+  height: 132px;
+}
+
+.voice-orb::before,
+.voice-orb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  opacity: 0;
+}
+
+.voice-listening .voice-orb::before {
+  opacity: 0.55;
+  inset: 14px;
+  animation: voice-breathe 2.6s ease-in-out infinite;
+}
+
+.voice-speaking .voice-orb::before,
+.voice-speaking .voice-orb::after {
+  animation: voice-ripple 1.6s ease-out infinite;
+}
+
+.voice-speaking .voice-orb::after {
+  animation-delay: 0.8s;
+}
+
+.voice-working .voice-orb::before {
+  opacity: 1;
+  inset: 12px;
+  border-color: transparent;
+  border-top-color: var(--accent);
+  animation: voice-spin 1s linear infinite;
+}
+
+.voice.muted .voice-orb::before {
+  animation: none;
+  opacity: 0.25;
+  border-color: var(--text-muted);
+}
+
+@keyframes voice-breathe {
+  50% {
+    transform: scale(1.06);
+    opacity: 0.9;
+  }
+}
+
+@keyframes voice-ripple {
+  from {
+    transform: scale(0.74);
+    opacity: 0.8;
+  }
+  to {
+    transform: scale(1.08);
+    opacity: 0;
+  }
+}
+
+@keyframes voice-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.voice-status {
+  margin: 0;
+  font-weight: 650;
+  font-size: 19px;
+}
+
+.voice-captions {
+  width: 100%;
+  max-width: 520px;
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.voice-captions p {
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.voice-heard {
+  color: var(--text-muted);
+}
+
+.voice-said {
+  font-size: 18px;
+}
+
+.voice-error {
+  color: var(--bad);
+}
+
+.voice-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--s4);
+}
+
+.voice-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 128px;
+  min-height: 56px;
+  padding: 0 var(--s5);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-weight: 650;
+}
+
+.voice-btn.on {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.voice-btn.end {
+  background: var(--bad);
+  color: #fff;
+  box-shadow: none;
+}
+
+.voice-btn:disabled {
+  opacity: 0.5;
+}
+
+/* ---------- the chat behind the open menu: shaded and softly blurred, like frosted glass ---------- */
+
+.shell-scrim {
+  -webkit-backdrop-filter: blur(0);
+  backdrop-filter: blur(0);
+  transition:
+    transform var(--slide),
+    opacity var(--slide),
+    backdrop-filter var(--slide),
+    -webkit-backdrop-filter var(--slide);
+}
+
+.app.drawer-open .shell-scrim {
+  -webkit-backdrop-filter: blur(7px) saturate(1.15);
+  backdrop-filter: blur(7px) saturate(1.15);
+}

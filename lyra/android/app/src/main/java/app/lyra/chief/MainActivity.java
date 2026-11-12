@@ -11,8 +11,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(GoogleAuthPlugin.class);
         // and installing updates from your Drive (Android asks you to confirm each one)
         registerPlugin(ApkInstallerPlugin.class);
-        // voice input, and things shared to Lyra from other apps
-        registerPlugin(SpeechPlugin.class);
+        // things shared to Lyra from other apps
         registerPlugin(ShareTargetPlugin.class);
         super.onCreate(savedInstanceState);
     }

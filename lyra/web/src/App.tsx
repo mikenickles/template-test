@@ -335,7 +335,7 @@ export function App() {
         )}
 
         {route.name === "chat" && !channelMissing && (
-          <Chat key={route.channelId ?? "main"} userName={state.userName} toast={toast} channel={channel ?? null} onTasksChanged={refreshCounts} />
+          <Chat key={route.channelId ?? "main"} hasOpenAI={state.keys.openai} userName={state.userName} toast={toast} channel={channel ?? null} onTasksChanged={refreshCounts} />
         )}
         {channelMissing && <div className="center-load">Loading…</div>}
         {route.name === "channel-info" && (

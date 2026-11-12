@@ -1,9 +1,10 @@
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api, onChange, sendChat, type Channel, type MemoryNote, type Message, type TaskNote } from "../api";
-import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chevron, Close, File as FileIcon, Mic, Minus, More, Pin, Plus, Spark, Stop, TasksIcon } from "../icons";
+import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chevron, Close, File as FileIcon, Minus, Wave, More, Pin, Plus, Spark, Stop, TasksIcon } from "../icons";
 import { noteOf, onIncoming, prepare, prepareShared, strip, takeIncoming, type Draft } from "../attach";
 import { MAX_ATTACHMENTS } from "../../../core/attachments";
-import { copyText, isNative, voice } from "../platform";
+import { copyText, isNative, liveVoice } from "../platform";
+import { VoiceOverlay } from "../VoiceOverlay";
 import { setChatStatus } from "../StatusLine";
 import { STATUS_LABEL } from "./Tasks";
 import { StarChart, Thinking } from "../LyraMark";
@@ -25,6 +26,8 @@ function greeting(now = new Date()): string {
 }
 
 interface ChatProps {
+  /** an OpenAI key is saved (live voice needs one) */
+  hasOpenAI: boolean;
   userName: string;
   toast: (msg: string) => void;
   channel: Channel | null;
@@ -35,10 +38,10 @@ interface ChatProps {
 export const Chat = memo(ChatView, (a, b) => {
   const same = (x: Channel | null, y: Channel | null) =>
     x === y || (!!x && !!y && x.id === y.id && x.name === y.name && x.icon === y.icon && x.about === y.about);
-  return a.userName === b.userName && a.toast === b.toast && a.onTasksChanged === b.onTasksChanged && same(a.channel, b.channel);
+  return a.hasOpenAI === b.hasOpenAI && a.userName === b.userName && a.toast === b.toast && a.onTasksChanged === b.onTasksChanged && same(a.channel, b.channel);
 });
 
-function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
+function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI }: ChatProps) {
   const channelId = channel?.id ?? null;
   const [messages, setMessages] = useState<Message[] | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -218,22 +221,22 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
     return onIncoming(collect);
   }, [addDrafts, toast]);
 
-  const [listening, setListening] = useState(false);
-  const dictate = async () => {
-    if (listening) return;
-    setListening(true);
-    try {
-      const heard = await voice.listen(channel ? `Speak to ${channel.name}` : "Speak to Lyra");
-      if (heard) {
-        setInput((cur) => (cur.trim() ? `${cur.trim()} ${heard}` : heard));
-        requestAnimationFrame(grow);
-      }
-    } catch (e) {
-      toast((e as Error).message);
-    } finally {
-      setListening(false);
-    }
+  // live voice: a spoken conversation with Lyra (GPT-Live)
+  const [talking, setTalking] = useState(false);
+  const [canTalk, setCanTalk] = useState(false);
+  useEffect(() => {
+    void liveVoice.available().then(setCanTalk, () => {});
+  }, []);
+  const talk = async () => {
+    if (!hasOpenAI) return toast("Live voice uses OpenAI's GPT-Live. Add an OpenAI API key in Settings, AI model.");
+    setTalking(true);
   };
+  const endTalk = useCallback(() => {
+    setTalking(false);
+    // what was said is in the chat now
+    void api.messages(channelId).then((r) => setMessages(r.messages), () => {});
+    stick.current = true;
+  }, [channelId]);
 
   const send = async (raw: string) => {
     const text = raw.trim();
@@ -492,6 +495,7 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
         </div>
       </div>
 
+      {talking && <VoiceOverlay channel={channel} onClose={endTalk} toast={toast} />}
       {attaching && (
         <div className="dialog-layer sheet-layer" role="presentation">
           <button className="dialog-scrim" aria-label="Close" tabIndex={-1} onClick={() => setAttaching(false)} />
@@ -608,9 +612,10 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
             </button>
           ) : (
             <>
-              {voice.available && !input.trim() && !drafts.length && (
-                <button type="button" className={`mic${listening ? " on" : ""}`} aria-label="Speak your message" onClick={() => void dictate()}>
-                  <Mic size={21} />
+              {canTalk && !input.trim() && !drafts.length && (
+                <button type="button" className="talk" aria-label="Talk with Lyra" onClick={() => void talk()}>
+                  <Wave size={20} />
+                  <span>Talk</span>
                 </button>
               )}
               <button type="submit" className="send" aria-label="Send" disabled={!input.trim() && !drafts.length}>

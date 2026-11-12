@@ -89,7 +89,7 @@ function SettingsHome({ state }: { state: AppState }) {
   const [usage, setUsage] = useState<number | null>(null);
   useEffect(() => {
     const today = dayKey(new Date());
-    void api.usage(today, today).then((rows) => setUsage(rows.reduce((n, r) => n + r.input + r.output, 0)), () => {});
+    void api.usage(today, today).then((rows) => setUsage(rows.filter((r) => r.source !== "voice").reduce((n, r) => n + r.input + r.output, 0)), () => {});
     void syncApi.status().then(setSync, () => {});
     void installer.version().then(setVersion, () => {});
     return syncApi.onChange(() => void syncApi.status().then(setSync, () => {}));

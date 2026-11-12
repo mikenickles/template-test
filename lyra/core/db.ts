@@ -266,6 +266,8 @@ export interface MessageMeta {
   reaction?: string;
   /** Pinned by the user, to find again on the chat's info page. */
   pinned?: boolean;
+  /** Said aloud in a live voice call. */
+  voice?: boolean;
   /** Photos and files sent with this message (a note each; the file itself isn't kept). */
   attachments?: import("./attachments.ts").AttachmentNote[];
 }

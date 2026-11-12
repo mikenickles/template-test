@@ -5,7 +5,8 @@
 import type { DB } from "./db.ts";
 import type { GenerateRequest, GenerateResult, ModelProvider } from "./providers/types.ts";
 
-export type UsageSource = "chat" | "worker" | "routine";
+/** "voice" rows count seconds of live voice in `input` (GPT-Live bills by time, not tokens). */
+export type UsageSource = "chat" | "worker" | "routine" | "voice";
 
 export interface UsageRow {
   /** local day, YYYY-MM-DD */

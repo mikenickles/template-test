@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
+import { LIVE_PRICE_PER_MINUTE, LIVE_VOICES } from "../../../core/live";
 import { api, type AppState } from "../api";
+
+/** "$0.05" */
+const PRICE = `\u0024${LIVE_PRICE_PER_MINUTE.toFixed(2)}`;
 import { Check, Chevron } from "../icons";
 
 type KeyId = "anthropic" | "openai" | "gemini";
@@ -39,6 +43,29 @@ export function ModelSettings({ state, run, busy }: { state: AppState; run: (fn:
             </span>
             {current.provider === "fake" ? <span className="pill live">In use</span> : <span className="pill">Use</span>}
           </button>
+        </div>
+      </section>
+
+      <section className="section">
+        <h2 className="section-label">Live voice</h2>
+        <div className="group">
+          <label className="item" htmlFor="live-voice">
+            <span className="body">
+              <div className="title">Lyra's voice</div>
+              <div className="sub">
+                {state.keys.openai
+                  ? `Talk with Lyra out loud using OpenAI's GPT-Live, about ${PRICE} a minute while a call is open. Tap Talk in the message box.`
+                  : "Live voice uses OpenAI's GPT-Live. Add an OpenAI API key above to turn it on."}
+              </div>
+            </span>
+            <select id="live-voice" className="select" value={state.liveVoice} disabled={busy} onChange={(e) => void run(() => api.saveSettings({ liveVoice: e.target.value }), `Voice set to ${e.target.value}`)}>
+              {LIVE_VOICES.map((v) => (
+                <option key={v} value={v}>
+                  {v[0].toUpperCase() + v.slice(1)}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       </section>
 

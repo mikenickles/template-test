@@ -260,3 +260,9 @@ export const Mic = (p: P) => (
     <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
   </Icon>
 );
+
+export const Wave = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 10v4M8 6v12M12 9v6M16 4v16M20 10v4" strokeWidth={2.2} />
+  </Icon>
+);

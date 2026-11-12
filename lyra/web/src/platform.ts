@@ -424,20 +424,22 @@ export const installer = {
   started: () => desk?.updates.ok(),
 };
 
-// ---------- voice input and "Share to Lyra" (phone) ----------
+// ---------- live voice, and "Share to Lyra" (phone) ----------
 
-const Speech = registerPlugin<{ listen(opts?: { prompt?: string }): Promise<{ text: string }> }>("Speech");
 const ShareTarget = registerPlugin<{
   take(): Promise<{ text?: string; files?: { name: string; mediaType: string; data: string }[]; skipped?: number }>;
   addListener(event: "shared", fn: () => void): Promise<{ remove(): Promise<void> }>;
 }>("ShareTarget");
 
-/** Voice typing through Android's speech recognizer. On a computer, Windows' own dictation (Win+H) types into any box. */
-export const voice = {
-  available: isNative,
-  async listen(prompt?: string): Promise<string> {
-    return (await Speech.listen({ prompt })).text.trim();
+/** Live voice (GPT-Live) needs the microphone: the phone app, a browser, or a Windows app new enough to allow it. */
+export const liveVoice = {
+  async available(): Promise<boolean> {
+    if (!navigator.mediaDevices?.getUserMedia || typeof RTCPeerConnection === "undefined") return false;
+    if (desk) return (await desk.updates.info()).shellVersion >= 2;
+    return true;
   },
+  /** on the computer: this copy of the Windows app predates live voice */
+  needsNewDesktop: async () => !!desk && (await desk.updates.info()).shellVersion < 2,
 };
 
 /** Text, links, photos and PDFs shared to Lyra from other apps. */
