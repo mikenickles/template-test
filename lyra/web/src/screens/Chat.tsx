@@ -498,6 +498,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                     </a>
                   )}
                   {m.meta.headsUp && <span className="routine-tag">Heads-up</span>}
+                  {m.meta.checkIn && <span className="routine-tag">Check-in</span>}
                   {m.meta.reminder && <span className="routine-tag">{m.meta.reminder.kind === "remind" ? "Reminder" : "Follow-up"}</span>}
                   {m.meta.pinned && (
                     <span className="pin-tag">

@@ -119,10 +119,14 @@ export interface Proactive {
   /** "HH:MM" local time; no heads-ups from quietStart until quietEnd */
   quietStart: string;
   quietEnd: string;
+  /** when nothing needs you, Lyra asks for work or gets to know you */
+  checkIns: boolean;
 }
 /** How often a heads-up check runs at each level. */
 export const HEADS_UP_EVERY: Record<ProactiveLevel, number> = { off: 0, light: 4 * 3600_000, active: 3600_000 };
-const PROACTIVE_DEFAULT: Proactive = { level: "off", quietStart: "21:00", quietEnd: "07:00" };
+const PROACTIVE_DEFAULT: Proactive = { level: "off", quietStart: "21:00", quietEnd: "07:00", checkIns: true };
+/** How long between check-ins at each level. */
+export const CHECK_IN_EVERY: Record<ProactiveLevel, number> = { off: 0, light: 24 * 3600_000, active: 8 * 3600_000 };
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** Is this local "HH:MM" inside quiet hours (which may wrap past midnight)? */
@@ -521,7 +525,7 @@ export class Lyra {
   get proactive(): Proactive {
     try {
       const p = { ...PROACTIVE_DEFAULT, ...(JSON.parse(getSetting(this.db, "proactive") || "{}") as Partial<Proactive>) };
-      return (PROACTIVE_LEVELS as readonly string[]).includes(p.level) && HHMM.test(p.quietStart) && HHMM.test(p.quietEnd) ? p : PROACTIVE_DEFAULT;
+      return (PROACTIVE_LEVELS as readonly string[]).includes(p.level) && HHMM.test(p.quietStart) && HHMM.test(p.quietEnd) ? { ...p, checkIns: p.checkIns !== false } : PROACTIVE_DEFAULT;
     } catch {
       return PROACTIVE_DEFAULT;
     }
@@ -632,7 +636,7 @@ export class Lyra {
       if (!(PROACTIVE_LEVELS as readonly string[]).includes(p.level)) throw new Error("That heads-up level isn't one of the choices.");
       if (!HHMM.test(p.quietStart) || !HHMM.test(p.quietEnd)) throw new Error("Quiet hours need times like 21:00.");
       const was = this.proactive.level;
-      setSetting(this.db, "proactive", JSON.stringify({ level: p.level, quietStart: p.quietStart, quietEnd: p.quietEnd }));
+      setSetting(this.db, "proactive", JSON.stringify({ level: p.level, quietStart: p.quietStart, quietEnd: p.quietEnd, checkIns: p.checkIns !== false }));
       // turning it on (or up) starts the clock now, so the first check isn't instant
       if (p.level !== "off" && p.level !== was) setSetting(this.db, "headsUpAt", new Date().toISOString());
     }
@@ -1026,8 +1030,63 @@ export class Lyra {
   tickRoutines(now = new Date()): number[] {
     const started = this.routinesRunner.tick(now);
     this.tickReminders(now);
-    this.tickHeadsUp(now);
+    if (!this.tickHeadsUp(now)) this.tickCheckIn(now);
     return started;
+  }
+
+  // ---------- check-ins: when nothing needs you, Lyra asks for work ----------
+
+  /**
+   * Once a day (Light) or every 8 hours (Active), in the daytime and never in quiet hours:
+   * if nothing is waiting on the user, they aren't mid-conversation, and they've answered
+   * the last check-in, Lyra offers to take something on or asks to get to know them.
+   */
+  tickCheckIn(now = new Date()): boolean {
+    const p = this.proactive;
+    if (p.level === "off" || !p.checkIns) return false;
+    if (!this.p.provider && this.choice().provider === "fake") return false;
+    if (this.busy || this.routinesRunner.headsUpRunning) return false;
+    const local = now.toLocaleTimeString("en-GB", { timeZone: this.p.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    if (inQuietHours(local, p) || local < "09:00" || local >= "20:00") return false;
+    const lastAt = getSetting(this.db, "checkInAt");
+    if (lastAt && now.getTime() - new Date(lastAt).getTime() < CHECK_IN_EVERY[p.level]) return false;
+    // something already needs them, or Lyra is busy on their behalf: no need to ask for more
+    if (todayView(this.db, { timeZone: this.p.timeZone, now }).needs > 0) return false;
+    if (this.db.get<{ n: number }>("SELECT COUNT(*) AS n FROM tasks WHERE status = 'working'")!.n > 0) return false;
+    // not in the middle of talking
+    const lastUser = this.db.get<{ at: string | null }>("SELECT MAX(created_at) AS at FROM messages WHERE role = 'user'")!.at;
+    if (lastUser && now.getTime() - new Date(lastUser).getTime() < 2 * 3600_000) return false;
+    // the last one is still unanswered: don't stack them (give up waiting after 3 days)
+    const lastId = Number(getSetting(this.db, "checkInMessage") ?? 0);
+    if (lastId && lastAt && now.getTime() - new Date(lastAt).getTime() < 3 * 86_400_000) {
+      const answered = this.db.get<{ n: number }>("SELECT COUNT(*) AS n FROM messages WHERE role = 'user' AND channel_id IS NULL AND id > ?", [lastId])!.n > 0;
+      if (!answered) return false;
+    }
+    setSetting(this.db, "checkInAt", now.toISOString());
+    let recent: string[] = [];
+    try {
+      recent = JSON.parse(getSetting(this.db, "checkInRecent") || "[]");
+    } catch {
+      recent = [];
+    }
+    this.routinesRunner.headsUp(
+      {
+        name: "Check-in",
+        instructions: checkInInstructions(this.userName, recent, this.actionsAllowed()),
+        last_run_at: lastAt || null,
+        last_summary: "",
+        post_mode: "news",
+        channel_id: null,
+      },
+      (messageId, text) => {
+        if (messageId === null) return;
+        setSetting(this.db, "checkInMessage", String(messageId));
+        setSetting(this.db, "checkInRecent", JSON.stringify([text.replace(/\s+/g, " ").slice(0, 200), ...recent].slice(0, 6)));
+        this.listeners.forEach((l) => l({ type: "message", channelId: null, notify: { title: "Lyra", body: text.split("\n")[0].slice(0, 160) } }));
+      },
+      "checkIn",
+    );
+    return true;
   }
 
   // ---------- heads-ups ----------
@@ -1246,6 +1305,24 @@ export class Lyra {
 }
 
 /** What a heads-up check looks for, and how high the bar is for speaking up. */
+/** A check-in: nothing needs the user, so Lyra asks for work or gets to know them. */
+export function checkInInstructions(userName: string, recent: string[], can: { email: boolean; event: boolean }): string {
+  const user = userName === "you" ? "the user" : userName;
+  const extra = [can.email && "write emails for their OK", can.event && "add calendar events for their OK"].filter(Boolean).join(", ");
+  return `This is a check-in. Things are quiet: nothing needs ${user} right now, and you have room to take more on. Like a good chief of staff with a free afternoon, ask for work or get to know ${user} better.
+
+Pick ONE, whichever would help most right now:
+1. Offer a specific project you could do for them, grounded in what you know or can see: their memory and open loops, recent mail, the calendar for the coming week, open tasks. Say what you'd do and what they'd get ("I could go through this week's school emails and pull out every date and form into one list. Want that?"). Only offer what you can really do: research, summarize, compare, plan, draft, keep track, set up a routine or reminders${extra ? `, ${extra}` : ""}.
+2. Ask one question that would make you more useful and that your memory doesn't answer yet: their work, the people who matter to them, their week, their goals, how they like you to help. One question, not a questionnaire.
+3. Ask what's on their plate this week that you could take off it.
+
+Keep it to two short sentences, warm, no preamble, no "just checking in". Give up to three short replies they can tap (options), written as they'd say them, like "Yes, do that", "Not this week", "Ask me later".
+Call post. Use nothing_new only if there's truly nothing worth asking.
+
+Don't repeat what you asked or offered recently:
+${recent.length ? recent.map((r) => `- ${r}`).join("\n") : "(nothing yet)"}`;
+}
+
 export function headsUpInstructions(connected: string[], userName: string, level: ProactiveLevel): string {
   const user = userName === "you" ? "the user" : userName;
   const look = [

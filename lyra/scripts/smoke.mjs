@@ -63,6 +63,7 @@ try {
   check((await page.getByRole("radio", { name: "Off" }).getAttribute("aria-checked")) === "true", "heads-ups are off until you choose");
   await page.getByRole("radio", { name: "Light" }).click();
   await page.getByText("Heads-ups: Light").waitFor();
+  check(await page.getByRole("switch", { name: /Check in when it's quiet/ }).isChecked(), "with heads-ups on, Lyra also checks in when things are quiet (on by default)");
   await page.getByLabel("Quiet from").fill("22:30");
   await page.getByText("Quiet hours saved").waitFor();
   await shot("light-32-heads-ups");

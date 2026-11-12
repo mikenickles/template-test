@@ -5,7 +5,7 @@ import { awaySince } from "./away.ts";
 import type { DB } from "./db.ts";
 
 export interface TodayItem {
-  kind: "task" | "action" | "heads_up" | "routine" | "reminder" | "follow_up" | "next_routine";
+  kind: "task" | "action" | "heads_up" | "check_in" | "routine" | "reminder" | "follow_up" | "next_routine";
   /** "Ready for you", "Heads-up", "Reminder" */
   label: string;
   text: string;
@@ -64,7 +64,7 @@ export function todayView(db: DB, opts: { timeZone?: string; now?: Date } = {}):
     .reverse()
     .slice(0, 2)
     .map((i) => ({
-      kind: i.kind === "heads_up" ? "heads_up" : i.kind === "routine" ? "routine" : i.kind === "reminder" ? "reminder" : "follow_up",
+      kind: i.kind === "heads_up" ? "heads_up" : i.kind === "check_in" ? "check_in" : i.kind === "routine" ? "routine" : i.kind === "reminder" ? "reminder" : "follow_up",
       label: i.label,
       text: i.text,
       side: shortWhen(new Date(i.at), tz, now),

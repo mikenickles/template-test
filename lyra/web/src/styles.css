@@ -5431,3 +5431,7 @@ button.orb {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+.section .group + .group {
+  margin-top: var(--s3);
+}

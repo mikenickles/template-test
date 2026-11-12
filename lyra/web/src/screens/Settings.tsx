@@ -211,6 +211,26 @@ function HeadsUps({ state, run, busy }: { state: AppState; run: (fn: () => Promi
           </label>
         </div>
       )}
+      {p.level !== "off" && (
+        <div className="group">
+          <label className="item">
+            <span className="body">
+              <div className="title">Check in when it's quiet</div>
+              <div className="sub">
+                When nothing needs you, Lyra offers to take something on or asks something to get to know you, {p.level === "active" ? "up to twice a day" : "about once a day"}. Never while you're mid-conversation, and not again until you've answered.
+              </div>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              className="switch"
+              checked={p.checkIns}
+              disabled={busy}
+              onChange={(e) => void run(() => api.saveSettings({ proactive: { checkIns: e.target.checked } }), e.target.checked ? "Lyra will check in" : "No check-ins")}
+            />
+          </label>
+        </div>
+      )}
       {p.level !== "off" && <p className="hint">Each check uses some tokens even when it stays quiet. They show on the Usage page under heads-ups. Checks run while Lyra is open, or in the background with {isNative ? "Keep watch" : "the tray"} (below){isNative ? "" : ". With sync on, your phone does the checking"}.</p>}
     </section>
   );

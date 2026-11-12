@@ -3,7 +3,7 @@
 import type { DB } from "./db.ts";
 
 export interface AwayItem {
-  kind: "routine" | "heads_up" | "reminder" | "follow_up" | "task";
+  kind: "routine" | "heads_up" | "check_in" | "reminder" | "follow_up" | "task";
   /** "Morning brief", "Heads-up", "Ready for you" */
   label: string;
   /** one plain line about it */
@@ -27,7 +27,7 @@ export function awaySince(db: DB, since: string, limit = 6): { items: AwayItem[]
     [since],
   );
   for (const m of msgs) {
-    let meta: { routine?: { name: string }; headsUp?: boolean; reminder?: { kind: string } } = {};
+    let meta: { routine?: { name: string }; headsUp?: boolean; checkIn?: boolean; reminder?: { kind: string } } = {};
     try {
       meta = JSON.parse(m.meta);
     } catch {
@@ -36,6 +36,7 @@ export function awaySince(db: DB, since: string, limit = 6): { items: AwayItem[]
     const base = { at: m.created_at, channelId: m.channel_id, messageId: m.id };
     if (meta.routine) items.push({ ...base, kind: "routine", label: meta.routine.name, text: line(m.content) });
     else if (meta.headsUp) items.push({ ...base, kind: "heads_up", label: "Heads-up", text: line(m.content) });
+    else if (meta.checkIn) items.push({ ...base, kind: "check_in", label: "Lyra asks", text: line(m.content) });
     else if (meta.reminder?.kind === "remind") items.push({ ...base, kind: "reminder", label: "Reminder", text: line(m.content.replace(/^Reminder:\s*/, "")) });
     else if (meta.reminder) items.push({ ...base, kind: "follow_up", label: "Follow-up", text: line(m.content) });
   }

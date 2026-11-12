@@ -285,11 +285,20 @@ ${neutralize(memory.trim())}
 ${tasks.trim() ? neutralize(tasks) : "(none)"}`;
 }
 
-function finishTools(mode: PostMode): ToolDef[] {
+function finishTools(mode: PostMode, withOptions = false): ToolDef[] {
   const post: ToolDef = {
     name: "post",
     description: "Post the routine's message to the user's chat. Lead with the point; keep it short.",
-    schema: { type: "object", properties: { message: { type: "string" } }, required: ["message"] },
+    schema: {
+      type: "object",
+      properties: {
+        message: { type: "string" },
+        ...(withOptions
+          ? { options: { type: "array", items: { type: "string", maxLength: 48 }, maxItems: 3, description: "Up to three short replies the user can tap, written as they'd say them." } }
+          : {}),
+      },
+      required: ["message"],
+    },
   };
   if (mode === "always") return [post];
   return [
@@ -433,20 +442,22 @@ export class Routines {
    * A heads-up check: like a routine that posts only when there's news, run on
    * Lyra's own schedule. `done` gets the posted text, or null when it stayed quiet.
    */
-  headsUp(job: RoutineJob, done: (messageId: number | null, text: string) => void): void {
+  headsUp(job: RoutineJob, done: (messageId: number | null, text: string) => void, kind: "headsUp" | "checkIn" = "headsUp"): void {
     this.headsUpRunning = true;
     this.queue = this.queue
       .then(() =>
         this.execute(
           job,
-          (text, srcs) => {
-            const msg = addMessage(this.d.db, "assistant", text.trim(), { headsUp: true, ...(srcs.length ? { sources: srcs } : {}) }, null);
+          (text, srcs, options) => {
+            const meta = kind === "checkIn" ? { checkIn: true, ...(options.length ? { suggestions: options } : {}) } : { headsUp: true };
+            const msg = addMessage(this.d.db, "assistant", text.trim(), { ...meta, ...(srcs.length ? { sources: srcs } : {}) }, null);
             done(msg.id, text.trim());
           },
           (status, note) => {
             if (status !== "posted") done(null, note ?? "");
           },
           "proactive",
+          kind === "checkIn",
         ),
       )
       .catch((e) => console.error("[lyra] heads-up failed", e))
@@ -460,13 +471,22 @@ export class Routines {
 
   private async execute(
     r: RoutineJob,
-    post: (text: string, sources: Source[]) => void,
+    post: (text: string, sources: Source[], options: string[]) => void,
     end: (status: RoutineRun["status"], note?: string) => void,
     source: "routine" | "proactive" = "routine",
+    withOptions = false,
   ): Promise<void> {
     const db = this.d.db;
     const sources: Source[] = [];
-    const posted = (text: string) => post(text, uniqueSources(sources).slice(0, 8));
+    // buttons the user taps become their own words, so none after reading mail or the web
+    let tainted = false;
+    const posted = (text: string, options: unknown = []) => {
+      const clean =
+        withOptions && !tainted && Array.isArray(options)
+          ? options.map((o) => String(o).replace(/\s+/g, " ").trim()).filter((o) => o && o.length <= 60).slice(0, 3)
+          : [];
+      post(text, uniqueSources(sources).slice(0, 8), clean);
+    };
     try {
       const provider = await this.d.provider(source);
       const search = !!this.d.webSearch?.();
@@ -479,13 +499,14 @@ export class Routines {
         describeTasks(listTasks(db, { status: "open", limit: 30 }), true),
         notebook,
       );
-      const tools = [...finishTools(r.post_mode), ...(await this.d.connectors.tools())];
+      const tools = [...finishTools(r.post_mode, withOptions), ...(await this.d.connectors.tools())];
       const messages: Msg[] = [{ role: "user", parts: [{ type: "text", text: "Run the routine now." }] }];
 
       for (let step = 0; step < ROUTINE_STEPS; step++) {
         const result = await provider.generate({ system, messages, tools, webSearch: search }, () => {});
         messages.push({ role: "assistant", parts: result.parts });
         if (result.sources) sources.push(...result.sources);
+        if (result.searched) tainted = true;
         const calls = result.parts.filter((p): p is Extract<Part, { type: "tool_call" }> => p.type === "tool_call");
         if (!calls.length) {
           if (result.stop === "pause") continue;
@@ -503,7 +524,7 @@ export class Routines {
               results.push({ type: "tool_result", id: call.id, name: call.name, content: "The message is empty.", isError: true });
               continue;
             }
-            posted(text);
+            posted(text, call.input.options);
             return;
           }
           if (call.name === "nothing_new" && r.post_mode === "news") {
@@ -512,6 +533,7 @@ export class Routines {
           }
           if (this.d.connectors.owns(call.name)) {
             const res = await this.d.connectors.call(call.name, call.input);
+            if (!res.isError) tainted = true;
             results.push({ type: "tool_result", id: call.id, name: call.name, content: res.content, isError: res.isError });
           } else results.push({ type: "tool_result", id: call.id, name: call.name, content: `Unknown tool ${call.name}.`, isError: true });
         }

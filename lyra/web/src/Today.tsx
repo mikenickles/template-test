@@ -8,6 +8,8 @@ import { api, onChange } from "./api";
 const SWAY = [2, 11, 0, 9, 3, 10];
 
 const QUICK = ["Brief me", "What's on today?", "What needs a reply?"];
+/** When nothing needs you: hand Lyra something, or let it get to know you. */
+const QUIET = ["What could you take on for me?", "Ask me something", "Brief me"];
 
 function dayPart(now = new Date()): string {
   const day = now.toLocaleDateString(undefined, { weekday: "long" });
@@ -72,7 +74,7 @@ export function TodayView({ onSend, onShowChat, hasChat }: { onSend: (text: stri
                 <span className={`star${i.needs ? (n === 0 ? " vega" : " bright") : ""}`} />
               </span>
               <span className="today-label">
-                <span className={i.needs || i.kind === "heads_up" ? "on" : ""}>{i.label}</span>
+                <span className={i.needs || i.kind === "heads_up" || i.kind === "check_in" ? "on" : ""}>{i.label}</span>
                 <span>{i.side}</span>
               </span>
               <span className="today-text">{i.text}</span>
@@ -84,7 +86,7 @@ export function TodayView({ onSend, onShowChat, hasChat }: { onSend: (text: stri
       )}
 
       <div className="today-quick">
-        {QUICK.map((q) => (
+        {(today.needs ? QUICK : QUIET).map((q) => (
           <button key={q} type="button" className="today-chip" onClick={() => onSend(q)}>
             {q}
           </button>

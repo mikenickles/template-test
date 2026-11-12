@@ -300,6 +300,8 @@ export interface MessageMeta {
   reminder?: { id: number; kind: "remind" | "follow_up" };
   /** Emails and events proposed in this reply (cards with Send / Add, done only on the user's tap). */
   actions?: number[];
+  /** Lyra checking in when things are quiet: a question, or an offer of something to take on. */
+  checkIn?: boolean;
   /** Posted by a heads-up check Lyra ran on its own. */
   headsUp?: boolean;
   /** Next steps Lyra offers as buttons (only on its latest reply). */
