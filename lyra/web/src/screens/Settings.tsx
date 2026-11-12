@@ -168,6 +168,33 @@ export function Settings({
       </section>
 
       <section className="section">
+        <h2 className="section-label">Notifications</h2>
+        <div className="group">
+          <label className="item">
+            <span className="body">
+              <div className="title">Notify me</div>
+              <div className="sub">When Lyra finishes a reply after you've switched away, a routine posts news, or a task is ready for you. Plus a reminder at each routine's time.</div>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              className="switch"
+              checked={state.notifications}
+              disabled={busy}
+              onChange={(e) => {
+                const on = e.target.checked;
+                void run(async () => {
+                  if (on && !(await api.allowNotifications())) throw new Error("Android has notifications off for Lyra. Turn them on in your phone's Settings, Apps, Lyra.");
+                  return api.saveSettings({ notifications: on });
+                }, on ? "Notifications on" : "Notifications off");
+              }}
+            />
+          </label>
+        </div>
+        {!isNative && <p className="hint">Notifications work in the Android app.</p>}
+      </section>
+
+      <section className="section">
         <h2 className="section-label">API keys</h2>
         <div className="keys">
           {KEY_FIELDS.map((k) => {

@@ -29,6 +29,8 @@ describe("Lyra engine", () => {
     const lyra = await Lyra.start(platform());
     await expect(lyra.saveSettings({ provider: "gemini" })).rejects.toThrow(/Gemini API key/);
     expect(lyra.state().accent).toBe("lime");
+    expect(lyra.state().notifications).toBe(true);
+    expect((await lyra.saveSettings({ notifications: false })).notifications).toBe(false);
     expect((await lyra.saveSettings({ accent: "maroon" })).accent).toBe("maroon");
     await expect(lyra.saveSettings({ accent: "chartreuse" })).rejects.toThrow(/choices/);
     await lyra.saveSettings({ keys: { gemini: "g" } });

@@ -63,3 +63,24 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def status_icon():
+    """White constellation mark for the notification status bar (Android tints it)."""
+    from PIL import ImageDraw as D
+    stars = [(14, 7.5), (21, 19), (35, 21.5), (31, 39), (16.5, 35.5)]
+    path = [0, 1, 2, 3, 4, 1]
+    for dens, scale in (("mdpi", 1), ("hdpi", 1.5), ("xhdpi", 2), ("xxhdpi", 3), ("xxxhdpi", 4)):
+        px = round(24 * scale)
+        k = 4  # draw big, then shrink for smooth edges
+        img = Image.new("RGBA", (px * k, px * k), (0, 0, 0, 0))
+        d = D.Draw(img)
+        f = px * k / 48
+        pts = [((x) * f, (y + 1) * f) for x, y in stars]
+        d.line([pts[i] for i in path], fill=(255, 255, 255, 255), width=round(2.6 * f), joint="curve")
+        for i, (x, y) in enumerate(pts):
+            r = (5.2 if i == 0 else 3.2) * f
+            d.ellipse((x - r, y - r, x + r, y + r), fill=(255, 255, 255, 255))
+        out = RES / f"drawable-{dens}"
+        out.mkdir(exist_ok=True)
+        img.resize((px, px), Image.LANCZOS).save(out / "ic_stat_lyra.png", optimize=True)

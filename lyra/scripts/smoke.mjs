@@ -54,6 +54,7 @@ try {
   check(true, "settings saves your name");
   await shot("light-5-settings");
 
+  check((await page.getByRole("switch", { name: /Notify me/ }).isChecked()) === true, "notifications are on by default");
   await page.getByRole("link", { name: "Back" }).click();
   await page.getByText("Hi Sam, I'm Lyra.").waitFor();
   check(true, "greeting uses your name");

@@ -54,8 +54,51 @@ const ready: Promise<Lyra> = createPlatform().then(async (p) => {
   // Save to disk whenever the app leaves the screen.
   if (isNative) void CapApp.addListener("pause", () => void lyra.flush());
   addEventListener("pagehide", () => void lyra.flush());
+  watchForNotices(lyra);
   return lyra;
 });
+
+// ---------- notifications ----------
+// Lyra only tells you about things while it's out of sight: a reply that finished, a routine's
+// post, a task that's ready for you. Routine reminders are scheduled ahead on the phone.
+
+let foreground = true;
+if (isNative) void CapApp.addListener("appStateChange", (s) => (foreground = s.isActive));
+else document.addEventListener("visibilitychange", () => (foreground = document.visibilityState === "visible"));
+
+const firstLine = (text: string) => text.trim().split("\n")[0].replace(/[*_`#>]/g, "").slice(0, 160);
+const chatHash = (channelId: number | null) => (channelId === null ? "#/" : `#/c/${channelId}`);
+
+function notice(lyra: Lyra, title: string, body: string, hash: string): void {
+  if (foreground || !lyra.state().notifications) return;
+  void notifier.now(title, body, hash).catch(() => {});
+}
+
+function syncReminders(lyra: Lyra): void {
+  void notifier.reminders(lyra.state().notifications ? lyra.routines() : []).catch(() => {});
+}
+
+function watchForNotices(lyra: Lyra): void {
+  syncReminders(lyra);
+  // only a task that just became "Ready for you" is news
+  const seen = new Map(lyra.tasks({}).map((t) => [t.id, t.status]));
+  lyra.onChange((e) => {
+    if (e.type === "routine") return syncReminders(lyra);
+    if (e.type === "message" && "notify" in e && e.notify) return notice(lyra, e.notify.title, e.notify.body, chatHash(e.channelId));
+    if (e.type === "task") {
+      let d: ReturnType<Lyra["task"]> | undefined;
+      try {
+        d = lyra.task(e.taskId);
+      } catch {
+        // deleted
+      }
+      const before = seen.get(e.taskId);
+      if (!d) return void seen.delete(e.taskId);
+      seen.set(e.taskId, d.task.status);
+      if (d.task.status === "ready" && before !== "ready") notice(lyra, `Ready for you: ${d.task.title}`, d.task.needs || "Lyra finished its part.", `#/t/${e.taskId}`);
+    }
+  });
+}
 
 export const api = {
   state: async () => (await ready).state(),
@@ -67,7 +110,14 @@ export const api = {
   note: async (messageId: number, index: number, action: "undo" | "accept" | "dismiss") => ({
     message: await (await ready).note(messageId, index, action),
   }),
-  saveSettings: async (patch: SettingsPatch) => (await ready).saveSettings(patch),
+  saveSettings: async (patch: SettingsPatch) => {
+    const lyra = await ready;
+    const s = await lyra.saveSettings(patch);
+    if (patch.notifications !== undefined) syncReminders(lyra);
+    return s;
+  },
+  /** Turn on notifications; false if Android said no. */
+  allowNotifications: async () => (isNative ? notifier.ask() : true),
   channels: async () => (await ready).channels(),
   createChannel: async (input: ChannelInput) => (await ready).createChannel(input),
   updateChannel: async (id: number, input: Partial<ChannelInput>) => (await ready).updateChannel(id, input),
@@ -84,7 +134,12 @@ export const api = {
   setTaskStep: async (stepId: number, done: boolean) => (await ready).setTaskStep(stepId, done),
   removeTaskStep: async (taskId: number, stepId: number) => (await ready).removeTaskStep(taskId, stepId),
   deleteTask: async (id: number) => (await ready).deleteTask(id),
-  startTask: async (id: number, note?: string) => (await ready).startTask(id, note),
+  startTask: async (id: number, note?: string) => {
+    const lyra = await ready;
+    // a good moment to ask: the worker may finish while you're away
+    if (lyra.state().notifications) void notifier.ask().catch(() => {});
+    return lyra.startTask(id, note);
+  },
   stopTask: async (id: number) => (await ready).stopTask(id),
   workerRuns: async (id: number) => (await ready).workerRuns(id),
   taskActivity: async (id: number) => (await ready).taskActivity(id),
@@ -115,6 +170,9 @@ export interface StreamHandlers {
 
 /** Send a message; Lyra's reply arrives through the handlers as it's written. */
 export async function sendChat(text: string, h: StreamHandlers, channelId: number | null = null): Promise<void> {
-  const { message, user } = await (await ready).chat(text, { text: h.text, status: h.status, memory: h.memory, reaction: h.reaction }, channelId);
+  const lyra = await ready;
+  const { message, user } = await lyra.chat(text, { text: h.text, status: h.status, memory: h.memory, reaction: h.reaction }, channelId);
   h.done(message, user);
+  // you switched away while Lyra was writing
+  if (message.content.trim()) notice(lyra, "Lyra", firstLine(message.content), chatHash(channelId));
 }

@@ -185,6 +185,9 @@ export interface ReminderRoutine {
 }
 
 export const notifier = {
+  /** Ask Android for permission to show notifications (only asks once; later it's in system settings). */
+  ask: allowed,
+
   /** Replace all routine reminders with the current schedule. */
   async reminders(list: ReminderRoutine[]): Promise<void> {
     if (!isNative) return;
@@ -210,7 +213,8 @@ export const notifier = {
 
   /** Tell the user about news while Lyra is in the background. */
   async now(title: string, body: string, hash: string): Promise<void> {
-    if (!(await allowed())) return;
+    // never pop the permission question from the background: only send if already allowed
+    if (!isNative || (await LocalNotifications.checkPermissions()).display !== "granted") return;
     noticeId = noticeId >= NOTICE_BASE + 90_000 ? NOTICE_BASE : noticeId + 1;
     await LocalNotifications.schedule({ notifications: [{ id: noticeId, title, body, extra: { hash } }] });
   },

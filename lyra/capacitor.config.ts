@@ -10,6 +10,8 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SystemBars: { insetsHandling: "css", initialViewportFitValueHint: "cover" },
+    // a white constellation in the status bar (scripts/avatar.py makes it), tinted Lyra's lime
+    LocalNotifications: { smallIcon: "ic_stat_lyra", iconColor: "#8fb82a" },
   },
 };
 

@@ -73,6 +73,8 @@ export interface AppState {
   webSearch: boolean;
   /** The app's accent color, one of ACCENTS. */
   accent: Accent;
+  /** Phone notifications for news while Lyra is in the background, and routine reminders. */
+  notifications: boolean;
 }
 
 /** Accent colors the user can pick in Settings. The colors themselves live in the app's stylesheet. */
@@ -105,6 +107,7 @@ export interface SettingsPatch {
   openaiBaseUrl?: string;
   webSearch?: boolean;
   accent?: string;
+  notifications?: boolean;
 }
 
 const SECRET_KEYS = ["anthropic", "openai", "gemini"] as const;
@@ -291,6 +294,7 @@ export class Lyra {
       },
       webSearch: this.webSearch,
       accent: this.accent,
+      notifications: getSetting(this.db, "notifications") !== "off",
     };
   }
 
@@ -302,6 +306,7 @@ export class Lyra {
   async saveSettings(patch: SettingsPatch): Promise<AppState> {
     if (patch.userName !== undefined) setSetting(this.db, "userName", patch.userName.trim().slice(0, 40));
     if (patch.webSearch !== undefined) setSetting(this.db, "webSearch", patch.webSearch ? "on" : "off");
+    if (patch.notifications !== undefined) setSetting(this.db, "notifications", patch.notifications ? "on" : "off");
     if (patch.accent !== undefined) {
       if (!(ACCENTS as readonly string[]).includes(patch.accent)) throw new Error("That color isn't one of the choices.");
       setSetting(this.db, "accent", patch.accent);
