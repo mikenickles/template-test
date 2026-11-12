@@ -75,13 +75,13 @@ export function Markdown({ text }: { text: string }) {
 }
 
 /**
- * The first line gets headline styling only when the reply has a point plus
- * supporting detail: more than one part, and a short first sentence.
- * Quick answers stay plain, like a normal text.
+ * Most replies read like a normal text. The first line gets headline styling
+ * only on the rare long reply (like a morning brief), where a clear point on
+ * top helps: several parts and a lot to read under it.
  */
 export function headline(text: string): boolean {
   const blocks = text.trim().split(/\n{2,}/).filter((b) => b.trim());
-  if (blocks.length < 2) return false;
+  if (blocks.length < 3 || text.trim().length < 400) return false;
   const first = blocks[0].trim();
   return first.length <= 120 && !first.includes("\n") && !/^([-*•>]|\d+[.)])\s/.test(first);
 }
