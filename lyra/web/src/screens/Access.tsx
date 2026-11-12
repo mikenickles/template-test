@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { api, type AppState, type ConnectorStatus } from "../api";
 import { Calendar, Chevron, File, Mail, Notebook, Plus, Spark } from "../icons";
 import { Orb } from "../LyraMark";
+import { PinnedList } from "./Pinned";
 
 type GoogleId = "gmail" | "calendar" | "drive";
 
@@ -72,6 +73,8 @@ export function Access({
           {notice.body}
         </div>
       )}
+
+      <PinnedList channelId={null} toast={toast} />
 
       <section className="section">
         <h2 className="section-label">What Lyra has access to</h2>

@@ -1,6 +1,7 @@
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api, onChange, sendChat, type Channel, type MemoryNote, type Message, type TaskNote } from "../api";
-import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chevron, Minus, Spark, Stop, TasksIcon } from "../icons";
+import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chevron, Minus, Pin, Spark, Stop, TasksIcon } from "../icons";
+import { copyText } from "../platform";
 import { STATUS_LABEL } from "./Tasks";
 import { StarChart, Thinking } from "../LyraMark";
 import { headline, Markdown } from "../markdown";
@@ -158,6 +159,63 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
     }
   };
 
+  // long-press a message: copy, pin or delete it
+  const [acting, setActing] = useState<Message | null>(null);
+  const press = useRef<{ t: number; x: number; y: number } | null>(null);
+  const holdProps = (m: Message) =>
+    m.id < 0
+      ? {}
+      : {
+          onContextMenu: (e: React.MouseEvent) => {
+            e.preventDefault();
+            setActing(m);
+          },
+          onPointerDown: (e: React.PointerEvent) => {
+            if (e.pointerType === "mouse") return;
+            const t = window.setTimeout(() => {
+              press.current = null;
+              navigator.vibrate?.(12);
+              setActing(m);
+            }, 450);
+            press.current = { t, x: e.clientX, y: e.clientY };
+          },
+          onPointerMove: (e: React.PointerEvent) => {
+            const p = press.current;
+            if (p && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 10) {
+              clearTimeout(p.t);
+              press.current = null;
+            }
+          },
+          onPointerUp: () => {
+            if (press.current) clearTimeout(press.current.t);
+            press.current = null;
+          },
+          onPointerCancel: () => {
+            if (press.current) clearTimeout(press.current.t);
+            press.current = null;
+          },
+        };
+
+  const act = async (m: Message, what: "copy" | "pin" | "delete") => {
+    setActing(null);
+    try {
+      if (what === "copy") {
+        await copyText(m.content);
+        toast("Copied");
+      } else if (what === "pin") {
+        const next = await api.pinMessage(m.id, !m.meta.pinned);
+        setMessages((list) => (list ?? []).map((x) => (x.id === m.id ? next : x)));
+        toast(next.meta.pinned ? "Pinned. Find it on the chat's info page." : "Unpinned");
+      } else {
+        await api.deleteMessage(m.id);
+        setMessages((list) => (list ?? []).filter((x) => x.id !== m.id));
+        toast("Deleted");
+      }
+    } catch (e) {
+      toast((e as Error).message);
+    }
+  };
+
   const answerNote = async (msg: Message, index: number, action: "undo" | "accept" | "dismiss") => {
     try {
       const { message } = await api.note(msg.id, index, action);
@@ -232,8 +290,13 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
                       {m.meta.routine.name}
                     </a>
                   )}
+                  {m.meta.pinned && (
+                    <span className="pin-tag">
+                      <Pin size={13} /> Pinned
+                    </span>
+                  )}
                   {m.role === "user" ? (
-                    <div className={`bubble${m.meta.reaction ? " reacted" : ""}`}>
+                    <div className={`bubble${m.meta.reaction ? " reacted" : ""}`} {...holdProps(m)}>
                       {m.content}
                       {m.meta.reaction && (
                         <span className="reaction" role="img" aria-label={`Lyra reacted ${m.meta.reaction}`}>
@@ -242,7 +305,7 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
                       )}
                     </div>
                   ) : !m.content.trim() && !m.meta.error ? null : (
-                    <div className={`reply${m.meta.error ? " error" : headline(m.content) ? " headline" : ""}`}>
+                    <div className={`reply${m.meta.error ? " error" : headline(m.content) ? " headline" : ""}`} {...holdProps(m)}>
                       <Markdown text={m.content} />
                     </div>
                   )}
@@ -271,6 +334,7 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
         </div>
       </div>
 
+      {acting && <MessageActions message={acting} onAct={(w) => void act(acting, w)} onClose={() => setActing(null)} />}
       <div className="composer" ref={composerRef}>
         {!atBottom && (
           <button className="ring jump" aria-label="Jump to latest" onClick={() => toBottom(true)}>
@@ -396,6 +460,44 @@ function Sources({ list }: { list: { url: string; title: string }[] }) {
           {host(s.url)}
         </a>
       ))}
+    </div>
+  );
+}
+
+function MessageActions({ message, onAct, onClose }: { message: Message; onAct: (what: "copy" | "pin" | "delete") => void; onClose: () => void }) {
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    addEventListener("keydown", esc);
+    return () => removeEventListener("keydown", esc);
+  }, [onClose]);
+  return (
+    <div className="dialog-layer sheet-layer" role="presentation">
+      <button className="dialog-scrim" aria-label="Close" tabIndex={-1} onClick={onClose} />
+      <div className="sheet" role="dialog" aria-modal="true" aria-label="Message actions">
+        <p className="sheet-preview">{message.content.replace(/[*_`#>]/g, "").slice(0, 160)}</p>
+        <div className="group">
+          <button className="item" onClick={() => onAct("copy")} autoFocus>
+            <span className="body">
+              <div className="title">Copy</div>
+            </span>
+          </button>
+          <button className="item" onClick={() => onAct("pin")}>
+            <span className="body">
+              <div className="title">{message.meta.pinned ? "Unpin" : "Pin"}</div>
+            </span>
+          </button>
+          <button
+            className="item"
+            onClick={() => {
+              if (confirm("Delete this message? Lyra will forget it was said, but anything it saved to memory stays.")) onAct("delete");
+            }}
+          >
+            <span className="body">
+              <div className="title bad">Delete</div>
+            </span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

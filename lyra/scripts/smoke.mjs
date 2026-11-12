@@ -261,6 +261,52 @@ try {
   await shot("dark-23-accent-tasks");
   await page.emulateMedia({ colorScheme: "light" });
 
+  // ---- phase 7: message actions ----
+  await page.goto(`${base}/#/`);
+  await page.locator(".bubble", { hasText: "When is it?" }).click({ button: "right" });
+  await page.getByRole("dialog", { name: "Message actions" }).waitFor();
+  await shot("light-24-message-actions");
+  await page.getByRole("button", { name: "Pin", exact: true }).click();
+  await page.locator(".pin-tag").first().waitFor();
+  check(true, "long-press pins a message");
+  await page.getByRole("link", { name: "What Lyra can access" }).click();
+  await page.locator(".pinned-item", { hasText: "When is it?" }).waitFor();
+  check(true, "pinned messages show on the info page");
+  await shot("light-25-pinned");
+  await page.goto(`${base}/#/`);
+  const before = await page.locator(".bubble").count();
+  await page.locator(".bubble", { hasText: "thanks!" }).click({ button: "right" });
+  page.once("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: "Delete" }).click();
+  await page.getByText("Deleted", { exact: true }).waitFor();
+  check((await page.locator(".bubble").count()) === before - 1, "deleting a message removes it");
+
+  // ---- phase 7: backup, then restore it over a changed chat ----
+  await page.getByRole("link", { name: "Settings" }).click();
+  await page.getByRole("button", { name: /Back up Lyra/ }).click();
+  await page.getByLabel("Passphrase").fill("correct horse battery");
+  await page.getByLabel("Type it again").fill("correct horse battery");
+  await shot("light-26-backup");
+  const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Back up", exact: true }).click()]);
+  const backupPath = join(shots, "test-backup.lyra");
+  await download.saveAs(backupPath);
+  check(download.suggestedFilename().endsWith(".lyra"), "backup makes an encrypted .lyra file");
+  await page.getByRole("link", { name: "Back" }).click();
+  await page.getByPlaceholder("Message Lyra").fill("This one is after the backup");
+  await page.getByRole("button", { name: "Send" }).click();
+  await page.locator(".bubble", { hasText: "after the backup" }).waitFor();
+  await page.getByRole("link", { name: "Settings" }).click();
+  page.on("dialog", (d) => d.accept());
+  await page.getByLabel("Backup file").setInputFiles(backupPath);
+  await page.getByLabel("Passphrase").fill("not the passphrase");
+  await page.getByRole("button", { name: "Restore", exact: true }).click(); // first: the confirm
+  await page.getByRole("alert").filter({ hasText: "doesn't open" }).waitFor();
+  check(true, "a wrong passphrase is refused");
+  await page.getByLabel("Passphrase").fill("correct horse battery");
+  await page.getByRole("button", { name: "Restore", exact: true }).click();
+  await page.locator(".bubble", { hasText: "When is it?" }).waitFor();
+  check((await page.locator(".bubble", { hasText: "after the backup" }).count()) === 0, "restore brings back the backed-up chat");
+
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   check(!wide, "no sideways scrolling");
   check(errors.length === 0, `no page errors ${errors.join("; ")}`);

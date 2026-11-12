@@ -2981,3 +2981,103 @@ a.btn {
 .swatch:active .swatch-dot {
   transform: scale(0.92);
 }
+
+/* ---------- phase 7: lock screen, backup dialog, message actions ---------- */
+
+.lock-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s3);
+  padding: var(--s6);
+  text-align: center;
+  background: var(--bg);
+}
+
+.lock-screen h1 {
+  margin: var(--s4) 0 0;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+}
+
+.lock-screen p {
+  margin: 0 0 var(--s4);
+  color: var(--text-muted);
+}
+
+.lock-screen .btn {
+  min-width: 200px;
+  min-height: 52px;
+}
+
+.dialog-text {
+  margin: calc(-1 * var(--s3)) 0 var(--s5);
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.hint.bad {
+  color: var(--bad);
+}
+
+.sheet-layer {
+  align-items: flex-end;
+  padding-bottom: calc(var(--inset-bottom) + var(--s4));
+}
+
+.sheet {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  padding: var(--s4);
+  border-radius: 28px;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  animation: pop 240ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+.sheet-preview {
+  margin: var(--s1) var(--s2) var(--s4);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.title.bad {
+  color: var(--bad);
+}
+
+/* long-press opens the actions, so don't also start a text selection */
+.bubble,
+.reply {
+  -webkit-touch-callout: none;
+}
+
+.pin-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.row.user .pin-tag {
+  align-self: flex-end;
+}
+
+.pinned-text {
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

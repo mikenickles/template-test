@@ -2,7 +2,7 @@
 
 Lyra is a personal chief of staff that lives in an Android app. You text it like a trusted assistant; it answers short, leads with the point, and remembers what matters. Everything runs on your phone: there's no server or computer to keep running.
 
-This is **Phase 6**: the main chat, memory, channels, tasks, background workers, routines, web search, and read-only Gmail, Google Calendar and Google Drive.
+This is **Phase 7**: everything from Phases 1 to 6 (chat, memory, channels, tasks, workers, routines, web search, read-only Google), plus encrypted backups, app lock and message actions.
 
 | Phase | What it adds | Status |
 | --- | --- | --- |
@@ -11,8 +11,20 @@ This is **Phase 6**: the main chat, memory, channels, tasks, background workers,
 | 3 | Tasks page | Done |
 | 4 | Background workers | Done |
 | 5 | Calendar and Drive, read-only | Done |
-| 6 | Routines (7am brief, check-ins, watches) | **Here** |
-| 7 | Approvals, then the first actions that send or book | Next |
+| 6 | Routines (7am brief, check-ins, watches) | Done |
+| 7 | Safety net: encrypted backup and restore, app lock, message actions | **Here** |
+| 8 | Talk your way: voice input, share to Lyra, photos and files | Next |
+| 9 | Approvals and actions: drafts, calendar events, reminders from chat | Planned |
+| 10 | Smarter memory: search past chats, people, weekly tidy-up | Planned |
+| 11 | Works on its own: background routines, "while you were away", widget | Planned |
+| 12 | Polish: accent-colored app icon, fixes from testing | Planned |
+
+### Safety net (Phase 7)
+
+- **Encrypted backups.** Settings, Backup makes one `.lyra` file with your chats, memory, channels, tasks, routines and soul, encrypted with AES-256-GCM using a key derived from your passphrase (PBKDF2-SHA-256, 310,000 rounds). Save it anywhere through the share sheet. API keys and Google sign-ins are never included (`core/backup.ts`).
+- **Restore.** On a new phone, pick the file and enter the passphrase. It replaces everything on that phone and restarts Lyra; you then add your API key and reconnect Google.
+- **App lock.** Fingerprint, face or the phone's screen lock to open Lyra, and again after a minute away.
+- **Message actions.** Long-press any message to copy, pin or delete it. Pinned messages are listed on the chat's info page.
 
 ## What Phase 1 does
 

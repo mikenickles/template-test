@@ -18,6 +18,8 @@ import {
   getMessage,
   getSetting,
   listChannels,
+  deleteMessage,
+  pinnedMessages,
   listMessages,
   setSetting,
   updateMessageMeta,
@@ -26,6 +28,7 @@ import {
   type ChannelSummary,
   type StoredMessage,
 } from "./db.ts";
+import { decryptBackup, encryptBackup, fromBase64, toBase64, type BackupPayload } from "./backup.ts";
 import { channelNotebookSpec, cleanItem, mainNotebookSpec, Notebook, type Snapshot, type TextStore } from "./memory.ts";
 import {
   createProvider,
@@ -75,6 +78,8 @@ export interface AppState {
   accent: Accent;
   /** Phone notifications for news while Lyra is in the background, and routine reminders. */
   notifications: boolean;
+  /** Ask for fingerprint, face or the phone's PIN to open Lyra. */
+  appLock: boolean;
 }
 
 /** Accent colors the user can pick in Settings. The colors themselves live in the app's stylesheet. */
@@ -108,6 +113,7 @@ export interface SettingsPatch {
   webSearch?: boolean;
   accent?: string;
   notifications?: boolean;
+  appLock?: boolean;
 }
 
 const SECRET_KEYS = ["anthropic", "openai", "gemini"] as const;
@@ -295,6 +301,7 @@ export class Lyra {
       webSearch: this.webSearch,
       accent: this.accent,
       notifications: getSetting(this.db, "notifications") !== "off",
+      appLock: getSetting(this.db, "appLock") === "on",
     };
   }
 
@@ -306,6 +313,7 @@ export class Lyra {
   async saveSettings(patch: SettingsPatch): Promise<AppState> {
     if (patch.userName !== undefined) setSetting(this.db, "userName", patch.userName.trim().slice(0, 40));
     if (patch.webSearch !== undefined) setSetting(this.db, "webSearch", patch.webSearch ? "on" : "off");
+    if (patch.appLock !== undefined) setSetting(this.db, "appLock", patch.appLock ? "on" : "off");
     if (patch.notifications !== undefined) setSetting(this.db, "notifications", patch.notifications ? "on" : "off");
     if (patch.accent !== undefined) {
       if (!(ACCENTS as readonly string[]).includes(patch.accent)) throw new Error("That color isn't one of the choices.");
@@ -386,6 +394,26 @@ export class Lyra {
 
   stop(): void {
     this.running?.abort();
+  }
+
+  async deleteMessage(id: number): Promise<void> {
+    deleteMessage(this.db, id);
+    await this.db.flush();
+  }
+
+  async pinMessage(id: number, pinned: boolean): Promise<StoredMessage> {
+    const m = getMessage(this.db, id);
+    if (!m) throw new Error("That message no longer exists.");
+    const meta = { ...m.meta };
+    if (pinned) meta.pinned = true;
+    else delete meta.pinned;
+    updateMessageMeta(this.db, id, meta);
+    await this.db.flush();
+    return { ...m, meta };
+  }
+
+  pinned(channelId: number | null): StoredMessage[] {
+    return pinnedMessages(this.db, channelId);
   }
 
   // ---------- memory ----------
@@ -730,5 +758,60 @@ export class Lyra {
   /** Save everything now (the app calls this when it goes to the background). */
   flush(): Promise<void> {
     return this.db.flush();
+  }
+
+  // ---------- backup ----------
+
+  /** Everything Lyra knows, encrypted with the passphrase. API keys and Google sign-ins stay out. */
+  async backup(passphrase: string): Promise<Uint8Array> {
+    await this.db.flush();
+    const files: Record<string, string> = {};
+    const names = ["memory.md", "soul.md", ...listChannels(this.db).map((c) => channelNotebookSpec(c.id, c.name, c.about).file)];
+    for (const n of names) {
+      const t = await this.p.texts.read(n);
+      if (t !== null) files[n] = t;
+    }
+    const payload: BackupPayload = { format: "lyra-backup", version: 1, createdAt: new Date().toISOString(), db: toBase64(this.db.exportBytes()), files };
+    return encryptBackup(payload, passphrase);
+  }
+
+  /**
+   * Replace everything on this phone with a backup. Afterwards this engine is
+   * finished: the app must restart (reload) to load the restored data.
+   */
+  async restore(file: Uint8Array, passphrase: string): Promise<{ messages: number; channels: number }> {
+    const payload = await decryptBackup(file, passphrase);
+    // check the database opens, and drop Google sign-ins: they belong to the old phone
+    let bytes: Uint8Array;
+    let channels: { id: number; name: string; about: string }[];
+    let messages: number;
+    try {
+      const probe = new this.p.SQL.Database(fromBase64(payload.db));
+      messages = Number(probe.exec("SELECT count(*) FROM messages")[0]?.values[0][0] ?? 0);
+      channels = (probe.exec("SELECT id, name, about FROM channels")[0]?.values ?? []).map(([id, name, about]) => ({ id: Number(id), name: String(name), about: String(about ?? "") }));
+      probe.run("DELETE FROM settings WHERE key IN ('gmail', 'calendar', 'drive')");
+      bytes = probe.export();
+      probe.close();
+    } catch {
+      throw new Error("This backup is damaged and can't be restored.");
+    }
+    if (!this.p.blobs) throw new Error("This device can't restore backups.");
+
+    // stop everything that could write, then swap the files underneath
+    this.running?.abort();
+    this.workers.stopAll();
+    await this.workers.settle();
+    await this.db.detach();
+    await this.p.blobs.write("lyra.db", bytes);
+    for (const [name, text] of Object.entries(payload.files)) {
+      if (/^(memory|soul|channel-\d+)\.md$/.test(name)) await this.p.texts.write(name, text);
+    }
+    if (!("soul.md" in payload.files)) await this.p.texts.write("soul.md", "");
+    // a channel whose notebook wasn't in the backup starts fresh, not with this phone's old file
+    for (const c of channels) {
+      const spec = channelNotebookSpec(c.id, c.name, c.about);
+      if (!(spec.file in payload.files)) await this.p.texts.write(spec.file, spec.template);
+    }
+    return { messages, channels: channels.length };
   }
 }

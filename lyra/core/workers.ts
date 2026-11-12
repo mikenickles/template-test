@@ -212,6 +212,11 @@ export class Workers {
     return resumed;
   }
 
+  /** Stop every running worker (before a restore). */
+  stopAll(): void {
+    for (const c of this.live.values()) c.abort();
+  }
+
   /** Resolves when this task's worker (if any) has stopped. */
   async done(taskId: number): Promise<void> {
     await this.byTask.get(taskId)?.catch(() => {});

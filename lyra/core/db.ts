@@ -176,6 +176,19 @@ export class DB {
     this.timer = setTimeout(() => void this.flush(), this.saveDelay);
   }
 
+  /** The whole database as a file (for backups). */
+  exportBytes(): Uint8Array {
+    return this.db.export();
+  }
+
+  /** Stop saving to disk: used just before a restore replaces the file underneath. */
+  async detach(): Promise<void> {
+    clearTimeout(this.timer);
+    this.timer = undefined;
+    await this.saving;
+    this.store = undefined;
+  }
+
   /** Save now (e.g. when the app goes to the background). */
   async flush(): Promise<void> {
     clearTimeout(this.timer);
@@ -238,6 +251,8 @@ export interface MessageMeta {
   routine?: { id: number; name: string };
   /** On a user's message: the emoji Lyra reacted with. */
   reaction?: string;
+  /** Pinned by the user, to find again on the chat's info page. */
+  pinned?: boolean;
 }
 
 type Row = Omit<StoredMessage, "meta"> & { meta: string };
@@ -262,6 +277,18 @@ export function addMessage(
 
 export function updateMessageMeta(db: DB, id: number, meta: MessageMeta): void {
   db.run("UPDATE messages SET meta = ? WHERE id = ?", [JSON.stringify(meta), id]);
+}
+
+export function deleteMessage(db: DB, id: number): void {
+  db.run("DELETE FROM messages WHERE id = ?", [id]);
+}
+
+/** Pinned messages in a chat, newest first. */
+export function pinnedMessages(db: DB, channelId: number | null): StoredMessage[] {
+  const where = channelId === null ? "channel_id IS NULL" : "channel_id = ?";
+  return db
+    .all<Row>(`SELECT * FROM messages WHERE ${where} AND json_extract(meta, '$.pinned') = 1 ORDER BY id DESC`, channelId === null ? [] : [channelId])
+    .map(parse);
 }
 
 export function getMessage(db: DB, id: number): StoredMessage | undefined {

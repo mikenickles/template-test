@@ -5,7 +5,10 @@
  *  - In a desktop browser (development preview): IndexedDB and localStorage,
  *    and no Gmail.
  */
+import { BiometricAuth } from "@aparajita/capacitor-biometric-auth";
 import { SecureStorage } from "@aparajita/capacitor-secure-storage";
+import { Clipboard } from "@capacitor/clipboard";
+import { Share } from "@capacitor/share";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { Directory, Encoding, Filesystem } from "@capacitor/filesystem";
 import { LocalNotifications } from "@capacitor/local-notifications";
@@ -227,5 +230,56 @@ export const notifier = {
       if (hash) fn(hash);
     });
     return () => void sub.then((s) => s.remove());
+  },
+};
+
+// ---------- backups, clipboard, app lock ----------
+
+/** Hand a backup file to the user: Android's share sheet (Drive, email, Files…), or a download in a browser. */
+export async function shareFile(name: string, bytes: Uint8Array): Promise<void> {
+  if (!isNative) {
+    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/octet-stream" }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: name });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    return;
+  }
+  const { uri } = await Filesystem.writeFile({ path: name, data: toBase64(bytes), directory: Directory.Cache });
+  try {
+    await Share.share({ title: name, files: [uri], dialogTitle: "Save your Lyra backup" });
+  } catch (e) {
+    // closing the share sheet without picking anything isn't an error
+    if (!/cancel/i.test((e as Error).message ?? "")) throw e;
+  }
+  // The copy stays in the app's private cache (Android clears it over time): the app you
+  // shared to, like Drive, may still be reading it after the share sheet closes.
+}
+
+export async function copyText(text: string): Promise<void> {
+  if (isNative) await Clipboard.write({ string: text });
+  else await navigator.clipboard.writeText(text);
+}
+
+export const appLock = {
+  /** Whether this phone can lock Lyra: it needs a screen lock (PIN, pattern or password) at least. */
+  async available(): Promise<boolean> {
+    if (!isNative) return false;
+    const r = await BiometricAuth.checkBiometry();
+    return r.isAvailable || r.deviceIsSecure;
+  },
+  /** Fingerprint or face, with the phone's PIN as a fallback. Resolves true when unlocked. */
+  async unlock(): Promise<boolean> {
+    if (!isNative) return true;
+    try {
+      await BiometricAuth.authenticate({
+        reason: "Unlock Lyra",
+        androidTitle: "Unlock Lyra",
+        androidSubtitle: "Use your fingerprint, face or screen lock",
+        allowDeviceCredential: true,
+      });
+      return true;
+    } catch {
+      return false;
+    }
   },
 };

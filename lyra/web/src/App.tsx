@@ -13,7 +13,7 @@ import { Settings } from "./screens/Settings";
 import { Soul } from "./screens/Soul";
 import { TaskPage, Tasks, WorkerLog } from "./screens/Tasks";
 import { RoutinePage } from "./screens/Routines";
-import { notifier } from "./platform";
+import { appLock, notifier } from "./platform";
 import { ChatIcon, TasksIcon } from "./icons";
 
 export type Route =
@@ -97,6 +97,27 @@ export function App() {
     return () => void sub.then((s) => s.remove());
   }, []);
 
+  // App lock: locked when Lyra opens, and again after a minute away.
+  const [locked, setLocked] = useState(false);
+  const lockOn = useRef(false);
+  lockOn.current = !!state?.appLock && isNative;
+  const lockChecked = useRef(false);
+  useEffect(() => {
+    if (state && !lockChecked.current) {
+      lockChecked.current = true;
+      if (state.appLock && isNative) setLocked(true);
+    }
+  }, [state]);
+  useEffect(() => {
+    if (!isNative) return;
+    let leftAt = 0;
+    const sub = CapApp.addListener("appStateChange", ({ isActive }) => {
+      if (!isActive) leftAt = Date.now();
+      else if (lockOn.current && leftAt && Date.now() - leftAt > 60_000) setLocked(true);
+    });
+    return () => void sub.then((s) => s.remove());
+  }, []);
+
   // While the keyboard is up, the tab bar hides and the message box sits right on the keyboard.
   const [keyboard, setKeyboard] = useState(false);
   useEffect(() => {
@@ -173,6 +194,7 @@ export function App() {
       </div>
     );
   if (!state) return <div className="center-load">Loading…</div>;
+  if (locked) return <LockScreen onUnlock={() => setLocked(false)} />;
 
   const initial = (state.userName !== "you" ? state.userName : "Me").charAt(0).toUpperCase();
   const inChat = route.name === "chat" || route.name === "tasks";
@@ -291,6 +313,32 @@ export function App() {
       )}
       {/* tapping the slid-aside chat closes the menu */}
       <button className="shell-scrim" aria-label="Close menu" tabIndex={drawer ? 0 : -1} onClick={() => setDrawer(false)} />
+    </div>
+  );
+}
+
+/** Shown instead of the app while it's locked. Asks for the fingerprint straight away. */
+function LockScreen({ onUnlock }: { onUnlock: () => void }) {
+  const [asking, setAsking] = useState(false);
+  const ask = useCallback(async () => {
+    setAsking(true);
+    const ok = await appLock.unlock();
+    setAsking(false);
+    if (ok) onUnlock();
+  }, [onUnlock]);
+  useEffect(() => {
+    void ask();
+  }, [ask]);
+  return (
+    <div className="lock-screen">
+      <span className="orb orb-lg">
+        <Avatar />
+      </span>
+      <h1>Lyra is locked</h1>
+      <p>Unlock with your fingerprint, face or screen lock.</p>
+      <button className="btn ink" onClick={() => void ask()} disabled={asking}>
+        Unlock
+      </button>
     </div>
   );
 }

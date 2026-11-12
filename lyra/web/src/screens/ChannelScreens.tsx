@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type ChannelView, type Task } from "../api";
 import { StatusText } from "./Tasks";
+import { PinnedList } from "./Pinned";
 import { CHANNEL_ICON_NAMES, ChannelIcon, Pencil, Trash } from "../icons";
 import { ago, parse } from "../when";
 
@@ -324,6 +325,7 @@ export function ChannelInfo({ id, toast, onChange }: { id: number; toast: (m: st
 
       {!editing && (
         <>
+          <PinnedList channelId={channel.id} toast={toast} />
           <section className="section" style={{ marginTop: 0, marginBottom: 48 }}>
             <h2 className="section-label">
               Tasks {tasks.length > 0 && <span className="count">{tasks.length}</span>}

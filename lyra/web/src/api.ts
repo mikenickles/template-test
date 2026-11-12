@@ -16,7 +16,8 @@ import {
   type MemoryView as CoreMemory,
   type SettingsPatch,
 } from "../../core/lyra";
-import { createPlatform, isNative, notifier } from "./platform";
+import { backupName } from "../../core/backup";
+import { createPlatform, isNative, notifier, shareFile } from "./platform";
 
 export type MemoryNote = CoreNote;
 export type Message = StoredMessage;
@@ -115,6 +116,23 @@ export const api = {
     const s = await lyra.saveSettings(patch);
     if (patch.notifications !== undefined) syncReminders(lyra);
     return s;
+  },
+  deleteMessage: async (id: number) => (await ready).deleteMessage(id),
+  pinMessage: async (id: number, pinned: boolean) => (await ready).pinMessage(id, pinned),
+  pinned: async (channelId: number | null) => (await ready).pinned(channelId),
+  /** Make an encrypted backup and hand it to the share sheet. */
+  backup: async (passphrase: string) => shareFile(backupName(), await (await ready).backup(passphrase)),
+  /** Replace everything with a backup, then restart the app on the restored data. */
+  restore: async (file: Uint8Array, passphrase: string) => {
+    const r = await (await ready).restore(file, passphrase);
+    try {
+      sessionStorage.setItem("lyra.restored", JSON.stringify(r));
+    } catch {
+      // only for the welcome-back note
+    }
+    location.replace(location.pathname + "#/");
+    location.reload();
+    return r;
   },
   /** Turn on notifications; false if Android said no. */
   allowNotifications: async () => (isNative ? notifier.ask() : true),

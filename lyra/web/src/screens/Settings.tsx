@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { api, isNative, type AppState } from "../api";
+import { appLock } from "../platform";
+import { BackupSection } from "./Backup";
 import { Check, Chevron, Cpu } from "../icons";
 
 type KeyId = "anthropic" | "openai" | "gemini";
@@ -193,6 +195,37 @@ export function Settings({
         </div>
         {!isNative && <p className="hint">Notifications work in the Android app.</p>}
       </section>
+
+      <section className="section">
+        <h2 className="section-label">Privacy</h2>
+        <div className="group">
+          <label className="item">
+            <span className="body">
+              <div className="title">App lock</div>
+              <div className="sub">Ask for your fingerprint, face or screen lock to open Lyra, and again after it's been away a minute.</div>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              className="switch"
+              checked={state.appLock}
+              disabled={busy || !isNative}
+              onChange={(e) => {
+                const on = e.target.checked;
+                void run(async () => {
+                  if (on && !(await appLock.available())) throw new Error("Set a screen lock on your phone first (Settings, Security), then turn this on.");
+                  // prove it works before relying on it
+                  if (!(await appLock.unlock())) throw new Error("App lock wasn't turned on.");
+                  return api.saveSettings({ appLock: on });
+                }, on ? "App lock on" : "App lock off");
+              }}
+            />
+          </label>
+        </div>
+        {!isNative && <p className="hint">App lock works in the Android app.</p>}
+      </section>
+
+      <BackupSection toast={toast} />
 
       <section className="section">
         <h2 className="section-label">API keys</h2>
