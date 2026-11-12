@@ -17,7 +17,7 @@
     "android:apk": "vite build && cap sync android && cd android && ./gradlew assembleDebug",
     "android:icons": "node scripts/android-icons.mjs",
     "desktop": "node scripts/desktop.mjs",
-    "desktop:smoke": "node scripts/desktop.mjs --stage-only && xvfb-run -a node scripts/desktop-smoke.mjs"
+    "desktop:smoke": "node scripts/desktop.mjs --stage-only && xvfb-run -a -s \"-screen 0 1400x900x24\" node scripts/desktop-smoke.mjs && xvfb-run -a -s \"-screen 0 1400x900x24\" node scripts/desktop-sync-smoke.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",

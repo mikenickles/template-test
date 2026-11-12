@@ -3106,3 +3106,324 @@ a.btn {
   color: var(--text);
   font-weight: 600;
 }
+
+/* =========================================================================
+   Desktop layout: a wide window on a computer. A docked sidebar replaces the
+   slide-out menu and the tab bar; a slim title bar replaces the floating one.
+   ========================================================================= */
+
+.app.desk {
+  --side-w: 288px;
+  --content: 780px;
+  --bar-h: 52px;
+  display: flex;
+  background: var(--bg);
+}
+
+/* the sidebar */
+.app.desk > .drawer-panel {
+  position: relative;
+  inset: auto;
+  flex: none;
+  width: var(--side-w);
+  height: 100%;
+  padding: var(--s4) var(--s3) var(--s3);
+  opacity: 1;
+  transform: none;
+  transition: none;
+  background: var(--drawer-bg);
+  border-right: 1px solid var(--border);
+}
+
+.app.desk .drawer-head {
+  padding: 2px var(--s2) var(--s4);
+  -webkit-app-region: drag;
+}
+
+.app.desk .drawer-orb {
+  width: 34px;
+  height: 34px;
+}
+
+.app.desk .drawer-title {
+  font-size: 21px;
+}
+
+.app.desk .drawer-rule {
+  margin-bottom: var(--s3);
+}
+
+.app.desk .nav-item {
+  min-height: 0;
+  padding: 9px var(--s3);
+  border-radius: 12px;
+  font-size: 15px;
+  gap: var(--s3);
+}
+
+.app.desk .nav-item .nav-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.app.desk .nav-item.everything .nav-sub {
+  font-size: 12.5px;
+}
+
+.app.desk .nav-name {
+  font-size: 15px;
+}
+
+.app.desk .drawer-empty {
+  font-size: 13px;
+}
+
+.side-sections {
+  margin-top: auto;
+  padding-top: var(--s3);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-item.side {
+  position: relative;
+}
+
+.side-badge {
+  position: static;
+  margin-left: auto;
+}
+
+.side-initial {
+  margin-left: auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-text);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+/* the content side */
+.app.desk > .shell {
+  position: relative;
+  inset: auto;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  transform: none !important;
+  border-radius: 0 !important;
+  transition: none;
+  will-change: auto;
+}
+
+/* the title bar: drag to move the window; Windows' own buttons sit at the right */
+.deskbar {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  height: var(--bar-h);
+  padding: 0 var(--s5);
+  padding-right: calc(100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px) + var(--s4));
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.deskbar a,
+.deskbar button {
+  -webkit-app-region: no-drag;
+}
+
+.desk-drag {
+  flex: 1;
+  align-self: stretch;
+}
+
+.desk-back,
+.desk-action {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: background var(--ease), color var(--ease);
+}
+
+.desk-back:hover,
+.desk-action:hover {
+  background: var(--drawer-hover);
+  color: var(--text);
+}
+
+.desk-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.desk-title-icon {
+  display: grid;
+  color: var(--accent-text);
+}
+
+.desk-title-name {
+  font-weight: 650;
+  font-size: 16px;
+  white-space: nowrap;
+}
+
+.desk-title-about {
+  color: var(--text-muted);
+  font-size: 13.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* chat: a centered column, the message box docked at its bottom */
+.app.desk .chat {
+  --tabbar-h: 0px;
+}
+
+.app.desk .log,
+.app.desk .chat.in-channel .log {
+  padding-top: var(--s5);
+  --fade: linear-gradient(rgba(0, 0, 0, 0.25), #000 28px, #000 calc(100% - var(--below) - 24px), rgba(0, 0, 0, 0.3) calc(100% - var(--below) + 16px), rgba(0, 0, 0, 0.1) 100%);
+}
+
+.app.desk .chat .composer {
+  padding-bottom: var(--s4);
+}
+
+.app.desk .bubble,
+.app.desk .reply {
+  font-size: 16px;
+}
+
+.app.desk .bubble {
+  max-width: min(72%, 560px);
+}
+
+.app.desk .hello h1 {
+  font-size: 44px;
+}
+
+/* other screens: wider margins, the page's own heading does the talking */
+.app.desk .screen {
+  padding: var(--s5) var(--s6) var(--s8);
+}
+
+.app.desk .page-title {
+  font-size: 34px;
+}
+
+.app.desk .tasks-screen {
+  padding-bottom: var(--s8);
+}
+
+/* hover affordances a mouse expects */
+.app.desk .item:hover,
+.app.desk a.item:hover,
+.app.desk button.item:hover {
+  background: var(--drawer-hover);
+}
+
+.app.desk .chip:hover {
+  border-color: var(--text-muted);
+}
+
+/* message actions on hover (right-click works too) */
+.msg-more {
+  display: none;
+}
+
+.app.desk .row {
+  position: relative;
+}
+
+.app.desk .msg-more {
+  position: absolute;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  color: var(--text-muted);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.app.desk .row.user .msg-more {
+  right: calc(min(72%, 560px) + 8px);
+}
+
+.app.desk .row.lyra .msg-more {
+  right: 0;
+}
+
+.app.desk .row:hover .msg-more,
+.app.desk .msg-more:focus-visible {
+  opacity: 1;
+}
+
+.app.desk .msg-more:hover {
+  color: var(--text);
+}
+
+/* the actions menu: a small centered card instead of a bottom sheet */
+.app.desk ~ .dialog-layer.sheet-layer,
+.app.desk .dialog-layer.sheet-layer {
+  align-items: center;
+}
+
+/* desktop scrollbars: thin, out of the way */
+.app.desk ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.app.desk ::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text-muted) 45%, transparent) padding-box;
+}
+
+.app.desk ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* the phone layout inside the desktop app (narrow window): leave room for the window buttons */
+.app.in-desktop:not(.desk) .topbar {
+  padding-top: max(var(--s3), env(titlebar-area-height, 0px));
+}
+
+.app.in-desktop:not(.desk)::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(titlebar-area-height, 0px);
+  z-index: 100;
+  -webkit-app-region: drag;
+}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api, isNative, type AppState } from "../api";
-import { appLock } from "../platform";
+import { appLock, isDesktop, thisDevice } from "../platform";
 import { BackupSection } from "./Backup";
 import { GoogleSetupSection, SyncSection } from "./SyncSection";
 import { Check, Chevron, Cpu } from "../icons";
@@ -76,7 +76,7 @@ export function Settings({
     <div className="screen">
       <h1 className="page-title">Settings</h1>
       <p className="page-sub">
-        Lyra lives on this phone. Your keys stay in {isNative ? "Android's encrypted storage" : "this browser"} and only go to the model you pick.
+        Lyra lives on {thisDevice}. Your keys stay in {isNative ? "Android's encrypted storage" : isDesktop ? "Windows' encrypted storage for your account" : "this browser"} and only go to the model you pick.
       </p>
 
       <section className="section">
@@ -194,7 +194,7 @@ export function Settings({
             />
           </label>
         </div>
-        {!isNative && <p className="hint">Notifications work in the Android app.</p>}
+        {!isNative && !isDesktop && <p className="hint">Notifications work in the Android and Windows apps.</p>}
       </section>
 
       <section className="section">
@@ -216,7 +216,8 @@ export function Settings({
                 void run(async () => {
                   if (on && !(await appLock.available())) throw new Error("Set a screen lock on your phone first (Settings, Security), then turn this on.");
                   // prove it works before relying on it
-                  if (!(await appLock.unlock())) throw new Error("App lock wasn't turned on.");
+                  const r = await appLock.unlock();
+                  if (!r.ok) throw new Error(r.error ? `App lock wasn't turned on: ${r.error}` : "App lock wasn't turned on.");
                   return api.saveSettings({ appLock: on });
                 }, on ? "App lock on" : "App lock off");
               }}

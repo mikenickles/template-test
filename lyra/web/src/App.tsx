@@ -3,7 +3,7 @@ import { Keyboard } from "@capacitor/keyboard";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, isNative, onChange, type AppState, type Channel } from "./api";
 import { Drawer } from "./Drawer";
-import { Back, ChannelIcon, MenuIcon } from "./icons";
+import { Back, ChannelIcon, Info, Layers, MenuIcon } from "./icons";
 import { Avatar } from "./LyraMark";
 import { Access } from "./screens/Access";
 import { ChannelInfo, NewChannelDialog } from "./screens/ChannelScreens";
@@ -14,7 +14,7 @@ import { Soul } from "./screens/Soul";
 import { TaskPage, Tasks, WorkerLog } from "./screens/Tasks";
 import { RoutinePage } from "./screens/Routines";
 import { SyncConflict } from "./screens/SyncSection";
-import { appLock, notifier } from "./platform";
+import { appLock, isDesktop, notifier } from "./platform";
 import { ChatIcon, TasksIcon } from "./icons";
 
 export type Route =
@@ -62,8 +62,24 @@ function backFrom(r: Route): string | null {
   }
 }
 
+/** Desktop layout (sidebar, title bar) in a wide window on a computer; the phone layout otherwise. */
+function useWide(): boolean {
+  const query = "(min-width: 860px)";
+  const can = isDesktop || !isNative;
+  const [wide, setWide] = useState(() => can && matchMedia(query).matches);
+  useEffect(() => {
+    if (!can) return;
+    const m = matchMedia(query);
+    const on = () => setWide(m.matches);
+    m.addEventListener("change", on);
+    return () => m.removeEventListener("change", on);
+  }, [can]);
+  return wide;
+}
+
 export function App() {
   const [route, setRoute] = useState<Route>(() => readRoute());
+  const wide = useWide();
   const [state, setState] = useState<AppState | null>(null);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [drawer, setDrawer] = useState(false);
@@ -98,7 +114,8 @@ export function App() {
     return () => void sub.then((s) => s.remove());
   }, []);
 
-  // App lock: locked when Lyra opens, and again after a minute away.
+  // App lock: locked when Lyra opens, and again after a minute away. Lyra restarting
+  // itself (sync, restore) moments after you unlocked doesn't count as opening.
   const [locked, setLocked] = useState(false);
   const lockOn = useRef(false);
   lockOn.current = !!state?.appLock && isNative;
@@ -106,17 +123,43 @@ export function App() {
   useEffect(() => {
     if (state && !lockChecked.current) {
       lockChecked.current = true;
-      if (state.appLock && isNative) setLocked(true);
+      if (state.appLock && isNative && !recentlyUnlocked()) setLocked(true);
     }
   }, [state]);
   useEffect(() => {
     if (!isNative) return;
     let leftAt = 0;
     const sub = CapApp.addListener("appStateChange", ({ isActive }) => {
-      if (!isActive) leftAt = Date.now();
-      else if (lockOn.current && leftAt && Date.now() - leftAt > 60_000) setLocked(true);
+      if (!isActive) {
+        leftAt = Date.now();
+        session("lyra.leftAt", String(leftAt));
+      } else if (lockOn.current && leftAt && Date.now() - leftAt > LOCK_AFTER) setLocked(true);
+      else session("lyra.leftAt", null);
     });
     return () => void sub.then((s) => s.remove());
+  }, []);
+  const unlocked = useCallback(() => {
+    session("lyra.unlockedAt", String(Date.now()));
+    setLocked(false);
+  }, []);
+
+  // Desktop shortcuts: Ctrl+N new channel, Ctrl+K the message box, Ctrl+, settings, Ctrl+Shift+T tasks.
+  useEffect(() => {
+    if (isNative) return;
+    const key = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      const k = e.key.toLowerCase();
+      if (k === "n" && !e.shiftKey) setCreating(true);
+      else if (k === "k" && !e.shiftKey) {
+        if (readRoute().name !== "chat") location.hash = "#/";
+        setTimeout(() => document.querySelector<HTMLTextAreaElement>(".composer textarea")?.focus(), 50);
+      } else if (k === "," && !e.shiftKey) location.hash = "#/settings";
+      else if (k === "t" && e.shiftKey) location.hash = "#/tasks";
+      else return;
+      e.preventDefault();
+    };
+    addEventListener("keydown", key);
+    return () => removeEventListener("keydown", key);
   }, []);
 
   // While the keyboard is up, the tab bar hides and the message box sits right on the keyboard.
@@ -195,7 +238,7 @@ export function App() {
       </div>
     );
   if (!state) return <div className="center-load">Loading…</div>;
-  if (locked) return <LockScreen onUnlock={() => setLocked(false)} />;
+  if (locked) return <LockScreen onUnlock={unlocked} />;
 
   const initial = (state.userName !== "you" ? state.userName : "Me").charAt(0).toUpperCase();
   const inChat = route.name === "chat" || route.name === "tasks";
@@ -204,15 +247,22 @@ export function App() {
   const back = backFrom(route);
 
   return (
-    <div className={`app${drawer ? " drawer-open" : ""}${keyboard ? " keyboard-open" : ""}`}>
+    <div className={`app${drawer && !wide ? " drawer-open" : ""}${keyboard ? " keyboard-open" : ""}${wide ? " desk" : ""}${isDesktop ? " in-desktop" : ""}`}>
       <Drawer
-        open={drawer}
+        open={drawer || wide}
+        docked={wide}
         onClose={() => setDrawer(false)}
         channels={channels}
         current={route.name === "chat" ? route.channelId : undefined}
         onNewChannel={() => setCreating(true)}
+        route={route.name}
+        readyCount={readyCount}
+        initial={initial}
       />
-      <div className="shell" inert={drawer}>
+      <div className="shell" inert={drawer && !wide}>
+        {wide ? (
+          <DeskBar route={route} channel={channel} back={back} />
+        ) : (
         <header className={`topbar${route.name === "chat" ? " floating" : ""}`}>
           {inChat ? (
             <button
@@ -256,6 +306,7 @@ export function App() {
             <span />
           )}
         </header>
+        )}
 
         {route.name === "chat" && !channelMissing && (
           <Chat key={route.channelId ?? "main"} userName={state.userName} toast={toast} channel={channel ?? null} onTasksChanged={refreshCounts} />
@@ -273,7 +324,7 @@ export function App() {
         {route.name === "soul" && <Soul toast={toast} userName={state.userName} />}
         {route.name === "settings" && <Settings state={state} setState={setState} toast={toast} />}
 
-        {inChat && (
+        {inChat && !wide && (
           <nav className={`tabbar${route.name === "chat" ? " floating" : ""}`} aria-label="Sections">
             <div className="tabbar-inner">
               <a className={`tabbar-item${route.name === "chat" ? " on" : ""}`} href={route.name === "chat" ? "#/" : lastChat} aria-current={route.name === "chat" ? "page" : undefined}>
@@ -314,21 +365,52 @@ export function App() {
       )}
       <SyncConflict />
       {/* tapping the slid-aside chat closes the menu */}
-      <button className="shell-scrim" aria-label="Close menu" tabIndex={drawer ? 0 : -1} onClick={() => setDrawer(false)} />
+      {!wide && <button className="shell-scrim" aria-label="Close menu" tabIndex={drawer ? 0 : -1} onClick={() => setDrawer(false)} />}
     </div>
   );
 }
 
 /** Shown instead of the app while it's locked. Asks for the fingerprint straight away. */
+const LOCK_AFTER = 60_000;
+
+/** sessionStorage survives Lyra reloading itself, not the app being closed. */
+function session(key: string, value?: string | null): string | null {
+  try {
+    if (value === undefined) return sessionStorage.getItem(key);
+    if (value === null) sessionStorage.removeItem(key);
+    else sessionStorage.setItem(key, value);
+  } catch {
+    // unavailable: Lyra just locks more often
+  }
+  return null;
+}
+
+/** Unlocked in this session, and not away for longer than the lock delay since. */
+function recentlyUnlocked(): boolean {
+  const at = Number(session("lyra.unlockedAt") ?? 0);
+  const left = Number(session("lyra.leftAt") ?? 0);
+  if (!at) return false;
+  return !left || Date.now() - left < LOCK_AFTER;
+}
+
+/** Shown instead of the app while it's locked. Asks once when it appears; the button asks again. */
 function LockScreen({ onUnlock }: { onUnlock: () => void }) {
   const [asking, setAsking] = useState(false);
-  const ask = useCallback(async () => {
+  const [error, setError] = useState<string | null>(null);
+  const done = useRef(onUnlock);
+  done.current = onUnlock;
+  const ask = useCallback(async (fresh = false) => {
     setAsking(true);
-    const ok = await appLock.unlock();
+    setError(null);
+    const r = await appLock.unlock({ fresh });
     setAsking(false);
-    if (ok) onUnlock();
-  }, [onUnlock]);
+    if (r.ok) done.current();
+    else if (r.error) setError(r.error);
+  }, []);
+  const asked = useRef(false);
   useEffect(() => {
+    if (asked.current) return;
+    asked.current = true;
     void ask();
   }, [ask]);
   return (
@@ -338,9 +420,45 @@ function LockScreen({ onUnlock }: { onUnlock: () => void }) {
       </span>
       <h1>Lyra is locked</h1>
       <p>Unlock with your fingerprint, face or screen lock.</p>
-      <button className="btn ink" onClick={() => void ask()} disabled={asking}>
-        Unlock
+      {error && (
+        <p className="hint bad" role="alert">
+          {error}
+        </p>
+      )}
+      <button className="btn ink" onClick={() => void ask(true)}>
+        {asking ? "Waiting for you…" : "Unlock"}
       </button>
     </div>
+  );
+}
+
+/**
+ * Desktop: a slim title bar over the content. It's also where you drag the window;
+ * Windows draws its own minimize, maximize and close buttons at the right.
+ */
+function DeskBar({ route, channel, back }: { route: Route; channel?: Channel; back: string | null }) {
+  const inChat = route.name === "chat";
+  const sub = !inChat && route.name !== "tasks" && route.name !== "settings" && route.name !== "access" && route.name !== "memory";
+  return (
+    <header className="deskbar">
+      {sub && back && (
+        <a className="desk-back" href={back} aria-label="Back">
+          <Back size={20} />
+        </a>
+      )}
+      {inChat && (
+        <div className="desk-title">
+          <span className="desk-title-icon">{channel ? <ChannelIcon name={channel.icon} size={18} /> : <Layers size={18} />}</span>
+          <span className="desk-title-name">{channel ? channel.name : "Everything"}</span>
+          {channel?.about && <span className="desk-title-about">{channel.about}</span>}
+        </div>
+      )}
+      <span className="desk-drag" />
+      {inChat && (
+        <a className="desk-action" href={channel ? `#/c/${channel.id}/info` : "#/access"} aria-label={channel ? `${channel.name}: channel details` : "What Lyra can access"} title="Details">
+          <Info size={20} />
+        </a>
+      )}
+    </header>
   );
 }

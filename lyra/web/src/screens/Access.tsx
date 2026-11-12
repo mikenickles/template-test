@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { api, type AppState, type ConnectorStatus } from "../api";
 import { Calendar, Chevron, File, Mail, Notebook, Plus, Spark } from "../icons";
 import { Orb } from "../LyraMark";
+import { thisDevice } from "../platform";
 import { PinnedList } from "./Pinned";
 
 type GoogleId = "gmail" | "calendar" | "drive";
@@ -64,7 +65,7 @@ export function Access({
       <div className="page-head">
         <Orb size="lg" />
         <h1>Lyra</h1>
-        <p>Chief of staff · lives on this phone</p>
+        <p>Chief of staff · lives on {thisDevice}</p>
       </div>
 
       {notice && (

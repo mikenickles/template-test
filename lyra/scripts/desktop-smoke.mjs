@@ -34,7 +34,16 @@ check(page.url().startsWith("app://lyra/"), "the app loads from inside Lyra (app
 check(await page.evaluate(() => !!window.lyraDesktop && typeof window.require === "undefined"), "desktop bridge present, no Node in the page");
 check(await page.evaluate(() => window.isSecureContext && !!crypto.subtle), "secure context (encryption works)");
 
-await page.getByRole("link", { name: "Settings" }).click();
+// a wide window gets the desktop layout: sidebar, title bar, no phone tab bar
+check(await page.locator(".app.desk").isVisible(), "a wide window uses the desktop layout");
+check((await page.locator(".drawer-panel.docked").isVisible()) && (await page.locator(".tabbar").count()) === 0, "docked sidebar, no phone tab bar");
+await page.keyboard.press("Control+n");
+await page.getByRole("heading", { name: "New channel" }).waitFor();
+await page.getByLabel("Name").fill("Home");
+await page.getByRole("button", { name: "Create", exact: true }).click();
+await page.locator(".drawer-panel .nav-item", { hasText: "Home" }).waitFor();
+check(true, "Ctrl+N makes a channel, and it appears in the sidebar");
+await page.locator(".drawer-panel .nav-item.side", { hasText: "Settings" }).click();
 await page.getByText("Google on this computer").waitFor();
 check(true, "Settings shows the desktop Google setup");
 await page.getByText("Turn on sync").waitFor();
@@ -58,6 +67,11 @@ await page.goto("app://lyra/index.html#/");
 await page.getByPlaceholder("Message Lyra").fill("Hello from the laptop");
 await page.getByRole("button", { name: "Send" }).click();
 await page.locator(".bubble", { hasText: "Hello from the laptop" }).waitFor();
+await page.locator(".row.user", { hasText: "Hello from the laptop" }).hover();
+await page.locator(".row.user", { hasText: "Hello from the laptop" }).getByRole("button", { name: "Message actions" }).click();
+await page.getByRole("button", { name: "Pin", exact: true }).click();
+await page.locator(".pin-tag").first().waitFor();
+check(true, "the hover button on a message opens copy, pin and delete");
 await page.waitForTimeout(800); // let it save
 await page.screenshot({ path: join(shots, "desktop-2-chat.png") });
 await app.close();
@@ -72,6 +86,9 @@ page = await app.firstWindow();
 page.on("pageerror", (e) => errors.push(e.message));
 await page.locator(".bubble", { hasText: "Hello from the laptop" }).waitFor({ timeout: 20_000 });
 check(true, "chat survives a restart");
+await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(420, 820));
+await page.locator(".tabbar").waitFor();
+check(!(await page.locator(".app.desk").count()), "a narrow window falls back to the phone layout");
 await page.getByText("Hi Mike").or(page.locator(".bubble")).first().waitFor();
 check(errors.length === 0, `no page errors ${errors.join("; ")}`);
 await app.close();

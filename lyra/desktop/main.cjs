@@ -275,16 +275,23 @@ function startMenuShortcut() {
   }
 }
 
+// Lyra draws its own title bar; Windows keeps its minimize, maximize and close buttons, in Lyra's colors.
+const themeColors = () =>
+  nativeTheme.shouldUseDarkColors ? { bg: "#0d0f13", symbol: "#eceef1" } : { bg: "#f3f1ea", symbol: "#131416" };
+const overlay = () => ({ color: themeColors().bg, symbolColor: themeColors().symbol, height: 52 });
+
 function createWindow() {
   win = new BrowserWindow({
-    width: 480,
-    height: 900,
-    minWidth: 360,
+    width: 1180,
+    height: 800,
+    minWidth: 400,
     minHeight: 560,
     title: "Lyra",
     icon: ICON,
     autoHideMenuBar: true,
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0d0f13" : "#f3f1ea",
+    titleBarStyle: "hidden",
+    titleBarOverlay: overlay(),
+    backgroundColor: themeColors().bg,
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
@@ -294,6 +301,11 @@ function createWindow() {
     },
   });
   win.setMenu(null);
+  nativeTheme.on("updated", () => {
+    if (!win) return;
+    win.setBackgroundColor(themeColors().bg);
+    if (process.platform !== "darwin") win.setTitleBarOverlay?.(overlay());
+  });
   // links (sources, emails) open in your browser, never inside Lyra
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//.test(url)) void shell.openExternal(url);

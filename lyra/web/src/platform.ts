@@ -48,6 +48,8 @@ const deskSecrets: SecretStore | undefined = desk && {
 export const isDesktop = !!desk;
 /** What this device is called in sync. */
 export const deviceKind = isNative ? "Phone" : isDesktop ? "Computer" : "Browser";
+/** "this phone" / "this computer", for sentences. */
+export const thisDevice = isNative ? "this phone" : isDesktop ? "this computer" : "this browser";
 
 // ---------- files ----------
 
@@ -334,6 +336,8 @@ export async function copyText(text: string): Promise<void> {
   else await navigator.clipboard.writeText(text);
 }
 
+let prompting: Promise<{ ok: boolean; error?: string }> | null = null;
+
 export const appLock = {
   /** Whether this phone can lock Lyra: it needs a screen lock (PIN, pattern or password) at least. */
   async available(): Promise<boolean> {
@@ -341,20 +345,35 @@ export const appLock = {
     const r = await BiometricAuth.checkBiometry();
     return r.isAvailable || r.deviceIsSecure;
   },
-  /** Fingerprint or face, with the phone's PIN as a fallback. Resolves true when unlocked. */
-  async unlock(): Promise<boolean> {
-    if (!isNative) return true;
-    try {
-      await BiometricAuth.authenticate({
+  /**
+   * Fingerprint or face, with the phone's PIN as a fallback. Android tracks one prompt
+   * at a time (a second one would swallow the first's answer), so overlapping calls
+   * share the prompt that's already open. `fresh` starts over: when you can tap Lyra's
+   * own Unlock button, no prompt is on screen, so one still "open" was lost.
+   */
+  unlock(opts: { fresh?: boolean } = {}): Promise<{ ok: boolean; error?: string }> {
+    if (!isNative) return Promise.resolve({ ok: true });
+    if (opts.fresh) prompting = null;
+    if (!prompting) {
+      const mine: Promise<{ ok: boolean; error?: string }> =
+      BiometricAuth.authenticate({
         reason: "Unlock Lyra",
         androidTitle: "Unlock Lyra",
         androidSubtitle: "Use your fingerprint, face or screen lock",
         allowDeviceCredential: true,
-      });
-      return true;
-    } catch {
-      return false;
+        androidConfirmationRequired: false,
+      })
+        .then(() => ({ ok: true }))
+        .catch((e: { code?: string; message?: string }) => {
+          const cancelled = /cancel/i.test(`${e.code ?? ""} ${e.message ?? ""}`);
+          return { ok: false, error: cancelled ? undefined : e.message || "Couldn't unlock." };
+        })
+        .finally(() => {
+          if (prompting === mine) prompting = null;
+        });
+      prompting = mine;
     }
+    return prompting;
   },
 };
 

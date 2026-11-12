@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { MIN_PASSPHRASE } from "../../../core/backup";
 import { api } from "../api";
+import { thisDevice } from "../platform";
 
 type Mode = { kind: "backup" } | { kind: "restore"; file: Uint8Array; name: string };
 
@@ -22,7 +23,7 @@ export function BackupSection({ toast }: { toast: (m: string) => void }) {
         <button className="item" onClick={() => picker.current?.click()}>
           <span className="body">
             <div className="title">Restore from a backup</div>
-            <div className="sub">Moving to this phone? Pick your Lyra backup file.</div>
+            <div className="sub">Moving to {thisDevice}? Pick your Lyra backup file.</div>
           </span>
         </button>
       </div>
@@ -53,7 +54,7 @@ function PassphraseDialog({ mode, toast, onClose }: { mode: Mode; toast: (m: str
 
   const go = async () => {
     if (!ready || busy) return;
-    if (!backup && !confirm("Restoring replaces everything Lyra has on this phone with the backup. Continue?")) return;
+    if (!backup && !confirm(`Restoring replaces everything Lyra has on ${thisDevice} with the backup. Continue?`)) return;
     setBusy(true);
     setError(null);
     try {

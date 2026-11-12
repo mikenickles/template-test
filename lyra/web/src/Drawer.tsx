@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { Channel } from "./api";
-import { ChannelIcon, Layers, Notebook, Plus } from "./icons";
+import { ChannelIcon, Gear, Layers, Notebook, Plus, Spark, TasksIcon } from "./icons";
 import { Avatar } from "./LyraMark";
 
 /**
@@ -13,6 +13,10 @@ export function Drawer({
   channels,
   current,
   onNewChannel,
+  docked = false,
+  route = "",
+  readyCount = 0,
+  initial = "",
 }: {
   open: boolean;
   onClose: () => void;
@@ -20,19 +24,25 @@ export function Drawer({
   /** null = main chat, a number = that channel, undefined = not in a chat */
   current: number | null | undefined;
   onNewChannel: () => void;
+  /** Desktop: always shown beside the app, with the app's sections at the bottom. */
+  docked?: boolean;
+  /** the current screen's name, to mark it in the sidebar */
+  route?: string;
+  readyCount?: number;
+  initial?: string;
 }) {
   const panel = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || docked) return;
     const key = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     addEventListener("keydown", key);
     panel.current?.querySelector<HTMLElement>(".nav-item.active, .nav-item")?.focus();
     return () => removeEventListener("keydown", key);
-  }, [open, onClose]);
+  }, [open, onClose, docked]);
 
   return (
-    <nav className="drawer-panel" ref={panel} aria-label="Channels" aria-hidden={!open} inert={!open}>
+    <nav className={`drawer-panel${docked ? " docked" : ""}`} ref={panel} aria-label="Channels" aria-hidden={!open} inert={!open}>
       <div className="drawer-head">
         <span className="orb drawer-orb">
           <Avatar />
@@ -75,9 +85,44 @@ export function Drawer({
         <p className="drawer-empty">Channels keep one subject together, like Home or a trip, each with its own notebook.</p>
       )}
 
-      <a className="ring drawer-foot" href="#/memory" onClick={onClose} aria-label="Memory">
-        <Notebook size={22} />
-      </a>
+      {docked ? (
+        <div className="side-sections">
+          <a className={`nav-item side${/^(tasks|task|worker-log|routine)$/.test(route) ? " active" : ""}`} href="#/tasks">
+            <span className="nav-icon">
+              <TasksIcon size={20} />
+            </span>
+            <span className="nav-name">Tasks</span>
+            {readyCount > 0 && (
+              <span className="badge side-badge" aria-label={`${readyCount} ready for you`}>
+                {readyCount}
+              </span>
+            )}
+          </a>
+          <a className={`nav-item side${route === "memory" ? " active" : ""}`} href="#/memory">
+            <span className="nav-icon">
+              <Notebook size={20} />
+            </span>
+            <span className="nav-name">Memory</span>
+          </a>
+          <a className={`nav-item side${route === "access" || route === "soul" ? " active" : ""}`} href="#/access">
+            <span className="nav-icon">
+              <Spark size={20} />
+            </span>
+            <span className="nav-name">Lyra</span>
+          </a>
+          <a className={`nav-item side${route === "settings" ? " active" : ""}`} href="#/settings">
+            <span className="nav-icon">
+              <Gear size={20} />
+            </span>
+            <span className="nav-name">Settings</span>
+            {initial && <span className="side-initial">{initial}</span>}
+          </a>
+        </div>
+      ) : (
+        <a className="ring drawer-foot" href="#/memory" onClick={onClose} aria-label="Memory">
+          <Notebook size={22} />
+        </a>
+      )}
     </nav>
   );
 }

@@ -1,6 +1,6 @@
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api, onChange, sendChat, type Channel, type MemoryNote, type Message, type TaskNote } from "../api";
-import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chevron, Minus, Pin, Spark, Stop, TasksIcon } from "../icons";
+import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chevron, Minus, More, Pin, Spark, Stop, TasksIcon } from "../icons";
 import { copyText } from "../platform";
 import { STATUS_LABEL } from "./Tasks";
 import { StarChart, Thinking } from "../LyraMark";
@@ -277,6 +277,8 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
           )}
 
           {messages.map((m) => {
+            // a reaction on its own is shown on your message; its empty reply takes no room
+            if (m.role === "assistant" && !m.content.trim() && !m.meta.error && !m.meta.memory?.length && !m.meta.tasks?.length) return null;
             const d = parse(m.created_at);
             const day = dayLabel(d);
             const showDay = day !== lastDay;
@@ -285,6 +287,11 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
               <Fragment key={m.id}>
                 {showDay && <div className="day">{day}</div>}
                 <div className={`row ${m.role === "user" ? "user" : "lyra"}`}>
+                  {m.id > 0 && (m.content.trim() || m.role === "user") && (
+                    <button className="msg-more" aria-label="Message actions" title="Copy, pin or delete" onClick={() => setActing(m)}>
+                      <More size={18} />
+                    </button>
+                  )}
                   {m.meta.routine && (
                     <a className="routine-tag" href={`#/r/${m.meta.routine.id}`}>
                       {m.meta.routine.name}
