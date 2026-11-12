@@ -340,6 +340,34 @@ try {
   await page.locator(".bubble", { hasText: "When is it?" }).waitFor();
   check((await page.locator(".bubble", { hasText: "after the backup" }).count()) === 0, "restore brings back the backed-up chat");
 
+  // ---- the chat follows the latest message, through keyboard and layout changes ----
+  await page.goto(`${base}/#/`);
+  await page.locator(".bubble").first().waitFor();
+  const gap = () => page.locator(".log").evaluate((el) => Math.round(el.scrollHeight - el.scrollTop - el.clientHeight));
+  for (const t of ["One more", "And another", "Still going", "Last one"]) {
+    await page.getByPlaceholder("Message Lyra").fill(t);
+    await page.getByRole("button", { name: "Send" }).click();
+    await page.locator(".bubble", { hasText: t }).waitFor();
+    await page.getByText("practice model").last().waitFor();
+  }
+  await page.waitForTimeout(400);
+  check((await gap()) < 4, "after sending, the chat is scrolled to the newest message");
+  const size = page.viewportSize();
+  await page.setViewportSize({ width: size.width, height: Math.round(size.height * 0.55) }); // the keyboard opens
+  await page.waitForTimeout(300);
+  check((await gap()) < 4, "it stays on the newest message when the keyboard opens");
+  await page.setViewportSize(size); // and closes
+  await page.waitForTimeout(300);
+  check((await gap()) < 4, "and when it closes again");
+  await page.locator(".log").hover();
+  await page.mouse.wheel(0, -600); // you scroll up to read
+  await page.waitForTimeout(300);
+  const readingAt = await gap();
+  await page.setViewportSize({ width: size.width, height: size.height - 40 });
+  await page.waitForTimeout(300);
+  check(readingAt > 100 && (await gap()) > 100, "scrolling up yourself is left alone");
+  await page.setViewportSize(size);
+
   // ---- usage: tokens per model, with a graph ----
   await page.goto(`${base}/#/settings`);
   await page.getByRole("link", { name: /Usage.*tokens today/ }).click();

@@ -106,12 +106,44 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
     if (stick.current && (messages?.length || pending)) toBottom();
   }, [messages, pending, toBottom]);
 
+  // Only your own scrolling (finger, wheel, keys) lets go of the latest message. Scrolls
+  // caused by the layout (the keyboard, the tab bar, the message box shrinking after
+  // sending) don't count: those keep following the conversation.
+  const touchedAt = useRef(0);
+  const touched = () => (touchedAt.current = Date.now());
   const onScroll = () => {
     const el = logRef.current!;
     const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-    stick.current = near;
-    setAtBottom(near);
+    const mine = Date.now() - touchedAt.current < 1200;
+    if (near || mine) stick.current = near;
+    else if (stick.current) toBottom();
+    setAtBottom(near || stick.current);
   };
+
+  // follow the latest message whenever the chat's size changes: the reply growing as it
+  // streams in, the keyboard opening or closing, the message box growing or shrinking
+  useEffect(() => {
+    const log = logRef.current;
+    const inner = log?.firstElementChild;
+    if (!log) return;
+    let frame = 0;
+    const follow = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => stick.current && toBottom());
+    };
+    const watch = new ResizeObserver(follow);
+    watch.observe(log);
+    if (inner) watch.observe(inner);
+    if (composerRef.current) watch.observe(composerRef.current);
+    addEventListener("resize", follow);
+    window.visualViewport?.addEventListener("resize", follow);
+    return () => {
+      cancelAnimationFrame(frame);
+      watch.disconnect();
+      removeEventListener("resize", follow);
+      window.visualViewport?.removeEventListener("resize", follow);
+    };
+  }, [toBottom, messages === null]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const grow = () => {
     const el = boxRef.current;
@@ -239,7 +271,17 @@ function ChatView({ userName, toast, channel, onTasksChanged }: ChatProps) {
 
   return (
     <div className={`chat${channel ? " in-channel" : ""}`} ref={chatRef}>
-      <div className="log" ref={logRef} onScroll={onScroll} aria-live="polite">
+      <div
+        className="log"
+        ref={logRef}
+        onScroll={onScroll}
+        onTouchStart={touched}
+        onTouchMove={touched}
+        onWheel={touched}
+        onPointerDown={touched}
+        onKeyDown={touched}
+        aria-live="polite"
+      >
         <div className="log-inner">
           {hasMore && (
             <button className="chip small" onClick={loadEarlier}>
