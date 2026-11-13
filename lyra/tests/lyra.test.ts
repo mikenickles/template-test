@@ -60,16 +60,6 @@ describe("Lyra engine", () => {
     expect(again.memoryView().sections.find((s) => s.name === "People")!.items).toEqual([]);
   });
 
-  it("only answers one message at a time", async () => {
-    let release!: () => void;
-    const slow = { id: "slow", model: "slow", generate: () => new Promise<GenerateResult>((r) => (release = () => r(say("ok")))) };
-    const lyra = await Lyra.start(platform({ provider: slow }));
-    const first = lyra.chat("one", noop);
-    await expect(lyra.chat("two", noop)).rejects.toThrow(/still answering/);
-    release();
-    await first;
-  });
-
   it("connects Gmail read-only and refuses a grant that can send", async () => {
     const fetchFn = (async () => Response.json({ emailAddress: "sam@example.com" })) as typeof fetch;
     const lyra = await Lyra.start(platform({ fetch: fetchFn }));

@@ -6,7 +6,7 @@
 import { awaySince, type AwayItem } from "./away.ts";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SqlJsStatic } from "sql.js";
-import { CHANNEL_ICONS, runTurn, type TurnEmitter, type Workspace } from "./chat.ts";
+import { CHANNEL_ICONS, runTurn, type TurnEmitter, type TurnInbox, type Workspace } from "./chat.ts";
 import { createGmailServer, gmailProfile } from "./connectors/gmail/server.ts";
 import { createCalendarServer } from "./connectors/calendar/server.ts";
 import { createDriveServer } from "./connectors/drive/server.ts";
@@ -263,6 +263,8 @@ interface GmailLink {
 export class Lyra {
   private keys: Keys = {};
   private running: AbortController | undefined;
+  /** The reply being written: its chat, messages sent meanwhile, and when it's done. */
+  private turn: { channelId: number | null; items: string[]; open: boolean; wake?: () => void; done: Promise<StoredMessage> } | undefined;
   private connectors: Connectors;
   /** Spotify sign-in and API (Phase 14). Tokens stay on this device. */
   readonly spotify: SpotifyAuth;
@@ -818,14 +820,44 @@ export class Lyra {
     return listMessages(this.db, channelId, Math.min(limit, 200), before);
   }
 
-  async chat(text: string, emit: TurnEmitter, channelId: number | null = null, attachments: Attachment[] = []): Promise<{ message: StoredMessage; user: StoredMessage }> {
+  async chat(
+    text: string,
+    emit: TurnEmitter,
+    channelId: number | null = null,
+    attachments: Attachment[] = [],
+  ): Promise<{ message: StoredMessage; user: StoredMessage; queued?: boolean }> {
     const clean = text.trim();
     if (!clean && !attachments.length) throw new Error("Say something first.");
     if (clean.length > 20_000) throw new Error("That message is too long.");
-    if (this.running) throw new Error("Lyra is still answering the last message.");
     const channel = channelId === null ? null : getChannel(this.db, channelId);
     if (channel === undefined) throw new Error("That channel no longer exists.");
+    // Back to back: while Lyra is answering in this chat, a new message joins that reply.
+    const t = this.turn;
+    if (t && t.open && t.channelId === channelId && !attachments.length) {
+      const user = addMessage(this.db, "user", clean, {}, channelId);
+      t.items.push(clean);
+      t.wake?.();
+      void this.db.flush();
+      return { message: await t.done, user, queued: true };
+    }
+    // Otherwise wait for the current reply to finish (a moment ago it stopped taking more).
+    while (this.running) {
+      if (!this.turn) throw new Error("Lyra is still answering the last message.");
+      if (this.turn.channelId !== channelId) throw new Error("Lyra is still answering in another chat.");
+      await this.turn.done.catch(() => {});
+    }
     this.running = new AbortController();
+    let finish!: (m: StoredMessage) => void;
+    let fail!: (e: unknown) => void;
+    const done = new Promise<StoredMessage>((res, rej) => ((finish = res), (fail = rej)));
+    done.catch(() => {});
+    const turn: NonNullable<Lyra["turn"]> = { channelId, items: [], open: true, done };
+    this.turn = turn;
+    const inbox: TurnInbox = {
+      take: () => turn.items.splice(0),
+      listen: (fn) => (turn.wake = fn),
+      close: () => (turn.open = false),
+    };
     try {
       const provider = metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "chat", this.db, this.p.timeZone);
       const message = await runTurn(
@@ -844,11 +876,18 @@ export class Lyra {
         emit,
         this.running.signal,
         attachments,
+        inbox,
       );
+      finish(message);
       // the cards in this reply know where they are, for "jump to it" from Today
       for (const id of message.meta.actions ?? []) this.db.run("UPDATE actions SET message_id = ? WHERE id = ?", [message.id, id]);
-      return { message, user: listMessages(this.db, channelId, 2)[0] };
+      return { message, user: userMessageBefore(this.db, channelId, message.id) };
+    } catch (e) {
+      fail(e);
+      throw e;
     } finally {
+      turn.open = false;
+      if (this.turn === turn) this.turn = undefined;
       this.running = undefined;
       void this.db.flush();
     }
@@ -1797,4 +1836,12 @@ ${look.join("\n")}
 Speak up only for something ${user} would actually want to be interrupted for${level === "light" ? " (the bar is high: only things that matter today)" : ""}. Most checks should end with nothing_new. Skip anything you mentioned last time unless it changed, and skip newsletters, promotions and automated mail.
 
 If you do post: lead with the one thing that matters most, then at most two more, each in a line, and the next step for each. No greeting, no recap of what you checked.`;
+}
+
+/** The user message that started a reply: the first one after the previous assistant message. */
+function userMessageBefore(db: DB, channelId: number | null, replyId: number): StoredMessage {
+  const recent = listMessages(db, channelId, 40).filter((m) => m.id < replyId);
+  let i = recent.length - 1;
+  while (i > 0 && recent[i - 1].role === "user") i--;
+  return recent[i];
 }

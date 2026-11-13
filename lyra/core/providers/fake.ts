@@ -13,6 +13,18 @@ export class FakeProvider implements ModelProvider {
 
   async generate(req: GenerateRequest, onText: (d: string) => void): Promise<GenerateResult> {
     this.requests.push({ ...req, messages: structuredClone(req.messages) });
+    // "take your time…": the practice model thinks for a couple of seconds, so you can send more meanwhile
+    const lastText = req.messages.at(-1)?.parts.map((p) => (p.type === "text" ? p.text : "")).join("\n") ?? "";
+    if (!this.script.length && /^take your time/i.test(lastText.trim())) {
+      await new Promise<void>((done, fail) => {
+        const t = setTimeout(done, 2500);
+        req.signal?.addEventListener("abort", () => (clearTimeout(t), fail(new Error("aborted"))));
+      });
+      const heard = lastText.split("\n").filter((l) => l.trim() && !/added, while you were working:$/.test(l));
+      const r: GenerateResult = { parts: [{ type: "text", text: `Got all of it: ${heard.join(" / ")}` }], stop: "end" };
+      for (const word of (r.parts[0] as { text: string }).text.split(/(?<= )/)) onText(word);
+      return r;
+    }
     const result = this.script.length ? this.script.shift()! : this.rules(req);
     // Practice has no real tokens: estimate at four characters each, so the Usage page has something to show.
     if (!result.usage) {

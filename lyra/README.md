@@ -59,6 +59,11 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - Heads-up and follow-up tokens show on the Usage page as their own kind of work ("proactive").
 - **Check-ins when it's quiet** (on with heads-ups, its own switch): when nothing needs you, Lyra asks for work like a colleague with a free afternoon. It offers one specific project grounded in your memory, mail, calendar and tasks, asks one question to know you better, or asks what it could take off your plate this week, with up to three replies to tap. About once a day on Light, up to twice on Active; only 9:00 to 20:00 and outside quiet hours; never while you're mid-conversation (2 hours), while something is waiting on you or a worker is running, or before you've answered the last one (gives up waiting after 3 days). Your answers go to memory; a yes gets started. Tap-replies are dropped if it read mail or the web. Recent check-ins are passed along so it doesn't repeat itself (`Lyra.tickCheckIn`, `checkInInstructions`, `meta.checkIn`, settings `checkInAt` / `checkInMessage` / `checkInRecent`). The Today view offers "What could you take on for me?" and "Ask me something" when nothing needs you.
 
+### Back to back
+
+- Text Lyra like a person: send a message, then another, without waiting. While she's still thinking, what you add joins the same thought (that step starts over with it); if she's already writing, she finishes and then answers what you added in the same reply. Between tool steps (reading mail, searching), she picks it up before the next one.
+- Send stays available while she works; Stop shows when the box is empty. Messages with attachments, or in another chat, wait for the current reply.
+
 ### Talk like me
 
 - Lyra mirrors how you talk: your energy, slang, punctuation, casing and emoji. Say "hell yeah" and good news gets a "Hell yeah!" back. She borrows your phrases now and then without parroting, swears only if you do (lightly, never at you or in bad news), and keeps her clarity rules. Drafts for other people stay written for that reader.

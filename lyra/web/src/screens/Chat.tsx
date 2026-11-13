@@ -298,7 +298,37 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
   const send = async (raw: string) => {
     const text = raw.trim();
     const files = drafts;
-    if ((!text && !files.length) || pending) return;
+    if (!text && !files.length) return;
+    // A reply's being written: this joins it, like texting back to back.
+    if (pending) {
+      if (!text) return;
+      setInput("");
+      requestAnimationFrame(grow);
+      stick.current = true;
+      const extra: Message = { id: -Date.now(), role: "user", content: text, created_at: new Date().toISOString(), meta: {}, channel_id: channelId };
+      setMessages((m) => [...(m ?? []), extra]);
+      try {
+        await sendChat(
+          text,
+          {
+            text: () => {},
+            status: () => {},
+            memory: () => {},
+            done: (msg, user) =>
+              setMessages((m) => {
+                const list = (m ?? []).map((x) => (x.id === extra.id && user ? user : x));
+                return list.some((x) => x.id === msg.id) ? list : [...list, msg];
+              }),
+          },
+          channelId,
+        );
+      } catch (e) {
+        setMessages((m) => (m ?? []).filter((x) => x.id !== extra.id));
+        setInput(text);
+        toast((e as Error).message);
+      }
+      return;
+    }
     setShowToday(false);
     setInput("");
     setDrafts([]);
@@ -321,7 +351,10 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
         memory: (note) => setPending((p) => p && { ...p, notes: [...p.notes, note] }),
         reaction: (emoji) => setMessages((m) => (m ?? []).map((x) => (x.id === temp.id ? { ...x, meta: { ...x.meta, reaction: emoji } } : x))),
         done: (msg, user) => {
-          setMessages((m) => [...(m ?? []).map((x) => (x.id === temp.id && user ? user : x)), msg]);
+          setMessages((m) => {
+            const list = (m ?? []).map((x) => (x.id === temp.id && user ? user : x));
+            return list.some((x) => x.id === msg.id) ? list : [...list, msg];
+          });
           if (msg.meta.tasks?.length) onTasksChanged?.();
         },
       }, channelId, files.map(strip));
@@ -735,7 +768,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
               }
             }}
           />
-          {pending ? (
+          {pending && !input.trim() ? (
             <button type="button" className="send stop" aria-label="Stop" onClick={() => api.stop().catch(() => {})}>
               <Stop size={20} />
             </button>

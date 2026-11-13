@@ -36,6 +36,19 @@ export interface TurnEmitter {
   reaction?(emoji: string): void;
 }
 
+/**
+ * Messages the user sends while a reply is still being written (back to back, like
+ * texting). They're already saved; the turn picks them up before its next step.
+ */
+export interface TurnInbox {
+  /** Take whatever has arrived since last time. */
+  take(): string[];
+  /** Called when a message arrives (or with undefined to stop listening). */
+  listen(fn: (() => void) | undefined): void;
+  /** The turn is wrapping up: anything later starts a new turn. */
+  close(): void;
+}
+
 /** The reactions Lyra can put on a message, like a tapback. */
 export const REACTIONS = ["❤️", "👍", "😂", "🎉", "😮", "😢", "🙏", "🔥"] as const;
 
@@ -562,7 +575,14 @@ async function digests(ctx: TurnContext): Promise<ChannelDigest[]> {
  * let the model answer (calling tools as needed), stream text as it
  * arrives, save the reply.
  */
-export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmitter, signal?: AbortSignal, attachments: Attachment[] = []): Promise<StoredMessage> {
+export async function runTurn(
+  ctx: TurnContext,
+  userText: string,
+  emit: TurnEmitter,
+  signal?: AbortSignal,
+  attachments: Attachment[] = [],
+  inbox?: TurnInbox,
+): Promise<StoredMessage> {
   const channelId = ctx.channel?.id ?? null;
   const attached = checkAttachments(attachments);
   const userMessage = addMessage(ctx.db, "user", userText, attached.length ? { attachments: attached } : {}, channelId);
@@ -637,16 +657,54 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
       webSearch: !!ctx.webSearch,
     });
 
+    // Messages sent back to back while Lyra works join the conversation before the next step.
+    const who = ctx.userName === "you" ? "The user" : ctx.userName;
+    const takeNew = (): boolean => {
+      const added = inbox?.take() ?? [];
+      if (!added.length) return false;
+      const last = messages[messages.length - 1];
+      if (last?.role === "user") last.parts.push({ type: "text", text: `${who} added, while you were working:\n${added.join("\n")}` });
+      else messages.push({ role: "user", parts: [{ type: "text", text: added.join("\n") }] });
+      return true;
+    };
+    let restarts = 0;
+
     for (let step = 0; step < MAX_STEPS; step++) {
+      takeNew();
       let started = false;
-      const result = await ctx.provider.generate(
-        { system, messages, tools, signal, webSearch: !!ctx.webSearch, onStatus: (l) => emit.status(l) },
-        (d) => {
-          if (!started && reply.trim()) say("\n\n");
-          started = true;
-          say(d);
-        },
-      );
+      // A message arriving while Lyra is still thinking (nothing written yet) restarts this
+      // step with it included, so it's part of the same thought.
+      const stepAbort = new AbortController();
+      const passOn = () => stepAbort.abort();
+      signal?.addEventListener("abort", passOn);
+      let restarted = false;
+      inbox?.listen(() => {
+        if (!started && restarts < 5) {
+          restarted = true;
+          stepAbort.abort();
+        }
+      });
+      let result: Awaited<ReturnType<typeof ctx.provider.generate>>;
+      try {
+        result = await ctx.provider.generate(
+          { system, messages, tools, signal: stepAbort.signal, webSearch: !!ctx.webSearch, onStatus: (l) => emit.status(l) },
+          (d) => {
+            if (!started && reply.trim()) say("\n\n");
+            started = true;
+            say(d);
+          },
+        );
+      } catch (e) {
+        if (restarted && !signal?.aborted && !started) {
+          restarts++;
+          step--;
+          continue;
+        }
+        throw e;
+      } finally {
+        inbox?.listen(undefined);
+        signal?.removeEventListener("abort", passOn);
+      }
       messages.push({ role: "assistant", parts: result.parts });
       // Web results are other people's words, just like email.
       if (result.searched) state.tainted = true;
@@ -654,6 +712,8 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
       const calls = result.parts.filter((p): p is Extract<Part, { type: "tool_call" }> => p.type === "tool_call");
       if (!calls.length) {
         if (result.stop === "pause") continue; // a long search: let the model carry on
+        // they sent more while Lyra was answering: carry on and answer that too
+        if (takeNew()) continue;
         break;
       }
 
@@ -840,10 +900,12 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
       messages.push({ role: "user", parts: results });
       if (step === MAX_STEPS - 1) say(`${reply.trim() ? "\n\n" : ""}I stopped there so this doesn't run on. Want me to keep going?`);
     }
+    inbox?.close();
     // A reaction alone is a complete reply, like a tapback on a text.
     if (!reply.trim() && !(reacted && !notes.length && !taskNotes.length)) say(notes.length ? "Got it." : "Done.");
     return addMessage(ctx.db, "assistant", reply.trim(), meta(), channelId);
   } catch (e) {
+    inbox?.close();
     const aborted = signal?.aborted;
     const why = aborted ? "Stopped." : `I couldn't finish that. ${friendlyError(e)}`;
     if (!aborted) console.error("[lyra] turn failed:", e);

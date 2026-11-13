@@ -277,6 +277,19 @@ try {
   check((await page.locator(".bubble").count()) === 1, "channel chat starts empty and holds its own messages");
   await shot("light-9-channel-chat");
 
+  // ---- back to back: a second message while Lyra is still thinking joins the same reply ----
+  await page.getByPlaceholder("Message Rowan").fill("take your time: plan dinner friday");
+  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Stop" }).waitFor();
+  await page.getByPlaceholder("Message Rowan").fill("it's for 6 people");
+  check((await page.getByRole("button", { name: "Send" }).count()) === 1, "you can type and send while Lyra is thinking");
+  await page.getByRole("button", { name: "Send" }).click();
+  await page.locator(".bubble", { hasText: "it's for 6 people" }).waitFor();
+  await page.getByText("Got all of it: take your time: plan dinner friday / it's for 6 people").waitFor({ timeout: 10_000 });
+  await page.getByRole("button", { name: "Stop" }).waitFor({ state: "detached" });
+  check((await page.getByText(/^Got all of it/).count()) === 1, "back-to-back messages get one reply that covers both");
+  await shot("light-43-back-to-back");
+
   // ---- skills: teach one in chat, use it by name, see it on the Memory page ----
   await page.getByPlaceholder("Message Rowan").fill("save a skill called Party prep: 1. Confirm the headcount\n2. Order the cake\n3. Text the parents");
   await page.getByRole("button", { name: "Send" }).click();
