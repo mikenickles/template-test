@@ -4875,7 +4875,9 @@ a.status-pill:active {
   margin-top: auto;
   padding-top: var(--s4);
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* one even column per section, across the whole width */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 4px;
   flex: none;
 }
@@ -5517,10 +5519,6 @@ button.orb {
 }
 
 /* ---------- Phase 13: docs ---------- */
-
-.drawer-sections {
-  grid-template-columns: repeat(5, 1fr);
-}
 
 .doc-actions {
   display: flex;
