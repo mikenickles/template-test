@@ -15,7 +15,7 @@ import { cleanItem } from "./memory.ts";
 import { uniqueSources, type ModelProvider, type Msg, type Part, type Source, type ToolDef } from "./providers/types.ts";
 import { describeTasks, listTasks } from "./tasks.ts";
 import { neutralize } from "./untrusted.ts";
-import { character } from "./soul.ts";
+import { calendarAhead, character } from "./soul.ts";
 import VOICE from "./voice.md?raw";
 
 export const ROUTINE_STEPS = 12;
@@ -256,6 +256,7 @@ function routinePrompt(r: RoutineJob, d: RoutineDeps, search: boolean, memory: s
   const now = new Date().toLocaleString("en-US", { timeZone: tz, dateStyle: "full", timeStyle: "short" });
   const last = r.last_run_at ? new Date(r.last_run_at).toLocaleString("en-US", { timeZone: tz, dateStyle: "medium", timeStyle: "short" }) : "never";
   return `You are running one of Lyra's scheduled routines for ${user}. Lyra is their personal chief of staff. Right now is ${now} (${tz}).
+${calendarAhead(new Date(), tz)}
 
 # The routine: ${neutralize(r.name)}
 ${neutralize(r.instructions)}

@@ -14,7 +14,7 @@ import { createDoc, updateDoc } from "./docs.ts";
 import { uniqueSources, type ModelProvider, type Msg, type Part, type Source, type ToolDef } from "./providers/types.ts";
 import { addStep, getTask, log, setStepDone, STATUS_LABEL, taskDetail, updateTask, type TaskRow } from "./tasks.ts";
 import { neutralize } from "./untrusted.ts";
-import { character } from "./soul.ts";
+import { calendarAhead, character } from "./soul.ts";
 import VOICE from "./voice.md?raw";
 
 export const MAX_WORKERS = 2;
@@ -91,6 +91,7 @@ function workerPrompt(task: TaskRow, steps: string, deps: WorkerDeps, memory: st
   const tz = deps.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const now = new Date().toLocaleString("en-US", { timeZone: tz, dateStyle: "full", timeStyle: "short" });
   return `You are one of Lyra's background workers. Lyra is ${user}'s personal chief of staff; you carry out one task for them, out of sight, and report back. Right now is ${now} (${tz}).
+${calendarAhead(new Date(), tz)}
 
 # Your task
 #${task.id}: ${neutralize(task.title)}

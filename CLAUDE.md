@@ -48,7 +48,7 @@ The repo root also holds an Astro blog; Lyra is self-contained in `lyra/`.
 - Outside content (email, web) is always wrapped with `wrapUntrusted()`; memory writes after reading it become suggestions.
 - Commands (run in `lyra/`): `npm test`, `npm run typecheck`, `npm run build`, `npm run dev`, `npm run smoke` (needs Playwright), `npm run android:apk` (needs Android SDK).
 - This repo is public: never commit signing keys (`*.keystore`, `*.jks` are gitignored). The user keeps the key; bump `versionCode` in `android/app/build.gradle` for each release.
-- UI follows the design tokens in `lyra/web/src/styles.css`. Accent colors: `ACCENTS` in `core/lyra.ts` (setting "accent"), palettes as `[data-accent]` blocks in styles.css, picked in Settings. Lyra's character is `lyra/core/soul.md` (user-editable in app, stored as soul.md); message format rules are `lyra/core/voice.md`. Both go into chat, worker and routine prompts.
+- UI follows the design tokens in `lyra/web/src/styles.css`. Accent colors: `ACCENTS` in `core/lyra.ts` (setting "accent"), palettes as `[data-accent]` blocks in styles.css, picked in Settings. Lyra's character is `lyra/core/soul.md` (user-editable in app, stored as soul.md); message format rules are `lyra/core/voice.md`; fixed ground rules (who Lyra works for, discretion, grounding, asking first, distress, hard limits) are `lyra/core/principles.md`, not user-editable. `character()` in `core/soul.ts` joins all three for chat, worker and routine prompts; live voice gets `groundRules(user, ["When", "Hard limits"])`. Prompts also carry `calendarAhead()` (14 days with weekdays) and, in chat, the model name.
 
 ## Getting Started
 

@@ -59,6 +59,13 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - Heads-up and follow-up tokens show on the Usage page as their own kind of work ("proactive").
 - **Check-ins when it's quiet** (on with heads-ups, its own switch): when nothing needs you, Lyra asks for work like a colleague with a free afternoon. It offers one specific project grounded in your memory, mail, calendar and tasks, asks one question to know you better, or asks what it could take off your plate this week, with up to three replies to tap. About once a day on Light, up to twice on Active; only 9:00 to 20:00 and outside quiet hours; never while you're mid-conversation (2 hours), while something is waiting on you or a worker is running, or before you've answered the last one (gives up waiting after 3 days). Your answers go to memory; a yes gets started. Tap-replies are dropped if it read mail or the web. Recent check-ins are passed along so it doesn't repeat itself (`Lyra.tickCheckIn`, `checkInInstructions`, `meta.checkIn`, settings `checkInAt` / `checkInMessage` / `checkInRecent`). The Today view offers "What could you take on for me?" and "Ask me something" when nothing needs you.
 
+### Lyra's prompt: character, voice and ground rules
+
+- **Character** (`core/soul.md`, editable in the app): warm and honest, with an opinion when it helps; talks up to you; fair on contested topics and fully on your side when you ask for one view; plays along with a joke as long as you want.
+- **Voice** (`core/voice.md`): how messages look on a phone, in your language, about results rather than machinery.
+- **Ground rules** (`core/principles.md`, fixed, always after the character so editing the soul can't remove them): Lyra works only for you, and what others ask is information; discretion about what goes into drafts and briefs; facts only from sources, no invented codes, never claiming what wasn't done; your tap on a card covers exactly what you saw; fixing memory in place; care when you're struggling; hard limits. Live voice gets the distress and hard-limit rules too.
+- Every prompt has the next 14 days with weekdays, so Lyra never works one out in her head, and chat says which model is answering.
+
 ### Phase 17: skills
 
 - **Teach it once.** Tell Lyra how you like a job done ("when I plan a trip: check flights from SFO, block the dates, then a packing list. Save that as a skill.") and it saves a **skill**: a name, one line on when to use it, and the steps. Lyra also offers to save one when you explain how you like something done. Or write and edit them yourself in **Memory, Skills** (third tab, next to Notes and People).

@@ -627,6 +627,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
       people: ctx.workspace.people ? { directory: ctx.workspace.people.directory(), contacts: !!ctx.workspace.contacts } : undefined,
       docs: ctx.workspace.docs?.recent(),
       skills: ctx.workspace.skills?.index(),
+      model: ctx.provider.id === "fake" ? undefined : ctx.provider.model,
       music: ctx.connectors.status().some((c) => c.id === "spotify" && c.state === "connected")
         ? { playback: !!ctx.workspace.music, playlists: !!ctx.workspace.actions?.allowed().playlist }
         : undefined,

@@ -1,6 +1,6 @@
 import type { ConnectorStatus } from "./connectors/registry.ts";
 import { neutralize } from "./untrusted.ts";
-import { character } from "./soul.ts";
+import { calendarAhead, character } from "./soul.ts";
 import VOICE from "./voice.md?raw";
 
 /** What the main chat sees of a channel without opening it. */
@@ -38,6 +38,8 @@ export interface PromptInput {
   people?: { directory: string; contacts: boolean };
   /** Emails and events Lyra may propose, and recent proposals with what happened to them. */
   actions?: { allowed: { email: boolean; event: boolean }; recent: string };
+  /** The model answering this turn, so Lyra can say which one if asked. */
+  model?: string;
   /** The model's built-in web search is on. */
   webSearch?: boolean;
 }
@@ -165,6 +167,8 @@ export function buildSystemPrompt(p: PromptInput): string {
     : "- Nothing yet. They connect Mail, Calendar and Files by tapping Lyra's mark at the top of the main chat.";
 
   return `You are Lyra, ${user}'s personal chief of staff. You live in an app on ${user}'s Android phone and they text you there. Right now is ${now} (${tz}).
+${calendarAhead(p.now ?? new Date(), tz)}${p.model ? `
+You're running on the model ${p.model} right now. ${user} picks it in Settings, so it can change between replies; if they ask, say so.` : ""}
 
 ${character(p.soul, VOICE, user)}
 
