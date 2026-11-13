@@ -62,7 +62,7 @@ export function Drawer({
 
   const sections: { href: string; label: string; icon: ReactNode; on: boolean; badge?: number; initial?: string }[] = [
     { href: "#/tasks", label: "Tasks", icon: <TasksIcon size={20} />, on: /^(tasks|task|worker-log|routine)$/.test(route), badge: readyCount },
-    { href: "#/docs", label: "Docs", icon: <FileIcon size={20} />, on: route === "docs" || route === "doc" },
+    { href: "#/artifacts", label: "Artifacts", icon: <FileIcon size={20} />, on: route === "docs" || route === "doc" },
     { href: "#/memory", label: "Memory", icon: <Notebook size={20} />, on: route === "memory" },
     { href: "#/access", label: "Lyra", icon: <Spark size={20} />, on: route === "access" || route === "soul" },
     { href: "#/settings", label: "Settings", icon: <Gear size={20} />, on: route === "settings", initial },

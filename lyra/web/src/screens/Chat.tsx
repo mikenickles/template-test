@@ -1,6 +1,6 @@
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api, onChange, sendChat, type Channel, type MemoryNote, type Message, type TaskNote } from "../api";
-import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chevron, Close, File as FileIcon, Minus, Wave, More, Pin, Plus, Spark, Stop, TasksIcon } from "../icons";
+import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chart, Chevron, Close, File as FileIcon, Minus, Wave, More, Pin, Plus, Spark, Stop, TasksIcon } from "../icons";
 import { noteOf, onIncoming, prepare, prepareShared, strip, takeIncoming, type Draft } from "../attach";
 import { MAX_ATTACHMENTS } from "../../../core/attachments";
 import { copyText, isNative, liveVoice } from "../platform";
@@ -614,9 +614,9 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                     <div className="notes">
                       {m.meta.docs.map((d) => (
                         <a className="note task-note doc-note" key={d.id} href={`#/d/${d.id}`}>
-                          <FileIcon size={16} />
+                          {d.kind === "dashboard" ? <Chart size={16} /> : <FileIcon size={16} />}
                           <span className="what">
-                            <b>{d.created ? "Doc" : "Doc updated"}</b> · {d.title}
+                            <b>{d.kind === "dashboard" ? (d.created ? "Dashboard" : "Dashboard updated") : d.created ? "Doc" : "Doc updated"}</b> · {d.title}
                           </span>
                           <Chevron size={16} className="chev" />
                         </a>

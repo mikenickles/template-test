@@ -3,11 +3,18 @@
 import type { DB } from "./db.ts";
 import { NeedsConsentError, type TokenSource } from "./connectors/google.ts";
 
+export type ArtifactKind = "doc" | "dashboard";
+
 export interface Doc {
   id: number;
+  /** what it is: a doc (Markdown) or a dashboard (JSON, see dashboard.ts) */
+  kind: ArtifactKind;
   title: string;
-  /** Markdown */
+  /** Markdown, or a dashboard's JSON */
   body: string;
+  /** dashboards: how to rebuild it with fresh data ("" when it can't be refreshed) */
+  instructions: string;
+  refreshed_at: string | null;
   channel_id: number | null;
   /** written after reading outside content (mail, web): read back as data, never instructions */
   tainted: boolean;
@@ -37,21 +44,35 @@ export function getDoc(db: DB, id: number): Doc | undefined {
   return r && parse(r);
 }
 
-export function createDoc(db: DB, input: { title: unknown; body: unknown; channelId?: number | null; tainted?: boolean; taskId?: number | null }): Doc {
+export function createDoc(
+  db: DB,
+  input: { title: unknown; body: unknown; channelId?: number | null; tainted?: boolean; taskId?: number | null; kind?: ArtifactKind; instructions?: string },
+): Doc {
   const t = title(input.title);
   if (!t) throw new Error("Give the doc a title.");
   const body = String(input.body ?? "").replace(/\r\n?/g, "\n").trim();
   if (!body) throw new Error("The doc is empty.");
   if (body.length > MAX_BODY) throw new Error("That's too long for one doc. Split it in two.");
   if (db.get<{ n: number }>("SELECT COUNT(*) AS n FROM docs")!.n >= 1000) throw new Error("There are already 1,000 docs. Delete some first.");
-  const r = db.run<Row>("INSERT INTO docs (title, body, channel_id, tainted, task_id) VALUES (?, ?, ?, ?, ?) RETURNING *", [t, body, input.channelId ?? null, input.tainted ? 1 : 0, input.taskId ?? null])!;
+  const r = db.run<Row>("INSERT INTO docs (title, body, channel_id, tainted, task_id, kind, instructions) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *", [
+    t,
+    body,
+    input.channelId ?? null,
+    input.tainted ? 1 : 0,
+    input.taskId ?? null,
+    input.kind ?? "doc",
+    (input.instructions ?? "").trim().slice(0, 2000),
+  ])!;
   return parse(r);
 }
 
 /** Replace the body, add to the end, and/or rename. */
-export function updateDoc(db: DB, id: number, patch: { title?: unknown; body?: unknown; append?: unknown; tainted?: boolean }): Doc {
+export function updateDoc(db: DB, id: number, patch: { title?: unknown; body?: unknown; append?: unknown; tainted?: boolean; instructions?: string; refreshed?: boolean }): Doc {
   const d = getDoc(db, id);
   if (!d) throw new Error(`There's no doc #${id}.`);
+  if (d.kind === "dashboard" && patch.append !== undefined) throw new Error("That's a dashboard: change it with update_dashboard.");
+  if (patch.instructions !== undefined) db.run("UPDATE docs SET instructions = ? WHERE id = ?", [patch.instructions.trim().slice(0, 2000), id]);
+  if (patch.refreshed) db.run("UPDATE docs SET refreshed_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?", [id]);
   let body = d.body;
   if (patch.body !== undefined) body = String(patch.body).replace(/\r\n?/g, "\n").trim();
   if (patch.append !== undefined && String(patch.append).trim()) body = `${body}\n\n${String(patch.append).replace(/\r\n?/g, "\n").trim()}`;
@@ -70,7 +91,7 @@ export function deleteDoc(db: DB, id: number): void {
 export function describeDocs(docs: Doc[], max = 12): string {
   return docs
     .slice(0, max)
-    .map((d) => `- #${d.id} ${d.title} (updated ${d.updated_at.slice(0, 10)})`)
+    .map((d) => `- #${d.id} ${d.title} (${d.kind === "dashboard" ? "dashboard, " : ""}updated ${d.updated_at.slice(0, 10)})`)
     .join("\n");
 }
 

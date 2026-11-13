@@ -234,6 +234,11 @@ export const MIGRATIONS: string[] = [
      started_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
      ended_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
    );`,
+  // Artifacts: docs are one kind; dashboards (JSON in body) another. A dashboard can keep
+  // the instructions to rebuild it with fresh data.
+  `ALTER TABLE docs ADD COLUMN kind TEXT NOT NULL DEFAULT 'doc';
+   ALTER TABLE docs ADD COLUMN instructions TEXT NOT NULL DEFAULT '';
+   ALTER TABLE docs ADD COLUMN refreshed_at TEXT;`,
 ];
 
 const FILE = "lyra.db";
@@ -396,7 +401,7 @@ export interface MessageMeta {
   /** An inbox triage card (Phase 16). */
   triage?: import("./triage.ts").Triage;
   /** Docs written or updated in this reply. */
-  docs?: { id: number; title: string; created: boolean }[];
+  docs?: { id: number; title: string; created: boolean; kind?: "doc" | "dashboard" }[];
   /** People cards added or updated in this reply. */
   people?: { id: number; name: string; created: boolean }[];
   /** Posted by a heads-up check Lyra ran on its own. */

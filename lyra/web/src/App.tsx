@@ -51,6 +51,8 @@ export function readRoute(hash = location.hash): Route {
   if (r) return { name: "routine", routineId: Number(r[1]) };
   const s = path.match(/^settings\/(\w+)$/);
   if (s && (SETTINGS_SECTIONS as string[]).includes(s[1])) return { name: "settings", section: s[1] as SettingsSection };
+  // Docs became Artifacts: #/docs still opens it
+  if (path === "artifacts") return { name: "docs" };
   if (path === "tasks" || path === "access" || path === "memory" || path === "soul" || path === "settings" || path === "docs" || path === "activity") return { name: path };
   return { name: "chat", channelId: null, focus: m };
 }
@@ -72,7 +74,7 @@ function backFrom(r: Route): string | null {
     case "routine":
       return "#/tasks";
     case "doc":
-      return "#/docs";
+      return "#/artifacts";
     case "settings":
       return r.section ? "#/settings" : "#/";
     default:

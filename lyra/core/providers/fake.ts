@@ -56,7 +56,8 @@ export class FakeProvider implements ModelProvider {
       if (result.name === "suggest_replies") return say("Here are a couple of next steps.");
       if (result.name === "forget") return say("Done, that's gone.");
       if (result.name === "propose_email" || result.name === "propose_event") return say("It's ready for you to check.");
-      if (result.name === "write_doc" || result.name === "update_doc") return say("It's in your Docs.");
+      if (result.name === "write_doc" || result.name === "update_doc") return say("It's in your Artifacts.");
+      if (result.name === "make_dashboard" || result.name === "update_dashboard") return say("Your dashboard is in Artifacts (practice numbers: add an API key for real ones).");
       // life admin scan: save the first bill-looking email found (practice data)
       if (result.name === "gmail__search_mail" && req.tools.some((t) => t.name === "save_items")) {
         const thread = result.content.match(/thread: ([0-9a-f]{6,32})/i)?.[1];
@@ -102,6 +103,14 @@ export class FakeProvider implements ModelProvider {
     // "use my Trip planning skill"
     const useIt = text.match(/^use my (.+?) skill\b/i);
     if (useIt && has("use_skill")) return call("use_skill", { name: useIt[1] });
+    // a dashboard refresh: practice numbers, as of now
+    if (has("save_dashboard")) {
+      return call("save_dashboard", { subtitle: "New practice numbers", blocks: practiceBlocks(1 + (Date.now() % 6)) });
+    }
+    // "make a dashboard called Spending": the practice model can make one (made-up numbers, said so)
+    const dash = text.match(/^(?:make|build) (?:me )?a dashboard (?:called|about|for|of) (.+)$/i);
+    if (dash && has("make_dashboard"))
+      return call("make_dashboard", { title: dash[1], subtitle: "Practice numbers", blocks: practiceBlocks(0), refresh: "Practice: make up new example numbers." });
     // "make a doc called Packing list": the practice model can write a doc
     const doc = text.match(/^(?:make|write) (?:me )?a doc(?:ument)? (?:called|about|for) (.+)$/i);
     if (doc && has("write_doc")) return call("write_doc", { title: doc[1], body: "## To do\n- First thing\n- Second thing" });
@@ -114,4 +123,15 @@ export class FakeProvider implements ModelProvider {
       "I'm running on the practice model, so I can't really think yet.\n\nAdd an API key in Settings and pick a model there.",
     );
   }
+}
+
+/** Example blocks for the practice model's dashboards (clearly not real). */
+function practiceBlocks(shift: number) {
+  const n = (base: number, i: number) => base + ((i * 7 + shift * 2) % 9); // every shift 1-6 differs from 0
+  return [
+    { type: "stats", items: [{ label: "This week", value: `$${n(120, 1)}` }, { label: "Open tasks", value: String(n(3, 2)) }, { label: "Streak", value: `${n(4, 3)} days` }] },
+    { type: "bar", title: "By category", unit: "$", items: ["Food", "Transport", "Fun"].map((label, i) => ({ label, value: n(20, i) * 2 })) },
+    { type: "line", title: "Last 7 days", unit: "$", points: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label, i) => ({ label, value: n(10, i) })) },
+    { type: "list", title: "Next up", items: [{ text: "Example item", note: "practice" }, { text: "Another example", done: true }] },
+  ];
 }

@@ -1,10 +1,11 @@
 import type { Connectors } from "./connectors/registry.ts";
 import { attachmentParts, attachmentReminder, checkAttachments, type Attachment } from "./attachments.ts";
 import { checkTriage, TRIAGE_GUIDE, TRIAGE_SCHEMA, type Triage } from "./triage.ts";
-import { addMessage, listMessages, updateMessageMeta, type Channel, type ChannelSummary, type DB, type MemoryNote, type StoredMessage, type TaskNote } from "./db.ts";
+import { addMessage, listMessages, updateMessageMeta, type Channel, type ChannelSummary, type DB, type MemoryNote, type MessageMeta, type StoredMessage, type TaskNote } from "./db.ts";
 import { CHANNEL_SECTIONS, SECTIONS, type Notebook } from "./memory.ts";
 import { buildSystemPrompt, type ChannelDigest } from "./prompt.ts";
 import { neutralize, wrapUntrusted } from "./untrusted.ts";
+import { DASHBOARD_SCHEMA } from "./dashboard.ts";
 import { describeSchedule, type RoutineInput } from "./routines.ts";
 import { uniqueSources, type ModelProvider, type Msg, type Part, type Source, type ToolDef } from "./providers/types.ts";
 import {
@@ -73,6 +74,8 @@ export interface Workspace {
     update(id: number, patch: { title?: unknown; body?: unknown; append?: unknown }, tainted: boolean): { id: number; title: string };
     /** the text, and whether it holds outside content */
     read(id: number): { text: string; tainted: boolean };
+    /** make or change a dashboard (refresh: how to rebuild it, kept only from a clean turn) */
+    dashboard(input: { id?: number; title?: unknown; dashboard: unknown; refresh?: unknown }, channelId: number | null, tainted: boolean): { id: number; title: string; created: boolean };
   };
   /** How to talk like the user (empty when that's turned off). */
   talk?(): string;
@@ -232,8 +235,27 @@ function docTools(ws: Workspace): ToolDef[] {
     },
     {
       name: "read_doc",
-      description: "Read one of the user's docs by its #id.",
+      description: "Read one of the user's docs or dashboards by its #id.",
       schema: { type: "object", properties: { id: { type: "number" } }, required: ["id"] },
+    },
+    {
+      name: "make_dashboard",
+      description:
+        "Make a dashboard the user keeps in Artifacts: headline numbers, charts, tables and lists on one page (their subscriptions, spending, a project's progress, the week ahead). Use real data you have or just looked up; never invent numbers. refresh: how to rebuild it with fresh data later (what to look at, what to show), so the user can tap Refresh.",
+      schema: {
+        type: "object",
+        properties: { title: { type: "string" }, ...DASHBOARD_SCHEMA, refresh: { type: "string", description: "Instructions to rebuild it with fresh data, in a sentence or two." } },
+        required: ["title", "blocks"],
+      },
+    },
+    {
+      name: "update_dashboard",
+      description: "Replace a dashboard's content by its #id (read it first). The whole dashboard: every block you want kept.",
+      schema: {
+        type: "object",
+        properties: { id: { type: "number" }, title: { type: "string" }, ...DASHBOARD_SCHEMA, refresh: { type: "string" } },
+        required: ["id", "blocks"],
+      },
     },
   ];
 }
@@ -631,7 +653,7 @@ export async function runTurn(
   const taskNotes: TaskNote[] = [];
   const actionIds: number[] = [];
   const peopleNotes: { id: number; name: string; created: boolean }[] = [];
-  const docNotes: { id: number; title: string; created: boolean }[] = [];
+  const docNotes: NonNullable<MessageMeta["docs"]> = [];
   let triage: Triage | undefined;
   const skillNotes: { id: number; name: string; kind: "used" | "saved" }[] = [];
   const toolsUsed: { name: string; ok: boolean }[] = [];
@@ -864,6 +886,29 @@ export async function runTurn(
             ok = true;
             emit.status("Sorted your inbox");
             content = `Shown as a card: ${triage.needs.length} need the user, ${triage.later.length} can wait, ${triage.fyi.length} newsletters. Now say the gist in a sentence or two; don't list them again.`;
+          } catch (e) {
+            content = (e as Error).message;
+          }
+          toolsUsed.push({ name: call.name, ok });
+          results.push({ type: "tool_result", id: call.id, name: call.name, content, isError: !ok });
+          continue;
+        }
+        if (call.name === "make_dashboard" || call.name === "update_dashboard") {
+          let content: string;
+          let ok = false;
+          try {
+            const docs = ctx.workspace.docs!;
+            const id = call.name === "update_dashboard" ? Number(call.input.id) : undefined;
+            // after reading mail or the web, only a dashboard made from outside content (or just now) can be replaced
+            if (id !== undefined && state.tainted && !docNotes.some((n) => n.id === id && n.created) && !docs.read(id).tainted)
+              throw new Error("Not replaced: outside content was read this turn. Make a new dashboard instead, or ask the user first.");
+            const r = docs.dashboard({ id, title: call.input.title, dashboard: call.input, refresh: call.input.refresh }, ctx.channel?.id ?? null, state.tainted);
+            const i = docNotes.findIndex((n) => n.id === r.id);
+            if (i === -1) docNotes.push({ id: r.id, title: r.title, created: r.created, kind: "dashboard" });
+            else docNotes[i] = { ...docNotes[i], title: r.title };
+            emit.status(r.created ? `Made ${r.title}` : `Updated ${r.title}`);
+            content = `${r.created ? "Made" : "Updated"} dashboard #${r.id}: ${r.title}. It shows as a card under your reply; say what it shows in a sentence.${state.tainted && call.input.refresh ? " (Refresh instructions aren't kept after reading outside content.)" : ""}`;
+            ok = true;
           } catch (e) {
             content = (e as Error).message;
           }

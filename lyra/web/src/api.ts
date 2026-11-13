@@ -395,6 +395,7 @@ export const api = {
   saveDoc: async (id: number | null, patch: { title: string; body: string }) => (await ready).saveDoc(id, patch),
   deleteDoc: async (id: number) => (await ready).deleteDoc(id),
   saveDocToGoogle: async (id: number) => (await ready).saveDocToGoogle(id),
+  refreshDashboard: async (id: number) => (await ready).refreshDashboard(id),
   talkStyle: async () => (await ready).talkStyle(),
   learnStyleNow: async () => (await ready).learnStyleNow(),
   forgetStyle: async () => (await ready).forgetStyle(),

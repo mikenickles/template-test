@@ -18,6 +18,7 @@ import * as S from "./skills.ts";
 import * as ST from "./style.ts";
 import * as LA from "./lifeadmin.ts";
 import * as AC from "./activity.ts";
+import * as DB_ from "./dashboard.ts";
 import { SPOTIFY_PLAYBACK, SPOTIFY_PLAYLISTS, SPOTIFY_READ, SpotifyAuth, type OAuthRedirect } from "./connectors/spotify/auth.ts";
 import { createSpotifyServer } from "./connectors/spotify/server.ts";
 import { runTidy } from "./tidy.ts";
@@ -333,14 +334,33 @@ export class Lyra {
           return { id: d.id, title: d.title };
         },
         update: (id, patch, tainted) => {
+          if (D.getDoc(this.db, id)?.kind === "dashboard") throw new Error("That's a dashboard: change it with update_dashboard.");
           const d = D.updateDoc(this.db, id, { ...patch, tainted });
           this.listeners.forEach((l) => l({ type: "doc", docId: d.id }));
           return { id: d.id, title: d.title };
         },
+        dashboard: (input, channelId, tainted) => {
+          const dash = DB_.checkDashboard(input.dashboard);
+          // instructions to rebuild are only kept from a clean turn: they'd run again later with tools
+          const refresh = !tainted && typeof input.refresh === "string" ? input.refresh : undefined;
+          if (input.id !== undefined) {
+            const had = D.getDoc(this.db, input.id);
+            if (!had || had.kind !== "dashboard") throw new Error(`There's no dashboard #${input.id}.`);
+            const d = D.updateDoc(this.db, input.id, { title: input.title, body: JSON.stringify(dash), tainted, instructions: refresh, refreshed: true });
+            this.listeners.forEach((l) => l({ type: "doc", docId: d.id }));
+            return { id: d.id, title: d.title, created: false };
+          }
+          const d = D.createDoc(this.db, { title: input.title, body: JSON.stringify(dash), channelId, tainted, kind: "dashboard", instructions: refresh });
+          this.listeners.forEach((l) => l({ type: "doc", docId: d.id }));
+          return { id: d.id, title: d.title, created: true };
+        },
         read: (id) => {
           const d = D.getDoc(this.db, id);
           if (!d) throw new Error(`There's no doc #${id}.`);
-          const text = `# ${d.title}\n\n${d.body}`;
+          const text =
+            d.kind === "dashboard"
+              ? `# ${d.title} (dashboard)\n\n${DB_.describeDashboard(JSON.parse(d.body))}${d.instructions ? `\n\nHow it's refreshed: ${d.instructions}` : ""}`
+              : `# ${d.title}\n\n${d.body}`;
           return { text: d.tainted ? wrapUntrusted(`doc #${d.id}`, text) : text, tainted: d.tainted };
         },
       },
@@ -1529,10 +1549,56 @@ export class Lyra {
 
   private docsToken: TokenSource | undefined;
 
+  private refreshing = new Set<number>();
+
+  /** Rebuild a dashboard with fresh data, the way it says it's made. Read-only tools; reading outside content marks it. */
+  async refreshDashboard(id: number): Promise<D.Doc> {
+    const d = D.getDoc(this.db, id);
+    if (!d || d.kind !== "dashboard") throw new Error("That dashboard is no longer here.");
+    if (!d.instructions.trim()) throw new Error("This dashboard doesn't say how to refresh it. Ask Lyra in chat to update it.");
+    if (this.refreshing.has(id)) throw new Error("Already refreshing it.");
+    this.refreshing.add(id);
+    try {
+      const provider = metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "chat", this.db, this.p.timeZone);
+      const la = this.gmailOn
+        ? [{ name: "life_admin", description: "Bills, subscriptions, packages, trips and returns found in the user's email.", schema: { type: "object", properties: {} } }]
+        : [];
+      const today = new Date().toLocaleDateString("en-US", { timeZone: this.p.timeZone, weekday: "long", month: "long", day: "numeric", year: "numeric" });
+      const r = await DB_.rebuildDashboard({
+        provider,
+        tools: [...la, ...(await this.connectors.tools())],
+        call: async (name, input) => {
+          if (name === "life_admin" && la.length) {
+            const items = LA.listItems(this.db);
+            const total = LA.monthlyTotal(items);
+            const list = LA.describeForModel(items, LA.localDay(new Date(), this.p.timeZone));
+            return { content: wrapUntrusted("life admin, from the user's email", `${list}${total ? `\n\nSubscriptions come to about ${total} a month.` : ""}`), isError: false };
+          }
+          if (this.connectors.owns(name)) return this.connectors.call(name, input);
+          return { content: `Unknown tool ${name}.`, isError: true };
+        },
+        webSearch: this.webSearch,
+        userName: this.userName,
+        today,
+        title: d.title,
+        instructions: d.instructions,
+        current: DB_.describeDashboard(DB_.checkDashboard(JSON.parse(d.body))),
+      });
+      if (!r) throw new Error("Couldn't refresh it this time. Try again, or ask Lyra in chat.");
+      const after = D.updateDoc(this.db, id, { title: r.title, body: JSON.stringify(r.dashboard), tainted: r.outside, refreshed: true });
+      await this.db.flush();
+      this.listeners.forEach((l) => l({ type: "doc", docId: id }));
+      return after;
+    } finally {
+      this.refreshing.delete(id);
+    }
+  }
+
   /** Save (or update) the doc in Google Docs. The first time, Google asks for access to the docs Lyra creates. */
   async saveDocToGoogle(id: number): Promise<D.Doc> {
     const d = D.getDoc(this.db, id);
     if (!d) throw new Error("That doc is no longer here.");
+    if (d.kind === "dashboard") throw new Error("Dashboards stay in Lyra. Only docs go to Google Docs.");
     if (!this.p.google.available) throw new Error("Google sign-in isn't available here.");
     this.docsToken ??= new TokenSource(this.p.google, [DRIVE_FILE]);
     const attempt = async (doc: D.Doc) => {

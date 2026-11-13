@@ -349,7 +349,38 @@ try {
   check((await page.getByRole("button", { name: /Google Doc/ }).count()) === 0, "a doc can be edited (no Google button where Google can't sign in)");
   await page.getByRole("link", { name: "Back" }).click();
   await page.locator(".item", { hasText: "Packing list" }).waitFor();
-  check(true, "Docs lists it");
+  check(await page.getByRole("heading", { name: "Artifacts" }).isVisible(), "Artifacts lists it");
+
+  // ---- dashboards: Lyra makes one, it draws as tiles and charts, Refresh rebuilds it ----
+  await page.goto(`${base}/#/`);
+  await page.getByPlaceholder("Message Lyra").fill("make a dashboard called Spending");
+  await page.getByRole("button", { name: "Send" }).click();
+  await page.locator(".doc-note", { hasText: "Spending" }).click();
+  await page.getByRole("heading", { name: "Spending" }).waitFor();
+  check(
+    (await page.locator(".dash-stat").count()) === 3 && (await page.locator(".dash-bar").count()) === 3 && (await page.locator(".dash-line").count()) === 1,
+    "a dashboard draws stat tiles, bars with values, and a line chart",
+  );
+  await page.locator(".dash-plot rect").nth(3).dispatchEvent("pointerdown");
+  check(await page.locator(".dash-tip", { hasText: "Thu" }).isVisible(), "tapping the line chart shows that point's value");
+  await shot("light-42-dashboard");
+  await page.getByRole("button", { name: "Show as table" }).click();
+  check((await page.locator(".dash-table tbody tr").count()) === 7, "the line chart can show as a table");
+  await page.getByRole("button", { name: "Show chart" }).click();
+  await page.getByRole("button", { name: "Refresh" }).click();
+  await page.locator(".page-sub", { hasText: "New practice numbers" }).waitFor();
+  check(/· Refreshed (just now|\d+ ?(s|sec|min|m) ago)/i.test(await page.locator(".page-sub").first().innerText()), "Refresh rebuilds it");
+  await page.emulateMedia({ colorScheme: "dark" });
+  await shot("dark-11-dashboard");
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto(`${base}/#/docs`);
+  await page.getByRole("tab", { name: "Dashboards" }).click();
+  check(
+    (await page.locator(".item", { hasText: "Spending" }).count()) === 1 && (await page.locator(".item", { hasText: "Packing list" }).count()) === 0,
+    "Artifacts filters to dashboards (and #/docs still opens it)",
+  );
+  await shot("light-43-artifacts");
+  await page.getByRole("tab", { name: "All" }).click();
 
   // ---- search every chat from the menu, and jump to the message ----
   await page.goto(`${base}/#/`);
@@ -404,7 +435,7 @@ try {
   await page.locator(".app.drawer-open").waitFor();
   await page.getByRole("link", { name: /Everything/ }).click();
   await page.waitForTimeout(300);
-  check((await page.locator(".bubble").count()) === 3, "main chat keeps its own history");
+  check((await page.locator(".bubble").count()) === 4, "main chat keeps its own history");
 
   await page.goto(`${base}/#/c/1/info`);
   await page.getByText("Lyra saves facts about Rowan here").waitFor();
@@ -438,7 +469,7 @@ try {
   await page.getByPlaceholder("Message Lyra").fill("thanks!");
   await page.getByRole("button", { name: "Send" }).click();
   await page.getByRole("img", { name: "Lyra reacted ❤️" }).waitFor();
-  check((await page.locator(".bubble").count()) === 4, "Lyra can react to a message, with no text reply");
+  check((await page.locator(".bubble").count()) === 5, "Lyra can react to a message, with no text reply");
   await shot("light-21-reaction");
 
   await page.goto(`${base}/#/settings/you`);

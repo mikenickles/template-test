@@ -19,7 +19,7 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 | 10 | Smarter memory: people cards, weekly tidy-up, phone contacts (search past chats came with the redesign) | Done |
 | 11 | Works on its own: background routines, "while you were away", widget | Done (Proactive step 3) |
 | 12 | Polish: accent-colored app icon, fixes from testing | Planned |
-| 13 | Docs: documents Lyra writes for you, optionally in Google Docs | Done |
+| 13 | Artifacts: docs Lyra writes for you (optionally in Google Docs) and dashboards she builds and refreshes | Done |
 | 14 | More connectors: Spotify first (more later), with approval cards for anything that writes | Done (Spotify) |
 | 15 | Research tasks: workers that read web pages and report back with sources | Done |
 | 16 | Inbox triage, when you ask (or as a routine you set up), replies drafted for your OK | Done |
@@ -64,6 +64,14 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 
 - **Settings, Notifications, Checkup** checks everything that stops Lyra reaching you on her own, each with a one-tap fix: notifications allowed (or Android's settings when they were turned off there), a real AI model (the practice model can't write heads-ups), heads-ups on, Keep watch on (the tray on Windows), and not held back by battery saving. **Send me a test notification** arrives a few seconds later, so you can leave the app and see it.
 - **What arrives with Lyra closed** (scheduled on the phone ahead of time): reminders and follow-ups, routine nudges, and life admin heads-ups (9:00 on their day). **What needs Lyra running** (Keep watch, and not swiped away from recent apps): heads-ups, check-ins, routine posts and finished tasks, since she has to think to write them.
+
+### Artifacts: docs and dashboards
+
+- **Artifacts** (menu → Artifacts; `#/docs` still opens it) holds everything Lyra made for you to keep, with All / Docs / Dashboards filters. Docs work as before (Phase 13, below).
+- **Dashboards**: ask "make a dashboard of my subscriptions" or "my spending this month" and Lyra builds one page of headline numbers (stat tiles), bar and line charts, tables, checklists, progress bars and short notes from data it has or just looked up (`make_dashboard`, `update_dashboard`; a card under the reply opens it). Lyra never writes code for it: it hands over data, `checkDashboard` in `core/dashboard.ts` checks and trims it (up to 12 blocks, short labels, numbers only where numbers go), and the app draws it (`web/src/Dashboard.tsx`). So a dashboard built from email or the web can't run anything.
+- **Readable without color**: one series per chart in the validated series blue, every bar labelled with its value, a line chart with a tap/hover tooltip and **Show as table**, and the same look in dark mode.
+- **Refresh**: Lyra saves how a dashboard is made (what to look at, what to show). Tapping **Refresh** rebuilds it with fresh data, using the read-only connectors, your life admin list and web search when it's on (`Lyra.refreshDashboard`, `rebuildDashboard`). Refresh instructions are only kept from a clean turn (not after reading mail or the web), since they run again later with tools; a dashboard built from outside content is marked so, and Lyra reads it back as outside data. A clean dashboard can't be replaced in a turn that read outside content.
+- Dashboards stay in Lyra (no Google Docs); **Copy** gives them as text. The practice model makes one with made-up numbers it labels as practice ("make a dashboard called Spending").
 
 ### Activity log
 

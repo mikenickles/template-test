@@ -95,10 +95,11 @@ ${p.music.playlists ? `- To make a playlist or add songs to one, find the songs 
 function docsSection(p: PromptInput, user: string): string {
   if (p.docs === undefined) return "";
   return `
-## Docs
-For anything ${user} will want to keep, come back to or share (a plan, itinerary, packing or shopping list, comparison, research notes, a long draft), write a doc with write_doc instead of a long chat reply, then say in a sentence what it is. Keep chat replies short. Update an existing doc rather than writing a new one when it's the same thing (read_doc first to replace its body).
+## Artifacts
+Docs and dashboards ${user} keeps in Artifacts. For anything they'll want to keep, come back to or share (a plan, itinerary, packing or shopping list, comparison, research notes, a long draft), write a doc with write_doc instead of a long chat reply, then say in a sentence what it is. Keep chat replies short. Update an existing doc rather than writing a new one when it's the same thing (read_doc first to replace its body).
+When the point is numbers or status at a glance (spending, subscriptions, a project's progress, the week ahead), make a dashboard with make_dashboard, from data you have or just looked up; never invent numbers. Give it refresh instructions so ${user} can tap Refresh for fresh data later.
 
-Recent docs:
+Recent artifacts:
 ${p.docs.trim() ? neutralize(p.docs) : "(none yet)"}
 `;
 }
