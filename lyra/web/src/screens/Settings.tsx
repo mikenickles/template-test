@@ -3,6 +3,7 @@ import { api, isNative, syncApi, type AppState, type SyncStatus } from "../api";
 import { Bell, Chart, Check, Chevron, Cloud, Cpu, Plug, Refresh, User } from "../icons";
 import { compact, dayKey } from "../usageData";
 import { Usage } from "./Usage";
+import { useSlidingPill } from "../pill";
 import { appLock, background, installer, isDesktop, notifier, thisDevice, type BackgroundState } from "../platform";
 import { BackupSection } from "./Backup";
 import { ModelSettings } from "./ModelSettings";
@@ -275,6 +276,7 @@ const LEVELS = [
 function HeadsUps({ state, run, busy }: { state: AppState; run: (fn: () => Promise<AppState>, done: string) => Promise<void>; busy: boolean }) {
   const p = state.proactive;
   const level = LEVELS.find((l) => l.id === p.level)!;
+  const levelPill = useSlidingPill(p.level);
   const quiet = (k: "quietStart" | "quietEnd", v: string) => v && v !== p[k] && void run(() => api.saveSettings({ proactive: { [k]: v } }), "Quiet hours saved");
   // saved a moment after the last change (a phone's picker, or typing on a computer), not on every keystroke
   const wait = useRef<{ quietStart?: number; quietEnd?: number }>({});
@@ -285,7 +287,8 @@ function HeadsUps({ state, run, busy }: { state: AppState; run: (fn: () => Promi
   return (
     <section className="section">
       <h2 className="section-label">Heads-ups</h2>
-      <div className="seg" role="radiogroup" aria-label="Heads-ups">
+      <div className="seg" role="radiogroup" aria-label="Heads-ups" ref={levelPill}>
+        <span className="pill" aria-hidden="true" />
         {LEVELS.map((l) => (
           <button
             key={l.id}

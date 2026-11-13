@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { UsageRow } from "../../../core/usage";
 import { LIVE_PRICE_PER_MINUTE } from "../../../core/live";
 import { api } from "../api";
+import { useSlidingPill } from "../pill";
 import { buildBuckets, buildSeries, compact, niceScale, rangeDays, type Bucket, type Series, type UsageRange } from "../usageData";
 
 const RANGES: { id: UsageRange; label: string; span: string }[] = [
@@ -15,6 +16,7 @@ const colorOf = (i: number, key: string) => (key === "other" ? "var(--series-oth
 /** Settings → Usage: tokens per model over time, as the providers counted them. */
 export function Usage() {
   const [range, setRange] = useState<UsageRange>("daily");
+  const rangePill = useSlidingPill(range, "usage-range");
   const [all, setAll] = useState<UsageRow[] | null>(null);
   const today = useMemo(() => new Date(), []);
 
@@ -48,7 +50,8 @@ export function Usage() {
 
   return (
     <div className="usage">
-      <div className="seg" role="tablist" aria-label="Time range">
+      <div className="seg" role="tablist" aria-label="Time range" ref={rangePill}>
+        <span className="pill" aria-hidden="true" />
         {RANGES.map((r) => (
           <button key={r.id} role="tab" aria-selected={range === r.id} className={range === r.id ? "on" : ""} onClick={() => setRange(r.id)}>
             {r.label}

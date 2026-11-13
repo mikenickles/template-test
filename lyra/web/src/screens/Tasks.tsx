@@ -7,6 +7,7 @@ import { Markdown } from "../markdown";
 import { LifeAdmin } from "./LifeAdmin";
 import { ScheduledSection } from "./Routines";
 import { ago, parse } from "../when";
+import { useSlidingPill } from "../pill";
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
   up_next: "Up next",
@@ -175,6 +176,7 @@ export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: 
   const [searching, setSearching] = useState(false);
   const [creating, setCreating] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const segPill = useSlidingPill(tab, "tasks-tabs");
 
   const load = useCallback(() => {
     api
@@ -231,7 +233,8 @@ export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: 
   const putOff = tab === "active" ? (rows ?? []).filter(snoozed) : [];
 
   const seg = (
-    <div className="seg-tabs" role="tablist" aria-label="Tasks">
+    <div className="seg-tabs" role="tablist" aria-label="Tasks" ref={segPill}>
+      <span className="pill" aria-hidden="true" />
       {(["active", "done", "admin"] as const).map((k) => (
         <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>
           {k === "active" ? "Active" : k === "done" ? "Done" : "Life admin"}

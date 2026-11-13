@@ -72,6 +72,12 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### Smoother motion (0.42.1)
+
+- The Chat/Tasks bar, the Tasks tabs and the segmented switches (Usage range, Heads-ups level) have a pill that slides to the option you pick, with a small settle at the end (`web/src/pill.ts` `useSlidingPill`; it remembers where it was, so it slides even when the page rebuilds the control).
+- The menu opens a little slower on a softer curve (460 ms open, 340 ms close), and what's in it follows the panel in, one after another.
+- Pages settle in when you arrive, sheets rise from the bottom, dialogs and pop-up notices land softly, buttons give a little when pressed. "Reduce motion" on the phone turns it all down.
+
 ### Quick capture, voice memos, places (0.42)
 
 - **Quick capture from anywhere** (phone): a **Tell Lyra** tile for Quick Settings (pull down, edit, drag it in) and a mic on the home-screen widget. Either opens Lyra listening; it sends what you said as soon as you pause. Uses the phone's own speech recognition (`ListenPlugin.java` "LyraListen", `CaptureTile.java`, `web/src/QuickCapture.tsx`); **Type instead** is always there.

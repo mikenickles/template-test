@@ -6906,3 +6906,191 @@ a.drawer-head:hover {
   color: var(--good);
 }
 
+
+/* =========================================================================
+   Motion polish: one soft curve for things that move, a pill that slides to
+   the chosen option, a slower menu, and pages that settle in.
+   ========================================================================= */
+
+:root {
+  /* quick start, long gentle finish */
+  --glide: cubic-bezier(0.22, 1, 0.36, 1);
+  /* a touch of overshoot for small things that land */
+  --settle: cubic-bezier(0.34, 1.25, 0.64, 1);
+}
+
+/* ---- the sliding pill (Chat/Tasks, segmented controls); placed by useSlidingPill ---- */
+.tabbar-inner,
+.seg,
+.seg-tabs {
+  position: relative;
+}
+
+.pill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  border-radius: 999px;
+  pointer-events: none;
+  transition:
+    transform 420ms var(--settle),
+    width 420ms var(--settle),
+    height 420ms var(--settle),
+    opacity 200ms ease;
+  will-change: transform, width;
+}
+
+.tabbar-inner > .pill {
+  background: var(--drawer-active);
+}
+
+.seg > .pill,
+.seg-tabs > .pill {
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.seg-tabs > .pill {
+  border-radius: 18px;
+}
+
+/* the option itself stays clear: the pill underneath is the highlight */
+.tabbar-item,
+.seg button,
+.seg-tabs button {
+  position: relative;
+  z-index: 1;
+  transition:
+    color 260ms ease,
+    transform 160ms ease;
+}
+
+.tabbar-item.on,
+.seg button.on,
+.seg-tabs button.on {
+  background: transparent;
+  box-shadow: none;
+}
+
+.tabbar-item svg {
+  transition:
+    color 260ms ease,
+    transform 420ms var(--settle);
+}
+
+.tabbar-item.on svg {
+  transform: scale(1.08);
+}
+
+.tabbar-item:active,
+.seg button:active,
+.seg-tabs button:active {
+  transform: scale(0.96);
+}
+
+/* ---- the menu: a little slower and softer to open, a little quicker to close ---- */
+.app {
+  --slide: 340ms var(--glide);
+}
+
+.app.drawer-open {
+  --slide: 460ms var(--glide);
+}
+
+/* what's in the menu follows the panel in, one after another */
+.app:not(.desk) .drawer-panel > * {
+  opacity: 0;
+  transform: translate3d(-14px, 0, 0);
+  transition:
+    opacity 260ms ease,
+    transform 340ms var(--glide);
+}
+
+.app.drawer-open:not(.desk) .drawer-panel > * {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 420ms ease,
+    transform 520ms var(--glide);
+}
+
+.app.drawer-open:not(.desk) .drawer-panel > :nth-child(1) {
+  transition-delay: 60ms;
+}
+.app.drawer-open:not(.desk) .drawer-panel > :nth-child(2) {
+  transition-delay: 100ms;
+}
+.app.drawer-open:not(.desk) .drawer-panel > :nth-child(3) {
+  transition-delay: 140ms;
+}
+.app.drawer-open:not(.desk) .drawer-panel > :nth-child(n + 4) {
+  transition-delay: 180ms;
+}
+
+/* ---- pages settle in when you arrive ---- */
+.screen {
+  animation: page-in 320ms var(--glide) backwards;
+}
+
+.chat {
+  animation: fade 260ms ease backwards;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+}
+
+/* ---- sheets rise from the bottom, dialogs land softly ---- */
+.sheet {
+  animation: sheet-up 380ms var(--glide) both;
+}
+
+.dialog {
+  animation: pop 300ms var(--glide) both;
+}
+
+.dialog-scrim {
+  animation: fade 260ms ease both;
+}
+
+@keyframes sheet-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 40px, 0);
+  }
+}
+
+/* ---- small things ---- */
+.toast {
+  animation: toast-in 360ms var(--settle) both;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate3d(-50%, 12px, 0) scale(0.96);
+  }
+}
+
+.btn,
+.ring,
+.item {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pill {
+    transition: none;
+  }
+  .app:not(.desk) .drawer-panel > * {
+    transition: none;
+    transform: none;
+    opacity: 1;
+  }
+}

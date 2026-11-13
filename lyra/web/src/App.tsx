@@ -3,6 +3,7 @@ import { Keyboard } from "@capacitor/keyboard";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, isNative, onChange, type AppState, type Channel } from "./api";
 import { Drawer } from "./Drawer";
+import { useSlidingPill } from "./pill";
 import { Back, ChannelIcon, Info, Layers, MenuIcon } from "./icons";
 import { Avatar } from "./LyraMark";
 import { Access } from "./screens/Access";
@@ -275,6 +276,7 @@ export function App() {
   useEffect(() => onChange(() => refreshCounts()), [refreshCounts]);
   // The Chat tab returns to whichever chat you were last in.
   const [lastChat, setLastChat] = useState("#/");
+  const tabPill = useSlidingPill(route.name, "tabbar");
   useEffect(() => {
     if (route.name === "chat") setLastChat(route.channelId === null ? "#/" : `#/c/${route.channelId}`);
     refreshCounts();
@@ -437,7 +439,8 @@ export function App() {
 
         {inChat && !wide && (
           <nav className={`tabbar${route.name === "chat" ? " floating" : ""}`} aria-label="Sections">
-            <div className="tabbar-inner">
+            <div className="tabbar-inner" ref={tabPill}>
+              <span className="pill" aria-hidden="true" />
               <a
                 className={`tabbar-item${route.name === "chat" ? " on" : ""}`}
                 href={route.name === "chat" ? "#/" : lastChat}
