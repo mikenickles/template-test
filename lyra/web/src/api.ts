@@ -21,11 +21,11 @@ import { backupName } from "../../core/backup";
 import type { Platform } from "../../core/lyra";
 import type { Activity, ActivityDetail, ActivityKind } from "../../core/activity";
 export type { Activity, ActivityDetail, ActivityKind };
-import { readSyncState, Sync, type SnapshotInfo, type SyncResult } from "../../core/sync";
+import { HOME_STALE_MS, readSyncState, Sync, type SnapshotInfo, type SyncResult } from "../../core/sync";
 import { DriveSyncRemote } from "../../core/sync-drive";
 import { applyUpdate, checkForUpdate, watchForUpdates } from "./updater";
 import { watchWidget } from "./widget";
-import { background, createPlatform, deviceKind, isDesktop, isNative, keepBackupCopy, notifier, shareFile } from "./platform";
+import { background, createPlatform, deviceKind, isDesktop, isNative, keepBackupCopy, notifier, push, shareFile } from "./platform";
 
 export type MemoryNote = CoreNote;
 export type Message = StoredMessage;
@@ -65,6 +65,8 @@ let sync: Sync;
 const ready: Promise<Lyra> = createPlatform().then(async (p) => {
   platform = p;
   const state = await readSyncState(p.texts, deviceKind);
+  const pulledAfter = state.justPulled ? Number(localStorage.getItem(PULLED_AFTER) ?? NaN) : NaN;
+  localStorage.removeItem(PULLED_AFTER);
   // right after loading another device's data, its running workers stay with that device
   const lyra = await Lyra.start(p, { resumeWorkers: !state.justPulled });
   sync = new Sync(lyra, new DriveSyncRemote(p.google), p.texts, p.secrets, state);
@@ -74,6 +76,8 @@ const ready: Promise<Lyra> = createPlatform().then(async (p) => {
   if (isNative) void CapApp.addListener("pause", () => void lyra.flush());
   addEventListener("pagehide", () => void lyra.flush());
   watchForNotices(lyra);
+  void signUpForPush(lyra);
+  if (Number.isFinite(pulledAfter)) void tellWhatsNew(lyra, pulledAfter);
   runRoutines(lyra);
   watchSync(lyra);
   watchForUpdates(lyra);
@@ -85,12 +89,26 @@ const ready: Promise<Lyra> = createPlatform().then(async (p) => {
 
 // ---------- routines ----------
 // Routines run on schedule while Lyra is open, and catch up when it's opened. With sync
-// on, only the phone runs them, so the same brief isn't posted twice.
+// on, one device runs them, so the same brief isn't posted twice: the home base (a computer
+// that's always on) while it's been heard from, otherwise the phone.
 
-const routinesRunHere = () => !(isDesktop && sync.state.enabled);
+const routinesRunHere = () => sync.runsJobs(!isDesktop);
+const BEAT_EVERY = 5 * 60_000;
 
 function runRoutines(lyra: Lyra): void {
-  const tick = () => {
+  let beatAt = 0;
+  const tick = async () => {
+    if (restarting) return;
+    if (sync.state.enabled && sync.state.home) {
+      if (Date.now() - beatAt > BEAT_EVERY) {
+        beatAt = Date.now();
+        await sync.beat().catch((e) => console.error("[lyra] home base", e));
+        syncChanged();
+      }
+      // the home base works from the latest data, and holds off while another device is in use
+      const r = await syncNow(lyra);
+      if (restarting || r === "busy" || r === "conflict" || sync.othersActive()) return;
+    }
     if (!routinesRunHere() || restarting) return;
     try {
       lyra.tickRoutines();
@@ -98,17 +116,57 @@ function runRoutines(lyra: Lyra): void {
       console.error("[lyra] routines", e);
     }
   };
-  tick();
-  setInterval(tick, 60_000);
-  // the phone keeping watch in the background: run what's due, give it a couple of minutes to finish, save, send to sync
+  void tick();
+  setInterval(() => void tick(), 60_000);
+  // the phone keeping watch in the background: load what the home base did (that restarts Lyra, which
+  // then tells you what's new), or run what's due here, give it a couple of minutes, save, send to sync
   background.onTick(async () => {
-    tick();
+    if (sync.state.enabled) await syncNow(lyra);
+    if (restarting) return;
+    await tick();
     await Promise.race([lyra.routinesRunner.settle(), new Promise((r) => setTimeout(r, 150_000))]);
     await lyra.flush();
     if (sync.state.enabled) await syncNow(lyra, { pull: false });
   });
-  if (isNative) void CapApp.addListener("resume", tick);
-  else document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && tick());
+  if (isNative) void CapApp.addListener("resume", () => void tick());
+  else document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && void tick());
+}
+
+// A device that loads another's data restarts. If Lyra posted on her own in the meantime
+// (the home base's routines and heads-ups), say so here, unless you're looking at Lyra.
+const PULLED_AFTER = "lyra.pulledAfter";
+
+/** On a phone, once the home base has set push up: sign up, and pass this phone's address along through sync. */
+async function signUpForPush(lyra: Lyra): Promise<void> {
+  const cfg = lyra.pushConfig();
+  if (!push.available || !cfg || !sync.state.enabled || !lyra.state().notifications) return;
+  try {
+    await lyra.registerPushDevice(sync.state.device, sync.state.deviceName, await push.register(cfg));
+  } catch (e) {
+    console.error("[lyra] push sign-up", e);
+    pushError = (e as Error).message;
+  }
+}
+let pushError: string | undefined;
+
+/** The home base rings the phones: Lyra's own posts and tasks that are ready, whether or not this computer's window is showing. */
+function ring(lyra: Lyra, title: string, body: string, hash: string): void {
+  if (!sync.state.enabled || !sync.state.home) return;
+  void lyra.push(title, body, hash).catch((e) => console.error("[lyra] push", e));
+}
+
+async function tellWhatsNew(lyra: Lyra, after: number): Promise<void> {
+  try {
+    if (!lyra.state().notifications) return;
+    // signed up for push: the home base already rang this phone about these
+    if ((await lyra.pushStatus()).devices.some((d) => d.id === sync.state.device)) return;
+    const showing = isNative ? (await CapApp.getState()).isActive : document.visibilityState === "visible";
+    if (showing) return;
+    const posts = lyra.ownPostsSince(after);
+    for (const p of posts.slice(-3)) await notifier.now(p.title, p.body, p.channelId === null ? "#/" : `#/c/${p.channelId}`);
+  } catch (e) {
+    console.error("[lyra] what's new", e);
+  }
 }
 
 // ---------- sync ----------
@@ -148,8 +206,12 @@ async function syncNow(lyra: Lyra, opts: { pull?: boolean } = {}): Promise<SyncR
   // nor in the middle of a voice call
   const canPull = opts.pull !== false && !lyra.busy && !typing && !editing && !document.body.dataset.call;
   try {
+    const last = lyra.lastMessageId();
     const r = await sync.check(canPull);
-    if (r === "pulled") restartApp();
+    if (r === "pulled") {
+      localStorage.setItem(PULLED_AFTER, String(last));
+      restartApp();
+    }
     return r;
   } catch (e) {
     console.error("[lyra] sync", e);
@@ -183,6 +245,10 @@ export interface SyncStatus {
   pending: boolean;
   conflict?: SnapshotInfo;
   routinesHere: boolean;
+  /** this device is the home base */
+  home: boolean;
+  /** another device is the home base: its name, when it was last heard from, and whether that's recent */
+  homeBase?: { name: string; at: string; fresh: boolean };
 }
 
 export const updatesApi = {
@@ -194,7 +260,48 @@ export const syncApi = {
   status: async (): Promise<SyncStatus> => {
     await ready;
     const s = sync.state;
-    return { enabled: s.enabled, deviceName: s.deviceName, lastSync: s.lastSync, lastError: s.lastError, pending: s.dirty, conflict: s.conflict, routinesHere: routinesRunHere() };
+    const beat = !s.home && s.homeBeat && s.homeBeat.device !== s.device ? s.homeBeat : undefined;
+    return {
+      enabled: s.enabled,
+      deviceName: s.deviceName,
+      lastSync: s.lastSync,
+      lastError: s.lastError,
+      pending: s.dirty,
+      conflict: s.conflict,
+      routinesHere: routinesRunHere(),
+      home: !!s.home,
+      homeBase: beat && { name: beat.deviceName, at: beat.at, fresh: Date.now() - new Date(beat.at).getTime() < HOME_STALE_MS },
+    };
+  },
+  /** Push: set up on the home base, phones sign up by themselves. */
+  push: async () => {
+    const lyra = await ready;
+    return { ...(await lyra.pushStatus()), thisDevice: sync.state.device, error: pushError };
+  },
+  setupPush: async (googleServices: string, serviceAccount: string) => {
+    await (await ready).setupPush(googleServices, serviceAccount);
+    syncChanged();
+  },
+  forgetPush: async () => {
+    await (await ready).forgetPush();
+    await push.forget();
+    syncChanged();
+  },
+  testPush: async () => (await ready).push("Lyra", "This is a test from your home base. Push is working.", "#/"),
+  /** Make this computer the one that does Lyra's background work (or stop). Turns heads-ups on if they were off. */
+  setHome: async (on: boolean): Promise<{ headsUpsOn: boolean }> => {
+    const lyra = await ready;
+    try {
+      await sync.setHome(on);
+      let headsUpsOn = false;
+      if (on && lyra.state().proactive.level === "off") {
+        await lyra.saveSettings({ proactive: { ...lyra.state().proactive, level: "light" } });
+        headsUpsOn = true;
+      }
+      return { headsUpsOn };
+    } finally {
+      syncChanged();
+    }
   },
   onChange(fn: () => void): () => void {
     syncListeners.add(fn);
@@ -277,6 +384,7 @@ function watchForNotices(lyra: Lyra): void {
         if (!isNative && lyra.state().notifications) void notifier.now(e.notify.title, e.notify.body, chatHash(e.channelId)).catch(() => {});
         return;
       }
+      ring(lyra, e.notify.title, e.notify.body, chatHash(e.channelId));
       return notice(lyra, e.notify.title, e.notify.body, chatHash(e.channelId));
     }
     if (e.type === "task") {
@@ -289,7 +397,10 @@ function watchForNotices(lyra: Lyra): void {
       const before = seen.get(e.taskId);
       if (!d) return void seen.delete(e.taskId);
       seen.set(e.taskId, d.task.status);
-      if (d.task.status === "ready" && before !== "ready") notice(lyra, `Ready for you: ${d.task.title}`, d.task.needs || "Lyra finished its part.", `#/t/${e.taskId}`);
+      if (d.task.status === "ready" && before !== "ready") {
+        ring(lyra, `Ready for you: ${d.task.title}`, d.task.needs || "Lyra finished its part.", `#/t/${e.taskId}`);
+        notice(lyra, `Ready for you: ${d.task.title}`, d.task.needs || "Lyra finished its part.", `#/t/${e.taskId}`);
+      }
     }
   });
 }

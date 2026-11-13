@@ -4,7 +4,7 @@
  * change any of your own files. Every snapshot is encrypted before upload.
  */
 import { DRIVE_APPDATA, TokenSource, type GoogleAuth } from "./connectors/google.ts";
-import type { SnapshotInfo, SyncRemote } from "./sync.ts";
+import type { HomeBeat, SnapshotInfo, SyncRemote } from "./sync.ts";
 
 const API = "https://www.googleapis.com/drive/v3/files";
 const UPLOAD = "https://www.googleapis.com/upload/drive/v3/files";
@@ -64,6 +64,34 @@ export class DriveSyncRemote implements SyncRemote {
         savedAt: f.appProperties!.savedAt ?? "",
         kind: f.appProperties!.kind === "conflict" ? "conflict" : "snapshot",
       }));
+  }
+
+  /** The home base's heartbeat: a file with no content, only its properties. */
+  private async homeFile(): Promise<DriveFile | undefined> {
+    const q = new URLSearchParams({
+      spaces: "appDataFolder",
+      fields: "files(id,appProperties)",
+      pageSize: "10",
+      q: "trashed = false and appProperties has { key='home' and value='1' }",
+    });
+    return ((await (await this.call(`${API}?${q}`)).json()) as { files: DriveFile[] }).files[0];
+  }
+
+  async home(): Promise<HomeBeat | undefined> {
+    const p = (await this.homeFile())?.appProperties;
+    return p?.device && p.at ? { device: p.device, deviceName: p.deviceName ?? "your computer", at: p.at } : undefined;
+  }
+
+  async setHome(beat: HomeBeat | null): Promise<void> {
+    const f = await this.homeFile();
+    if (!beat) {
+      if (f) await this.remove(f.id);
+      return;
+    }
+    const appProperties = { home: "1", device: beat.device, deviceName: beat.deviceName.slice(0, 40), at: beat.at };
+    const init = { headers: { "Content-Type": "application/json" } };
+    if (f) await this.call(`${API}/${encodeURIComponent(f.id)}`, { ...init, method: "PATCH", body: JSON.stringify({ appProperties }) });
+    else await this.call(API, { ...init, method: "POST", body: JSON.stringify({ name: "lyra-home.json", parents: ["appDataFolder"], appProperties }) });
   }
 
   async download(id: string): Promise<Uint8Array> {

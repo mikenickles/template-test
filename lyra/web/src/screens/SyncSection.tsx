@@ -20,6 +20,13 @@ export function SyncSection({ toast }: { toast: (m: string) => void }) {
   const s = useSyncStatus();
   const [busy, setBusy] = useState(false);
   const [setup, setSetup] = useState<{ existing?: SnapshotInfo } | null>(null);
+  const [pushSetup, setPushSetup] = useState(false);
+  const [push, setPush] = useState<Awaited<ReturnType<typeof syncApi.push>> | null>(null);
+  useEffect(() => {
+    const load = () => void syncApi.push().then(setPush, () => {});
+    load();
+    return syncApi.onChange(load);
+  }, []);
 
   const start = async () => {
     setBusy(true);
@@ -73,6 +80,88 @@ export function SyncSection({ toast }: { toast: (m: string) => void }) {
               </button>
             </div>
             {isDesktop && (
+              <label className="item">
+                <span className="body">
+                  <div className="title">Make this computer Lyra's home base</div>
+                  <div className="sub">
+                    For a computer that's always on. Lyra does her routines, heads-ups and mail checks here instead of on your phone, so they happen on time whatever your phone is doing. If this computer goes quiet for half an hour, your phone takes over until it's back.
+                  </div>
+                </span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  className="switch"
+                  checked={s.home}
+                  disabled={busy}
+                  onChange={(e) => {
+                    const on = e.target.checked;
+                    setBusy(true);
+                    void syncApi
+                      .setHome(on)
+                      .then(
+                        (r) => toast(on ? (r.headsUpsOn ? "This computer is Lyra's home base. Heads-ups turned on." : "This computer is Lyra's home base") : "Your phone does the background work again"),
+                        (err) => toast((err as Error).message),
+                      )
+                      .finally(() => setBusy(false));
+                  }}
+                />
+              </label>
+            )}
+            {(s.home || push?.configured) && push && (
+              <div className="item">
+                <span className="body">
+                  <div className="title">{s.home ? "Ring my phone" : "Notifications from the home base"}</div>
+                  <div className={`sub${push.error ? " bad" : ""}`}>
+                    {s.home
+                      ? !push.canSend
+                        ? "Lyra's news reaches your phone within seconds, even with Lyra closed there. Needs a free Firebase project of your own, set up once (about ten minutes)."
+                        : push.devices.length
+                          ? `On. Reaches ${push.devices.map((d) => d.name).join(", ")}.`
+                          : "Set up. Now open Lyra on your phone once, so it signs up."
+                      : push.error
+                        ? `This device couldn't sign up: ${push.error}`
+                        : push.devices.some((d) => d.id === push.thisDevice)
+                          ? "On. Your home base rings this phone when Lyra has something."
+                          : isDesktop
+                            ? "Set up on your home base."
+                            : "Signing up… (needs notifications allowed)"}
+                  </div>
+                </span>
+                {s.home && !push.canSend && (
+                  <button className="btn quiet" onClick={() => setPushSetup(true)}>
+                    Set up
+                  </button>
+                )}
+                {s.home && push.canSend && push.devices.length > 0 && (
+                  <button
+                    className="btn quiet"
+                    onClick={() => void syncApi.testPush().then((n) => toast(n ? "Sent. Check your phone." : "Couldn't reach your phone. Open Lyra there once, then try again."), (e) => toast((e as Error).message))}
+                  >
+                    Test
+                  </button>
+                )}
+              </div>
+            )}
+            {s.home && push?.canSend && (
+              <button className="item" onClick={() => confirm("Stop ringing your phone from this computer? Your Firebase project stays as it is.") && void syncApi.forgetPush().then(() => toast("Push is off"))}>
+                <span className="body">
+                  <div className="title">Turn off push</div>
+                </span>
+              </button>
+            )}
+            {s.homeBase && (
+              <div className="item">
+                <span className="body">
+                  <div className="title">Home base · {s.homeBase.name}</div>
+                  <div className={`sub${s.homeBase.fresh ? "" : " bad"}`}>
+                    {s.homeBase.fresh
+                      ? `Doing Lyra's routines and heads-ups. Last heard from ${ago(parse(s.homeBase.at))}.`
+                      : `Not heard from since ${ago(parse(s.homeBase.at))}, so ${isDesktop ? "your phone" : "this phone"} is doing the background work until it's back.`}
+                  </div>
+                </span>
+              </div>
+            )}
+            {isDesktop && (
               <button className="item" onClick={() => void openBackupsFolder()}>
                 <span className="body">
                   <div className="title">Open backups folder</div>
@@ -97,11 +186,96 @@ export function SyncSection({ toast }: { toast: (m: string) => void }) {
       </div>
       <p className="hint">
         {s.enabled && !s.routinesHere
-          ? "Routines run on your phone while sync is on, so nothing is posted twice."
+          ? s.homeBase?.fresh
+            ? `Routines and heads-ups run on ${s.homeBase.name}, so nothing is posted twice.`
+            : "Routines run on your phone while sync is on, so nothing is posted twice."
           : "Encrypted with your sync passphrase before it leaves this device. Google only stores scrambled data in a hidden Lyra folder, and Lyra can't see your other Drive files through it."}
       </p>
       {setup && <SyncSetupDialog existing={setup.existing} toast={toast} onClose={() => setSetup(null)} />}
+      {pushSetup && <PushSetupDialog toast={toast} onClose={() => setPushSetup(false)} />}
     </section>
+  );
+}
+
+/** On the home base: the two files from the user's own Firebase project. */
+function PushSetupDialog({ toast, onClose }: { toast: (m: string) => void; onClose: () => void }) {
+  const [services, setServices] = useState<{ name: string; text: string } | null>(null);
+  const [account, setAccount] = useState<{ name: string; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const pick = (set: (f: { name: string; text: string } | null) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    setError("");
+    if (!f) return set(null);
+    void f.text().then((text) => set({ name: f.name, text }));
+  };
+  const go = async () => {
+    if (!services || !account) return;
+    setBusy(true);
+    setError("");
+    try {
+      await syncApi.setupPush(services.text, account.text);
+      toast("Push is set up. Open Lyra on your phone once.");
+      onClose();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="dialog-layer" role="presentation">
+      <button className="dialog-scrim" aria-label="Cancel" tabIndex={-1} onClick={onClose} />
+      <form
+        className="dialog push-setup"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pu-title"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void go();
+        }}
+      >
+        <h2 id="pu-title" className="dialog-title">
+          Ring my phone
+        </h2>
+        <p className="dialog-text">Lyra has no server, so this uses Google's push service through a free Firebase project that only you own. Once, on this computer:</p>
+        <ol className="push-steps">
+          <li>
+            Open <b>console.firebase.google.com</b> and create a project (any name; Analytics can stay off).
+          </li>
+          <li>
+            Add an <b>Android app</b> with the package name <b className="mono">app.lyra.chief</b>, and download <b>google-services.json</b>. Skip the rest of Firebase's steps.
+          </li>
+          <li>
+            In <b>Project settings, Service accounts</b>, choose <b>Generate new private key</b>. That downloads a second file.
+          </li>
+          <li>Choose both files here.</li>
+        </ol>
+        <label className="action-field">
+          <span>google-services.json{services ? ` · ${services.name}` : ""}</span>
+          <input type="file" accept=".json,application/json" aria-label="google-services.json" onChange={pick(setServices)} />
+        </label>
+        <label className="action-field" style={{ marginTop: 12 }}>
+          <span>Service account key{account ? ` · ${account.name}` : ""}</span>
+          <input type="file" accept=".json,application/json" aria-label="Service account key" onChange={pick(setAccount)} />
+        </label>
+        <p className="hint">The key stays on this computer, stored like your API keys. Your phone gets only the app's public settings, through sync. A notification carries one line: the title and the first line of what Lyra posted.</p>
+        {error && (
+          <p className="hint bad" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="dialog-actions">
+          <button type="button" className="btn quiet" onClick={onClose} disabled={busy}>
+            Cancel
+          </button>
+          <button type="submit" className="btn ink" disabled={!services || !account || busy}>
+            {busy ? "Checking…" : "Turn on"}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
 

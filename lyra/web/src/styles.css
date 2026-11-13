@@ -5549,6 +5549,29 @@ button.orb {
   min-height: 50vh;
 }
 
+/* ---------- push setup (home base) ---------- */
+
+.push-steps {
+  margin: 0 0 var(--s4);
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.push-steps .mono {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+  user-select: all;
+}
+
+.push-setup input[type="file"] {
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
 /* ---------- artifacts: dashboards, in the app's own look ---------- */
 /* Marks use the user's accent: fills in --accent on a --surface-2 pill track (pale accents like
    lime and yellow are under 3:1 on the card, so every bar and meter writes its value out), lines

@@ -406,7 +406,7 @@ function BackgroundSection({ toast }: { toast: (m: string) => void }) {
             )}
           </div>
           {isNative && <p className="hint">Swiping Lyra away from your recent apps stops it until you open it again.</p>}
-          {isDesktop && !routinesHere && <p className="hint">With sync on, your phone runs routines and heads-ups. The tray keeps sync and notifications going here.</p>}
+          {isDesktop && !routinesHere && <p className="hint">With sync on, your phone runs routines and heads-ups. To run them on this computer instead, make it Lyra's home base under Sync and backup.</p>}
         </>
       )}
     </section>

@@ -10,6 +10,13 @@
  *  - remote is newer, no local changes   -> load it (the app then restarts)
  *  - remote is newer AND local changes   -> conflict: the user picks a side
  * The last few snapshots are kept, so a wrong pick can be undone.
+ *
+ * Home base: one device (a computer that's always on) can be the one that does Lyra's
+ * own work: routines, heads-ups, scans. It leaves a heartbeat in the remote; while that
+ * is fresh the other devices leave the background work to it, and take it back when it
+ * goes quiet. The home base never waits on a person: it holds its work while another
+ * device is in use, and if both sides changed anyway it loads the other side (a person's
+ * changes win; its own are saved as a conflict copy and its work runs again).
  */
 import type { Lyra } from "./lyra.ts";
 import type { SecretStore } from "./lyra.ts";
@@ -25,7 +32,22 @@ export interface SnapshotInfo {
   kind?: "snapshot" | "conflict";
 }
 
+/** The home base's heartbeat, kept in the remote next to the snapshots. */
+export interface HomeBeat {
+  device: string;
+  deviceName: string;
+  at: string;
+}
+
+/** A home base not heard from for this long is treated as away. */
+export const HOME_STALE_MS = 30 * 60_000;
+/** The home base holds its own work this long after another device last saved. */
+export const HOME_QUIET_MS = 90_000;
+
 export interface SyncRemote {
+  /** the home base's heartbeat, if a device has taken that job */
+  home?(): Promise<HomeBeat | undefined>;
+  setHome?(beat: HomeBeat | null): Promise<void>;
   list(): Promise<SnapshotInfo[]>;
   download(id: string): Promise<Uint8Array>;
   upload(bytes: Uint8Array, info: Omit<SnapshotInfo, "id">): Promise<SnapshotInfo>;
@@ -46,6 +68,10 @@ export interface SyncState {
   conflict?: SnapshotInfo;
   /** set right after loading another device's snapshot (don't resume its workers) */
   justPulled?: boolean;
+  /** this device is the home base: it does Lyra's background work for every device */
+  home?: boolean;
+  /** the home base's heartbeat as last seen (another device's, or this one's) */
+  homeBeat?: HomeBeat;
 }
 
 export type SyncResult = "off" | "up-to-date" | "pushed" | "pulled" | "conflict" | "busy";
@@ -143,9 +169,63 @@ export class Sync {
   }
 
   async disable(): Promise<void> {
+    if (this.state.home) await this.remote.setHome?.(null).catch(() => {});
     await this.secrets.remove(PASS_KEY);
-    this.state = { ...this.state, enabled: false, base: undefined, dirty: false, conflict: undefined, lastError: undefined };
+    this.state = { ...this.state, enabled: false, base: undefined, dirty: false, conflict: undefined, lastError: undefined, home: false, homeBeat: undefined };
     await this.save();
+  }
+
+  /** Make this device the home base (taking over from any other), or stop being it. */
+  async setHome(on: boolean, now = new Date()): Promise<void> {
+    if (!this.state.enabled) throw new Error("Turn sync on first.");
+    if (!this.remote.setHome) throw new Error("This kind of sync can't have a home base.");
+    if (on) {
+      const beat = { device: this.state.device, deviceName: this.state.deviceName, at: now.toISOString() };
+      await this.remote.setHome(beat);
+      this.state.home = true;
+      this.state.homeBeat = beat;
+    } else {
+      if (this.state.homeBeat?.device === this.state.device) await this.remote.setHome(null);
+      this.state.home = false;
+      this.state.homeBeat = undefined;
+    }
+    await this.save();
+  }
+
+  /** The home base says it's still here. Stops being home if another device took the job. */
+  async beat(now = new Date()): Promise<void> {
+    if (!this.state.enabled || !this.state.home || !this.remote.setHome) return;
+    const there = await this.remote.home?.();
+    if (there && there.device !== this.state.device) {
+      this.state.home = false;
+      this.state.homeBeat = there;
+    } else {
+      const beat = { device: this.state.device, deviceName: this.state.deviceName, at: now.toISOString() };
+      await this.remote.setHome(beat);
+      this.state.homeBeat = beat;
+    }
+    await this.save();
+  }
+
+  /**
+   * Does this device do Lyra's own work (routines, heads-ups, scans)? Without sync every
+   * device does. With it: the home base while it's been heard from, otherwise the phone.
+   */
+  runsJobs(phone: boolean, now = Date.now()): boolean {
+    if (!this.state.enabled) return true;
+    if (this.state.home) return true;
+    const beat = this.state.homeBeat;
+    if (beat && beat.device !== this.state.device && now - new Date(beat.at).getTime() < HOME_STALE_MS) return false;
+    return phone;
+  }
+
+  /** The newest snapshot seen at the last check. */
+  private seen?: SnapshotInfo;
+
+  /** Another device saved moments ago: someone is using it, so the home base holds its own work. */
+  othersActive(now = Date.now()): boolean {
+    const s = this.seen;
+    return !!s && s.device !== this.state.device && now - new Date(s.savedAt).getTime() < HOME_QUIET_MS;
   }
 
   /**
@@ -159,11 +239,28 @@ export class Sync {
     try {
       const list = await this.remote.list();
       const latest = latestSnapshot(list);
+      this.seen = latest;
+      // who's the home base, and has it been heard from? (a failed look keeps what we knew)
+      if (!this.state.home && this.remote.home) {
+        const beat = await this.remote.home().catch(() => this.state.homeBeat);
+        if (JSON.stringify(beat) !== JSON.stringify(this.state.homeBeat)) {
+          this.state.homeBeat = beat;
+          await this.save();
+        }
+      }
       const ours = !latest || latest.id === this.state.base?.id;
       let result: SyncResult;
       if (ours) result = this.state.dirty || !latest ? await this.push(list) : "up-to-date";
       else if (!this.state.dirty) result = canPull ? await this.pull(latest) : "busy";
-      else {
+      else if (this.state.home) {
+        // nobody is at the home base to pick a side: the other device's changes win,
+        // this one's are kept as a conflict copy, and its work runs again from there
+        if (!canPull) result = "busy";
+        else {
+          await this.upload(list, "conflict");
+          result = await this.pull(latest);
+        }
+      } else {
         this.state.conflict = latest;
         await this.save();
         result = "conflict";

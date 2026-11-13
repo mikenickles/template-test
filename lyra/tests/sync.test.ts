@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Lyra } from "../core/lyra.ts";
 import { FakeProvider } from "../core/providers/fake.ts";
-import { readSyncState, Sync, type SnapshotInfo, type SyncRemote } from "../core/sync.ts";
+import { HOME_STALE_MS, readSyncState, Sync, type HomeBeat, type SnapshotInfo, type SyncRemote } from "../core/sync.ts";
 import { memStores, platform } from "./helpers.ts";
 
 const noop = { text: () => {}, status: () => {}, memory: () => {} };
@@ -20,8 +20,11 @@ function fakeDrive() {
       return full;
     },
     remove: async (id) => void files.delete(id),
+    home: async () => box.home,
+    setHome: async (b) => void (box.home = b ?? undefined),
   };
-  return { remote, files };
+  const box: { remote: SyncRemote; files: typeof files; home?: HomeBeat } = { remote, files };
+  return box;
 }
 
 /** A device: its own storage, an engine, and its sync. `restart()` is the app reloading. */
@@ -182,5 +185,84 @@ describe("Drive sync folder", () => {
     expect((up.init!.headers as Record<string, string>).Authorization).toBe("Bearer tok");
 
     expect([...(await remote.download("a"))]).toEqual([1, 2, 3]);
+  });
+
+  it("a home base does the background work; the phone leaves it alone and takes over when it goes quiet", async () => {
+    const drive = fakeDrive();
+    const phone = await device("Phone", drive);
+    await phone.sync.enable(PASS, "Phone");
+    const laptop = await device("Laptop", drive);
+    await laptop.sync.enable(PASS, "Laptop");
+    await laptop.restart();
+    // no home base: the phone does the work, the computer doesn't (as before)
+    expect([phone.sync.runsJobs(true), laptop.sync.runsJobs(false)]).toEqual([true, false]);
+
+    const t0 = new Date("2026-11-13T10:00:00Z");
+    await laptop.sync.setHome(true, t0);
+    expect(laptop.sync.runsJobs(false, t0.getTime())).toBe(true);
+    await phone.sync.check();
+    expect(phone.sync.state.homeBeat).toMatchObject({ deviceName: "Laptop" });
+    expect(phone.sync.runsJobs(true, t0.getTime() + 60_000)).toBe(false);
+    // the laptop goes quiet (lid shut, no network): the phone takes the work back
+    expect(phone.sync.runsJobs(true, t0.getTime() + HOME_STALE_MS + 1)).toBe(true);
+    // it comes back and says so
+    await laptop.sync.beat(new Date(t0.getTime() + HOME_STALE_MS + 60_000));
+    await phone.sync.check();
+    expect(phone.sync.runsJobs(true, t0.getTime() + HOME_STALE_MS + 120_000)).toBe(false);
+    // turning it off hands the work back to the phone
+    await laptop.sync.setHome(false);
+    await phone.sync.check();
+    expect([phone.sync.runsJobs(true), laptop.sync.runsJobs(false)]).toEqual([true, false]);
+  });
+
+  it("the home base holds its work while the phone is in use, and never waits on someone to settle a conflict", async () => {
+    const drive = fakeDrive();
+    const phone = await device("Phone", drive);
+    await phone.sync.enable(PASS, "Phone");
+    const laptop = await device("Laptop", drive);
+    await laptop.sync.enable(PASS, "Laptop");
+    await laptop.restart();
+    await laptop.sync.setHome(true);
+
+    // you chat on the phone; it saves
+    await phone.lyra.chat("Remember the plumber comes Tuesday", noop);
+    await phone.sync.check();
+    // meanwhile the laptop posted something on its own, without having seen that
+    await laptop.lyra.saveDoc(null, { title: "Made on the laptop", body: "A heads-up's notes" });
+    expect(await laptop.sync.check()).toBe("pulled");
+    expect(laptop.sync.state.conflict).toBeUndefined();
+    await laptop.restart();
+    // the phone's side won; the laptop's own change is kept as a conflict copy, not lost
+    expect(laptop.texts().join(" ")).toContain("plumber comes Tuesday");
+    expect(laptop.lyra.docs()).toHaveLength(0);
+    expect([...drive.files.values()].filter((f) => f.info.kind === "conflict")).toHaveLength(1);
+    // right after the phone saved, the home base waits before doing its own work
+    expect(laptop.sync.othersActive()).toBe(false); // (fresh engine: nothing seen yet)
+    await laptop.sync.check();
+    expect(laptop.sync.othersActive()).toBe(true);
+    expect(laptop.sync.othersActive(Date.now() + 120_000)).toBe(false);
+    // a phone with changes of its own still asks, as before
+    await laptop.lyra.saveDoc(null, { title: "Later", body: "x" });
+    await laptop.sync.check();
+    await phone.lyra.saveDoc(null, { title: "Phone doc", body: "y" });
+    expect(await phone.sync.check()).toBe("conflict");
+  });
+
+  it("lists what Lyra posted on her own since a message, for telling a device that just caught up", async () => {
+    const d = await device("Phone", fakeDrive());
+    await d.lyra.chat("hello", noop);
+    const after = d.lyra.lastMessageId();
+    const db = (d.lyra as unknown as { db: { run(sql: string, p: unknown[]): void } }).db;
+    const add = (content: string, meta: object, channel: number | null = null) =>
+      db.run("INSERT INTO messages (channel_id, role, content, meta) VALUES (?, 'assistant', ?, ?)", [channel, content, JSON.stringify(meta)]);
+    add("**School** closes early Friday.\nMore below", { routine: { id: 1, name: "School check" } });
+    add("Your flight moved to 9:40.", { headsUp: true });
+    add("A normal reply", {});
+    add("PG&E is due Friday", { lifeAdmin: { ids: [1] } });
+    expect(d.lyra.ownPostsSince(after).map((p) => [p.title, p.body])).toEqual([
+      ["School check", "School closes early Friday."],
+      ["Heads-up from Lyra", "Your flight moved to 9:40."],
+    ]);
+    expect(d.lyra.ownPostsSince(d.lyra.lastMessageId())).toEqual([]);
   });
 });

@@ -50,7 +50,20 @@ async function fakeDrive(route) {
     return route.fulfill({ status: 204, body: "" });
   }
   if (m && url.searchParams.get("alt") === "media") return route.fulfill({ body: drive.get(m[1]).bytes, contentType: "application/octet-stream" });
-  if (url.pathname === "/drive/v3/files") return route.fulfill({ json: { files: [...drive].map(([id, f]) => ({ id, appProperties: f.appProperties })) } });
+  // the home base's heartbeat: a file with only properties
+  if (m && req.method() === "PATCH") {
+    drive.get(m[1]).appProperties = JSON.parse(req.postData()).appProperties;
+    return route.fulfill({ json: { id: m[1] } });
+  }
+  if (url.pathname === "/drive/v3/files" && req.method() === "POST") {
+    const id = `f${++nextId}`;
+    drive.set(id, { appProperties: JSON.parse(req.postData()).appProperties, bytes: Buffer.alloc(0) });
+    return route.fulfill({ json: { id } });
+  }
+  if (url.pathname === "/drive/v3/files") {
+    const homeOnly = (url.searchParams.get("q") ?? "").includes("key='home'");
+    return route.fulfill({ json: { files: [...drive].filter(([, f]) => !homeOnly || f.appProperties.home === "1").map(([id, f]) => ({ id, appProperties: f.appProperties })) } });
+  }
   return route.fulfill({ status: 404, body: "unexpected" });
 }
 
@@ -144,6 +157,23 @@ await b.page.getByRole("button", { name: "Use Computer A's" }).click();
 await b.shows("A while apart");
 check((await b.page.locator(".bubble", { hasText: "B while apart" }).count()) === 0, "picking the other device's version loads it");
 check([...drive.values()].some((f) => f.appProperties.kind === "conflict"), "the side not kept is saved in Drive just in case");
+
+// home base: computer A takes Lyra's background work; B sees it and leaves the work to A
+await a.settings();
+await a.page.getByRole("switch", { name: /home base/ }).click();
+await a.page.getByText(/This computer is Lyra's home base/).first().waitFor();
+check([...drive.values()].some((f) => f.appProperties.home === "1" && f.appProperties.deviceName === "Computer A"), "a computer can be made Lyra's home base (its heartbeat is in Drive)");
+await a.page.screenshot({ path: join(shots, "desktop-13-home-base.png") });
+await a.page.locator(".item", { hasText: "Ring my phone" }).getByRole("button", { name: "Set up" }).click();
+await a.page.getByRole("dialog", { name: "Ring my phone" }).waitFor();
+check(await a.page.getByText("app.lyra.chief").isVisible(), "the home base offers to ring your phone, with the steps to set it up");
+await a.page.waitForTimeout(3500); // past the toast and the fade-in
+await a.page.screenshot({ path: join(shots, "desktop-14-push-setup.png") });
+await a.page.getByRole("dialog", { name: "Ring my phone" }).getByRole("button", { name: "Cancel", exact: true }).click();
+await b.settings();
+await b.page.getByRole("button", { name: "Sync now" }).click();
+await b.page.getByText("Home base · Computer A").waitFor({ timeout: 20_000 });
+check(await b.page.getByText(/Doing Lyra's routines and heads-ups/).isVisible(), "the other device sees the home base and leaves the background work to it");
 
 const kept = (d) => (existsSync(join(d.documents, "Lyra Backups")) ? readdirSync(join(d.documents, "Lyra Backups")) : []).filter((f) => f.startsWith("Lyra auto "));
 check(kept(a).length >= 2 && kept(b).length >= 2, `each computer keeps encrypted copies in Documents/Lyra Backups (${kept(a).length} and ${kept(b).length})`);

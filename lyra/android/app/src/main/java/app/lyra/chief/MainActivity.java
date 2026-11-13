@@ -21,6 +21,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(ContactsPlugin.class);
         // opening Spotify's sign-in page in the browser
         registerPlugin(LinksPlugin.class);
+        // push from the home base (your always-on computer), once you've set it up
+        registerPlugin(PushPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

@@ -587,6 +587,20 @@ export const shares = {
 // Phone: "Keep watch" runs a quiet foreground service so Lyra keeps going in the background,
 // woken every 15 minutes. Computer: closing the window leaves Lyra in the tray.
 
+const NativePush = registerPlugin<{
+  register(o: { projectId: string; appId: string; apiKey: string; senderId: string }): Promise<{ token: string }>;
+  forget(): Promise<void>;
+}>("LyraPush");
+
+/** Push from the home base (phone only): sign up with the project's settings, get this phone's address. */
+export const push = {
+  available: isNative,
+  register: async (cfg: { projectId: string; appId: string; apiKey: string; senderId: string }) => (await NativePush.register(cfg)).token,
+  forget: async () => {
+    if (isNative) await NativePush.forget().catch(() => {});
+  },
+};
+
 const NativeBackground = registerPlugin<{
   status(): Promise<{ on: boolean }>;
   set(o: { on: boolean }): Promise<{ on: boolean }>;
