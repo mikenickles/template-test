@@ -74,7 +74,7 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 
 ### Glanceable replies (0.43.1)
 
-- The voice guide (`core/voice.md`, in every chat, routine and heads-up prompt) now carries the user's "understood at a glance" rules: a first line of about 15 words that holds the point and stands alone, most replies under about 25 words, short one-idea paragraphs, list lines that start with a **bold name:**, numbered only when they'll answer by number, no headings, and tables only when asked for.
+- The voice guide (`core/voice.md`, in every chat, routine and heads-up prompt) now carries the user's "understood at a glance" rules: a first line of about 15 words that holds the point and stands alone, most replies under about 25 words, short one-idea paragraphs, list lines that start with a **bold name:**, numbered only when they'll answer by number, no headings, and a table when comparing three or more things across a few details (or when asked; 0.43.2).
 
 ### Rate a reply, and haptics (0.43)
 
