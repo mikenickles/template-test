@@ -1,5 +1,6 @@
 import type { Connectors } from "./connectors/registry.ts";
 import { attachmentParts, attachmentReminder, checkAttachments, type Attachment } from "./attachments.ts";
+import { checkTriage, TRIAGE_GUIDE, TRIAGE_SCHEMA, type Triage } from "./triage.ts";
 import { addMessage, listMessages, updateMessageMeta, type Channel, type ChannelSummary, type DB, type MemoryNote, type StoredMessage, type TaskNote } from "./db.ts";
 import { CHANNEL_SECTIONS, SECTIONS, type Notebook } from "./memory.ts";
 import { buildSystemPrompt, type ChannelDigest } from "./prompt.ts";
@@ -99,6 +100,18 @@ export interface TurnContext {
 }
 
 const MAIN = "main";
+
+/** Phase 16: inbox triage, as a card. Only offered with Gmail connected. */
+function triageTools(gmail: boolean): ToolDef[] {
+  if (!gmail) return [];
+  return [
+    {
+      name: "show_triage",
+      description: `Show an inbox triage as a card under your reply, when the user asks you to go through, sort or triage their mail. ${TRIAGE_GUIDE} Then say the gist in a sentence; the card shows the rest.`,
+      schema: TRIAGE_SCHEMA,
+    },
+  ];
+}
 
 /** Phase 13: docs. */
 function docTools(ws: Workspace): ToolDef[] {
@@ -514,6 +527,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
   const actionIds: number[] = [];
   const peopleNotes: { id: number; name: string; created: boolean }[] = [];
   const docNotes: { id: number; title: string; created: boolean }[] = [];
+  let triage: Triage | undefined;
   const toolsUsed: { name: string; ok: boolean }[] = [];
   // Once outside content has been read, notebook changes need the user's tap.
   const state = { tainted: false };
@@ -534,6 +548,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
     ...(actionIds.length ? { actions: actionIds } : {}),
     ...(peopleNotes.length ? { people: peopleNotes } : {}),
     ...(docNotes.length ? { docs: docNotes } : {}),
+    ...(triage ? { triage } : {}),
     ...(sources.length ? { sources: uniqueSources(sources).slice(0, 8) } : {}),
     tools: toolsUsed,
     provider: ctx.provider.id,
@@ -542,7 +557,8 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
 
   try {
     const channels = ctx.workspace.channels();
-    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed(), !!ctx.workspace.music), ...peopleTools(ctx.workspace), ...docTools(ctx.workspace), ...(await ctx.connectors.tools())];
+    const gmailOn = ctx.connectors.status().some((c) => c.id === "gmail" && c.state === "connected");
+    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed(), !!ctx.workspace.music), ...peopleTools(ctx.workspace), ...docTools(ctx.workspace), ...triageTools(gmailOn), ...(await ctx.connectors.tools())];
     const system = buildSystemPrompt({
       userName: ctx.userName,
       soul: ctx.soul,
@@ -617,6 +633,22 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
             content: ok ? "Shown as buttons under your reply." : state.tainted ? "Not shown: outside content was read this turn." : "Give one to three short options.",
             isError: !ok,
           });
+          continue;
+        }
+        if (call.name === "show_triage") {
+          // only a display of what was read: allowed after reading mail (that's the point)
+          let content: string;
+          let ok = false;
+          try {
+            triage = checkTriage(call.input);
+            ok = true;
+            emit.status("Sorted your inbox");
+            content = `Shown as a card: ${triage.needs.length} need the user, ${triage.later.length} can wait, ${triage.fyi.length} newsletters. Now say the gist in a sentence or two; don't list them again.`;
+          } catch (e) {
+            content = (e as Error).message;
+          }
+          toolsUsed.push({ name: call.name, ok });
+          results.push({ type: "tool_result", id: call.id, name: call.name, content, isError: !ok });
           continue;
         }
         if (call.name === "write_doc" || call.name === "update_doc" || call.name === "read_doc") {

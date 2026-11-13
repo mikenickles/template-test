@@ -349,6 +349,8 @@ export interface MessageMeta {
   checkIn?: boolean;
   /** The weekly memory tidy-up: the version to go back to, and whether it was undone. */
   tidy?: { snapshotId: number; undone?: boolean };
+  /** An inbox triage card (Phase 16). */
+  triage?: import("./triage.ts").Triage;
   /** Docs written or updated in this reply. */
   docs?: { id: number; title: string; created: boolean }[];
   /** People cards added or updated in this reply. */

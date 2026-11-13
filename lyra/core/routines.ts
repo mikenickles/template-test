@@ -10,6 +10,7 @@
 import type { Workspace } from "./chat.ts";
 import type { Connectors } from "./connectors/registry.ts";
 import { addMessage, getChannel, type DB } from "./db.ts";
+import { checkTriage, TRIAGE_GUIDE, TRIAGE_SCHEMA, type Triage } from "./triage.ts";
 import { cleanItem } from "./memory.ts";
 import { uniqueSources, type ModelProvider, type Msg, type Part, type Source, type ToolDef } from "./providers/types.ts";
 import { describeTasks, listTasks } from "./tasks.ts";
@@ -285,14 +286,15 @@ ${neutralize(memory.trim())}
 ${tasks.trim() ? neutralize(tasks) : "(none)"}`;
 }
 
-function finishTools(mode: PostMode, withOptions = false): ToolDef[] {
+function finishTools(mode: PostMode, withOptions = false, withTriage = false): ToolDef[] {
   const post: ToolDef = {
     name: "post",
-    description: "Post the routine's message to the user's chat. Lead with the point; keep it short.",
+    description: `Post the routine's message to the user's chat. Lead with the point; keep it short.${withTriage ? ` For an inbox triage, also pass triage: it shows as a card. ${TRIAGE_GUIDE}` : ""}`,
     schema: {
       type: "object",
       properties: {
         message: { type: "string" },
+        ...(withTriage ? { triage: TRIAGE_SCHEMA } : {}),
         ...(withOptions
           ? { options: { type: "array", items: { type: "string", maxLength: 48 }, maxItems: 3, description: "Up to three short replies the user can tap, written as they'd say them." } }
           : {}),
@@ -393,14 +395,20 @@ export class Routines {
       ]);
       db.run("UPDATE routines SET last_run_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?", [id]);
     };
-    const post = (text: string, srcs: Source[]) => {
+    const post = (text: string, srcs: Source[], _options: string[], triage?: Triage) => {
       const channelId = r.channel_id && getChannel(db, r.channel_id) ? r.channel_id : null;
-      const msg = addMessage(db, "assistant", text.trim(), { routine: { id: r.id, name: r.name }, ...(srcs.length ? { sources: srcs } : {}) }, channelId);
+      const msg = addMessage(
+        db,
+        "assistant",
+        text.trim(),
+        { routine: { id: r.id, name: r.name }, ...(srcs.length ? { sources: srcs } : {}), ...(triage ? { triage } : {}) },
+        channelId,
+      );
       db.run("UPDATE routines SET last_summary = ? WHERE id = ?", [text.trim().slice(0, 800), id]);
       end("posted", "", msg.id);
       this.d.onEvent({ type: "message", channelId, notify: { title: r.name, body: text.trim().split("\n")[0].slice(0, 160) } });
     };
-    await this.execute(r, post, end);
+    await this.execute(r, post, end, "routine", false, true);
   }
 
   /**
@@ -471,21 +479,30 @@ export class Routines {
 
   private async execute(
     r: RoutineJob,
-    post: (text: string, sources: Source[], options: string[]) => void,
+    post: (text: string, sources: Source[], options: string[], triage?: Triage) => void,
     end: (status: RoutineRun["status"], note?: string) => void,
     source: "routine" | "proactive" = "routine",
     withOptions = false,
+    canTriage = false,
   ): Promise<void> {
+    // a routine can post an inbox triage card when Gmail is connected (Phase 16)
+    const withTriage = canTriage && this.d.connectors.status().some((c) => c.id === "gmail" && c.state === "connected");
     const db = this.d.db;
     const sources: Source[] = [];
     // buttons the user taps become their own words, so none after reading mail or the web
     let tainted = false;
-    const posted = (text: string, options: unknown = []) => {
+    const posted = (text: string, options: unknown = [], triage?: unknown) => {
+      let card: Triage | undefined;
+      try {
+        card = withTriage && triage && typeof triage === "object" ? checkTriage(triage as Record<string, unknown>) : undefined;
+      } catch {
+        card = undefined;
+      }
       const clean =
         withOptions && !tainted && Array.isArray(options)
           ? options.map((o) => String(o).replace(/\s+/g, " ").trim()).filter((o) => o && o.length <= 60).slice(0, 3)
           : [];
-      post(text, uniqueSources(sources).slice(0, 8), clean);
+      post(text, uniqueSources(sources).slice(0, 8), clean, card);
     };
     try {
       const provider = await this.d.provider(source);
@@ -499,7 +516,7 @@ export class Routines {
         describeTasks(listTasks(db, { status: "open", limit: 30 }), true),
         notebook,
       );
-      const tools = [...finishTools(r.post_mode, withOptions), ...(await this.d.connectors.tools())];
+      const tools = [...finishTools(r.post_mode, withOptions, withTriage), ...(await this.d.connectors.tools())];
       const messages: Msg[] = [{ role: "user", parts: [{ type: "text", text: "Run the routine now." }] }];
 
       for (let step = 0; step < ROUTINE_STEPS; step++) {
@@ -524,7 +541,7 @@ export class Routines {
               results.push({ type: "tool_result", id: call.id, name: call.name, content: "The message is empty.", isError: true });
               continue;
             }
-            posted(text, call.input.options);
+            posted(text, call.input.options, call.input.triage);
             return;
           }
           if (call.name === "nothing_new" && r.post_mode === "news") {

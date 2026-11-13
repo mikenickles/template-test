@@ -5647,3 +5647,111 @@ button.orb {
 .research-pick:hover {
   background: none;
 }
+
+/* ---------- Phase 16: inbox triage ---------- */
+
+.triage-card {
+  margin-top: var(--s3);
+  padding: var(--s4);
+  border-radius: 22px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  max-width: 600px;
+}
+
+.triage-summary {
+  margin: 0 0 var(--s3);
+  line-height: 1.45;
+}
+
+.triage-label {
+  display: block;
+  margin: var(--s4) 0 var(--s1);
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.triage-label.on {
+  color: var(--accent-text);
+}
+
+.triage-fold {
+  min-height: 36px;
+}
+
+.triage-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.triage-item {
+  position: relative;
+  display: flex;
+  gap: var(--s2);
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.triage-item:last-child {
+  border-bottom: 0;
+}
+
+.triage-star {
+  flex: none;
+  margin-top: 5px;
+  color: var(--accent-text);
+}
+
+.triage-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.triage-from {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.triage-subject {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.triage-why {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.triage-list.compact .triage-why,
+.triage-list.compact .triage-actions {
+  display: none;
+}
+
+.triage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: 6px;
+}
+
+.triage-btn {
+  min-height: 32px;
+  padding: 0 var(--s3);
+  display: inline-flex;
+  align-items: center;
+  border-radius: 16px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+

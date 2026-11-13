@@ -6,6 +6,7 @@ import { MAX_ATTACHMENTS } from "../../../core/attachments";
 import { copyText, isNative, liveVoice } from "../platform";
 import { VoiceOverlay } from "../VoiceOverlay";
 import { ActionCards } from "../ActionCard";
+import { TriageCard } from "../TriageCard";
 import { TodayView } from "../Today";
 import { markSeen } from "../seen";
 import { Star } from "../icons";
@@ -541,6 +542,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                   )}
                   {!!m.meta.memory?.length && <Notes notes={m.meta.memory} onAction={(i, a) => answerNote(m, i, a)} />}
                   {!!m.meta.tasks?.length && <TaskNotes notes={m.meta.tasks} />}
+                  {m.meta.triage && <TriageCard t={m.meta.triage} onSend={(text) => void send(text)} />}
                   {!!m.meta.actions?.length && <ActionCards ids={m.meta.actions} toast={toast} />}
                   {!!m.meta.docs?.length && (
                     <div className="notes">

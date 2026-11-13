@@ -45,6 +45,7 @@ export class FakeProvider implements ModelProvider {
       if (result.name === "forget") return say("Done, that's gone.");
       if (result.name === "propose_email" || result.name === "propose_event") return say("It's ready for you to check.");
       if (result.name === "write_doc" || result.name === "update_doc") return say("It's in your Docs.");
+      if (result.name === "show_triage") return say("Here's how your inbox sorts out (practice data: add an API key for the real thing).");
       return say(`Here's what I found.\n\n${result.content.replace(/<\/?untrusted_data[^>]*>/g, "").trim().slice(0, 400)}`);
     }
 
@@ -64,6 +65,15 @@ export class FakeProvider implements ModelProvider {
     if (rem && has("remember")) return call("remember", { section: "Open loops", text: rem[1] });
     const forget = text.match(/^forget[:\s]+(.+)$/i);
     if (forget && has("forget")) return call("forget", { section: "Open loops", match: forget[1] });
+    // "go through my inbox": the practice model shows a sample triage card (made-up example mail)
+    if (/^(go through|triage|sort) my inbox/i.test(text.trim()) && has("show_triage"))
+      return call("show_triage", {
+        range: "Practice example",
+        summary: "One example email needs you; the rest can wait.",
+        needs_you: [{ thread_id: "abc123def456", from: "Example sender", subject: "Can you confirm Friday?", why: "Waiting on a yes or no" }],
+        can_wait: [{ thread_id: "abc123def457", from: "Example newsletter team", subject: "Monthly update", why: "Nothing to do" }],
+        newsletters: [{ thread_id: "abc123def458", from: "Example store", subject: "Sale this weekend" }],
+      });
     // "make a doc called Packing list": the practice model can write a doc
     const doc = text.match(/^(?:make|write) (?:me )?a doc(?:ument)? (?:called|about|for) (.+)$/i);
     if (doc && has("write_doc")) return call("write_doc", { title: doc[1], body: "## To do\n- First thing\n- Second thing" });

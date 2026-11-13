@@ -121,6 +121,15 @@ const sentBody = Buffer.from(raw.split("\r\n\r\n")[1] ?? "", "base64").toString(
 check(sent.length === 1 && raw.includes("To: dana@example.com") && sentBody === "Yes, Friday works. See you then!", "tapping Send sends it once, with your edits");
 check((await card.getByRole("button", { name: "Send", exact: true }).count()) === 0, "a sent email can't be sent again from the card");
 
+// ---- inbox triage, when asked (practice data) ----
+await page.getByPlaceholder("Message Lyra").fill("go through my inbox");
+await page.getByRole("button", { name: "Send" }).click();
+const triage = page.getByRole("region", { name: "Inbox triage" });
+await triage.waitFor();
+check((await triage.getByText("Needs you · 1").count()) === 1 && (await triage.getByRole("link", { name: "Open in Gmail" }).count()) === 2, "asking Lyra to go through the inbox shows a triage card");
+await triage.getByRole("button", { name: /Newsletters and promos/ }).click();
+await page.screenshot({ path: join(shots, "desktop-10-triage.png") });
+
 // ---- Spotify: set up with your own app's Client ID, sign in through the browser (pretend) ----
 await app.evaluate(({ shell }) => {
   // instead of opening the browser: Spotify "sends the user back" straight away
