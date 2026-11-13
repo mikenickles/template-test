@@ -19,6 +19,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(LyraWidget.WidgetPlugin.class);
         // looking a name up in your contacts, when you allow it
         registerPlugin(ContactsPlugin.class);
+        // opening Spotify's sign-in page in the browser
+        registerPlugin(LinksPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

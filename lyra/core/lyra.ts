@@ -14,6 +14,8 @@ import { CALENDAR_EVENTS, CALENDAR_READONLY, DRIVE_FILE, DRIVE_READONLY, GMAIL_C
 import * as A from "./actions.ts";
 import * as P from "./people.ts";
 import * as D from "./docs.ts";
+import { SPOTIFY_PLAYBACK, SPOTIFY_PLAYLISTS, SPOTIFY_READ, SpotifyAuth, type OAuthRedirect } from "./connectors/spotify/auth.ts";
+import { createSpotifyServer } from "./connectors/spotify/server.ts";
 import { runTidy } from "./tidy.ts";
 import { wrapUntrusted } from "./untrusted.ts";
 import { latestIds, searchMessages, todayView, unreadCounts, type SearchHit, type Today } from "./today.ts";
@@ -89,6 +91,8 @@ export interface Platform {
   timeZone?: string;
   /** Tests pass a provider directly instead of choosing one from settings. */
   provider?: ModelProvider;
+  /** Signing in to services other than Google (Spotify): the browser and back. */
+  oauth?: OAuthRedirect;
   /** The phone's address book (Android only), searched by name. */
   contacts?: {
     available: boolean;
@@ -198,7 +202,7 @@ export type GoogleId = "gmail" | "calendar" | "drive";
 
 const GOOGLE_LINKS = ["gmail", "calendar", "drive"];
 /** Settings that stay with a device when another device's data arrives through sync. */
-const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications", "actions.gmail", "actions.calendar", "contacts"];
+const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications", "actions.gmail", "actions.calendar", "contacts", "spotify", "spotify.playback", "spotify.playlists"];
 
 /** Phase 9: what Lyra may propose, each turned on by the user in Connections. */
 const ACTION_ACCESS = {
@@ -254,6 +258,8 @@ export class Lyra {
   private keys: Keys = {};
   private running: AbortController | undefined;
   private connectors: Connectors;
+  /** Spotify sign-in and API (Phase 14). Tokens stay on this device. */
+  readonly spotify: SpotifyAuth;
   private tokenSources = new Map<GoogleId, TokenSource>();
   private customSoul: string | undefined;
   private notebooks = new Map<number, Promise<Notebook>>();
@@ -300,6 +306,10 @@ export class Lyra {
           return p ? P.describePerson(p) : null;
         },
       },
+      // Spotify playback, only while connected with the playback switch on
+      get music() {
+        return lyra.spotifyLinked && getSetting(lyra.db, "spotify.playback") === "on" ? { control: (action: string, uri?: string) => lyra.controlMusic(action, uri) } : undefined;
+      },
       // only while the user has it turned on, on a phone that can
       get contacts() {
         return lyra.contactsOn
@@ -325,7 +335,22 @@ export class Lyra {
       startTask: (id, note) => void this.workers.start(id, "lyra", note),
       actions: {
         allowed: () => this.actionsAllowed(),
-        propose: (kind, input, tainted, channelId) => {
+        propose: async (kind, input, tainted, channelId) => {
+          if (kind === "playlist") {
+            if (!this.actionsAllowed().playlist) throw new Error("You can't change Spotify playlists yet: the user can turn it on in Connections.");
+            const p = A.checkPlaylist(input);
+            // the card shows the songs' real names, straight from Spotify
+            const tracks: A.PlaylistDraft["tracks"] = [];
+            for (let i = 0; i < p.uris.length; i += 50) {
+              const ids = p.uris.slice(i, i + 50).map((u) => u.split(":")[2]);
+              const r = await this.spotify.get<{ tracks: ({ uri: string; name: string; artists?: { name: string }[] } | null)[] }>(`/tracks?ids=${ids.join(",")}`);
+              for (const t of r.tracks) if (t) tracks.push({ uri: t.uri, name: t.name, artist: (t.artists ?? []).map((a) => a.name).join(", ") });
+            }
+            if (!tracks.length) throw new Error("Spotify didn't find those songs.");
+            const name = p.playlistId ? (await this.spotify.get<{ name: string }>(`/playlists/${p.playlistId}?fields=name`)).name : p.name;
+            const row = A.createAction(this.db, "playlist", { name, description: p.description, ...(p.playlistId ? { playlistId: p.playlistId } : {}), tracks }, tainted, channelId);
+            return { id: row.id, summary: A.describeAction(row) };
+          }
           if (!this.actionsAllowed()[kind]) throw new Error(`You can't ${ACTION_ACCESS[kind].what} yet: the user can turn it on in Connections.`);
           const payload = kind === "email" ? A.checkEmail(input) : A.checkEvent(input, this.p.timeZone);
           const row = A.createAction(this.db, kind, payload, tainted, channelId);
@@ -363,8 +388,9 @@ export class Lyra {
       calendar: () => createCalendarServer(this.tokenFor("calendar"), this.fetch, p.timeZone),
       drive: () => createDriveServer(this.tokenFor("drive"), this.fetch),
     };
-    this.connectors = new Connectors(
-      GOOGLE.map((g) => ({
+    this.spotify = new SpotifyAuth(p.secrets, (...a) => this.fetch(...a));
+    this.connectors = new Connectors([
+      ...GOOGLE.map((g) => ({
         id: g.id,
         label: g.label,
         access: g.access,
@@ -375,7 +401,25 @@ export class Lyra {
         account: () => this.link(g.id)?.email,
         server: servers[g.id],
       })),
-    );
+      {
+        id: "spotify",
+        label: "Spotify",
+        access: "Can see what you play",
+        allow: ["now_playing", "recently_played", "top_items", "search", "my_playlists", "playlist_tracks"],
+        labels: {
+          now_playing: "Checking what's playing",
+          recently_played: "Checking what you played",
+          top_items: "Looking at your favorites",
+          search: "Searching Spotify",
+          my_playlists: "Looking at your playlists",
+          playlist_tracks: "Reading the playlist",
+        },
+        available: () => !!p.oauth,
+        connected: () => this.spotifyLinked,
+        account: () => this.spotifyLink?.name,
+        server: () => createSpotifyServer(this.spotify),
+      },
+    ]);
     this.workers = new Workers({
       db,
       workspace: this.workspace,
@@ -504,17 +548,17 @@ export class Lyra {
 
   private actionTokens = { email: undefined as TokenSource | undefined, event: undefined as TokenSource | undefined };
 
-  private actionToken(kind: A.ActionKind): TokenSource {
+  private actionToken(kind: "email" | "event"): TokenSource {
     return (this.actionTokens[kind] ??= new TokenSource(this.p.google, [ACTION_ACCESS[kind].scope]));
   }
 
-  actionsAllowed(): { email: boolean; event: boolean } {
-    const on = (k: A.ActionKind) => !!this.link(ACTION_ACCESS[k].link) && getSetting(this.db, ACTION_ACCESS[k].setting) === "on";
-    return { email: on("email"), event: on("event") };
+  actionsAllowed(): { email: boolean; event: boolean; playlist: boolean } {
+    const on = (k: "email" | "event") => !!this.link(ACTION_ACCESS[k].link) && getSetting(this.db, ACTION_ACCESS[k].setting) === "on";
+    return { email: on("email"), event: on("event"), playlist: this.spotifyLinked && getSetting(this.db, "spotify.playlists") === "on" };
   }
 
   /** Turn on (asks Google for that one permission) or off. */
-  async allowActions(kind: A.ActionKind, on: boolean): Promise<AppState> {
+  async allowActions(kind: "email" | "event", on: boolean): Promise<AppState> {
     const a = ACTION_ACCESS[kind];
     if (on) {
       if (!this.link(a.link)) throw new Error(`Connect ${a.link === "gmail" ? "Mail" : "Calendar"} first.`);
@@ -569,6 +613,14 @@ export class Lyra {
       A.finishAction(this.db, id, { status: "declined" });
     } else {
       try {
+        if (a.kind === "playlist") {
+          if (!this.actionsAllowed().playlist) throw new Error("Lyra isn't allowed to change your Spotify playlists on this device. Turn it on in Connections, then try again.");
+          const result = await A.doPlaylist(this.spotify, a.payload as A.PlaylistDraft);
+          A.finishAction(this.db, id, { status: "done", result });
+          await this.db.flush();
+          this.listeners.forEach((l) => l({ type: "message", channelId: a.channel_id }));
+          return A.getAction(this.db, id)!;
+        }
         const payload = edited ? (a.kind === "email" ? A.checkEmail(edited) : A.checkEvent(edited, this.p.timeZone)) : a.payload;
         if (!this.actionsAllowed()[a.kind]) throw new Error(`Lyra isn't allowed to ${ACTION_ACCESS[a.kind].what} on ${this.p.google.available ? "this device" : "here"}. Turn it on in Connections, then try again.`);
         const deps: A.ActionDeps = { fetch: this.fetch, compose: this.actionToken("email"), mailRead: this.tokenFor("gmail"), events: this.actionToken("event"), timeZone: this.p.timeZone };
@@ -1157,6 +1209,97 @@ export class Lyra {
   async setTidy(on: boolean): Promise<void> {
     setSetting(this.db, "tidy", on ? "on" : "off");
     await this.db.flush();
+  }
+
+  // ---------- Spotify (Phase 14) ----------
+
+  private get spotifyLink(): { name: string; connected_at: string } | undefined {
+    try {
+      const raw = getSetting(this.db, "spotify");
+      return raw ? JSON.parse(raw) : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  get spotifyLinked(): boolean {
+    return !!this.spotifyLink;
+  }
+
+  async spotifyState(): Promise<{ available: boolean; clientId: string | null; connected: boolean; name?: string; playback: boolean; playlists: boolean }> {
+    return {
+      available: !!this.p.oauth,
+      clientId: await this.spotify.clientId(),
+      connected: this.spotifyLinked,
+      name: this.spotifyLink?.name,
+      playback: this.spotifyLinked && getSetting(this.db, "spotify.playback") === "on",
+      playlists: this.actionsAllowed().playlist,
+    };
+  }
+
+  private spotifyScopes(extra: { playback?: boolean; playlists?: boolean } = {}): string[] {
+    const playback = extra.playback ?? getSetting(this.db, "spotify.playback") === "on";
+    const playlists = extra.playlists ?? getSetting(this.db, "spotify.playlists") === "on";
+    return [...SPOTIFY_READ, ...(playback ? SPOTIFY_PLAYBACK : []), ...(playlists ? SPOTIFY_PLAYLISTS : [])];
+  }
+
+  /** Sign in to Spotify (the user's own Spotify app's Client ID, the first time). */
+  async connectSpotify(clientId?: string): Promise<AppState> {
+    if (!this.p.oauth) throw new Error("Spotify sign-in works in the Android app and the newest Windows app.");
+    if (clientId) await this.spotify.setClientId(clientId);
+    const r = await this.spotify.connect(this.p.oauth, this.spotifyScopes());
+    setSetting(this.db, "spotify", JSON.stringify({ name: r.name, connected_at: new Date().toISOString() }));
+    await this.connectors.reset();
+    await this.db.flush();
+    return this.state();
+  }
+
+  async disconnectSpotify(): Promise<AppState> {
+    await this.spotify.forget();
+    for (const k of ["spotify", "spotify.playback", "spotify.playlists"]) this.db.run("DELETE FROM settings WHERE key = ?", [k]);
+    await this.connectors.reset();
+    await this.db.flush();
+    return this.state();
+  }
+
+  /** Playback control or playlist changes: turning one on signs in again with that permission added. */
+  async allowSpotify(what: "playback" | "playlists", on: boolean): Promise<AppState> {
+    if (!this.spotifyLinked) throw new Error("Connect Spotify first.");
+    if (on) {
+      if (!this.p.oauth) throw new Error("Spotify sign-in isn't available here.");
+      const r = await this.spotify.connect(this.p.oauth, this.spotifyScopes({ [what]: true }));
+      const need = what === "playback" ? SPOTIFY_PLAYBACK : SPOTIFY_PLAYLISTS;
+      if (!need.every((s) => r.scope.split(" ").includes(s))) throw new Error("Spotify didn't grant that permission.");
+    }
+    setSetting(this.db, `spotify.${what}`, on ? "on" : "off");
+    await this.db.flush();
+    return this.state();
+  }
+
+  /** Play, pause, skip or queue, when the user asked (playback switch on). */
+  async controlMusic(action: string, uri?: string): Promise<string> {
+    const u = uri?.trim();
+    if (u && !/^spotify:(track|album|playlist|artist):[A-Za-z0-9]{22}$/.test(u)) throw new Error("Give a spotify: URI from search.");
+    switch (action) {
+      case "play":
+        await this.spotify.call("PUT", "/me/player/play", u ? (u.startsWith("spotify:track:") ? { uris: [u] } : { context_uri: u }) : undefined);
+        return u ? "Playing it." : "Playing.";
+      case "pause":
+        await this.spotify.call("PUT", "/me/player/pause");
+        return "Paused.";
+      case "next":
+        await this.spotify.call("POST", "/me/player/next");
+        return "Skipped to the next song.";
+      case "previous":
+        await this.spotify.call("POST", "/me/player/previous");
+        return "Back to the previous song.";
+      case "queue":
+        if (!u?.startsWith("spotify:track:")) throw new Error("Queue takes one song's spotify:track: URI.");
+        await this.spotify.call("POST", `/me/player/queue?uri=${encodeURIComponent(u)}`);
+        return "Added to the queue.";
+      default:
+        throw new Error("Action must be play, pause, next, previous or queue.");
+    }
   }
 
   // ---------- docs (Phase 13) ----------

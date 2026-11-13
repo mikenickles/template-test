@@ -15,7 +15,8 @@ const BUNDLED_DIST = path.join(__dirname, "dist");
 // raising this number makes older shells refuse packs that need the new one.
 // 2: lets the app use the microphone for live voice.
 // 3: keeps running in the tray when the window is closed, and can open at sign-in.
-const SHELL_VERSION = 3;
+// 4: sign-in to Spotify (its page in the browser, back through 127.0.0.1).
+const SHELL_VERSION = 4;
 let DIST = BUNDLED_DIST;
 let activeVersion = null;
 const ICON = path.join(__dirname, "icon.png");
@@ -214,6 +215,46 @@ ipcMain.handle("google:authorize", async (_e, scopes, interactive) => {
     win.focus();
   }
   return { accessToken: t.access_token, grantedScopes: String(t.scope || "").split(/\s+/).filter(Boolean), email: who };
+});
+
+// Sign-in to other services: only Spotify's page. Its redirect comes back to a one-time
+// listener on 127.0.0.1 (any port, as Spotify allows for loopback), path /spotify.
+ipcMain.handle("oauth:loopback", async (_e, url) => {
+  if (typeof url !== "string" || !url.startsWith("https://accounts.spotify.com/authorize?") || !url.includes("__REDIRECT__")) throw new Error("Not a sign-in page Lyra opens.");
+  const result = await new Promise((resolve, reject) => {
+    const server = http.createServer((req, res) => {
+      const u = new URL(req.url, "http://127.0.0.1");
+      if (u.pathname !== "/spotify" || (!u.searchParams.has("code") && !u.searchParams.has("error"))) {
+        res.writeHead(404).end();
+        return;
+      }
+      const ok = u.searchParams.has("code");
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(
+        `<!doctype html><meta charset="utf-8"><title>Lyra</title><body style="font:18px system-ui;padding:48px;background:#f3f1ea;color:#131416">` +
+          (ok ? "<h2>You're signed in to Spotify.</h2><p>You can close this tab and go back to Lyra.</p>" : "<h2>Sign-in didn't finish.</h2><p>Go back to Lyra and try again.</p>"),
+      );
+      clearTimeout(timer);
+      server.close();
+      resolve({ redirectUri, returned: `${redirectUri}${u.search}` });
+    });
+    let redirectUri = "";
+    const timer = setTimeout(() => {
+      server.close();
+      reject(new Error("Spotify sign-in timed out. Try again."));
+    }, 5 * 60_000);
+    server.on("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      redirectUri = `http://127.0.0.1:${server.address().port}/spotify`;
+      void shell.openExternal(url.replace("__REDIRECT__", encodeURIComponent(redirectUri)));
+    });
+  });
+  if (win) {
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
+  }
+  return result;
 });
 
 ipcMain.handle("google:signOut", async () => {

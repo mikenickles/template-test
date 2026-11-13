@@ -7,7 +7,7 @@ import { googleGet } from "./connectors/google-http.ts";
 import { NeedsConsentError, type TokenSource } from "./connectors/google.ts";
 import { describeDue, localToDate } from "./reminders.ts";
 
-export type ActionKind = "email" | "event";
+export type ActionKind = "email" | "event" | "playlist";
 export type ActionStatus = "proposed" | "working" | "done" | "declined";
 
 export interface EmailDraft {
@@ -31,6 +31,31 @@ export interface EventDraft {
   attendees: string[];
 }
 
+/** Phase 14: a Spotify playlist to make, or songs to add to one of the user's. */
+export interface PlaylistDraft {
+  /** the new playlist's name, or the existing one's (for the card) */
+  name: string;
+  description: string;
+  /** set: add to this existing playlist instead of making a new one */
+  playlistId?: string;
+  tracks: { uri: string; name: string; artist: string }[];
+}
+
+const TRACK = /^spotify:track:[A-Za-z0-9]{22}$/;
+
+/** Checks what the model asked for; the songs' real names are filled in from Spotify after. */
+export function checkPlaylist(input: Record<string, unknown>): { name: string; description: string; playlistId?: string; uris: string[] } {
+  const uris = [...new Set((Array.isArray(input.uris) ? input.uris : []).map((u) => String(u).trim()))];
+  if (!uris.length) throw new Error("Which songs? Give spotify:track: URIs from search.");
+  if (uris.length > 100) throw new Error("That's more than 100 songs. Keep it to 100.");
+  for (const u of uris) if (!TRACK.test(u)) throw new Error(`"${u}" isn't a Spotify song URI (spotify:track:...).`);
+  const playlistId = input.playlist_id ? String(input.playlist_id).trim() : undefined;
+  if (playlistId && !/^[A-Za-z0-9]{10,40}$/.test(playlistId)) throw new Error("playlist_id must be an id from my_playlists.");
+  const name = oneLine(input.name, 100);
+  if (!name && !playlistId) throw new Error("Give the playlist a name.");
+  return { name, description: oneLine(input.description, 300), ...(playlistId ? { playlistId } : {}), uris };
+}
+
 export interface ActionResult {
   /** "sent" | "drafted" | "added" */
   did: string;
@@ -42,7 +67,7 @@ export interface ActionRow {
   id: number;
   kind: ActionKind;
   status: ActionStatus;
-  payload: EmailDraft | EventDraft;
+  payload: EmailDraft | EventDraft | PlaylistDraft;
   result: ActionResult | null;
   /** the last attempt's error, shown on the card */
   error: string | null;
@@ -127,6 +152,10 @@ function toLocal(d: Date, timeZone?: string): string {
 
 /** One line for prompts and lists: what it is, not the whole text. */
 export function describeAction(a: Pick<ActionRow, "kind" | "payload">, timeZone?: string): string {
+  if (a.kind === "playlist") {
+    const p = a.payload as PlaylistDraft;
+    return p.playlistId ? `Add ${p.tracks.length} songs to the playlist "${p.name}"` : `New playlist "${p.name}" with ${p.tracks.length} songs`;
+  }
   if (a.kind === "email") {
     const e = a.payload as EmailDraft;
     return `Email to ${e.to.join(", ")}${e.subject ? `: "${e.subject}"` : " (reply)"}`;
@@ -153,7 +182,7 @@ interface Row {
 
 const parse = (r: Row): ActionRow => ({ ...r, payload: JSON.parse(r.payload), result: r.result ? JSON.parse(r.result) : null, tainted: !!r.tainted });
 
-export function createAction(db: DB, kind: ActionKind, payload: EmailDraft | EventDraft, tainted: boolean, channelId: number | null): ActionRow {
+export function createAction(db: DB, kind: ActionKind, payload: EmailDraft | EventDraft | PlaylistDraft, tainted: boolean, channelId: number | null): ActionRow {
   const r = db.run<Row>("INSERT INTO actions (kind, payload, tainted, channel_id) VALUES (?, ?, ?, ?) RETURNING *", [kind, JSON.stringify(payload), tainted ? 1 : 0, channelId])!;
   return parse(r);
 }
@@ -173,7 +202,7 @@ export function claimAction(db: DB, id: number): boolean {
   return !!db.run<{ id: number }>("UPDATE actions SET status = 'working', error = NULL WHERE id = ? AND status = 'proposed' RETURNING id", [id]);
 }
 
-export function finishAction(db: DB, id: number, outcome: { status: "done" | "declined" | "proposed"; payload?: EmailDraft | EventDraft; result?: ActionResult; error?: string }): void {
+export function finishAction(db: DB, id: number, outcome: { status: "done" | "declined" | "proposed"; payload?: EmailDraft | EventDraft | PlaylistDraft; result?: ActionResult; error?: string }): void {
   db.run("UPDATE actions SET status = ?, payload = COALESCE(?, payload), result = ?, error = ?, decided_at = ? WHERE id = ?", [
     outcome.status,
     outcome.payload ? JSON.stringify(outcome.payload) : null,
@@ -280,4 +309,22 @@ export async function doEvent(d: ActionDeps, v: EventDraft): Promise<ActionResul
   };
   const r = await post(d, `https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=${v.attendees.length ? "all" : "none"}`, d.events, "add calendar events", body);
   return { did: "added", at: new Date().toISOString(), link: typeof r.htmlLink === "string" && r.htmlLink.startsWith("https://") ? r.htmlLink : undefined };
+}
+
+/** Make the playlist (private), or add the songs to the user's existing one. Only after their tap. */
+export async function doPlaylist(spotify: { call<T>(method: string, path: string, body?: unknown): Promise<T> }, p: PlaylistDraft): Promise<ActionResult> {
+  let id = p.playlistId;
+  let link: string | undefined;
+  if (!id) {
+    const me = await spotify.call<{ id: string }>("GET", "/me");
+    const made = await spotify.call<{ id: string; external_urls?: { spotify?: string } }>("POST", `/users/${encodeURIComponent(me.id)}/playlists`, {
+      name: p.name,
+      description: p.description,
+      public: false,
+    });
+    id = made.id;
+    link = made.external_urls?.spotify;
+  }
+  for (let i = 0; i < p.tracks.length; i += 100) await spotify.call("POST", `/playlists/${id}/tracks`, { uris: p.tracks.slice(i, i + 100).map((t) => t.uri) });
+  return { did: p.playlistId ? "added_songs" : "made", at: new Date().toISOString(), link: link?.startsWith("https://open.spotify.com/") ? link : `https://open.spotify.com/playlist/${id}` };
 }

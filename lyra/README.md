@@ -20,8 +20,8 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 | 11 | Works on its own: background routines, "while you were away", widget | Done (Proactive step 3) |
 | 12 | Polish: accent-colored app icon, fixes from testing | Planned |
 | 13 | Docs: documents Lyra writes for you, optionally in Google Docs | Done |
-| 14 | More connectors: other services, with approval cards for anything that writes | Next |
-| 15 | Research tasks: workers that read web pages and report back with sources | Planned |
+| 14 | More connectors: Spotify first (more later), with approval cards for anything that writes | Done (Spotify) |
+| 15 | Research tasks: workers that read web pages and report back with sources | Next |
 | 16 | Inbox triage: a daily sort of your mail, replies drafted for your OK | Planned |
 | 17 | Playbooks: procedures you teach once and run by name | Planned |
 | 18 | Feedback and learning: thumbs up/down, a monthly "what I've learned" | Planned |
@@ -58,6 +58,15 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - Runs on the routine tick (`Lyra.tickHeadsUp`, `Routines.headsUp`), so like routines it runs on the phone when sync is on, never on the practice model, and not while Lyra is busy. What it said last time is passed to the next check so it doesn't repeat itself (settings `headsUpAt`, `headsUpLast`). Posts are tagged "Heads-up" and notify like a routine.
 - Heads-up and follow-up tokens show on the Usage page as their own kind of work ("proactive").
 - **Check-ins when it's quiet** (on with heads-ups, its own switch): when nothing needs you, Lyra asks for work like a colleague with a free afternoon. It offers one specific project grounded in your memory, mail, calendar and tasks, asks one question to know you better, or asks what it could take off your plate this week, with up to three replies to tap. About once a day on Light, up to twice on Active; only 9:00 to 20:00 and outside quiet hours; never while you're mid-conversation (2 hours), while something is waiting on you or a worker is running, or before you've answered the last one (gives up waiting after 3 days). Your answers go to memory; a yes gets started. Tap-replies are dropped if it read mail or the web. Recent check-ins are passed along so it doesn't repeat itself (`Lyra.tickCheckIn`, `checkInInstructions`, `meta.checkIn`, settings `checkInAt` / `checkInMessage` / `checkInRecent`). The Today view offers "What could you take on for me?" and "Ask me something" when nothing needs you.
+
+### Phase 14: Spotify
+
+- **Set up once** (Lyra page → Music → Set up Spotify): make a free app on developer.spotify.com, add the redirect URIs `app.lyra.chief://spotify` (phone) and `http://127.0.0.1/spotify` (Windows; any port is allowed for loopback), and paste its Client ID. Sign-in uses PKCE, so there's no secret; tokens stay on each device (`core/connectors/spotify/auth.ts`). A development-mode Spotify app works for its owner's account.
+- **Looking** (the connector, `core/connectors/spotify/server.ts`): now playing, recently played, top artists and songs, search, your playlists and their songs. Results are outside data like email.
+- **Control playback** (its own switch; Spotify requires Premium): `control_music` plays, pauses, skips or queues when you ask. Allowed even after a search, since it's harmless and easy to undo.
+- **Make playlists** (its own switch): `propose_playlist` makes an approval card listing the songs, with their real names fetched from Spotify; the playlist (private) is made, or the songs added to yours, only when you tap.
+- Each switch signs in again with just that extra permission; a grant with anything else is refused (`spotifyGrantIsAllowed`).
+- Sign-in: on the phone Spotify's page opens in the browser and comes back through the `app.lyra.chief://spotify` link (`LinksPlugin.java`, intent filter); on Windows the shell listens once on 127.0.0.1 (`oauth:loopback` in main.cjs, shell 4).
 
 ### Phase 13: docs
 

@@ -1,9 +1,9 @@
 // A proposed email or calendar event, as a card under Lyra's reply. Shows exactly what
 // will happen; nothing does until the user taps Send / Save to Drafts / Add.
 import { useEffect, useState } from "react";
-import type { ActionRow, EmailDraft, EventDraft } from "../../core/actions";
+import type { ActionRow, EmailDraft, EventDraft, PlaylistDraft } from "../../core/actions";
 import { api, onChange } from "./api";
-import { Calendar, Mail } from "./icons";
+import { Calendar, Mail, Music } from "./icons";
 
 const when = (iso: string) => new Date(iso).toLocaleString(undefined, { hour: "numeric", minute: "2-digit" });
 
@@ -17,7 +17,7 @@ function eventWhen(v: EventDraft): string {
   return `${s.toLocaleDateString(undefined, day)}, ${s.toLocaleTimeString(undefined, time)} to ${s.toDateString() === e.toDateString() ? e.toLocaleTimeString(undefined, time) : e.toLocaleString(undefined, { ...day, ...time })}`;
 }
 
-const DONE: Record<string, string> = { sent: "Sent", drafted: "Saved to Drafts", added: "Added to your calendar" };
+const DONE: Record<string, string> = { sent: "Sent", drafted: "Saved to Drafts", added: "Added to your calendar", made: "Playlist made", added_songs: "Songs added" };
 
 export function ActionCards({ ids, toast }: { ids: number[]; toast: (m: string) => void }) {
   return (
@@ -41,6 +41,7 @@ function ActionCard({ id, toast }: { id: number; toast: (m: string) => void }) {
   if (a === undefined) return null;
   if (a === null) return <div className="action-card gone">This was removed.</div>;
 
+  if (a.kind === "playlist") return <PlaylistCard a={a} setA={setA} toast={toast} />;
   const email = a.kind === "email" ? (a.payload as EmailDraft) : null;
   const event = a.kind === "event" ? (a.payload as EventDraft) : null;
   const open = a.status === "proposed";
@@ -188,6 +189,74 @@ function ActionCard({ id, toast }: { id: number; toast: (m: string) => void }) {
       {a.status === "done" && a.result?.link && (
         <a className="action-link" href={a.result.link} target="_blank" rel="noreferrer noopener">
           {email ? "Open in Gmail" : "Open in Calendar"}
+        </a>
+      )}
+    </div>
+  );
+}
+
+/** Phase 14: a Spotify playlist to make, or songs to add, shown song by song. */
+function PlaylistCard({ a, setA, toast }: { a: ActionRow; setA: (r: ActionRow) => void; toast: (m: string) => void }) {
+  const p = a.payload as PlaylistDraft;
+  const [busy, setBusy] = useState(false);
+  const [all, setAll] = useState(false);
+  const open = a.status === "proposed";
+  const decide = async (choice: "add" | "decline") => {
+    setBusy(true);
+    try {
+      const r = await api.decideAction(a.id, choice);
+      setA(r);
+      if (r.status === "done") toast(DONE[r.result?.did ?? ""] ?? "Done");
+      else if (r.error) toast(r.error);
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const shown = all ? p.tracks : p.tracks.slice(0, 8);
+  return (
+    <div className={`action-card ${a.status}`} aria-label="Playlist for your OK" role="group">
+      <div className="action-head">
+        <span className="action-kind">
+          <Music size={16} />
+          {p.playlistId ? "Add to playlist" : "New playlist"}
+        </span>
+        <span className="action-state">
+          {a.status === "done" ? `${DONE[a.result?.did ?? ""] ?? "Done"} · ${when(a.result!.at)}` : a.status === "declined" ? "Not made" : a.status === "working" ? "Working…" : "Waiting for your OK"}
+        </span>
+      </div>
+      {open && a.tainted && <p className="action-warn">Put together after reading outside content. Check the songs before you tap.</p>}
+      <div className="action-body">
+        <div className="action-title">{p.name}</div>
+        {p.description && <div className="action-sub">{p.description}</div>}
+        <ol className="playlist-songs">
+          {shown.map((t) => (
+            <li key={t.uri}>
+              <span>{t.name}</span> <span className="action-sub">{t.artist}</span>
+            </li>
+          ))}
+        </ol>
+        {p.tracks.length > 8 && (
+          <button className="link-btn" onClick={() => setAll((v) => !v)}>
+            {all ? "Show fewer" : `All ${p.tracks.length} songs`}
+          </button>
+        )}
+      </div>
+      {open && a.error && <p className="action-error">{a.error}</p>}
+      {open && (
+        <div className="action-buttons">
+          <button className="btn primary" disabled={busy} onClick={() => void decide("add")}>
+            {p.playlistId ? `Add ${p.tracks.length} songs` : "Make playlist"}
+          </button>
+          <button className="btn text" disabled={busy} onClick={() => void decide("decline")}>
+            Not now
+          </button>
+        </div>
+      )}
+      {a.status === "done" && a.result?.link && (
+        <a className="action-link" href={a.result.link} target="_blank" rel="noreferrer noopener">
+          Open in Spotify
         </a>
       )}
     </div>

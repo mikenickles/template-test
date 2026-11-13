@@ -59,6 +59,8 @@ export interface Workspace {
     /** the text, and whether it holds outside content */
     read(id: number): { text: string; tainted: boolean };
   };
+  /** Spotify playback (Phase 14), when the user turned it on. */
+  music?: { control(action: string, uri?: string): Promise<string> };
   /** People cards (Phase 10). */
   people?: {
     directory(): string;
@@ -69,8 +71,8 @@ export interface Workspace {
   contacts?: { find(name: string): Promise<string> };
   /** Emails and events Lyra proposes; the user approves each one on a card. */
   actions?: {
-    allowed(): { email: boolean; event: boolean };
-    propose(kind: "email" | "event", input: Record<string, unknown>, tainted: boolean, channelId: number | null): { id: number; summary: string };
+    allowed(): { email: boolean; event: boolean; playlist?: boolean };
+    propose(kind: "email" | "event" | "playlist", input: Record<string, unknown>, tainted: boolean, channelId: number | null): Promise<{ id: number; summary: string }>;
     /** recent proposals and what happened to them, one per line */
     recent(): string;
   };
@@ -162,8 +164,35 @@ function peopleTools(ws: Workspace): ToolDef[] {
 }
 
 /** Phase 9: proposing (never doing) an email or a calendar event. Only offered once the user has allowed it. */
-function actionTools(allowed: { email: boolean; event: boolean } | undefined): ToolDef[] {
+function actionTools(allowed: { email: boolean; event: boolean; playlist?: boolean } | undefined, music: boolean): ToolDef[] {
   const tools: ToolDef[] = [];
+  if (music)
+    tools.push({
+      name: "control_music",
+      description:
+        "Control the user's Spotify when they ask: play (a song, album, playlist or artist by its spotify: URI from search, or resume), pause, next, previous, or queue a song. It plays on whichever device Spotify is active on.",
+      schema: {
+        type: "object",
+        properties: { action: { type: "string", enum: ["play", "pause", "next", "previous", "queue"] }, uri: { type: "string", description: "A spotify: URI from search, for play or queue." } },
+        required: ["action"],
+      },
+    });
+  if (allowed?.playlist)
+    tools.push({
+      name: "propose_playlist",
+      description:
+        "Make a new Spotify playlist, or add songs to one of the user's (playlist_id from my_playlists), for them to approve. It appears as a card listing the songs; nothing changes until they tap. Find songs with search first and pass their spotify:track: URIs.",
+      schema: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "For a new playlist." },
+          description: { type: "string" },
+          playlist_id: { type: "string", description: "To add to an existing playlist instead." },
+          uris: { type: "array", items: { type: "string" }, description: "spotify:track: URIs, up to 100." },
+        },
+        required: ["uris"],
+      },
+    });
   if (allowed?.email)
     tools.push({
       name: "propose_email",
@@ -508,7 +537,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
 
   try {
     const channels = ctx.workspace.channels();
-    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed()), ...peopleTools(ctx.workspace), ...docTools(ctx.workspace), ...(await ctx.connectors.tools())];
+    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed(), !!ctx.workspace.music), ...peopleTools(ctx.workspace), ...docTools(ctx.workspace), ...(await ctx.connectors.tools())];
     const system = buildSystemPrompt({
       userName: ctx.userName,
       soul: ctx.soul,
@@ -522,6 +551,9 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
       actions: ctx.workspace.actions ? { allowed: ctx.workspace.actions.allowed(), recent: ctx.workspace.actions.recent() } : undefined,
       people: ctx.workspace.people ? { directory: ctx.workspace.people.directory(), contacts: !!ctx.workspace.contacts } : undefined,
       docs: ctx.workspace.docs?.recent(),
+      music: ctx.connectors.status().some((c) => c.id === "spotify" && c.state === "connected")
+        ? { playback: !!ctx.workspace.music, playlists: !!ctx.workspace.actions?.allowed().playlist }
+        : undefined,
       webSearch: !!ctx.webSearch,
     });
 
@@ -639,7 +671,22 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
           results.push({ type: "tool_result", id: call.id, name: call.name, content, isError: !ok });
           continue;
         }
-        if (call.name === "propose_email" || call.name === "propose_event") {
+        if (call.name === "control_music") {
+          let content: string;
+          let ok = false;
+          try {
+            if (!ctx.workspace.music) throw new Error("Playback control isn't turned on.");
+            // playing music is harmless and easy to undo, so it's allowed after a search too
+            content = await ctx.workspace.music.control(String(call.input.action ?? ""), call.input.uri ? String(call.input.uri) : undefined);
+            ok = true;
+          } catch (e) {
+            content = (e as Error).message;
+          }
+          toolsUsed.push({ name: call.name, ok });
+          results.push({ type: "tool_result", id: call.id, name: call.name, content, isError: !ok });
+          continue;
+        }
+        if (call.name === "propose_email" || call.name === "propose_event" || call.name === "propose_playlist") {
           // Only a proposal: the card shows exactly what happens, and nothing does until the user taps.
           // Allowed after reading mail (replying needs that), but the card warns the user to check it.
           let content: string;
@@ -648,10 +695,11 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
             if (actionIds.length >= 3) throw new Error("That's three for one reply. Let the user deal with these first.");
             const a = ctx.workspace.actions;
             if (!a) throw new Error("Not available.");
-            const r = a.propose(call.name === "propose_email" ? "email" : "event", call.input, state.tainted, ctx.channel?.id ?? null);
+            const kind = call.name === "propose_email" ? "email" : call.name === "propose_event" ? "event" : "playlist";
+            const r = await a.propose(kind, call.input, state.tainted, ctx.channel?.id ?? null);
             actionIds.push(r.id);
             ok = true;
-            emit.status(call.name === "propose_email" ? "Email ready for your OK" : "Event ready for your OK");
+            emit.status(kind === "email" ? "Email ready for your OK" : kind === "event" ? "Event ready for your OK" : "Playlist ready for your OK");
             content = `Ready for the user's OK as a card under your reply (#${r.id}: ${r.summary}). It is NOT sent or added yet: say it's ready for them to check, never that it's done.`;
           } catch (e) {
             content = (e as Error).message;

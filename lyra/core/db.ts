@@ -171,6 +171,24 @@ export const MIGRATIONS: string[] = [
      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
      updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
    );`,
+  // Phase 14: playlists join emails and events as things done only on the user's tap
+  `CREATE TABLE actions_next (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     kind TEXT NOT NULL CHECK (kind IN ('email','event','playlist')),
+     status TEXT NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed','working','done','declined')),
+     payload TEXT NOT NULL,
+     result TEXT,
+     error TEXT,
+     tainted INTEGER NOT NULL DEFAULT 0,
+     channel_id INTEGER REFERENCES channels(id) ON DELETE SET NULL,
+     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+     decided_at TEXT,
+     message_id INTEGER
+   );
+   INSERT INTO actions_next (id, kind, status, payload, result, error, tainted, channel_id, created_at, decided_at, message_id)
+     SELECT id, kind, status, payload, result, error, tainted, channel_id, created_at, decided_at, message_id FROM actions;
+   DROP TABLE actions;
+   ALTER TABLE actions_next RENAME TO actions;`,
 ];
 
 const FILE = "lyra.db";

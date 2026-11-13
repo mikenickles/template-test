@@ -17,6 +17,8 @@ import wasmUrl from "sql.js/dist/sql-wasm.wasm?url";
 import { NeedsConsentError, type GoogleAuth } from "../../core/connectors/google";
 import type { BlobStore } from "../../core/db";
 import type { Platform, SecretStore } from "../../core/lyra";
+import type { OAuthRedirect } from "../../core/connectors/spotify/auth";
+import { App as CapApp } from "@capacitor/app";
 import type { TextStore } from "../../core/memory";
 
 export const isNative = Capacitor.isNativePlatform();
@@ -29,6 +31,8 @@ interface DesktopBridge {
   backups: { keep(name: string, bytes: Uint8Array): Promise<string>; saveAs(name: string, bytes: Uint8Array): Promise<string | null>; openFolder(): Promise<void> };
   notify(title: string, body: string, hash: string): Promise<void>;
   onOpenHash(fn: (hash: string) => void): () => void;
+  /** shell 4 and later: sign-in pages for other services (Spotify), back through 127.0.0.1 */
+  oauth?: { loopback(url: string): Promise<{ redirectUri: string; returned: string }> };
   /** shell 3 and later */
   shell?: { prefs(): Promise<ShellPrefs>; setPrefs(p: Partial<ShellPrefs>): Promise<ShellPrefs> };
   updates: {
@@ -244,8 +248,43 @@ export async function createPlatform(): Promise<Platform> {
     secrets: isNative ? nativeSecrets : isDesktop ? deskSecrets! : webSecrets,
     google: isNative ? nativeGoogle : isDesktop ? desktopGoogle : webGoogle,
     ...(isNative ? { contacts: phoneContacts } : {}),
+    ...(isNative ? { oauth: phoneOAuth } : desk?.oauth ? { oauth: deskOAuth } : {}),
   };
 }
+
+// ---------- signing in to other services (Spotify) ----------
+// Phone: the browser opens Spotify's page, which sends the user back via app.lyra.chief://spotify.
+// Computer: the shell listens on 127.0.0.1 for the redirect (like Google sign-in).
+
+const Links = registerPlugin<{ open(o: { url: string }): Promise<void> }>("LyraLinks");
+
+const phoneOAuth: OAuthRedirect = {
+  authorize: async (authUrl) => {
+    const redirectUri = "app.lyra.chief://spotify";
+    let done!: (url: string) => void;
+    let fail!: (e: Error) => void;
+    const back = new Promise<string>((res, rej) => ((done = res), (fail = rej)));
+    const sub = await CapApp.addListener("appUrlOpen", (e) => e.url.startsWith(redirectUri) && done(e.url));
+    const timer = setTimeout(() => fail(new Error("Spotify sign-in timed out. Try again.")), 5 * 60_000);
+    try {
+      await Links.open({ url: authUrl(redirectUri) });
+      return { redirectUri, returned: await back };
+    } finally {
+      clearTimeout(timer);
+      void sub.remove();
+    }
+  },
+};
+
+const deskOAuth: OAuthRedirect = {
+  authorize: async (authUrl) => {
+    try {
+      return await desk!.oauth!.loopback(authUrl("__REDIRECT__"));
+    } catch (e) {
+      throw new Error(((e as Error).message ?? "").replace(/^Error invoking remote method '[^']+': (Error: )?/, ""));
+    }
+  },
+};
 
 // ---------- the phone's contacts (looked up by name, only once allowed) ----------
 

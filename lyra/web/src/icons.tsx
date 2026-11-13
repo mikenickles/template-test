@@ -273,3 +273,11 @@ export const Star = (p: P) => (
     <path d="M12 2c.8 6.3 3.7 9.2 10 10-6.3.8-9.2 3.7-10 10-.8-6.3-3.7-9.2-10-10 6.3-.8 9.2-3.7 10-10z" />
   </Icon>
 );
+
+export const Music = (p: P) => (
+  <Icon {...p}>
+    <path d="M9 18V5l11-2v13" />
+    <circle cx="6" cy="18" r="3" />
+    <circle cx="17" cy="16" r="3" />
+  </Icon>
+);

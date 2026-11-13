@@ -29,6 +29,10 @@ contextBridge.exposeInMainWorld("lyraDesktop", {
     return () => ipcRenderer.removeListener("open-hash", h);
   },
   info: () => ipcRenderer.invoke("app:info"),
+  // sign-in pages for other services, like Spotify (shell 4)
+  oauth: {
+    loopback: (url) => ipcRenderer.invoke("oauth:loopback", url),
+  },
   // keep running in the tray, open at sign-in (shell 3)
   shell: {
     prefs: () => ipcRenderer.invoke("shell:prefs"),

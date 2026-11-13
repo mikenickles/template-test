@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { api, type AppState, type ConnectorStatus } from "../api";
-import { Calendar, Chevron, File, Mail, Notebook, Plus, Spark, User } from "../icons";
+import { Calendar, Chevron, File, Mail, Music, Notebook, Plus, Spark, User } from "../icons";
 import { Orb } from "../LyraMark";
 import { thisDevice } from "../platform";
 import { PinnedList } from "./Pinned";
@@ -95,6 +95,8 @@ export function Access({
 
       {state.contacts !== null && <PhoneContacts state={state} setState={setState} toast={toast} />}
 
+      <SpotifySection state={state} setState={setState} toast={toast} />
+
       {!unavailable && <WithYourOk state={state} setState={setState} toast={toast} />}
 
       <section className="section">
@@ -125,6 +127,127 @@ export function Access({
         </div>
       </section>
     </div>
+  );
+}
+
+type SpotifyState = Awaited<ReturnType<typeof api.spotifyState>>;
+
+/** Phase 14: Spotify, with the user's own Spotify developer app. */
+function SpotifySection({ state, setState, toast }: { state: AppState; setState: (s: AppState) => void; toast: (m: string) => void }) {
+  const [s, setS] = useState<SpotifyState | null>(null);
+  const [clientId, setClientId] = useState("");
+  const [setup, setSetup] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const reload = () => void api.spotifyState().then(setS, () => {});
+  useEffect(reload, [state]);
+  if (!s) return null;
+  const run = async (fn: () => Promise<AppState>, done: string) => {
+    setBusy(true);
+    try {
+      setState(await fn());
+      toast(done);
+      setSetup(false);
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy(false);
+      reload();
+    }
+  };
+  return (
+    <section className="section">
+      <h2 className="section-label">Music</h2>
+      <div className="group">
+        {s.connected ? (
+          <div className="item">
+            <span className="tile on">
+              <Music />
+            </span>
+            <span className="body">
+              <div className="title">Spotify</div>
+              <div className="sub">Can see what you play{s.name ? ` · ${s.name}` : ""}</div>
+            </span>
+            <button className="btn quiet" disabled={busy} onClick={() => confirm("Disconnect Spotify?") && void run(() => api.disconnectSpotify(), "Spotify disconnected")}>
+              Disconnect
+            </button>
+          </div>
+        ) : !s.available ? (
+          <div className="item">
+            <span className="tile">
+              <Music />
+            </span>
+            <span className="body">
+              <div className="title">Spotify</div>
+              <div className="sub">Works in the Android app and the newest Windows app.</div>
+            </span>
+          </div>
+        ) : (
+          <button className="item" disabled={busy} onClick={() => (s.clientId ? void run(() => api.connectSpotify(), "Spotify connected") : setSetup(true))}>
+            <span className="tile">
+              <Music />
+            </span>
+            <span className="body">
+              <div className="title">Spotify</div>
+              <div className="sub">{busy ? "Opening Spotify sign-in…" : s.clientId ? "Connect Spotify, look only" : "Set up Spotify (about 3 minutes)"}</div>
+            </span>
+            <span className="tile empty">
+              <Plus />
+            </span>
+          </button>
+        )}
+        {s.connected && (
+          <>
+            <label className="item">
+              <span className="body">
+                <div className="title">Control playback</div>
+                <div className="sub">Play, pause, skip or queue when you ask. Spotify only allows this with Premium.</div>
+              </span>
+              <input type="checkbox" role="switch" className="switch" checked={s.playback} disabled={busy} onChange={(e) => void run(() => api.allowSpotify("playback", e.target.checked), e.target.checked ? "Lyra can control playback" : "Playback control off")} />
+            </label>
+            <label className="item">
+              <span className="body">
+                <div className="title">Make playlists</div>
+                <div className="sub">Lyra puts together playlists for you to check; each is made only when you tap.</div>
+              </span>
+              <input type="checkbox" role="switch" className="switch" checked={s.playlists} disabled={busy} onChange={(e) => void run(() => api.allowSpotify("playlists", e.target.checked), e.target.checked ? "Lyra can make playlists for your OK" : "Playlists off")} />
+            </label>
+          </>
+        )}
+      </div>
+      {setup && (
+        <div className="setup-box">
+          <ol className="setup-steps">
+            <li>
+              On <b>developer.spotify.com/dashboard</b>, log in and tap <b>Create app</b>. Any name and description.
+            </li>
+            <li>
+              Under <b>Redirect URIs</b>, add both <b>app.lyra.chief://spotify</b> and <b>http://127.0.0.1/spotify</b>. Tick <b>Web API</b>, agree, and save.
+            </li>
+            <li>
+              Open the app's <b>Settings</b>, copy the <b>Client ID</b>, and paste it here. No secret is needed.
+            </li>
+          </ol>
+          <label className="action-field">
+            <span>Client ID</span>
+            <input value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="32 letters and numbers" autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+          </label>
+          <div className="action-buttons">
+            <button className="btn primary" disabled={busy || !clientId.trim()} onClick={() => void run(() => api.connectSpotify(clientId), "Spotify connected")}>
+              {busy ? "Opening Spotify…" : "Connect"}
+            </button>
+            <button className="btn quiet" onClick={() => setSetup(false)}>
+              Cancel
+            </button>
+          </div>
+          <p className="hint">Your Spotify app works for your own account straight away. Lyra only looks unless you turn on the switches that appear once you're connected.</p>
+        </div>
+      )}
+      {s.available && !s.connected && s.clientId && !setup && (
+        <button className="link-btn" onClick={() => setSetup(true)}>
+          Use a different Spotify app
+        </button>
+      )}
+    </section>
   );
 }
 

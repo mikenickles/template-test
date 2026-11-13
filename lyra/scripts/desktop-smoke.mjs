@@ -121,6 +121,33 @@ const sentBody = Buffer.from(raw.split("\r\n\r\n")[1] ?? "", "base64").toString(
 check(sent.length === 1 && raw.includes("To: dana@example.com") && sentBody === "Yes, Friday works. See you then!", "tapping Send sends it once, with your edits");
 check((await card.getByRole("button", { name: "Send", exact: true }).count()) === 0, "a sent email can't be sent again from the card");
 
+// ---- Spotify: set up with your own app's Client ID, sign in through the browser (pretend) ----
+await app.evaluate(({ shell }) => {
+  // instead of opening the browser: Spotify "sends the user back" straight away
+  shell.openExternal = async (url) => {
+    const u = new URL(url);
+    if (u.hostname !== "accounts.spotify.com") return;
+    await fetch(`${u.searchParams.get("redirect_uri")}?code=abc&state=${u.searchParams.get("state")}`);
+  };
+});
+let spotifyAsked = "";
+await page.route("https://accounts.spotify.com/api/token", (r) => {
+  spotifyAsked = new URLSearchParams(r.request().postData()).get("redirect_uri");
+  return r.fulfill({ json: { access_token: "at", refresh_token: "rt", expires_in: 3600, scope: "user-read-playback-state user-read-currently-playing user-read-recently-played user-top-read playlist-read-private playlist-read-collaborative user-library-read user-modify-playback-state" } });
+});
+await page.route("https://api.spotify.com/v1/me", (r) => r.fulfill({ json: { id: "sam1", display_name: "Sam" } }));
+await page.goto("app://lyra/index.html#/access");
+await page.getByRole("button", { name: /Set up Spotify/ }).click();
+await page.getByLabel("Client ID").fill("0123456789abcdef0123456789abcdef");
+await page.getByRole("button", { name: "Connect", exact: true }).click();
+await page.getByText("Spotify connected").waitFor();
+check(/^http:\/\/127\.0\.0\.1:\d+\/spotify$/.test(spotifyAsked), "Spotify sign-in comes back through 127.0.0.1 on this computer");
+check(await page.getByText("Can see what you play · Sam").isVisible(), "Spotify shows as connected, look-only");
+await page.getByRole("switch", { name: /Control playback/ }).click();
+await page.getByText("Lyra can control playback").waitFor();
+await page.screenshot({ path: join(shots, "desktop-9-spotify.png") });
+check(true, "playback control is its own switch");
+
 // closing the window keeps Lyra running in the tray; the setting turns that off
 check((await page.evaluate(() => window.lyraDesktop.shell.prefs())).tray === true, "keeping running in the tray is on by default");
 await page.goto("app://lyra/index.html#/settings/alerts");
