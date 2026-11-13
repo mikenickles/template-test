@@ -414,6 +414,20 @@ try {
   await page.reload();
   await page.getByRole("radio", { name: "Burnt orange" }).waitFor();
   check((await page.getByRole("radio", { name: "Burnt orange" }).isChecked()) === true, "the accent color is saved");
+  // ---- talk like me ----
+  const mirror = page.getByRole("switch", { name: /Talk like me/ });
+  check(await mirror.isChecked(), "Talk like me is on by default");
+  await page.getByText("Nothing learned yet").waitFor();
+  await page.getByRole("button", { name: "Learn now" }).click();
+  await page.getByText(/few more of your messages/).waitFor();
+  check(true, "learning how you talk waits for enough of your messages");
+  await page.getByText("How Lyra talks to you").scrollIntoViewIfNeeded();
+  await shot("light-42-talk-like-me");
+  await mirror.click();
+  await page.getByText("Lyra will keep her own voice").waitFor();
+  check(!(await mirror.isChecked()) && (await page.getByText("Nothing learned yet").count()) === 0, "Talk like me can be turned off");
+  await mirror.click();
+  await page.getByText("Lyra will talk more like you").waitFor();
   await page.goto(`${base}/#/`);
   await page.locator(".bubble").first().waitFor();
   check((await page.locator(".topbar .avatar").getAttribute("src")).includes("avatar-orange"), "the avatar's glow follows the accent color");

@@ -59,6 +59,12 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - Heads-up and follow-up tokens show on the Usage page as their own kind of work ("proactive").
 - **Check-ins when it's quiet** (on with heads-ups, its own switch): when nothing needs you, Lyra asks for work like a colleague with a free afternoon. It offers one specific project grounded in your memory, mail, calendar and tasks, asks one question to know you better, or asks what it could take off your plate this week, with up to three replies to tap. About once a day on Light, up to twice on Active; only 9:00 to 20:00 and outside quiet hours; never while you're mid-conversation (2 hours), while something is waiting on you or a worker is running, or before you've answered the last one (gives up waiting after 3 days). Your answers go to memory; a yes gets started. Tap-replies are dropped if it read mail or the web. Recent check-ins are passed along so it doesn't repeat itself (`Lyra.tickCheckIn`, `checkInInstructions`, `meta.checkIn`, settings `checkInAt` / `checkInMessage` / `checkInRecent`). The Today view offers "What could you take on for me?" and "Ask me something" when nothing needs you.
 
+### Talk like me
+
+- Lyra mirrors how you talk: your energy, slang, punctuation, casing and emoji. Say "hell yeah" and good news gets a "Hell yeah!" back. She borrows your phrases now and then without parroting, swears only if you do (lightly, never at you or in bad news), and keeps her clarity rules. Drafts for other people stay written for that reader.
+- In the moment she goes by the recent chat. Every few days (after 20+ new messages, while you're not mid-conversation) she rereads your own recent messages, never email or the web and skipping long pastes, and keeps up to 8 notes on how you talk, not what you talked about.
+- Settings, You and appearance, "How Lyra talks to you": the Talk like me switch (on by default), what she's noticed, Update now and Forget. Turning it off gives her own voice back.
+
 ### Lyra's prompt: character, voice and ground rules
 
 - **Character** (`core/soul.md`, editable in the app): warm and honest, with an opinion when it helps; talks up to you; fair on contested topics and fully on your side when you ask for one view; plays along with a joke as long as you want.

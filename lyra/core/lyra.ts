@@ -15,6 +15,7 @@ import * as A from "./actions.ts";
 import * as P from "./people.ts";
 import * as D from "./docs.ts";
 import * as S from "./skills.ts";
+import * as ST from "./style.ts";
 import { SPOTIFY_PLAYBACK, SPOTIFY_PLAYLISTS, SPOTIFY_READ, SpotifyAuth, type OAuthRedirect } from "./connectors/spotify/auth.ts";
 import { createSpotifyServer } from "./connectors/spotify/server.ts";
 import { runTidy } from "./tidy.ts";
@@ -116,6 +117,8 @@ export interface AppState {
   accent: Accent;
   /** Phone notifications for news while Lyra is in the background, and routine reminders. */
   notifications: boolean;
+  /** Lyra mirrors how the user talks. */
+  mirror: boolean;
   /** Ask for fingerprint, face or the phone's PIN to open Lyra. */
   appLock: boolean;
   /** Where the status line's weather is for (set in Settings); null = no weather. */
@@ -191,6 +194,8 @@ export interface SettingsPatch {
   webSearch?: boolean;
   accent?: string;
   notifications?: boolean;
+  /** Talk like me: mirror how the user talks. */
+  mirror?: boolean;
   appLock?: boolean;
   weatherPlace?: WeatherPlace | null;
   liveVoice?: string;
@@ -277,6 +282,7 @@ export class Lyra {
     const lyra = this;
     this.workspace = {
       main: memory,
+      talk: () => ST.styleSection(this.userName === "you" ? "the user" : this.userName, ST.readStyle(this.db)?.notes, ST.mirrorOn(this.db)),
       skills: {
         index: () => S.describeSkills(S.listSkills(this.db)),
         use: (name) => {
@@ -549,6 +555,7 @@ export class Lyra {
       webSearch: this.webSearch,
       accent: this.accent,
       notifications: getSetting(this.db, "notifications") !== "off",
+      mirror: ST.mirrorOn(this.db),
       appLock: getSetting(this.db, "appLock") === "on",
       weatherPlace: this.weatherPlace,
       liveVoice: this.liveVoice,
@@ -761,6 +768,7 @@ export class Lyra {
       setSetting(this.db, "weatherPlace", w ? JSON.stringify({ name: w.name.trim().slice(0, 80), latitude: w.latitude, longitude: w.longitude }) : "");
     }
     if (patch.notifications !== undefined) setSetting(this.db, "notifications", patch.notifications ? "on" : "off");
+    if (patch.mirror !== undefined) setSetting(this.db, "mirror", patch.mirror ? "on" : "off");
     if (patch.proactive !== undefined) {
       const p = { ...this.proactive, ...patch.proactive };
       if (!(PROACTIVE_LEVELS as readonly string[]).includes(p.level)) throw new Error("That heads-up level isn't one of the choices.");
@@ -1166,8 +1174,61 @@ export class Lyra {
   tickRoutines(now = new Date()): number[] {
     const started = this.routinesRunner.tick(now);
     this.tickReminders(now);
-    if (!this.tickHeadsUp(now) && !this.tickCheckIn(now)) this.tickTidy(now);
+    if (!this.tickHeadsUp(now) && !this.tickCheckIn(now) && !this.tickTidy(now)) this.tickStyle(now);
     return started;
+  }
+
+  // ---------- talking like the user ----------
+
+  private learningStyle = false;
+
+  /** What Lyra has noticed about how the user talks, and whether she mirrors it. */
+  talkStyle(): { on: boolean; notes: string[]; updatedAt: string | null; newMessages: number } {
+    const s = ST.readStyle(this.db);
+    return { on: ST.mirrorOn(this.db), notes: s?.notes ?? [], updatedAt: s?.updatedAt ?? null, newMessages: ST.newSince(this.db, s?.updatedAt) };
+  }
+
+  /**
+   * Relearn how the user talks every few days once they've sent enough new messages,
+   * while they're not mid-conversation. Only their own messages are read.
+   */
+  tickStyle(now = new Date()): boolean {
+    if (!ST.mirrorOn(this.db) || this.learningStyle || this.busy) return false;
+    if (!this.p.provider && this.choice().provider === "fake") return false;
+    const s = ST.readStyle(this.db);
+    if (s && now.getTime() - new Date(s.updatedAt).getTime() < 3 * 86_400_000) return false;
+    const tried = getSetting(this.db, "styleTriedAt");
+    if (tried && now.getTime() - new Date(tried).getTime() < 86_400_000) return false;
+    if (ST.newSince(this.db, s?.updatedAt) < ST.STYLE_MIN_NEW) return false;
+    const lastUser = this.db.get<{ at: string | null }>("SELECT MAX(created_at) AS at FROM messages WHERE role = 'user'")!.at;
+    if (lastUser && now.getTime() - new Date(lastUser).getTime() < 15 * 60_000) return false;
+    setSetting(this.db, "styleTriedAt", now.toISOString());
+    void this.learnStyleNow().catch((e) => console.error("[lyra] learning how you talk failed", e));
+    return true;
+  }
+
+  /** Learn now (also the Settings button). Throws when there isn't enough to go on. */
+  async learnStyleNow(): Promise<{ on: boolean; notes: string[]; updatedAt: string | null; newMessages: number }> {
+    if (this.learningStyle) throw new Error("Already on it.");
+    this.learningStyle = true;
+    try {
+      const samples = ST.styleSamples(this.db);
+      if (samples.length < 10) throw new Error("Lyra needs a few more of your messages to go on. Keep chatting!");
+      const provider = metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "proactive", this.db, this.p.timeZone);
+      const notes = await ST.learnStyle(provider, samples, ST.readStyle(this.db)?.notes ?? [], this.userName);
+      if (!notes) throw new Error("Not enough to go on yet. Keep chatting and Lyra will pick it up.");
+      ST.saveStyle(this.db, notes, samples.length);
+      await this.db.flush();
+      return this.talkStyle();
+    } finally {
+      this.learningStyle = false;
+    }
+  }
+
+  async forgetStyle(): Promise<{ on: boolean; notes: string[]; updatedAt: string | null; newMessages: number }> {
+    ST.clearStyle(this.db);
+    await this.db.flush();
+    return this.talkStyle();
   }
 
   // ---------- the weekly memory tidy-up (Phase 10) ----------

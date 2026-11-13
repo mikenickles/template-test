@@ -29,6 +29,8 @@ export interface PromptInput {
   tasks?: string;
   /** Reminders and follow-ups still to come, one per line. */
   reminders?: string;
+  /** How to talk like the user (style.ts styleSection). */
+  talk?: string;
   /** The user's skills: name and when to use, one per line. */
   skills?: string;
   /** Spotify: connected, and which switches are on. */
@@ -222,7 +224,7 @@ ${p.tasks?.trim() ? neutralize(p.tasks) : "(none)"}
 
 Coming up (reminders and follow-ups):
 ${p.reminders?.trim() ? neutralize(p.reminders) : "(none)"}
-${skillsSection(p, user)}${actionsSection(p, user)}${peopleSection(p, user)}${docsSection(p, user)}${musicSection(p, user)}
+${p.talk ?? ""}${skillsSection(p, user)}${actionsSection(p, user)}${peopleSection(p, user)}${docsSection(p, user)}${musicSection(p, user)}
 ${
     p.webSearch
       ? `## The web

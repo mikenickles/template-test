@@ -161,8 +161,77 @@ function YouSection({ state, setState, toast, run, busy }: Omit<Props, "section"
         </div>
       </section>
 
+      <TalkLikeMe state={state} run={run} busy={busy} toast={toast} />
+
       <WeatherSection state={state} setState={setState} toast={toast} />
     </>
+  );
+}
+
+type TalkStyle = Awaited<ReturnType<typeof api.talkStyle>>;
+
+/** Lyra mirrors how you talk, and what she's noticed so far. */
+function TalkLikeMe({ state, run, busy, toast }: { state: AppState; run: (fn: () => Promise<AppState>, done: string) => Promise<void>; busy: boolean; toast: (m: string) => void }) {
+  const [style, setStyle] = useState<TalkStyle | null>(null);
+  const [working, setWorking] = useState(false);
+  useEffect(() => void api.talkStyle().then(setStyle, () => {}), [state.mirror]);
+  const act = async (fn: () => Promise<TalkStyle>, done: string) => {
+    setWorking(true);
+    try {
+      setStyle(await fn());
+      toast(done);
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setWorking(false);
+    }
+  };
+  return (
+    <section className="section">
+      <h2 className="section-label">How Lyra talks to you</h2>
+      <div className="group">
+        <label className="item">
+          <span className="body">
+            <div className="title">Talk like me</div>
+            <div className="sub">Lyra picks up your slang, energy and emoji over time and talks a bit more like you. She learns only from your own messages, never your email.</div>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            className="switch"
+            checked={state.mirror}
+            disabled={busy}
+            onChange={(e) => void run(() => api.saveSettings({ mirror: e.target.checked }), e.target.checked ? "Lyra will talk more like you" : "Lyra will keep her own voice")}
+          />
+        </label>
+      </div>
+      {state.mirror && style && (
+        <>
+          {style.notes.length ? (
+            <>
+              <p className="hint">What she's noticed so far:</p>
+              <ul className="style-notes">
+                {style.notes.map((n) => (
+                  <li key={n}>{n}</li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="hint">Nothing learned yet. She goes by your recent chat for now, and every few days she takes note of how you talk.</p>
+          )}
+          <div className="field-row">
+            <button className="btn quiet" disabled={working} onClick={() => void act(() => api.learnStyleNow(), "Updated")}>
+              {working ? "Listening…" : style.notes.length ? "Update now" : "Learn now"}
+            </button>
+            {style.notes.length > 0 && (
+              <button className="btn text" disabled={working} onClick={() => confirm("Forget what Lyra noticed about how you talk?") && void act(() => api.forgetStyle(), "Forgotten")}>
+                Forget
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </section>
   );
 }
 

@@ -61,6 +61,8 @@ export interface Workspace {
     /** the text, and whether it holds outside content */
     read(id: number): { text: string; tainted: boolean };
   };
+  /** How to talk like the user (empty when that's turned off). */
+  talk?(): string;
   /** Skills (Phase 17): how the user wants particular jobs done. */
   skills?: {
     index(): string;
@@ -627,6 +629,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
       people: ctx.workspace.people ? { directory: ctx.workspace.people.directory(), contacts: !!ctx.workspace.contacts } : undefined,
       docs: ctx.workspace.docs?.recent(),
       skills: ctx.workspace.skills?.index(),
+      talk: ctx.workspace.talk?.(),
       model: ctx.provider.id === "fake" ? undefined : ctx.provider.model,
       music: ctx.connectors.status().some((c) => c.id === "spotify" && c.state === "connected")
         ? { playback: !!ctx.workspace.music, playlists: !!ctx.workspace.actions?.allowed().playlist }
