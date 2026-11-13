@@ -97,6 +97,12 @@ export const ThumbUp = (p: P) => (
   </Icon>
 );
 export const ThumbDown = (p: P) => <ThumbUp {...p} style={{ transform: "rotate(180deg)", ...p.style }} />;
+export const Inbox = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 13.5l2.2-7.1A2 2 0 0 1 8.1 5h7.8a2 2 0 0 1 1.9 1.4l2.2 7.1V18a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18z" />
+    <path d="M4 13.5h4.5l1 2h5l1-2H20" />
+  </Icon>
+);
 export const Pulse = (p: P) => (
   <Icon {...p}>
     <path d="M3.5 12h4l2.5-6 4 12 2.5-6h4" />

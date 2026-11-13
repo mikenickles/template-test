@@ -7506,3 +7506,101 @@ button.lp-svc:active {
 .lp-bad {
   color: var(--bad);
 }
+
+/* ---------- 0.45 cards: a new time, an answer, an inbox tidy, a text ---------- */
+.action-was {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--text-muted) 60%, transparent);
+}
+.action-now {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+.action-answer {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.action-answer.a-declined {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.archive-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+.archive-list li {
+  display: flex;
+  flex-direction: column;
+  padding: 7px 0;
+}
+.archive-list li + li {
+  border-top: 1px solid var(--border);
+}
+.action-title-sm {
+  font-weight: 600;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.action-text-bubble {
+  margin-top: 8px;
+  max-width: 88%;
+  padding: 9px 14px;
+  border-radius: 18px 18px 18px 6px;
+  background: var(--surface-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+.action-textarea {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+
+/* the Notifications sheet on the Lyra page */
+.lp-notice-setup {
+  margin-bottom: 14px;
+}
+.lp-notice-setup .hint {
+  margin: 0 4px 12px;
+}
+.lp-wide {
+  width: 100%;
+}
+.lp-sub {
+  margin: 0 4px 8px;
+}
+.lp-apps {
+  max-height: 38vh;
+  overflow-y: auto;
+}
+.lp-sheet-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.lp-sheet-row .btn {
+  flex: 1;
+  width: auto;
+  margin: 0;
+}
+.link-btn.inline {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  text-decoration: underline;
+}

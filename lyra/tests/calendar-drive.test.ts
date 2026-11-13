@@ -58,11 +58,11 @@ describe("read-only Google grants", () => {
 describe("calendar formatting", () => {
   it("describes timed, all-day and multi-day events in the user's time zone", () => {
     expect(describeEvent({ id: "a", summary: "Dentist", start: { dateTime: "2026-11-17T17:00:00Z" }, end: { dateTime: "2026-11-17T18:00:00Z" } }, TZ)).toBe(
-      "- Tue, Nov 17, 9:00 AM to 10:00 AM · Dentist",
+      "- Tue, Nov 17, 9:00 AM to 10:00 AM · Dentist\n  id: a (yours)",
     );
-    expect(describeEvent({ id: "b", summary: "Holiday", start: { date: "2026-11-26" }, end: { date: "2026-11-27" } }, TZ)).toBe("- Thu, Nov 26, all day · Holiday");
+    expect(describeEvent({ id: "b", summary: "Holiday", start: { date: "2026-11-26" }, end: { date: "2026-11-27" } }, TZ)).toBe("- Thu, Nov 26, all day · Holiday\n  id: b (yours)");
     expect(describeEvent({ id: "c", summary: "Trip", start: { date: "2026-12-20" }, end: { date: "2026-12-24" } }, TZ)).toBe(
-      "- Sun, Dec 20 to Wed, Dec 23, all day · Trip",
+      "- Sun, Dec 20 to Wed, Dec 23, all day · Trip\n  id: c (yours)",
     );
     expect(() => toInstant("next tuesday")).toThrow(/YYYY-MM-DD/);
   });
@@ -99,6 +99,7 @@ describe("Calendar and Drive connectors", () => {
       ["drive", "connected"],
       // no sign-in for other services in this test platform
       ["spotify", "unavailable"],
+      ["phone", "unavailable"],
     ]);
     expect((await c.tools()).map((t) => t.name).sort()).toEqual(["calendar__list_calendars", "calendar__list_events", "drive__read_file", "drive__search_files"]);
   });
@@ -143,6 +144,6 @@ describe("Calendar and Drive connectors", () => {
     expect(lyra.state().connectors[2].state).toBe("connected");
     await lyra.disconnectGoogle("drive");
     expect(revokes()).toBe(1);
-    expect(lyra.state().connectors.filter((c) => c.id !== "spotify").every((c) => c.state === "not_connected")).toBe(true);
+    expect(lyra.state().connectors.filter((c) => c.id !== "spotify" && c.id !== "phone").every((c) => c.state === "not_connected")).toBe(true);
   });
 });

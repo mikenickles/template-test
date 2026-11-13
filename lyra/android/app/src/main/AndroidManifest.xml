@@ -104,6 +104,17 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+            <!-- 0.45: reading notifications (texts, chats, deliveries), only once the user allows it in Android settings -->
+        <service
+            android:name=".NoticeListener"
+            android:exported="true"
+            android:label="Lyra"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
     </application>
 
     <!-- Permissions -->
@@ -116,6 +127,8 @@
     </queries>
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 0.45: Android 16 Live Updates for "Lyra at work" (the status bar chip while a task runs) -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
 
     <!-- live voice: the microphone, only while a call is open (Android asks you first) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />

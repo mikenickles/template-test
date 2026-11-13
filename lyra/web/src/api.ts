@@ -25,7 +25,7 @@ import { HOME_STALE_MS, readSyncState, Sync, type SnapshotInfo, type SyncResult 
 import { DriveSyncRemote } from "../../core/sync-drive";
 import { applyUpdate, checkForUpdate, watchForUpdates } from "./updater";
 import { watchWidget } from "./widget";
-import { background, createPlatform, deviceKind, isDesktop, isNative, keepBackupCopy, notifier, places, push, shareFile } from "./platform";
+import { background, createPlatform, deviceKind, isDesktop, isNative, keepBackupCopy, live, notifier, places, push, shareFile } from "./platform";
 import { directionsLink, driveSeconds, leaveAt } from "../../core/places";
 
 export type MemoryNote = CoreNote;
@@ -78,6 +78,12 @@ const ready: Promise<Lyra> = createPlatform().then(async (p) => {
   addEventListener("pagehide", () => void lyra.flush());
   watchForNotices(lyra);
   watchPlaces(lyra);
+  watchLive(lyra);
+  // notification access is turned on and off in Android settings: follow it when Lyra comes back
+  if (isNative) {
+    void lyra.syncNotices().catch(() => {});
+    void CapApp.addListener("resume", () => void lyra.syncNotices().catch(() => {}));
+  }
   void askToNotify(lyra);
   void signUpForPush(lyra);
   if (Number.isFinite(pulledAfter)) void tellWhatsNew(lyra, pulledAfter);
@@ -171,6 +177,34 @@ async function askToNotify(lyra: Lyra): Promise<void> {
   } catch (e) {
     console.error("[lyra] notification permission", e);
   }
+}
+
+// ---------- live progress: an ongoing notification while Lyra works on a task ----------
+
+function watchLive(lyra: Lyra): void {
+  if (!live.available) return;
+  const shown = new Map<number, string>();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const update = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const now = lyra.liveWork();
+      for (const w of now) {
+        const key = `${w.title}|${w.note}|${w.done}/${w.total}`;
+        if (shown.get(w.id) === key) continue;
+        shown.set(w.id, key);
+        void live.show({ task: w.id, title: w.title, text: w.note, done: w.done, total: w.total, since: w.since });
+      }
+      for (const id of [...shown.keys()])
+        if (!now.some((w) => w.id === id)) {
+          shown.delete(id);
+          void live.end(id);
+        }
+    }, 300);
+  };
+  // left over from before a restart: clear, then show what's really running
+  void live.end().then(update);
+  lyra.onChange((e) => e.type === "task" && update());
 }
 
 // ---------- places: reminders on arrival, and when to leave ----------
@@ -662,8 +696,10 @@ export const api = {
   disconnectGmail: async () => (await ready).disconnectGmail(),
   connectGoogle: async (id: "gmail" | "calendar" | "drive") => (await ready).connectGoogle(id),
   disconnectGoogle: async (id: "gmail" | "calendar" | "drive") => (await ready).disconnectGoogle(id),
-  allowActions: async (kind: "email" | "event", on: boolean) => (await ready).allowActions(kind, on),
+  allowActions: async (kind: "email" | "event" | "archive" | "text", on: boolean) => (await ready).allowActions(kind, on),
   allowContacts: async (on: boolean) => (await ready).allowContacts(on),
+  allowNotices: async (on: boolean) => (await ready).allowNotices(on),
+  syncNotices: async () => (await ready).syncNotices(),
   spotifyState: async () => (await ready).spotifyState(),
   connectSpotify: async (clientId?: string) => (await ready).connectSpotify(clientId),
   disconnectSpotify: async () => (await ready).disconnectSpotify(),
@@ -696,7 +732,7 @@ export const api = {
   setTidy: async (on: boolean) => (await ready).setTidy(on),
   tidyOn: async () => (await ready).tidyOn,
   action: async (id: number) => (await ready).action(id),
-  decideAction: async (id: number, choice: "send" | "draft" | "add" | "decline", edited?: Record<string, unknown>) => (await ready).decideAction(id, choice, edited),
+  decideAction: async (id: number, choice: "send" | "draft" | "add" | "do" | "decline", edited?: Record<string, unknown>) => (await ready).decideAction(id, choice, edited),
   scanAction: async (messageId: number, which: number | "all") => (await ready).scanAction(messageId, which),
   places: async () => (await ready).places(),
   savePlace: async (name: string) => (await ready).savePlace(name),

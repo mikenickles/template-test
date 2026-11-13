@@ -248,7 +248,9 @@ export async function createPlatform(): Promise<Platform> {
     secrets: isNative ? nativeSecrets : isDesktop ? deskSecrets! : webSecrets,
     google: isNative ? nativeGoogle : isDesktop ? desktopGoogle : webGoogle,
     ...(isNative ? { contacts: phoneContacts } : {}),
+    ...(isNative ? { sms: { compose: (number: string, body: string) => Links.sms({ number, body }) } } : {}),
     ...(isNative ? { places: phonePlaces } : {}),
+    ...(isNative ? { notices: phoneNotices } : {}),
     ...(isNative ? { oauth: phoneOAuth } : desk?.oauth ? { oauth: deskOAuth } : {}),
   };
 }
@@ -257,7 +259,7 @@ export async function createPlatform(): Promise<Platform> {
 // Phone: the browser opens Spotify's page, which sends the user back via app.lyra.chief://spotify.
 // Computer: the shell listens on 127.0.0.1 for the redirect (like Google sign-in).
 
-const Links = registerPlugin<{ open(o: { url: string }): Promise<void> }>("LyraLinks");
+const Links = registerPlugin<{ open(o: { url: string }): Promise<void>; sms(o: { number: string; body: string }): Promise<void> }>("LyraLinks");
 
 const phoneOAuth: OAuthRedirect = {
   authorize: async (authUrl) => {
@@ -642,6 +644,56 @@ const phonePlaces = {
   access: async () => (await NativePlaces.status()).access,
   here: () => NativePlaces.here(),
   find: async (query: string, near?: { lat: number; lng: number }) => (await NativePlaces.find({ query, ...(near ?? {}) })).places,
+};
+
+// ---------- the phone's notifications (0.45): read once allowed in Android settings ----------
+
+export interface NoticeApp {
+  pkg: string;
+  label: string;
+  count: number;
+  last: number;
+  blocked: boolean;
+}
+
+const NativeNotices = registerPlugin<{
+  status(): Promise<{ access: boolean }>;
+  open(): Promise<void>;
+  appInfo(): Promise<void>;
+  recent(o: { since: number }): Promise<{ list: { app: string; pkg: string; title: string; text: string; at: number; msg?: boolean }[] }>;
+  apps(): Promise<{ apps: NoticeApp[] }>;
+  block(o: { pkg: string; blocked: boolean }): Promise<void>;
+  clear(): Promise<void>;
+}>("LyraNotices");
+
+const phoneNotices = {
+  access: async () => (await NativeNotices.status()).access,
+  recent: async (since: number) => (await NativeNotices.recent({ since })).list,
+};
+
+export const notices = {
+  available: isNative,
+  access: async () => (isNative ? (await NativeNotices.status()).access : false),
+  /** Android's Notification access page */
+  open: () => NativeNotices.open(),
+  /** App info, where "Allow restricted settings" is for an app installed from a file */
+  appInfo: () => NativeNotices.appInfo(),
+  apps: async () => (isNative ? (await NativeNotices.apps()).apps : []),
+  block: (pkg: string, blocked: boolean) => NativeNotices.block({ pkg, blocked }),
+  clear: () => NativeNotices.clear(),
+};
+
+// ---------- live progress while Lyra works on a task (0.45) ----------
+
+const NativeLive = registerPlugin<{
+  show(o: { task: number; title: string; text: string; done: number; total: number; since: number }): Promise<void>;
+  end(o: { task?: number }): Promise<void>;
+}>("LyraLive");
+
+export const live = {
+  available: isNative,
+  show: (o: { task: number; title: string; text: string; done: number; total: number; since: number }) => (isNative ? NativeLive.show(o).catch(() => {}) : Promise.resolve()),
+  end: (task?: number) => (isNative ? NativeLive.end(task === undefined ? {} : { task }).catch(() => {}) : Promise.resolve()),
 };
 
 export const places = {

@@ -71,13 +71,15 @@ describe("untrusted wrapping", () => {
 });
 
 describe("google scopes", () => {
-  it("accepts reading plus the two approve-each-one permissions, and refuses anything wider", () => {
+  it("accepts reading plus the approve-each-one permissions, and refuses anything wider", () => {
     expect(grantIsAllowed(GMAIL_READONLY, GMAIL_READONLY)).toBe(true);
     expect(grantIsAllowed(`${GMAIL_READONLY} openid`, GMAIL_READONLY)).toBe(true);
     // turning on drafts doesn't spoil the read-only connection (Google returns both)
     expect(grantIsAllowed(`${GMAIL_READONLY} ${GMAIL_COMPOSE} ${CALENDAR_EVENTS}`, GMAIL_READONLY)).toBe(true);
     expect(grantIsAllowed(`${GMAIL_READONLY} https://www.googleapis.com/auth/gmail.send`, GMAIL_READONLY)).toBe(false);
-    expect(grantIsAllowed(`${GMAIL_READONLY} https://www.googleapis.com/auth/gmail.modify`, GMAIL_READONLY)).toBe(false);
+    // archiving with the user's OK (0.45) needs gmail.modify, behind its own switch; deleting and full access stay out
+    expect(grantIsAllowed(`${GMAIL_READONLY} https://www.googleapis.com/auth/gmail.modify`, GMAIL_READONLY)).toBe(true);
+    expect(grantIsAllowed(`${GMAIL_READONLY} https://www.googleapis.com/auth/gmail.settings.basic`, GMAIL_READONLY)).toBe(false);
     expect(grantIsAllowed(`${GMAIL_READONLY} https://www.googleapis.com/auth/calendar`, GMAIL_READONLY)).toBe(false);
     expect(grantIsAllowed("https://mail.google.com/", GMAIL_READONLY)).toBe(false);
     expect(grantIsAllowed("", GMAIL_READONLY)).toBe(false);

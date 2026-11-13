@@ -54,6 +54,8 @@ export function describeEvent(e: CalEvent, tz: string): string {
   if (others.length) lines.push(`  with: ${others.slice(0, 6).map((a) => a.displayName || a.email).join(", ")}${others.length > 6 ? ` and ${others.length - 6} more` : ""}`);
   if (e.organizer && !e.organizer.self && (e.organizer.displayName || e.organizer.email)) lines.push(`  organizer: ${e.organizer.displayName || e.organizer.email}`);
   if (e.hangoutLink) lines.push(`  video call: yes`);
+  // for moving it or answering it with the user's OK (propose_reschedule / propose_rsvp)
+  if (e.id && e.status !== "cancelled") lines.push(`  id: ${e.id}${e.organizer?.self || !e.organizer ? " (yours)" : ""}`);
   if (e.description) lines.push(`  notes: ${e.description.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 300)}`);
   return lines.join("\n");
 }

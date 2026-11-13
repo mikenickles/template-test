@@ -3,17 +3,18 @@
 // and to disconnect), what it may do with your OK, and its promise.
 import { useEffect, useState, type ReactNode } from "react";
 import { api, type AppState, type ConnectorStatus } from "../api";
-import { Bulb, Calendar, Check, Close, File, Mail, Music, Notebook, People, Plus, Pulse, Shield, Spark } from "../icons";
+import { Bell, Bulb, Calendar, ChatIcon, Check, Close, File, Inbox, Mail, Music, Notebook, People, Plus, Pulse, Shield, Spark } from "../icons";
 import { Avatar } from "../LyraMark";
 import { PinnedList } from "./Pinned";
+import { notices, type NoticeApp } from "../platform";
 
 type GoogleId = "gmail" | "calendar" | "drive";
-type ServiceId = GoogleId | "contacts" | "spotify";
+type ServiceId = GoogleId | "contacts" | "notices" | "spotify";
 type SpotifyState = Awaited<ReturnType<typeof api.spotifyState>>;
 
-const ICONS: Record<ServiceId, ReactNode> = { gmail: <Mail />, calendar: <Calendar />, drive: <File />, contacts: <People />, spotify: <Music /> };
+const ICONS: Record<ServiceId, ReactNode> = { gmail: <Mail />, calendar: <Calendar />, drive: <File />, contacts: <People />, notices: <Bell />, spotify: <Music /> };
 const NAMES: Record<GoogleId, string> = { gmail: "Gmail", calendar: "Google Calendar", drive: "Google Drive" };
-const SHORT: Record<ServiceId, string> = { gmail: "Mail", calendar: "Calendar", drive: "Files", contacts: "Contacts", spotify: "Spotify" };
+const SHORT: Record<ServiceId, string> = { gmail: "Mail", calendar: "Calendar", drive: "Files", contacts: "Contacts", notices: "Notifications", spotify: "Spotify" };
 const PROMISE: Record<GoogleId, string> = {
   gmail: "Lyra can now read your mail. It can't send, delete or change anything on its own.",
   calendar: "Lyra can now see your schedule. It can't add, change or answer events on its own.",
@@ -24,13 +25,21 @@ const PROMISE: Record<GoogleId, string> = {
 function abilities(id: ServiceId, state: AppState, spotify: SpotifyState | null): { yes: string[]; no: string[] } {
   switch (id) {
     case "gmail":
-      return { yes: ["Read and search your mail", ...(state.actions.email ? ["Write emails for you to check and send"] : [])], no: ["Send, delete or change anything on its own"] };
+      return {
+        yes: ["Read and search your mail", ...(state.actions.email ? ["Write emails for you to check and send"] : []), ...(state.actions.archive ? ["Archive mail you approve"] : [])],
+        no: ["Send, delete or change anything on its own"],
+      };
     case "calendar":
-      return { yes: ["See your schedule", ...(state.actions.event ? ["Suggest events you add with a tap"] : [])], no: ["Add, change or answer events on its own"] };
+      return { yes: ["See your schedule", ...(state.actions.event ? ["Add, move or answer events when you tap"] : [])], no: ["Add, change or answer events on its own"] };
     case "drive":
       return { yes: ["Find and read your files"], no: ["Change, share or delete them"] };
     case "contacts":
       return { yes: ["Look up one name when you mention someone"], no: ["Copy or upload your address book"] };
+    case "notices":
+      return {
+        yes: ["Read texts, chats and app alerts from the last two days", "Mention what's waiting when you ask or in a brief"],
+        no: ["Reply to, dismiss or open anything", "Keep them anywhere but this phone", "See sign-in codes (blanked out)"],
+      };
     case "spotify":
       return {
         yes: ["See what you play and your playlists", ...(spotify?.playback ? ["Play, pause and skip when you ask"] : []), ...(spotify?.playlists ? ["Make playlists you add with a tap"] : [])],
@@ -94,6 +103,7 @@ export function Access({ state, setState, toast }: { state: AppState; setState: 
       status: busy === c.id ? "Opening sign-in…" : c.state === "connected" ? "Reading" : c.state === "error" ? "Tap to reconnect" : c.state === "unavailable" ? "Phone app only" : "Not connected",
       tap: () => (c.state === "connected" || c.state === "unavailable" ? setOpen(c.id) : void connect(c.id)),
     })),
+    ...(state.notices !== null ? [{ id: "notices" as const, on: !!state.notices, status: state.notices ? "Reading" : "Off", tap: () => setOpen("notices") }] : []),
     ...(state.contacts !== null ? [{ id: "contacts" as const, on: !!state.contacts, status: state.contacts ? "On this phone" : "Off", tap: () => setOpen("contacts") }] : []),
     ...(spotify ? [{ id: "spotify" as const, on: spotify.connected, status: spotify.connected ? "Connected" : spotify.available ? "Not connected" : "Phone or Windows app", tap: () => setOpen("spotify") }] : []),
   ];
@@ -277,9 +287,13 @@ function ServiceSheet({
   };
 
   const can = abilities(id, state, spotify);
-  const on = id === "contacts" ? !!state.contacts : id === "spotify" ? !!spotify?.connected : google?.state === "connected";
+  const on = id === "notices" ? !!state.notices : id === "contacts" ? !!state.contacts : id === "spotify" ? !!spotify?.connected : google?.state === "connected";
   const sub =
-    id === "contacts"
+    id === "notices"
+      ? state.notices
+        ? "On this phone only"
+        : "Off"
+      : id === "contacts"
       ? "Your phone's contacts"
       : id === "spotify"
         ? spotify?.connected
@@ -317,6 +331,8 @@ function ServiceSheet({
             </div>
           ))}
         </div>
+
+        {id === "notices" && <NoticesPanel state={state} setState={setState} toast={toast} />}
 
         {id === "contacts" && (
           <div className="group lp-sheet-group">
@@ -451,12 +467,34 @@ function WithYourOk({
     {
       kind: "event",
       icon: <Calendar />,
-      title: "Add calendar events",
-      sub: linked("calendar") ? "Added only when you tap Add" : "Connect Calendar first",
+      title: "Calendar changes",
+      sub: linked("calendar") ? "Add, move or answer events, only when you tap" : "Connect Calendar first",
       ready: linked("calendar"),
       checked: state.actions.event,
       set: (on: boolean) => flip("event", () => api.allowActions("event", on), on ? "Lyra can add events with your OK" : "Add calendar events: off"),
     },
+    {
+      kind: "archive",
+      icon: <Inbox />,
+      title: "Tidy your inbox",
+      sub: linked("gmail") ? "Archives mail only when you tap Archive" : "Connect Mail first",
+      ready: linked("gmail"),
+      checked: state.actions.archive,
+      set: (on: boolean) => flip("archive", () => api.allowActions("archive", on), on ? "Lyra can tidy your inbox with your OK" : "Tidy your inbox: off"),
+    },
+    ...(state.actions.text !== null
+      ? [
+          {
+            kind: "text",
+            icon: <ChatIcon />,
+            title: "Write texts",
+            sub: "Opens Messages with the text ready; you send it",
+            ready: true,
+            checked: !!state.actions.text,
+            set: (on: boolean) => flip("text", () => api.allowActions("text", on), on ? "Lyra can write texts for you to send" : "Write texts: off"),
+          },
+        ]
+      : []),
     ...(spotify?.available || spotify?.connected
       ? [
           {
@@ -487,5 +525,107 @@ function WithYourOk({
         ))}
       </div>
     </section>
+  );
+}
+
+/**
+ * Reading the phone's notifications: Android turns it on (Notification access), Lyra can't.
+ * Off: what it means and a button to Android's page. On: which apps to leave out, and off.
+ */
+function NoticesPanel({ state, setState, toast }: { state: AppState; setState: (s: AppState) => void; toast: (m: string) => void }) {
+  const [apps, setApps] = useState<NoticeApp[] | null>(null);
+  const [asked, setAsked] = useState(false);
+  const loadApps = () => void notices.apps().then((a) => setApps(a.sort((x, y) => y.last - x.last)), () => setApps([]));
+  useEffect(() => {
+    if (state.notices) loadApps();
+  }, [state.notices]);
+  // back from Android settings: if access is on now, turn it on here
+  useEffect(() => {
+    if (!asked) return;
+    const back = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        if (await notices.access()) {
+          setState(await api.allowNotices(true));
+          toast("Lyra can read your notifications");
+          setAsked(false);
+        }
+      } catch (e) {
+        toast((e as Error).message);
+      }
+    };
+    document.addEventListener("visibilitychange", back);
+    return () => document.removeEventListener("visibilitychange", back);
+  }, [asked]);
+
+  if (!state.notices)
+    return (
+      <div className="lp-notice-setup">
+        <p className="hint">Android asks you to turn this on yourself: find <b>Lyra</b> on the next screen and switch it on, then come back.</p>
+        <button className="btn ink lp-wide" onClick={() => void notices.open().then(() => setAsked(true))}>
+          Turn on in Android settings
+        </button>
+        {asked && (
+          <p className="hint">
+            Greyed out, or Android says it's a restricted setting? Lyra was installed from a file, so Android wants one more step: open{" "}
+            <button className="link-btn inline" onClick={() => void notices.appInfo()}>
+              App info for Lyra
+            </button>
+            , tap ⋮ at the top, choose <b>Allow restricted settings</b>, then try again.
+          </p>
+        )}
+      </div>
+    );
+
+  return (
+    <>
+      {apps && apps.length > 0 && (
+        <>
+          <p className="sub-label lp-sub">Apps Lyra reads</p>
+          <div className="group lp-sheet-group lp-apps">
+            {apps.map((a) => (
+              <label className="item" key={a.pkg}>
+                <span className="body">
+                  <div className="title">{a.label}</div>
+                  <div className="sub">{a.blocked ? "Left out" : `${a.count} lately`}</div>
+                </span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  className="switch"
+                  checked={!a.blocked}
+                  onChange={async (e) => {
+                    await notices.block(a.pkg, !e.target.checked).catch((err) => toast((err as Error).message));
+                    loadApps();
+                  }}
+                />
+              </label>
+            ))}
+          </div>
+        </>
+      )}
+      {apps && !apps.length && <p className="hint">Nothing yet. New notifications show up here as they arrive, and you can leave any app out.</p>}
+      <div className="lp-sheet-row">
+        <button
+          className="btn quiet"
+          onClick={async () => {
+            await notices.clear().catch(() => {});
+            loadApps();
+            toast("Forgotten");
+          }}
+        >
+          Forget what's kept
+        </button>
+        <button
+          className="btn quiet lp-bad"
+          onClick={async () => {
+            setState(await api.allowNotices(false));
+            toast("Lyra won't read notifications. You can also turn access off in Android settings.");
+          }}
+        >
+          Turn off
+        </button>
+      </div>
+    </>
   );
 }

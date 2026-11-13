@@ -27,6 +27,10 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(ListenPlugin.class);
         // place reminders and leave-now nudges, once you allow location
         registerPlugin(PlacesPlugin.class);
+        // 0.45: reading the phone's notifications, once allowed in Android settings
+        registerPlugin(NoticesPlugin.class);
+        // 0.45: live progress while Lyra works on a task
+        registerPlugin(LivePlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

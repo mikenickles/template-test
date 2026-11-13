@@ -10,7 +10,9 @@ import { CHANNEL_ICONS, runTurn, type TurnEmitter, type TurnInbox, type Workspac
 import { createGmailServer, gmailProfile } from "./connectors/gmail/server.ts";
 import { createCalendarServer } from "./connectors/calendar/server.ts";
 import { createDriveServer } from "./connectors/drive/server.ts";
-import { CALENDAR_EVENTS, CALENDAR_READONLY, DRIVE_FILE, DRIVE_READONLY, GMAIL_COMPOSE, GMAIL_READONLY, grantIsAllowed, TokenSource, type GoogleAuth } from "./connectors/google.ts";
+import { googleGet } from "./connectors/google-http.ts";
+import { createPhoneServer, type NoticeSource } from "./connectors/phone/server.ts";
+import { CALENDAR_EVENTS, CALENDAR_READONLY, DRIVE_FILE, DRIVE_READONLY, GMAIL_COMPOSE, GMAIL_MODIFY, GMAIL_READONLY, grantIsAllowed, TokenSource, type GoogleAuth } from "./connectors/google.ts";
 import * as A from "./actions.ts";
 import * as P from "./people.ts";
 import * as D from "./docs.ts";
@@ -108,6 +110,10 @@ export interface Platform {
   provider?: ModelProvider;
   /** Signing in to services other than Google (Spotify): the browser and back. */
   oauth?: OAuthRedirect;
+  /** The phone's notifications, once the user allows Notification access in Android settings (0.45). */
+  notices?: NoticeSource & { access(): Promise<boolean> };
+  /** The phone's messaging app: opens a text ready to send (Android only). */
+  sms?: { compose(number: string, body: string): Promise<void> };
   /** The phone's address book (Android only), searched by name. */
   contacts?: {
     available: boolean;
@@ -143,9 +149,12 @@ export interface AppState {
   /** Heads-ups: Lyra checks in on its own and speaks up only when something needs you. */
   proactive: Proactive;
   /** Lyra may propose emails / calendar events (you approve each one). */
-  actions: { email: boolean; event: boolean };
+  /** email/event/archive: allowed on this device; text: null where there's no phone to text from */
+  actions: { email: boolean; event: boolean; archive: boolean; text: boolean | null };
   /** Phone contacts: on/off, or null where there are none (computer, browser). */
   contacts: boolean | null;
+  /** Reading the phone's notifications: on/off, or null where there are none (computer, browser). */
+  notices: boolean | null;
 }
 
 export const PROACTIVE_LEVELS = ["off", "light", "active"] as const;
@@ -234,13 +243,17 @@ export type GoogleId = "gmail" | "calendar" | "drive";
 
 const GOOGLE_LINKS = ["gmail", "calendar", "drive"];
 /** Settings that stay with a device when another device's data arrives through sync. */
-const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications", "actions.gmail", "actions.calendar", "contacts", "spotify", "spotify.playback", "spotify.playlists"];
+const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications", "actions.gmail", "actions.calendar", "actions.archive", "actions.text", "notices", "contacts", "spotify", "spotify.playback", "spotify.playlists"];
 
 /** Phase 9: what Lyra may propose, each turned on by the user in Connections. */
 const ACTION_ACCESS = {
   email: { link: "gmail" as GoogleId, setting: "actions.gmail", scope: GMAIL_COMPOSE, what: "draft and send mail" },
   event: { link: "calendar" as GoogleId, setting: "actions.calendar", scope: CALENDAR_EVENTS, what: "add calendar events" },
+  archive: { link: "gmail" as GoogleId, setting: "actions.archive", scope: GMAIL_MODIFY, what: "tidy your inbox" },
 };
+type GoogleAction = keyof typeof ACTION_ACCESS;
+/** Which permission each kind of card needs: moving and answering events use the calendar one. */
+const NEEDS: Record<"email" | "event" | "move" | "rsvp" | "archive", GoogleAction> = { email: "email", event: "event", move: "event", rsvp: "event", archive: "archive" };
 
 /** Lyra's Google connectors. Each asks for one read-only permission. */
 const GOOGLE: {
@@ -445,7 +458,43 @@ export class Lyra {
             const row = A.createAction(this.db, "playlist", { name, description: p.description, ...(p.playlistId ? { playlistId: p.playlistId } : {}), tracks }, tainted, channelId);
             return { id: row.id, summary: A.describeAction(row) };
           }
-          if (!this.actionsAllowed()[kind]) throw new Error(`You can't ${ACTION_ACCESS[kind].what} yet: the user can turn it on in Connections.`);
+          if (kind === "text") {
+            if (!this.actionsAllowed().text) throw new Error("Texting isn't available here: it works on the phone, and the user can turn it on in Connections.");
+            const row = A.createAction(this.db, "text", A.checkText(input), tainted, channelId);
+            return { id: row.id, summary: A.describeAction(row) };
+          }
+          if (!this.actionsAllowed()[kind]) throw new Error(`You can't ${ACTION_ACCESS[NEEDS[kind]].what} yet: the user can turn it on in Connections.`);
+          if (kind === "move" || kind === "rsvp") {
+            // the card shows the event as it really is on the calendar, not as the model described it
+            const e = await A.getEvent({ fetch: this.fetch }, this.tokenFor("calendar"), A.checkEventId(input.event_id));
+            const when = A.eventWhen(e, this.p.timeZone);
+            let payload: A.MoveDraft | A.RsvpDraft;
+            if (kind === "move") {
+              const others = (e.attendees ?? []).filter((a) => !a.self).length;
+              if (e.organizer && !e.organizer.self && others) throw new Error(`The user isn't the organizer of "${e.summary ?? "that event"}", so it can't be moved for everyone. Offer to email the organizer asking for a new time instead.`);
+              payload = { eventId: e.id, title: e.summary?.trim() || "(no title)", was: when, ...A.checkMove(input, e, this.p.timeZone), guests: others };
+            } else {
+              const r = A.checkRsvp(input);
+              if (!(e.attendees ?? []).some((a) => a.self)) throw new Error("The user isn't a guest on that event, so there's nothing to answer.");
+              payload = { eventId: e.id, title: e.summary?.trim() || "(no title)", when, organizer: e.organizer?.displayName || e.organizer?.email || "", response: r.response, note: r.note };
+            }
+            const row = A.createAction(this.db, kind, payload, tainted, channelId);
+            return { id: row.id, summary: A.describeAction(row, this.p.timeZone) };
+          }
+          if (kind === "archive") {
+            // subject and sender straight from Gmail, so the card lists exactly what will move
+            const g = googleGet("https://gmail.googleapis.com/gmail/v1/users/me", "Gmail", this.tokenFor("gmail"), this.fetch);
+            const threads: A.ArchiveDraft["threads"] = [];
+            for (const id of A.checkArchive(input)) {
+              const t = await g.json<{ messages?: { payload?: { headers?: { name: string; value: string }[] } }[] }>(`/threads/${id}`, { format: "metadata", metadataHeaders: ["Subject", "From"] }).catch(() => null);
+              const h = t?.messages?.[0]?.payload?.headers ?? [];
+              const v = (n: string) => h.find((x) => x.name.toLowerCase() === n.toLowerCase())?.value ?? "";
+              if (t?.messages?.length) threads.push({ id, subject: v("Subject").slice(0, 120) || "(no subject)", from: v("From").replace(/\s*<[^>]+>/, "").slice(0, 60) });
+            }
+            if (!threads.length) throw new Error("Gmail didn't find those threads.");
+            const row = A.createAction(this.db, "archive", { threads }, tainted, channelId);
+            return { id: row.id, summary: A.describeAction(row) };
+          }
           const payload = kind === "email" ? A.checkEmail(input) : A.checkEvent(input, this.p.timeZone);
           const row = A.createAction(this.db, kind, payload, tainted, channelId);
           return { id: row.id, summary: A.describeAction(row, this.p.timeZone) };
@@ -521,6 +570,26 @@ export class Lyra {
         connected: () => this.spotifyLinked,
         account: () => this.spotifyLink?.name,
         server: () => createSpotifyServer(this.spotify),
+      },
+      {
+        id: "phone",
+        label: "Phone",
+        access: "Can read your phone's notifications",
+        allow: ["recent_notifications"],
+        labels: { recent_notifications: "Checking your notifications" },
+        available: () => !!p.notices,
+        connected: () => getSetting(this.db, "notices") === "on",
+        account: () => undefined,
+        server: () =>
+          createPhoneServer(
+            {
+              recent: async (since) => {
+                if (!(await p.notices!.access())) throw new Error("Notification access is off in Android settings. Tell the user they can turn it back on from the Lyra page.");
+                return p.notices!.recent(since);
+              },
+            },
+            p.timeZone,
+          ),
       },
     ]);
     this.workers = new Workers({
@@ -656,26 +725,55 @@ export class Lyra {
       weatherPlace: this.weatherPlace,
       liveVoice: this.liveVoice,
       proactive: this.proactive,
-      actions: this.actionsAllowed(),
+      actions: (({ email, event, archive, text }) => ({ email, event, archive, text: this.p.sms ? text : null }))(this.actionsAllowed()),
       contacts: this.p.contacts?.available ? this.contactsOn : null,
+      notices: this.p.notices ? getSetting(this.db, "notices") === "on" : null,
     };
   }
 
   // ---------- actions: emails and events, done only on the user's tap ----------
 
-  private actionTokens = { email: undefined as TokenSource | undefined, event: undefined as TokenSource | undefined };
+  private actionTokens: Partial<Record<GoogleAction, TokenSource>> = {};
 
-  private actionToken(kind: "email" | "event"): TokenSource {
+  private actionToken(kind: GoogleAction): TokenSource {
     return (this.actionTokens[kind] ??= new TokenSource(this.p.google, [ACTION_ACCESS[kind].scope]));
   }
 
-  actionsAllowed(): { email: boolean; event: boolean; playlist: boolean } {
-    const on = (k: "email" | "event") => !!this.link(ACTION_ACCESS[k].link) && getSetting(this.db, ACTION_ACCESS[k].setting) === "on";
-    return { email: on("email"), event: on("event"), playlist: this.spotifyLinked && getSetting(this.db, "spotify.playlists") === "on" };
+  actionsAllowed(): { email: boolean; event: boolean; move: boolean; rsvp: boolean; archive: boolean; text: boolean; playlist: boolean } {
+    const on = (k: GoogleAction) => !!this.link(ACTION_ACCESS[k].link) && getSetting(this.db, ACTION_ACCESS[k].setting) === "on";
+    const event = on("event");
+    return {
+      email: on("email"),
+      event,
+      move: event,
+      rsvp: event,
+      archive: on("archive"),
+      // only opens the messaging app with the text ready: on by default on a phone
+      text: !!this.p.sms && getSetting(this.db, "actions.text") !== "off",
+      playlist: this.spotifyLinked && getSetting(this.db, "spotify.playlists") === "on",
+    };
   }
 
-  /** Turn on (asks Google for that one permission) or off. */
-  async allowActions(kind: "email" | "event", on: boolean): Promise<AppState> {
+  /**
+   * What Lyra is working on right now (0.45), for the live progress notification: each task
+   * being worked, Lyra's latest step on it, and how far through its checklist it is.
+   */
+  liveWork(): { id: number; title: string; note: string; done: number; total: number; since: number }[] {
+    return T.listTasks(this.db, { status: "working", limit: 5 }).map((t) => {
+      const last = this.db.get<{ text: string }>("SELECT text FROM task_log WHERE task_id = ? AND who != 'you' ORDER BY id DESC LIMIT 1", [t.id]);
+      const run = this.db.get<{ started_at: string }>("SELECT started_at FROM worker_runs WHERE task_id = ? ORDER BY id DESC LIMIT 1", [t.id]);
+      const since = run ? Date.parse(run.started_at.endsWith("Z") ? run.started_at : `${run.started_at.replace(" ", "T")}Z`) : Date.now();
+      return { id: t.id, title: t.title, note: (last?.text ?? "Getting started").replace(/^Result: /, "").slice(0, 200), done: t.steps_done, total: t.steps_total, since: Number.isNaN(since) ? Date.now() : since };
+    });
+  }
+
+  /** Turn on (asks Google for that one permission) or off. Texts need no permission: they open in Messages. */
+  async allowActions(kind: GoogleAction | "text", on: boolean): Promise<AppState> {
+    if (kind === "text") {
+      setSetting(this.db, "actions.text", on ? "on" : "off");
+      await this.db.flush();
+      return this.state();
+    }
     const a = ACTION_ACCESS[kind];
     if (on) {
       if (!this.link(a.link)) throw new Error(`Connect ${a.link === "gmail" ? "Mail" : "Calendar"} first.`);
@@ -920,7 +1018,6 @@ export class Lyra {
   /** Events with a place in the next few hours, for leave-now (needs Calendar). */
   async upcomingTrips(now = new Date(), hours = 6): Promise<PL.Trip[]> {
     if (!this.connectors.status().some((c) => c.id === "calendar" && c.state === "connected")) return [];
-    const { googleGet } = await import("./connectors/google-http.ts");
     const g = googleGet("https://www.googleapis.com/calendar/v3", "Google Calendar", this.tokenFor("calendar"), this.fetch);
     const r = await g.json<{ items?: { id: string; status?: string; summary?: string; location?: string; start?: { date?: string; dateTime?: string } }[] }>("/calendars/primary/events", {
       timeMin: now.toISOString(),
@@ -978,7 +1075,7 @@ export class Lyra {
    * The user's tap on a card: send / save as a draft / add to the calendar, or not now.
    * `edited` is the card's fields if the user changed them; they're checked again.
    */
-  async decideAction(id: number, choice: "send" | "draft" | "add" | "decline", edited?: Record<string, unknown>): Promise<A.ActionRow> {
+  async decideAction(id: number, choice: "send" | "draft" | "add" | "do" | "decline", edited?: Record<string, unknown>): Promise<A.ActionRow> {
     const a = A.getAction(this.db, id);
     if (!a) throw new Error("That's no longer here.");
     if (!A.claimAction(this.db, id)) throw new Error(a.status === "done" ? "That's already done." : a.status === "declined" ? "You said not now to that one." : "That's already being done.");
@@ -1000,13 +1097,37 @@ export class Lyra {
           this.listeners.forEach((l) => l({ type: "message", channelId: a.channel_id }));
           return A.getAction(this.db, id)!;
         }
-        const payload = edited ? (a.kind === "email" ? A.checkEmail(edited) : A.checkEvent(edited, this.p.timeZone)) : a.payload;
-        if (!this.actionsAllowed()[a.kind]) throw new Error(`Lyra isn't allowed to ${ACTION_ACCESS[a.kind].what} on ${this.p.google.available ? "this device" : "here"}. Turn it on in Connections, then try again.`);
-        const deps: A.ActionDeps = { fetch: this.fetch, compose: this.actionToken("email"), mailRead: this.tokenFor("gmail"), events: this.actionToken("event"), timeZone: this.p.timeZone };
+        if (a.kind === "text") {
+          // opens Messages with the text ready; the user sends it there (or doesn't)
+          if (!this.p.sms) throw new Error("Texts open in the phone's messaging app. Do this on your phone.");
+          const t = (edited ? A.checkText({ ...a.payload, ...edited }) : a.payload) as A.TextDraft;
+          await this.p.sms.compose(t.number, t.body);
+          A.finishAction(this.db, id, { status: "done", payload: t, result: { did: "opened", at: new Date().toISOString() } });
+          await this.db.flush();
+          this.listeners.forEach((l) => l({ type: "message", channelId: a.channel_id }));
+          return A.getAction(this.db, id)!;
+        }
+        const payload = edited && (a.kind === "email" || a.kind === "event") ? (a.kind === "email" ? A.checkEmail(edited) : A.checkEvent(edited, this.p.timeZone)) : a.payload;
+        const need = ACTION_ACCESS[NEEDS[a.kind]];
+        if (!this.actionsAllowed()[a.kind]) throw new Error(`Lyra isn't allowed to ${need.what} on ${this.p.google.available ? "this device" : "here"}. Turn it on in Connections, then try again.`);
+        const deps: A.ActionDeps = {
+          fetch: this.fetch,
+          compose: this.actionToken("email"),
+          mailRead: this.tokenFor("gmail"),
+          events: this.actionToken("event"),
+          modify: this.actionToken("archive"),
+          timeZone: this.p.timeZone,
+        };
         const result =
           a.kind === "email"
             ? await A.doEmail(deps, payload as A.EmailDraft, choice === "draft" ? "draft" : "send")
-            : await A.doEvent(deps, payload as A.EventDraft);
+            : a.kind === "move"
+              ? await A.doMove(deps, payload as A.MoveDraft)
+              : a.kind === "rsvp"
+                ? await A.doRsvp(deps, payload as A.RsvpDraft)
+                : a.kind === "archive"
+                  ? await A.doArchive(deps, payload as A.ArchiveDraft)
+                  : await A.doEvent(deps, payload as A.EventDraft);
         A.finishAction(this.db, id, { status: "done", payload, result });
       } catch (e) {
         A.finishAction(this.db, id, { status: "proposed", error: (e as Error).message.slice(0, 300) });
@@ -2049,6 +2170,31 @@ export class Lyra {
   /** The phone's contacts are on for this device (and the phone can). */
   get contactsOn(): boolean {
     return !!this.p.contacts?.available && getSetting(this.db, "contacts") === "on";
+  }
+
+  /**
+   * Reading notifications follows Android's Notification access: on once the user allows it
+   * there (Lyra can't turn it on itself), off when they turn it off here or there.
+   */
+  async allowNotices(on: boolean): Promise<AppState> {
+    if (on) {
+      if (!this.p.notices) throw new Error("Reading notifications works in the Android app.");
+      if (!(await this.p.notices.access())) throw new Error("NEEDS_ACCESS");
+    }
+    setSetting(this.db, "notices", on ? "on" : "off");
+    await this.db.flush();
+    return this.state();
+  }
+
+  /** On start and on coming back to Lyra: notice when access was turned on or off in Android settings. */
+  async syncNotices(): Promise<AppState> {
+    if (!this.p.notices) return this.state();
+    const access = await this.p.notices.access().catch(() => false);
+    const on = getSetting(this.db, "notices") === "on";
+    // allowed in Android settings and never turned off here: on. Taken away there: off.
+    if (access && !on && getSetting(this.db, "notices") !== "off") return this.allowNotices(true);
+    if (!access && on) return this.allowNotices(false);
+    return this.state();
   }
 
   async allowContacts(on: boolean): Promise<AppState> {

@@ -242,6 +242,24 @@ export const MIGRATIONS: string[] = [
    ALTER TABLE docs ADD COLUMN refreshed_at TEXT;`,
   // place reminders (geofences on the phone)
   PLACE_MIGRATION,
+  // 0.45: moving events, answering invitations, archiving mail and writing texts join the cards
+  `CREATE TABLE actions_next (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     kind TEXT NOT NULL CHECK (kind IN ('email','event','playlist','move','rsvp','archive','text')),
+     status TEXT NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed','working','done','declined')),
+     payload TEXT NOT NULL,
+     result TEXT,
+     error TEXT,
+     tainted INTEGER NOT NULL DEFAULT 0,
+     channel_id INTEGER REFERENCES channels(id) ON DELETE SET NULL,
+     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+     decided_at TEXT,
+     message_id INTEGER
+   );
+   INSERT INTO actions_next (id, kind, status, payload, result, error, tainted, channel_id, created_at, decided_at, message_id)
+     SELECT id, kind, status, payload, result, error, tainted, channel_id, created_at, decided_at, message_id FROM actions;
+   DROP TABLE actions;
+   ALTER TABLE actions_next RENAME TO actions;`,
 ];
 
 const FILE = "lyra.db";

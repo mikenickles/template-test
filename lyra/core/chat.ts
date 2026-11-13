@@ -114,8 +114,8 @@ export interface Workspace {
   contacts?: { find(name: string): Promise<string> };
   /** Emails and events Lyra proposes; the user approves each one on a card. */
   actions?: {
-    allowed(): { email: boolean; event: boolean; playlist?: boolean };
-    propose(kind: "email" | "event" | "playlist", input: Record<string, unknown>, tainted: boolean, channelId: number | null): Promise<{ id: number; summary: string }>;
+    allowed(): { email: boolean; event: boolean; playlist?: boolean; move?: boolean; rsvp?: boolean; archive?: boolean; text?: boolean };
+    propose(kind: "email" | "event" | "playlist" | "move" | "rsvp" | "archive" | "text", input: Record<string, unknown>, tainted: boolean, channelId: number | null): Promise<{ id: number; summary: string }>;
     /** recent proposals and what happened to them, one per line */
     recent(): string;
   };
@@ -308,7 +308,7 @@ function peopleTools(ws: Workspace): ToolDef[] {
 }
 
 /** Phase 9: proposing (never doing) an email or a calendar event. Only offered once the user has allowed it. */
-function actionTools(allowed: { email: boolean; event: boolean; playlist?: boolean } | undefined, music: boolean): ToolDef[] {
+function actionTools(allowed: ReturnType<NonNullable<Workspace["actions"]>["allowed"]> | undefined, music: boolean): ToolDef[] {
   const tools: ToolDef[] = [];
   if (music)
     tools.push({
@@ -372,8 +372,75 @@ function actionTools(allowed: { email: boolean; event: boolean; playlist?: boole
         required: ["title", "start"],
       },
     });
+  if (allowed?.move)
+    tools.push({
+      name: "propose_reschedule",
+      description:
+        "Move one of the user's calendar events to a new time, for them to approve (a card; nothing changes until they tap Move). Only events they organize; guests are told about the new time. Get the event_id from list_events, and check the new time is free first.",
+      schema: {
+        type: "object",
+        properties: {
+          event_id: { type: "string", description: "The event's id from list_events." },
+          start: { type: "string", description: "New start, the user's local time: YYYY-MM-DD HH:MM (or YYYY-MM-DD for all day)." },
+          end: { type: "string", description: "New end, same format. Leave out to keep the same length." },
+        },
+        required: ["event_id", "start"],
+      },
+    });
+  if (allowed?.rsvp)
+    tools.push({
+      name: "propose_rsvp",
+      description:
+        "Answer an invitation on the user's calendar (yes, no or maybe), for them to approve. It's a card; the organizer is told only after the user taps. Get the event_id from list_events. Only when the user asked to answer it.",
+      schema: {
+        type: "object",
+        properties: {
+          event_id: { type: "string", description: "The event's id from list_events." },
+          response: { type: "string", enum: ["yes", "no", "maybe"] },
+          note: { type: "string", description: "Optional short note to the organizer, in the user's voice." },
+        },
+        required: ["event_id", "response"],
+      },
+    });
+  if (allowed?.archive)
+    tools.push({
+      name: "propose_archive",
+      description:
+        "Archive email threads (out of the inbox; still in All Mail and search), for the user to approve. It's a card listing each one; nothing moves until they tap Archive. Good for clearing newsletters, receipts and done threads. Use thread ids from search_mail, up to 25.",
+      schema: {
+        type: "object",
+        properties: { thread_ids: { type: "array", items: { type: "string" }, description: "Thread ids from search_mail." } },
+        required: ["thread_ids"],
+      },
+    });
+  if (allowed?.text)
+    tools.push({
+      name: "propose_text",
+      description:
+        "Write a text message for the user to send. It's a card; tapping it opens their messaging app with the text ready, and they send it there. Get the number with find_contact (or use one the user gave). Write it in the user's voice, short like a real text.",
+      schema: {
+        type: "object",
+        properties: {
+          to: { type: "string", description: "Who it's for, by name." },
+          number: { type: "string", description: "Their phone number." },
+          body: { type: "string" },
+        },
+        required: ["number", "body"],
+      },
+    });
   return tools;
 }
+
+/** Tools that only make a card for the user's OK, and what kind of card. */
+const PROPOSALS: Record<string, { kind: "email" | "event" | "playlist" | "move" | "rsvp" | "archive" | "text"; label: string }> = {
+  propose_email: { kind: "email", label: "Email" },
+  propose_event: { kind: "event", label: "Event" },
+  propose_playlist: { kind: "playlist", label: "Playlist" },
+  propose_reschedule: { kind: "move", label: "New time" },
+  propose_rsvp: { kind: "rsvp", label: "Answer" },
+  propose_archive: { kind: "archive", label: "Inbox tidy" },
+  propose_text: { kind: "text", label: "Text" },
+};
 
 function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolDef[] {
   const notebooks = [MAIN, ...channels.map((c) => c.name)];
@@ -1120,7 +1187,7 @@ export async function runTurn(
           results.push({ type: "tool_result", id: call.id, name: call.name, content, isError: !ok });
           continue;
         }
-        if (call.name === "propose_email" || call.name === "propose_event" || call.name === "propose_playlist") {
+        if (PROPOSALS[call.name]) {
           // Only a proposal: the card shows exactly what happens, and nothing does until the user taps.
           // Allowed after reading mail (replying needs that), but the card warns the user to check it.
           let content: string;
@@ -1129,11 +1196,11 @@ export async function runTurn(
             if (actionIds.length >= 3) throw new Error("That's three for one reply. Let the user deal with these first.");
             const a = ctx.workspace.actions;
             if (!a) throw new Error("Not available.");
-            const kind = call.name === "propose_email" ? "email" : call.name === "propose_event" ? "event" : "playlist";
+            const { kind, label } = PROPOSALS[call.name];
             const r = await a.propose(kind, call.input, state.tainted, ctx.channel?.id ?? null);
             actionIds.push(r.id);
             ok = true;
-            emit.status(kind === "email" ? "Email ready for your OK" : kind === "event" ? "Event ready for your OK" : "Playlist ready for your OK");
+            emit.status(`${label} ready for your OK`);
             content = `Ready for the user's OK as a card under your reply (#${r.id}: ${r.summary}). It is NOT sent or added yet: say it's ready for them to check, never that it's done.`;
           } catch (e) {
             content = (e as Error).message;

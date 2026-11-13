@@ -7,7 +7,7 @@ import { googleGet } from "./connectors/google-http.ts";
 import { NeedsConsentError, type TokenSource } from "./connectors/google.ts";
 import { describeDue, localToDate } from "./reminders.ts";
 
-export type ActionKind = "email" | "event" | "playlist";
+export type ActionKind = "email" | "event" | "playlist" | "move" | "rsvp" | "archive" | "text";
 export type ActionStatus = "proposed" | "working" | "done" | "declined";
 
 export interface EmailDraft {
@@ -41,6 +41,76 @@ export interface PlaylistDraft {
   tracks: { uri: string; name: string; artist: string }[];
 }
 
+/** Move one of the user's events to a new time (they must be its organizer). */
+export interface MoveDraft {
+  eventId: string;
+  title: string;
+  /** when it was, as the card shows it */
+  was: string;
+  start: string;
+  end: string;
+  allDay: boolean;
+  /** how many other people are on it (they're told about the new time) */
+  guests: number;
+}
+
+/** Answer an invitation: yes, no or maybe, with an optional note to the organizer. */
+export interface RsvpDraft {
+  eventId: string;
+  title: string;
+  when: string;
+  organizer: string;
+  response: "accepted" | "declined" | "tentative";
+  note: string;
+}
+
+/** Archive email threads: out of the inbox, still in All Mail and search. */
+export interface ArchiveDraft {
+  threads: { id: string; subject: string; from: string }[];
+}
+
+/** A text message, opened in the phone's messaging app ready to send. The user sends it there. */
+export interface TextDraft {
+  to: string;
+  number: string;
+  body: string;
+}
+
+export type ActionPayload = EmailDraft | EventDraft | PlaylistDraft | MoveDraft | RsvpDraft | ArchiveDraft | TextDraft;
+
+const EVENT_ID = /^[a-zA-Z0-9_-]{5,1024}$/;
+const THREAD_ID = /^[0-9a-f]{6,32}$/i;
+const PHONE = /^\+?[0-9][0-9 ().-]{3,22}[0-9]$/;
+
+export function checkEventId(v: unknown): string {
+  const id = String(v ?? "").trim();
+  if (!EVENT_ID.test(id)) throw new Error("event_id must be an event's id from list_events.");
+  return id;
+}
+
+export function checkRsvp(input: Record<string, unknown>): { eventId: string; response: RsvpDraft["response"]; note: string } {
+  const r = String(input.response ?? "").toLowerCase();
+  const response = r === "yes" || r === "accepted" ? "accepted" : r === "no" || r === "declined" ? "declined" : r === "maybe" || r === "tentative" ? "tentative" : null;
+  if (!response) throw new Error('response must be "yes", "no" or "maybe".');
+  return { eventId: checkEventId(input.event_id), response, note: oneLine(input.note, 300) };
+}
+
+export function checkArchive(input: Record<string, unknown>): string[] {
+  const ids = [...new Set((Array.isArray(input.thread_ids) ? input.thread_ids : []).map((t) => String(t).trim()))];
+  if (!ids.length) throw new Error("Which emails? Give thread ids from search_mail.");
+  if (ids.length > 25) throw new Error("That's more than 25 threads. Keep it to 25.");
+  for (const id of ids) if (!THREAD_ID.test(id)) throw new Error(`"${id}" isn't a thread id from search_mail.`);
+  return ids;
+}
+
+export function checkText(input: Record<string, unknown>): TextDraft {
+  const number = oneLine(input.number, 30);
+  if (!PHONE.test(number)) throw new Error("Give the phone number to text (from find_contact, or what the user said).");
+  const body = String(input.body ?? "").replace(/\r\n?/g, "\n").trim().slice(0, 1000);
+  if (!body) throw new Error("The text is empty.");
+  return { to: oneLine(input.to, 80) || number, number, body };
+}
+
 const TRACK = /^spotify:track:[A-Za-z0-9]{22}$/;
 
 /** Checks what the model asked for; the songs' real names are filled in from Spotify after. */
@@ -67,7 +137,7 @@ export interface ActionRow {
   id: number;
   kind: ActionKind;
   status: ActionStatus;
-  payload: EmailDraft | EventDraft | PlaylistDraft;
+  payload: ActionPayload;
   result: ActionResult | null;
   /** the last attempt's error, shown on the card */
   error: string | null;
@@ -152,6 +222,23 @@ function toLocal(d: Date, timeZone?: string): string {
 
 /** One line for prompts and lists: what it is, not the whole text. */
 export function describeAction(a: Pick<ActionRow, "kind" | "payload">, timeZone?: string): string {
+  if (a.kind === "move") {
+    const m = a.payload as MoveDraft;
+    const to = m.allDay ? m.start : describeDue(localToDate(m.start, timeZone)!, timeZone);
+    return `Move "${m.title}" from ${m.was} to ${to}${m.guests ? ` (${m.guests} guests told)` : ""}`;
+  }
+  if (a.kind === "rsvp") {
+    const r = a.payload as RsvpDraft;
+    return `Answer ${r.response === "accepted" ? "yes" : r.response === "declined" ? "no" : "maybe"} to "${r.title}" (${r.when})`;
+  }
+  if (a.kind === "archive") {
+    const t = (a.payload as ArchiveDraft).threads;
+    return `Archive ${t.length} email${t.length === 1 ? "" : "s"}: ${t.slice(0, 3).map((x) => `"${x.subject}"`).join(", ")}${t.length > 3 ? "…" : ""}`;
+  }
+  if (a.kind === "text") {
+    const x = a.payload as TextDraft;
+    return `Text to ${x.to}: "${x.body.slice(0, 60)}${x.body.length > 60 ? "…" : ""}"`;
+  }
   if (a.kind === "playlist") {
     const p = a.payload as PlaylistDraft;
     return p.playlistId ? `Add ${p.tracks.length} songs to the playlist "${p.name}"` : `New playlist "${p.name}" with ${p.tracks.length} songs`;
@@ -182,7 +269,7 @@ interface Row {
 
 const parse = (r: Row): ActionRow => ({ ...r, payload: JSON.parse(r.payload), result: r.result ? JSON.parse(r.result) : null, tainted: !!r.tainted });
 
-export function createAction(db: DB, kind: ActionKind, payload: EmailDraft | EventDraft | PlaylistDraft, tainted: boolean, channelId: number | null): ActionRow {
+export function createAction(db: DB, kind: ActionKind, payload: ActionPayload, tainted: boolean, channelId: number | null): ActionRow {
   const r = db.run<Row>("INSERT INTO actions (kind, payload, tainted, channel_id) VALUES (?, ?, ?, ?) RETURNING *", [kind, JSON.stringify(payload), tainted ? 1 : 0, channelId])!;
   return parse(r);
 }
@@ -202,7 +289,7 @@ export function claimAction(db: DB, id: number): boolean {
   return !!db.run<{ id: number }>("UPDATE actions SET status = 'working', error = NULL WHERE id = ? AND status = 'proposed' RETURNING id", [id]);
 }
 
-export function finishAction(db: DB, id: number, outcome: { status: "done" | "declined" | "proposed"; payload?: EmailDraft | EventDraft | PlaylistDraft; result?: ActionResult; error?: string }): void {
+export function finishAction(db: DB, id: number, outcome: { status: "done" | "declined" | "proposed"; payload?: ActionPayload; result?: ActionResult; error?: string }): void {
   db.run("UPDATE actions SET status = ?, payload = COALESCE(?, payload), result = ?, error = ?, decided_at = ? WHERE id = ?", [
     outcome.status,
     outcome.payload ? JSON.stringify(outcome.payload) : null,
@@ -223,6 +310,8 @@ export interface ActionDeps {
   mailRead: TokenSource;
   /** calendar.events */
   events: TokenSource;
+  /** gmail.modify: archiving (only when the user turned "Tidy your inbox" on) */
+  modify?: TokenSource;
   timeZone?: string;
 }
 
@@ -261,8 +350,8 @@ async function bearer(t: TokenSource, what: string): Promise<string> {
   }
 }
 
-async function post(d: ActionDeps, url: string, token: TokenSource, what: string, body: unknown): Promise<Record<string, unknown>> {
-  const r = await d.fetch(url, { method: "POST", headers: { authorization: `Bearer ${await bearer(token, what)}`, "content-type": "application/json" }, body: JSON.stringify(body) });
+async function post(d: ActionDeps, url: string, token: TokenSource, what: string, body: unknown, method = "POST"): Promise<Record<string, unknown>> {
+  const r = await d.fetch(url, { method, headers: { authorization: `Bearer ${await bearer(token, what)}`, "content-type": "application/json" }, body: JSON.stringify(body) });
   const j = (await r.json().catch(() => ({}))) as Record<string, unknown> & { error?: { message?: string } };
   if (r.status === 401 || r.status === 403) {
     await token.invalidate();
@@ -332,4 +421,68 @@ export async function doPlaylist(
   }
   for (let i = 0; i < p.tracks.length; i += 100) await spotify.call("POST", `/playlists/${id}/tracks`, { uris: p.tracks.slice(i, i + 100).map((t) => t.uri) });
   return { did: p.playlistId && !p.made ? "added_songs" : "made", at: new Date().toISOString(), link: link?.startsWith("https://open.spotify.com/") ? link : `https://open.spotify.com/playlist/${id}` };
+}
+
+// ---------- more things to do with the user's OK: move, answer, archive, text ----------
+
+const CAL = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
+
+export interface CalendarEvent {
+  id: string;
+  summary?: string;
+  status?: string;
+  start?: { date?: string; dateTime?: string };
+  end?: { date?: string; dateTime?: string };
+  attendees?: { email?: string; displayName?: string; self?: boolean; responseStatus?: string; comment?: string; organizer?: boolean }[];
+  organizer?: { email?: string; displayName?: string; self?: boolean };
+}
+
+/** "Fri, Nov 14, 3:00 PM" or "Fri, Nov 14, all day", for cards and prompts. */
+export function eventWhen(e: CalendarEvent, timeZone?: string): string {
+  if (e.start?.date) return `${new Date(`${e.start.date}T12:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" })}, all day`;
+  if (!e.start?.dateTime) return "no time";
+  return describeDue(new Date(e.start.dateTime), timeZone);
+}
+
+/** The new time for a move; the length stays the same when no end is given. */
+export function checkMove(input: Record<string, unknown>, e: CalendarEvent, timeZone?: string, now = new Date()): Pick<MoveDraft, "start" | "end" | "allDay"> {
+  const start = oneLine(input.start, 20).replace("T", " ");
+  let end = oneLine(input.end, 20).replace("T", " ");
+  if (!end && !DAY.test(start) && e.start?.dateTime && e.end?.dateTime) {
+    const s = localToDate(start, timeZone);
+    if (s) end = toLocal(new Date(s.getTime() + (new Date(e.end.dateTime).getTime() - new Date(e.start.dateTime).getTime())), timeZone);
+  }
+  const v = checkEvent({ title: e.summary || "Event", start, end }, timeZone, now);
+  return { start: v.start, end: v.end, allDay: v.allDay };
+}
+
+export async function getEvent(d: Pick<ActionDeps, "fetch">, token: TokenSource, eventId: string): Promise<CalendarEvent> {
+  const e = await googleGet("https://www.googleapis.com/calendar/v3", "Calendar", token, d.fetch).json<CalendarEvent>(`/calendars/primary/events/${encodeURIComponent(eventId)}`, {});
+  if (!e?.id || e.status === "cancelled") throw new Error("That event isn't on the calendar anymore.");
+  return e;
+}
+
+export async function doMove(d: ActionDeps, m: MoveDraft): Promise<ActionResult> {
+  const tz = d.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const when = m.allDay
+    ? { start: { date: m.start, dateTime: null }, end: { date: nextDay(m.end), dateTime: null } }
+    : { start: { dateTime: localToDate(m.start, tz)!.toISOString(), timeZone: tz, date: null }, end: { dateTime: localToDate(m.end, tz)!.toISOString(), timeZone: tz, date: null } };
+  const r = await post(d, `${CAL}/${encodeURIComponent(m.eventId)}?sendUpdates=${m.guests ? "all" : "none"}`, d.events, "add calendar events", when, "PATCH");
+  return { did: "moved", at: new Date().toISOString(), link: typeof r.htmlLink === "string" && r.htmlLink.startsWith("https://") ? r.htmlLink : undefined };
+}
+
+export async function doRsvp(d: ActionDeps, v: RsvpDraft): Promise<ActionResult> {
+  // the guest list as it is now, with only the user's own answer changed
+  const e = await getEvent(d, d.events, v.eventId);
+  const attendees = e.attendees ?? [];
+  if (!attendees.some((a) => a.self)) throw new Error("You're not on that event's guest list anymore.");
+  const next = attendees.map((a) => (a.self ? { ...a, responseStatus: v.response, ...(v.note ? { comment: v.note } : {}) } : a));
+  const r = await post(d, `${CAL}/${encodeURIComponent(v.eventId)}?sendUpdates=all`, d.events, "add calendar events", { attendees: next }, "PATCH");
+  return { did: v.response, at: new Date().toISOString(), link: typeof r.htmlLink === "string" && r.htmlLink.startsWith("https://") ? r.htmlLink : undefined };
+}
+
+export async function doArchive(d: ActionDeps, a: ArchiveDraft): Promise<ActionResult> {
+  if (!d.modify) throw new Error("Lyra isn't allowed to tidy your inbox yet. Turn it on in Connections, then try again.");
+  for (const t of a.threads) await post(d, `${GMAIL}/threads/${t.id}/modify`, d.modify, "tidy your inbox", { removeLabelIds: ["INBOX"] });
+  return { did: "archived", at: new Date().toISOString() };
 }
