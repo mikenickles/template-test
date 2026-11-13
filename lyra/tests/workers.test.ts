@@ -80,7 +80,7 @@ describe("background workers", () => {
     const req = workerRequests[0];
     expect(req.system).toContain("Ages 6 to 8, 12 kids, park, 2 hours");
     expect(req.system).toContain("<memory>");
-    expect(req.tools.map((t) => t.name)).toEqual(["log_progress", "update_steps", "ask_user", "finish"]);
+    expect(req.tools.map((t) => t.name)).toEqual(["log_progress", "update_steps", "ask_user", "write_report", "finish"]);
     expect(lyra.workerRuns(1).map((r) => r.status)).toEqual(["finished"]);
   });
 

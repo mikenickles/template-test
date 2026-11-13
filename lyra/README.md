@@ -21,8 +21,8 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 | 12 | Polish: accent-colored app icon, fixes from testing | Planned |
 | 13 | Docs: documents Lyra writes for you, optionally in Google Docs | Done |
 | 14 | More connectors: Spotify first (more later), with approval cards for anything that writes | Done (Spotify) |
-| 15 | Research tasks: workers that read web pages and report back with sources | Next |
-| 16 | Inbox triage: a daily sort of your mail, replies drafted for your OK | Planned |
+| 15 | Research tasks: workers that read web pages and report back with sources | Done |
+| 16 | Inbox triage: a daily sort of your mail, replies drafted for your OK | Next |
 | 17 | Playbooks: procedures you teach once and run by name | Planned |
 | 18 | Feedback and learning: thumbs up/down, a monthly "what I've learned" | Planned |
 | 19 | Phone smarts: other apps' notifications, "leaving soon" nudges | Planned |
@@ -58,6 +58,12 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - Runs on the routine tick (`Lyra.tickHeadsUp`, `Routines.headsUp`), so like routines it runs on the phone when sync is on, never on the practice model, and not while Lyra is busy. What it said last time is passed to the next check so it doesn't repeat itself (settings `headsUpAt`, `headsUpLast`). Posts are tagged "Heads-up" and notify like a routine.
 - Heads-up and follow-up tokens show on the Usage page as their own kind of work ("proactive").
 - **Check-ins when it's quiet** (on with heads-ups, its own switch): when nothing needs you, Lyra asks for work like a colleague with a free afternoon. It offers one specific project grounded in your memory, mail, calendar and tasks, asks one question to know you better, or asks what it could take off your plate this week, with up to three replies to tap. About once a day on Light, up to twice on Active; only 9:00 to 20:00 and outside quiet hours; never while you're mid-conversation (2 hours), while something is waiting on you or a worker is running, or before you've answered the last one (gives up waiting after 3 days). Your answers go to memory; a yes gets started. Tap-replies are dropped if it read mail or the web. Recent check-ins are passed along so it doesn't repeat itself (`Lyra.tickCheckIn`, `checkInInstructions`, `meta.checkIn`, settings `checkInAt` / `checkInMessage` / `checkInRecent`). The Today view offers "What could you take on for me?" and "Ask me something" when nothing needs you.
+
+### Phase 15: research tasks
+
+- **Reading pages, not just search results.** With web search on, Lyra and its workers can also open pages in full: pages they found, or a link you paste ("summarize this article"). Each provider's own tool does it, so it works the same on the phone and Windows: Claude's `web_fetch` (`web_fetch_20260209` on current models, `web_fetch_20250910` on older ones; turned off for a model that refuses it), Gemini's URL context (dropped first if a model can't use it, before search), and OpenAI's web search, which opens pages itself. Pages read count as sources and as outside content.
+- **Research tasks.** When you want something researched properly ("compare strollers under $400", "what's known about X"), Lyra creates the task with `research` on (or switch on **Research it** when adding a task). The worker gets a research brief: break the question down, read three to eight good sources in full (primary ones first), note dates and disagreements, log progress, then `write_report`.
+- **Reports.** `write_report` saves a doc (any worker can use it for long results); Lyra appends the list of sources the worker actually read, from the provider's results, not from what the model says it read. The task page links the report, and the worker's message in chat carries a card to it. Research needs web search on.
 
 ### Phase 14: Spotify
 

@@ -633,6 +633,16 @@ try {
   await shot("light-28-status-channel");
   check(true, "channels show the status under the channel name");
 
+  // ---- a research task, added by hand ----
+  await page.goto(`${base}/#/tasks`);
+  await page.getByRole("button", { name: "New task" }).click();
+  await page.getByLabel("Title").fill("Compare compact strollers under $400");
+  await page.getByRole("switch", { name: /Research it/ }).check();
+  await shot("light-39-research");
+  await page.getByRole("button", { name: "Add task" }).click();
+  await page.locator(".research-tag").waitFor();
+  check(true, "a task can be a research task, marked as one");
+
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   check(!wide, "no sideways scrolling");
   check(errors.length === 0, `no page errors ${errors.join("; ")}`);

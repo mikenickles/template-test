@@ -32,6 +32,8 @@ export interface Task {
   done_at: string | null;
   /** put off ("Later"): out of Up next until this time */
   snoozed_until: string | null;
+  /** "research": the worker searches the web, reads sources in full, and writes a report */
+  kind: "task" | "research";
 }
 
 export interface TaskRow extends Task {
@@ -151,16 +153,18 @@ export interface NewTask {
   brief?: string;
   steps?: string[];
   channelId?: number | null;
+  kind?: "task" | "research";
 }
 
 export function createTask(db: DB, input: NewTask, who: Who): TaskRow {
   const title = oneLine(input.title ?? "", 120);
   if (!title) throw new Error("Give the task a title.");
   if (input.channelId != null && !db.get("SELECT id FROM channels WHERE id = ?", [input.channelId])) throw new Error("That channel no longer exists.");
-  const row = db.run<{ id: number }>("INSERT INTO tasks (title, brief, channel_id) VALUES (?, ?, ?) RETURNING id", [
+  const row = db.run<{ id: number }>("INSERT INTO tasks (title, brief, channel_id, kind) VALUES (?, ?, ?, ?) RETURNING id", [
     title,
     longText(input.brief ?? "", 4000),
     input.channelId ?? null,
+    input.kind === "research" ? "research" : "task",
   ])!;
   for (const s of (input.steps ?? []).slice(0, 30)) addStep(db, row.id, s, false);
   log(db, row.id, who, who === "you" ? "You added this task." : "Lyra added this task.");

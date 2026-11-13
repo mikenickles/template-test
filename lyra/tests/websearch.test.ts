@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AnthropicProvider, fromAnthropicContent, toAnthropicMessages, WEB_SEARCH_TOOL } from "../core/providers/anthropic.ts";
+import { AnthropicProvider, fromAnthropicContent, toAnthropicMessages, WEB_SEARCH_TOOL, webFetchTool } from "../core/providers/anthropic.ts";
 import { OpenAIResponsesProvider } from "../core/providers/openai-responses.ts";
 import type { GenerateResult, ModelProvider, Msg } from "../core/providers/types.ts";
 import { Lyra } from "../core/lyra.ts";
@@ -46,9 +46,43 @@ describe("Claude web search", () => {
     const p = new AnthropicProvider("sk-ant", "claude-haiku-5-5", fetchFn);
     await p.generate(req(true), () => {});
     await p.generate(req(false), () => {});
-    expect((bodies[0].tools as { name: string }[]).map((t) => t.name)).toEqual(["remember", "web_search"]);
+    expect((bodies[0].tools as { name: string }[]).map((t) => t.name)).toEqual(["remember", "web_search", "web_fetch"]);
     expect((bodies[0].tools as object[])[1]).toEqual(WEB_SEARCH_TOOL);
+    // reading whole pages comes with search: the older variant on this model
+    expect((bodies[0].tools as { type: string }[])[2].type).toBe("web_fetch_20250910");
+    expect(webFetchTool("claude-opus-5-5").type).toBe("web_fetch_20260209");
+    expect(webFetchTool("claude-fable-5-2").type).toBe("web_fetch_20260209");
     expect((bodies[1].tools as { name: string }[]).map((t) => t.name)).toEqual(["remember"]);
+  });
+
+  it("carries on without page reading if the model turns it down", async () => {
+    const bodies: Record<string, unknown>[] = [];
+    const fetchFn = (async (_u: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body));
+      bodies.push(body);
+      if ((body.tools as { name: string }[]).some((t) => t.name === "web_fetch"))
+        return new Response(JSON.stringify({ type: "error", error: { type: "invalid_request_error", message: "tools.2: web_fetch is not available for this model" } }), { status: 400, headers: { "content-type": "application/json" } });
+      return sse([
+        { type: "message_start", message: { id: "m", type: "message", role: "assistant", model: "x", content: [], stop_reason: null, usage: { input_tokens: 1, output_tokens: 0 } } },
+        { type: "message_delta", delta: { stop_reason: "end_turn" }, usage: { output_tokens: 1 } },
+        { type: "message_stop" },
+      ]);
+    }) as typeof fetch;
+    const p = new AnthropicProvider("sk-ant", "claude-old-model", fetchFn);
+    await p.generate(req(true), () => {});
+    await p.generate(req(true), () => {});
+    expect(bodies.map((b) => (b.tools as { name: string }[]).map((t) => t.name).join(","))).toEqual(["remember,web_search,web_fetch", "remember,web_search", "remember,web_search"]);
+  });
+
+  it("a page read in full is a source, and the turn counts as having read the web", () => {
+    const { sources, searched, parts } = fromAnthropicContent([
+      { type: "server_tool_use", id: "srv_2", name: "web_fetch", input: { url: "https://city.example/levy" } },
+      { type: "web_fetch_tool_result", tool_use_id: "srv_2", content: { type: "web_fetch_result", url: "https://city.example/levy", content: { type: "document", title: "Levy FAQ", source: { type: "text", media_type: "text/plain", data: "..." } } } },
+      { type: "text", text: "Here's the FAQ." },
+    ] as never);
+    expect(searched).toBe(true);
+    expect(sources).toEqual([{ url: "https://city.example/levy", title: "Levy FAQ" }]);
+    expect(parts.map((p) => p.type)).toEqual(["native", "native", "text"]);
   });
 
   it("collects sources, marks the answer as searched, and sends search blocks back unchanged", () => {

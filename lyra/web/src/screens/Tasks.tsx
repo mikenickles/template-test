@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { api, onChange, type Channel, type Task, type TaskDetail, type TaskStatus, type WorkerRun } from "../api";
-import { ChannelIcon, CheckCircle, Chevron, Close, Pencil, Plus, Search, Star, Stop, Trash } from "../icons";
+import { ChannelIcon, CheckCircle, Chevron, Close, File as FileIcon, Pencil, Plus, Search, Star, Stop, Trash } from "../icons";
 import { Thinking } from "../LyraMark";
 import { Markdown } from "../markdown";
 import { ScheduledSection } from "./Routines";
@@ -24,6 +24,7 @@ export function StatusText({ status }: { status: TaskStatus }) {
 
 function subline(t: Task): string {
   const bits: string[] = [];
+  if (t.kind === "research") bits.push("Research");
   if (t.channel_name) bits.push(t.channel_name);
   if (t.status === "ready" && t.needs) bits.push(t.needs);
   else if (t.steps_total) bits.push(`${t.steps_done} of ${t.steps_total} steps`);
@@ -351,6 +352,7 @@ function NewTaskDialog({
   const [title, setTitle] = useState("");
   const [brief, setBrief] = useState("");
   const [channelId, setChannelId] = useState<number | null>(null);
+  const [research, setResearch] = useState(false);
   const [busy, setBusy] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
 
@@ -377,7 +379,7 @@ function NewTaskDialog({
           if (!title.trim() || busy) return;
           setBusy(true);
           try {
-            const t = await api.createTask({ title, brief, channelId });
+            const t = await api.createTask({ title, brief, channelId, kind: research ? "research" : "task" });
             onCreated(t.id);
           } catch (err) {
             toast((err as Error).message);
@@ -404,6 +406,13 @@ function NewTaskDialog({
           placeholder="What does done look like? Any limits?"
           onChange={(e) => setBrief(e.target.value)}
         />
+        <label className="item research-pick">
+          <span className="body">
+            <div className="title">Research it</div>
+            <div className="sub">A worker searches the web, reads the best sources, and writes you a report with them.</div>
+          </span>
+          <input type="checkbox" role="switch" className="switch" checked={research} onChange={(e) => setResearch(e.target.checked)} />
+        </label>
         {channels.length > 0 && (
           <>
             <p className="field-label" style={{ marginTop: 20 }} id="nt-ch">
@@ -444,8 +453,10 @@ export function TaskPage({ id, toast, onCounts }: { id: number; toast: (m: strin
   const [busy, setBusy] = useState(false);
   const [activity, setActivity] = useState<string | undefined>();
   const [runs, setRuns] = useState<WorkerRun[]>([]);
+  const [report, setReport] = useState<{ id: number; title: string } | null>(null);
 
   const refresh = useCallback(() => {
+    api.taskReport(id).then(setReport, () => {});
     api.task(id).then(setD, (e) => {
       toast(e.message);
       location.hash = "#/tasks";
@@ -493,6 +504,7 @@ export function TaskPage({ id, toast, onCounts }: { id: number; toast: (m: strin
     <div className="screen task-page">
       <div className="task-meta">
         <StatusText status={task.status} />
+        {task.kind === "research" && <span className="research-tag">Research</span>}
         {task.channel_name && (
           <a className="pick on small" href={`#/c/${task.channel_id}`}>
             <ChannelIcon name={task.channel_icon ?? "star"} size={14} /> {task.channel_name}
@@ -552,6 +564,16 @@ export function TaskPage({ id, toast, onCounts }: { id: number; toast: (m: strin
             <Stop size={16} /> Stop
           </button>
         </div>
+      )}
+
+      {report && (
+        <a className="note task-note doc-note report-link" href={`#/d/${report.id}`}>
+          <FileIcon size={16} />
+          <span className="what">
+            <b>Report</b> · {report.title}
+          </span>
+          <Chevron size={16} className="chev" />
+        </a>
       )}
 
       {result && task.status !== "done" && (

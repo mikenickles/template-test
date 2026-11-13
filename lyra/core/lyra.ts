@@ -1063,6 +1063,12 @@ export class Lyra {
     return this.workers.runs(id);
   }
 
+  /** The report doc a task's worker wrote (Phase 15), if any. */
+  taskReport(id: number): { id: number; title: string } | null {
+    const d = D.reportFor(this.db, id);
+    return d ? { id: d.id, title: d.title } : null;
+  }
+
   taskActivity(id: number): string | undefined {
     return this.workers.isRunning(id) ? (this.workers.activity.get(id) ?? "Working") : undefined;
   }

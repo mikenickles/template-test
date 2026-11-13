@@ -6,6 +6,14 @@ type ABlock = Anthropic.ContentBlockParam;
 
 export const WEB_SEARCH_TOOL = { type: "web_search_20250305", name: "web_search", max_uses: 5 } as const;
 
+/** Phase 15: reading a whole page (only addresses already in the conversation: from search, or pasted). */
+export function webFetchTool(model: string) {
+  const current = /^claude-(fable|mythos|opus-5|opus-4-[678]|sonnet-5|sonnet-4-6)/.test(model);
+  return { type: current ? "web_fetch_20260209" : "web_fetch_20250910", name: "web_fetch", max_uses: 6, max_content_tokens: 24000 } as const;
+}
+/** Models that turned web fetch down: Lyra carries on without it. */
+const noFetch = new Set<string>();
+
 export function toAnthropicMessages(messages: Msg[]): AMessage[] {
   return messages
     .map((m) => ({
@@ -40,10 +48,14 @@ export function fromAnthropicContent(content: Anthropic.ContentBlock[]): { parts
       parts.push({ type: "text", text: b.text });
       for (const c of b.citations ?? []) if (c.type === "web_search_result_location") sources.push({ url: c.url, title: c.title ?? c.url });
     } else if (b.type === "tool_use") parts.push({ type: "tool_call", id: b.id, name: b.name, input: (b.input ?? {}) as Record<string, unknown> });
-    else if (b.type === "server_tool_use" || b.type === "web_search_tool_result") {
+    else if (b.type === "server_tool_use" || b.type === "web_search_tool_result" || (b.type as string) === "web_fetch_tool_result") {
       if (b.type === "server_tool_use") searched = true;
       if (b.type === "web_search_tool_result" && Array.isArray(b.content))
         for (const r of b.content) if (r.type === "web_search_result") sources.push({ url: r.url, title: r.title });
+      // a page read in full: it's a source too
+      const fetched = (b as { content?: { type?: string; url?: string; content?: { title?: string } } }).content;
+      if ((b.type as string) === "web_fetch_tool_result" && fetched?.type === "web_fetch_result" && fetched.url?.startsWith("http"))
+        sources.push({ url: fetched.url, title: fetched.content?.title || fetched.url });
       // keep only what the API accepts back as input
       const { caller: _caller, ...block } = b as typeof b & { caller?: unknown };
       parts.push({ type: "native", provider: "anthropic", block });
@@ -72,6 +84,21 @@ export class AnthropicProvider implements ModelProvider {
       input_schema: t.schema as Anthropic.Tool.InputSchema,
     }));
     if (req.webSearch) tools.push(WEB_SEARCH_TOOL as unknown as Anthropic.ToolUnion);
+    const fetchOn = !!req.webSearch && !noFetch.has(this.model);
+    if (fetchOn) tools.push(webFetchTool(this.model) as unknown as Anthropic.ToolUnion);
+    try {
+      return await this.run(req, onText, tools);
+    } catch (e) {
+      // an older model or account without web fetch: carry on with search only
+      if (fetchOn && /web_fetch/i.test(String((e as Error).message))) {
+        noFetch.add(this.model);
+        return this.run(req, onText, tools.filter((t) => (t as { name?: string }).name !== "web_fetch"));
+      }
+      throw e;
+    }
+  }
+
+  private async run(req: GenerateRequest, onText: (d: string) => void, tools: Anthropic.ToolUnion[]): Promise<GenerateResult> {
     const stream = this.client.messages.stream(
       {
         model: this.model,
@@ -85,7 +112,8 @@ export class AnthropicProvider implements ModelProvider {
     );
     stream.on("text", onText);
     stream.on("streamEvent", (ev) => {
-      if (ev.type === "content_block_start" && ev.content_block.type === "server_tool_use") req.onStatus?.("Searching the web");
+      if (ev.type === "content_block_start" && ev.content_block.type === "server_tool_use")
+        req.onStatus?.((ev.content_block as { name?: string }).name === "web_fetch" ? "Reading a page" : "Searching the web");
     });
     const msg = await stream.finalMessage();
     const { parts, sources, searched } = fromAnthropicContent(msg.content);

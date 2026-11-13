@@ -3,6 +3,8 @@ import { uniqueSources, type GenerateRequest, type GenerateResult, type ModelPro
 
 /** Models that refused Google Search next to Lyra's own tools; asked again without it. */
 const noSearch = new Set<string>();
+/** Models that can't read pages (URL context): search only. */
+const noUrl = new Set<string>();
 
 export function toGeminiContents(messages: Msg[]): Content[] {
   return messages
@@ -75,34 +77,42 @@ export class GeminiProvider implements ModelProvider {
 
   async generate(req: GenerateRequest, onText: (d: string) => void): Promise<GenerateResult> {
     const search = !!req.webSearch && !noSearch.has(this.model);
+    const url = search && !noUrl.has(this.model);
     let wrote = false;
+    const write = (d: string) => {
+      wrote = true;
+      onText(d);
+    };
     try {
-      return await this.run(
-        req,
-        (d) => {
-          wrote = true;
-          onText(d);
-        },
-        search,
-      );
+      return await this.run(req, write, search, url);
     } catch (e) {
-      // Some models can't mix Google Search with function tools: try once more without it.
       const err = e as { status?: number; message?: string };
-      if (search && !wrote && (err.status === 400 || /search|tool/i.test(err.message ?? ""))) {
-        noSearch.add(this.model);
-        return this.run(req, onText, false);
+      const toolTrouble = !wrote && (err.status === 400 || /search|tool|url/i.test(err.message ?? ""));
+      if (!toolTrouble || !search) throw e;
+      // Some models can't read pages (URL context), or can't mix Google Search with function tools:
+      // drop the page reading first, then search.
+      if (url) {
+        noUrl.add(this.model);
+        try {
+          return await this.run(req, write, true, false);
+        } catch {
+          /* fall through to no search */
+        }
       }
-      throw e;
+      noSearch.add(this.model);
+      return this.run(req, onText, false, false);
     }
   }
 
-  private async run(req: GenerateRequest, onText: (d: string) => void, search: boolean): Promise<GenerateResult> {
+  private async run(req: GenerateRequest, onText: (d: string) => void, search: boolean, url = false): Promise<GenerateResult> {
     const tools: Record<string, unknown>[] = [];
     if (req.tools.length)
       tools.push({
         functionDeclarations: req.tools.map((t) => ({ name: t.name, description: t.description, parametersJsonSchema: t.schema })),
       });
+    // with search, Gemini can also read pages it finds or that were pasted (URL context)
     if (search) tools.push({ googleSearch: {} });
+    if (url) tools.push({ urlContext: {} });
     const stream = await this.ai.models.generateContentStream({
       model: this.model,
       contents: toGeminiContents(req.messages),
@@ -125,6 +135,12 @@ export class GeminiProvider implements ModelProvider {
       const cand = chunk.candidates?.[0];
       const g = cand?.groundingMetadata;
       if (g?.webSearchQueries?.length) searched = true;
+      // pages read in full (URL context): sources too, and outside content
+      for (const u of (cand as { urlContextMetadata?: { urlMetadata?: { retrievedUrl?: string; urlRetrievalStatus?: string }[] } } | undefined)?.urlContextMetadata?.urlMetadata ?? [])
+        if (u.retrievedUrl?.startsWith("http") && u.urlRetrievalStatus !== "URL_RETRIEVAL_STATUS_ERROR") {
+          searched = true;
+          sources.push({ url: u.retrievedUrl, title: u.retrievedUrl });
+        }
       for (const c of g?.groundingChunks ?? []) if (c.web?.uri) sources.push({ url: c.web.uri, title: c.web.title || c.web.uri });
       for (const p of cand?.content?.parts ?? []) {
         all.push(p);

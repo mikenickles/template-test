@@ -307,6 +307,11 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
             description: "The written brief the worker starts from: the goal, what done looks like, limits (budget, dates), and everything relevant you already know.",
           },
           start: { type: "boolean", description: "Start a background worker on it now (default true). False just tracks it as Up next." },
+          research: {
+            type: "boolean",
+            description:
+              "A research question (compare options, find the best X, what's the latest on Y): the worker searches the web, reads the best sources in full, and writes a report doc with its sources. Needs web search on.",
+          },
           steps: { type: "array", items: { type: "string" }, description: "Optional checklist, a few short steps." },
           channel: {
             type: "string",
@@ -815,7 +820,8 @@ async function runTool(
           channelId = found.id;
         }
         const steps = Array.isArray(input.steps) ? input.steps.map(String) : [];
-        const t = createTask(ctx.db, { title: String(input.title ?? ""), brief: String(input.details ?? ""), steps, channelId }, "lyra");
+        if (input.research === true && !ctx.webSearch) return fail("Research needs web search, which is off. Ask the user to turn it on in Settings, AI model, Web.");
+        const t = createTask(ctx.db, { title: String(input.title ?? ""), brief: String(input.details ?? ""), steps, channelId, kind: input.research === true ? "research" : "task" }, "lyra");
         let started = "";
         if (input.start !== false && ctx.workspace.startTask) {
           try {

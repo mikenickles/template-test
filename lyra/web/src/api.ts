@@ -357,6 +357,7 @@ export const api = {
   stopTask: async (id: number) => (await ready).stopTask(id),
   workerRuns: async (id: number) => (await ready).workerRuns(id),
   taskActivity: async (id: number) => (await ready).taskActivity(id),
+  taskReport: async (id: number) => (await ready).taskReport(id),
   soul: async () => (await ready).soul(),
   saveSoul: async (content: string) => (await ready).saveSoul(content),
   resetSoul: async () => (await ready).resetSoul(),

@@ -189,6 +189,9 @@ export const MIGRATIONS: string[] = [
      SELECT id, kind, status, payload, result, error, tainted, channel_id, created_at, decided_at, message_id FROM actions;
    DROP TABLE actions;
    ALTER TABLE actions_next RENAME TO actions;`,
+  // Phase 15: research tasks, and the report doc a task's worker wrote
+  `ALTER TABLE tasks ADD COLUMN kind TEXT NOT NULL DEFAULT 'task';
+   ALTER TABLE docs ADD COLUMN task_id INTEGER;`,
 ];
 
 const FILE = "lyra.db";

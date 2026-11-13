@@ -14,6 +14,8 @@ export interface Doc {
   /** the Google Doc it was saved to, if any */
   gdoc_id: string | null;
   gdoc_link: string | null;
+  /** the task whose worker wrote it (a report) */
+  task_id: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -35,14 +37,14 @@ export function getDoc(db: DB, id: number): Doc | undefined {
   return r && parse(r);
 }
 
-export function createDoc(db: DB, input: { title: unknown; body: unknown; channelId?: number | null; tainted?: boolean }): Doc {
+export function createDoc(db: DB, input: { title: unknown; body: unknown; channelId?: number | null; tainted?: boolean; taskId?: number | null }): Doc {
   const t = title(input.title);
   if (!t) throw new Error("Give the doc a title.");
   const body = String(input.body ?? "").replace(/\r\n?/g, "\n").trim();
   if (!body) throw new Error("The doc is empty.");
   if (body.length > MAX_BODY) throw new Error("That's too long for one doc. Split it in two.");
   if (db.get<{ n: number }>("SELECT COUNT(*) AS n FROM docs")!.n >= 1000) throw new Error("There are already 1,000 docs. Delete some first.");
-  const r = db.run<Row>("INSERT INTO docs (title, body, channel_id, tainted) VALUES (?, ?, ?, ?) RETURNING *", [t, body, input.channelId ?? null, input.tainted ? 1 : 0])!;
+  const r = db.run<Row>("INSERT INTO docs (title, body, channel_id, tainted, task_id) VALUES (?, ?, ?, ?, ?) RETURNING *", [t, body, input.channelId ?? null, input.tainted ? 1 : 0, input.taskId ?? null])!;
   return parse(r);
 }
 
@@ -106,4 +108,10 @@ export async function saveToGoogleDocs(d: Doc, tokens: TokenSource, fetchFn: typ
   if (!r.ok) throw new Error(`Google said ${r.status}.`);
   const j = (await r.json()) as { id: string; webViewLink?: string };
   return { id: j.id, link: j.webViewLink && j.webViewLink.startsWith("https://") ? j.webViewLink : `https://docs.google.com/document/d/${j.id}/edit` };
+}
+
+/** The report a task's worker wrote, if any (the newest). */
+export function reportFor(db: DB, taskId: number): Doc | undefined {
+  const r = db.get<Row>("SELECT * FROM docs WHERE task_id = ? ORDER BY id DESC LIMIT 1", [taskId]);
+  return r && parse(r);
 }
