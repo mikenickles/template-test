@@ -20,8 +20,8 @@ export interface Dashboard {
 
 const one = (s: unknown, max: number) => String(s ?? "").replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 const num = (v: unknown) => {
-  // "$1,200.50" reads as 1200.5; text with no digits ("n/a") isn't a number, not 0
-  const n = typeof v === "number" ? v : typeof v === "string" && /\d/.test(v) ? Number(v.replace(/[^0-9.\-]/g, "")) : NaN;
+  // "$1,200.50" and "45%" read as numbers; anything else ("n/a", "3.2K", "5 of 10") isn't one, and is left out rather than guessed
+  const n = typeof v === "number" ? v : typeof v === "string" && /^\s*-?\s*[$€£¥₹]?\s*-?\d[\d,]*(\.\d+)?\s*%?\s*$/.test(v) ? Number(v.replace(/[^0-9.\-]/g, "")) : NaN;
   return Number.isFinite(n) && Math.abs(n) < 1e12 ? n : null;
 };
 const arr = (v: unknown, max: number) => (Array.isArray(v) ? v.slice(0, max) : []);
@@ -61,9 +61,10 @@ export function checkDashboard(input: unknown): Dashboard {
         break;
       }
       case "table": {
-        const columns = arr(b.columns, 6).map((c) => one(c, 30)).filter(Boolean);
+        // a blank header is fine (the first column of a table often has none); all blank isn't a table
+        const columns = arr(b.columns, 6).map((c) => one(c, 30));
         const rows = arr(b.rows, 50).map((r) => arr(r, columns.length).map((c) => one(c, 80)));
-        if (columns.length && rows.length) blocks.push({ type: "table", title, columns, rows: rows.map((r) => [...r, ...Array(columns.length - r.length).fill("")]) });
+        if (columns.some(Boolean) && rows.length) blocks.push({ type: "table", title, columns, rows: rows.map((r) => [...r, ...Array(columns.length - r.length).fill("")]) });
         break;
       }
       case "list": {

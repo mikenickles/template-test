@@ -191,8 +191,11 @@ function Line({ b }: { b: Extract<Block, { type: "line" }> }) {
   }, [table]);
 
   const values = b.points.map((p) => p.value);
-  const hi = niceScale(Math.max(...values, 0));
-  const lo = Math.min(...values) < 0 ? -niceScale(-Math.min(...values)).top : 0;
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  // nothing above zero: the axis ends at zero (all negative), or at 1 (all zeros), not at a made-up 1,000
+  const hi = max > 0 ? niceScale(max) : { top: min < 0 ? 0 : 1, ticks: [0, 1] };
+  const lo = min < 0 ? -niceScale(-min).top : 0;
   const ticks = lo < 0 ? [lo, 0, hi.top] : hi.ticks;
   const plotW = w - LEFT - RIGHT;
   const plotH = H - TOP - BOTTOM;

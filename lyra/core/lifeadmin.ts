@@ -135,11 +135,16 @@ export function setStatus(db: DB, id: number, status: AdminItem["status"]): Admi
 /** Housekeeping: subscriptions roll to their next renewal; old packages, trips, returns and paid-looking bills drop off. */
 export function tidyItems(db: DB, today: string): void {
   for (const s of db.all<AdminItem>("SELECT * FROM admin_items WHERE kind = 'subscription' AND status = 'open' AND due_on IS NOT NULL AND due_on < ?", [today])) {
-    let d = new Date(`${s.due_on}T12:00:00Z`);
-    for (let n = 0; n < 60 && d.toISOString().slice(0, 10) < today; n++) {
-      if (s.every === "week") d = new Date(d.getTime() + 7 * 86_400_000);
-      else if (s.every === "year") d.setUTCFullYear(d.getUTCFullYear() + 1);
-      else d.setUTCMonth(d.getUTCMonth() + 1);
+    const first = new Date(`${s.due_on}T12:00:00Z`);
+    let d = first;
+    // months are counted from the first date, so the 31st becomes Feb 28 and then Mar 31 again (not Mar 3)
+    for (let n = 1; n <= 60 && d.toISOString().slice(0, 10) < today; n++) {
+      if (s.every === "week") d = new Date(first.getTime() + n * 7 * 86_400_000);
+      else {
+        const months = s.every === "year" ? n * 12 : n;
+        d = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + months, 1, 12));
+        d.setUTCDate(Math.min(first.getUTCDate(), new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate()));
+      }
     }
     db.run("UPDATE admin_items SET due_on = ?, notified = NULL WHERE id = ?", [d.toISOString().slice(0, 10), s.id]);
   }

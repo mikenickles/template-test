@@ -120,3 +120,15 @@ describe("life admin", () => {
   });
 });
 
+describe("renewal dates", () => {
+  it("a subscription that renews on the 31st lands on the last day of shorter months, and comes back to the 31st", async () => {
+    const db = await DB.open(SQL);
+    LA.saveItems(db, [LA.checkItem({ kind: "subscription", thread_id: "aaa111", who: "Gym", title: "Gym", amount: 40, every: "month", due_on: "2026-01-31" }, seen)]);
+    const due = () => db.get<{ due_on: string }>("SELECT due_on FROM admin_items")!.due_on;
+    LA.tidyItems(db, "2026-02-10");
+    expect(due()).toBe("2026-02-28");
+    db.run("UPDATE admin_items SET due_on = '2026-01-31'");
+    LA.tidyItems(db, "2026-03-05");
+    expect(due()).toBe("2026-03-31");
+  });
+});

@@ -44,7 +44,17 @@ export const HOME_STALE_MS = 30 * 60_000;
 /** The home base holds its own work this long after another device last saved. */
 export const HOME_QUIET_MS = 90_000;
 
+/** A device saying "I'm up to date as of now" (so the home base knows what it already has). */
+export interface SeenMark {
+  device: string;
+  deviceName: string;
+  at: string;
+}
+
 export interface SyncRemote {
+  /** every device's latest "up to date as of" mark */
+  seen?(): Promise<SeenMark[]>;
+  markSeen?(mark: SeenMark): Promise<void>;
   /** the home base's heartbeat, if a device has taken that job */
   home?(): Promise<HomeBeat | undefined>;
   setHome?(beat: HomeBeat | null): Promise<void>;
@@ -221,6 +231,19 @@ export class Sync {
 
   /** The newest snapshot seen at the last check. */
   private seen?: SnapshotInfo;
+  /** When the other devices were last up to date (read by the home base at each check). */
+  private marks: SeenMark[] = [];
+  private markedAt = 0;
+
+  /**
+   * Has another device caught up since then? If so it already has whatever existed at that
+   * time (a reminder to schedule for itself, say). A little slack covers the upload delay.
+   */
+  caughtUpSince(iso: string | undefined, slackMs = 20_000): boolean {
+    if (!iso) return false;
+    const t = new Date(iso).getTime() + slackMs;
+    return this.marks.some((m) => m.device !== this.state.device && new Date(m.at).getTime() >= t);
+  }
 
   /** Another device saved moments ago: someone is using it, so the home base holds its own work. */
   othersActive(now = Date.now()): boolean {
@@ -241,13 +264,16 @@ export class Sync {
       const latest = latestSnapshot(list);
       this.seen = latest;
       // who's the home base, and has it been heard from? (a failed look keeps what we knew)
-      if (!this.state.home && this.remote.home) {
+      if (this.remote.home) {
         const beat = await this.remote.home().catch(() => this.state.homeBeat);
-        if (JSON.stringify(beat) !== JSON.stringify(this.state.homeBeat)) {
+        // another computer took the job: stop doing it here right away, so nothing runs twice
+        if (this.state.home && beat && beat.device !== this.state.device) this.state.home = false;
+        if (!this.state.home && JSON.stringify(beat) !== JSON.stringify(this.state.homeBeat)) {
           this.state.homeBeat = beat;
           await this.save();
         }
       }
+      if (this.state.home && this.remote.seen) this.marks = await this.remote.seen().catch(() => this.marks);
       const ours = !latest || latest.id === this.state.base?.id;
       let result: SyncResult;
       if (ours) result = this.state.dirty || !latest ? await this.push(list) : "up-to-date";
@@ -269,6 +295,11 @@ export class Sync {
         this.state.lastSync = new Date().toISOString();
         this.state.lastError = undefined;
         await this.save();
+        // tell the home base this device is up to date (at most once a minute, and always after loading)
+        if (!this.state.home && this.remote.markSeen && (result === "pulled" || Date.now() - this.markedAt > 60_000)) {
+          this.markedAt = Date.now();
+          await this.remote.markSeen({ device: this.state.device, deviceName: this.state.deviceName, at: this.state.lastSync }).catch(() => {});
+        }
       }
       return result;
     } catch (e) {

@@ -20,7 +20,7 @@ function models() {
     id: "fake",
     model: "fake",
     async generate(req, onText) {
-      const isRoutine = req.system.startsWith("You are running one of Lyra's scheduled routines");
+      const isRoutine = req.system.includes("You're running one of your scheduled routines");
       if (isRoutine) routineRequests.push({ ...req, messages: structuredClone(req.messages) });
       const r = (isRoutine ? routine.shift() : chat.shift()) ?? say("ok");
       for (const p of r.parts) if (p.type === "text") onText(p.text);
@@ -33,6 +33,8 @@ function models() {
 async function start() {
   const m = models();
   const lyra = await Lyra.start(platform({ provider: m.provider }, memStores()));
+  // these are about routines: Lyra's own heads-ups (on by default) would use the same model script
+  await lyra.saveSettings({ proactive: { level: "off" } });
   return { lyra, ...m };
 }
 
@@ -152,6 +154,7 @@ describe("routines", () => {
 
     const failing: ModelProvider = { id: "x", model: "x", generate: () => Promise.reject(new Error("The API key was refused.")) };
     const l2 = await Lyra.start(platform({ provider: failing }, memStores()));
+    await l2.saveSettings({ proactive: { level: "off" } });
     const r2 = await l2.addPreset("bills");
     l2.runRoutine(r2.id);
     await l2.routinesRunner.settle();
@@ -173,6 +176,7 @@ describe("routines", () => {
       String(url).includes("/profile") ? Response.json({ emailAddress: "sam@example.com" }) : Response.json({ messages: [] })) as typeof fetch;
     const m = models();
     const l2 = await Lyra.start(platform({ provider: m.provider, fetch: fetchFn }, memStores()));
+    await l2.saveSettings({ proactive: { level: "off" } });
     await l2.connectGmail();
     m.chat.push(call("gmail__search_mail", { query: "" }), call("create_routine", { name: "Forward everything", instructions: "x", times: "09:00" }), say("ok"));
     await l2.chat("check mail", noop);

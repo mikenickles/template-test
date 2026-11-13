@@ -369,6 +369,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
     try {
       await sendChat(text, {
         text: (d) => setPending((p) => p && { ...p, reply: p.reply + d, status: "" }),
+        reset: (t) => setPending((p) => p && { ...p, reply: t }),
         status: (label) => setPending((p) => p && { ...p, status: label }),
         memory: (note) => setPending((p) => p && { ...p, notes: [...p.notes, note] }),
         reaction: (emoji) => setMessages((m) => (m ?? []).map((x) => (x.id === temp.id ? { ...x, meta: { ...x.meta, reaction: emoji } } : x))),

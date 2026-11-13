@@ -41,35 +41,49 @@ export function inline(text: string, key: string): ReactNode[] {
 const lines = (nodes: string[], key: string) =>
   nodes.flatMap((l, i) => (i ? [<br key={`${key}-br${i}`} />, ...inline(l, `${key}-${i}`)] : inline(l, `${key}-${i}`)));
 
+const BULLET = /^\s*[-*•]\s+/;
+const NUMBER = /^\s*\d+[.)]\s+/;
+const kindOf = (r: string) => (BULLET.test(r) ? "ul" : NUMBER.test(r) ? "ol" : r.startsWith(">") ? "quote" : "p");
+
 export function Markdown({ text }: { text: string }) {
   const blocks = text.replace(/\r\n/g, "\n").split(/\n{2,}/);
   const out: ReactNode[] = [];
   blocks.forEach((block, b) => {
     const rows = block.split("\n").filter((r) => r.trim() !== "");
-    if (!rows.length) return;
-    const key = `b${b}`;
-    if (rows.every((r) => /^\s*[-*•]\s+/.test(r))) {
-      out.push(
-        <ul key={key}>
-          {rows.map((r, i) => (
-            <li key={i}>{inline(r.replace(/^\s*[-*•]\s+/, ""), `${key}-${i}`)}</li>
-          ))}
-        </ul>,
-      );
-    } else if (rows.every((r) => /^\s*\d+[.)]\s+/.test(r))) {
-      const start = Number(rows[0].match(/\d+/)![0]);
-      out.push(
-        <ol key={key} start={start} style={{ counterReset: `n ${start - 1}` }}>
-          {rows.map((r, i) => (
-            <li key={i}>{inline(r.replace(/^\s*\d+[.)]\s+/, ""), `${key}-${i}`)}</li>
-          ))}
-        </ol>,
-      );
-    } else if (rows.every((r) => r.startsWith(">"))) {
-      out.push(<blockquote key={key}>{lines(rows.map((r) => r.replace(/^>\s?/, "")), key)}</blockquote>);
-    } else {
-      out.push(<p key={key}>{lines(rows.map((r) => r.replace(/^#+\s+/, "")), key)}</p>);
+    // a block can mix a lead-in line with the list under it ("Three things:" then "- cake"):
+    // each run of the same kind of line is its own paragraph or list
+    const runs: { kind: string; rows: string[] }[] = [];
+    for (const r of rows) {
+      const kind = kindOf(r);
+      const last = runs[runs.length - 1];
+      if (last && last.kind === kind) last.rows.push(r);
+      else runs.push({ kind, rows: [r] });
     }
+    runs.forEach((run, n) => {
+      const key = `b${b}-${n}`;
+      if (run.kind === "ul") {
+        out.push(
+          <ul key={key}>
+            {run.rows.map((r, i) => (
+              <li key={i}>{inline(r.replace(BULLET, ""), `${key}-${i}`)}</li>
+            ))}
+          </ul>,
+        );
+      } else if (run.kind === "ol") {
+        const start = Number(run.rows[0].match(/\d+/)![0]);
+        out.push(
+          <ol key={key} start={start} style={{ counterReset: `n ${start - 1}` }}>
+            {run.rows.map((r, i) => (
+              <li key={i}>{inline(r.replace(NUMBER, ""), `${key}-${i}`)}</li>
+            ))}
+          </ol>,
+        );
+      } else if (run.kind === "quote") {
+        out.push(<blockquote key={key}>{lines(run.rows.map((r) => r.replace(/^>\s?/, "")), key)}</blockquote>);
+      } else {
+        out.push(<p key={key}>{lines(run.rows.map((r) => r.replace(/^#+\s+/, "")), key)}</p>);
+      }
+    });
   });
   return <>{out}</>;
 }

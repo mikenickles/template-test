@@ -33,7 +33,7 @@ export interface WorkerRun {
   ended_at: string | null;
 }
 
-export type WorkerEvent = { type: "task"; taskId: number } | { type: "message"; channelId: number | null };
+export type WorkerEvent = { type: "task"; taskId: number } | { type: "message"; channelId: number | null; notify?: { title: string; body: string } };
 
 export interface WorkerDeps {
   db: DB;
@@ -266,7 +266,7 @@ export class Workers {
   }
 
   /** Post the worker's news to the chat the task came from. */
-  private report(task: TaskRow, text: string) {
+  private report(task: TaskRow, text: string, tell = false) {
     const channelId = task.channel_id && getChannel(this.d.db, task.channel_id) ? task.channel_id : null;
     const fresh = getTask(this.d.db, task.id)!;
     const sources = uniqueSources(this.sources.get(task.id) ?? []).slice(0, 8);
@@ -283,7 +283,8 @@ export class Workers {
       },
       channelId,
     );
-    this.d.onEvent({ type: "message", channelId });
+    // a task that finishes turns "Ready for you", which is announced on its own; one that stopped isn't
+    this.d.onEvent({ type: "message", channelId, ...(tell ? { notify: { title: "Lyra", body: text.split("\n")[0].slice(0, 160) } } : {}) });
   }
 
   private async loop(runId: number, taskId: number, transcript: Msg[], signal: AbortSignal): Promise<void> {
@@ -306,7 +307,7 @@ export class Workers {
         if (steps >= MAX_WORKER_STEPS) {
           updateTask(db, taskId, { status: "ready", needs: "I hit my step limit. Should I keep going?" }, "worker");
           this.end(runId, "waiting");
-          this.report(task, `I paused work on “${task.title}” after ${steps} steps. Want me to keep going?`);
+          this.report(task, `I paused work on “${task.title}” after ${steps} steps. Want me to keep going?`, true);
           return;
         }
         const stepsText = detail.steps.map((s, i) => `${i + 1}. [${s.done ? "x" : " "}] ${s.text}`).join("\n");
@@ -362,7 +363,7 @@ export class Workers {
         if (!stopped) {
           const why = (e as Error).message?.slice(0, 200) || "something went wrong";
           log(db, taskId, "worker", `Stopped: ${why}`);
-          this.report(getTask(db, taskId)!, `I had to stop work on “${getTask(db, taskId)!.title}”: ${why}`);
+          this.report(getTask(db, taskId)!, `I had to stop work on “${getTask(db, taskId)!.title}”: ${why}`, true);
         }
       }
     }

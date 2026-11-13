@@ -298,7 +298,9 @@ export class DB {
   /** Run a statement that changes data. Returns RETURNING rows, if any. */
   run<T = unknown>(sql: string, params: SqlValue[] = []): T | undefined {
     const row = this.get<T>(sql, params);
-    this.changed();
+    // An UPDATE or DELETE that matched nothing changed nothing: don't save, and don't tell sync there's
+    // something new (a once-a-minute tidy-up would otherwise upload a fresh copy every minute).
+    if (!/^\s*(update|delete)\b/i.test(sql) || this.db.getRowsModified() > 0) this.changed();
     return row;
   }
 
@@ -402,6 +404,8 @@ export interface MessageMeta {
   triage?: import("./triage.ts").Triage;
   /** Docs written or updated in this reply. */
   docs?: { id: number; title: string; created: boolean; kind?: "doc" | "dashboard" }[];
+  /** this post reached a phone by push (set on the home base) */
+  pushed?: boolean;
   /** People cards added or updated in this reply. */
   people?: { id: number; name: string; created: boolean }[];
   /** Posted by a heads-up check Lyra ran on its own. */

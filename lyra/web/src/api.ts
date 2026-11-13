@@ -76,6 +76,7 @@ const ready: Promise<Lyra> = createPlatform().then(async (p) => {
   if (isNative) void CapApp.addListener("pause", () => void lyra.flush());
   addEventListener("pagehide", () => void lyra.flush());
   watchForNotices(lyra);
+  void askToNotify(lyra);
   void signUpForPush(lyra);
   if (Number.isFinite(pulledAfter)) void tellWhatsNew(lyra, pulledAfter);
   runRoutines(lyra);
@@ -95,19 +96,27 @@ const ready: Promise<Lyra> = createPlatform().then(async (p) => {
 const routinesRunHere = () => sync.runsJobs(!isDesktop);
 const BEAT_EVERY = 5 * 60_000;
 
+/** The home base hasn't managed to catch up for this long: it stops saying it's here, so a phone takes the work back. */
+const HOME_STUCK_MS = 10 * 60_000;
+
 function runRoutines(lyra: Lyra): void {
   let beatAt = 0;
+  let okAt = Date.now();
   const tick = async () => {
     if (restarting) return;
     if (sync.state.enabled && sync.state.home) {
-      if (Date.now() - beatAt > BEAT_EVERY) {
+      // the home base works from the latest data, and holds off while another device is in use
+      const r = await syncNow(lyra);
+      if (restarting) return;
+      const stuck = r === "busy" || r === "conflict";
+      if (!stuck) okAt = Date.now();
+      // it only says "I'm here" while it can actually do the work (not when sync keeps failing)
+      if (Date.now() - okAt < HOME_STUCK_MS && Date.now() - beatAt > BEAT_EVERY && sync.state.home) {
         beatAt = Date.now();
         await sync.beat().catch((e) => console.error("[lyra] home base", e));
         syncChanged();
       }
-      // the home base works from the latest data, and holds off while another device is in use
-      const r = await syncNow(lyra);
-      if (restarting || r === "busy" || r === "conflict" || sync.othersActive()) return;
+      if (stuck || sync.othersActive()) return;
     }
     if (!routinesRunHere() || restarting) return;
     try {
@@ -136,6 +145,31 @@ function runRoutines(lyra: Lyra): void {
 // (the home base's routines and heads-ups), say so here, unless you're looking at Lyra.
 const PULLED_AFTER = "lyra.pulledAfter";
 
+/**
+ * Ask for the phone's notification permission once, when it matters: you've started using Lyra and
+ * she's set to speak up on her own. (Android only shows its question once; after a no it's in Settings.)
+ */
+async function askToNotify(lyra: Lyra): Promise<void> {
+  try {
+    if (!isNative || !lyra.state().notifications || localStorage.getItem("lyra.askedToNotify")) return;
+    if ((await notifier.permission()) !== "prompt") return;
+    const ask = async () => {
+      if (localStorage.getItem("lyra.askedToNotify") || !lyra.lastMessageId()) return;
+      localStorage.setItem("lyra.askedToNotify", "1");
+      if (await notifier.ask()) syncReminders(lyra);
+    };
+    // right away if you've already chatted; otherwise after your first exchange
+    if (lyra.lastMessageId()) return void ask();
+    const stop = lyra.onChange((e) => {
+      if (e.type !== "message") return;
+      stop();
+      void ask();
+    });
+  } catch (e) {
+    console.error("[lyra] notification permission", e);
+  }
+}
+
 /** On a phone, once the home base has set push up: sign up, and pass this phone's address along through sync. */
 async function signUpForPush(lyra: Lyra): Promise<void> {
   const cfg = lyra.pushConfig();
@@ -150,16 +184,29 @@ async function signUpForPush(lyra: Lyra): Promise<void> {
 let pushError: string | undefined;
 
 /** The home base rings the phones: Lyra's own posts and tasks that are ready, whether or not this computer's window is showing. */
-function ring(lyra: Lyra, title: string, body: string, hash: string): void {
+function ring(lyra: Lyra, title: string, body: string, hash: string, channelId?: number | null): void {
   if (!sync.state.enabled || !sync.state.home) return;
-  void lyra.push(title, body, hash).catch((e) => console.error("[lyra] push", e));
+  void lyra
+    .push(title, body, hash)
+    // a phone that loads this post later won't announce it again
+    .then((reached) => reached > 0 && channelId !== undefined && lyra.markPushed(channelId))
+    .catch((e) => console.error("[lyra] push", e));
 }
+
+// Reminders made on this computer while it's the home base: a phone only has one of these on its
+// own schedule once it has synced since. (One made on a phone, that phone already has.)
+const HOME_MADE = "lyra.homeMade";
+const homeMade = (): number[] => {
+  try {
+    return JSON.parse(localStorage.getItem(HOME_MADE) || "[]") as number[];
+  } catch {
+    return [];
+  }
+};
 
 async function tellWhatsNew(lyra: Lyra, after: number): Promise<void> {
   try {
     if (!lyra.state().notifications) return;
-    // signed up for push: the home base already rang this phone about these
-    if ((await lyra.pushStatus()).devices.some((d) => d.id === sync.state.device)) return;
     const showing = isNative ? (await CapApp.getState()).isActive : document.visibilityState === "visible";
     if (showing) return;
     const posts = lyra.ownPostsSince(after);
@@ -203,8 +250,10 @@ async function syncNow(lyra: Lyra, opts: { pull?: boolean } = {}): Promise<SyncR
   const typing = !!document.querySelector<HTMLTextAreaElement>(".composer textarea")?.value.trim() || !!document.querySelector(".drafts");
   // nor while a form, sheet or editor is open (a doc, a routine, a person): the reload would throw the edits away
   const editing = !!document.querySelector(".dialog-layer, .editor, .doc-screen textarea, .action-edit") || editingField(document.activeElement);
-  // nor in the middle of a voice call
-  const canPull = opts.pull !== false && !lyra.busy && !typing && !editing && !document.body.dataset.call;
+  // (the home base with nobody at it doesn't wait on a draft or an open sheet: it would stop doing its job)
+  const unattended = !!sync.state.home && !isNative && !document.hasFocus();
+  // nor in the middle of a voice call, a routine, a heads-up or a mail scan
+  const canPull = opts.pull !== false && !lyra.working && (unattended || (!typing && !editing)) && !document.body.dataset.call;
   try {
     const last = lyra.lastMessageId();
     const r = await sync.check(canPull);
@@ -249,6 +298,18 @@ export interface SyncStatus {
   home: boolean;
   /** another device is the home base: its name, when it was last heard from, and whether that's recent */
   homeBase?: { name: string; at: string; fresh: boolean };
+  /** this computer is the home base but can't do all of the job: what's missing here */
+  homeGaps: string[];
+}
+
+/** What a home base needs on this computer itself: API keys and Google connections don't sync between devices. */
+function homeGaps(lyra: Lyra): string[] {
+  const s = lyra.state();
+  const gaps: string[] = [];
+  if (s.choice.provider === "fake") gaps.push("an AI model (add your API key here, in Settings, AI model)");
+  const off = s.connectors.filter((c) => ["gmail", "calendar"].includes(c.id) && c.state !== "connected").map((c) => c.label);
+  if (off.length) gaps.push(`${off.join(" and ")} connected on this computer (on the Lyra page)`);
+  return gaps;
 }
 
 export const updatesApi = {
@@ -270,6 +331,7 @@ export const syncApi = {
       conflict: s.conflict,
       routinesHere: routinesRunHere(),
       home: !!s.home,
+      homeGaps: s.home ? homeGaps(await ready) : [],
       homeBase: beat && { name: beat.deviceName, at: beat.at, fresh: Date.now() - new Date(beat.at).getTime() < HOME_STALE_MS },
     };
   },
@@ -353,15 +415,20 @@ export const syncApi = {
 // Lyra only tells you about things while it's out of sight: a reply that finished, a routine's
 // post, a task that's ready for you. Routine reminders are scheduled ahead on the phone.
 
-let foreground = true;
-if (isNative) void CapApp.addListener("appStateChange", (s) => (foreground = s.isActive));
-else document.addEventListener("visibilitychange", () => (foreground = document.visibilityState === "visible"));
+// (After a reload in the background the app must not assume it's on screen, or it would stay quiet.)
+let active = !isNative;
+if (isNative) {
+  void CapApp.getState().then((s) => (active = s.isActive));
+  void CapApp.addListener("appStateChange", (s) => (active = s.isActive));
+}
+/** Is the user looking at Lyra right now? On a computer that means the window is showing and in front. */
+const inFront = () => (isNative ? active : document.visibilityState === "visible" && document.hasFocus());
 
 const firstLine = (text: string) => text.trim().split("\n")[0].replace(/[*_`#>]/g, "").slice(0, 160);
 const chatHash = (channelId: number | null) => (channelId === null ? "#/" : `#/c/${channelId}`);
 
 function notice(lyra: Lyra, title: string, body: string, hash: string): void {
-  if (foreground || !lyra.state().notifications) return;
+  if (inFront() || !lyra.state().notifications) return;
   void notifier.now(title, body, hash).catch(() => {});
 }
 
@@ -376,16 +443,30 @@ function watchForNotices(lyra: Lyra): void {
   syncReminders(lyra);
   // only a task that just became "Ready for you" is news
   const seen = new Map(lyra.tasks({}).map((t) => [t.id, t.status]));
+  const knownReminders = new Set(lyra.reminders().map((r) => r.id));
   lyra.onChange((e) => {
+    if (e.type === "reminder") {
+      for (const r of lyra.reminders()) {
+        if (knownReminders.has(r.id)) continue;
+        knownReminders.add(r.id);
+        if (sync.state.enabled && sync.state.home) localStorage.setItem(HOME_MADE, JSON.stringify([...homeMade(), r.id].slice(-200)));
+      }
+    }
     if (e.type === "routine" || e.type === "reminder" || e.type === "admin") return syncReminders(lyra);
     if (e.type === "message" && "notify" in e && e.notify) {
-      // reminders: the phone already showed its scheduled notification; on a computer, say it even while Lyra is open
-      if (e.notify.scheduled) {
-        if (!isNative && lyra.state().notifications) void notifier.now(e.notify.title, e.notify.body, chatHash(e.channelId)).catch(() => {});
+      const n = e.notify as { title: string; body: string; scheduled?: boolean; since?: string; reminderId?: number };
+      if (n.scheduled) {
+        // A reminder or a life admin heads-up: a phone that knew about it showed its own notification
+        // at the time. On a computer, say it even while Lyra is open.
+        if (!isNative && lyra.state().notifications) void notifier.now(n.title, n.body, chatHash(e.channelId)).catch(() => {});
+        // The home base rings the phone only for one the phone couldn't have had: made here, or
+        // found here, and the phone hasn't caught up since.
+        const phoneHasIt = n.reminderId !== undefined ? !homeMade().includes(n.reminderId) || sync.caughtUpSince(n.since) : sync.caughtUpSince(n.since);
+        if (!phoneHasIt) ring(lyra, n.title, n.body, chatHash(e.channelId));
         return;
       }
-      ring(lyra, e.notify.title, e.notify.body, chatHash(e.channelId));
-      return notice(lyra, e.notify.title, e.notify.body, chatHash(e.channelId));
+      ring(lyra, n.title, n.body, chatHash(e.channelId), e.channelId);
+      return notice(lyra, n.title, n.body, chatHash(e.channelId));
     }
     if (e.type === "task") {
       let d: ReturnType<Lyra["task"]> | undefined;
@@ -534,6 +615,8 @@ export const api = {
 
 export interface StreamHandlers {
   text(d: string): void;
+  /** replace what's been written so far */
+  reset?(text: string): void;
   status(label: string): void;
   memory(note: MemoryNote): void;
   reaction?(emoji: string): void;
@@ -543,7 +626,7 @@ export interface StreamHandlers {
 /** Send a message; Lyra's reply arrives through the handlers as it's written. */
 export async function sendChat(text: string, h: StreamHandlers, channelId: number | null = null, attachments: Attachment[] = []): Promise<void> {
   const lyra = await ready;
-  const { message, user, queued } = await lyra.chat(text, { text: h.text, status: h.status, memory: h.memory, reaction: h.reaction }, channelId, attachments);
+  const { message, user, queued } = await lyra.chat(text, { text: h.text, reset: h.reset, status: h.status, memory: h.memory, reaction: h.reaction }, channelId, attachments);
   h.done(message, user);
   // sent back to back: the first message's send already tells you about this reply
   if (queued) return;

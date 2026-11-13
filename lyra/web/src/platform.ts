@@ -307,7 +307,8 @@ const NOTICE_BASE = 200_000;
 const ONE_OFF_BASE = 300_000;
 /** Life admin heads-ups scheduled ahead: 2,000,000 + the item's id. */
 const ADMIN_BASE = 2_000_000;
-let noticeId = NOTICE_BASE;
+// (starts from the clock, so a notice after a reload doesn't replace one that's still unread)
+let noticeId = NOTICE_BASE + (Math.floor(Date.now() / 1000) % 90_000);
 
 async function allowed(): Promise<boolean> {
   if (!isNative) return false;
@@ -348,7 +349,7 @@ export const notifier = {
           id: REMINDER_BASE + r.id * 100 + Number(d) * 10 + ti,
           title: r.name,
           body: "Tap to open Lyra and it'll run now.",
-          schedule: { on: { weekday: Number(d) + 1, hour, minute }, allowWhileIdle: false },
+          schedule: { on: { weekday: Number(d) + 1, hour, minute }, allowWhileIdle: true },
           extra: { hash: r.channel_id ? `#/c/${r.channel_id}` : "#/" },
         }));
       }),

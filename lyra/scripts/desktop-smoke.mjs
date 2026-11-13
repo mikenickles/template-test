@@ -139,9 +139,12 @@ await page.getByText("Checkup").waitFor();
 const checkup = page.locator(".checkup-row");
 check(
   (await checkup.filter({ hasText: "A real AI model" }).locator(".checkup-mark:not(.ok)").count()) === 1 &&
-    (await checkup.filter({ hasText: "Heads-ups on" }).getByRole("button", { name: "Turn on" }).count()) === 1,
-  "the notification checkup says what's missing (practice model, heads-ups off), each with a fix",
+    (await checkup.filter({ hasText: "Heads-ups on" }).locator(".checkup-mark.ok").count()) === 1,
+  "the notification checkup says what's missing (the practice model); heads-ups are on from the start",
 );
+// turned off, the checkup offers to turn them back on in one tap
+await page.getByRole("radio", { name: "Off" }).click();
+await page.getByText("Heads-ups off").first().waitFor();
 await checkup.filter({ hasText: "Heads-ups on" }).getByRole("button", { name: "Turn on" }).click();
 await page.getByText("Heads-ups: Light").first().waitFor();
 check((await checkup.filter({ hasText: "Heads-ups on" }).locator(".checkup-mark.ok").count()) === 1, "one tap turns heads-ups on");

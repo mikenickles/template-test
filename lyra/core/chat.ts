@@ -31,6 +31,8 @@ export const CHANNEL_ICONS = ["home", "sprout", "game", "heart", "work", "travel
 
 export interface TurnEmitter {
   text(delta: string): void;
+  /** What's been written so far is replaced with this (a "let me look" line gives way to the answer). */
+  reset?(text: string): void;
   status(label: string): void;
   memory(note: MemoryNote): void;
   /** Lyra reacted to the user's message with this emoji. */
@@ -72,10 +74,15 @@ export interface Workspace {
     recent(): string;
     write(input: { title: unknown; body: unknown }, channelId: number | null, tainted: boolean): { id: number; title: string };
     update(id: number, patch: { title?: unknown; body?: unknown; append?: unknown }, tainted: boolean): { id: number; title: string };
-    /** the text, and whether it holds outside content */
-    read(id: number): { text: string; tainted: boolean };
-    /** make or change a dashboard (refresh: how to rebuild it, kept only from a clean turn) */
-    dashboard(input: { id?: number; title?: unknown; dashboard: unknown; refresh?: unknown }, channelId: number | null, tainted: boolean): { id: number; title: string; created: boolean };
+    /** how many docs, or dashboards, there are */
+    count(kind: "doc" | "dashboard"): number;
+    /** the text, its title, and whether it holds outside content */
+    read(id: number): { text: string; title: string; tainted: boolean };
+    /**
+     * Make or change a dashboard. refresh: the model's words for how to rebuild it; ask: the user's
+     * own request. After outside content was read, only the user's words are kept as the recipe.
+     */
+    dashboard(input: { id?: number; title?: unknown; dashboard: unknown; refresh?: unknown; ask?: string }, channelId: number | null, tainted: boolean): { id: number; title: string; created: boolean };
   };
   /** How to talk like the user (empty when that's turned off). */
   talk?(): string;
@@ -510,11 +517,11 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
     {
       name: "follow_up",
       description:
-        "Schedule yourself to check back on something left open (a reply the user is waiting for, a delivery, a decision). At that time you check with your tools and post a short update here.",
+        "Schedule yourself to come back to something: to check on a thing left open (a reply the user is waiting for, a delivery, a decision), or to ask how something in their life went (an interview, a sick kid, a big day). At that time you look with your tools if there's something to look at, and post a short message here.",
       schema: {
         type: "object",
         properties: {
-          about: { type: "string", description: "What to check and what the user wants to know, e.g. 'Has Ortiz Plumbing replied with a quote?'" },
+          about: { type: "string", description: "What to check or ask, e.g. 'Has Ortiz Plumbing confirmed Thursday?' or 'Ask how the interview went.'" },
           at: { type: "string", description: "The user's local time, YYYY-MM-DD HH:MM." },
         },
         required: ["about", "at"],
@@ -654,18 +661,65 @@ export async function runTurn(
   const actionIds: number[] = [];
   const peopleNotes: { id: number; name: string; created: boolean }[] = [];
   const docNotes: NonNullable<MessageMeta["docs"]> = [];
+  // The user's own words: this message, plus the two before it when this one is only a short
+  // go-ahead ("yes", "do it"). What they asked for is theirs to ask, even in a turn that goes on to
+  // read other people's content.
+  const ownWords = () => {
+    const mine = listMessages(ctx.db, channelId, 12)
+      .filter((m) => m.role === "user")
+      .map((m) => m.content.trim());
+    return mine.slice(mine[mine.length - 1]?.length >= 20 ? -1 : -3);
+  };
+  /** Their latest message that says something (not just "yes, go ahead"). */
+  const ownAsk = () => [...ownWords()].reverse().find((t) => t.length >= 20)?.slice(0, 400);
+  /** Did the user ask for this doc or dashboard to change? By a word of its title, or by its kind ("the dashboard") when it's the only one. */
+  const askedToChange = (kind: "doc" | "dashboard", title: string) => {
+    const own = ownWords().join("\n").toLowerCase();
+    const named = title
+      .toLowerCase()
+      .split(/[^\p{L}\p{N}]+/u)
+      .some((w) => w.length >= 4 && !/^(dashboards?|documents?|docs)$/.test(w) && own.includes(w));
+    return named || (own.includes(kind) && ctx.workspace.docs!.count(kind) === 1);
+  };
   let triage: Triage | undefined;
   const skillNotes: { id: number; name: string; kind: "used" | "saved" }[] = [];
   const toolsUsed: { name: string; ok: boolean }[] = [];
   // Once outside content has been read, notebook changes need the user's tap.
-  const state = { tainted: false };
-  let reply = "";
-
+  // asked: did the user's own words ask for this kind of thing? Then it's theirs to ask, even after
+  // outside content was read; what they didn't ask for waits for their OK.
+  const state: TurnState = { tainted: false, asked: (re) => re.test(ownWords().join("\n")) };
+  // What Lyra writes, one piece per step. A reply is put together from the pieces at the end:
+  // a short line said before looking something up ("I'll check your mail") is narration and gives
+  // way to the answer, and an answer written twice (after a tool was refused) is kept once.
+  const said: { text: string; narration: boolean }[] = [];
+  let reply = ""; // what the user is seeing as it streams
   const say = (d: string) => {
     if (!d) return;
+    if (!said.length) said.push({ text: "", narration: false });
+    said[said.length - 1].text += d;
     reply += d;
     emit.text(d);
   };
+  /** A line of Lyra's own (an error, "Done."), as its own piece. */
+  const own = (text: string) => {
+    said.push({ text: "", narration: false });
+    if (reply.trim()) {
+      reply += "\n\n";
+      emit.text("\n\n");
+    }
+    say(text);
+  };
+  /** The pieces worth keeping, in order. */
+  const kept = (moreComing = false) =>
+    said
+      .filter((s, i) => {
+        if (!s.text.trim()) return false;
+        const later = said.slice(i + 1).filter((l) => l.text.trim());
+        if (s.narration && s.text.trim().length <= 240 && (moreComing || later.length)) return false;
+        return !later.some((l) => sameSaid(s.text, l.text));
+      })
+      .map((s) => s.text.trim())
+      .join("\n\n");
 
   const sources: Source[] = [];
   let suggestions: string[] = [];
@@ -750,7 +804,19 @@ export async function runTurn(
         result = await ctx.provider.generate(
           { system, messages, tools, signal: stepAbort.signal, webSearch: !!ctx.webSearch, onStatus: (l) => emit.status(l) },
           (d) => {
-            if (!started && reply.trim()) say("\n\n");
+            if (!started) {
+              // a new piece: anything before it that was only narration leaves the screen now
+              const before = kept(true);
+              if (before !== reply.trim()) {
+                reply = before;
+                emit.reset?.(before);
+              }
+              said.push({ text: "", narration: false });
+              if (reply.trim()) {
+                reply += "\n\n";
+                emit.text("\n\n");
+              }
+            }
             started = true;
             say(d);
           },
@@ -771,6 +837,8 @@ export async function runTurn(
       if (result.searched) state.tainted = true;
       if (result.sources) sources.push(...result.sources);
       const calls = result.parts.filter((p): p is Extract<Part, { type: "tool_call" }> => p.type === "tool_call");
+      // text written in the same step as a lookup came before its results: narration, not the answer
+      if (started && calls.some((c) => ctx.connectors.owns(c.name) || LOOKUPS.has(c.name))) said[said.length - 1].narration = true;
       if (!calls.length) {
         if (result.stop === "pause") {
           paused = true; // a long search: let the model carry on
@@ -806,17 +874,18 @@ export async function runTurn(
           continue;
         }
         if (call.name === "suggest_replies") {
-          // a button the user taps becomes their own message, so outside content can't write one
-          const list = Array.isArray(call.input.options) ? call.input.options : [];
-          const clean = list.map((o) => String(o).replace(/\s+/g, " ").trim()).filter((o) => o && o.length <= 60).slice(0, 3);
-          const ok = !state.tainted && clean.length > 0;
+          // A button the user taps becomes their own message. They see exactly what it says before they
+          // tap, so after outside content was read it's still offered, but kept short and plain: no
+          // address or link for an email or web page to smuggle in.
+          const clean = plainOptions(call.input.options, state.tainted);
+          const ok = clean.length > 0;
           if (ok) suggestions = clean;
           toolsUsed.push({ name: call.name, ok });
           results.push({
             type: "tool_result",
             id: call.id,
             name: call.name,
-            content: ok ? "Shown as buttons under your reply." : state.tainted ? "Not shown: outside content was read this turn." : "Give one to three short options.",
+            content: ok ? "Shown as buttons under your reply." : state.tainted ? "Not shown: after reading outside content, options must be short and can't carry an address or link." : "Give one to three short options.",
             isError: !ok,
           });
           continue;
@@ -899,15 +968,19 @@ export async function runTurn(
           try {
             const docs = ctx.workspace.docs!;
             const id = call.name === "update_dashboard" ? Number(call.input.id) : undefined;
-            // after reading mail or the web, only a dashboard made from outside content (or just now) can be replaced
-            if (id !== undefined && state.tainted && !docNotes.some((n) => n.id === id && n.created) && !docs.read(id).tainted)
-              throw new Error("Not replaced: outside content was read this turn. Make a new dashboard instead, or ask the user first.");
-            const r = docs.dashboard({ id, title: call.input.title, dashboard: call.input, refresh: call.input.refresh }, ctx.channel?.id ?? null, state.tainted);
+            // after reading mail or the web, a dashboard the user already had is only replaced when they asked for that
+            // themselves (one made just now, or already built from outside content, can always be)
+            if (id !== undefined && state.tainted && !docNotes.some((n) => n.id === id && n.created)) {
+              const had = docs.read(id);
+              if (!had.tainted && !askedToChange("dashboard", had.title))
+                throw new Error("Not replaced: outside content was read this turn, and the user didn't ask to change this dashboard. Make a new one instead, or ask them first.");
+            }
+            const r = docs.dashboard({ id, title: call.input.title, dashboard: call.input, refresh: call.input.refresh, ask: ownAsk() }, ctx.channel?.id ?? null, state.tainted);
             const i = docNotes.findIndex((n) => n.id === r.id);
             if (i === -1) docNotes.push({ id: r.id, title: r.title, created: r.created, kind: "dashboard" });
             else docNotes[i] = { ...docNotes[i], title: r.title };
             emit.status(r.created ? `Made ${r.title}` : `Updated ${r.title}`);
-            content = `${r.created ? "Made" : "Updated"} dashboard #${r.id}: ${r.title}. It shows as a card under your reply; say what it shows in a sentence.${state.tainted && call.input.refresh ? " (Refresh instructions aren't kept after reading outside content.)" : ""}`;
+            content = `${r.created ? "Made" : "Updated"} dashboard #${r.id}: ${r.title}. It shows as a card under your reply; say what it shows in a sentence.`;
             ok = true;
           } catch (e) {
             content = (e as Error).message;
@@ -930,8 +1003,9 @@ export async function runTurn(
               // after reading mail or the web, Lyra can add to a doc but not replace one the user already had
               if (call.name === "update_doc" && state.tainted && call.input.body !== undefined) {
                 const id = Number(call.input.id);
-                const mine = docNotes.some((n) => n.id === id && n.created) || docs.read(id).tainted;
-                if (!mine) throw new Error("Not replaced: outside content was read this turn. You can append to this doc, or ask the user before replacing its text.");
+                const had = docs.read(id);
+                const mine = docNotes.some((n) => n.id === id && n.created) || had.tainted || askedToChange("doc", had.title);
+                if (!mine) throw new Error("Not replaced: outside content was read this turn, and the user didn't ask to change this doc. You can append to it, or ask them before replacing its text.");
               }
               const r =
                 call.name === "write_doc"
@@ -1022,22 +1096,23 @@ export async function runTurn(
         results.push({ type: "tool_result", id: call.id, name: call.name, content: r.content, isError: r.isError });
       }
       messages.push({ role: "user", parts: results });
-      // Wrote the reply and reacted in one go: that's the whole answer, no need to ask the model again.
-      if (started && calls.every((c) => c.name === "react") && !takeNew()) break;
+      // Wrote the reply and reacted or offered buttons in one go: that's the whole answer, no need to
+      // ask the model again (it would only add a line about the buttons).
+      if (started && calls.every((c) => c.name === "react" || c.name === "suggest_replies") && !takeNew()) break;
       if (step === MAX_STEPS + extra - 1 && extra < 2 && takeNew()) extra++;
-      else if (step === MAX_STEPS + extra - 1) say(`${reply.trim() ? "\n\n" : ""}I stopped there so this doesn't run on. Want me to keep going?`);
+      else if (step === MAX_STEPS + extra - 1) own(`I stopped there so this doesn't run on. Want me to keep going?`);
     }
     inbox?.close();
     // A reaction alone is a complete reply, like a tapback on a text.
-    if (!reply.trim() && !(reacted && !notes.length && !taskNotes.length)) say(notes.length ? "Got it." : "Done.");
-    return addMessage(ctx.db, "assistant", reply.trim(), meta(), channelId);
+    if (!kept() && !(reacted && !notes.length && !taskNotes.length)) own(notes.length ? "Got it." : "Done.");
+    return addMessage(ctx.db, "assistant", kept(), meta(), channelId);
   } catch (e) {
     inbox?.close();
     const aborted = signal?.aborted;
     const why = aborted ? "Stopped." : `I couldn't finish that. ${friendlyError(e)}`;
     if (!aborted) console.error("[lyra] turn failed:", e);
-    say(`${reply.trim() ? "\n\n" : ""}${why}`);
-    return addMessage(ctx.db, "assistant", reply.trim(), { ...meta(), error: true }, channelId);
+    own(why);
+    return addMessage(ctx.db, "assistant", kept(), { ...meta(), error: true }, channelId);
   }
 }
 
@@ -1049,11 +1124,49 @@ async function pickNotebook(ctx: TurnContext, name: unknown): Promise<{ book: No
   return { book: await ctx.workspace.notebook(ch.id), label: ch.name };
 }
 
+/**
+ * Replies offered as buttons. Tapping one sends it as the user's own message, and they see its
+ * words first. After outside content was read they're kept short and plain: no address or link
+ * for an email or a web page to smuggle in.
+ */
+export function plainOptions(options: unknown, tainted: boolean): string[] {
+  return (Array.isArray(options) ? options : [])
+    .map((o) => String(o).replace(/\s+/g, " ").trim())
+    .filter((o) => o && o.length <= (tainted ? 48 : 60) && !(tainted && /@|:\/\/|www\.|\.(com|net|org|io)\b/i.test(o)))
+    .slice(0, 3);
+}
+
+/** Tools that only look things up: what Lyra says alongside one was said before she had the answer. */
+const LOOKUPS = new Set(["life_admin", "read_doc", "read_channel", "list_tasks", "list_routines", "look_up_person", "find_contact", "use_skill"]);
+
+/** Do these two pieces say the same thing? (An answer written again after a tool was refused.) */
+export function sameSaid(a: string, b: string): boolean {
+  const words = (s: string) => new Set(s.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []);
+  const A = words(a);
+  const B = words(b);
+  if (A.size < 6) return false;
+  let shared = 0;
+  for (const w of A) if (B.has(w)) shared++;
+  return shared / A.size >= 0.7;
+}
+
+interface TurnState {
+  /** outside content (mail, calendar, files, the web) has been read this turn */
+  tainted: boolean;
+  /** the user's own message asks for this (see ownWords in runTurn) */
+  asked(re: RegExp): boolean;
+}
+
+/** The user asking, in their own words, for a reminder or for Lyra to check back. */
+const ASKED_REMINDER = /\b(remind(er|ers|s)?|nudge|ping me|don'?t let me forget|follow[- ]?up|check back|check in on|keep an eye|let me know (when|if|once)|tell me (when|if|once)|alert me|heads[- ]?up)\b/i;
+/** The user asking for something to go on their list. */
+const ASKED_TASK = /\b(tasks?|to-?dos?|my list|add (it|that|this|them|those|these|everything|anything|all)|put (it|that|this|them|those) (on|in)|track (it|this|that|them))\b/i;
+
 async function runTool(
   ctx: TurnContext,
   name: string,
   input: Record<string, unknown>,
-  state: { tainted: boolean },
+  state: TurnState,
   notes: MemoryNote[],
   emit: TurnEmitter,
   taskNotes: TaskNote[] = [],
@@ -1114,9 +1227,11 @@ async function runTool(
   }
 
   if (name === "create_task" || name === "update_task" || name === "start_task") {
-    // A task may later be carried out by a worker, so outside content can't create or steer one.
-    if (state.tainted)
-      return fail("Not changed: outside content was read this turn. Tell the user what you'd add or change, and do it once they say yes.");
+    // A task may later be carried out by a worker, so outside content can't start or steer one. A
+    // to-do the user asked for themselves can still be added: it just waits, unstarted.
+    const listOnly = state.tainted && name === "create_task" && state.asked(ASKED_TASK);
+    if (state.tainted && !listOnly)
+      return fail("Not changed: outside content was read this turn. Tell the user in a few words what you'd add or change and offer it with suggest_replies; do it once they say yes.");
     try {
       if (name === "create_task") {
         const ch = String(input.channel ?? "").trim();
@@ -1131,7 +1246,8 @@ async function runTool(
         if (input.research === true && !ctx.webSearch) return fail("Research needs web search, which is off. Ask the user to turn it on in Settings, AI model, Web.");
         const t = createTask(ctx.db, { title: String(input.title ?? ""), brief: String(input.details ?? ""), steps, channelId, kind: input.research === true ? "research" : "task" }, "lyra");
         let started = "";
-        if (input.start !== false && ctx.workspace.startTask) {
+        if (listOnly) started = " It's on the list as Up next. It isn't started, because this reply read outside content: they can tap Start on it.";
+        else if (input.start !== false && ctx.workspace.startTask) {
           try {
             ctx.workspace.startTask(t.id);
             started = " A worker started on it and will report back here.";
@@ -1184,7 +1300,9 @@ async function runTool(
         return fail((e as Error).message);
       }
     }
-    if (state.tainted) return fail("Not set: outside content was read this turn. Tell the user what you'd set and when, and set it once they say yes.");
+    // a reminder the user asked for in their own words is theirs to ask for, whatever was read since
+    if (state.tainted && !state.asked(ASKED_REMINDER))
+      return fail("Not set: outside content was read this turn and they didn't ask for a reminder. Say in a few words what you'd set and when, and offer it with suggest_replies; set it once they say yes.");
     const kind = name === "set_reminder" ? "remind" : "follow_up";
     try {
       const r = rs.create(kind, String((kind === "remind" ? input.text : input.about) ?? ""), String(input.at ?? ""), ctx.channel?.id ?? null);

@@ -23,7 +23,7 @@ import * as PU from "./push.ts";
 import { SPOTIFY_PLAYBACK, SPOTIFY_PLAYLISTS, SPOTIFY_READ, SpotifyAuth, type OAuthRedirect } from "./connectors/spotify/auth.ts";
 import { createSpotifyServer } from "./connectors/spotify/server.ts";
 import { runTidy } from "./tidy.ts";
-import { wrapUntrusted } from "./untrusted.ts";
+import { neutralize, wrapUntrusted } from "./untrusted.ts";
 import { latestIds, searchMessages, todayView, unreadCounts, type SearchHit, type Today } from "./today.ts";
 import { Connectors, type ConnectorStatus } from "./connectors/registry.ts";
 import {
@@ -151,9 +151,12 @@ export interface Proactive {
 }
 /** How often a heads-up check runs at each level. */
 export const HEADS_UP_EVERY: Record<ProactiveLevel, number> = { off: 0, light: 4 * 3600_000, active: 3600_000 };
-const PROACTIVE_DEFAULT: Proactive = { level: "off", quietStart: "21:00", quietEnd: "07:00", checkIns: true };
+// On from the start (Light): a chief of staff who never speaks first isn't one. It only runs on a real model.
+const PROACTIVE_DEFAULT: Proactive = { level: "light", quietStart: "21:00", quietEnd: "07:00", checkIns: true };
 /** How long between check-ins at each level. */
 export const CHECK_IN_EVERY: Record<ProactiveLevel, number> = { off: 0, light: 24 * 3600_000, active: 8 * 3600_000 };
+/** A heads-up or check-in that couldn't run is tried again this much later. */
+const RETRY_MS = 10 * 60_000;
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** Is this local "HH:MM" inside quiet hours (which may wrap past midnight)? */
@@ -306,7 +309,9 @@ export class Lyra {
           const it = this.db.get<LA.AdminItem>("SELECT * FROM admin_items WHERE id = ?", [id]);
           if (!it) throw new Error("There's no item with that number.");
           // after reading mail, only an item the user named in their own message can be changed
-          if (userText !== undefined && !userText.toLowerCase().includes(it.who.toLowerCase().split(/\s+/)[0] ?? "")) throw new Error(`Not changed: outside content was read this turn, and the user didn't mention ${it.who}. Ask them first.`);
+          const said = (userText ?? "").toLowerCase();
+          const names = it.who.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 3 && !/^(the|and|inc|llc|ltd|company|corp)$/.test(w));
+          if (userText !== undefined && !(names.length ? names.some((w) => said.includes(w)) : said.includes(it.who.toLowerCase()))) throw new Error(`Not changed: outside content was read this turn, and the user didn't mention ${it.who}. Ask them first.`);
           LA.setStatus(this.db, id, status);
           void this.db.flush();
           this.listeners.forEach((l) => l({ type: "admin" }));
@@ -342,19 +347,25 @@ export class Lyra {
         },
         dashboard: (input, channelId, tainted) => {
           const dash = DB_.checkDashboard(input.dashboard);
-          // instructions to rebuild are only kept from a clean turn: they'd run again later with tools
-          const refresh = !tainted && typeof input.refresh === "string" ? input.refresh : undefined;
+          // How to rebuild it later (Refresh runs this again, with tools). From a clean turn, Lyra's own
+          // words; after outside content was read, only what the user themselves asked for.
+          const one = (s: unknown) => (typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, 400) : "");
+          const own = one(input.ask) ? `${this.userName === "you" ? "The user" : this.userName} asked: "${one(input.ask)}"` : "";
+          const recipe = tainted ? own : one(input.refresh) || own;
           if (input.id !== undefined) {
             const had = D.getDoc(this.db, input.id);
             if (!had || had.kind !== "dashboard") throw new Error(`There's no dashboard #${input.id}.`);
-            const d = D.updateDoc(this.db, input.id, { title: input.title, body: JSON.stringify(dash), tainted, instructions: refresh, refreshed: true });
+            // a later ask adds to how it's made; it doesn't erase it
+            const instructions = !had.instructions.trim() ? recipe : tainted ? (own && !had.instructions.includes(one(input.ask)) ? `${had.instructions}\nThen ${own}`.slice(0, 1000) : undefined) : one(input.refresh) || undefined;
+            const d = D.updateDoc(this.db, input.id, { title: input.title, body: JSON.stringify(dash), tainted, instructions: instructions || undefined, refreshed: true });
             this.listeners.forEach((l) => l({ type: "doc", docId: d.id }));
             return { id: d.id, title: d.title, created: false };
           }
-          const d = D.createDoc(this.db, { title: input.title, body: JSON.stringify(dash), channelId, tainted, kind: "dashboard", instructions: refresh });
+          const d = D.createDoc(this.db, { title: input.title, body: JSON.stringify(dash), channelId, tainted, kind: "dashboard", instructions: recipe });
           this.listeners.forEach((l) => l({ type: "doc", docId: d.id }));
           return { id: d.id, title: d.title, created: true };
         },
+        count: (kind) => this.db.get<{ n: number }>("SELECT COUNT(*) AS n FROM docs WHERE kind = ?", [kind])!.n,
         read: (id) => {
           const d = D.getDoc(this.db, id);
           if (!d) throw new Error(`There's no doc #${id}.`);
@@ -362,7 +373,7 @@ export class Lyra {
             d.kind === "dashboard"
               ? `# ${d.title} (dashboard)\n\n${DB_.describeDashboard(JSON.parse(d.body))}${d.instructions ? `\n\nHow it's refreshed: ${d.instructions}` : ""}`
               : `# ${d.title}\n\n${d.body}`;
-          return { text: d.tainted ? wrapUntrusted(`doc #${d.id}`, text) : text, tainted: d.tainted };
+          return { text: d.tainted ? wrapUntrusted(`doc #${d.id}`, text) : text, title: d.title, tainted: d.tainted };
         },
       },
       people: {
@@ -736,6 +747,22 @@ export class Lyra {
     return true;
   }
 
+  /**
+   * The newest post in that chat reached a phone by push, so a phone that loads it later doesn't
+   * announce it a second time.
+   */
+  markPushed(channelId: number | null): void {
+    const m = this.db.get<{ id: number; meta: string }>(
+      channelId === null
+        ? "SELECT id, meta FROM messages WHERE role = 'assistant' AND channel_id IS NULL ORDER BY id DESC LIMIT 1"
+        : "SELECT id, meta FROM messages WHERE role = 'assistant' AND channel_id = ? ORDER BY id DESC LIMIT 1",
+      channelId === null ? [] : [channelId],
+    );
+    if (!m) return;
+    updateMessageMeta(this.db, m.id, { ...(JSON.parse(m.meta || "{}") as import("./db.ts").MessageMeta), pushed: true });
+    void this.db.flush();
+  }
+
   /** Ring every signed-up phone. Returns how many it reached. Does nothing without the sending key. */
   async push(title: string, body: string, hash = "#/"): Promise<number> {
     const devices = this.pushDevices();
@@ -775,8 +802,9 @@ export class Lyra {
   ownPostsSince(id: number): { id: number; channelId: number | null; title: string; body: string }[] {
     return this.db
       .all<{ id: number; channel_id: number | null; content: string; meta: string }>(
-        `SELECT id, channel_id, content, meta FROM messages WHERE id > ? AND role = 'assistant'
-           AND (json_extract(meta, '$.routine') IS NOT NULL OR json_extract(meta, '$.headsUp') IS NOT NULL OR json_extract(meta, '$.checkIn') IS NOT NULL)
+        `SELECT id, channel_id, content, meta FROM messages WHERE id > ? AND role = 'assistant' AND json_extract(meta, '$.pushed') IS NULL
+           AND (json_extract(meta, '$.routine') IS NOT NULL OR json_extract(meta, '$.headsUp') IS NOT NULL OR json_extract(meta, '$.checkIn') IS NOT NULL
+                OR json_extract(meta, '$.reminder.kind') = 'follow_up' OR json_extract(meta, '$.worker') IS NOT NULL)
          ORDER BY id`,
         [id],
       )
@@ -785,7 +813,7 @@ export class Lyra {
         return {
           id: m.id,
           channelId: m.channel_id,
-          title: meta.routine?.name ?? (meta.headsUp ? "Heads-up from Lyra" : "Lyra"),
+          title: meta.routine?.name ?? (meta.headsUp ? "Heads-up from Lyra" : meta.reminder ? "Lyra followed up" : "Lyra"),
           body: m.content.trim().split("\n")[0].replace(/[*_`#>]/g, "").slice(0, 160),
         };
       });
@@ -1103,6 +1131,11 @@ export class Lyra {
   /** A reply is being written or a worker is running: not a moment to swap the data out. */
   get busy(): boolean {
     return !!this.running || this.workers.busyCount > 0;
+  }
+
+  /** Busy, or doing something of her own (a routine, a heads-up, a mail scan): not a moment to reload the app. */
+  get working(): boolean {
+    return this.busy || this.routinesRunner.active || this.scanning;
   }
 
   async deleteMessage(id: number): Promise<void> {
@@ -1699,9 +1732,10 @@ export class Lyra {
         webSearch: this.webSearch,
         userName: this.userName,
         today,
-        title: d.title,
         instructions: d.instructions,
-        current: DB_.describeDashboard(DB_.checkDashboard(JSON.parse(d.body))),
+        // what it shows now may itself have come from mail or the web: data, not instructions
+        current: d.tainted ? wrapUntrusted(`dashboard #${d.id}`, DB_.describeDashboard(DB_.checkDashboard(JSON.parse(d.body)))) : DB_.describeDashboard(DB_.checkDashboard(JSON.parse(d.body))),
+        title: d.tainted ? neutralize(d.title) : d.title,
       });
       if (!r) throw new Error("Couldn't refresh it this time. Try again, or ask Lyra in chat.");
       const after = D.updateDoc(this.db, id, { title: r.title, body: JSON.stringify(r.dashboard), tainted: r.outside, refreshed: true });
@@ -1798,8 +1832,13 @@ export class Lyra {
     if (inQuietHours(local, p) || local < "09:00" || local >= "20:00") return false;
     const lastAt = getSetting(this.db, "checkInAt");
     if (lastAt && now.getTime() - new Date(lastAt).getTime() < CHECK_IN_EVERY[p.level]) return false;
-    // something already needs them, or Lyra is busy on their behalf: no need to ask for more
-    if (todayView(this.db, { timeZone: this.p.timeZone, now }).needs > 0) return false;
+    // something fresh already needs them, or Lyra is busy on their behalf: no need to ask for more.
+    // (Only the last two days count: a task or a card left sitting for a week shouldn't silence her for good.)
+    const fresh = new Date(now.getTime() - 48 * 3600_000).toISOString();
+    const waiting =
+      this.db.get<{ n: number }>("SELECT COUNT(*) AS n FROM tasks WHERE status = 'ready' AND updated_at >= ?", [fresh])!.n +
+      this.db.get<{ n: number }>("SELECT COUNT(*) AS n FROM actions WHERE status = 'proposed' AND created_at >= ?", [fresh])!.n;
+    if (waiting > 0) return false;
     if (this.db.get<{ n: number }>("SELECT COUNT(*) AS n FROM tasks WHERE status = 'working'")!.n > 0) return false;
     // not in the middle of talking
     const lastUser = this.db.get<{ at: string | null }>("SELECT MAX(created_at) AS at FROM messages WHERE role = 'user'")!.at;
@@ -1826,7 +1865,8 @@ export class Lyra {
         post_mode: "news",
         channel_id: null,
       },
-      (messageId, text) => {
+      (messageId, text, failed) => {
+        if (failed) setSetting(this.db, "checkInAt", new Date(now.getTime() - CHECK_IN_EVERY[p.level] + RETRY_MS).toISOString());
         if (messageId === null) return;
         setSetting(this.db, "checkInMessage", String(messageId));
         setSetting(this.db, "checkInRecent", JSON.stringify([text.replace(/\s+/g, " ").slice(0, 200), ...recent].slice(0, 6)));
@@ -1865,7 +1905,9 @@ export class Lyra {
         post_mode: "news",
         channel_id: null,
       },
-      (messageId, text) => {
+      (messageId, text, failed) => {
+        // couldn't check (no network, the model was down): try again in a few minutes, not in hours
+        if (failed) setSetting(this.db, "headsUpAt", new Date(now.getTime() - HEADS_UP_EVERY[p.level] + RETRY_MS).toISOString());
         if (messageId === null) return;
         setSetting(this.db, "headsUpLast", text.slice(0, 800));
         this.listeners.forEach((l) => l({ type: "message", channelId: null, notify: { title: "Heads-up from Lyra", body: text.split("\n")[0].slice(0, 160) } }));
@@ -2013,7 +2055,8 @@ export class Lyra {
       if (n) {
         addMessage(this.db, "assistant", n.text, { lifeAdmin: { ids: n.ids } }, null);
         // the phone showed its scheduled notification at 9:00; a computer says it now
-        this.listeners.forEach((l) => l({ type: "message", channelId: null, notify: { title: "Life admin", body: n.text.split("\n")[0].slice(0, 160), scheduled: true } }));
+        const since = this.db.get<{ at: string | null }>(`SELECT MAX(created_at) AS at FROM admin_items WHERE id IN (${n.ids.map(() => "?").join(",")})`, n.ids)?.at ?? undefined;
+        this.listeners.forEach((l) => l({ type: "message", channelId: null, notify: { title: "Life admin", body: n.text.split("\n")[0].slice(0, 160), scheduled: true, since } }));
         void this.db.flush();
       }
     }
@@ -2040,8 +2083,11 @@ export class Lyra {
         this.db.run("UPDATE reminders SET message_id = ? WHERE id = ?", [messageId, r.id]);
         const m = getMessage(this.db, messageId);
         if (m) updateMessageMeta(this.db, messageId, { ...m.meta, reminder: { id: r.id, kind: r.kind } });
-        // the phone already showed a scheduled notification at the time
-        this.listeners.forEach((l) => l({ type: "message", channelId, notify: { title, body: body.split("\n")[0].slice(0, 160), scheduled: true } }));
+        // A reminder: a phone that knew about it showed its own notification at the time. A follow-up's
+        // result is news nobody has seen yet.
+        this.listeners.forEach((l) =>
+          l({ type: "message", channelId, notify: { title, body: body.split("\n")[0].slice(0, 160), ...(r.kind === "remind" ? { scheduled: true, since: r.created_at, reminderId: r.id } : {}) } }),
+        );
         void this.db.flush();
       };
       if (r.kind === "remind") {
@@ -2197,10 +2243,11 @@ export function checkInInstructions(userName: string, recent: string[], can: { e
 
 Pick ONE, whichever would help most right now:
 1. Offer a specific project you could do for them, grounded in what you know or can see: their memory and open loops, recent mail, the calendar for the coming week, open tasks. Say what you'd do and what they'd get ("I could go through this week's school emails and pull out every date and form into one list. Want that?"). Only offer what you can really do: research, summarize, compare, plan, draft, keep track, set up a routine or reminders${extra ? `, ${extra}` : ""}.
-2. Ask one question that would make you more useful and that your memory doesn't answer yet: their work, the people who matter to them, their week, their goals, how they like you to help. One question, not a questionnaire.
-3. Ask what's on their plate this week that you could take off it.
+2. Ask after something in their life you know about and haven't heard the end of: how something went, how someone is doing, what they decided. The way a friend would, because you want to know.
+3. Ask one question that would make you more useful and that your memory doesn't answer yet: their work, the people who matter to them, their week, their goals, how they like you to help. One question, not a questionnaire.
+4. Ask what's on their plate this week that you could take off it.
 
-Keep it to two short sentences, warm, no preamble, no "just checking in". Give up to three short replies they can tap (options), written as they'd say them, like "Yes, do that", "Not this week", "Ask me later".
+Write it the way you'd text a friend: one or two short sentences, warm, in your own voice, no preamble, no "just checking in". Give up to three short replies they can tap (options), written as they'd say them, like "Yes, do that", "Not this week", "Ask me later".
 Call post. Use nothing_new only if there's truly nothing worth asking.
 
 Don't repeat what you asked or offered recently:
@@ -2213,16 +2260,18 @@ export function headsUpInstructions(connected: string[], userName: string, level
     connected.some((c) => /mail/i.test(c)) && "- Mail since the last check: anything from a real person that's waiting on a reply, a deadline, a bill, or a change of plans.",
     connected.some((c) => /calendar/i.test(c)) && "- Calendar for the next few hours and tomorrow morning: something that needs prep, a clash, an early start, travel time.",
     "- Open tasks: anything Ready for them, waiting on their answer, or past its due date.",
-    "- Loose ends in memory: something they said they'd do or decide that's now due.",
+    "- Loose ends and dates in memory: something they said they'd do or decide that's now due, a birthday or deadline coming up in the next week or two.",
   ].filter(Boolean);
-  return `This is a heads-up check: you're looking in on ${user}'s day on your own, without being asked.
+  return `This is a heads-up check: you're looking in on ${user}'s day on your own, the way a good chief of staff glances at the inbox and the calendar between other things.
 
 Look at:
 ${look.join("\n")}
 
-Speak up only for something ${user} would actually want to be interrupted for${level === "light" ? " (the bar is high: only things that matter today)" : ""}. Most checks should end with nothing_new. Skip anything you mentioned last time unless it changed, and skip newsletters, promotions and automated mail.
+Post when you find something ${user} would be glad you caught: a deadline today or tomorrow, someone waiting on their answer, a clash, something to prepare or leave early for, an offer or a hold about to lapse, a bill nearly due, a date that needs a head start. ${
+    level === "light" ? "Keep it to what matters today or tomorrow." : "Smaller things that are worth a nudge count too."
+  } Skip newsletters, promotions and automated mail, and skip anything you already told them (see what you reported last time) unless it changed or its deadline is now close. If there's nothing like that, call nothing_new: quiet is fine, and saying the same thing twice is worse than silence.
 
-If you do post: lead with the one thing that matters most, then at most two more, each in a line, and the next step for each. No greeting, no recap of what you checked.`;
+If you post, write it like a text from you, not an alert: a few words in your own voice to open, then the thing that matters most, then at most two more, each with its next step. Offer to take the next step yourself where you can (draft the reply, set the reminder), and give those as options to tap. No recap of what you checked.`;
 }
 
 /** The user message that started a reply: the first one after the previous assistant message. */

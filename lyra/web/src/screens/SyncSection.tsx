@@ -107,6 +107,16 @@ export function SyncSection({ toast }: { toast: (m: string) => void }) {
                 />
               </label>
             )}
+            {s.home && s.homeGaps.length > 0 && (
+              <div className="item">
+                <span className="body">
+                  <div className="title bad">This computer can't do the whole job yet</div>
+                  <div className="sub">
+                    API keys and Google connections stay on each device, so the home base needs its own. Missing here: {s.homeGaps.join("; ")}. Until then Lyra's heads-ups and mail checks won't happen, and your phone won't do them either.
+                  </div>
+                </span>
+              </div>
+            )}
             {(s.home || push?.configured) && push && (
               <div className="item">
                 <span className="body">

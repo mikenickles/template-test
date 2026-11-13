@@ -47,6 +47,7 @@ describe("talking like the user", () => {
   it("mirrors in chat and routines, learns every few days when idle, and turns off cleanly", async () => {
     const m = scripted([]);
     const lyra = await Lyra.start(platform({ provider: m.provider }));
+    await lyra.saveSettings({ proactive: { level: "off" } });
     await lyra.saveSettings({ userName: "Mike" });
     await lyra.chat("yo", noop);
     expect(m.requests[0].system).toMatch(/## Talking like Mike[^]*"Hell yeah!" back is exactly right[^]*go by the recent chat/);
@@ -70,7 +71,7 @@ describe("talking like the user", () => {
     const r = await lyra.addPreset("bills");
     lyra.runRoutine(r.id);
     await lyra.routinesRunner.settle();
-    expect(m.requests.at(-1)!.system).toMatch(/You are running one of Lyra's scheduled routines[^]*## Talking like Mike/);
+    expect(m.requests.at(-1)!.system).toMatch(/You're running one of your scheduled routines[^]*## Talking like Mike/);
 
     await lyra.saveSettings({ mirror: false });
     await lyra.chat("ok", noop);

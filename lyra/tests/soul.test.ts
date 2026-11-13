@@ -34,9 +34,9 @@ describe("Lyra's soul", () => {
     await lyra.routinesRunner.settle();
     expect(systems).toHaveLength(3);
     for (const s of systems) {
-      expect(s).toContain("You are Lyra, Sam's chief of staff and the person in their corner.");
-      expect(s).toContain("**Bullets for lists.**");
-      expect(s).toContain("Lead with the point."); // the voice guide is still there
+      expect(s).toContain("You are Lyra: Sam's chief of staff, and their friend.");
+      expect(s).toContain("## Taking the lead");
+      expect(s).toContain("## For errands: lead with the point"); // the voice guide is still there
       expect(s).not.toContain("{user}");
     }
   });

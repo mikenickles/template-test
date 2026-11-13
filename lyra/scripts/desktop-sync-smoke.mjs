@@ -61,8 +61,9 @@ async function fakeDrive(route) {
     return route.fulfill({ json: { id } });
   }
   if (url.pathname === "/drive/v3/files") {
-    const homeOnly = (url.searchParams.get("q") ?? "").includes("key='home'");
-    return route.fulfill({ json: { files: [...drive].filter(([, f]) => !homeOnly || f.appProperties.home === "1").map(([id, f]) => ({ id, appProperties: f.appProperties })) } });
+    // marker files are asked for by their property (home='1', seen='1'), like Drive's own filter
+    const key = (url.searchParams.get("q") ?? "").match(/key='(\w+)' and value='1'/)?.[1];
+    return route.fulfill({ json: { files: [...drive].filter(([, f]) => !key || f.appProperties[key] === "1").map(([id, f]) => ({ id, appProperties: f.appProperties })) } });
   }
   return route.fulfill({ status: 404, body: "unexpected" });
 }
@@ -103,7 +104,7 @@ async function device(name) {
   return { app, page, errors, say, settings, shows, documents };
 }
 
-const snapshots = () => [...drive.values()].filter((f) => f.appProperties.kind !== "conflict");
+const snapshots = () => [...drive.values()].filter((f) => f.appProperties.rev && f.appProperties.kind !== "conflict");
 
 const a = await device("a");
 await a.say("Sent on computer A");

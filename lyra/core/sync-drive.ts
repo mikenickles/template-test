@@ -4,7 +4,7 @@
  * change any of your own files. Every snapshot is encrypted before upload.
  */
 import { DRIVE_APPDATA, TokenSource, type GoogleAuth } from "./connectors/google.ts";
-import type { HomeBeat, SnapshotInfo, SyncRemote } from "./sync.ts";
+import type { HomeBeat, SeenMark, SnapshotInfo, SyncRemote } from "./sync.ts";
 
 const API = "https://www.googleapis.com/drive/v3/files";
 const UPLOAD = "https://www.googleapis.com/upload/drive/v3/files";
@@ -66,15 +66,34 @@ export class DriveSyncRemote implements SyncRemote {
       }));
   }
 
-  /** The home base's heartbeat: a file with no content, only its properties. */
-  private async homeFile(): Promise<DriveFile | undefined> {
+  /** Small marker files with no content, only properties: the home base's heartbeat, each device's "up to date" mark. */
+  private async markers(key: "home" | "seen"): Promise<DriveFile[]> {
     const q = new URLSearchParams({
       spaces: "appDataFolder",
       fields: "files(id,appProperties)",
-      pageSize: "10",
-      q: "trashed = false and appProperties has { key='home' and value='1' }",
+      pageSize: "20",
+      q: `trashed = false and appProperties has { key='${key}' and value='1' }`,
     });
-    return ((await (await this.call(`${API}?${q}`)).json()) as { files: DriveFile[] }).files[0];
+    return ((await (await this.call(`${API}?${q}`)).json()) as { files: DriveFile[] }).files;
+  }
+
+  private async homeFile(): Promise<DriveFile | undefined> {
+    return (await this.markers("home"))[0];
+  }
+
+  async seen(): Promise<SeenMark[]> {
+    return (await this.markers("seen")).flatMap((f) => {
+      const p = f.appProperties;
+      return p?.device && p.at ? [{ device: p.device, deviceName: p.deviceName ?? "", at: p.at }] : [];
+    });
+  }
+
+  async markSeen(mark: SeenMark): Promise<void> {
+    const mine = (await this.markers("seen")).find((f) => f.appProperties?.device === mark.device);
+    const appProperties = { seen: "1", device: mark.device, deviceName: mark.deviceName.slice(0, 40), at: mark.at };
+    const init = { headers: { "Content-Type": "application/json" } };
+    if (mine) await this.call(`${API}/${encodeURIComponent(mine.id)}`, { ...init, method: "PATCH", body: JSON.stringify({ appProperties }) });
+    else await this.call(API, { ...init, method: "POST", body: JSON.stringify({ name: "lyra-seen.json", parents: ["appDataFolder"], appProperties }) });
   }
 
   async home(): Promise<HomeBeat | undefined> {

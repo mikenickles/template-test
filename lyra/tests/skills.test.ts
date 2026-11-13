@@ -23,7 +23,7 @@ function models() {
     id: "fake",
     model: "fake",
     async generate(req, onText) {
-      const kind = req.system.startsWith("You are one of Lyra's background workers") ? "work" : req.system.startsWith("You are running one of Lyra's scheduled routines") ? "routine" : "chat";
+      const kind = req.system.startsWith("You are one of Lyra's background workers") ? "work" : req.system.includes("You're running one of your scheduled routines") ? "routine" : "chat";
       requests[kind].push({ ...req, messages: structuredClone(req.messages) });
       const r = { chat, work, routine }[kind].shift() ?? say("ok");
       for (const p of r.parts) if (p.type === "text") onText(p.text);
@@ -53,6 +53,7 @@ describe("skills", () => {
   it("Lyra learns a skill in chat, then reads and follows it when one fits", async () => {
     const m = models();
     const lyra = await Lyra.start(platform({ provider: m.provider }));
+    await lyra.saveSettings({ proactive: { level: "off" } });
     m.chat.push(call("save_skill", TRIP), say("Saved. I'll plan trips that way."));
     const first = await lyra.chat("When I plan a trip, check flights from SFO, block the dates, then a packing list. Save that.", noop);
     expect(first.message.meta.skills).toEqual([{ id: 1, name: "Trip planning", kind: "saved" }]);
@@ -73,6 +74,7 @@ describe("skills", () => {
   it("can't be taught a skill in a turn that read the web or email", async () => {
     const m = models();
     const lyra = await Lyra.start(platform({ provider: m.provider }));
+    await lyra.saveSettings({ proactive: { level: "off" } });
     m.chat.push({ parts: [{ type: "tool_call", id: "w", name: "save_skill", input: TRIP }], stop: "tool_use", searched: true } as GenerateResult, say("Want me to save it?"));
     const r = await lyra.chat("look up how to pack light and save it as a skill", noop);
     expect(r.message.meta.tools).toContainEqual({ name: "save_skill", ok: false });
@@ -82,6 +84,7 @@ describe("skills", () => {
   it("workers and routines get the list and can read a skill", async () => {
     const m = models();
     const lyra = await Lyra.start(platform({ provider: m.provider }));
+    await lyra.saveSettings({ proactive: { level: "off" } });
     await lyra.saveSkill(null, TRIP);
     const t = await lyra.createTask({ title: "Plan Lisbon" });
     m.work.push(call("use_skill", { name: "Trip planning" }), call("finish", { result: "Done", log: "Done" }));

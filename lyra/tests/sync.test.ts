@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Lyra } from "../core/lyra.ts";
 import { FakeProvider } from "../core/providers/fake.ts";
-import { HOME_STALE_MS, readSyncState, Sync, type HomeBeat, type SnapshotInfo, type SyncRemote } from "../core/sync.ts";
+import { HOME_STALE_MS, readSyncState, Sync, type HomeBeat, type SeenMark, type SnapshotInfo, type SyncRemote } from "../core/sync.ts";
 import { memStores, platform } from "./helpers.ts";
 
 const noop = { text: () => {}, status: () => {}, memory: () => {} };
@@ -22,8 +22,10 @@ function fakeDrive() {
     remove: async (id) => void files.delete(id),
     home: async () => box.home,
     setHome: async (b) => void (box.home = b ?? undefined),
+    seen: async () => [...box.marks.values()],
+    markSeen: async (m) => void box.marks.set(m.device, m),
   };
-  const box: { remote: SyncRemote; files: typeof files; home?: HomeBeat } = { remote, files };
+  const box: { remote: SyncRemote; files: typeof files; home?: HomeBeat; marks: Map<string, SeenMark> } = { remote, files, marks: new Map() };
   return box;
 }
 
@@ -264,5 +266,50 @@ describe("Drive sync folder", () => {
       ["Heads-up from Lyra", "Your flight moved to 9:40."],
     ]);
     expect(d.lyra.ownPostsSince(d.lyra.lastMessageId())).toEqual([]);
+  });
+
+  it("an idle minute changes nothing, so there's nothing new to sync", async () => {
+    const d = await device("Phone", fakeDrive());
+    await d.lyra.chat("hello", noop);
+    await d.lyra.saveSettings({ proactive: { level: "off" } });
+    let changes = 0;
+    d.lyra.onDataChange(() => changes++);
+    for (let i = 0; i < 3; i++) d.lyra.tickRoutines(new Date(Date.now() + i * 60_000));
+    await d.lyra.routinesRunner.settle();
+    expect(changes).toBe(0);
+  });
+
+  it("the home base knows when a phone has caught up, and steps down at once if another computer takes over", async () => {
+    const drive = fakeDrive();
+    const phone = await device("Phone", drive);
+    await phone.sync.enable(PASS, "Phone");
+    const laptop = await device("Laptop", drive);
+    await laptop.sync.enable(PASS, "Laptop");
+    await laptop.restart();
+    await laptop.sync.setHome(true);
+
+    // a reminder made on the laptop just now: the phone hasn't synced since, so it doesn't have it
+    const made = new Date().toISOString();
+    await laptop.sync.check();
+    expect(laptop.sync.caughtUpSince(made)).toBe(false);
+    // the phone syncs half a minute later and says so; now it has it (and schedules its own notification)
+    drive.marks.set(phone.sync.state.device, { device: phone.sync.state.device, deviceName: "Phone", at: new Date(Date.now() + 30_000).toISOString() });
+    await laptop.sync.check();
+    expect(laptop.sync.caughtUpSince(made)).toBe(true);
+    expect(laptop.sync.caughtUpSince(new Date(Date.now() + 3600_000).toISOString())).toBe(false);
+    // a phone's own check leaves its mark; the home base's doesn't
+    drive.marks.clear();
+    await phone.restart(); // (a mark is left at most once a minute)
+    await phone.sync.check();
+    expect([...drive.marks.keys()]).toEqual([phone.sync.state.device]);
+
+    // a second computer takes the job: the first one stops at its very next check, not minutes later
+    const desk = await device("Desktop", drive);
+    await desk.sync.enable(PASS, "Desktop");
+    await desk.restart();
+    await desk.sync.setHome(true);
+    await laptop.sync.check();
+    expect(laptop.sync.state.home).toBe(false);
+    expect(laptop.sync.runsJobs(false)).toBe(false);
   });
 });
