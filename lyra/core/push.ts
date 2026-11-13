@@ -109,16 +109,16 @@ export class PushSender {
   }
 
   /** One notification to one device. "gone": that device's address is no longer valid (app removed, or re-registered). */
-  async send(deviceToken: string, n: { title: string; body: string; hash?: string }): Promise<PushResult> {
+  async send(deviceToken: string, n: { title: string; body: string; hash?: string; options?: string[] }): Promise<PushResult> {
     const r = await this.fetchFn(`https://fcm.googleapis.com/v1/projects/${encodeURIComponent(this.account.projectId)}/messages:send`, {
       method: "POST",
       headers: { Authorization: `Bearer ${await this.access()}`, "Content-Type": "application/json" },
       body: JSON.stringify({
+        // data only: Lyra's own service on the phone draws it, with the buttons and the chat to open
         message: {
           token: deviceToken,
-          notification: { title: n.title.slice(0, 80), body: n.body.slice(0, 240) },
-          data: { hash: n.hash ?? "#/" },
-          android: { priority: "HIGH", notification: { channel_id: "lyra_push", icon: "ic_stat_lyra" } },
+          data: { title: n.title.slice(0, 80), body: n.body.slice(0, 240), hash: n.hash ?? "#/", options: JSON.stringify((n.options ?? []).slice(0, 3)) },
+          android: { priority: "HIGH" },
         },
       }),
     });

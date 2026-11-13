@@ -61,6 +61,19 @@
                 android:value="Runs the user's own scheduled routines and reminders while the app is in the background, at their request." />
         </service>
         <receiver android:name=".BackgroundPlugin$TickReceiver" android:exported="false" />
+        <!-- after a restart or an update: put Keep watch's alarm back, and say if it needs a tap -->
+        <receiver android:name=".BootReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        <!-- push from the home base: Lyra draws it, with buttons and the chat to open -->
+        <service android:name=".LyraMessagingService" android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
         <!-- the home-screen widget -->
         <receiver android:name=".LyraWidget" android:exported="false" android:label="Lyra">
             <intent-filter>
@@ -93,6 +106,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Notification checkup: asks Android to let Lyra's 15-minute wake-ups through battery saving -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- Phase 10: look one name up in your contacts, only once you turn it on (Android asks first) -->

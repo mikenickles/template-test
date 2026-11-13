@@ -19,7 +19,7 @@ const account = (project = "lyra-mine") => JSON.stringify({ type: "service_accou
 
 /** Google's token and push endpoints, in memory. */
 function fakeGoogle(gone: string[] = []) {
-  const sent: { token: string; title: string; body: string; hash: string; channel: string }[] = [];
+  const sent: { token: string; title: string; body: string; hash: string; options: string[] }[] = [];
   let tokens = 0;
   const fetch = (async (url: string, init: RequestInit) => {
     if (url === "https://oauth2.googleapis.com/token") {
@@ -28,9 +28,11 @@ function fakeGoogle(gone: string[] = []) {
     }
     if (url === "https://fcm.googleapis.com/v1/projects/lyra-mine/messages:send") {
       if ((init.headers as Record<string, string>).Authorization !== "Bearer ya29.test") return new Response("{}", { status: 401 });
-      const m = (JSON.parse(String(init.body)) as { message: { token: string; notification: { title: string; body: string }; data: { hash: string }; android: { notification: { channel_id: string } } } }).message;
+      const m = (JSON.parse(String(init.body)) as { message: { token: string; notification?: unknown; data: { title: string; body: string; hash: string; options: string }; android: { priority: string } } }).message;
       if (gone.includes(m.token)) return new Response(JSON.stringify({ error: { status: "NOT_FOUND", details: [{ errorCode: "UNREGISTERED" }] } }), { status: 404 });
-      sent.push({ token: m.token, title: m.notification.title, body: m.notification.body, hash: m.data.hash, channel: m.android.notification.channel_id });
+      // data only (the phone's own service draws it), sent right away
+      if (m.notification || m.android.priority !== "HIGH") return new Response("{}", { status: 400 });
+      sent.push({ token: m.token, title: m.data.title, body: m.data.body, hash: m.data.hash, options: JSON.parse(m.data.options) as string[] });
       return new Response("{}", { status: 200 });
     }
     return new Response("unexpected", { status: 500 });
@@ -72,8 +74,8 @@ describe("push from the home base", () => {
     expect(await lyra.registerPushDevice("d1", "Phone", "tok-phone")).toBe(false);
     await lyra.registerPushDevice("d2", "Old phone", "tok-old-phone");
 
-    expect(await lyra.push("Heads-up from Lyra", "Rowan's school closes early Friday.", "#/c/2")).toBe(1);
-    expect(g.sent).toEqual([{ token: "tok-phone", title: "Heads-up from Lyra", body: "Rowan's school closes early Friday.", hash: "#/c/2", channel: "lyra_push" }]);
+    expect(await lyra.push("Heads-up from Lyra", "Rowan's school closes early Friday.", "#/c/2", ["Remind me Thursday", "Draft a reply"])).toBe(1);
+    expect(g.sent).toEqual([{ token: "tok-phone", title: "Heads-up from Lyra", body: "Rowan's school closes early Friday.", hash: "#/c/2", options: ["Remind me Thursday", "Draft a reply"] }]);
     expect((await lyra.pushStatus()).devices.map((d) => d.name)).toEqual(["Phone"]);
     await lyra.push("Lyra", "again");
     expect(g.tokenCalls()).toBe(1); // the sending token is reused until it runs out

@@ -288,7 +288,7 @@ export type RoutineEvent =
        * since: when the thing was created (a phone that synced after that knew about it).
        * reminderId: which reminder, when it is one.
        */
-      notify?: { title: string; body: string; scheduled?: boolean; since?: string; reminderId?: number };
+      notify?: { title: string; body: string; scheduled?: boolean; since?: string; reminderId?: number; options?: string[] };
     }
   /** reminders were added, changed or happened */
   | { type: "reminder" };
@@ -486,7 +486,7 @@ export class Routines {
       );
       db.run("UPDATE routines SET last_summary = ? WHERE id = ?", [text.trim().slice(0, 800), id]);
       end("posted", "", msg.id);
-      this.d.onEvent({ type: "message", channelId, notify: { title: r.name, body: text.trim().split("\n")[0].slice(0, 160) } });
+      this.d.onEvent({ type: "message", channelId, notify: { title: r.name, body: text.trim().split("\n")[0].slice(0, 160), options } });
     };
     await this.execute(r, post, end, "routine", true);
   }

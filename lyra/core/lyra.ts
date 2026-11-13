@@ -20,6 +20,7 @@ import * as LA from "./lifeadmin.ts";
 import * as AC from "./activity.ts";
 import * as DB_ from "./dashboard.ts";
 import * as PU from "./push.ts";
+import * as MW from "./mailwatch.ts";
 import { SPOTIFY_PLAYBACK, SPOTIFY_PLAYLISTS, SPOTIFY_READ, SpotifyAuth, type OAuthRedirect } from "./connectors/spotify/auth.ts";
 import { createSpotifyServer } from "./connectors/spotify/server.ts";
 import { runTidy } from "./tidy.ts";
@@ -148,11 +149,15 @@ export interface Proactive {
   quietEnd: string;
   /** when nothing needs you, Lyra asks for work or gets to know you */
   checkIns: boolean;
+  /** watch for new mail from the people who matter, every few minutes */
+  mailWatch: boolean;
 }
 /** How often a heads-up check runs at each level. */
 export const HEADS_UP_EVERY: Record<ProactiveLevel, number> = { off: 0, light: 4 * 3600_000, active: 3600_000 };
 // On from the start (Light): a chief of staff who never speaks first isn't one. It only runs on a real model.
-const PROACTIVE_DEFAULT: Proactive = { level: "light", quietStart: "21:00", quietEnd: "07:00", checkIns: true };
+const PROACTIVE_DEFAULT: Proactive = { level: "light", quietStart: "21:00", quietEnd: "07:00", checkIns: true, mailWatch: true };
+/** How often the mail watch looks (a plain search; the AI only reads what's new). */
+const MAIL_WATCH_EVERY = 5 * 60_000;
 /** How long between check-ins at each level. */
 export const CHECK_IN_EVERY: Record<ProactiveLevel, number> = { off: 0, light: 24 * 3600_000, active: 8 * 3600_000 };
 /** A heads-up or check-in that couldn't run is tried again this much later. */
@@ -764,7 +769,7 @@ export class Lyra {
   }
 
   /** Ring every signed-up phone. Returns how many it reached. Does nothing without the sending key. */
-  async push(title: string, body: string, hash = "#/"): Promise<number> {
+  async push(title: string, body: string, hash = "#/", options: string[] = []): Promise<number> {
     const devices = this.pushDevices();
     if (!Object.keys(devices).length || !this.pushConfig()) return 0;
     if (!this.pushSender) {
@@ -775,7 +780,7 @@ export class Lyra {
     let sent = 0;
     let gone = false;
     for (const [id, d] of Object.entries(devices)) {
-      const r = await this.pushSender.send(d.token, { title, body, hash }).catch(() => "failed" as const);
+      const r = await this.pushSender.send(d.token, { title, body, hash, options }).catch(() => "failed" as const);
       if (r === "sent") sent++;
       if (r === "gone") {
         delete devices[id];
@@ -877,7 +882,7 @@ export class Lyra {
   get proactive(): Proactive {
     try {
       const p = { ...PROACTIVE_DEFAULT, ...(JSON.parse(getSetting(this.db, "proactive") || "{}") as Partial<Proactive>) };
-      return (PROACTIVE_LEVELS as readonly string[]).includes(p.level) && HHMM.test(p.quietStart) && HHMM.test(p.quietEnd) ? { ...p, checkIns: p.checkIns !== false } : PROACTIVE_DEFAULT;
+      return (PROACTIVE_LEVELS as readonly string[]).includes(p.level) && HHMM.test(p.quietStart) && HHMM.test(p.quietEnd) ? { ...p, checkIns: p.checkIns !== false, mailWatch: p.mailWatch !== false } : PROACTIVE_DEFAULT;
     } catch {
       return PROACTIVE_DEFAULT;
     }
@@ -994,7 +999,7 @@ export class Lyra {
       if (!(PROACTIVE_LEVELS as readonly string[]).includes(p.level)) throw new Error("That heads-up level isn't one of the choices.");
       if (!HHMM.test(p.quietStart) || !HHMM.test(p.quietEnd)) throw new Error("Quiet hours need times like 21:00.");
       const was = this.proactive.level;
-      setSetting(this.db, "proactive", JSON.stringify({ level: p.level, quietStart: p.quietStart, quietEnd: p.quietEnd, checkIns: p.checkIns !== false }));
+      setSetting(this.db, "proactive", JSON.stringify({ level: p.level, quietStart: p.quietStart, quietEnd: p.quietEnd, checkIns: p.checkIns !== false, mailWatch: p.mailWatch !== false }));
       // turning it on (or up) starts the clock now, so the first check isn't instant
       if (p.level !== "off" && p.level !== was) setSetting(this.db, "headsUpAt", new Date().toISOString());
     }
@@ -1449,9 +1454,78 @@ export class Lyra {
   tickRoutines(now = new Date()): number[] {
     const started = this.routinesRunner.tick(now);
     this.tickReminders(now);
+    this.tickMailWatch(now);
     this.tickLifeAdmin(now);
     if (!this.tickHeadsUp(now) && !this.tickCheckIn(now) && !this.tickTidy(now)) this.tickStyle(now);
     return started;
+  }
+
+  // ---------- mail watch ----------
+
+  private mailWatching = false;
+
+  /**
+   * Every few minutes: is there new mail from someone who matters? A plain search, no AI.
+   * Only something new gets read, and Lyra posts (with buttons) only if it needs the user.
+   * Returns true when a look started.
+   */
+  tickMailWatch(now = new Date()): boolean {
+    const p = this.proactive;
+    if (p.level === "off" || !p.mailWatch || !this.gmailOn || this.mailWatching) return false;
+    if (!this.p.provider && this.choice().provider === "fake") return false;
+    const local = now.toLocaleTimeString("en-GB", { timeZone: this.p.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    // in quiet hours it doesn't look, so what arrives overnight is still new in the morning
+    if (inQuietHours(local, p)) return false;
+    const last = getSetting(this.db, "mailWatchAt");
+    if (last && now.getTime() - new Date(last).getTime() < MAIL_WATCH_EVERY) return false;
+    setSetting(this.db, "mailWatchAt", now.toISOString());
+    this.mailWatching = true;
+    void this.watchMail()
+      .catch((e) => console.error("[lyra] mail watch", e))
+      .finally(() => (this.mailWatching = false));
+    return true;
+  }
+
+  private async watchMail(): Promise<void> {
+    const r = await this.connectors.call("gmail__search_mail", { query: MW.watchQuery(P.listPeople(this.db)), max_results: 15 });
+    if (r.isError) return;
+    const items = MW.parseMailList(r.content);
+    const before = getSetting(this.db, "mailWatchSeen");
+    let seen: string[] = [];
+    try {
+      seen = JSON.parse(before ?? "[]") as string[];
+    } catch {
+      seen = [];
+    }
+    const f = MW.fresh(items, seen);
+    // the first look only learns what's already there: no alert for old mail
+    if (JSON.stringify(f.seen) !== JSON.stringify(seen)) setSetting(this.db, "mailWatchSeen", JSON.stringify(f.seen));
+    if (before === undefined || !f.fresh.length) return;
+    // (a heads-up check running now would read the same mail: let it, and skip this round's AI step)
+    if (this.routinesRunner.headsUpRunning) return;
+    await new Promise<void>((settled) =>
+      this.routinesRunner.headsUp(
+        {
+          name: "Mail watch",
+          instructions: MW.mailWatchInstructions(f.fresh, this.userName),
+          last_run_at: null,
+          last_summary: getSetting(this.db, "headsUpLast") ?? "",
+          post_mode: "news",
+          channel_id: null,
+        },
+        (messageId, text) => {
+          settled();
+          if (messageId === null) return;
+          // so the next heads-up doesn't say it again
+          setSetting(this.db, "headsUpLast", `${text}\n\n${getSetting(this.db, "headsUpLast") ?? ""}`.slice(0, 800));
+          const options = getMessage(this.db, messageId)?.meta.suggestions ?? [];
+          const who = f.fresh.length === 1 ? MW.senderName(f.fresh[0].from) : "";
+          this.listeners.forEach((l) =>
+            l({ type: "message", channelId: null, notify: { title: who ? `Mail from ${neutralize(who)}` : "New mail", body: text.split("\n")[0].slice(0, 160), options } }),
+          );
+        },
+      ),
+    );
   }
 
   // ---------- talking like the user ----------
@@ -1870,7 +1944,8 @@ export class Lyra {
         if (messageId === null) return;
         setSetting(this.db, "checkInMessage", String(messageId));
         setSetting(this.db, "checkInRecent", JSON.stringify([text.replace(/\s+/g, " ").slice(0, 200), ...recent].slice(0, 6)));
-        this.listeners.forEach((l) => l({ type: "message", channelId: null, notify: { title: "Lyra", body: text.split("\n")[0].slice(0, 160) } }));
+        const options = getMessage(this.db, messageId)?.meta.suggestions ?? [];
+        this.listeners.forEach((l) => l({ type: "message", channelId: null, notify: { title: "Lyra", body: text.split("\n")[0].slice(0, 160), options } }));
       },
       "checkIn",
     );
@@ -1910,7 +1985,8 @@ export class Lyra {
         if (failed) setSetting(this.db, "headsUpAt", new Date(now.getTime() - HEADS_UP_EVERY[p.level] + RETRY_MS).toISOString());
         if (messageId === null) return;
         setSetting(this.db, "headsUpLast", text.slice(0, 800));
-        this.listeners.forEach((l) => l({ type: "message", channelId: null, notify: { title: "Heads-up from Lyra", body: text.split("\n")[0].slice(0, 160) } }));
+        const options = getMessage(this.db, messageId)?.meta.suggestions ?? [];
+        this.listeners.forEach((l) => l({ type: "message", channelId: null, notify: { title: "Heads-up from Lyra", body: text.split("\n")[0].slice(0, 160), options } }));
       },
     );
     return true;

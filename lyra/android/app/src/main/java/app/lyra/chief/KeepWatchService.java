@@ -30,8 +30,7 @@ public class KeepWatchService extends Service {
 
     static boolean running = false;
 
-    /** The notification, with the widget's latest words. */
-    static Notification build(Context c) {
+    static void channel(Context c) {
         NotificationManager nm = c.getSystemService(NotificationManager.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm.getNotificationChannel(CHANNEL) == null) {
             // lowest importance: no sound, no pop-up, no status bar icon, tucked at the bottom of the shade
@@ -40,6 +39,11 @@ public class KeepWatchService extends Service {
             ch.setShowBadge(false);
             nm.createNotificationChannel(ch);
         }
+    }
+
+    /** The notification, with the widget's latest words. */
+    static Notification build(Context c) {
+        channel(c);
         SharedPreferences p = c.getSharedPreferences(LyraWidget.PREFS, Context.MODE_PRIVATE);
         String status = p.getString("status", "Here when you need me");
         String detail = p.getString("detail", "");

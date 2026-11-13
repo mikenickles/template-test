@@ -101,7 +101,7 @@ describe("heads-ups", () => {
     const provider = new FakeProvider([call("nothing_new", { note: "Inbox quiet" })]);
     const lyra = await Lyra.start(platform({ provider }));
     // on (Light) from the start; off when you turn them off
-    expect(lyra.state().proactive).toEqual({ level: "light", quietStart: "21:00", quietEnd: "07:00", checkIns: true });
+    expect(lyra.state().proactive).toEqual({ level: "light", quietStart: "21:00", quietEnd: "07:00", checkIns: true, mailWatch: true });
     await lyra.saveSettings({ proactive: { level: "off" } });
     expect(lyra.tickHeadsUp(atLA(12))).toBe(false);
 
@@ -133,7 +133,7 @@ describe("heads-ups", () => {
     const m = lyra.messages(null).at(-1)!;
     expect(m.content).toMatch(/^Dana's waiting/);
     expect(m.meta.headsUp).toBe(true);
-    expect(events).toContainEqual({ type: "message", channelId: null, notify: { title: "Heads-up from Lyra", body: "Dana's waiting on your answer about Friday." } });
+    expect(events).toContainEqual({ type: "message", channelId: null, notify: { title: "Heads-up from Lyra", body: "Dana's waiting on your answer about Friday.", options: [] } });
     expect(provider.requests[0].system).toMatch(/Keep it to what matters today or tomorrow/);
 
     lyra.tickHeadsUp(new Date(t.getTime() + 4 * 3600_000 + 60_000));
@@ -184,7 +184,7 @@ describe("check-ins when things are quiet", () => {
     const m = lyra.messages(null).at(-1)!;
     expect(m.meta).toMatchObject({ checkIn: true, suggestions: ["Yes, do that", "Not this week"] });
     expect(provider.requests[0].system).toMatch(/This is a check-in/);
-    expect(events).toContainEqual({ type: "message", channelId: null, notify: { title: "Lyra", body: expect.stringMatching(/^I could pull/) } });
+    expect(events).toContainEqual({ type: "message", channelId: null, notify: { title: "Lyra", body: expect.stringMatching(/^I could pull/), options: ["Yes, do that", "Not this week"] } });
     // unanswered: no second ask, even after the 8 hours
     expect(lyra.tickCheckIn(atLA(19, 1))).toBe(false);
     await lyra.chat("Yes, do that", noop);

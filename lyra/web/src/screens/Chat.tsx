@@ -88,6 +88,33 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
     const toggle = () => setShowToday((v) => !v);
     addEventListener("lyra:today", toggle);
     return () => removeEventListener("lyra:today", toggle);
+  }, []);
+
+  // a button tapped on a notification: send that step here, once (and only if it was just now)
+  const sendRef = useRef<(t: string) => Promise<void>>(async () => {});
+  useEffect(() => {
+    const take = () => {
+      try {
+        const o = JSON.parse(sessionStorage.getItem("lyra.say") || "null") as { hash: string; say: string; at: number } | null;
+        const here = channelId === null ? "#/" : `#/c/${channelId}`;
+        if (!o || o.hash.split("?")[0] !== here || Date.now() - o.at > 60_000) return;
+        sessionStorage.removeItem("lyra.say");
+        setShowToday(false);
+        void sendRef.current(o.say);
+      } catch {
+        sessionStorage.removeItem("lyra.say");
+      }
+    };
+    // after the chat's messages have loaded
+    const t = setTimeout(take, 600);
+    addEventListener("lyra:say", take);
+    return () => {
+      clearTimeout(t);
+      removeEventListener("lyra:say", take);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channelId]);
+  useEffect(() => {
   }, [channel]);
   useEffect(() => {
     if (showToday) logRef.current?.scrollTo({ top: 0 });
@@ -394,6 +421,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
       }
     }
   };
+  sendRef.current = send;
 
   // what Lyra is doing, for the status under its avatar
   useEffect(() => {

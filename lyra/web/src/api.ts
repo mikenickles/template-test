@@ -184,10 +184,10 @@ async function signUpForPush(lyra: Lyra): Promise<void> {
 let pushError: string | undefined;
 
 /** The home base rings the phones: Lyra's own posts and tasks that are ready, whether or not this computer's window is showing. */
-function ring(lyra: Lyra, title: string, body: string, hash: string, channelId?: number | null): void {
+function ring(lyra: Lyra, title: string, body: string, hash: string, channelId?: number | null, options: string[] = []): void {
   if (!sync.state.enabled || !sync.state.home) return;
   void lyra
-    .push(title, body, hash)
+    .push(title, body, hash, options)
     // a phone that loads this post later won't announce it again
     .then((reached) => reached > 0 && channelId !== undefined && lyra.markPushed(channelId))
     .catch((e) => console.error("[lyra] push", e));
@@ -427,9 +427,9 @@ const inFront = () => (isNative ? active : document.visibilityState === "visible
 const firstLine = (text: string) => text.trim().split("\n")[0].replace(/[*`#>]/g, "").slice(0, 160);
 const chatHash = (channelId: number | null) => (channelId === null ? "#/" : `#/c/${channelId}`);
 
-function notice(lyra: Lyra, title: string, body: string, hash: string): void {
+function notice(lyra: Lyra, title: string, body: string, hash: string, options: string[] = []): void {
   if (inFront() || !lyra.state().notifications) return;
-  void notifier.now(title, body, hash).catch(() => {});
+  void notifier.now(title, body, hash, options).catch(() => {});
 }
 
 function syncReminders(lyra: Lyra): void {
@@ -454,7 +454,7 @@ function watchForNotices(lyra: Lyra): void {
     }
     if (e.type === "routine" || e.type === "reminder" || e.type === "admin") return syncReminders(lyra);
     if (e.type === "message" && "notify" in e && e.notify) {
-      const n = e.notify as { title: string; body: string; scheduled?: boolean; since?: string; reminderId?: number };
+      const n = e.notify as { title: string; body: string; scheduled?: boolean; since?: string; reminderId?: number; options?: string[] };
       if (n.scheduled) {
         // A reminder or a life admin heads-up: a phone that knew about it showed its own notification
         // at the time. On a computer, say it even while Lyra is open.
@@ -465,8 +465,8 @@ function watchForNotices(lyra: Lyra): void {
         if (!phoneHasIt) ring(lyra, n.title, n.body, chatHash(e.channelId));
         return;
       }
-      ring(lyra, n.title, n.body, chatHash(e.channelId), e.channelId);
-      return notice(lyra, n.title, n.body, chatHash(e.channelId));
+      ring(lyra, n.title, n.body, chatHash(e.channelId), e.channelId, n.options);
+      return notice(lyra, n.title, n.body, chatHash(e.channelId), n.options);
     }
     if (e.type === "task") {
       let d: ReturnType<Lyra["task"]> | undefined;

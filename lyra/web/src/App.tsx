@@ -245,7 +245,17 @@ export function App() {
     return shares.onShared(collect);
   }, []);
   // Tapping a notification opens the chat it's about.
-  useEffect(() => notifier.onOpen((hash) => (location.hash = hash)), []);
+  // A notification opens its chat; a button on it (one of Lyra's next steps) is sent there too,
+  // by the chat once it's on screen.
+  useEffect(
+    () =>
+      notifier.onOpen((hash, say) => {
+        if (say) sessionStorage.setItem("lyra.say", JSON.stringify({ hash, say, at: Date.now() }));
+        if (location.hash !== hash) location.hash = hash;
+        dispatchEvent(new Event("lyra:say"));
+      }),
+    [],
+  );
   // Workers change tasks in the background: keep the badge current.
   useEffect(() => onChange(() => refreshCounts()), [refreshCounts]);
   // The Chat tab returns to whichever chat you were last in.

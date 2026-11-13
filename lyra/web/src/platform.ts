@@ -418,24 +418,36 @@ export const notifier = {
     if (isNative) await NativeBackground.openNotificationSettings();
   },
 
-  /** Tell the user about news while Lyra is in the background. */
-  async now(title: string, body: string, hash: string): Promise<void> {
+  /** Tell the user about news while Lyra is in the background. options: Lyra's next steps, as buttons. */
+  async now(title: string, body: string, hash: string, options: string[] = []): Promise<void> {
     if (desk) return desk.notify(title, body, hash);
     // never pop the permission question from the background: only send if already allowed
     if (!isNative || (await LocalNotifications.checkPermissions()).display !== "granted") return;
     noticeId = noticeId >= NOTICE_BASE + 90_000 ? NOTICE_BASE : noticeId + 1;
-    await LocalNotifications.schedule({ notifications: [{ id: noticeId, title, body, extra: { hash } }] });
+    const buttons = options.slice(0, 3);
+    // each notice gets its own set of buttons (their words differ every time)
+    if (buttons.length)
+      await LocalNotifications.registerActionTypes({ types: [{ id: `n${noticeId}`, actions: buttons.map((t, i) => ({ id: String(i), title: t, foreground: true })) }] }).catch(() => {});
+    await LocalNotifications.schedule({
+      notifications: [{ id: noticeId, title, body, extra: { hash, options: buttons }, ...(buttons.length ? { actionTypeId: `n${noticeId}` } : {}) }],
+    });
   },
 
-  /** Opening a notification goes to the chat it's about. */
-  onOpen(fn: (hash: string) => void): () => void {
-    if (desk) return desk.onOpenHash(fn);
+  /** Opening a notification goes to the chat it's about; one of its buttons also sends that step there. */
+  onOpen(fn: (hash: string, say?: string) => void): () => void {
+    if (desk) return desk.onOpenHash((h) => fn(h));
     if (!isNative) return () => {};
     const sub = LocalNotifications.addListener("localNotificationActionPerformed", (a) => {
-      const hash = (a.notification.extra as { hash?: string } | undefined)?.hash;
-      if (hash) fn(hash);
+      const extra = a.notification.extra as { hash?: string; options?: string[] } | undefined;
+      const say = /^\d$/.test(a.actionId) ? extra?.options?.[Number(a.actionId)] : undefined;
+      if (extra?.hash) fn(extra.hash, say);
     });
-    return () => void sub.then((s) => s.remove());
+    // a push from the home base (Lyra draws those itself)
+    const pushed = NativePush.addListener("open", (o) => o.hash && fn(o.hash, o.say));
+    return () => {
+      void sub.then((s) => s.remove());
+      void pushed.then((s) => s.remove());
+    };
   },
 };
 
@@ -591,6 +603,7 @@ export const shares = {
 const NativePush = registerPlugin<{
   register(o: { projectId: string; appId: string; apiKey: string; senderId: string }): Promise<{ token: string }>;
   forget(): Promise<void>;
+  addListener(e: "open", fn: (o: { hash: string; say?: string }) => void): Promise<{ remove(): Promise<void> }>;
 }>("LyraPush");
 
 /** Push from the home base (phone only): sign up with the project's settings, get this phone's address. */

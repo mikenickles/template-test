@@ -334,6 +334,24 @@ function HeadsUps({ state, run, busy }: { state: AppState; run: (fn: () => Promi
               onChange={(e) => void run(() => api.saveSettings({ proactive: { checkIns: e.target.checked } }), e.target.checked ? "Lyra will check in" : "No check-ins")}
             />
           </label>
+          {state.connectors.some((c) => c.id === "gmail" && c.state === "connected") && (
+            <label className="item">
+              <span className="body">
+                <div className="title">Watch for important mail</div>
+                <div className="sub">
+                  Every 5 minutes Lyra checks for new mail from people on your People cards, or that Gmail marks Important. Only something new gets read, and you hear about it only if it needs you, with buttons for the next step.
+                </div>
+              </span>
+              <input
+                type="checkbox"
+                role="switch"
+                className="switch"
+                checked={p.mailWatch}
+                disabled={busy}
+                onChange={(e) => void run(() => api.saveSettings({ proactive: { mailWatch: e.target.checked } }), e.target.checked ? "Lyra will watch your mail" : "Mail watch off")}
+              />
+            </label>
+          )}
         </div>
       )}
       {p.level !== "off" && <p className="hint">Each check uses some tokens even when it stays quiet. They show on the Usage page under heads-ups. Checks run while Lyra is open, or in the background with {isNative ? "Keep watch" : "the tray"} (below){isNative ? "" : ". With sync on, your phone does the checking"}.</p>}
