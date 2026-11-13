@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Lyra } from "../core/lyra.ts";
 import type { GenerateRequest, GenerateResult, ModelProvider } from "../core/providers/types.ts";
-import { describeSchedule, nextRun, parseTimes } from "../core/routines.ts";
+import { compactTimes, describeSchedule, nextRun, parseTimes } from "../core/routines.ts";
 import { memStores, platform } from "./helpers.ts";
 
 const noop = { text: () => {}, status: () => {}, memory: () => {} };
@@ -54,6 +54,18 @@ describe("schedules", () => {
     expect(describeSchedule("07:00", "0123456")).toBe("Every day at 7:00 AM");
     expect(describeSchedule("17:30", "12345")).toBe("Weekdays at 5:30 PM");
     expect(describeSchedule("20:00,08:00", "14")).toBe("Mon, Thu at 8:00 AM and 8:00 PM");
+    // a repeating check reads as one phrase, not 96 times
+    const q = parseTimes("every 15 min").map(({ h, m }) => `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`).join(",");
+    expect(q.split(",").length).toBe(96);
+    expect(describeSchedule(q, "0123456")).toBe("Every 15 minutes, all day");
+    expect(compactTimes(q)).toBe("every 15 min");
+    expect(describeSchedule("every 2 hours", "12345")).toBe("Every 2 hours, weekdays");
+    expect(describeSchedule("every 30 min from 08:00 to 18:00", "0123456")).toBe("Every 30 minutes, 8:00 AM to 6:00 PM");
+    expect(compactTimes("08:00,08:30,09:00,09:30")).toBe("every 30 min from 08:00 to 09:30");
+    expect(describeSchedule("every 1 hour from 09:00 to 17:00", "135")).toBe("Every hour, 9:00 AM to 5:00 PM, on Mon, Wed, Fri");
+    expect(describeSchedule("07:00,09:10,12:00,15:00,21:00", "0123456")).toBe("Every day at 7:00 AM, 9:10 AM, 12:00 PM and 2 more");
+    expect(compactTimes("07:00,20:00")).toBe("07:00, 20:00");
+    expect(() => parseTimes("every 1 min")).toThrow(/between 5 minutes/);
   });
 });
 

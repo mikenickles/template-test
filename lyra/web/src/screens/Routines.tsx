@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { compactTimes } from "../../../core/routines";
 import { api, onChange, type Channel, type Reminder, type Routine, type RoutineRun } from "../api";
 import { Bell, ChannelIcon, Chevron, Clock, Close, Plus, Trash } from "../icons";
 import { Thinking } from "../LyraMark";
@@ -245,9 +246,9 @@ export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: st
           <label htmlFor="rt-name">Name</label>
         </div>
         <label className="field-label" htmlFor="rt-times" style={{ marginTop: 20 }}>
-          Times (HH:MM, comma between)
+          Times (like 07:00, 18:30 or "every 15 min")
         </label>
-        <input id="rt-times" className="field" value={draft.times} inputMode="numeric" onChange={(e) => setDraft({ ...draft, times: e.target.value })} />
+        <input id="rt-times" className="field" value={draft.times} autoCapitalize="off" onChange={(e) => setDraft({ ...draft, times: e.target.value })} />
         <p className="field-label" style={{ marginTop: 20 }} id="rt-days">
           Days
         </p>
@@ -337,7 +338,7 @@ export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: st
           <button
             className="btn quiet"
             onClick={() =>
-              setDraft({ name: r.name, instructions: r.instructions, times: r.times.replace(/,/g, ", "), days: r.days, always: r.post_mode === "always", channelId: r.channel_id })
+              setDraft({ name: r.name, instructions: r.instructions, times: compactTimes(r.times), days: r.days, always: r.post_mode === "always", channelId: r.channel_id })
             }
           >
             Edit

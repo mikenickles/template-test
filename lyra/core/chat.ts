@@ -492,7 +492,7 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
         properties: {
           name: { type: "string", description: "Short, e.g. 'Friday school check'." },
           instructions: { type: "string", description: "What to check and what counts as worth posting. Written for the assistant that will run it." },
-          times: { type: "string", description: "Local times, HH:MM, comma-separated, e.g. '07:00' or '08:00,20:00'." },
+          times: { type: "string", description: "Local times, HH:MM, comma-separated, e.g. '07:00' or '08:00,20:00'. For a repeating check: 'every 15 min', 'every 2 hours', or 'every 30 min from 08:00 to 18:00'." },
           days: { type: "string", description: "Days as digits, 0 = Sunday … 6 = Saturday. '0123456' every day, '12345' weekdays." },
           always_post: { type: "boolean", description: "Post every run (like a daily brief) instead of only when there's news." },
           channel: { type: "string", enum: ["none", ...channels.map((c) => c.name)], description: current ? `Defaults to this channel (${current.name}).` : "Where it posts. Defaults to the main chat." },

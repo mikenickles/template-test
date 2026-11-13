@@ -111,8 +111,50 @@ export const PRESETS: (RoutineInput & { key: string; blurb: string })[] = [
 
 // ---------- schedule ----------
 
+/** "every 15 min", "every 2 hours", "every 30 minutes from 08:00 to 18:00" as a list of times. */
+function expandEvery(times: string): string {
+  const m = times.trim().match(/^every\s+(\d+)\s*(m|min|mins|minutes?|h|hrs?|hours?)(?:\s+from\s+(\d{1,2}:\d{2})\s+(?:to|until|-)\s+(\d{1,2}:\d{2}))?$/i);
+  if (!m) return times;
+  const step = Number(m[1]) * (/^h/i.test(m[2]) ? 60 : 1);
+  if (step < 5 || step > 720) throw new Error("Pick a gap between 5 minutes and 12 hours.");
+  const toMin = (t: string) => {
+    const [h, mm] = t.split(":").map(Number);
+    if (h > 23 || mm > 59) throw new Error(`"${t}" isn't a time. Use HH:MM, like 07:00.`);
+    return h * 60 + mm;
+  };
+  const start = m[3] ? toMin(m[3]) : 0;
+  const end = m[4] ? toMin(m[4]) : 24 * 60 - 1;
+  if (end < start) throw new Error("The end time comes before the start time.");
+  const out: string[] = [];
+  for (let t = start; t <= end; t += step) out.push(`${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`);
+  return out.join(",");
+}
+
+/** Evenly spaced times (3 or more) as {step, start, end, allDay}, else null. */
+export function regularTimes(times: string): { step: number; start: number; end: number; allDay: boolean } | null {
+  const list = parseTimes(times).map(({ h, m }) => h * 60 + m);
+  if (list.length < 3) return null;
+  const step = list[1] - list[0];
+  if (step <= 0 || list.some((t, i) => i > 0 && t - list[i - 1] !== step)) return null;
+  const start = list[0];
+  const end = list[list.length - 1];
+  return { step, start, end, allDay: start < step && end + step >= 24 * 60 };
+}
+
+const clock = (min: number) => new Date(2000, 0, 1, Math.floor(min / 60), min % 60).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+const hhmm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+const gap = (step: number, short: boolean) =>
+  step % 60 === 0 ? (step === 60 ? "hour" : `${step / 60} hours`) : step === 1 ? "minute" : `${step} ${short ? "min" : "minutes"}`;
+
+/** The times as you'd type them: "every 15 min" for evenly spaced ones, else "07:00, 20:00". */
+export function compactTimes(times: string): string {
+  const r = regularTimes(times);
+  if (!r) return times.replace(/,/g, ", ");
+  return `every ${gap(r.step, true)}${r.allDay && r.start === 0 ? "" : ` from ${hhmm(r.start)} to ${hhmm(r.end)}`}`;
+}
+
 export function parseTimes(times: string): { h: number; m: number }[] {
-  const out = times
+  const out = expandEvery(times)
     .split(/[,\s]+/)
     .filter(Boolean)
     .map((t) => {
@@ -152,11 +194,17 @@ const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** "Every day at 7:00 AM", "Weekdays at 5:30 PM", "Mon, Thu at 8:00 AM and 8:00 PM" */
 export function describeSchedule(times: string, days: string): string {
-  const t = parseTimes(times)
-    .map(({ h, m }) => new Date(2000, 0, 1, h, m).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }))
-    .join(" and ");
   const d = cleanDays(days);
   const when = d === "0123456" ? "Every day" : d === "12345" ? "Weekdays" : d === "06" ? "Weekends" : d.split("").map((x) => DAY_NAMES[Number(x)]).join(", ");
+  // evenly spaced: "Every 15 minutes, all day" rather than 96 times
+  const r = regularTimes(times);
+  if (r) {
+    const span = r.allDay ? (d === "0123456" ? "all day" : "") : `${clock(r.start)} to ${clock(r.end)}`;
+    const dayPart = d === "0123456" ? "" : when.toLowerCase().startsWith("week") ? when.toLowerCase() : `on ${when}`;
+    return [`Every ${gap(r.step, false)}`, span, dayPart].filter(Boolean).join(", ");
+  }
+  const list = parseTimes(times).map(({ h, m }) => clock(h * 60 + m));
+  const t = list.length > 4 ? `${list.slice(0, 3).join(", ")} and ${list.length - 3} more` : list.join(" and ");
   return `${when} at ${t}`;
 }
 
