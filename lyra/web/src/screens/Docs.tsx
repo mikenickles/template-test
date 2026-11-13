@@ -14,12 +14,17 @@ export function Docs({ toast }: { toast: (m: string) => void }) {
   useEffect(load, [load]);
   useEffect(() => onChange((e) => e.type === "doc" && load()), [load]);
 
+  const [making, setMaking] = useState(false);
   const create = async () => {
+    if (making) return; // a double tap makes one doc, not two
+    setMaking(true);
     try {
       const d = await api.saveDoc(null, { title: "Untitled", body: "Start writing here." });
       location.hash = `#/d/${d.id}?edit`;
     } catch (e) {
       toast((e as Error).message);
+    } finally {
+      setMaking(false);
     }
   };
 
@@ -27,7 +32,7 @@ export function Docs({ toast }: { toast: (m: string) => void }) {
     <div className="screen">
       <div className="bar">
         <h1 className="page-title">Docs</h1>
-        <button className="btn quiet" onClick={() => void create()}>
+        <button className="btn quiet" disabled={making} onClick={() => void create()}>
           <Plus size={16} /> New
         </button>
       </div>

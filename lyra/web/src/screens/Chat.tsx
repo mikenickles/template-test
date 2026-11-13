@@ -531,13 +531,17 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
             </div>
           )}
 
-          {!showToday && messages.map((m) => {
+          {!showToday && messages.map((m, i) => {
             // a reaction on its own is shown on your message; its empty reply takes no room
             if (m.role === "assistant" && !m.content.trim() && !m.meta.error && !m.meta.memory?.length && !m.meta.tasks?.length) return null;
             const d = parse(m.created_at);
             const day = dayLabel(d);
             const showDay = day !== lastDay;
             lastDay = day;
+            // your messages sent back to back (within 5 minutes) read as one group, with one time under the last
+            const near = (a?: Message, b?: Message) => !!a && !!b && a.role === "user" && b.role === "user" && Math.abs(parse(b.created_at).getTime() - parse(a.created_at).getTime()) < 5 * 60_000;
+            const cont = !showDay && near(messages[i - 1], m);
+            const lastOfGroup = m.role === "user" && !near(m, messages[i + 1]);
             return (
               <Fragment key={m.id}>
                 {showDay && (
@@ -546,7 +550,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                     {day}
                   </div>
                 )}
-                <div className={`row ${m.role === "user" ? "user" : "lyra"}${m.id === focus ? " focused" : ""}`} data-mid={m.id}>
+                <div className={`row ${m.role === "user" ? "user" : "lyra"}${cont ? " cont" : ""}${m.id === focus ? " focused" : ""}`} data-mid={m.id}>
                   {m.id > 0 && (m.content.trim() || m.role === "user") && (
                     <button className="msg-more" aria-label="Message actions" title="Copy, pin or delete" onClick={() => setActing(m)}>
                       <More size={18} />
@@ -586,14 +590,17 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                       </span>
                     ) : null
                   ) : m.role === "user" ? (
-                    <div className={`bubble${m.meta.reaction ? " reacted" : ""}`} {...holdProps(m)}>
-                      {m.content}
-                      {m.meta.reaction && (
-                        <span className="reaction" role="img" aria-label={`Lyra reacted ${m.meta.reaction}`}>
-                          {m.meta.reaction}
-                        </span>
-                      )}
-                    </div>
+                    <>
+                      <div className={`bubble${m.meta.reaction ? " reacted" : ""}`} {...holdProps(m)}>
+                        {m.content}
+                        {m.meta.reaction && (
+                          <span className="reaction" role="img" aria-label={`Lyra reacted ${m.meta.reaction}`}>
+                            {m.meta.reaction}
+                          </span>
+                        )}
+                      </div>
+                      {lastOfGroup && m.id > 0 && <time className="stamp" dateTime={d.toISOString()}>{clock(d)}</time>}
+                    </>
                   ) : !m.content.trim() && !m.meta.error ? null : (
                     <div className={`reply${m.meta.error ? " error" : headline(m.content) ? " headline" : ""}`} {...holdProps(m)}>
                       <Markdown text={m.content} />

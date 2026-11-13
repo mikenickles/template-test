@@ -80,21 +80,26 @@ function ReadyCard({ t }: { t: Task }) {
 }
 
 /** Swipe left to put a task off until tomorrow, or mark it done. */
-function SwipeRow({ children, onLater, onDone, laterLabel = "Later" }: { children: ReactNode; onLater: () => void; onDone: () => void; laterLabel?: string }) {
+function SwipeRow({ children, title, onLater, onDone, laterLabel = "Later" }: { children: ReactNode; title: string; onLater: () => void; onDone: () => void; laterLabel?: string }) {
   const WIDTH = 152;
   const [dx, setDx] = useState(0);
   const [dragging, setDragging] = useState(false);
   const start = useRef<{ x: number; y: number; dx: number; locked: boolean } | null>(null);
   // the click that ends a drag isn't a tap
   const dragged = useRef(false);
-  const open = dx <= -WIDTH / 2;
   return (
-    <div className="swipe">
-      <div className="swipe-actions" aria-hidden={!open}>
-        <button type="button" className="swipe-later" tabIndex={open ? 0 : -1} onClick={() => (setDx(0), onLater())}>
+    <div
+      className="swipe"
+      // the buttons can also be reached with the keyboard or a screen reader: the row opens when one has focus
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null) && !dragging) setDx(0);
+      }}
+    >
+      <div className="swipe-actions">
+        <button type="button" className="swipe-later" aria-label={`${laterLabel}: ${title}`} onFocus={() => setDx(-WIDTH)} onClick={() => (setDx(0), onLater())}>
           {laterLabel}
         </button>
-        <button type="button" className="swipe-done" tabIndex={open ? 0 : -1} onClick={() => (setDx(0), onDone())}>
+        <button type="button" className="swipe-done" aria-label={`Done: ${title}`} onFocus={() => setDx(-WIDTH)} onClick={() => (setDx(0), onDone())}>
           Done
         </button>
       </div>
@@ -282,13 +287,13 @@ export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: 
                 </h2>
                 {g.items.map((t) =>
                   t.status === "ready" ? (
-                    <SwipeRow key={t.id} onLater={() => void later(t)} onDone={() => void toggle(t)}>
+                    <SwipeRow key={t.id} title={t.title} onLater={() => void later(t)} onDone={() => void toggle(t)}>
                       <ReadyCard t={t} />
                     </SwipeRow>
                   ) : t.status === "working" ? (
                     <TaskRowView key={t.id} t={t} onToggle={toggle} />
                   ) : (
-                    <SwipeRow key={t.id} onLater={() => void later(t)} onDone={() => void toggle(t)}>
+                    <SwipeRow key={t.id} title={t.title} onLater={() => void later(t)} onDone={() => void toggle(t)}>
                       <TaskRowView t={t} onToggle={toggle} />
                     </SwipeRow>
                   ),
@@ -301,7 +306,7 @@ export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: 
                 Later <span className="count">{putOff.length}</span>
               </h2>
               {putOff.map((t) => (
-                <SwipeRow key={t.id} laterLabel="Now" onLater={() => void bringBack(t)} onDone={() => void toggle(t)}>
+                <SwipeRow key={t.id} title={t.title} laterLabel="Now" onLater={() => void bringBack(t)} onDone={() => void toggle(t)}>
                   <TaskRowView t={t} onToggle={toggle} />
                 </SwipeRow>
               ))}

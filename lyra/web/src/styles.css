@@ -66,15 +66,15 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0d0f13;
-    --surface: #15181e;
-    --surface-2: #1e222a;
-    --text: #eceef1;
-    --text-muted: #8e95a2;
-    --border: #272c35;
+    --bg: #141310;
+    --surface: #1d1c18;
+    --surface-2: #27251f;
+    --text: #eeebe3;
+    --text-muted: #9d988b;
+    --border: #302e27;
     --accent: #cbf25c;
     --accent-ink: #10130a;
-    --accent-soft: #232c14;
+    --accent-soft: #2a3317;
     --accent-text: #cbf25c;
     --good: #5cc48a;
     --warn: #e0a940;
@@ -82,16 +82,16 @@
 
     --me: #d4cfc4;
     --me-text: #141310;
-    --orb: #171a20;
-    --orb-edge: #2a2f39;
-    --orb-line: rgba(236, 238, 241, 0.38);
-    --orb-star: #eceef1;
-    --chart-line: #3a404c;
-    --drawer-bg: #08090c;
-    --drawer-hover: rgba(236, 238, 241, 0.05);
-    --drawer-active: rgba(236, 238, 241, 0.09);
-    --drawer-active-edge: rgba(236, 238, 241, 0.2);
-    --tree-line: #343a45;
+    --orb: #1b1a16;
+    --orb-edge: #33302a;
+    --orb-line: rgba(238, 235, 227, 0.38);
+    --orb-star: #eeebe3;
+    --chart-line: #45423a;
+    --drawer-bg: #0e0d0b;
+    --drawer-hover: rgba(238, 235, 227, 0.05);
+    --drawer-active: rgba(238, 235, 227, 0.09);
+    --drawer-active-edge: rgba(238, 235, 227, 0.2);
+    --tree-line: #3d3a33;
     --scrim: rgba(0, 0, 0, 0.45);
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
     color-scheme: dark;
@@ -531,6 +531,20 @@ body[data-busy] .orb:has(.avatar)::after {
   margin-top: var(--s2);
 }
 
+/* back to back: one group, joined corners, one time under the last */
+.row.user.cont {
+  margin-top: 4px;
+}
+.row.user.cont .bubble {
+  border-top-right-radius: 6px;
+}
+.stamp {
+  margin: 4px 6px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 @keyframes rise {
   from {
     opacity: 0;
@@ -777,14 +791,17 @@ body[data-busy] .orb:has(.avatar)::after {
   max-width: min(90%, 560px);
 }
 
+/* everything Lyra did in a reply (saved, task, doc, skill, person) is the same small pill */
 .note {
   display: flex;
+  align-self: flex-start;
+  max-width: 100%;
   align-items: flex-start;
   gap: var(--s2);
   font-size: var(--text-sm);
   color: var(--text-muted);
-  padding: 6px var(--s3) 6px 10px;
-  border-radius: var(--radius-sm);
+  padding: 6px 14px 6px 10px;
+  border-radius: 18px;
   background: var(--surface);
   border: 1px solid var(--border);
 }
@@ -5474,13 +5491,24 @@ button.orb {
 }
 
 .person-chip {
-  padding: 4px var(--s3);
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent-text);
-  font-size: 13px;
-  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px 6px 10px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 600;
   text-decoration: none;
+}
+.person-chip::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-text);
 }
 
 .tidy-undo {
@@ -5791,14 +5819,14 @@ button.orb {
 @media (prefers-color-scheme: dark) {
   [data-bubbles="classic"] {
     --me: #e4e7ec;
-    --me-text: #0d0f13;
+    --me-text: #141310;
   }
   [data-bubbles="accent"] {
     --me: color-mix(in srgb, var(--accent) 20%, var(--surface));
     --me-text: var(--text);
   }
   [data-bubbles="neutral"] {
-    --me: #242832;
+    --me: #2b2924;
     --me-text: var(--text);
   }
 }

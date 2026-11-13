@@ -504,6 +504,18 @@ export class Lyra {
     if (opts.resumeWorkers !== false) lyra.workers.resumeInterrupted();
     // an email or event cut off mid-send: back to the user, who can check Gmail/Calendar first
     db.run("UPDATE actions SET status = 'proposed', error = ? WHERE status = 'working'", ["Lyra was closed while doing this. Check it didn't go through before trying again."]);
+    // a follow-up that came due as the app closed: say so, rather than let it vanish
+    if (opts.resumeWorkers !== false) {
+      const lost = db.all<{ id: number; text: string; channel_id: number | null }>(
+        "SELECT id, text, channel_id FROM reminders WHERE kind = 'follow_up' AND status = 'done' AND message_id IS NULL AND done_at > ?",
+        [new Date(Date.now() - 3 * 86_400_000).toISOString()],
+      );
+      for (const r of lost) {
+        const channelId = r.channel_id && getChannel(db, r.channel_id) ? r.channel_id : null;
+        const m = addMessage(db, "assistant", `I was going to check on this, but Lyra closed before I could: ${r.text}\n\nWant me to look now?`, { reminder: { id: r.id, kind: "follow_up" } }, channelId);
+        db.run("UPDATE reminders SET message_id = ? WHERE id = ?", [m.id, r.id]);
+      }
+    }
     return lyra;
   }
 
@@ -647,7 +659,11 @@ export class Lyra {
       try {
         if (a.kind === "playlist") {
           if (!this.actionsAllowed().playlist) throw new Error("Lyra isn't allowed to change your Spotify playlists on this device. Turn it on in Connections, then try again.");
-          const result = await A.doPlaylist(this.spotify, a.payload as A.PlaylistDraft);
+          // once the playlist exists it's remembered on the card, so a retry adds to it instead of making a second one
+          const result = await A.doPlaylist(this.spotify, a.payload as A.PlaylistDraft, (playlistId) => {
+            this.db.run("UPDATE actions SET payload = ? WHERE id = ?", [JSON.stringify({ ...(a.payload as A.PlaylistDraft), playlistId, made: true }), id]);
+            void this.db.flush();
+          });
           A.finishAction(this.db, id, { status: "done", result });
           await this.db.flush();
           this.listeners.forEach((l) => l({ type: "message", channelId: a.channel_id }));

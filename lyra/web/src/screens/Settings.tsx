@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { api, isNative, syncApi, type AppState, type SyncStatus } from "../api";
 import { Bell, Chart, Check, Chevron, Cloud, Cpu, Plug, Refresh, User } from "../icons";
 import { compact, dayKey } from "../usageData";
@@ -275,6 +275,12 @@ function HeadsUps({ state, run, busy }: { state: AppState; run: (fn: () => Promi
   const p = state.proactive;
   const level = LEVELS.find((l) => l.id === p.level)!;
   const quiet = (k: "quietStart" | "quietEnd", v: string) => v && v !== p[k] && void run(() => api.saveSettings({ proactive: { [k]: v } }), "Quiet hours saved");
+  // saved a moment after the last change (a phone's picker, or typing on a computer), not on every keystroke
+  const wait = useRef<number>(0);
+  const soon = (k: "quietStart" | "quietEnd", v: string) => {
+    clearTimeout(wait.current);
+    wait.current = window.setTimeout(() => quiet(k, v), 900);
+  };
   return (
     <section className="section">
       <h2 className="section-label">Heads-ups</h2>
@@ -300,13 +306,13 @@ function HeadsUps({ state, run, busy }: { state: AppState; run: (fn: () => Promi
               <div className="title">Quiet from</div>
               <div className="sub">No heads-ups overnight. Reminders you set still come.</div>
             </span>
-            <input id="quiet-start" type="time" className="select" value={p.quietStart} disabled={busy} onChange={(e) => quiet("quietStart", e.target.value)} />
+            <input id="quiet-start" type="time" className="select" defaultValue={p.quietStart} key={`qs${p.quietStart}`} onChange={(e) => soon("quietStart", e.target.value)} />
           </label>
           <label className="item" htmlFor="quiet-end">
             <span className="body">
               <div className="title">Until</div>
             </span>
-            <input id="quiet-end" type="time" className="select" value={p.quietEnd} disabled={busy} onChange={(e) => quiet("quietEnd", e.target.value)} />
+            <input id="quiet-end" type="time" className="select" defaultValue={p.quietEnd} key={`qe${p.quietEnd}`} onChange={(e) => soon("quietEnd", e.target.value)} />
           </label>
         </div>
       )}

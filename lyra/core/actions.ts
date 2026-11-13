@@ -312,7 +312,11 @@ export async function doEvent(d: ActionDeps, v: EventDraft): Promise<ActionResul
 }
 
 /** Make the playlist (private), or add the songs to the user's existing one. Only after their tap. */
-export async function doPlaylist(spotify: { call<T>(method: string, path: string, body?: unknown): Promise<T> }, p: PlaylistDraft): Promise<ActionResult> {
+export async function doPlaylist(
+  spotify: { call<T>(method: string, path: string, body?: unknown): Promise<T> },
+  p: PlaylistDraft & { made?: boolean },
+  onCreated?: (playlistId: string) => void,
+): Promise<ActionResult> {
   let id = p.playlistId;
   let link: string | undefined;
   if (!id) {
@@ -324,7 +328,8 @@ export async function doPlaylist(spotify: { call<T>(method: string, path: string
     });
     id = made.id;
     link = made.external_urls?.spotify;
+    onCreated?.(id);
   }
   for (let i = 0; i < p.tracks.length; i += 100) await spotify.call("POST", `/playlists/${id}/tracks`, { uris: p.tracks.slice(i, i + 100).map((t) => t.uri) });
-  return { did: p.playlistId ? "added_songs" : "made", at: new Date().toISOString(), link: link?.startsWith("https://open.spotify.com/") ? link : `https://open.spotify.com/playlist/${id}` };
+  return { did: p.playlistId && !p.made ? "added_songs" : "made", at: new Date().toISOString(), link: link?.startsWith("https://open.spotify.com/") ? link : `https://open.spotify.com/playlist/${id}` };
 }

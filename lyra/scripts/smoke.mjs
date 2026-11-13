@@ -192,7 +192,7 @@ try {
   for (let i = 1; i <= 8; i++) await page.mouse.move(card.x + card.width - 30 - i * 25, card.y + card.height / 2);
   await page.mouse.up();
   await shot("light-34-swipe");
-  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByRole("button", { name: /^Done: Find a plumber/ }).click();
   await page.getByText("Nothing on your plate.").waitFor();
   check(true, "swiping a task reveals Later and Done");
   await page.getByRole("tab", { name: "Done" }).click();
