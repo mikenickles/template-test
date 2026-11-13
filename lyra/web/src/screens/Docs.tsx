@@ -112,14 +112,14 @@ function DashboardPage({ doc, toast, onChange: set }: { doc: Doc; toast: (m: str
   };
   return (
     <div className="screen doc-screen dash-screen">
-      <h1 className="page-title">{doc.title}</h1>
-      <p className="page-sub">
-        {dash?.subtitle ? `${dash.subtitle} · ` : ""}
-        {doc.refreshed_at ? `Refreshed ${ago(parse(doc.refreshed_at))}` : `Made ${ago(parse(doc.created_at))}`}
+      <p className="today-when dash-when">
+        Dashboard · {doc.refreshed_at ? `Refreshed ${ago(parse(doc.refreshed_at))}` : `Made ${ago(parse(doc.created_at))}`}
       </p>
+      <h1 className="page-title">{doc.title}</h1>
+      {dash?.subtitle && <p className="page-sub">{dash.subtitle}</p>}
       <div className="doc-actions">
         {doc.instructions.trim() ? (
-          <button className="btn quiet" disabled={refreshing} onClick={() => void refresh()}>
+          <button className="btn primary" disabled={refreshing} onClick={() => void refresh()}>
             <Refresh size={16} className={refreshing ? "spin" : ""} /> {refreshing ? "Refreshing…" : "Refresh"}
           </button>
         ) : null}

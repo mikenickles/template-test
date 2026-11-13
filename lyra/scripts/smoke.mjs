@@ -358,18 +358,23 @@ try {
   await page.locator(".doc-note", { hasText: "Spending" }).click();
   await page.getByRole("heading", { name: "Spending" }).waitFor();
   check(
-    (await page.locator(".dash-stat").count()) === 3 && (await page.locator(".dash-bar").count()) === 3 && (await page.locator(".dash-line").count()) === 1,
-    "a dashboard draws stat tiles, bars with values, and a line chart",
+    (await page.locator(".dash-hero").count()) === 1 &&
+      (await page.locator(".dash-stat").count()) === 2 &&
+      (await page.locator(".dash-bar").count()) === 3 &&
+      (await page.locator(".dash-line").count()) === 1 &&
+      (await page.locator(".dash-list .done").count()) === 1,
+    "a dashboard draws a headline number, tiles, bars with values, a line chart and a checklist",
   );
   await page.locator(".dash-plot rect").nth(3).dispatchEvent("pointerdown");
   check(await page.locator(".dash-tip", { hasText: "Thu" }).isVisible(), "tapping the line chart shows that point's value");
+  await page.locator(".dash-hero").scrollIntoViewIfNeeded();
   await shot("light-42-dashboard");
   await page.getByRole("button", { name: "Show as table" }).click();
   check((await page.locator(".dash-table tbody tr").count()) === 7, "the line chart can show as a table");
   await page.getByRole("button", { name: "Show chart" }).click();
   await page.getByRole("button", { name: "Refresh" }).click();
   await page.locator(".page-sub", { hasText: "New practice numbers" }).waitFor();
-  check(/· Refreshed (just now|\d+ ?(s|sec|min|m) ago)/i.test(await page.locator(".page-sub").first().innerText()), "Refresh rebuilds it");
+  check(/Dashboard · Refreshed (just now|\d+ min ago)/.test(await page.locator(".dash-when").innerText()), "Refresh rebuilds it");
   await page.emulateMedia({ colorScheme: "dark" });
   await shot("dark-11-dashboard");
   await page.emulateMedia({ colorScheme: "light" });
