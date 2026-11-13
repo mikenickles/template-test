@@ -6,7 +6,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
+import android.os.Build;
 import android.os.PowerManager;
+import android.provider.Settings;
 import android.os.SystemClock;
 import androidx.core.content.ContextCompat;
 import com.getcapacitor.JSObject;
@@ -72,6 +75,45 @@ public class BackgroundPlugin extends Plugin {
         JSObject r = new JSObject();
         r.put("on", on);
         call.resolve(r);
+    }
+
+    /** Whether battery saving can hold Lyra back (true: it can't). */
+    @PluginMethod
+    public void battery(PluginCall call) {
+        PowerManager pm = getContext().getSystemService(PowerManager.class);
+        JSObject r = new JSObject();
+        r.put("unrestricted", pm != null && pm.isIgnoringBatteryOptimizations(getContext().getPackageName()));
+        call.resolve(r);
+    }
+
+    /** Android's own "let this app run in the background?" question. */
+    @PluginMethod
+    public void askBattery(PluginCall call) {
+        try {
+            Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getContext().getPackageName()));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+        } catch (RuntimeException e) {
+            Intent i = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+        }
+        call.resolve();
+    }
+
+    /** Lyra's notification settings in Android (when notifications were turned off there). */
+    @PluginMethod
+    public void openNotificationSettings(PluginCall call) {
+        Intent i;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            i = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+            i.putExtra(Settings.EXTRA_APP_PACKAGE, getContext().getPackageName());
+        } else {
+            i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getContext().getPackageName()));
+        }
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        getContext().startActivity(i);
+        call.resolve();
     }
 
     /** The app finished its background tick: let the phone sleep again. */

@@ -262,6 +262,7 @@ function syncReminders(lyra: Lyra): void {
   const on = lyra.state().notifications;
   void notifier.reminders(on ? lyra.routines() : []).catch(() => {});
   void notifier.oneOffs(on ? lyra.reminders() : []).catch(() => {});
+  void notifier.adminNotices(on ? lyra.lifeAdminNotices() : []).catch(() => {});
 }
 
 function watchForNotices(lyra: Lyra): void {
@@ -269,7 +270,7 @@ function watchForNotices(lyra: Lyra): void {
   // only a task that just became "Ready for you" is news
   const seen = new Map(lyra.tasks({}).map((t) => [t.id, t.status]));
   lyra.onChange((e) => {
-    if (e.type === "routine" || e.type === "reminder") return syncReminders(lyra);
+    if (e.type === "routine" || e.type === "reminder" || e.type === "admin") return syncReminders(lyra);
     if (e.type === "message" && "notify" in e && e.notify) {
       // reminders: the phone already showed its scheduled notification; on a computer, say it even while Lyra is open
       if (e.notify.scheduled) {

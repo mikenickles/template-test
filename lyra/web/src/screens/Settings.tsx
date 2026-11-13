@@ -1,9 +1,9 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import { api, isNative, syncApi, type AppState, type SyncStatus } from "../api";
 import { Bell, Chart, Check, Chevron, Cloud, Cpu, Plug, Refresh, User } from "../icons";
 import { compact, dayKey } from "../usageData";
 import { Usage } from "./Usage";
-import { appLock, background, installer, isDesktop, thisDevice, type BackgroundState } from "../platform";
+import { appLock, background, installer, isDesktop, notifier, thisDevice, type BackgroundState } from "../platform";
 import { BackupSection } from "./Backup";
 import { ModelSettings } from "./ModelSettings";
 import { GoogleSetupSection, SyncSection } from "./SyncSection";
@@ -413,9 +413,136 @@ function BackgroundSection({ toast }: { toast: (m: string) => void }) {
   );
 }
 
+/**
+ * Everything that has to be right for Lyra to reach you on her own, checked one by one,
+ * each with the tap that fixes it, and a test notification.
+ */
+function NotificationCheckup({ state, run, toast }: { state: AppState; run: (fn: () => Promise<AppState>, done: string) => Promise<void>; toast: (m: string) => void }) {
+  const [perm, setPerm] = useState<Awaited<ReturnType<typeof notifier.permission>> | null>(null);
+  const [watch, setWatch] = useState<BackgroundState | null>(null);
+  const [battery, setBattery] = useState<boolean | null>(null);
+  const check = useCallback(() => {
+    void notifier.permission().then(setPerm, () => setPerm("unavailable"));
+    void background.state().then(setWatch, () => setWatch(null));
+    void background.batteryOk().then(setBattery, () => setBattery(null));
+  }, []);
+  useEffect(check, [check]);
+  // coming back from Android's settings: look again
+  useEffect(() => {
+    const again = () => document.visibilityState === "visible" && check();
+    document.addEventListener("visibilitychange", again);
+    return () => document.removeEventListener("visibilitychange", again);
+  }, [check]);
+  if (perm === null || perm === "unavailable") return null;
+
+  const practice = state.choice.provider === "fake";
+  const rows: { ok: boolean; title: string; sub: string; fix?: ReactNode }[] = [
+    {
+      ok: perm === "granted" && state.notifications,
+      title: "Notifications allowed",
+      sub: perm === "denied" ? "Android has them turned off for Lyra." : !state.notifications ? "Turned off in Lyra." : "Lyra can reach you.",
+      fix:
+        perm === "denied" ? (
+          <button className="btn quiet" onClick={() => void notifier.openSettings()}>
+            Open settings
+          </button>
+        ) : (
+          <button
+            className="btn quiet"
+            onClick={() =>
+              void run(async () => {
+                if (!(await api.allowNotifications())) throw new Error("Android said no. Tap Open settings to allow them.");
+                return api.saveSettings({ notifications: true });
+              }, "Notifications on").then(check)
+            }
+          >
+            Allow
+          </button>
+        ),
+    },
+    {
+      ok: !practice,
+      title: "A real AI model",
+      sub: practice ? "The practice model can't write heads-ups or check-ins." : "Heads-ups and check-ins can run.",
+      fix: (
+        <a className="btn quiet" href="#/settings/model">
+          Set up
+        </a>
+      ),
+    },
+    {
+      ok: state.proactive.level !== "off",
+      title: "Heads-ups on",
+      sub: state.proactive.level === "off" ? "Off: Lyra only speaks when spoken to." : `${state.proactive.level === "active" ? "Active" : "Light"}, with check-ins ${state.proactive.checkIns ? "on" : "off"}.`,
+      fix: (
+        <button className="btn quiet" onClick={() => void run(() => api.saveSettings({ proactive: { level: "light", checkIns: true } }), "Heads-ups: Light")}>
+          Turn on
+        </button>
+      ),
+    },
+  ];
+  if (watch)
+    rows.push({
+      ok: watch.on,
+      title: isDesktop ? "Keep running in the tray" : "Keep watch on",
+      sub: watch.on ? "Lyra keeps checking with the app in the background." : "Off: Lyra only checks while she's open.",
+      fix: (
+        <button className="btn quiet" onClick={() => void background.set({ on: true }).then((s) => (setWatch(s), toast("Lyra will keep watch")), (e) => toast((e as Error).message))}>
+          Turn on
+        </button>
+      ),
+    });
+  if (battery !== null)
+    rows.push({
+      ok: battery,
+      title: "Not held back by battery saving",
+      sub: battery ? "Her 15-minute check-ins get through." : "Android may delay or skip her background checks.",
+      fix: (
+        <button className="btn quiet" onClick={() => void background.askBattery()}>
+          Allow
+        </button>
+      ),
+    });
+  const all = rows.every((r) => r.ok);
+
+  return (
+    <section className="section">
+      <h2 className="section-label">Checkup</h2>
+      <p className="hint">{all ? "All set: Lyra can reach you on her own." : "A few things stop Lyra reaching you on her own. Each is one tap."}</p>
+      <div className="group">
+        {rows.map((r) => (
+          <div className="item checkup-row" key={r.title}>
+            <span className={`checkup-mark${r.ok ? " ok" : ""}`} aria-label={r.ok ? "OK" : "Needs fixing"}>
+              {r.ok ? <Check size={16} /> : "!"}
+            </span>
+            <span className="body">
+              <div className="title">{r.title}</div>
+              <div className="sub">{r.sub}</div>
+            </span>
+            {!r.ok && r.fix}
+          </div>
+        ))}
+      </div>
+      {!isDesktop && <p className="hint">Don't swipe Lyra away from your recent apps: that stops her until you open her again. Reminders, routine nudges and life admin heads-ups still arrive; heads-ups and check-ins need her running.</p>}
+      <button
+        className="btn quiet"
+        onClick={() =>
+          void notifier.test().then(
+            () => toast(isDesktop ? "Sent" : "Coming in a few seconds: switch to your home screen to see it"),
+            (e) => toast((e as Error).message),
+          )
+        }
+      >
+        Send me a test notification
+      </button>
+    </section>
+  );
+}
+
 function AlertsSection({ state, run, busy, toast }: { state: AppState; run: (fn: () => Promise<AppState>, done: string) => Promise<void>; busy: boolean; toast: (m: string) => void }) {
   return (
     <>
+      <NotificationCheckup state={state} run={run} toast={toast} />
       <section className="section">
         <h2 className="section-label">Notifications</h2>
         <div className="group">

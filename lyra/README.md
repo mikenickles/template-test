@@ -60,6 +60,11 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - Heads-up and follow-up tokens show on the Usage page as their own kind of work ("proactive").
 - **Check-ins when it's quiet** (on with heads-ups, its own switch): when nothing needs you, Lyra asks for work like a colleague with a free afternoon. It offers one specific project grounded in your memory, mail, calendar and tasks, asks one question to know you better, or asks what it could take off your plate this week, with up to three replies to tap. About once a day on Light, up to twice on Active; only 9:00 to 20:00 and outside quiet hours; never while you're mid-conversation (2 hours), while something is waiting on you or a worker is running, or before you've answered the last one (gives up waiting after 3 days). Your answers go to memory; a yes gets started. Tap-replies are dropped if it read mail or the web. Recent check-ins are passed along so it doesn't repeat itself (`Lyra.tickCheckIn`, `checkInInstructions`, `meta.checkIn`, settings `checkInAt` / `checkInMessage` / `checkInRecent`). The Today view offers "What could you take on for me?" and "Ask me something" when nothing needs you.
 
+### Getting notifications
+
+- **Settings, Notifications, Checkup** checks everything that stops Lyra reaching you on her own, each with a one-tap fix: notifications allowed (or Android's settings when they were turned off there), a real AI model (the practice model can't write heads-ups), heads-ups on, Keep watch on (the tray on Windows), and not held back by battery saving. **Send me a test notification** arrives a few seconds later, so you can leave the app and see it.
+- **What arrives with Lyra closed** (scheduled on the phone ahead of time): reminders and follow-ups, routine nudges, and life admin heads-ups (9:00 on their day). **What needs Lyra running** (Keep watch, and not swiped away from recent apps): heads-ups, check-ins, routine posts and finished tasks, since she has to think to write them.
+
 ### Activity log
 
 - Tap Lyra's face in the main chat (or her name at the top of the menu) to see everything she did on her own, newest first and grouped by day: background tasks, routine runs, heads-ups, check-ins, reminders and follow-ups, life admin scans, memory tidy-ups and learning how you talk. Filter by Tasks, Routines, On her own or Reminders.

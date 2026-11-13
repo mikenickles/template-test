@@ -1747,6 +1747,15 @@ export class Lyra {
     };
   }
 
+  /** Life admin heads-ups to schedule on the phone: at 9:00 local on their day. */
+  lifeAdminNotices(now = new Date()): { id: number; at: string; text: string }[] {
+    if (!this.lifeAdminOn) return [];
+    const today = LA.localDay(now, this.p.timeZone);
+    return LA.upcomingNotices(this.db, today)
+      .map((n) => ({ id: n.id, at: localToDate(`${n.day} 09:00`, this.p.timeZone)?.toISOString() ?? "", text: n.text }))
+      .filter((n) => n.at && Date.parse(n.at) > now.getTime() + 60_000);
+  }
+
   async setLifeAdmin(on: boolean): Promise<void> {
     setSetting(this.db, "lifeAdmin", on ? "on" : "off");
     await this.db.flush();
@@ -1813,11 +1822,13 @@ export class Lyra {
     const today = LA.localDay(now, this.p.timeZone);
     const local = now.toLocaleTimeString("en-GB", { timeZone: this.p.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
     LA.tidyItems(this.db, today);
-    if (local >= "08:00" && local < "21:00" && !inQuietHours(local, this.proactive)) {
+    // from 9:00, the time the phone's own scheduled heads-up goes off (so it's said once)
+    if (local >= "09:00" && local < "21:00" && !inQuietHours(local, this.proactive)) {
       const n = LA.dueNotices(this.db, today);
       if (n) {
         addMessage(this.db, "assistant", n.text, { lifeAdmin: { ids: n.ids } }, null);
-        this.listeners.forEach((l) => l({ type: "message", channelId: null, notify: { title: "Life admin", body: n.text.split("\n")[0].slice(0, 160) } }));
+        // the phone showed its scheduled notification at 9:00; a computer says it now
+        this.listeners.forEach((l) => l({ type: "message", channelId: null, notify: { title: "Life admin", body: n.text.split("\n")[0].slice(0, 160), scheduled: true } }));
         void this.db.flush();
       }
     }

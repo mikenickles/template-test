@@ -6192,3 +6192,24 @@ a.drawer-head:hover {
   overflow-wrap: anywhere;
 }
 
+/* Settings, Notifications: the checkup */
+.checkup-row {
+  align-items: center;
+}
+.checkup-mark {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 15px;
+  background: color-mix(in srgb, var(--warn) 22%, transparent);
+  color: var(--text);
+}
+.checkup-mark.ok {
+  background: color-mix(in srgb, var(--good) 18%, transparent);
+  color: var(--good);
+}
+

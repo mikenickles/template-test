@@ -305,6 +305,8 @@ const phoneContacts = {
 const REMINDER_BASE = 100_000;
 const NOTICE_BASE = 200_000;
 const ONE_OFF_BASE = 300_000;
+/** Life admin heads-ups scheduled ahead: 2,000,000 + the item's id. */
+const ADMIN_BASE = 2_000_000;
 let noticeId = NOTICE_BASE;
 
 async function allowed(): Promise<boolean> {
@@ -372,6 +374,47 @@ export const notifier = {
         extra: { hash: r.channel_id ? `#/c/${r.channel_id}` : "#/" },
       })),
     });
+  },
+
+  /** Life admin heads-ups, scheduled ahead so they come at 9:00 even with Lyra closed. */
+  async adminNotices(list: { id: number; at: string; text: string }[]): Promise<void> {
+    if (!isNative) return;
+    const pending = await LocalNotifications.getPending().catch(() => ({ notifications: [] as { id: number }[] }));
+    const old = pending.notifications.filter((n) => n.id >= ADMIN_BASE && n.id < ADMIN_BASE + 1_000_000);
+    if (old.length) await LocalNotifications.cancel({ notifications: old.map((n) => ({ id: n.id })) });
+    if (!list.length || (await LocalNotifications.checkPermissions()).display !== "granted") return;
+    await LocalNotifications.schedule({
+      notifications: list.map((n) => ({
+        id: ADMIN_BASE + (n.id % 1_000_000),
+        title: "Life admin",
+        body: n.text,
+        schedule: { at: new Date(n.at), allowWhileIdle: true },
+        extra: { hash: "#/tasks?admin" },
+      })),
+    });
+  },
+
+  /** Whether this phone lets Lyra show notifications. */
+  async permission(): Promise<"granted" | "denied" | "prompt" | "unavailable"> {
+    if (desk) return "granted";
+    if (!isNative) return "unavailable";
+    const p = (await LocalNotifications.checkPermissions()).display;
+    return p === "granted" ? "granted" : p === "denied" ? "denied" : "prompt";
+  },
+
+  /** A test, a few seconds from now, so there's time to leave the app and see it arrive. */
+  async test(): Promise<void> {
+    if (desk) return desk.notify("Lyra", "Notifications work. This is how I'll reach you.", "#/");
+    if (!isNative) throw new Error("Notifications work in the Android app.");
+    if (!(await allowed())) throw new Error("Notifications are off for Lyra. Allow them first.");
+    await LocalNotifications.schedule({
+      notifications: [{ id: NOTICE_BASE + 99_999, title: "Lyra", body: "Notifications work. This is how I'll reach you.", schedule: { at: new Date(Date.now() + 6_000), allowWhileIdle: true }, extra: { hash: "#/" } }],
+    });
+  },
+
+  /** Android's notification settings for Lyra (for when they were turned off there). */
+  async openSettings(): Promise<void> {
+    if (isNative) await NativeBackground.openNotificationSettings();
   },
 
   /** Tell the user about news while Lyra is in the background. */
@@ -548,6 +591,9 @@ const NativeBackground = registerPlugin<{
   status(): Promise<{ on: boolean }>;
   set(o: { on: boolean }): Promise<{ on: boolean }>;
   done(): Promise<void>;
+  battery(): Promise<{ unrestricted: boolean }>;
+  askBattery(): Promise<void>;
+  openNotificationSettings(): Promise<void>;
 }>("LyraBackground");
 
 export interface BackgroundState {
@@ -574,6 +620,14 @@ export const background = {
       return { on: p.tray, atLogin: p.openAtLogin };
     }
     return null;
+  },
+  /** phone: true when battery saving can't hold back the 15-minute wake-ups (null elsewhere) */
+  async batteryOk(): Promise<boolean | null> {
+    if (!isNative) return null;
+    return (await NativeBackground.battery().catch(() => ({ unrestricted: false }))).unrestricted;
+  },
+  async askBattery(): Promise<void> {
+    if (isNative) await NativeBackground.askBattery();
   },
   /** phone: the 15-minute wake-up; `run` does what's due, then the phone may sleep again */
   onTick(run: () => Promise<void>): void {

@@ -102,4 +102,21 @@ describe("life admin", () => {
     expect(r2.message.meta.tools).toContainEqual({ name: "update_life_admin", ok: true });
     expect(lyra.lifeAdmin().items).toHaveLength(0);
   });
+
+  it("schedules each heads-up on the phone ahead of time, at 9:00 on its day, once", async () => {
+    const db = await DB.open(SQL);
+    LA.saveItems(db, [
+      LA.checkItem({ kind: "bill", thread_id: "aaa111", who: "PG&E", title: "Electric bill", amount: 84.5, due_on: "2026-11-20" }, seen),
+      LA.checkItem({ kind: "package", thread_id: "ccc333", who: "UPS", title: "Running shoes", due_on: "2026-11-14" }, seen),
+      LA.checkItem({ kind: "trip", thread_id: "bbb222", who: "TAP", title: "Lisbon trip", due_on: "2026-11-10" }, seen), // already started
+    ]);
+    expect(LA.upcomingNotices(db, "2026-11-13").map((n) => [n.day, n.text])).toEqual([
+      ["2026-11-14", "Running shoes from UPS, arriving today"],
+      ["2026-11-17", "PG&E bill $84.50, due Friday"],
+    ]);
+    // once given in the app, it isn't scheduled again
+    LA.dueNotices(db, "2026-11-17");
+    expect(LA.upcomingNotices(db, "2026-11-17").map((n) => n.text)).toEqual([]);
+  });
 });
+

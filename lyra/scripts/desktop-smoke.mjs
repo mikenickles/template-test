@@ -133,6 +133,23 @@ check(sent.length === 1 && raw.includes("To: dana@example.com") && sentBody === 
 check((await card.getByRole("button", { name: "Send", exact: true }).count()) === 0, "a sent email can't be sent again from the card");
 
 // ---- inbox triage, when asked (practice data) ----
+// ---- notification checkup: what stops Lyra reaching you, each with its fix ----
+await page.goto("app://lyra/index.html#/settings/alerts");
+await page.getByText("Checkup").waitFor();
+const checkup = page.locator(".checkup-row");
+check(
+  (await checkup.filter({ hasText: "A real AI model" }).locator(".checkup-mark:not(.ok)").count()) === 1 &&
+    (await checkup.filter({ hasText: "Heads-ups on" }).getByRole("button", { name: "Turn on" }).count()) === 1,
+  "the notification checkup says what's missing (practice model, heads-ups off), each with a fix",
+);
+await checkup.filter({ hasText: "Heads-ups on" }).getByRole("button", { name: "Turn on" }).click();
+await page.getByText("Heads-ups: Light").first().waitFor();
+check((await checkup.filter({ hasText: "Heads-ups on" }).locator(".checkup-mark.ok").count()) === 1, "one tap turns heads-ups on");
+await page.screenshot({ path: join(shots, "desktop-12-checkup.png") });
+await page.getByRole("button", { name: "Send me a test notification" }).click();
+await page.getByText("Sent").first().waitFor();
+check(true, "a test notification can be sent");
+
 // ---- life admin: Lyra goes through the mail and lists the bill (practice data) ----
 await page.goto("app://lyra/index.html#/tasks?admin");
 await page.getByRole("button", { name: "Check now" }).click();

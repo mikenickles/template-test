@@ -205,6 +205,32 @@ export function milestone(i: AdminItem, today: string): [string, string] | null 
   return null;
 }
 
+/** How many days ahead each kind gets its heads-up. */
+const LEAD: Record<AdminKind, number> = { bill: 3, return: 3, subscription: 2, trip: 1, package: 0 };
+
+/** When this item's heads-up is due, 9:00 that day (YYYY-MM-DD), or null if it has none. */
+export function noticeDay(i: AdminItem): string | null {
+  if (i.status !== "open" || !i.due_on) return null;
+  return new Date(Date.parse(`${i.due_on}T12:00:00Z`) - LEAD[i.kind] * 86_400_000).toISOString().slice(0, 10);
+}
+
+/**
+ * The heads-ups still to come, for the phone to schedule ahead, so they arrive at 9:00
+ * even with Lyra closed. Same wording and same days as dueNotices.
+ */
+export function upcomingNotices(db: DB, today: string): { id: number; day: string; text: string }[] {
+  const out: { id: number; day: string; text: string }[] = [];
+  for (const i of listItems(db)) {
+    let day = noticeDay(i);
+    if (!day || !i.due_on || i.due_on < today) continue;
+    if (day < today) day = today;
+    // already given for this date
+    if (i.notified && i.notified.endsWith(`:${i.due_on}`)) continue;
+    out.push({ id: i.id, day, text: describeItem(i, day) });
+  }
+  return out.slice(0, 40);
+}
+
 /** Heads-ups due today that haven't been given, as one message (or null), marking them given. */
 export function dueNotices(db: DB, today: string): { text: string; ids: number[] } | null {
   const lines: string[] = [];
