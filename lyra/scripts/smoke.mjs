@@ -277,6 +277,23 @@ try {
   check((await page.locator(".bubble").count()) === 1, "channel chat starts empty and holds its own messages");
   await shot("light-9-channel-chat");
 
+  // ---- docs: Lyra writes one, you open and edit it ----
+  await page.goto(`${base}/#/`);
+  await page.getByPlaceholder("Message Lyra").fill("make a doc called Packing list");
+  await page.getByRole("button", { name: "Send" }).click();
+  await page.locator(".doc-note", { hasText: "Packing list" }).click();
+  await page.getByRole("heading", { name: "Packing list" }).waitFor();
+  check(await page.getByText("Second thing").isVisible(), "Lyra writes a doc, shown as a card that opens it");
+  await shot("light-38-doc");
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.locator(".doc-screen textarea").fill("## Camping\n- Tent\n- Stove");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByText("Stove").waitFor();
+  check((await page.getByRole("button", { name: /Google Doc/ }).count()) === 0, "a doc can be edited (no Google button where Google can't sign in)");
+  await page.getByRole("link", { name: "Back" }).click();
+  await page.locator(".item", { hasText: "Packing list" }).waitFor();
+  check(true, "Docs lists it");
+
   // ---- search every chat from the menu, and jump to the message ----
   await page.goto(`${base}/#/`);
   await page.getByRole("button", { name: "Channels" }).click();
@@ -311,7 +328,7 @@ try {
   await page.locator(".app.drawer-open").waitFor();
   await page.getByRole("link", { name: /Everything/ }).click();
   await page.waitForTimeout(300);
-  check((await page.locator(".bubble").count()) === 2, "main chat keeps its own history");
+  check((await page.locator(".bubble").count()) === 3, "main chat keeps its own history");
 
   await page.goto(`${base}/#/c/1/info`);
   await page.getByText("Lyra saves facts about Rowan here").waitFor();
@@ -345,7 +362,7 @@ try {
   await page.getByPlaceholder("Message Lyra").fill("thanks!");
   await page.getByRole("button", { name: "Send" }).click();
   await page.getByRole("img", { name: "Lyra reacted ❤️" }).waitFor();
-  check((await page.locator(".bubble").count()) === 3, "Lyra can react to a message, with no text reply");
+  check((await page.locator(".bubble").count()) === 4, "Lyra can react to a message, with no text reply");
   await shot("light-21-reaction");
 
   await page.goto(`${base}/#/settings/you`);

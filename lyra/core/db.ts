@@ -159,6 +159,18 @@ export const MIGRATIONS: string[] = [
      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
      updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
    );`,
+  // Phase 13: docs Lyra writes for you
+  `CREATE TABLE docs (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     title TEXT NOT NULL,
+     body TEXT NOT NULL,
+     channel_id INTEGER REFERENCES channels(id) ON DELETE SET NULL,
+     tainted INTEGER NOT NULL DEFAULT 0,
+     gdoc_id TEXT,
+     gdoc_link TEXT,
+     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+   );`,
 ];
 
 const FILE = "lyra.db";
@@ -316,6 +328,8 @@ export interface MessageMeta {
   checkIn?: boolean;
   /** The weekly memory tidy-up: the version to go back to, and whether it was undone. */
   tidy?: { snapshotId: number; undone?: boolean };
+  /** Docs written or updated in this reply. */
+  docs?: { id: number; title: string; created: boolean }[];
   /** People cards added or updated in this reply. */
   people?: { id: number; name: string; created: boolean }[];
   /** Posted by a heads-up check Lyra ran on its own. */

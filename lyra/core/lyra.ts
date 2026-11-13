@@ -10,9 +10,10 @@ import { CHANNEL_ICONS, runTurn, type TurnEmitter, type Workspace } from "./chat
 import { createGmailServer, gmailProfile } from "./connectors/gmail/server.ts";
 import { createCalendarServer } from "./connectors/calendar/server.ts";
 import { createDriveServer } from "./connectors/drive/server.ts";
-import { CALENDAR_EVENTS, CALENDAR_READONLY, DRIVE_READONLY, GMAIL_COMPOSE, GMAIL_READONLY, grantIsAllowed, TokenSource, type GoogleAuth } from "./connectors/google.ts";
+import { CALENDAR_EVENTS, CALENDAR_READONLY, DRIVE_FILE, DRIVE_READONLY, GMAIL_COMPOSE, GMAIL_READONLY, grantIsAllowed, TokenSource, type GoogleAuth } from "./connectors/google.ts";
 import * as A from "./actions.ts";
 import * as P from "./people.ts";
+import * as D from "./docs.ts";
 import { runTidy } from "./tidy.ts";
 import { wrapUntrusted } from "./untrusted.ts";
 import { latestIds, searchMessages, todayView, unreadCounts, type SearchHit, type Today } from "./today.ts";
@@ -69,7 +70,7 @@ import * as T from "./tasks.ts";
 import { Workers, type WorkerEvent, type WorkerRun } from "./workers.ts";
 import * as R from "./routines.ts";
 
-export type LyraEvent = WorkerEvent | R.RoutineEvent;
+export type LyraEvent = WorkerEvent | R.RoutineEvent | { type: "doc"; docId: number };
 export type { Reminder } from "./reminders.ts";
 
 export interface SecretStore {
@@ -269,6 +270,25 @@ export class Lyra {
     const lyra = this;
     this.workspace = {
       main: memory,
+      docs: {
+        recent: () => D.describeDocs(D.listDocs(this.db, 12)),
+        write: (input, channelId, tainted) => {
+          const d = D.createDoc(this.db, { ...input, channelId, tainted });
+          this.listeners.forEach((l) => l({ type: "doc", docId: d.id }));
+          return { id: d.id, title: d.title };
+        },
+        update: (id, patch, tainted) => {
+          const d = D.updateDoc(this.db, id, { ...patch, tainted });
+          this.listeners.forEach((l) => l({ type: "doc", docId: d.id }));
+          return { id: d.id, title: d.title };
+        },
+        read: (id) => {
+          const d = D.getDoc(this.db, id);
+          if (!d) throw new Error(`There's no doc #${id}.`);
+          const text = `# ${d.title}\n\n${d.body}`;
+          return { text: d.tainted ? wrapUntrusted(`doc #${d.id}`, text) : text, tainted: d.tainted };
+        },
+      },
       people: {
         directory: () => P.describePeople(P.listPeople(this.db)),
         remember: (input) => {
@@ -1137,6 +1157,60 @@ export class Lyra {
   async setTidy(on: boolean): Promise<void> {
     setSetting(this.db, "tidy", on ? "on" : "off");
     await this.db.flush();
+  }
+
+  // ---------- docs (Phase 13) ----------
+
+  docs(): D.Doc[] {
+    return D.listDocs(this.db);
+  }
+
+  doc(id: number): D.Doc | undefined {
+    return D.getDoc(this.db, id);
+  }
+
+  /** Edited by hand in the app. */
+  async saveDoc(id: number | null, patch: { title: string; body: string }): Promise<D.Doc> {
+    const d = id === null ? D.createDoc(this.db, patch) : D.updateDoc(this.db, id, patch);
+    await this.db.flush();
+    return d;
+  }
+
+  async deleteDoc(id: number): Promise<void> {
+    D.deleteDoc(this.db, id);
+    await this.db.flush();
+  }
+
+  private docsToken: TokenSource | undefined;
+
+  /** Save (or update) the doc in Google Docs. The first time, Google asks for access to the docs Lyra creates. */
+  async saveDocToGoogle(id: number): Promise<D.Doc> {
+    const d = D.getDoc(this.db, id);
+    if (!d) throw new Error("That doc is no longer here.");
+    if (!this.p.google.available) throw new Error("Google sign-in isn't available here.");
+    this.docsToken ??= new TokenSource(this.p.google, [DRIVE_FILE]);
+    const attempt = async (doc: D.Doc) => {
+      try {
+        return await D.saveToGoogleDocs(doc, this.docsToken!, this.fetch);
+      } catch (e) {
+        if ((e as Error).message !== "NEEDS_CONSENT") throw e;
+        const r = await this.p.google.authorize([DRIVE_FILE], true);
+        if (!grantIsAllowed(r.grantedScopes, DRIVE_FILE)) throw new Error("Google granted more than Lyra asked for, so Lyra didn't keep it.");
+        await this.docsToken!.invalidate();
+        return D.saveToGoogleDocs(doc, this.docsToken!, this.fetch);
+      }
+    };
+    let r: { id: string; link: string };
+    try {
+      r = await attempt(d);
+    } catch (e) {
+      // deleted in Google: make a new one
+      if ((e as Error).message !== "GONE") throw e;
+      r = await attempt({ ...d, gdoc_id: null });
+    }
+    this.db.run("UPDATE docs SET gdoc_id = ?, gdoc_link = ? WHERE id = ?", [r.id, r.link, id]);
+    await this.db.flush();
+    return D.getDoc(this.db, id)!;
   }
 
   // ---------- people (Phase 10) ----------

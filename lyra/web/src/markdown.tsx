@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 
 const INLINE = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\((?:https?:\/\/|mailto:)[^)\s]+\)|https?:\/\/[^\s<>()]+[^\s<>().,;:!?'"]|\*[^*\s][^*]*\*)/g;
 
-function inline(text: string, key: string): ReactNode[] {
+export function inline(text: string, key: string): ReactNode[] {
   const out: ReactNode[] = [];
   let last = 0;
   let i = 0;
@@ -84,4 +84,100 @@ export function headline(text: string): boolean {
   if (blocks.length < 3 || text.trim().length < 400) return false;
   const first = blocks[0].trim();
   return first.length <= 120 && !first.includes("\n") && !/^([-*•>]|\d+[.)])\s/.test(first);
+}
+
+/**
+ * Docs (Phase 13) use more of Markdown than chat: headings, lists (with checkboxes),
+ * tables, quotes and dividers. Still React elements only, never HTML.
+ */
+export function DocMarkdown({ text }: { text: string }) {
+  const rows = text.replace(/\r\n?/g, "\n").split("\n");
+  const out: ReactNode[] = [];
+  let i = 0;
+  let k = 0;
+  const cells = (r: string) => r.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+  while (i < rows.length) {
+    const r = rows[i];
+    const key = `d${k++}`;
+    if (!r.trim()) {
+      i++;
+      continue;
+    }
+    const h = r.match(/^(#{1,4})\s+(.*)$/);
+    if (h) {
+      const level = Math.min(h[1].length + 1, 4);
+      const Tag = (`h${level}` as "h2" | "h3" | "h4");
+      out.push(<Tag key={key}>{inline(h[2], key)}</Tag>);
+      i++;
+      continue;
+    }
+    if (/^\s*([-*_])\s*\1\s*\1[\s\-*_]*$/.test(r)) {
+      out.push(<hr key={key} />);
+      i++;
+      continue;
+    }
+    if (/^\s*\|.*\|\s*$/.test(r) && /^\s*\|?\s*:?-{2,}/.test(rows[i + 1] ?? "")) {
+      const head = cells(r);
+      i += 2;
+      const body: string[][] = [];
+      while (i < rows.length && /^\s*\|.*\|\s*$/.test(rows[i])) body.push(cells(rows[i++]));
+      out.push(
+        <div className="doc-table" key={key}>
+          <table>
+            <thead>
+              <tr>{head.map((c, j) => <th key={j}>{inline(c, `${key}h${j}`)}</th>)}</tr>
+            </thead>
+            <tbody>
+              {body.map((row, ri) => (
+                <tr key={ri}>{row.map((c, j) => <td key={j}>{inline(c, `${key}-${ri}-${j}`)}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>,
+      );
+      continue;
+    }
+    if (/^\s*[-*•]\s+/.test(r)) {
+      const items: string[] = [];
+      while (i < rows.length && /^\s*[-*•]\s+/.test(rows[i])) items.push(rows[i++].replace(/^\s*[-*•]\s+/, ""));
+      out.push(
+        <ul key={key} className={items.some((t) => /^\[[ xX]\]\s/.test(t)) ? "checklist" : undefined}>
+          {items.map((t, j) => {
+            const box = t.match(/^\[([ xX])\]\s+(.*)$/);
+            return box ? (
+              <li key={j} className={box[1] === " " ? "todo" : "done"}>
+                <span className="box" aria-label={box[1] === " " ? "Not done" : "Done"} role="img" />
+                {inline(box[2], `${key}-${j}`)}
+              </li>
+            ) : (
+              <li key={j}>{inline(t, `${key}-${j}`)}</li>
+            );
+          })}
+        </ul>,
+      );
+      continue;
+    }
+    if (/^\s*\d+[.)]\s+/.test(r)) {
+      const items: string[] = [];
+      const start = Number(r.match(/\d+/)![0]);
+      while (i < rows.length && /^\s*\d+[.)]\s+/.test(rows[i])) items.push(rows[i++].replace(/^\s*\d+[.)]\s+/, ""));
+      out.push(
+        <ol key={key} start={start} style={{ counterReset: `n ${start - 1}` }}>
+          {items.map((t, j) => <li key={j}>{inline(t, `${key}-${j}`)}</li>)}
+        </ol>,
+      );
+      continue;
+    }
+    if (r.startsWith(">")) {
+      const q: string[] = [];
+      while (i < rows.length && rows[i].startsWith(">")) q.push(rows[i++].replace(/^>\s?/, ""));
+      out.push(<blockquote key={key}>{lines(q, key)}</blockquote>);
+      continue;
+    }
+    const para: string[] = [];
+    while (i < rows.length && rows[i].trim() && !/^(#{1,4}\s|\s*[-*•]\s|\s*\d+[.)]\s|>|\s*\|)/.test(rows[i])) para.push(rows[i++]);
+    if (!para.length) para.push(rows[i++]);
+    out.push(<p key={key}>{lines(para, key)}</p>);
+  }
+  return <>{out}</>;
 }

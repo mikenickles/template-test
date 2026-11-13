@@ -5480,3 +5480,127 @@ button.orb {
   margin: var(--s2) 0 0 22px;
   align-self: flex-start;
 }
+
+/* ---------- Phase 13: docs ---------- */
+
+.drawer-sections {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.doc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin: var(--s4) 0 var(--s5);
+}
+
+.doc-body {
+  padding: var(--s5);
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 16px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+
+.doc-link {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.doc-screen .editor {
+  min-height: 50vh;
+}
+
+.doc-body > :first-child {
+  margin-top: 0;
+}
+
+.doc-body h2,
+.doc-body h3,
+.doc-body h4 {
+  margin: var(--s5) 0 var(--s2);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.doc-body h2 {
+  font-size: 22px;
+}
+
+.doc-body h3 {
+  font-size: 18px;
+}
+
+.doc-body h4 {
+  font-size: 16px;
+}
+
+.doc-body ul,
+.doc-body ol {
+  padding-left: 1.3em;
+  margin: var(--s2) 0;
+}
+
+.doc-body li + li {
+  margin-top: 4px;
+}
+
+.doc-body ul.checklist {
+  list-style: none;
+  padding-left: 0;
+}
+
+.doc-body .checklist .box {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin: 0 10px -2px 0;
+  border-radius: 5px;
+  border: 1.5px solid var(--text-muted);
+}
+
+.doc-body .checklist .done {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.doc-body .checklist .done .box {
+  border-color: var(--accent-text);
+  background: var(--accent);
+}
+
+.doc-body hr {
+  border: 0;
+  height: 1px;
+  background: var(--border);
+  margin: var(--s5) 0;
+}
+
+.doc-table {
+  overflow-x: auto;
+  margin: var(--s3) 0;
+}
+
+.doc-table table {
+  border-collapse: collapse;
+  font-size: 14px;
+  min-width: 100%;
+}
+
+.doc-table th,
+.doc-table td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.doc-table th {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 12px;
+}

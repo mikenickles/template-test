@@ -44,6 +44,7 @@ export class FakeProvider implements ModelProvider {
       if (result.name === "suggest_replies") return say("Here are a couple of next steps.");
       if (result.name === "forget") return say("Done, that's gone.");
       if (result.name === "propose_email" || result.name === "propose_event") return say("It's ready for you to check.");
+      if (result.name === "write_doc" || result.name === "update_doc") return say("It's in your Docs.");
       return say(`Here's what I found.\n\n${result.content.replace(/<\/?untrusted_data[^>]*>/g, "").trim().slice(0, 400)}`);
     }
 
@@ -63,6 +64,9 @@ export class FakeProvider implements ModelProvider {
     if (rem && has("remember")) return call("remember", { section: "Open loops", text: rem[1] });
     const forget = text.match(/^forget[:\s]+(.+)$/i);
     if (forget && has("forget")) return call("forget", { section: "Open loops", match: forget[1] });
+    // "make a doc called Packing list": the practice model can write a doc
+    const doc = text.match(/^(?:make|write) (?:me )?a doc(?:ument)? (?:called|about|for) (.+)$/i);
+    if (doc && has("write_doc")) return call("write_doc", { title: doc[1], body: "## To do\n- First thing\n- Second thing" });
     // "email dana@example.com saying yes to Friday": the practice model can propose an email (the user still taps Send)
     const mail = text.match(/^e-?mail (\S+@\S+) saying (.+)$/i);
     if (mail && has("propose_email")) return call("propose_email", { to: [mail[1]], subject: "Quick note", body: mail[2] });

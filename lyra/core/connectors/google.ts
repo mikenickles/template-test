@@ -8,6 +8,8 @@ export const DRIVE_READONLY = "https://www.googleapis.com/auth/drive.readonly";
  */
 export const GMAIL_COMPOSE = "https://www.googleapis.com/auth/gmail.compose";
 export const CALENDAR_EVENTS = "https://www.googleapis.com/auth/calendar.events";
+/** Phase 13: only the files Lyra itself creates in Drive (its Google Docs). It can't see any other file. */
+export const DRIVE_FILE = "https://www.googleapis.com/auth/drive.file";
 /** Lyra's own hidden folder in your Drive, for sync. It can't see or change any of your files. */
 export const DRIVE_APPDATA = "https://www.googleapis.com/auth/drive.appdata";
 
@@ -26,6 +28,7 @@ const ALLOWED = new Set([
   DRIVE_APPDATA,
   GMAIL_COMPOSE,
   CALENDAR_EVENTS,
+  DRIVE_FILE,
   "openid",
   "email",
   "profile",

@@ -28,6 +28,8 @@ export interface PromptInput {
   tasks?: string;
   /** Reminders and follow-ups still to come, one per line. */
   reminders?: string;
+  /** The user's most recent docs, one line each. */
+  docs?: string;
   /** People cards: the directory, and whether the phone's contacts can be searched. */
   people?: { directory: string; contacts: boolean };
   /** Emails and events Lyra may propose, and recent proposals with what happened to them. */
@@ -42,6 +44,17 @@ function cant(p: PromptInput): string {
   if (a?.email) return "You can't delete, archive, label, book, pay for or buy anything, or change the calendar (Calendar events aren't turned on), and emails only go when the user taps the card.";
   if (a?.event) return "You can't send, reply to, delete, archive, label, pay for or buy anything (Mail drafts aren't turned on), and events are only added when the user taps the card.";
   return "You can't send, reply to, delete, archive, label, book, pay for or buy anything yet.";
+}
+
+function docsSection(p: PromptInput, user: string): string {
+  if (p.docs === undefined) return "";
+  return `
+## Docs
+For anything ${user} will want to keep, come back to or share (a plan, itinerary, packing or shopping list, comparison, research notes, a long draft), write a doc with write_doc instead of a long chat reply, then say in a sentence what it is. Keep chat replies short. Update an existing doc rather than writing a new one when it's the same thing (read_doc first to replace its body).
+
+Recent docs:
+${p.docs.trim() ? neutralize(p.docs) : "(none yet)"}
+`;
 }
 
 function peopleSection(p: PromptInput, user: string): string {
@@ -168,7 +181,7 @@ ${p.tasks?.trim() ? neutralize(p.tasks) : "(none)"}
 
 Coming up (reminders and follow-ups):
 ${p.reminders?.trim() ? neutralize(p.reminders) : "(none)"}
-${actionsSection(p, user)}${peopleSection(p, user)}
+${actionsSection(p, user)}${peopleSection(p, user)}${docsSection(p, user)}
 ${
     p.webSearch
       ? `## The web

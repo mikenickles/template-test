@@ -9,6 +9,7 @@ import { Access } from "./screens/Access";
 import { ChannelInfo, NewChannelDialog } from "./screens/ChannelScreens";
 import { Chat } from "./screens/Chat";
 import { Memory } from "./screens/Memory";
+import { DocPage, Docs } from "./screens/Docs";
 import { Settings, SETTINGS_SECTIONS, type SettingsSection } from "./screens/Settings";
 import { Soul } from "./screens/Soul";
 import { TaskPage, Tasks, WorkerLog } from "./screens/Tasks";
@@ -29,6 +30,8 @@ export type Route =
   | { name: "routine"; routineId: number }
   | { name: "access" }
   | { name: "memory" }
+  | { name: "docs" }
+  | { name: "doc"; docId: number }
   | { name: "soul" }
   | { name: "settings"; section?: SettingsSection };
 
@@ -40,11 +43,13 @@ export function readRoute(hash = location.hash): Route {
   if (c) return c[2] ? { name: "channel-info", channelId: Number(c[1]) } : { name: "chat", channelId: Number(c[1]), focus: m };
   const t = path.match(/^t\/(\d+)(\/log)?$/);
   if (t) return t[2] ? { name: "worker-log", taskId: Number(t[1]) } : { name: "task", taskId: Number(t[1]) };
+  const d = path.match(/^d\/(\d+)$/);
+  if (d) return { name: "doc", docId: Number(d[1]) };
   const r = path.match(/^r\/(\d+)$/);
   if (r) return { name: "routine", routineId: Number(r[1]) };
   const s = path.match(/^settings\/(\w+)$/);
   if (s && (SETTINGS_SECTIONS as string[]).includes(s[1])) return { name: "settings", section: s[1] as SettingsSection };
-  if (path === "tasks" || path === "access" || path === "memory" || path === "soul" || path === "settings") return { name: path };
+  if (path === "tasks" || path === "access" || path === "memory" || path === "soul" || path === "settings" || path === "docs") return { name: path };
   return { name: "chat", channelId: null, focus: m };
 }
 
@@ -64,6 +69,8 @@ function backFrom(r: Route): string | null {
       return `#/t/${r.taskId}`;
     case "routine":
       return "#/tasks";
+    case "doc":
+      return "#/docs";
     case "settings":
       return r.section ? "#/settings" : "#/";
     default:
@@ -358,6 +365,8 @@ export function App() {
         {route.name === "routine" && <RoutinePage key={route.routineId} id={route.routineId} toast={toast} channels={channels} />}
         {route.name === "access" && <Access state={state} setState={setState} toast={toast} />}
         {route.name === "memory" && <Memory toast={toast} channels={channels} />}
+        {route.name === "docs" && <Docs toast={toast} />}
+        {route.name === "doc" && <DocPage key={route.docId} id={route.docId} toast={toast} canGoogle={state.connectors.some((c) => c.state !== "unavailable")} />}
         {route.name === "soul" && <Soul toast={toast} userName={state.userName} />}
         {route.name === "settings" && <Settings key={route.section ?? "home"} state={state} setState={setState} toast={toast} section={route.section} />}
 

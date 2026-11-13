@@ -19,8 +19,8 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 | 10 | Smarter memory: people cards, weekly tidy-up, phone contacts (search past chats came with the redesign) | Done |
 | 11 | Works on its own: background routines, "while you were away", widget | Done (Proactive step 3) |
 | 12 | Polish: accent-colored app icon, fixes from testing | Planned |
-| 13 | Docs: documents Lyra writes for you, optionally in Google Docs | Next |
-| 14 | More connectors: other services, with approval cards for anything that writes | Planned |
+| 13 | Docs: documents Lyra writes for you, optionally in Google Docs | Done |
+| 14 | More connectors: other services, with approval cards for anything that writes | Next |
 | 15 | Research tasks: workers that read web pages and report back with sources | Planned |
 | 16 | Inbox triage: a daily sort of your mail, replies drafted for your OK | Planned |
 | 17 | Playbooks: procedures you teach once and run by name | Planned |
@@ -58,6 +58,13 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - Runs on the routine tick (`Lyra.tickHeadsUp`, `Routines.headsUp`), so like routines it runs on the phone when sync is on, never on the practice model, and not while Lyra is busy. What it said last time is passed to the next check so it doesn't repeat itself (settings `headsUpAt`, `headsUpLast`). Posts are tagged "Heads-up" and notify like a routine.
 - Heads-up and follow-up tokens show on the Usage page as their own kind of work ("proactive").
 - **Check-ins when it's quiet** (on with heads-ups, its own switch): when nothing needs you, Lyra asks for work like a colleague with a free afternoon. It offers one specific project grounded in your memory, mail, calendar and tasks, asks one question to know you better, or asks what it could take off your plate this week, with up to three replies to tap. About once a day on Light, up to twice on Active; only 9:00 to 20:00 and outside quiet hours; never while you're mid-conversation (2 hours), while something is waiting on you or a worker is running, or before you've answered the last one (gives up waiting after 3 days). Your answers go to memory; a yes gets started. Tap-replies are dropped if it read mail or the web. Recent check-ins are passed along so it doesn't repeat itself (`Lyra.tickCheckIn`, `checkInInstructions`, `meta.checkIn`, settings `checkInAt` / `checkInMessage` / `checkInRecent`). The Today view offers "What could you take on for me?" and "Ask me something" when nothing needs you.
+
+### Phase 13: docs
+
+- **Docs Lyra writes for you.** For anything worth keeping (a plan, itinerary, packing or shopping list, comparison, research notes, a long draft) Lyra writes a doc with `write_doc` instead of a long chat reply, and a card under its reply opens it. It updates the same doc later (`update_doc`, `read_doc`) and sees its recent docs' titles. Stored in the app (`core/docs.ts`, table `docs`), so they sync and are in backups.
+- **Docs page** (menu → Docs): list, read (headings, checklists, tables: `DocMarkdown` in `web/src/markdown.tsx`), edit, copy, share as a file on the phone, delete, or write one yourself.
+- **Save to Google Docs** (one tap, per doc): the first time, Google asks for `drive.file`, which only reaches files Lyra itself creates; Lyra can't see any of your other files with it. Saving again updates the same Google Doc; if you deleted it in Google, a new one is made. Markdown is converted to a formatted Google Doc.
+- A doc written after reading mail or the web is marked, and when Lyra reads it back it's treated as outside data (wrapped, and the turn counts as having read outside content).
 
 ### Phase 10: smarter memory
 

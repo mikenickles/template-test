@@ -51,6 +51,14 @@ export interface Workspace {
     create(input: RoutineInput): Promise<{ id: number; name: string }>;
     update(id: number, input: Partial<RoutineInput>): Promise<{ id: number; name: string }>;
   };
+  /** Docs Lyra writes (Phase 13). */
+  docs?: {
+    recent(): string;
+    write(input: { title: unknown; body: unknown }, channelId: number | null, tainted: boolean): { id: number; title: string };
+    update(id: number, patch: { title?: unknown; body?: unknown; append?: unknown }, tainted: boolean): { id: number; title: string };
+    /** the text, and whether it holds outside content */
+    read(id: number): { text: string; tainted: boolean };
+  };
   /** People cards (Phase 10). */
   people?: {
     directory(): string;
@@ -89,6 +97,33 @@ export interface TurnContext {
 }
 
 const MAIN = "main";
+
+/** Phase 13: docs. */
+function docTools(ws: Workspace): ToolDef[] {
+  if (!ws.docs) return [];
+  return [
+    {
+      name: "write_doc",
+      description:
+        "Write a document the user keeps: a plan, itinerary, packing or shopping list, comparison, research notes, a draft. Markdown (headings, lists, tables). It's saved in their Docs and shown as a card under your reply.",
+      schema: { type: "object", properties: { title: { type: "string" }, body: { type: "string", description: "Markdown." } }, required: ["title", "body"] },
+    },
+    {
+      name: "update_doc",
+      description: "Change one of the user's docs by its #id: replace the whole body, add to the end, or rename. Read it first if you're replacing the body.",
+      schema: {
+        type: "object",
+        properties: { id: { type: "number" }, body: { type: "string" }, append: { type: "string" }, title: { type: "string" } },
+        required: ["id"],
+      },
+    },
+    {
+      name: "read_doc",
+      description: "Read one of the user's docs by its #id.",
+      schema: { type: "object", properties: { id: { type: "number" } }, required: ["id"] },
+    },
+  ];
+}
 
 /** Phase 10: people cards, and the phone's contacts when allowed. */
 function peopleTools(ws: Workspace): ToolDef[] {
@@ -444,6 +479,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
   const taskNotes: TaskNote[] = [];
   const actionIds: number[] = [];
   const peopleNotes: { id: number; name: string; created: boolean }[] = [];
+  const docNotes: { id: number; title: string; created: boolean }[] = [];
   const toolsUsed: { name: string; ok: boolean }[] = [];
   // Once outside content has been read, notebook changes need the user's tap.
   const state = { tainted: false };
@@ -463,6 +499,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
     ...(taskNotes.length ? { tasks: taskNotes } : {}),
     ...(actionIds.length ? { actions: actionIds } : {}),
     ...(peopleNotes.length ? { people: peopleNotes } : {}),
+    ...(docNotes.length ? { docs: docNotes } : {}),
     ...(sources.length ? { sources: uniqueSources(sources).slice(0, 8) } : {}),
     tools: toolsUsed,
     provider: ctx.provider.id,
@@ -471,7 +508,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
 
   try {
     const channels = ctx.workspace.channels();
-    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed()), ...peopleTools(ctx.workspace), ...(await ctx.connectors.tools())];
+    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed()), ...peopleTools(ctx.workspace), ...docTools(ctx.workspace), ...(await ctx.connectors.tools())];
     const system = buildSystemPrompt({
       userName: ctx.userName,
       soul: ctx.soul,
@@ -484,6 +521,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
       reminders: ctx.workspace.reminders?.list(),
       actions: ctx.workspace.actions ? { allowed: ctx.workspace.actions.allowed(), recent: ctx.workspace.actions.recent() } : undefined,
       people: ctx.workspace.people ? { directory: ctx.workspace.people.directory(), contacts: !!ctx.workspace.contacts } : undefined,
+      docs: ctx.workspace.docs?.recent(),
       webSearch: !!ctx.webSearch,
     });
 
@@ -542,6 +580,35 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
             content: ok ? "Shown as buttons under your reply." : state.tainted ? "Not shown: outside content was read this turn." : "Give one to three short options.",
             isError: !ok,
           });
+          continue;
+        }
+        if (call.name === "write_doc" || call.name === "update_doc" || call.name === "read_doc") {
+          let content: string;
+          let ok = false;
+          try {
+            const docs = ctx.workspace.docs!;
+            if (call.name === "read_doc") {
+              const r = docs.read(Number(call.input.id));
+              // a doc written from mail or the web holds other people's words
+              if (r.tainted) state.tainted = true;
+              content = r.text;
+            } else {
+              const r =
+                call.name === "write_doc"
+                  ? docs.write({ title: call.input.title, body: call.input.body }, ctx.channel?.id ?? null, state.tainted)
+                  : docs.update(Number(call.input.id), { title: call.input.title, body: call.input.body, append: call.input.append }, state.tainted);
+              const i = docNotes.findIndex((n) => n.id === r.id);
+              if (i === -1) docNotes.push({ ...r, created: call.name === "write_doc" });
+              else docNotes[i] = { ...docNotes[i], title: r.title };
+              emit.status(call.name === "write_doc" ? `Wrote ${r.title}` : `Updated ${r.title}`);
+              content = `${call.name === "write_doc" ? "Saved" : "Updated"} doc #${r.id}: ${r.title}. It shows as a card under your reply, so just say what it is in a sentence; don't paste it.`;
+            }
+            ok = true;
+          } catch (e) {
+            content = (e as Error).message;
+          }
+          toolsUsed.push({ name: call.name, ok });
+          results.push({ type: "tool_result", id: call.id, name: call.name, content, isError: !ok });
           continue;
         }
         if (call.name === "remember_person" || call.name === "look_up_person" || call.name === "find_contact") {

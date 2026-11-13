@@ -542,6 +542,19 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                   {!!m.meta.memory?.length && <Notes notes={m.meta.memory} onAction={(i, a) => answerNote(m, i, a)} />}
                   {!!m.meta.tasks?.length && <TaskNotes notes={m.meta.tasks} />}
                   {!!m.meta.actions?.length && <ActionCards ids={m.meta.actions} toast={toast} />}
+                  {!!m.meta.docs?.length && (
+                    <div className="notes">
+                      {m.meta.docs.map((d) => (
+                        <a className="note task-note doc-note" key={d.id} href={`#/d/${d.id}`}>
+                          <FileIcon size={16} />
+                          <span className="what">
+                            <b>{d.created ? "Doc" : "Doc updated"}</b> · {d.title}
+                          </span>
+                          <Chevron size={16} className="chev" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
                   {!!m.meta.people?.length && (
                     <div className="people-notes">
                       {m.meta.people.map((p) => (
