@@ -406,6 +406,8 @@ export interface MessageMeta {
   docs?: { id: number; title: string; created: boolean; kind?: "doc" | "dashboard" }[];
   /** this post reached a phone by push (set on the home base) */
   pushed?: boolean;
+  /** what's on a scanned paper, with what the user did about each item */
+  scan?: import("./scan.ts").Scan;
   /** People cards added or updated in this reply. */
   people?: { id: number; name: string; created: boolean }[];
   /** Posted by a heads-up check Lyra ran on its own. */

@@ -493,6 +493,7 @@ export const api = {
   memory: async () => (await ready).memoryView(),
   saveMemory: async (content: string) => (await ready).saveMemory(content),
   restoreMemory: async (id: number) => (await ready).restoreMemory(id),
+  editNote: async (section: string, old: string | null, next: string | null) => (await ready).editMemoryNote(section, old, next),
   note: async (messageId: number, index: number, action: "undo" | "accept" | "dismiss") => ({
     message: await (await ready).note(messageId, index, action),
   }),
@@ -611,6 +612,7 @@ export const api = {
   tidyOn: async () => (await ready).tidyOn,
   action: async (id: number) => (await ready).action(id),
   decideAction: async (id: number, choice: "send" | "draft" | "add" | "decline", edited?: Record<string, unknown>) => (await ready).decideAction(id, choice, edited),
+  scanAction: async (messageId: number, which: number | "all") => (await ready).scanAction(messageId, which),
 };
 
 export interface StreamHandlers {

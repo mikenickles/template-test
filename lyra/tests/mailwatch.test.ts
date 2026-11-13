@@ -99,3 +99,59 @@ describe("mail watch", () => {
     expect(lyra.tickMailWatch(new Date(noon.getTime() + 60 * 60_000))).toBe(false);
   });
 });
+
+describe("scanning a paper", () => {
+  it("shows what's on it as a card, and a tap sets the reminder or adds it to the list", async () => {
+    const { checkScan, remindAt, actionFor } = await import("../core/scan.ts");
+    const { FakeProvider } = await import("../core/providers/fake.ts");
+    expect(() => checkScan({ items: [] })).toThrow(/Nothing to show/);
+    expect(checkScan({ items: [{ kind: "weird", text: "x", when: "next week" }] }).items[0]).toEqual({ kind: "todo", text: "x" });
+    expect(remindAt({ kind: "deadline", text: "Slip", when: "2026-11-17" })).toBe("2026-11-16 09:00");
+    expect(remindAt({ kind: "date", text: "Trip", when: "2026-11-20 08:45" })).toBe("2026-11-20 07:45");
+    expect(remindAt({ kind: "date", text: "No school", when: "2026-11-25" })).toBe("2026-11-25 08:00");
+    expect(actionFor({ kind: "amount", text: "$12" })).toBeNull();
+
+    const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+    const provider = new FakeProvider([
+      call("show_scan", {
+        title: "Room 12 slip",
+        items: [
+          { kind: "deadline", text: "Permission slip and $12", when: day(5) },
+          { kind: "todo", text: "Find two parent drivers" },
+          { kind: "date", text: "Old event", when: day(-3) },
+        ],
+      }),
+      { parts: [{ type: "text", text: "Two things need you before the trip." }], stop: "end" },
+    ]);
+    const lyra = await Lyra.start(platform({ provider }));
+    const png = { name: "slip.png", mediaType: "image/png", data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" };
+    const { message } = await lyra.chat("Scan this", { text: () => {}, status: () => {}, memory: () => {} }, null, [png]);
+    expect(message.meta.scan?.items).toHaveLength(3);
+    // one tap: a reminder the day before at 9
+    const after = await lyra.scanAction(message.id, 0);
+    expect(after.meta.scan!.items[0].done).toBe("remind");
+    expect(lyra.reminders().map((r) => r.text)).toEqual(["Permission slip and $12"]);
+    // Do all: the to-do goes on the list; a date already past becomes a to-do rather than a reminder in the past
+    const all = await lyra.scanAction(message.id, "all");
+    expect(all.meta.scan!.items.map((i) => i.done)).toEqual(["remind", "task", "task"]);
+    expect(lyra.tasks({}).map((t) => [t.title, t.status])).toEqual(expect.arrayContaining([["Find two parent drivers", "up_next"]]));
+    // nothing is done twice
+    await lyra.scanAction(message.id, "all");
+    expect(lyra.reminders()).toHaveLength(1);
+  });
+});
+
+describe("the Memory page", () => {
+  it("adds, changes and forgets one note at a time", async () => {
+    const lyra = await Lyra.start(platform());
+    let v = await lyra.editMemoryNote("Rules", null, "I'm vegetarian");
+    expect(v.sections.find((s) => s.name === "Rules")!.items).toEqual(["I'm vegetarian"]);
+    v = await lyra.editMemoryNote("Rules", "I'm vegetarian", "I'm vegetarian, but fish is fine");
+    expect(v.sections.find((s) => s.name === "Rules")!.items).toEqual(["I'm vegetarian, but fish is fine"]);
+    v = await lyra.editMemoryNote("Rules", "I'm vegetarian, but fish is fine", null);
+    expect(v.sections.find((s) => s.name === "Rules")!.items).toEqual([]);
+    await expect(lyra.editMemoryNote("Rules", null, " ")).rejects.toThrow(/Write the note/);
+    // every change can be undone from Recent changes
+    expect(v.history.length).toBeGreaterThanOrEqual(3);
+  });
+});

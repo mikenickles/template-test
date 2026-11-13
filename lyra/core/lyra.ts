@@ -21,6 +21,7 @@ import * as AC from "./activity.ts";
 import * as DB_ from "./dashboard.ts";
 import * as PU from "./push.ts";
 import * as MW from "./mailwatch.ts";
+import * as SC from "./scan.ts";
 import { SPOTIFY_PLAYBACK, SPOTIFY_PLAYLISTS, SPOTIFY_READ, SpotifyAuth, type OAuthRedirect } from "./connectors/spotify/auth.ts";
 import { createSpotifyServer } from "./connectors/spotify/server.ts";
 import { runTidy } from "./tidy.ts";
@@ -794,6 +795,46 @@ export class Lyra {
     return sent;
   }
 
+  /**
+   * A button on a scan card: remind about that item, or put it on the list. The user's own tap,
+   * on exactly the words they see, so it's done right away. "all" does every item at once.
+   */
+  async scanAction(messageId: number, which: number | "all"): Promise<StoredMessage> {
+    const m = getMessage(this.db, messageId);
+    const card = m?.meta.scan;
+    if (!m || !card) throw new Error("That card is gone.");
+    const items = card.items.map((i) => ({ ...i }));
+    const idx = which === "all" ? items.map((_, i) => i) : [which];
+    let did = 0;
+    for (const i of idx) {
+      const it = items[i];
+      if (!it || it.done) continue;
+      const act = SC.actionFor(it);
+      if (act === "remind") {
+        const at = SC.remindAt(it);
+        const when = at ? localToDate(at, this.p.timeZone) : null;
+        // already past: a to-do instead
+        if (when && when.getTime() > Date.now()) {
+          createReminder(this.db, { kind: "remind", text: it.text, at: when, channelId: m.channel_id });
+          it.done = "remind";
+          did++;
+          continue;
+        }
+      }
+      if (act) {
+        T.createTask(this.db, { title: it.text, brief: `From ${card.title}${it.when ? `, ${it.when}` : ""}.`, steps: [], channelId: m.channel_id, kind: "task" }, "you");
+        it.done = "task";
+        did++;
+      }
+    }
+    if (!did && which !== "all") throw new Error("Nothing to do for that one.");
+    updateMessageMeta(this.db, messageId, { ...m.meta, scan: { ...card, items } });
+    this.listeners.forEach((l) => l({ type: "reminder" }));
+    this.listeners.forEach((l) => l({ type: "message", channelId: m.channel_id }));
+    await this.db.flush();
+    return getMessage(this.db, messageId)!;
+  }
+
   /** The newest message's id (0 with none). */
   lastMessageId(): number {
     return this.db.get<{ id: number | null }>("SELECT MAX(id) AS id FROM messages")?.id ?? 0;
@@ -1176,6 +1217,22 @@ export class Lyra {
   async saveMemory(content: string): Promise<MemoryView> {
     if (content.length > 200_000) throw new Error("That memory file is too big.");
     await this.memory.replace(content);
+    return this.memoryView();
+  }
+
+  /**
+   * One line of memory, from the Memory page: change it (old → next), forget it (next null), or
+   * add one (old null). The page shows what changed, and Recent changes can undo it.
+   */
+  async editMemoryNote(section: string, old: string | null, next: string | null): Promise<MemoryView> {
+    const text = next?.replace(/\s+/g, " ").trim() ?? "";
+    if (old === null && !text) throw new Error("Write the note first.");
+    if (text.length > 300) throw new Error("Keep a note to a sentence or two.");
+    if (old !== null && old.trim() !== text) {
+      const r = await this.memory.forget(section, old);
+      if ("error" in r) throw new Error(r.error);
+    }
+    if (text && old?.trim() !== text) await this.memory.remember(section, text);
     return this.memoryView();
   }
 

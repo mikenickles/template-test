@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Person } from "../../../core/people";
 import type { Skill } from "../../../core/skills";
 import { api, type Channel, type MemoryView } from "../api";
-import { ChannelIcon, Chevron, Star } from "../icons";
+import { ChannelIcon, Chevron, Plus, Star } from "../icons";
 import { ago, parse } from "../when";
 
 const BLURB: Record<string, string> = {
@@ -12,13 +12,23 @@ const BLURB: Record<string, string> = {
   "Open loops": "Things waiting on someone",
 };
 
+type Tab = "notes" | "people" | "skills" | "talk";
+const TABS: { id: Tab; label: string }[] = [
+  { id: "notes", label: "About you" },
+  { id: "people", label: "People" },
+  { id: "skills", label: "Skills" },
+  { id: "talk", label: "How you talk" },
+];
+
+/** Everything Lyra knows about you, in one place: tap any line to change it or make Lyra forget it. */
 export function Memory({ toast, channels }: { toast: (m: string) => void; channels: Channel[] }) {
   const [view, setView] = useState<MemoryView | null>(null);
   const [draft, setDraft] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [tab, setTab] = useState<"notes" | "people" | "skills">(() =>
-    location.hash.includes("people") ? "people" : location.hash.includes("skills") ? "skills" : "notes",
+  const [tab, setTab] = useState<Tab>(() =>
+    location.hash.includes("people") ? "people" : location.hash.includes("skills") ? "skills" : location.hash.includes("talk") ? "talk" : "notes",
   );
+  const [note, setNote] = useState<{ section: string; text: string | null } | null>(null);
   const [tidyOn, setTidyOn] = useState<boolean | null>(null);
   const [tidying, setTidying] = useState(false);
 
@@ -26,6 +36,12 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
     api.memory().then(setView).catch((e) => toast(e.message));
     void api.tidyOn().then(setTidyOn, () => {});
   }, [toast]);
+  // a link to another tab while this page is open (from a notification or a chip) switches to it
+  useEffect(() => {
+    const follow = () => setTab(location.hash.includes("people") ? "people" : location.hash.includes("skills") ? "skills" : location.hash.includes("talk") ? "talk" : "notes");
+    addEventListener("hashchange", follow);
+    return () => removeEventListener("hashchange", follow);
+  }, []);
 
   const tidyNow = async () => {
     setTidying(true);
@@ -65,13 +81,13 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
   };
 
   const total = view.sections.reduce((n, s) => n + s.items.length, 0);
-  const last = view.history[0];
+  const filled = view.sections.filter((s) => s.items.length);
 
   if (draft !== null)
     return (
       <div className="screen">
         <div className="bar" style={{ marginBottom: 24 }}>
-          <h1 className="page-title">Edit memory</h1>
+          <h1 className="page-title">Edit as text</h1>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn quiet" onClick={() => setDraft(null)}>
               Cancel
@@ -85,141 +101,311 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
           Memory file
         </label>
         <textarea id="memory-file" className="editor" value={draft} onChange={(e) => setDraft(e.target.value)} spellCheck />
-        <p className="hint">One fact per line, starting with “- ”. Lyra reads this file before every reply.</p>
+        <p className="hint">One fact per line, starting with “- ”. Lyra reads this before every reply.</p>
       </div>
     );
 
   return (
     <div className="screen mem-sections">
-      <div className="bar">
-        <h1 className="page-title">Memory</h1>
-        {tab === "notes" && (
-          <button className="btn quiet" onClick={() => setDraft(view.content)}>
-            Edit
-          </button>
-        )}
-      </div>
-      <p className="page-sub">
-        {tab === "people"
-          ? "The people who matter to you, and what Lyra knows about each"
-          : tab === "skills"
-            ? "How you like particular jobs done. Lyra follows one when a request fits"
-            : total ? `${total} ${total === 1 ? "fact" : "facts"}` : "Nothing saved yet"}
-        {tab === "notes" && last ? ` · changed ${ago(parse(last.created_at))}` : ""}
-      </p>
+      <h1 className="page-title">Memory</h1>
+      <p className="page-sub">Everything Lyra knows about you. Tap anything to change it, or to make Lyra forget it.</p>
 
       <div className="seg-tabs mem-tabs" role="tablist" aria-label="Memory">
-        <button role="tab" aria-selected={tab === "notes"} className={tab === "notes" ? "on" : ""} onClick={() => setTab("notes")}>
-          Notes
-        </button>
-        <button role="tab" aria-selected={tab === "people"} className={tab === "people" ? "on" : ""} onClick={() => setTab("people")}>
-          People
-        </button>
-        <button role="tab" aria-selected={tab === "skills"} className={tab === "skills" ? "on" : ""} onClick={() => setTab("skills")}>
-          Skills
-        </button>
+        {TABS.map((t) => (
+          <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? "on" : ""} onClick={() => setTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {tab === "people" && <PeopleList toast={toast} />}
       {tab === "skills" && <SkillList toast={toast} />}
-
-      {tab === "notes" && view.sections.map((s) => (
-        <section className="section" key={s.name}>
-          <h2 className="section-label">
-            {s.name}
-            {s.items.length > 0 && <span className="count">{s.items.length}</span>}
-            <span className="blurb">{BLURB[s.name]}</span>
-          </h2>
-          {s.items.length ? (
-            <div className="group">
-              <ul className="mem-list">
-                {s.items.map((it, i) => (
-                  <li key={i}>{it}</li>
-                ))}
-              </ul>
-            </div>
-          ) : (
-            <p className="mem-empty">Nothing yet</p>
-          )}
-        </section>
-      ))}
+      {tab === "talk" && <TalkNotes toast={toast} />}
 
       {tab === "notes" && (
-        <section className="section">
-          <h2 className="section-label">Weekly tidy-up</h2>
-          <div className="group">
-            <label className="item">
-              <span className="body">
-                <div className="title">Tidy my notes each week</div>
-                <div className="sub">Lyra merges duplicates, drops what's done or out of date, and tells you what changed in the chat, with an Undo.</div>
-              </span>
-              <input
-                type="checkbox"
-                role="switch"
-                className="switch"
-                checked={!!tidyOn}
-                disabled={tidyOn === null}
-                onChange={(e) => {
-                  const on = e.target.checked;
-                  setTidyOn(on);
-                  void api.setTidy(on).then(() => toast(on ? "Weekly tidy-up on" : "Weekly tidy-up off"));
-                }}
-              />
-            </label>
-          </div>
-          <button className="btn quiet tidy-now" onClick={() => void tidyNow()} disabled={tidying || total < 3}>
-            {tidying ? "Tidying…" : "Tidy up now"}
+        <>
+          {total === 0 ? (
+            <div className="mem-empty-card">
+              <p className="mem-empty-title">Nothing yet.</p>
+              <p>As you chat, Lyra keeps what will still matter next week: how you like things done, what you're working on, what you're waiting on. Or tell it directly: “remember I'm vegetarian”.</p>
+            </div>
+          ) : (
+            filled.map((s) => (
+              <section className="section" key={s.name}>
+                <h2 className="section-label">
+                  {s.name}
+                  <span className="count">{s.items.length}</span>
+                  <span className="blurb">{BLURB[s.name]}</span>
+                </h2>
+                <div className="group">
+                  {s.items.map((it, i) => (
+                    <button key={i} className="item mem-note" onClick={() => setNote({ section: s.name, text: it })}>
+                      <span className="body">
+                        <div className="title">{it}</div>
+                      </span>
+                      <Chevron className="chev" />
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))
+          )}
+          <button className="btn quiet mem-add" onClick={() => setNote({ section: view.sections[0]?.name ?? "Rules", text: null })}>
+            <Plus size={16} /> Add a note
           </button>
-        </section>
-      )}
 
-      {tab === "notes" && channels.length > 0 && (
-        <section className="section">
-          <h2 className="section-label">
-            Channel notebooks <span className="blurb">Facts about one subject each</span>
-          </h2>
-          <div className="group">
-            {channels.map((c) => (
-              <a className="item" key={c.id} href={`#/c/${c.id}/info`}>
-                <span className="tile">
-                  <ChannelIcon name={c.icon} size={20} />
-                </span>
+          {channels.length > 0 && (
+            <section className="section">
+              <h2 className="section-label">
+                Channel notebooks <span className="blurb">What Lyra knows about one subject each</span>
+              </h2>
+              <div className="group">
+                {channels.map((c) => (
+                  <a className="item" key={c.id} href={`#/c/${c.id}/info`}>
+                    <span className="tile">
+                      <ChannelIcon name={c.icon} size={20} />
+                    </span>
+                    <span className="body">
+                      <div className="title">{c.name}</div>
+                      <div className="sub">{c.about || "No description yet"}</div>
+                    </span>
+                    <Chevron className="chev" />
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="section">
+            <h2 className="section-label">Keeping it tidy</h2>
+            <div className="group">
+              <label className="item">
                 <span className="body">
-                  <div className="title">{c.name}</div>
-                  <div className="sub">{c.about || "No description yet"}</div>
+                  <div className="title">Tidy my notes each week</div>
+                  <div className="sub">Lyra merges duplicates and drops what's done or out of date, then tells you what changed in the chat, with an Undo.</div>
+                </span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  className="switch"
+                  checked={!!tidyOn}
+                  disabled={tidyOn === null}
+                  onChange={(e) => {
+                    const on = e.target.checked;
+                    setTidyOn(on);
+                    void api.setTidy(on).then(() => toast(on ? "Weekly tidy-up on" : "Weekly tidy-up off"));
+                  }}
+                />
+              </label>
+              {total >= 3 && (
+                <button className="item" onClick={() => void tidyNow()} disabled={tidying}>
+                  <span className="body">
+                    <div className="title">{tidying ? "Tidying…" : "Tidy up now"}</div>
+                  </span>
+                </button>
+              )}
+              {view.history.length > 0 && (
+                <button className="item" onClick={() => setShowHistory((v) => !v)}>
+                  <span className="body">
+                    <div className="title">Recent changes</div>
+                    <div className="sub">{view.history.length} saved versions you can go back to</div>
+                  </span>
+                  <Chevron className={`chev${showHistory ? " open" : ""}`} />
+                </button>
+              )}
+              <button className="item" onClick={() => setDraft(view.content)}>
+                <span className="body">
+                  <div className="title">Edit as text</div>
+                  <div className="sub">The whole file Lyra reads before every reply</div>
                 </span>
                 <Chevron className="chev" />
-              </a>
+              </button>
+            </div>
+            {showHistory && (
+              <div className="group" style={{ marginTop: 8 }}>
+                {view.history.map((h) => (
+                  <div className="item flat" key={h.id}>
+                    <span className="body">
+                      <div className="title" style={{ fontSize: 15 }}>
+                        {h.reason}
+                      </div>
+                      <div className="sub">{ago(parse(h.created_at))}</div>
+                    </span>
+                    <button className="link-btn" onClick={() => restore(h.id)}>
+                      Restore
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
+      {note && (
+        <NoteSheet
+          note={note}
+          sections={view.sections.map((s) => s.name)}
+          onClose={() => setNote(null)}
+          onSaved={(v, msg) => {
+            setView(v);
+            setNote(null);
+            toast(msg);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** One note: change its words, move it to another section, or forget it. */
+function NoteSheet({
+  note,
+  sections,
+  onClose,
+  onSaved,
+}: {
+  note: { section: string; text: string | null };
+  sections: string[];
+  onClose: () => void;
+  onSaved: (v: MemoryView, msg: string) => void;
+}) {
+  const [text, setText] = useState(note.text ?? "");
+  const [section, setSection] = useState(note.section);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const run = async (fn: () => Promise<MemoryView>, msg: string) => {
+    setBusy(true);
+    setError("");
+    try {
+      onSaved(await fn(), msg);
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  };
+  const save = () => {
+    if (note.text === null) return run(() => api.editNote(section, null, text), "Saved");
+    if (section === note.section) return run(() => api.editNote(section, note.text, text), "Saved");
+    // moved: forget it here, then save it there
+    return run(async () => {
+      await api.editNote(note.section, note.text, null);
+      return api.editNote(section, null, text);
+    }, `Moved to ${section}`);
+  };
+  return (
+    <div className="dialog-layer sheet-layer" role="presentation">
+      <button className="dialog-scrim" aria-label="Close" tabIndex={-1} onClick={onClose} />
+      <form
+        className="sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label={note.text === null ? "Add a note" : "Edit note"}
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        <h2 className="dialog-title">{note.text === null ? "Add a note" : "Edit note"}</h2>
+        <label className="action-field">
+          <span>What Lyra should know</span>
+          <textarea rows={3} value={text} autoFocus maxLength={300} placeholder="I'm vegetarian" onChange={(e) => setText(e.target.value)} />
+        </label>
+        <div className="action-field" style={{ marginTop: 12 }}>
+          <span>Section</span>
+          <div className="chip-row">
+            {sections.map((s) => (
+              <button type="button" key={s} className={`pick${section === s ? " on" : ""}`} aria-pressed={section === s} onClick={() => setSection(s)}>
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+        {error && (
+          <p className="hint bad" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="dialog-actions">
+          {note.text !== null ? (
+            <button type="button" className="btn quiet bad-text" disabled={busy} onClick={() => void run(() => api.editNote(note.section, note.text, null), "Forgotten")}>
+              Forget
+            </button>
+          ) : (
+            <button type="button" className="btn quiet" onClick={onClose}>
+              Cancel
+            </button>
+          )}
+          <button type="submit" className="btn ink" disabled={busy || !text.trim() || (text.trim() === note.text && section === note.section)}>
+            Save
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/** How you talk: what Lyra has picked up from your own messages, to talk more like you. */
+function TalkNotes({ toast }: { toast: (m: string) => void }) {
+  const [style, setStyle] = useState<Awaited<ReturnType<typeof api.talkStyle>> | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => void api.talkStyle().then(setStyle, () => {}), []);
+  const act = async (fn: () => Promise<Awaited<ReturnType<typeof api.talkStyle>>>, done: string) => {
+    setBusy(true);
+    try {
+      setStyle(await fn());
+      toast(done);
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (!style) return <p className="hint">Loading…</p>;
+  return (
+    <>
+      {!style.on ? (
+        <div className="mem-empty-card">
+          <p className="mem-empty-title">Talk like me is off.</p>
+          <p>Lyra keeps its own voice. Turn it on in Settings, You and appearance, and Lyra picks up your slang, energy and emoji over time.</p>
+          <a className="btn quiet" href="#/settings/you">
+            Open settings
+          </a>
+        </div>
+      ) : style.notes.length ? (
+        <section className="section">
+          <h2 className="section-label">
+            What Lyra noticed <span className="blurb">{style.updatedAt ? `Updated ${ago(parse(style.updatedAt))}` : ""}</span>
+          </h2>
+          <div className="group">
+            {style.notes.map((n, i) => (
+              <div className="item flat" key={i}>
+                <span className="body">
+                  <div className="title">{n}</div>
+                </span>
+              </div>
             ))}
           </div>
         </section>
+      ) : (
+        <div className="mem-empty-card">
+          <p className="mem-empty-title">Nothing learned yet.</p>
+          <p>Lyra goes by your recent chat for now, and every few days takes note of how you talk. Only from your own messages, never your email.</p>
+        </div>
       )}
-
-      {tab === "notes" && view.history.length > 0 && (
-        <section className="section">
-          <button className="btn quiet" onClick={() => setShowHistory((v) => !v)}>
-            {showHistory ? "Hide changes" : `Recent changes (${view.history.length})`}
+      {style.on && (
+        <div className="action-buttons mem-talk-actions">
+          <button className="btn quiet" disabled={busy} onClick={() => void act(() => api.learnStyleNow(), "Updated")}>
+            {busy ? "Working…" : "Update now"}
           </button>
-          {showHistory && (
-            <div className="group" style={{ marginTop: 8 }}>
-              {view.history.map((h) => (
-                <div className="item flat" key={h.id}>
-                  <span className="body">
-                    <div className="title" style={{ fontSize: 15 }}>
-                      {h.reason}
-                    </div>
-                    <div className="sub">{ago(parse(h.created_at))}</div>
-                  </span>
-                  <button className="link-btn" onClick={() => restore(h.id)}>
-                    Restore
-                  </button>
-                </div>
-              ))}
-            </div>
+          {style.notes.length > 0 && (
+            <button className="btn text" disabled={busy} onClick={() => confirm("Forget how you talk? Lyra starts learning again from scratch.") && void act(() => api.forgetStyle(), "Forgotten")}>
+              Forget all
+            </button>
           )}
-        </section>
+        </div>
       )}
-    </div>
+    </>
   );
 }
 

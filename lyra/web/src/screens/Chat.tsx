@@ -7,6 +7,7 @@ import { copyText, isNative, liveVoice } from "../platform";
 import { VoiceOverlay } from "../VoiceOverlay";
 import { ActionCards } from "../ActionCard";
 import { TriageCard } from "../TriageCard";
+import { ScanCard } from "../ScanCard";
 import { TodayView } from "../Today";
 import { markSeen } from "../seen";
 import { Star } from "../icons";
@@ -279,6 +280,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
   const filePick = useRef<HTMLInputElement>(null);
   const photoPick = useRef<HTMLInputElement>(null);
   const cameraPick = useRef<HTMLInputElement>(null);
+  const scanPick = useRef<HTMLInputElement>(null);
 
   const addDrafts = useCallback(
     async (make: (() => Promise<Draft>)[]) => {
@@ -302,6 +304,15 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
     [toast],
   );
   const addFiles = useCallback((files: Iterable<File>) => addDrafts([...files].map((f) => () => prepare(f, f.name || "pasted.png"))), [addDrafts]);
+  /** "Scan a paper": the photo is sent right away with the ask, and Lyra answers with a card of what to do. */
+  const scanFiles = async (files: File[]) => {
+    try {
+      const ready = await Promise.all(files.slice(0, 2).map((f) => prepare(f, f.name || "scan.jpg")));
+      await send("Scan this: what's on it that I need to do or remember?", ready);
+    } catch (e) {
+      toast((e as Error).message);
+    }
+  };
 
   // shared to Lyra from another app: it lands in the message box, ready to send or edit
   useEffect(() => {
@@ -342,9 +353,9 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
     stick.current = true;
   }, [channelId]);
 
-  const send = async (raw: string) => {
+  const send = async (raw: string, given?: Draft[]) => {
     const text = raw.trim();
-    const files = drafts;
+    const files = given ?? drafts;
     if (!text && !files.length) return;
     // A reply's being written: this joins it, like texting back to back.
     if (pending) {
@@ -638,6 +649,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                   {!!m.meta.memory?.length && <Notes notes={m.meta.memory} onAction={(i, a) => answerNote(m, i, a)} />}
                   {!!m.meta.tasks?.length && <TaskNotes notes={m.meta.tasks} />}
                   {m.meta.triage && <TriageCard t={m.meta.triage} onSend={(text) => void send(text)} />}
+                  {m.meta.scan && m.id > 0 && <ScanCard messageId={m.id} scan={m.meta.scan} toast={toast} />}
                   {!!m.meta.actions?.length && <ActionCards ids={m.meta.actions} toast={toast} />}
                   {!!m.meta.docs?.length && (
                     <div className="notes">
@@ -732,6 +744,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
             <div className="group">
               {(
                 [
+                  ["Scan a paper (flyer, slip, receipt)", scanPick],
                   ["Take a photo", cameraPick],
                   ["Photo library", photoPick],
                   ["File (PDF or text)", filePick],
@@ -807,6 +820,20 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
           <input ref={filePick} type="file" hidden multiple accept="image/*,application/pdf,text/*,.md,.csv,.json,.ics" aria-label="Choose files" onChange={(e) => { void addFiles(e.target.files ?? []); e.target.value = ""; }} />
           <input ref={photoPick} type="file" hidden multiple accept="image/*" aria-label="Choose photos" onChange={(e) => { void addFiles(e.target.files ?? []); e.target.value = ""; }} />
           <input ref={cameraPick} type="file" hidden accept="image/*" capture="environment" aria-label="Take a photo" onChange={(e) => { void addFiles(e.target.files ?? []); e.target.value = ""; }} />
+          {/* a paper: the photo goes straight to Lyra, which shows what on it needs doing */}
+          <input
+            ref={scanPick}
+            type="file"
+            hidden
+            accept="image/*,application/pdf"
+            capture="environment"
+            aria-label="Scan a paper"
+            onChange={(e) => {
+              const files = [...(e.target.files ?? [])];
+              e.target.value = "";
+              if (files.length) void scanFiles(files);
+            }}
+          />
           <label htmlFor="msg" className="sr-only">
             Message Lyra
           </label>

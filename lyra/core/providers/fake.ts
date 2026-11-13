@@ -68,12 +68,25 @@ export class FakeProvider implements ModelProvider {
       }
       if (result.name === "save_skill") return say("Learned it. I'll do it that way from now on.");
       if (result.name === "use_skill") return say(`Doing it your way:\n\n${result.content.split("\n\n").slice(1).join("\n\n").slice(0, 400)}`);
+      if (result.name === "show_scan") return say("Three things on it. Tap to get a reminder or add one to your list (practice items: add an API key for the real thing).");
       if (result.name === "show_triage") return say("Here's how your inbox sorts out (practice data: add an API key for the real thing).");
       return say(`Here's what I found.\n\n${result.content.replace(/<\/?untrusted_data[^>]*>/g, "").trim().slice(0, 400)}`);
     }
 
     const text = last?.parts.map((p) => (p.type === "text" ? p.text : "")).join("") ?? "";
     const files = last?.parts.flatMap((p) => (p.type === "file" ? [p.name] : [])) ?? [];
+    // "Scan this": the practice model shows a sample card (made-up items, said so)
+    if (files.length && /^scan\b/i.test(text.trim()) && has("show_scan")) {
+      const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+      return call("show_scan", {
+        title: "Practice scan",
+        items: [
+          { kind: "deadline", text: "Permission slip and $12 due (practice)", when: day(4) },
+          { kind: "date", text: "Field trip (practice)", when: `${day(7)} 08:45` },
+          { kind: "todo", text: "Find two parent drivers (practice)" },
+        ],
+      });
+    }
     if (files.length) return say(`Got ${files.length === 1 ? "it" : "them"}: ${files.join(", ")}.\n\nThe practice model can't look inside. Add an API key in Settings and I'll read it properly.`);
     if (/^(thanks|thank you|thx|ty)\b/i.test(text.trim()) && has("react")) return call("react", { emoji: "❤️" });
     // "remind me in 5 minutes to stretch": the practice model can set reminders

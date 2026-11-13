@@ -133,6 +133,25 @@ try {
   await page.getByRole("heading", { name: "Memory" }).waitFor();
   await shot("light-4-memory");
   check(await page.getByRole("switch", { name: /Tidy my notes each week/ }).isChecked(), "the weekly memory tidy-up is on, with a switch");
+  // a note: add it, change it, forget it, right on the page
+  await page.getByRole("button", { name: "Add a note" }).click();
+  const noteSheet = page.getByRole("dialog", { name: "Add a note" });
+  await noteSheet.getByLabel("What Lyra should know").fill("I'm vegetarian");
+  await noteSheet.getByRole("button", { name: "Save" }).click();
+  await page.locator(".mem-note", { hasText: "I'm vegetarian" }).click();
+  const editSheet = page.getByRole("dialog", { name: "Edit note" });
+  await editSheet.getByLabel("What Lyra should know").fill("I'm vegetarian, but fish is fine");
+  await editSheet.getByRole("button", { name: "Projects" }).click();
+  await editSheet.getByRole("button", { name: "Save" }).click();
+  await page.locator(".section", { hasText: "Projects" }).locator(".mem-note", { hasText: "fish is fine" }).waitFor();
+  await shot("light-49-memory-notes");
+  await page.locator(".mem-note", { hasText: "fish is fine" }).click();
+  await page.getByRole("dialog", { name: "Edit note" }).getByRole("button", { name: "Forget" }).click();
+  await page.getByText("Forgotten").first().waitFor();
+  check((await page.locator(".mem-note").count()) === 0, "a note can be added, changed, moved and forgotten on the Memory page");
+  await page.getByRole("tab", { name: "How you talk" }).click();
+  await page.getByText("Nothing learned yet.").waitFor();
+  check(true, "Memory shows how you talk, too");
   // ---- people cards ----
   await page.getByRole("tab", { name: "People" }).click();
   await page.getByRole("button", { name: "Add a person" }).click();
@@ -145,7 +164,7 @@ try {
   await page.locator(".item", { hasText: "Dana Ortiz" }).waitFor();
   check((await page.locator(".item", { hasText: "sister · dana@example.com · 2 notes" }).count()) === 1, "people can be added as cards on the Memory page");
   await shot("light-37-people");
-  await page.getByRole("tab", { name: "Notes" }).click();
+  await page.getByRole("tab", { name: "About you" }).click();
 
   // ---- tasks ----
   await page.goto(`${base}/#/`);
@@ -351,6 +370,21 @@ try {
   await page.locator(".item", { hasText: "Packing list" }).waitFor();
   check(await page.getByRole("heading", { name: "Artifacts" }).isVisible(), "Artifacts lists it");
 
+  // ---- scan a paper: the photo goes straight to Lyra, and the card's buttons do the work ----
+  await page.goto(`${base}/#/`);
+  // (on the phone, + opens a sheet with "Scan a paper"; a browser goes straight to the file picker, so feed the scan input itself)
+  const scanPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+  await page.getByLabel("Scan a paper").setInputFiles({ name: "slip.png", mimeType: "image/png", buffer: scanPng });
+  await page.locator(".scan-card").waitFor();
+  check((await page.locator(".scan-items li").count()) === 3, "scanning a paper shows what's on it as a card");
+  await page.locator(".scan-items li", { hasText: "Permission slip" }).getByRole("button", { name: /Remind me/ }).click();
+  await page.locator(".scan-items li", { hasText: "Permission slip" }).getByText("Reminder set").waitFor();
+  await page.getByRole("button", { name: "Do all" }).click();
+  await page.locator(".scan-items li", { hasText: "parent drivers" }).getByText("On your list").waitFor();
+  check((await page.locator(".scan-done").count()) === 3, "each item is one tap: a reminder, or onto your list");
+  await page.waitForTimeout(400);
+  await shot("light-50-scan");
+
   // ---- a table in a chat reply ----
   await page.goto(`${base}/#/`);
   await page.getByPlaceholder("Message Lyra").fill("show me a table of plans");
@@ -449,7 +483,7 @@ try {
   await page.locator(".app.drawer-open").waitFor();
   await page.getByRole("link", { name: /Everything/ }).click();
   await page.waitForTimeout(300);
-  check((await page.locator(".bubble").count()) === 5, "main chat keeps its own history");
+  check((await page.locator(".bubble").count()) === 6, "main chat keeps its own history");
 
   await page.goto(`${base}/#/c/1/info`);
   await page.getByText("Lyra saves facts about Rowan here").waitFor();
@@ -483,7 +517,7 @@ try {
   await page.getByPlaceholder("Message Lyra").fill("thanks!");
   await page.getByRole("button", { name: "Send" }).click();
   await page.getByRole("img", { name: "Lyra reacted ❤️" }).waitFor();
-  check((await page.locator(".bubble").count()) === 6, "Lyra can react to a message, with no text reply");
+  check((await page.locator(".bubble").count()) === 7, "Lyra can react to a message, with no text reply");
   await shot("light-21-reaction");
 
   await page.goto(`${base}/#/settings/you`);
@@ -638,14 +672,14 @@ try {
   check((await page.locator(".draft").count()) === 1, "an attachment can be removed before sending");
   await shot("light-29-attach");
   await page.getByRole("button", { name: "Send" }).click();
-  await page.locator(".sent-photo").waitFor();
+  await page.locator(".sent-photo").last().waitFor();
   await page.getByText("Got it: flyer.jpg").waitFor();
   check(true, "a photo sends on its own, and Lyra receives it");
-  const sentSize = await page.locator(".sent-photo").evaluate((el) => el.naturalWidth);
+  const sentSize = await page.locator(".sent-photo").last().evaluate((el) => el.naturalWidth);
   check(sentSize > 0 && sentSize <= 320, "the chat keeps a small thumbnail, not the full photo");
   await shot("light-30-photo-sent");
   await page.reload();
-  await page.locator(".sent-photo").waitFor();
+  await page.locator(".sent-photo").last().waitFor();
   check(true, "the photo is still shown after a restart");
 
   // ---- live voice, against a pretend GPT-Live living in this page ----

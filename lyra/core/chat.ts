@@ -6,6 +6,7 @@ import { CHANNEL_SECTIONS, SECTIONS, type Notebook } from "./memory.ts";
 import { buildSystemPrompt, type ChannelDigest } from "./prompt.ts";
 import { neutralize, wrapUntrusted } from "./untrusted.ts";
 import { DASHBOARD_SCHEMA } from "./dashboard.ts";
+import { checkScan, SCAN_TOOL, type Scan } from "./scan.ts";
 import { describeSchedule, type RoutineInput } from "./routines.ts";
 import { uniqueSources, type ModelProvider, type Msg, type Part, type Source, type ToolDef } from "./providers/types.ts";
 import {
@@ -691,6 +692,7 @@ export async function runTurn(
     return named || (own.includes(kind) && ctx.workspace.docs!.count(kind) === 1);
   };
   let triage: Triage | undefined;
+  let scan: Scan | undefined;
   const skillNotes: { id: number; name: string; kind: "used" | "saved" }[] = [];
   const toolsUsed: { name: string; ok: boolean }[] = [];
   // Once outside content has been read, notebook changes need the user's tap.
@@ -748,6 +750,7 @@ export async function runTurn(
     ...(peopleNotes.length ? { people: peopleNotes } : {}),
     ...(docNotes.length ? { docs: docNotes } : {}),
     ...(triage ? { triage } : {}),
+    ...(scan ? { scan } : {}),
     ...(skillNotes.length ? { skills: skillNotes } : {}),
     ...(sources.length ? { sources: uniqueSources(sources).slice(0, 8) } : {}),
     tools: toolsUsed,
@@ -758,7 +761,7 @@ export async function runTurn(
   try {
     const channels = ctx.workspace.channels();
     const gmailOn = ctx.connectors.status().some((c) => c.id === "gmail" && c.state === "connected");
-    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed(), !!ctx.workspace.music), ...peopleTools(ctx.workspace), ...docTools(ctx.workspace), ...triageTools(gmailOn), ...skillTools(ctx.workspace, true), ...lifeAdminTools(ctx.workspace), ...(await ctx.connectors.tools())];
+    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed(), !!ctx.workspace.music), ...peopleTools(ctx.workspace), ...docTools(ctx.workspace), ...triageTools(gmailOn), SCAN_TOOL, ...skillTools(ctx.workspace, true), ...lifeAdminTools(ctx.workspace), ...(await ctx.connectors.tools())];
     const system = buildSystemPrompt({
       userName: ctx.userName,
       soul: ctx.soul,
@@ -888,6 +891,21 @@ export async function runTurn(
             content: ok ? "Reacted. Add text only if there's more to say." : `Pick one of: ${REACTIONS.join(" ")}`,
             isError: !ok,
           });
+          continue;
+        }
+        if (call.name === "show_scan") {
+          // a card the user acts on with their own taps: fine after reading the photo
+          let content: string;
+          let ok = false;
+          try {
+            scan = checkScan(call.input);
+            content = `Shown as a card with ${scan.items.length} item${scan.items.length === 1 ? "" : "s"} and buttons. Say the gist in a sentence; don't list them again.`;
+            ok = true;
+          } catch (e) {
+            content = (e as Error).message;
+          }
+          toolsUsed.push({ name: call.name, ok });
+          results.push({ type: "tool_result", id: call.id, name: call.name, content, isError: !ok });
           continue;
         }
         if (call.name === "suggest_replies") {
