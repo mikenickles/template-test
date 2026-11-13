@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Close, Mic } from "./icons";
 import { listen } from "./platform";
+import { haptic } from "./haptics";
 
 export function QuickCapture({ mode, onSend, onClose }: { mode: "quick" | "memo"; onSend: (text: string) => void; onClose: () => void }) {
   const [text, setText] = useState("");
@@ -17,6 +18,7 @@ export function QuickCapture({ mode, onSend, onClose }: { mode: "quick" | "memo"
     const words = t.trim();
     if (!words || sent.current) return;
     sent.current = true;
+    haptic.done();
     onSend(mode === "memo" ? `Voice memo: ${words}` : words);
     onClose();
   };
@@ -36,6 +38,7 @@ export function QuickCapture({ mode, onSend, onClose }: { mode: "quick" | "memo"
         if (mode === "quick" && o.text?.trim()) send(o.text);
       }
     });
+    haptic.tap();
     listen.start(mode === "memo").catch((e) => {
       setError((e as Error).message);
       setState("typing");

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, isNative, onChange, type AppState, type Channel } from "./api";
 import { Drawer } from "./Drawer";
 import { useSlidingPill } from "./pill";
+import { haptic } from "./haptics";
 import { Back, ChannelIcon, Info, Layers, MenuIcon } from "./icons";
 import { Avatar } from "./LyraMark";
 import { Access } from "./screens/Access";
@@ -367,6 +368,7 @@ export function App() {
               aria-expanded={drawer}
               onClick={() => {
                 void refreshChannels();
+                haptic.tap();
                 setDrawer(true);
               }}
             >

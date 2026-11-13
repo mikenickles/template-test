@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DB, addMessage } from "../core/db.ts";
 import { Lyra } from "../core/lyra.ts";
 import type { GenerateRequest, GenerateResult, ModelProvider } from "../core/providers/types.ts";
-import { cleanNotes, learnStyle, styleSamples } from "../core/style.ts";
+import { cleanNotes, learnStyle, ratedReplies, styleSamples } from "../core/style.ts";
 import { platform, SQL } from "./helpers.ts";
 
 const noop = { text: () => {}, status: () => {}, memory: () => {} };
@@ -80,5 +80,45 @@ describe("talking like the user", () => {
 
     await lyra.forgetStyle();
     expect(lyra.talkStyle().notes).toEqual([]);
+  });
+
+  it("takes a thumbs up or down on Lyra's replies, and learns what the user likes from them", async () => {
+    const m = scripted([]);
+    const lyra = await Lyra.start(platform({ provider: m.provider }));
+    await lyra.saveSettings({ proactive: { level: "off" } });
+    await lyra.saveSettings({ userName: "Mike" });
+    const db = (lyra as unknown as { db: DB }).db;
+    const ids: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      addMessage(db, "user", `what's on ${i}`, {}, null);
+      ids.push(addMessage(db, "assistant", `Here's a long answer ${i} `.repeat(30), {}, null).id);
+    }
+    const mine = addMessage(db, "user", "thanks", {}, null).id;
+    await expect(lyra.rateReply(mine, "up")).rejects.toThrow(/Only Lyra's replies/);
+
+    const up = await lyra.rateReply(ids[0], "up", "ignored on a thumbs up");
+    expect(up.meta.feedback).toMatchObject({ rating: "up" });
+    expect(up.meta.feedback!.why).toBeUndefined();
+    await lyra.rateReply(ids[1], "down", "Too long;  Too formal");
+    await lyra.rateReply(ids[2], "down");
+    expect((await lyra.rateReply(ids[2], null)).meta.feedback).toBeUndefined();
+    await lyra.rateReply(ids[2], "down", "Too long");
+
+    const rated = ratedReplies(db);
+    expect(rated.map((r) => r.rating)).toEqual(["up", "down", "down"]);
+    expect(rated[1]).toMatchObject({ why: "Too long; Too formal", asked: "what's on 1" });
+    expect(rated[1].reply.length).toBeLessThanOrEqual(501);
+
+    // three ratings are enough to learn from, even before 20 new messages
+    const replies = [call("save_style", { notes: ["Keep answers to a line or two; longer ones were too long"] })];
+    m.requests.length = 0;
+    m.provider.generate = async (req) => (m.requests.push(req), replies.shift() ?? say("ok"));
+    expect(lyra.tickStyle(new Date(Date.now() + 20 * 60_000))).toBe(true);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(m.requests[0].system).toMatch(/what they like in a reply[^]*<rated_replies>[^]*👍 liked[^]*👎 didn't like \(Too long; Too formal\)[^]*they said: what's on 1/);
+    expect(lyra.talkStyle().notes).toEqual(["Keep answers to a line or two; longer ones were too long"]);
+
+    await lyra.chat("hi", noop);
+    expect(m.requests.at(-1)!.system).toMatch(/talks and likes replies \(these win over your general format habits\):\n- Keep answers to a line or two/);
   });
 });

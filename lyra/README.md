@@ -72,6 +72,12 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### Rate a reply, and haptics (0.43)
+
+- **Thumbs up or down** under Lyra's latest reply (any reply from its long-press menu). A thumbs down asks what was off: Too long, Too short, Too formal, Too chatty, Missed the point, Got something wrong, or a few words of your own, or skip. Saved on the message (`meta.feedback`, `Lyra.rateReply`).
+- **Lyra learns from them**: the "How you talk" notes are now learned from your own messages *and* the replies you rated (`ratedReplies` in `core/style.ts`, passed to `learnStyle`), written as advice Lyra gives itself ("Keep answers to a line or two"). Three new ratings are enough to relearn after a day instead of waiting for 20 messages and three days. The notes go in every prompt and win over Lyra's general format habits.
+- **Haptics** (phone): a light tap when you send, open the menu or start talking; a tick when you switch tabs or options; a firmer tap when a swiped task catches or you long-press a message; a "done" buzz when you tick a task off, approve a card, act on a scan or send a voice memo (`web/src/haptics.ts`, `@capacitor/haptics`). Off with Settings → You → Feel → Haptics.
+
 ### Smoother motion (0.42.1)
 
 - The Chat/Tasks bar, the Tasks tabs and the segmented switches (Usage range, Heads-ups level) have a pill that slides to the option you pick, with a small settle at the end (`web/src/pill.ts` `useSlidingPill`; it remembers where it was, so it slides even when the page rebuilds the control).

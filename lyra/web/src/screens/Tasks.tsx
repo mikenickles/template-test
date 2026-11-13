@@ -8,6 +8,7 @@ import { LifeAdmin } from "./LifeAdmin";
 import { ScheduledSection } from "./Routines";
 import { ago, parse } from "../when";
 import { useSlidingPill } from "../pill";
+import { haptic } from "../haptics";
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
   up_next: "Up next",
@@ -127,7 +128,10 @@ function SwipeRow({ children, title, onLater, onDone, laterLabel = "Later" }: { 
             setDragging(true);
             (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
           }
-          setDx(Math.max(-WIDTH - 24, Math.min(0, s.dx + mx)));
+          const next = Math.max(-WIDTH - 24, Math.min(0, s.dx + mx));
+          // a tick when the row has gone far enough to stay open, and when it lets go again
+          if ((next < -WIDTH / 2) !== (dx < -WIDTH / 2)) haptic.press();
+          setDx(next);
         }}
         onPointerUp={() => {
           if (start.current?.locked) setDx((d) => (d < -WIDTH / 2 ? -WIDTH : 0));
@@ -203,6 +207,7 @@ export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: 
   const toggle = async (t: Task) => {
     try {
       await api.updateTask(t.id, { status: t.status === "done" ? "up_next" : "done" });
+      if (t.status !== "done") haptic.done();
       toast(t.status === "done" ? "Reopened" : "Marked done");
       load();
       onCounts();

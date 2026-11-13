@@ -1,6 +1,8 @@
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api, onChange, sendChat, type Channel, type MemoryNote, type Message, type TaskNote } from "../api";
-import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chart, Chevron, Close, File as FileIcon, Minus, Wave, More, Pin, Plus, Spark, Stop, TasksIcon } from "../icons";
+import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chart, Chevron, Close, File as FileIcon, Minus, Wave, More, Pin, Plus, Spark, Stop, TasksIcon, ThumbDown, ThumbUp } from "../icons";
+import { haptic } from "../haptics";
+import { FEEDBACK_REASONS } from "../../../core/style";
 import { noteOf, onIncoming, prepare, prepareShared, strip, takeIncoming, type Draft } from "../attach";
 import { MAX_ATTACHMENTS } from "../../../core/attachments";
 import { copyText, isNative, liveVoice } from "../platform";
@@ -357,6 +359,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
     const text = raw.trim();
     const files = given ?? drafts;
     if (!text && !files.length) return;
+    haptic.tap();
     // A reply's being written: this joins it, like texting back to back.
     if (pending) {
       if (files.length) return toast("Photos and files go once Lyra has finished this reply.");
@@ -455,7 +458,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
             if (e.pointerType === "mouse") return;
             const t = window.setTimeout(() => {
               press.current = null;
-              navigator.vibrate?.(12);
+              haptic.press();
               setActing(m);
             }, 450);
             press.current = { t, x: e.clientX, y: e.clientY };
@@ -477,10 +480,27 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
           },
         };
 
-  const act = async (m: Message, what: "copy" | "pin" | "delete") => {
+  // thumbs up or down on a reply; down asks what was off (optional)
+  const [whyFor, setWhyFor] = useState<Message | null>(null);
+  const rate = async (m: Message, rating: "up" | "down" | null, why?: string) => {
+    try {
+      haptic.select();
+      const next = await api.rateReply(m.id, rating, why);
+      setMessages((list) => (list ?? []).map((x) => (x.id === m.id ? next : x)));
+      if (rating === "down" && why === undefined) setWhyFor(next);
+      else if (rating === "up") toast("Thanks! Noted 🙌");
+      else if (rating === "down") toast("Thanks, noted");
+    } catch (e) {
+      toast((e as Error).message);
+    }
+  };
+
+  const act = async (m: Message, what: "copy" | "pin" | "delete" | "up" | "down") => {
     setActing(null);
     try {
-      if (what === "copy") {
+      if (what === "up" || what === "down") {
+        await rate(m, m.meta.feedback?.rating === what ? null : what);
+      } else if (what === "copy") {
         await copyText(m.content);
         toast("Copied");
       } else if (what === "pin") {
@@ -700,6 +720,31 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                     </button>
                   )}
                   {!!m.meta.sources?.length && <Sources list={m.meta.sources} />}
+                  {m.role === "assistant" && m.id > 0 && !m.meta.error && !!m.content.trim() && (m.meta.feedback || (m.id === lastId && !pending)) && (
+                    <div className={`rate${m.meta.feedback ? " rated" : ""}`} role="group" aria-label="Rate this reply">
+                      {(!m.meta.feedback || m.meta.feedback.rating === "up") && (
+                        <button
+                          className={`rate-btn${m.meta.feedback?.rating === "up" ? " on" : ""}`}
+                          aria-label={m.meta.feedback?.rating === "up" ? "You liked this reply (tap to undo)" : "Good reply"}
+                          aria-pressed={m.meta.feedback?.rating === "up"}
+                          onClick={() => void rate(m, m.meta.feedback?.rating === "up" ? null : "up")}
+                        >
+                          <ThumbUp size={16} />
+                        </button>
+                      )}
+                      {(!m.meta.feedback || m.meta.feedback.rating === "down") && (
+                        <button
+                          className={`rate-btn${m.meta.feedback?.rating === "down" ? " on" : ""}`}
+                          aria-label={m.meta.feedback?.rating === "down" ? "You didn't like this reply (tap to undo)" : "Not quite"}
+                          aria-pressed={m.meta.feedback?.rating === "down"}
+                          onClick={() => void rate(m, m.meta.feedback?.rating === "down" ? null : "down")}
+                        >
+                          <ThumbDown size={16} />
+                        </button>
+                      )}
+                      {m.meta.feedback?.why && <span className="rate-why">{m.meta.feedback.why}</span>}
+                    </div>
+                  )}
                   {!!m.meta.suggestions?.length && m.id === lastId && !pending && (
                     <div className="suggestions" aria-label="Suggested replies">
                       {m.meta.suggestions.map((s) => (
@@ -771,6 +816,16 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
         </div>
       )}
       {acting && <MessageActions message={acting} onAct={(w) => void act(acting, w)} onClose={() => setActing(null)} />}
+      {whyFor && (
+        <WhySheet
+          onSend={(why) => {
+            const m = whyFor;
+            setWhyFor(null);
+            if (why) void rate(m, "down", why);
+            else toast("Thanks, noted");
+          }}
+        />
+      )}
       <div className="composer" ref={composerRef}>
         {!atBottom && (
           <button className="ring jump" aria-label="Jump to latest" onClick={() => toBottom(true)}>
@@ -967,7 +1022,52 @@ function Sources({ list }: { list: { url: string; title: string }[] }) {
   );
 }
 
-function MessageActions({ message, onAct, onClose }: { message: Message; onAct: (what: "copy" | "pin" | "delete") => void; onClose: () => void }) {
+/** After a thumbs down: what was off? One tap, a few words, or skip. */
+function WhySheet({ onSend }: { onSend: (why: string) => void }) {
+  const [picked, setPicked] = useState<string[]>([]);
+  const [more, setMore] = useState("");
+  const why = [...picked, more.trim()].filter(Boolean).join("; ");
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && onSend("");
+    addEventListener("keydown", esc);
+    return () => removeEventListener("keydown", esc);
+  }, [onSend]);
+  return (
+    <div className="dialog-layer sheet-layer" role="presentation">
+      <button className="dialog-scrim" aria-label="Skip" tabIndex={-1} onClick={() => onSend("")} />
+      <div className="sheet why-sheet" role="dialog" aria-modal="true" aria-label="What was off?">
+        <h2 className="why-title">What was off?</h2>
+        <p className="why-sub">Lyra learns from this, so the next replies fit you better.</p>
+        <div className="why-chips">
+          {FEEDBACK_REASONS.map((r) => (
+            <button
+              key={r}
+              className={`why-chip${picked.includes(r) ? " on" : ""}`}
+              aria-pressed={picked.includes(r)}
+              onClick={() => {
+                haptic.select();
+                setPicked((p) => (p.includes(r) ? p.filter((x) => x !== r) : [...p, r]));
+              }}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+        <input className="field" placeholder="Anything else? (optional)" value={more} maxLength={160} onChange={(e) => setMore(e.target.value)} />
+        <div className="dialog-actions">
+          <button className="btn quiet" onClick={() => onSend("")}>
+            Skip
+          </button>
+          <button className="btn ink" disabled={!why} onClick={() => onSend(why)}>
+            Send
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MessageActions({ message, onAct, onClose }: { message: Message; onAct: (what: "copy" | "pin" | "delete" | "up" | "down") => void; onClose: () => void }) {
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     addEventListener("keydown", esc);
@@ -989,6 +1089,22 @@ function MessageActions({ message, onAct, onClose }: { message: Message; onAct: 
               <div className="title">{message.meta.pinned ? "Unpin" : "Pin"}</div>
             </span>
           </button>
+          {message.role === "assistant" && (
+            <>
+              <button className="item" onClick={() => onAct("up")}>
+                <span className="body">
+                  <div className="title">{message.meta.feedback?.rating === "up" ? "Undo good reply" : "Good reply"}</div>
+                </span>
+                <ThumbUp size={18} />
+              </button>
+              <button className="item" onClick={() => onAct("down")}>
+                <span className="body">
+                  <div className="title">{message.meta.feedback?.rating === "down" ? "Undo not quite" : "Not quite"}</div>
+                </span>
+                <ThumbDown size={18} />
+              </button>
+            </>
+          )}
           <button
             className="item"
             onClick={() => {

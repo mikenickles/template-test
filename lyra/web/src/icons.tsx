@@ -90,6 +90,13 @@ export const Pin = (p: P) => (
     <path d="M12 3.5l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.9 7.2 18.4l.9-5.4-3.9-3.8 5.4-.8z" />
   </Icon>
 );
+export const ThumbUp = (p: P) => (
+  <Icon {...p}>
+    <path d="M7.5 10.5v9h-3a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1z" />
+    <path d="M7.5 10.5l3.6-6.3a1.6 1.6 0 0 1 2.9 1.2l-.8 3.6h5a2 2 0 0 1 2 2.4l-1.3 6.4a2 2 0 0 1-2 1.7H7.5" />
+  </Icon>
+);
+export const ThumbDown = (p: P) => <ThumbUp {...p} style={{ transform: "rotate(180deg)", ...p.style }} />;
 export const Cpu = (p: P) => (
   <Icon {...p}>
     <rect x="6" y="6" width="12" height="12" rx="2" />

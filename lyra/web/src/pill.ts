@@ -3,6 +3,7 @@
 // `memo` remembers where the pill last was, so a control that's re-created when the page
 // changes still slides from the old option instead of appearing in place.
 import { useLayoutEffect, useState } from "react";
+import { haptic } from "./haptics";
 
 const last = new Map<string, string>();
 
@@ -42,8 +43,13 @@ export function useSlidingPill(active: unknown, memo?: string): (el: HTMLElement
         void pill.offsetWidth;
         pill.style.transition = "";
         place(true);
+        // a different option than before (not just the page coming back): a tick
+        if (memo && last.get(memo) !== from) haptic.select();
       } else place(false);
-    } else place(true);
+    } else {
+      haptic.select();
+      place(true);
+    }
     // fonts loading, a badge appearing, the window resizing: follow without sliding
     let size = `${box.offsetWidth}x${box.offsetHeight}`;
     const ro = new ResizeObserver(() => {

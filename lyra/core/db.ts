@@ -391,6 +391,8 @@ export interface MessageMeta {
   reaction?: string;
   /** Pinned by the user, to find again on the chat's info page. */
   pinned?: boolean;
+  /** On Lyra's reply: the user's thumbs up or down, and what was off. Feeds how Lyra learns to talk to them. */
+  feedback?: { rating: "up" | "down"; why?: string; at: string };
   /** Said aloud in a live voice call. */
   voice?: boolean;
   /** Posted by a reminder or a follow-up Lyra set. */

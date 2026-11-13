@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { actionFor, remindAt, type Scan, type ScanItem } from "../../core/scan";
 import { api } from "./api";
+import { haptic } from "./haptics";
 import { Bell, Calendar, Check, File as FileIcon, TasksIcon } from "./icons";
 
 /** "2026-11-17" → "Tue, Nov 17"; with a time, "Tue, Nov 17, 3:30 PM". */
@@ -35,6 +36,7 @@ export function ScanCard({ messageId, scan, toast }: { messageId: number; scan: 
     try {
       const m = await api.scanAction(messageId, which);
       if (m.meta.scan) setCard(m.meta.scan);
+      haptic.done();
       toast(which === "all" ? "Done: reminders set and the rest is on your list" : "Done");
     } catch (e) {
       toast((e as Error).message);

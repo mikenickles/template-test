@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { ActionRow, EmailDraft, EventDraft, PlaylistDraft } from "../../core/actions";
 import { api, onChange } from "./api";
 import { Calendar, Mail, Music } from "./icons";
+import { haptic } from "./haptics";
 
 const when = (iso: string) => new Date(iso).toLocaleString(undefined, { hour: "numeric", minute: "2-digit" });
 
@@ -71,6 +72,7 @@ function ActionCard({ id, toast }: { id: number; toast: (m: string) => void }) {
       const r = await api.decideAction(id, choice, choice === "decline" ? undefined : edited());
       setA(r);
       if (r.status === "done") {
+        haptic.done();
         setEditing(null);
         toast(DONE[r.result?.did ?? ""] ?? "Done");
       } else if (r.error) toast(r.error);
@@ -206,7 +208,7 @@ function PlaylistCard({ a, setA, toast }: { a: ActionRow; setA: (r: ActionRow) =
     try {
       const r = await api.decideAction(a.id, choice);
       setA(r);
-      if (r.status === "done") toast(DONE[r.result?.did ?? ""] ?? "Done");
+      if (r.status === "done") (haptic.done(), toast(DONE[r.result?.did ?? ""] ?? "Done"));
       else if (r.error) toast(r.error);
     } catch (e) {
       toast((e as Error).message);

@@ -1297,6 +1297,20 @@ export class Lyra {
     return { ...m, meta };
   }
 
+  /** Thumbs up or down on one of Lyra's replies (null takes it back). Lyra learns from these. */
+  async rateReply(id: number, rating: "up" | "down" | null, why?: string): Promise<StoredMessage> {
+    const m = getMessage(this.db, id);
+    if (!m) throw new Error("That message no longer exists.");
+    if (m.role !== "assistant") throw new Error("Only Lyra's replies can be rated.");
+    const meta = { ...m.meta };
+    const reason = why?.replace(/\s+/g, " ").trim().slice(0, 200);
+    if (rating) meta.feedback = { rating, ...(rating === "down" && reason ? { why: reason } : {}), at: new Date().toISOString() };
+    else delete meta.feedback;
+    updateMessageMeta(this.db, id, meta);
+    await this.db.flush();
+    return { ...m, meta };
+  }
+
   pinned(channelId: number | null): StoredMessage[] {
     return pinnedMessages(this.db, channelId);
   }
@@ -1700,10 +1714,12 @@ export class Lyra {
     if (!ST.mirrorOn(this.db) || this.learningStyle || this.busy) return false;
     if (!this.p.provider && this.choice().provider === "fake") return false;
     const s = ST.readStyle(this.db);
-    if (s && now.getTime() - new Date(s.updatedAt).getTime() < 3 * 86_400_000) return false;
+    // three ratings since last time count for more than chat alone: relearn after a day, not three
+    const rated = ST.ratedSince(this.db, s?.updatedAt) >= 3;
+    if (s && now.getTime() - new Date(s.updatedAt).getTime() < (rated ? 1 : 3) * 86_400_000) return false;
     const tried = getSetting(this.db, "styleTriedAt");
     if (tried && now.getTime() - new Date(tried).getTime() < 86_400_000) return false;
-    if (ST.newSince(this.db, s?.updatedAt) < ST.STYLE_MIN_NEW) return false;
+    if (!rated && ST.newSince(this.db, s?.updatedAt) < ST.STYLE_MIN_NEW) return false;
     const lastUser = this.db.get<{ at: string | null }>("SELECT MAX(created_at) AS at FROM messages WHERE role = 'user'")!.at;
     if (lastUser && now.getTime() - new Date(lastUser).getTime() < 15 * 60_000) return false;
     setSetting(this.db, "styleTriedAt", now.toISOString());
@@ -1717,9 +1733,10 @@ export class Lyra {
     this.learningStyle = true;
     try {
       const samples = ST.styleSamples(this.db);
-      if (samples.length < 10) throw new Error("Lyra needs a few more of your messages to go on. Keep chatting!");
+      const rated = ST.ratedReplies(this.db);
+      if (samples.length < 10 && rated.length < 3) throw new Error("Lyra needs a few more of your messages to go on. Keep chatting!");
       const provider = metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "proactive", this.db, this.p.timeZone);
-      const notes = await ST.learnStyle(provider, samples, ST.readStyle(this.db)?.notes ?? [], this.userName);
+      const notes = await ST.learnStyle(provider, samples, ST.readStyle(this.db)?.notes ?? [], this.userName, rated);
       if (!notes) throw new Error("Not enough to go on yet. Keep chatting and Lyra will pick it up.");
       ST.saveStyle(this.db, notes, samples.length);
       AC.logActivity(this.db, { kind: "style", title: "Noticed how you talk", summary: notes[0] ?? "", status: "done", detail: notes.map((n) => `- ${n}`).join("\n") });

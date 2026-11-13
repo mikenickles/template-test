@@ -4,6 +4,7 @@ import { Bell, Chart, Check, Chevron, Cloud, Cpu, Plug, Refresh, User } from "..
 import { compact, dayKey } from "../usageData";
 import { Usage } from "./Usage";
 import { useSlidingPill } from "../pill";
+import { haptic, hapticsOn, setHaptics } from "../haptics";
 import { appLock, background, installer, isDesktop, notifier, thisDevice, type BackgroundState } from "../platform";
 import { BackupSection } from "./Backup";
 import { ModelSettings } from "./ModelSettings";
@@ -196,7 +197,38 @@ function YouSection({ state, setState, toast, run, busy }: Omit<Props, "section"
       <TalkLikeMe state={state} run={run} busy={busy} toast={toast} />
 
       <WeatherSection state={state} setState={setState} toast={toast} />
+
+      {isNative && <HapticsSection />}
     </>
+  );
+}
+
+/** Little taps under your finger (this phone only). */
+function HapticsSection() {
+  const [on, setOn] = useState(hapticsOn);
+  return (
+    <section className="section">
+      <h2 className="section-label">Feel</h2>
+      <div className="group">
+        <label className="item">
+          <span className="body">
+            <div className="title">Haptics</div>
+            <div className="sub">A light tap when you send, switch tabs, swipe a task or tick one off.</div>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            className="switch"
+            checked={on}
+            onChange={(e) => {
+              setHaptics(e.target.checked);
+              setOn(e.target.checked);
+              haptic.done();
+            }}
+          />
+        </label>
+      </div>
+    </section>
   );
 }
 
@@ -225,7 +257,7 @@ function TalkLikeMe({ state, run, busy, toast }: { state: AppState; run: (fn: ()
         <label className="item">
           <span className="body">
             <div className="title">Talk like me</div>
-            <div className="sub">Lyra picks up your slang, energy and emoji over time and talks a bit more like you. Lyra learns only from your own messages, never your email.</div>
+            <div className="sub">Lyra picks up your slang, energy and emoji over time and talks a bit more like you. Lyra learns only from your own messages and the replies you rate with a thumbs up or down, never your email.</div>
           </span>
           <input
             type="checkbox"

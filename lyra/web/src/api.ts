@@ -601,6 +601,7 @@ export const api = {
   models: async (provider: "anthropic" | "openai" | "gemini" | "fake") => (await ready).models(provider),
   deleteMessage: async (id: number) => (await ready).deleteMessage(id),
   pinMessage: async (id: number, pinned: boolean) => (await ready).pinMessage(id, pinned),
+  rateReply: async (id: number, rating: "up" | "down" | null, why?: string) => (await ready).rateReply(id, rating, why),
   pinned: async (channelId: number | null) => (await ready).pinned(channelId),
   /** Make an encrypted backup and hand it to the share sheet. */
   backup: async (passphrase: string) => shareFile(backupName(), await (await ready).backup(passphrase)),
