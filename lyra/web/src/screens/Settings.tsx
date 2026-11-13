@@ -276,10 +276,10 @@ function HeadsUps({ state, run, busy }: { state: AppState; run: (fn: () => Promi
   const level = LEVELS.find((l) => l.id === p.level)!;
   const quiet = (k: "quietStart" | "quietEnd", v: string) => v && v !== p[k] && void run(() => api.saveSettings({ proactive: { [k]: v } }), "Quiet hours saved");
   // saved a moment after the last change (a phone's picker, or typing on a computer), not on every keystroke
-  const wait = useRef<number>(0);
+  const wait = useRef<{ quietStart?: number; quietEnd?: number }>({});
   const soon = (k: "quietStart" | "quietEnd", v: string) => {
-    clearTimeout(wait.current);
-    wait.current = window.setTimeout(() => quiet(k, v), 900);
+    clearTimeout(wait.current[k]);
+    wait.current[k] = window.setTimeout(() => quiet(k, v), 900);
   };
   return (
     <section className="section">

@@ -235,7 +235,7 @@ export const desktopGoogleSetup = {
 
 const webGoogle: GoogleAuth = {
   available: false,
-  authorize: () => Promise.reject(new Error("Gmail sign-in works in the Android app.")),
+  authorize: () => Promise.reject(new Error("Google sign-in works in the Android and Windows apps.")),
 };
 
 export async function createPlatform(): Promise<Platform> {

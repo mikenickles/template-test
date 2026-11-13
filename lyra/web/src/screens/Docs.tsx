@@ -124,7 +124,7 @@ function DashboardPage({ doc, toast, onChange: set }: { doc: Doc; toast: (m: str
           </button>
         ) : null}
         {dash && (
-          <button className="btn quiet" onClick={() => void copyText(`${doc.title}\n\n${describeDashboard(dash)}`).then(() => toast("Copied"))}>
+          <button className="btn quiet" onClick={() => void copyText(`${doc.title}\n\n${describeDashboard(dash)}`).then(() => toast("Copied"), () => toast("Couldn't copy. Your browser didn't allow it."))}>
             Copy
           </button>
         )}
@@ -235,7 +235,7 @@ export function DocPage({ id, toast, canGoogle }: { id: number; toast: (m: strin
         <button className="btn quiet" onClick={() => setDraft({ title: doc.title, body: doc.body })}>
           Edit
         </button>
-        <button className="btn quiet" onClick={() => void copyText(`# ${doc.title}\n\n${doc.body}`).then(() => toast("Copied"))}>
+        <button className="btn quiet" onClick={() => void copyText(`# ${doc.title}\n\n${doc.body}`).then(() => toast("Copied"), () => toast("Couldn't copy. Your browser didn't allow it."))}>
           Copy
         </button>
         {/* on a computer, Copy and Google Docs cover it (the desktop save dialog is for backups) */}

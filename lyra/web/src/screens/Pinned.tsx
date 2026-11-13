@@ -31,7 +31,7 @@ export function PinnedList({ channelId, toast }: { channelId: number | null; toa
               <Pin />
             </span>
             <span className="body">
-              <div className="title pinned-text">{m.content.replace(/[*_`#>]/g, "")}</div>
+              <div className="title pinned-text">{m.content.replace(/[*`#>]/g, "")}</div>
               <div className="sub">
                 {m.role === "user" ? "You" : "Lyra"} · {dayLabel(parse(m.created_at))}
               </div>

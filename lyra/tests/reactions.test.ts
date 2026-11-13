@@ -42,8 +42,20 @@ describe("reactions", () => {
     expect(reply.content).toBe("");
     const [user] = listMessages(t.db, null);
     expect(user.meta.reaction).toBe("❤️");
-    // the empty reply doesn't confuse the next turn's history
-    expect(historyFor(listMessages(t.db, null)).map((m) => m.role)).toEqual(["user"]);
+    // The reaction is still her turn in the next message's history: without it the next thing the
+    // user says would be glued onto "thanks!" and she'd answer that again (on the practice model, forever).
+    expect(historyFor(listMessages(t.db, null))).toEqual([
+      { role: "user", parts: [{ type: "text", text: "thanks!" }] },
+      { role: "assistant", parts: [{ type: "text", text: "[reacted ❤️ to their message, no words]" }] },
+    ]);
+    const next = await runTurn(t.ctx, "remember that the gate code is 4412", t.emit);
+    expect(next.content).toBe("Got it.");
+    expect(t.ctx.workspace.main.read()).toContain("the gate code is 4412");
+  });
+
+  it("never writes out the note that stands for an earlier reaction", async () => {
+    const t = await setup([say("[reacted ❤️ to their message, no words]\n\nAnytime!")]);
+    expect((await runTurn(t.ctx, "you're the best", t.emit)).content).toBe("[reacted ❤️ to their message, no words]\n\nAnytime!".split("\n\n")[1]);
   });
 
   it("can react and still say something", async () => {

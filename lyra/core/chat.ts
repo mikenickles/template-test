@@ -600,10 +600,19 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
 }
 
 /** Recent chat as model messages: text only, alternating roles, starting with the user. */
+/** How a reaction-only reply reads in the history (never shown to the user, and never to be written out). */
+const REACTED = (emoji: string) => `[reacted ${emoji} to their message, no words]`;
+const REACTED_LINE = /^\[reacted .{1,8} to their message, no words\]$/u;
+
 export function historyFor(messages: StoredMessage[]): Msg[] {
   const out: Msg[] = [];
+  let reaction: string | undefined; // on the user's latest message
   for (const m of messages) {
-    const text = [m.content.trim(), m.meta.attachments?.length ? attachmentReminder(m.meta.attachments) : ""].filter(Boolean).join("\n\n");
+    let text = [m.content.trim(), m.meta.attachments?.length ? attachmentReminder(m.meta.attachments) : ""].filter(Boolean).join("\n\n");
+    if (m.role === "user") reaction = m.meta.reaction;
+    // Lyra answered with only a reaction: that's still her turn. Without it, the user's next
+    // message would be glued onto the one she reacted to, and she'd answer both again.
+    else if (!text && !m.meta.error && reaction) text = REACTED(reaction);
     if (m.meta.error || !text) continue;
     const last = out[out.length - 1];
     if (last?.role === m.role) {
@@ -718,7 +727,15 @@ export async function runTurn(
         if (s.narration && s.text.trim().length <= 240 && (moreComing || later.length)) return false;
         return !later.some((l) => sameSaid(s.text, l.text));
       })
-      .map((s) => s.text.trim())
+      // (the note that stands for an earlier reaction-only reply is for the model's eyes; never echo it)
+      .map((s) =>
+        s.text
+          .split("\n")
+          .filter((l) => !REACTED_LINE.test(l.trim()))
+          .join("\n")
+          .trim(),
+      )
+      .filter(Boolean)
       .join("\n\n");
 
   const sources: Source[] = [];

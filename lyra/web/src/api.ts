@@ -424,7 +424,7 @@ if (isNative) {
 /** Is the user looking at Lyra right now? On a computer that means the window is showing and in front. */
 const inFront = () => (isNative ? active : document.visibilityState === "visible" && document.hasFocus());
 
-const firstLine = (text: string) => text.trim().split("\n")[0].replace(/[*_`#>]/g, "").slice(0, 160);
+const firstLine = (text: string) => text.trim().split("\n")[0].replace(/[*`#>]/g, "").slice(0, 160);
 const chatHash = (channelId: number | null) => (channelId === null ? "#/" : `#/c/${channelId}`);
 
 function notice(lyra: Lyra, title: string, body: string, hash: string): void {

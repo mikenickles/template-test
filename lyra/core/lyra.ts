@@ -814,7 +814,7 @@ export class Lyra {
           id: m.id,
           channelId: m.channel_id,
           title: meta.routine?.name ?? (meta.headsUp ? "Heads-up from Lyra" : meta.reminder ? "Lyra followed up" : "Lyra"),
-          body: m.content.trim().split("\n")[0].replace(/[*_`#>]/g, "").slice(0, 160),
+          body: m.content.trim().split("\n")[0].replace(/[*`#>]/g, "").slice(0, 160),
         };
       });
   }

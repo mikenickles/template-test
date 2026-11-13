@@ -199,12 +199,30 @@ export function App() {
     const on = (e: FocusEvent) => isBox(e) && setKeyboard(true);
     // moving from the text field to Send or attach isn't the keyboard closing
     const off = (e: FocusEvent) => isBox(e) && !(e.relatedTarget as HTMLElement | null)?.closest?.(".composer") && setKeyboard(false);
+    // leaving the chat removes the box without a focusout: check on every route change too
+    const gone = () => !document.activeElement?.matches?.(".composer textarea") && setKeyboard(false);
+    addEventListener("hashchange", gone);
     addEventListener("focusin", on);
     addEventListener("focusout", off);
     return () => {
       removeEventListener("focusin", on);
       removeEventListener("focusout", off);
+      removeEventListener("hashchange", gone);
     };
+  }, []);
+
+  // Escape closes whatever sheet or dialog is on top, including the ones that don't handle it themselves
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const layers = document.querySelectorAll(".dialog-layer");
+      const top = layers[layers.length - 1];
+      if (!top) return;
+      // after the dialog's own handler has had its turn: if it's still there, close it by its backdrop
+      setTimeout(() => top.isConnected && top.querySelector<HTMLElement>(".dialog-scrim")?.click(), 0);
+    };
+    addEventListener("keydown", key);
+    return () => removeEventListener("keydown", key);
   }, []);
 
   // Only re-render when the list actually changed, so opening the menu doesn't redraw the chat mid-slide.
@@ -425,12 +443,13 @@ export function App() {
           </nav>
         )}
 
-        {toastMsg && (
-          <div className="toast" role="status">
-            {toastMsg}
-          </div>
-        )}
       </div>
+      {/* outside the page that slides aside for the menu, so a message from a form in the menu is seen */}
+      {toastMsg && (
+        <div className="toast" role="status">
+          {toastMsg}
+        </div>
+      )}
       {creating && (
         <NewChannelDialog
           toast={toast}
@@ -528,7 +547,7 @@ function LockScreen({ onUnlock }: { onUnlock: () => void }) {
  */
 function DeskBar({ route, channel, back }: { route: Route; channel?: Channel; back: string | null }) {
   const inChat = route.name === "chat";
-  const sub = !inChat && route.name !== "tasks" && !(route.name === "settings" && !route.section) && route.name !== "access" && route.name !== "memory";
+  const sub = !inChat && route.name !== "tasks" && !(route.name === "settings" && !route.section) && route.name !== "access";
   return (
     <header className="deskbar">
       {sub && back && (

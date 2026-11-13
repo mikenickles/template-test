@@ -27,7 +27,7 @@ const CHANNEL_STARTERS = ["What's still open here?", "Sum up where this stands",
 
 function greeting(now = new Date()): string {
   const h = now.getHours();
-  return h < 5 ? "Up late" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  return h < 5 ? "Up late" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 }
 
 interface ChatProps {
@@ -488,7 +488,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
         aria-live="polite"
       >
         <div className="log-inner">
-          {showToday && !channel && <TodayView onSend={(t) => void send(t)} onShowChat={() => setShowToday(false)} hasChat={messages.length > 0} />}
+          {showToday && !channel && !empty && <TodayView onSend={(t) => void send(t)} onShowChat={() => setShowToday(false)} hasChat={messages.length > 0} />}
 
           {hasMore && !showToday && (
             <button className="chip small" onClick={loadEarlier}>
@@ -919,7 +919,7 @@ function MessageActions({ message, onAct, onClose }: { message: Message; onAct: 
     <div className="dialog-layer sheet-layer" role="presentation">
       <button className="dialog-scrim" aria-label="Close" tabIndex={-1} onClick={onClose} />
       <div className="sheet" role="dialog" aria-modal="true" aria-label="Message actions">
-        <p className="sheet-preview">{message.content.replace(/[*_`#>]/g, "").slice(0, 160)}</p>
+        <p className="sheet-preview">{message.content.replace(/[*`#>]/g, "").slice(0, 160)}</p>
         <div className="group">
           <button className="item" onClick={() => onAct("copy")} autoFocus>
             <span className="body">

@@ -2238,8 +2238,9 @@ button.nav-item {
   color: var(--good);
 }
 
+/* room under the list for the floating + button, so it never sits on the last row's switch */
 .tasks-screen {
-  padding-bottom: 120px;
+  padding-bottom: 200px;
 }
 
 .tasks-head {
@@ -5547,6 +5548,37 @@ button.orb {
   min-height: 50vh;
 }
 
+/* ---------- fixes from a full walk through every screen ---------- */
+
+/* one long word (a link, a file name) wraps instead of pushing the buttons beside it off the screen */
+.page-title,
+.item .title,
+.item .sub,
+.task-title,
+.nav-name,
+.activity-title,
+.dash-stat-value,
+.search-empty {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.bar > .page-title {
+  flex: 1 1 auto;
+}
+
+/* a long channel name in the message box: one line, cut with an ellipsis */
+.composer textarea::placeholder {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* the task's status sits clear of the Title field's floating label */
+.task-edit {
+  margin-top: var(--s4);
+}
+
 /* ---------- push setup (home base) ---------- */
 
 .push-steps {
@@ -5598,7 +5630,12 @@ button.orb {
 
 .dash {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--s5);
+}
+
+.dash-section {
+  min-width: 0;
 }
 
 /* the first number leads, like Today's headline */
@@ -5761,8 +5798,15 @@ button.orb {
 }
 
 /* line chart */
+/* the chart is laid over a box of fixed height, so its width follows the card, not the other way round */
 .dash-plot {
   margin: 0 calc(var(--s2) * -1) calc(var(--s2) * -1);
+  height: 180px;
+  overflow: hidden;
+}
+
+.dash-plot .dash-tip {
+  top: 0;
 }
 
 .dash-grid {

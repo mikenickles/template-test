@@ -225,7 +225,7 @@ function Line({ b }: { b: Extract<Block, { type: "line" }> }) {
         <Table columns={["", b.title || "Value"]} rows={b.points.map((pt) => [pt.label, withUnit(pt.value, b.unit)])} />
       ) : (
         <div className="usage-plot dash-plot" ref={box} onPointerLeave={() => setHover(null)}>
-          <svg width={w} height={H} role="img" aria-label={`${b.title || "Line chart"}: ${b.points.map((pt) => `${pt.label} ${withUnit(pt.value, b.unit)}`).join(", ")}`}>
+          <svg width={w} height={H} style={{ position: "absolute", inset: "0 auto auto 0" }} role="img" aria-label={`${b.title || "Line chart"}: ${b.points.map((pt) => `${pt.label} ${withUnit(pt.value, b.unit)}`).join(", ")}`}>
             <defs>
               <linearGradient id={fade} x1="0" x2="0" y1="0" y2="1">
                 <stop offset="0" style={{ stopColor: "var(--accent)", stopOpacity: 0.32 }} />
