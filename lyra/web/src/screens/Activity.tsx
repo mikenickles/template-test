@@ -9,7 +9,7 @@ const FILTERS: { id: string; label: string; kinds?: ActivityKind[] }[] = [
   { id: "all", label: "All" },
   { id: "tasks", label: "Tasks", kinds: ["task"] },
   { id: "routines", label: "Routines", kinds: ["routine"] },
-  { id: "own", label: "On her own", kinds: ["heads_up", "check_in", "life_admin", "tidy", "style"] },
+  { id: "own", label: "On its own", kinds: ["heads_up", "check_in", "life_admin", "tidy", "style"] },
   { id: "reminders", label: "Reminders", kinds: ["reminder", "follow_up"] },
 ];
 
@@ -35,7 +35,7 @@ const STATUS: Record<Item["status"], string> = {
   missed: "Missed",
 };
 
-/** Everything Lyra did on her own, by day; tap one to see what it came to and the steps it took. */
+/** Everything Lyra did unasked, by day; tap one to see what it came to and the steps it took. */
 export function Activity({ toast }: { toast: (m: string) => void }) {
   const [filter, setFilter] = useState(() => sessionStorage.getItem("lyra.activityFilter") ?? "all");
   const [items, setItems] = useState<Item[] | null>(null);

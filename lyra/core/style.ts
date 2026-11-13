@@ -1,5 +1,5 @@
-// Talking like the user: Lyra mirrors how the user talks. In the moment she follows the
-// recent chat; over time she keeps a few notes on their way of talking (slang, energy,
+// Talking like the user: Lyra mirrors how the user talks. In the moment Lyra follows the
+// recent chat; over time Lyra keeps a few notes on their way of talking (slang, energy,
 // punctuation, emoji, swearing), learned from the user's own messages only, never email
 // or the web. The notes describe how they talk, not what they talk about.
 import type { DB } from "./db.ts";

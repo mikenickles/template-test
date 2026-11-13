@@ -223,7 +223,7 @@ export const MIGRATIONS: string[] = [
      updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
    );
    CREATE INDEX admin_items_open ON admin_items (status, due_on);`,
-  // the activity log: jobs Lyra does on her own that leave no other record
+  // the activity log: jobs Lyra does unasked that leave no other record
   `CREATE TABLE activity_log (
      id INTEGER PRIMARY KEY AUTOINCREMENT,
      kind TEXT NOT NULL,

@@ -795,7 +795,7 @@ export class Lyra {
   }
 
   /**
-   * What Lyra posted on her own after that message: routine news, heads-ups, check-ins.
+   * What Lyra posted unasked after that message: routine news, heads-ups, check-ins.
    * For a device that just loaded the home base's data, to tell the user what's new.
    * (Reminders and life admin are scheduled on the phone itself, so they aren't here.)
    */
@@ -1133,7 +1133,7 @@ export class Lyra {
     return !!this.running || this.workers.busyCount > 0;
   }
 
-  /** Busy, or doing something of her own (a routine, a heads-up, a mail scan): not a moment to reload the app. */
+  /** Busy, or doing something of its own (a routine, a heads-up, a mail scan): not a moment to reload the app. */
   get working(): boolean {
     return this.busy || this.routinesRunner.active || this.scanning;
   }
@@ -1458,7 +1458,7 @@ export class Lyra {
 
   private learningStyle = false;
 
-  /** What Lyra has noticed about how the user talks, and whether she mirrors it. */
+  /** What Lyra has noticed about how the user talks, and whether Lyra mirrors it. */
   talkStyle(): { on: boolean; notes: string[]; updatedAt: string | null; newMessages: number } {
     const s = ST.readStyle(this.db);
     return { on: ST.mirrorOn(this.db), notes: s?.notes ?? [], updatedAt: s?.updatedAt ?? null, newMessages: ST.newSince(this.db, s?.updatedAt) };
@@ -1833,7 +1833,7 @@ export class Lyra {
     const lastAt = getSetting(this.db, "checkInAt");
     if (lastAt && now.getTime() - new Date(lastAt).getTime() < CHECK_IN_EVERY[p.level]) return false;
     // something fresh already needs them, or Lyra is busy on their behalf: no need to ask for more.
-    // (Only the last two days count: a task or a card left sitting for a week shouldn't silence her for good.)
+    // (Only the last two days count: a task or a card left sitting for a week shouldn't silence Lyra for good.)
     const fresh = new Date(now.getTime() - 48 * 3600_000).toISOString();
     const waiting =
       this.db.get<{ n: number }>("SELECT COUNT(*) AS n FROM tasks WHERE status = 'ready' AND updated_at >= ?", [fresh])!.n +
@@ -1936,7 +1936,7 @@ export class Lyra {
   /** Post what's due: reminders as a message, follow-ups after Lyra has checked. */
   // ---------- the activity log ----------
 
-  /** Everything Lyra did on her own, newest first. */
+  /** Everything Lyra did unasked, newest first. */
   activity(opts: { kind?: AC.ActivityKind[]; limit?: number } = {}): AC.Activity[] {
     return AC.listActivity(this.db, opts);
   }

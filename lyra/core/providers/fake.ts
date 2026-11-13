@@ -111,6 +111,9 @@ export class FakeProvider implements ModelProvider {
     const dash = text.match(/^(?:make|build) (?:me )?a dashboard (?:called|about|for|of) (.+)$/i);
     if (dash && has("make_dashboard"))
       return call("make_dashboard", { title: dash[1], subtitle: "Practice numbers", blocks: practiceBlocks(0), refresh: "Practice: make up new example numbers." });
+    // "show me a table": the practice model answers with one (made-up rows), to see how tables look in chat
+    if (/\btable\b/i.test(text))
+      return say("Here's a practice table (made-up rows):\n\n| Plan | Price | Notes |\n| --- | --- | --- |\n| Basic | $8 a month | One device |\n| Family | $15 a month | Up to **five** people |\n| Yearly | $80 a year | Two months free |\n\nI'd pick Family.");
     // "make a doc called Packing list": the practice model can write a doc
     const doc = text.match(/^(?:make|write) (?:me )?a doc(?:ument)? (?:called|about|for) (.+)$/i);
     if (doc && has("write_doc")) return call("write_doc", { title: doc[1], body: "## To do\n- First thing\n- Second thing" });

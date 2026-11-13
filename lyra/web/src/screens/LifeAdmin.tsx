@@ -46,7 +46,7 @@ export function LifeAdmin({ toast }: { toast: (m: string) => void }) {
     return (
       <div className="tasks-empty">
         <p className="tasks-empty-title">Connect Gmail to start.</p>
-        <p>Lyra goes through your mail once a day for bills, subscriptions, packages, trips and return windows, and tells you before anything's due. Read-only: she never pays, cancels or replies.</p>
+        <p>Lyra goes through your mail once a day for bills, subscriptions, packages, trips and return windows, and tells you before anything's due. Read-only: Lyra never pays, cancels or replies.</p>
         <a className="btn quiet" href="#/access">
           Connections
         </a>

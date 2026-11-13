@@ -249,12 +249,12 @@ try {
   await page.waitForTimeout(500);
   check((await page.getByRole("dialog", { name: "While you were away" }).count()) === 0, "a quick reload doesn't show it again");
 
-  // ---- Activity: tap Lyra's face to see what she's been doing, and open a task run ----
+  // ---- Activity: tap Lyra's face to see the activity log, and open a task run ----
   await page.getByRole("link", { name: "What Lyra's been doing" }).click();
   await page.getByRole("heading", { name: "Lyra" }).waitFor();
   const run = page.locator(".activity-row", { hasText: "Find a plumber" }).first();
   await run.waitFor();
-  check(true, "tapping Lyra's face opens her activity, with the task she worked on");
+  check(true, "tapping Lyra's face opens the activity log, with the task Lyra worked on");
   await shot("light-46-activity");
   await run.click();
   const actSheet = page.getByRole("dialog", { name: /Find a plumber/ });
@@ -351,6 +351,15 @@ try {
   await page.locator(".item", { hasText: "Packing list" }).waitFor();
   check(await page.getByRole("heading", { name: "Artifacts" }).isVisible(), "Artifacts lists it");
 
+  // ---- a table in a chat reply ----
+  await page.goto(`${base}/#/`);
+  await page.getByPlaceholder("Message Lyra").fill("show me a table of plans");
+  await page.getByRole("button", { name: "Send" }).click();
+  await page.locator(".chat-table").waitFor();
+  check((await page.locator(".chat-table tbody tr").count()) === 3 && (await page.locator(".chat-table th").count()) === 3, "Lyra can answer with a table in chat");
+  await page.waitForTimeout(400);
+  await shot("light-48-chat-table");
+
   // ---- dashboards: Lyra makes one, it draws as tiles and charts, Refresh rebuilds it ----
   await page.goto(`${base}/#/`);
   await page.getByPlaceholder("Message Lyra").fill("make a dashboard called Spending");
@@ -440,7 +449,7 @@ try {
   await page.locator(".app.drawer-open").waitFor();
   await page.getByRole("link", { name: /Everything/ }).click();
   await page.waitForTimeout(300);
-  check((await page.locator(".bubble").count()) === 4, "main chat keeps its own history");
+  check((await page.locator(".bubble").count()) === 5, "main chat keeps its own history");
 
   await page.goto(`${base}/#/c/1/info`);
   await page.getByText("Lyra saves facts about Rowan here").waitFor();
@@ -474,7 +483,7 @@ try {
   await page.getByPlaceholder("Message Lyra").fill("thanks!");
   await page.getByRole("button", { name: "Send" }).click();
   await page.getByRole("img", { name: "Lyra reacted ❤️" }).waitFor();
-  check((await page.locator(".bubble").count()) === 5, "Lyra can react to a message, with no text reply");
+  check((await page.locator(".bubble").count()) === 6, "Lyra can react to a message, with no text reply");
   await shot("light-21-reaction");
 
   await page.goto(`${base}/#/settings/you`);
@@ -510,7 +519,7 @@ try {
   await page.getByText("How Lyra talks to you").scrollIntoViewIfNeeded();
   await shot("light-42-talk-like-me");
   await mirror.click();
-  await page.getByText("Lyra will keep her own voice").waitFor();
+  await page.getByText("Lyra will keep its own voice").waitFor();
   check(!(await mirror.isChecked()) && (await page.getByText("Nothing learned yet").count()) === 0, "Talk like me can be turned off");
   await mirror.click();
   await page.getByText("Lyra will talk more like you").waitFor();

@@ -42,8 +42,8 @@ describe("reactions", () => {
     expect(reply.content).toBe("");
     const [user] = listMessages(t.db, null);
     expect(user.meta.reaction).toBe("❤️");
-    // The reaction is still her turn in the next message's history: without it the next thing the
-    // user says would be glued onto "thanks!" and she'd answer that again (on the practice model, forever).
+    // The reaction is still Lyra's turn in the next message's history: without it the next thing the
+    // user says would be glued onto "thanks!" and that would be answered again (on the practice model, forever).
     expect(historyFor(listMessages(t.db, null))).toEqual([
       { role: "user", parts: [{ type: "text", text: "thanks!" }] },
       { role: "assistant", parts: [{ type: "text", text: "[reacted ❤️ to their message, no words]" }] },

@@ -182,7 +182,7 @@ export function buildSystemPrompt(p: PromptInput): string {
     ? connected.map((c) => `- ${c.label}: ${c.access.toLowerCase()} (read-only)`).join("\n")
     : "- Nothing yet. They connect Mail, Calendar and Files by tapping Lyra's mark at the top of the main chat.";
 
-  // Who Lyra is and her rules first: they're the same from one message to the next, so
+  // Who Lyra is and Lyra's rules first: they're the same from one message to the next, so
   // providers can cache them. Everything that changes (the time, tasks, memory) comes after.
   return `You are Lyra, ${user}'s personal chief of staff and friend. You live in an app on ${user}'s phone and computer, and they text you there.
 

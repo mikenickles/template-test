@@ -43,7 +43,11 @@ const lines = (nodes: string[], key: string) =>
 
 const BULLET = /^\s*[-*•]\s+/;
 const NUMBER = /^\s*\d+[.)]\s+/;
-const kindOf = (r: string) => (BULLET.test(r) ? "ul" : NUMBER.test(r) ? "ol" : r.startsWith(">") ? "quote" : "p");
+const TABLE_ROW = /^\s*\|.*\|\s*$/;
+/** The line under a table's header: | --- | :---: | */
+const TABLE_RULE = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
+const tableCells = (r: string) => r.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+const kindOf = (r: string) => (TABLE_ROW.test(r) || TABLE_RULE.test(r) ? "table" : BULLET.test(r) ? "ul" : NUMBER.test(r) ? "ol" : r.startsWith(">") ? "quote" : "p");
 
 export function Markdown({ text }: { text: string }) {
   const blocks = text.replace(/\r\n/g, "\n").split(/\n{2,}/);
@@ -61,7 +65,33 @@ export function Markdown({ text }: { text: string }) {
     }
     runs.forEach((run, n) => {
       const key = `b${b}-${n}`;
-      if (run.kind === "ul") {
+      // a table needs its header rule on the second line; anything else that happens to start with | is just text
+      if (run.kind === "table" && run.rows.length >= 3 && TABLE_RULE.test(run.rows[1])) {
+        const head = tableCells(run.rows[0]);
+        const body = run.rows.slice(2).filter((r) => !TABLE_RULE.test(r)).map(tableCells);
+        out.push(
+          <div className="doc-table chat-table" key={key}>
+            <table>
+              <thead>
+                <tr>
+                  {head.map((c, j) => (
+                    <th key={j}>{inline(c, `${key}h${j}`)}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {body.map((row, ri) => (
+                  <tr key={ri}>
+                    {head.map((_, j) => (
+                      <td key={j}>{inline(row[j] ?? "", `${key}-${ri}-${j}`)}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>,
+        );
+      } else if (run.kind === "ul") {
         out.push(
           <ul key={key}>
             {run.rows.map((r, i) => (

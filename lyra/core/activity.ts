@@ -1,6 +1,6 @@
-// The activity log: everything Lyra did on her own, newest first. Most of it is read from
+// The activity log: everything Lyra did unasked, newest first. Most of it is read from
 // what's already recorded (background task runs with their transcripts, routine runs, the
-// heads-ups, check-ins, reminders, follow-ups and tidy-ups she posted); the few jobs that
+// heads-ups, check-ins, reminders, follow-ups and tidy-ups Lyra posted); the few jobs that
 // leave no other trace (life admin scans, learning how you talk) write a row to
 // activity_log. Opening one shows what it came to and the steps it took.
 import type { DB } from "./db.ts";
@@ -85,7 +85,7 @@ export function listActivity(db: DB, opts: { limit?: number; kind?: ActivityKind
       out.push({ id: `r${r.id}`, kind: "routine", title: r.name, summary, status: ROUTINE[r.status] ?? "done", at: z(r.started_at)!, ended: z(r.ended_at) });
     }
 
-  // what Lyra posted on her own
+  // what Lyra posted unasked
   const posts: [ActivityKind, string, string][] = [
     ["heads_up", "$.headsUp", "Heads-up"],
     ["check_in", "$.checkIn", "Checked in"],
@@ -227,7 +227,7 @@ export function activityDetail(db: DB, id: string): ActivityDetail | null {
     const r = db.get<{ detail: string }>("SELECT detail FROM activity_log WHERE id = ?", [n]);
     const a = base();
     if (!r || !a) return null;
-    const links = a.kind === "life_admin" ? [{ label: "Open Life admin", href: "#/tasks?admin" }] : a.kind === "style" ? [{ label: "See what she noticed", href: "#/settings/you" }] : [];
+    const links = a.kind === "life_admin" ? [{ label: "Open Life admin", href: "#/tasks?admin" }] : a.kind === "style" ? [{ label: "See what Lyra noticed", href: "#/settings/you" }] : [];
     return { ...a, body: r.detail, steps: [], links };
   }
   return null;

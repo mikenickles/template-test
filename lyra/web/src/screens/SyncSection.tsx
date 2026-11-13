@@ -84,7 +84,7 @@ export function SyncSection({ toast }: { toast: (m: string) => void }) {
                 <span className="body">
                   <div className="title">Make this computer Lyra's home base</div>
                   <div className="sub">
-                    For a computer that's always on. Lyra does her routines, heads-ups and mail checks here instead of on your phone, so they happen on time whatever your phone is doing. If this computer goes quiet for half an hour, your phone takes over until it's back.
+                    For a computer that's always on. Lyra's routines, heads-ups and mail checks run here instead of on your phone, so they happen on time whatever your phone is doing. If this computer goes quiet for half an hour, your phone takes over until it's back.
                   </div>
                 </span>
                 <input

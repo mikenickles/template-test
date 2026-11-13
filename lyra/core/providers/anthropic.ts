@@ -15,7 +15,7 @@ export function webFetchTool(model: string) {
 const noFetch = new Set<string>();
 
 /**
- * The system prompt as cache-friendly blocks: the stable part (who Lyra is, her rules) is
+ * The system prompt as cache-friendly blocks: the stable part (who Lyra is, Lyra's rules) is
  * cached across messages, the rest (time, tasks, memory) is cached for the tool steps of
  * one reply. Tools come before the system prompt, so they're cached with the stable part.
  */

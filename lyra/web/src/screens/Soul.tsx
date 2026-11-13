@@ -57,7 +57,7 @@ export function Soul({ toast, userName }: { toast: (m: string) => void; userName
       <p className="page-sub">Who Lyra is and how it talks to you. {soul.custom ? "Edited by you." : "The original."}</p>
       {soul.custom && (
         <p className="hint">
-          Lyra's built-in character changes with updates (the latest makes her more of a friend, and quicker to take the lead). Because you've edited yours, she's still using your version. Reset to the original below to get the new one; you can edit again after.
+          Lyra's built-in character changes with updates (the latest makes Lyra more of a friend, and quicker to take the lead). Because you've edited yours, Lyra is still using your version. Reset to the original below to get the new one; you can edit again after.
         </p>
       )}
       <div className="soul-doc">

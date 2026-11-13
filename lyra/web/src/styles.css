@@ -6076,6 +6076,33 @@ button.orb {
   font-size: 12px;
 }
 
+/* a table in a chat reply: a small card that scrolls sideways when it's wider than the phone */
+.chat-table {
+  margin: var(--s2) 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  max-width: 100%;
+}
+
+.chat-table table {
+  width: 100%;
+}
+
+.chat-table th,
+.chat-table td {
+  padding: 8px 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chat-table td:first-child {
+  font-weight: 600;
+}
+
+.chat-table tr:last-child td {
+  border-bottom: none;
+}
+
 /* ---------- Phase 14: Spotify ---------- */
 
 .playlist-songs {

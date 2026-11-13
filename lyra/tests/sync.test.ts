@@ -250,7 +250,7 @@ describe("Drive sync folder", () => {
     expect(await phone.sync.check()).toBe("conflict");
   });
 
-  it("lists what Lyra posted on her own since a message, for telling a device that just caught up", async () => {
+  it("lists what Lyra posted unasked since a message, for telling a device that just caught up", async () => {
     const d = await device("Phone", fakeDrive());
     await d.lyra.chat("hello", noop);
     const after = d.lyra.lastMessageId();

@@ -70,8 +70,8 @@ export function Drawer({
 
   return (
     <nav className={`drawer-panel${docked ? " docked" : ""}`} ref={panel} aria-label="Channels" aria-hidden={!open} inert={!open}>
-      {/* Lyra herself: opens what she's been doing */}
-      <a className="drawer-head" href="#/activity" aria-label="Lyra: what she's been doing" onClick={() => !docked && onClose()}>
+      {/* Lyra: opens the activity log */}
+      <a className="drawer-head" href="#/activity" aria-label="Lyra: recent activity" onClick={() => !docked && onClose()}>
         <span className="orb drawer-orb">
           <Avatar />
         </span>

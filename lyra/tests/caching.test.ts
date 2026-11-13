@@ -6,7 +6,7 @@ import { plainSystem, SYSTEM_SPLIT, splitSystem } from "../core/providers/types.
 const base = { userName: "Sam", timeZone: "America/Los_Angeles", connectors: [], channels: [], memory: "" } as unknown as Parameters<typeof buildSystemPrompt>[0];
 
 describe("cache-friendly prompts", () => {
-  it("keeps who Lyra is and her rules identical between messages; time, tasks and memory come after", () => {
+  it("keeps who Lyra is and Lyra's rules identical between messages; time, tasks and memory come after", () => {
     const a = buildSystemPrompt({ ...base, now: new Date("2026-11-13T17:01:00Z"), memory: "- Likes oolong", tasks: "#1 Plumber" });
     const b = buildSystemPrompt({ ...base, now: new Date("2026-11-13T19:42:00Z"), memory: "- Likes espresso", tasks: "#2 Cake" });
     const [sa, ca] = splitSystem(a);

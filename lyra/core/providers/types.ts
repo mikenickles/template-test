@@ -33,7 +33,7 @@ export interface ToolDef {
 
 /**
  * Splits a system prompt into the part that stays the same from one request to the next
- * (who Lyra is, her rules) and the part that changes (the time, tasks, memory). Providers
+ * (who Lyra is, Lyra's rules) and the part that changes (the time, tasks, memory). Providers
  * that cache by prefix (Claude) cache the stable part across messages; others just drop it.
  */
 export const SYSTEM_SPLIT = "\n\n<<lyra:stable-above>>\n\n";

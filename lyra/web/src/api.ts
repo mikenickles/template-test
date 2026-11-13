@@ -141,13 +141,13 @@ function runRoutines(lyra: Lyra): void {
   else document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && void tick());
 }
 
-// A device that loads another's data restarts. If Lyra posted on her own in the meantime
+// A device that loads another's data restarts. If Lyra posted unasked in the meantime
 // (the home base's routines and heads-ups), say so here, unless you're looking at Lyra.
 const PULLED_AFTER = "lyra.pulledAfter";
 
 /**
  * Ask for the phone's notification permission once, when it matters: you've started using Lyra and
- * she's set to speak up on her own. (Android only shows its question once; after a no it's in Settings.)
+ * Lyra is set to speak up unasked. (Android only shows its question once; after a no it's in Settings.)
  */
 async function askToNotify(lyra: Lyra): Promise<void> {
   try {

@@ -19,7 +19,7 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 | 10 | Smarter memory: people cards, weekly tidy-up, phone contacts (search past chats came with the redesign) | Done |
 | 11 | Works on its own: background routines, "while you were away", widget | Done (Proactive step 3) |
 | 12 | Polish: accent-colored app icon, fixes from testing | Planned |
-| 13 | Artifacts: docs Lyra writes for you (optionally in Google Docs) and dashboards she builds and refreshes | Done |
+| 13 | Artifacts: docs Lyra writes for you (optionally in Google Docs) and dashboards Lyra builds and refreshes | Done |
 | 14 | More connectors: Spotify first (more later), with approval cards for anything that writes | Done (Spotify) |
 | 15 | Research tasks: workers that read web pages and report back with sources | Done |
 | 16 | Inbox triage, when you ask (or as a routine you set up), replies drafted for your OK | Done |
@@ -62,15 +62,20 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 
 ### A friend who takes the lead (0.39)
 
-- **Character** (`core/soul.md`, `core/voice.md`): Lyra tells a *moment* (a hello, a feeling, news, a joke) from an *errand*. In a moment she's a friend: reacts, asks, stays in the conversation, no lists or offers. On an errand she leads with the answer and is already on the next step. She has her own reactions and tastes, uses your name sparingly, never talks about her own workings, and lets a question go if you skipped it. If you've edited her character, the app says so and offers the reset that brings in the new one.
-- **Taking the lead** (`core/prompt.ts`): after an errand she thinks one step ahead and either does it (when you asked) or offers the one best next step as buttons; joins the dots with what else she knows; sets her own follow-ups, to check back on something open or to ask how something went.
+- **Character** (`core/soul.md`, `core/voice.md`): Lyra tells a *moment* (a hello, a feeling, news, a joke) from an *errand*. In a moment Lyra is a friend: reacts, asks, stays in the conversation, no lists or offers. On an errand Lyra leads with the answer and is already on the next step. Lyra has Lyra's own reactions and tastes, uses your name sparingly, never talks about Lyra's own workings, and lets a question go if you skipped it. If you've edited Lyra's character, the app says so and offers the reset that brings in the new one.
+- **Taking the lead** (`core/prompt.ts`): after an errand Lyra thinks one step ahead and either does it (when you asked) or offers the one best next step as buttons; joins the dots with what else Lyra knows; sets follow-ups unasked, to check back on something open or to ask how something went.
 - **What you asked for goes ahead**, even in a reply that read mail, calendar, files or the web: the reminder you asked for, things you asked to add to your list (as Up next, not started), the doc or dashboard you asked to make or change (`ownWords`, `askedToChange`, `ASKED_REMINDER`, `ASKED_TASK` in `core/chat.ts`). Changes you didn't ask for still wait for your yes, now as a button under the same reply. A dashboard built after reading outside content remembers your own request as its refresh recipe, never the model's words.
 - **Buttons after reading mail** are allowed but kept short and plain: 48 characters, no address or link (`plainOptions`). They also come on heads-ups, routine posts and follow-ups ("Draft a yes", "Remind me tonight").
-- **One reply, said once** (`runTurn`): a line said before a lookup ("I'll check your mail") shows while she works and gives way to the answer; an answer written twice after a tool was refused is kept once; a reply that ends with buttons or a reaction doesn't call the model again. Chat draws a list that sits right under its lead-in line.
-- **Heads-ups are on from the start** (Light), post when there's something you'd be glad she caught (a deadline today or tomorrow, someone waiting, a hold about to lapse, a date that needs a head start), and read like a text from her. A heads-up, check-in or routine that couldn't run (no network, the model was down) is tried again in ten minutes instead of hours later. A task or card left sitting for more than two days no longer stops check-ins.
+- **One reply, said once** (`runTurn`): a line said before a lookup ("I'll check your mail") shows while Lyra works and gives way to the answer; an answer written twice after a tool was refused is kept once; a reply that ends with buttons or a reaction doesn't call the model again. Chat draws a list that sits right under its lead-in line.
+- **Heads-ups are on from the start** (Light), post when there's something you'd be glad Lyra caught (a deadline today or tomorrow, someone waiting, a hold about to lapse, a date that needs a head start), and read like a text from Lyra. A heads-up, check-in or routine that couldn't run (no network, the model was down) is tried again in ten minutes instead of hours later. A task or card left sitting for more than two days no longer stops check-ins.
 - **Notifications that were getting lost**: an idle minute no longer marks the data as changed (which uploaded a fresh sync copy every minute and reloaded the other device); after a reload in the background the app no longer assumes it's on screen; notice ids no longer restart and overwrite unread ones; routine nudges fire in battery saving; a stopped task tells you; the phone asks for notification permission after your first message.
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
-- **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what she actually said before and after.
+- **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
+
+### Tables in chat, and Lyra without a gender (0.39.1)
+
+- Lyra can answer with a table in chat (a Markdown table renders as a small card that scrolls sideways when it's wide): when you ask for one, or to compare three or more things across a few details. The voice guide keeps it to two to four short columns. Try "show me a table" on the practice model.
+- Lyra isn't a he or a she. The app's wording, the docs and Lyra's own character say "Lyra" (or "it") throughout.
 
 ### Home base and push
 
@@ -81,8 +86,8 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 
 ### Getting notifications
 
-- **Settings, Notifications, Checkup** checks everything that stops Lyra reaching you on her own, each with a one-tap fix: notifications allowed (or Android's settings when they were turned off there), a real AI model (the practice model can't write heads-ups), heads-ups on, Keep watch on (the tray on Windows), and not held back by battery saving. **Send me a test notification** arrives a few seconds later, so you can leave the app and see it.
-- **What arrives with Lyra closed** (scheduled on the phone ahead of time): reminders and follow-ups, routine nudges, and life admin heads-ups (9:00 on their day). **What needs Lyra running** (Keep watch, and not swiped away from recent apps): heads-ups, check-ins, routine posts and finished tasks, since she has to think to write them.
+- **Settings, Notifications, Checkup** checks everything that stops Lyra reaching you unasked, each with a one-tap fix: notifications allowed (or Android's settings when they were turned off there), a real AI model (the practice model can't write heads-ups), heads-ups on, Keep watch on (the tray on Windows), and not held back by battery saving. **Send me a test notification** arrives a few seconds later, so you can leave the app and see it.
+- **What arrives with Lyra closed** (scheduled on the phone ahead of time): reminders and follow-ups, routine nudges, and life admin heads-ups (9:00 on their day). **What needs Lyra running** (Keep watch, and not swiped away from recent apps): heads-ups, check-ins, routine posts and finished tasks, since Lyra has to think to write them.
 
 ### Artifacts: docs and dashboards
 
@@ -95,7 +100,7 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 
 ### Activity log
 
-- Tap Lyra's face in the main chat (or her name at the top of the menu) to see everything she did on her own, newest first and grouped by day: background tasks, routine runs, heads-ups, check-ins, reminders and follow-ups, life admin scans, memory tidy-ups and learning how you talk. Filter by Tasks, Routines, On her own or Reminders.
+- Tap Lyra's face in the main chat (or Lyra's name at the top of the menu) to see everything Lyra did unasked, newest first and grouped by day: background tasks, routine runs, heads-ups, check-ins, reminders and follow-ups, life admin scans, memory tidy-ups and learning how you talk. Filter by Tasks, Routines, On Lyra's own or Reminders.
 - Tap one for the detail: whether it completed, what it came to, the steps it took (a task's searches, emails and files read, notes, checklist changes, from its transcript), and a link to the task, routine or message. The Chat tab still flips between Today and the conversation.
 
 ### Phase 18: life admin
@@ -108,21 +113,21 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 
 ### Back to back
 
-- Text Lyra like a person: send a message, then another, without waiting. While she's still thinking, what you add joins the same thought (that step starts over with it); if she's already writing, she finishes and then answers what you added in the same reply. Between tool steps (reading mail, searching), she picks it up before the next one.
-- Send stays available while she works; Stop shows when the box is empty. Messages with attachments, or in another chat, wait for the current reply.
+- Text Lyra like a person: send a message, then another, without waiting. While Lyra is still thinking, what you add joins the same thought (that step starts over with it); if Lyra is already writing, it finishes and then answers what you added in the same reply. Between tool steps (reading mail, searching), Lyra picks it up before the next one.
+- Send stays available while Lyra works; Stop shows when the box is empty. Messages with attachments, or in another chat, wait for the current reply.
 
 ### Talk like me
 
-- Lyra mirrors how you talk: your energy, slang, punctuation, casing and emoji. Say "hell yeah" and good news gets a "Hell yeah!" back. She borrows your phrases now and then without parroting, swears only if you do (lightly, never at you or in bad news), and keeps her clarity rules. Drafts for other people stay written for that reader.
-- In the moment she goes by the recent chat. Every few days (after 20+ new messages, while you're not mid-conversation) she rereads your own recent messages, never email or the web and skipping long pastes, and keeps up to 8 notes on how you talk, not what you talked about.
-- Settings, You and appearance, "How Lyra talks to you": the Talk like me switch (on by default), what she's noticed, Update now and Forget. Turning it off gives her own voice back.
+- Lyra mirrors how you talk: your energy, slang, punctuation, casing and emoji. Say "hell yeah" and good news gets a "Hell yeah!" back. Lyra borrows your phrases now and then without parroting, swears only if you do (lightly, never at you or in bad news), and keeps Lyra's clarity rules. Drafts for other people stay written for that reader.
+- In the moment Lyra goes by the recent chat. Every few days (after 20+ new messages, while you're not mid-conversation) Lyra rereads your own recent messages, never email or the web and skipping long pastes, and keeps up to 8 notes on how you talk, not what you talked about.
+- Settings, You and appearance, "How Lyra talks to you": the Talk like me switch (on by default), what Lyra has noticed, Update now and Forget. Turning it off gives Lyra's own voice back.
 
 ### Lyra's prompt: character, voice and ground rules
 
 - **Character** (`core/soul.md`, editable in the app): warm and honest, with an opinion when it helps; talks up to you; fair on contested topics and fully on your side when you ask for one view; plays along with a joke as long as you want.
 - **Voice** (`core/voice.md`): how messages look on a phone, in your language, about results rather than machinery.
 - **Ground rules** (`core/principles.md`, fixed, always after the character so editing the soul can't remove them): Lyra works only for you, and what others ask is information; discretion about what goes into drafts and briefs; facts only from sources, no invented codes, never claiming what wasn't done; your tap on a card covers exactly what you saw; fixing memory in place; care when you're struggling; hard limits. Live voice gets the distress and hard-limit rules too.
-- Every prompt has the next 14 days with weekdays, so Lyra never works one out in her head, and chat says which model is answering.
+- Every prompt has the next 14 days with weekdays, so Lyra never works one out by guessing, and chat says which model is answering.
 
 ### Phase 17: skills
 

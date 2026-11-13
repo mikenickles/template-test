@@ -200,7 +200,7 @@ function YouSection({ state, setState, toast, run, busy }: Omit<Props, "section"
 
 type TalkStyle = Awaited<ReturnType<typeof api.talkStyle>>;
 
-/** Lyra mirrors how you talk, and what she's noticed so far. */
+/** Lyra mirrors how you talk, and what Lyra has noticed so far. */
 function TalkLikeMe({ state, run, busy, toast }: { state: AppState; run: (fn: () => Promise<AppState>, done: string) => Promise<void>; busy: boolean; toast: (m: string) => void }) {
   const [style, setStyle] = useState<TalkStyle | null>(null);
   const [working, setWorking] = useState(false);
@@ -223,7 +223,7 @@ function TalkLikeMe({ state, run, busy, toast }: { state: AppState; run: (fn: ()
         <label className="item">
           <span className="body">
             <div className="title">Talk like me</div>
-            <div className="sub">Lyra picks up your slang, energy and emoji over time and talks a bit more like you. She learns only from your own messages, never your email.</div>
+            <div className="sub">Lyra picks up your slang, energy and emoji over time and talks a bit more like you. Lyra learns only from your own messages, never your email.</div>
           </span>
           <input
             type="checkbox"
@@ -231,7 +231,7 @@ function TalkLikeMe({ state, run, busy, toast }: { state: AppState; run: (fn: ()
             className="switch"
             checked={state.mirror}
             disabled={busy}
-            onChange={(e) => void run(() => api.saveSettings({ mirror: e.target.checked }), e.target.checked ? "Lyra will talk more like you" : "Lyra will keep her own voice")}
+            onChange={(e) => void run(() => api.saveSettings({ mirror: e.target.checked }), e.target.checked ? "Lyra will talk more like you" : "Lyra will keep its own voice")}
           />
         </label>
       </div>
@@ -239,7 +239,7 @@ function TalkLikeMe({ state, run, busy, toast }: { state: AppState; run: (fn: ()
         <>
           {style.notes.length ? (
             <>
-              <p className="hint">What she's noticed so far:</p>
+              <p className="hint">What Lyra has noticed so far:</p>
               <ul className="style-notes">
                 {style.notes.map((n) => (
                   <li key={n}>{n}</li>
@@ -247,7 +247,7 @@ function TalkLikeMe({ state, run, busy, toast }: { state: AppState; run: (fn: ()
               </ul>
             </>
           ) : (
-            <p className="hint">Nothing learned yet. She goes by your recent chat for now, and every few days she takes note of how you talk.</p>
+            <p className="hint">Nothing learned yet. Lyra goes by your recent chat for now, and every few days takes note of how you talk.</p>
           )}
           <div className="field-row">
             <button className="btn quiet" disabled={working} onClick={() => void act(() => api.learnStyleNow(), "Updated")}>
@@ -414,7 +414,7 @@ function BackgroundSection({ toast }: { toast: (m: string) => void }) {
 }
 
 /**
- * Everything that has to be right for Lyra to reach you on her own, checked one by one,
+ * Everything that has to be right for Lyra to reach you unasked, checked one by one,
  * each with the tap that fixes it, and a test notification.
  */
 function NotificationCheckup({ state, run, toast }: { state: AppState; run: (fn: () => Promise<AppState>, done: string) => Promise<void>; toast: (m: string) => void }) {
@@ -485,7 +485,7 @@ function NotificationCheckup({ state, run, toast }: { state: AppState; run: (fn:
     rows.push({
       ok: watch.on,
       title: isDesktop ? "Keep running in the tray" : "Keep watch on",
-      sub: watch.on ? "Lyra keeps checking with the app in the background." : "Off: Lyra only checks while she's open.",
+      sub: watch.on ? "Lyra keeps checking with the app in the background." : "Off: Lyra only checks while the app is open.",
       fix: (
         <button className="btn quiet" onClick={() => void background.set({ on: true }).then((s) => (setWatch(s), toast("Lyra will keep watch")), (e) => toast((e as Error).message))}>
           Turn on
@@ -496,7 +496,7 @@ function NotificationCheckup({ state, run, toast }: { state: AppState; run: (fn:
     rows.push({
       ok: battery,
       title: "Not held back by battery saving",
-      sub: battery ? "Her 15-minute check-ins get through." : "Android may delay or skip her background checks.",
+      sub: battery ? "Lyra's 15-minute check-ins get through." : "Android may delay or skip Lyra's background checks.",
       fix: (
         <button className="btn quiet" onClick={() => void background.askBattery()}>
           Allow
@@ -508,7 +508,7 @@ function NotificationCheckup({ state, run, toast }: { state: AppState; run: (fn:
   return (
     <section className="section">
       <h2 className="section-label">Checkup</h2>
-      <p className="hint">{all ? "All set: Lyra can reach you on her own." : "A few things stop Lyra reaching you on her own. Each is one tap."}</p>
+      <p className="hint">{all ? "All set: Lyra can reach you without being asked." : "A few things stop Lyra reaching you without being asked. Each is one tap."}</p>
       <div className="group">
         {rows.map((r) => (
           <div className="item checkup-row" key={r.title}>
@@ -523,7 +523,7 @@ function NotificationCheckup({ state, run, toast }: { state: AppState; run: (fn:
           </div>
         ))}
       </div>
-      {!isDesktop && <p className="hint">Don't swipe Lyra away from your recent apps: that stops her until you open her again. Reminders, routine nudges and life admin heads-ups still arrive; heads-ups and check-ins need her running.</p>}
+      {!isDesktop && <p className="hint">Don't swipe Lyra away from your recent apps: that stops Lyra until you open the app again. Reminders, routine nudges and life admin heads-ups still arrive; heads-ups and check-ins need Lyra running.</p>}
       <button
         className="btn quiet"
         onClick={() =>

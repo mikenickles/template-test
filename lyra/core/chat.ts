@@ -610,8 +610,8 @@ export function historyFor(messages: StoredMessage[]): Msg[] {
   for (const m of messages) {
     let text = [m.content.trim(), m.meta.attachments?.length ? attachmentReminder(m.meta.attachments) : ""].filter(Boolean).join("\n\n");
     if (m.role === "user") reaction = m.meta.reaction;
-    // Lyra answered with only a reaction: that's still her turn. Without it, the user's next
-    // message would be glued onto the one she reacted to, and she'd answer both again.
+    // Lyra answered with only a reaction: that's still Lyra's turn. Without it, the user's next
+    // message would be glued onto the one Lyra reacted to, and both would be answered again.
     else if (!text && !m.meta.error && reaction) text = REACTED(reaction);
     if (m.meta.error || !text) continue;
     const last = out[out.length - 1];
@@ -1153,7 +1153,7 @@ export function plainOptions(options: unknown, tainted: boolean): string[] {
     .slice(0, 3);
 }
 
-/** Tools that only look things up: what Lyra says alongside one was said before she had the answer. */
+/** Tools that only look things up: what Lyra says alongside one was said before Lyra had the answer. */
 const LOOKUPS = new Set(["life_admin", "read_doc", "read_channel", "list_tasks", "list_routines", "look_up_person", "find_contact", "use_skill"]);
 
 /** Do these two pieces say the same thing? (An answer written again after a tool was refused.) */

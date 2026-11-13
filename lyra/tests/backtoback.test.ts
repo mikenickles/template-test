@@ -57,7 +57,7 @@ describe("back-to-back messages", () => {
     expect(text.join("")).toBe("Table for six on Friday, got it.");
   });
 
-  it("once Lyra is writing, she finishes and then answers what was added, in the same reply", async () => {
+  it("once Lyra is writing, the reply finishes and then answers what was added, in the same reply", async () => {
     const m = manual();
     const lyra = await Lyra.start(platform({ provider: m.provider }));
     const text: string[] = [];
@@ -66,7 +66,7 @@ describe("back-to-back messages", () => {
     m.calls[0].write("Pretty clear.");
     const second = lyra.chat("hell yeah", { text: () => {}, status: () => {}, memory: () => {} });
     await tick();
-    expect(m.calls.length).toBe(1); // not restarted: she was already writing
+    expect(m.calls.length).toBe(1); // not restarted: the reply was already being written
     m.calls[0].finish(say("Pretty clear."));
     await m.next(2);
     expect(m.calls[1].req.messages.at(-2)!.role).toBe("assistant");
