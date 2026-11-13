@@ -152,6 +152,12 @@ try {
   await page.getByRole("link", { name: "Tasks" }).click();
   await page.getByText("Nothing on your plate.").waitFor();
   check(true, "tasks tab shows an empty state");
+  await page.getByRole("tab", { name: "Life admin" }).click();
+  await page.getByText("Connect Gmail to start.").waitFor();
+  check(true, "Life admin asks for Gmail first (read-only, explained)");
+  await shot("light-45-life-admin-empty");
+  await page.getByRole("tab", { name: "Active" }).click();
+  await page.getByText("Nothing on your plate.").waitFor();
   await page.getByRole("button", { name: "New task" }).click();
   await page.getByLabel("Title").fill("Find a plumber for the kitchen leak");
   await page.getByLabel("Details").fill("Before Monday, under $200");
@@ -662,7 +668,7 @@ try {
   // ---- proactive: reminders and suggested next steps ----
   await page.goto(`${base}/#/`);
   await page.locator(".bubble").first().waitFor();
-  await page.getByPlaceholder("Message Lyra").fill("Remind me in 90 minutes to stretch");
+  await page.getByPlaceholder("Message Lyra").fill("Remind me in 20 minutes to stretch");
   await page.getByRole("button", { name: "Send" }).click();
   await page.getByText("Okay, I'll remind you.").waitFor();
   await page.locator(".status-pill", { hasText: /Reminder at/ }).waitFor({ timeout: 15_000 });

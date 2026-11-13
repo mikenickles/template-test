@@ -1,11 +1,12 @@
 // The redesign's "Today" view, search across every chat, and unread counts.
 // All read from what's saved: no model call, so they're instant and free.
 import { describeAction, type ActionRow } from "./actions.ts";
+import * as LA from "./lifeadmin.ts";
 import { awaySince } from "./away.ts";
 import type { DB } from "./db.ts";
 
 export interface TodayItem {
-  kind: "task" | "action" | "heads_up" | "check_in" | "routine" | "reminder" | "follow_up" | "next_routine";
+  kind: "task" | "action" | "heads_up" | "check_in" | "routine" | "reminder" | "follow_up" | "next_routine" | "admin";
   /** "Ready for you", "Heads-up", "Reminder" */
   label: string;
   text: string;
@@ -58,6 +59,27 @@ export function todayView(db: DB, opts: { timeZone?: string; now?: Date } = {}):
       href: chatHref(a.channel_id, a.message_id),
     });
 
+  // life admin: bills and return windows closing soon need you; packages and trips are just coming up
+  const today = LA.localDay(now, tz);
+  const adminSoon: TodayItem[] = [];
+  for (const i of LA.listItems(db)) {
+    if (!i.due_on) continue;
+    const days = Math.round((Date.parse(`${i.due_on}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) / 86_400_000);
+    const urgent = (i.kind === "bill" && days <= 3) || (i.kind === "return" && days >= 0 && days <= 3);
+    const coming = (i.kind === "package" && days === 0) || (i.kind === "trip" && days >= 0 && days <= 1) || (i.kind === "subscription" && days >= 0 && days <= 2);
+    if (!urgent && !coming) continue;
+    const item: TodayItem = {
+      kind: "admin",
+      label: { bill: days < 0 ? "Bill overdue" : "Bill due", subscription: "Renewing", package: "Arriving", trip: "Trip", return: "Return by" }[i.kind],
+      text: one(LA.describeItem(i, today)),
+      side: LA.whenWord(i.due_on, today),
+      needs: urgent,
+      href: "#/tasks?admin",
+    };
+    if (urgent) needs.push(item);
+    else adminSoon.push(item);
+  }
+
   // what Lyra posted on its own in the last 12 hours, newest first
   const said: TodayItem[] = awaySince(db, new Date(now.getTime() - 12 * 3600_000).toISOString(), 3)
     .items.filter((i) => i.kind !== "task")
@@ -90,7 +112,7 @@ export function todayView(db: DB, opts: { timeZone?: string; now?: Date } = {}):
   );
   if (routine) upcoming.push({ kind: "next_routine", label: "Next up", text: routine.name, side: shortWhen(new Date(routine.next_run_at), tz, now), needs: false, href: `#/r/${routine.id}` });
 
-  return { needs: needs.length, items: [...needs.slice(0, 4), ...said, ...upcoming].slice(0, 6) };
+  return { needs: needs.length, items: [...needs.slice(0, 4), ...said, ...adminSoon.slice(0, 2), ...upcoming].slice(0, 6) };
 }
 
 export interface SearchHit {

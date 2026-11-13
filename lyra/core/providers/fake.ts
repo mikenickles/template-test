@@ -57,6 +57,14 @@ export class FakeProvider implements ModelProvider {
       if (result.name === "forget") return say("Done, that's gone.");
       if (result.name === "propose_email" || result.name === "propose_event") return say("It's ready for you to check.");
       if (result.name === "write_doc" || result.name === "update_doc") return say("It's in your Docs.");
+      // life admin scan: save the first bill-looking email found (practice data)
+      if (result.name === "gmail__search_mail" && req.tools.some((t) => t.name === "save_items")) {
+        const thread = result.content.match(/thread: ([0-9a-f]{6,32})/i)?.[1];
+        const from = result.content.match(/from: ([^<\n]+)/)?.[1]?.trim();
+        const amount = Number(result.content.match(/\$(\d+(?:\.\d{2})?)/)?.[1] ?? NaN);
+        const due = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
+        return call("save_items", { items: thread && from ? [{ kind: "bill", thread_id: thread, who: from, title: "Bill", amount: Number.isFinite(amount) ? amount : undefined, due_on: due }] : [] });
+      }
       if (result.name === "save_skill") return say("Learned it. I'll do it that way from now on.");
       if (result.name === "use_skill") return say(`Doing it your way:\n\n${result.content.split("\n\n").slice(1).join("\n\n").slice(0, 400)}`);
       if (result.name === "show_triage") return say("Here's how your inbox sorts out (practice data: add an API key for the real thing).");

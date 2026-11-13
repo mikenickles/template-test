@@ -5904,3 +5904,51 @@ button.orb {
   background: var(--bg);
 }
 
+
+/* ---------- Phase 18: life admin ---------- */
+.admin-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s2);
+}
+.admin-head .page-sub {
+  margin: 0;
+}
+.admin-item {
+  align-items: flex-start;
+}
+.admin-item .sub {
+  white-space: normal;
+}
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s2);
+}
+.admin-when {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.admin-when.soon {
+  color: var(--accent-text);
+}
+.admin-done {
+  margin-top: var(--s5);
+}
+.admin-done summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: var(--s2) 0;
+}
+.admin-switch {
+  margin-top: var(--s6);
+  border-radius: 20px;
+  background: var(--surface);
+}

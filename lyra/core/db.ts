@@ -203,6 +203,26 @@ export const MIGRATIONS: string[] = [
      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
      updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
    );`,
+  // Phase 18: life admin (bills, subscriptions, packages, trips, returns found in the inbox)
+  `CREATE TABLE admin_items (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     kind TEXT NOT NULL CHECK (kind IN ('bill','subscription','package','trip','return')),
+     title TEXT NOT NULL,
+     who TEXT NOT NULL,
+     amount REAL,
+     currency TEXT,
+     due_on TEXT,
+     end_on TEXT,
+     every TEXT,
+     detail TEXT NOT NULL DEFAULT '',
+     thread TEXT NOT NULL,
+     key TEXT NOT NULL UNIQUE,
+     status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','done','dismissed')),
+     notified TEXT,
+     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+   );
+   CREATE INDEX admin_items_open ON admin_items (status, due_on);`,
 ];
 
 const FILE = "lyra.db";
@@ -370,6 +390,8 @@ export interface MessageMeta {
   people?: { id: number; name: string; created: boolean }[];
   /** Posted by a heads-up check Lyra ran on its own. */
   headsUp?: boolean;
+  /** Life admin heads-up (Phase 18): the items it was about */
+  lifeAdmin?: { ids: number[] };
   /** Next steps Lyra offers as buttons (only on its latest reply). */
   suggestions?: string[];
   /** Photos and files sent with this message (a note each; the file itself isn't kept). */

@@ -24,8 +24,9 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 | 15 | Research tasks: workers that read web pages and report back with sources | Done |
 | 16 | Inbox triage, when you ask (or as a routine you set up), replies drafted for your OK | Done |
 | 17 | Skills: how you like particular jobs done, taught once, used when they fit | Done |
-| 18 | Feedback and learning: thumbs up/down, a monthly "what I've learned" | Next |
-| 19 | Phone smarts: other apps' notifications, "leaving soon" nudges | Planned |
+| 18 | Life admin: bills, subscriptions, packages, trips and returns from your inbox | Done |
+| 19 | Feedback and learning: thumbs up/down, a monthly "what I've learned" | Next |
+| 20 | Phone smarts: other apps' notifications, "leaving soon" nudges | Planned |
 
 ### Windows app and sync (Phase 7b)
 
@@ -58,6 +59,14 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - Runs on the routine tick (`Lyra.tickHeadsUp`, `Routines.headsUp`), so like routines it runs on the phone when sync is on, never on the practice model, and not while Lyra is busy. What it said last time is passed to the next check so it doesn't repeat itself (settings `headsUpAt`, `headsUpLast`). Posts are tagged "Heads-up" and notify like a routine.
 - Heads-up and follow-up tokens show on the Usage page as their own kind of work ("proactive").
 - **Check-ins when it's quiet** (on with heads-ups, its own switch): when nothing needs you, Lyra asks for work like a colleague with a free afternoon. It offers one specific project grounded in your memory, mail, calendar and tasks, asks one question to know you better, or asks what it could take off your plate this week, with up to three replies to tap. About once a day on Light, up to twice on Active; only 9:00 to 20:00 and outside quiet hours; never while you're mid-conversation (2 hours), while something is waiting on you or a worker is running, or before you've answered the last one (gives up waiting after 3 days). Your answers go to memory; a yes gets started. Tap-replies are dropped if it read mail or the web. Recent check-ins are passed along so it doesn't repeat itself (`Lyra.tickCheckIn`, `checkInInstructions`, `meta.checkIn`, settings `checkInAt` / `checkInMessage` / `checkInRecent`). The Today view offers "What could you take on for me?" and "Ask me something" when nothing needs you.
+
+### Phase 18: life admin
+
+- **Once a day** (6:00 to 22:00, with Gmail connected and the switch on), Lyra goes through recent mail with its read-only Gmail tools (since the last check; a month the first time) for **bills** (amount, due date), **subscriptions** (amount, how often, next renewal), **packages** (arriving), **trips** (flights, hotels, cars; times in a detail line) and **return windows**, and saves them as short items (`core/lifeadmin.ts`, table `admin_items`). It updates rather than repeats (one per subscription, per bill per month, per order or trip), and keeps what you closed closed.
+- **Heads-ups with no model call**: bills and returns 3 days ahead, renewals 2 days ahead, trips the day before, packages on the day, each said once, 8:00 to 21:00 outside quiet hours, as one message (`meta.lifeAdmin`). Subscriptions roll to their next renewal; delivered packages, past trips and old bills drop off. Bills and return windows closing soon show on the Today view.
+- **Tasks, Life admin tab**: grouped by kind with Open in Gmail, Paid / Got it / Returned, Not mine, Put back, the monthly cost of subscriptions, Check now, and the daily switch.
+- **In chat**: `life_admin` (with `scan: true` to check the mail first) and `update_life_admin` ("I paid the PG&E one").
+- **Safety**: read-only; nothing is paid, cancelled or replied to. An item only counts if its thread id was in that scan's search results (an email can't plant one), fields are short one-line text, the list reaches the chat model wrapped as untrusted and taints the turn, and after that an item can only be changed if you named it in your own message.
 
 ### Back to back
 

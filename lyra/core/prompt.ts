@@ -29,6 +29,8 @@ export interface PromptInput {
   tasks?: string;
   /** Reminders and follow-ups still to come, one per line. */
   reminders?: string;
+  /** Life admin is available (Gmail connected). */
+  lifeAdmin?: boolean;
   /** How to talk like the user (style.ts styleSection). */
   talk?: string;
   /** The user's skills: name and when to use, one per line. */
@@ -53,6 +55,16 @@ function cant(p: PromptInput): string {
   if (a?.email) return "You can't delete, archive, label, book, pay for or buy anything, or change the calendar (Calendar events aren't turned on), and emails only go when the user taps the card.";
   if (a?.event) return "You can't send, reply to, delete, archive, label, pay for or buy anything (Mail drafts aren't turned on), and events are only added when the user taps the card.";
   return "You can't send, reply to, delete, archive, label, book, pay for or buy anything yet.";
+}
+
+function lifeAdminSection(user: string): string {
+  return `
+## Life admin
+Once a day you go through ${user}'s mail for bills, subscriptions, packages, trips and return windows, and give a heads-up when one is close. The list is in life_admin (scan: true to check the mail first).
+- Use it for "what's due", "what am I paying for", "where's my package", "my flight details". Lead with what's soonest or most expensive.
+- When ${user} says they paid, got, returned or don't care about one, mark it with update_life_admin.
+- You can't pay, cancel or return anything. Say what they'd do and, if it helps, draft the email.
+`;
 }
 
 function skillsSection(p: PromptInput, user: string): string {
@@ -224,7 +236,7 @@ ${p.tasks?.trim() ? neutralize(p.tasks) : "(none)"}
 
 Coming up (reminders and follow-ups):
 ${p.reminders?.trim() ? neutralize(p.reminders) : "(none)"}
-${p.talk ?? ""}${skillsSection(p, user)}${actionsSection(p, user)}${peopleSection(p, user)}${docsSection(p, user)}${musicSection(p, user)}
+${p.talk ?? ""}${p.lifeAdmin ? lifeAdminSection(user) : ""}${skillsSection(p, user)}${actionsSection(p, user)}${peopleSection(p, user)}${docsSection(p, user)}${musicSection(p, user)}
 ${
     p.webSearch
       ? `## The web

@@ -4,6 +4,7 @@ import { api, onChange, type Channel, type Task, type TaskDetail, type TaskStatu
 import { ChannelIcon, CheckCircle, Chevron, Close, File as FileIcon, Pencil, Plus, Search, Star, Stop, Trash } from "../icons";
 import { Thinking } from "../LyraMark";
 import { Markdown } from "../markdown";
+import { LifeAdmin } from "./LifeAdmin";
 import { ScheduledSection } from "./Routines";
 import { ago, parse } from "../when";
 
@@ -166,7 +167,9 @@ function TopSlot({ id, children }: { id: string; children: ReactNode }) {
 }
 
 export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: string) => void; channels: Channel[]; onCounts: () => void; wide?: boolean }) {
-  const [tab, setTab] = useState<"active" | "done">(() => (sessionStorage.getItem("lyra.tasksTab") === "done" ? "done" : "active"));
+  const [tab, setTab] = useState<"active" | "done" | "admin">(() =>
+    location.hash.includes("admin") ? "admin" : sessionStorage.getItem("lyra.tasksTab") === "done" ? "done" : "active",
+  );
   const [rows, setRows] = useState<Task[] | null>(null);
   const [q, setQ] = useState("");
   const [searching, setSearching] = useState(false);
@@ -229,9 +232,9 @@ export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: 
 
   const seg = (
     <div className="seg-tabs" role="tablist" aria-label="Tasks">
-      {(["active", "done"] as const).map((k) => (
+      {(["active", "done", "admin"] as const).map((k) => (
         <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>
-          {k === "active" ? "Active" : "Done"}
+          {k === "active" ? "Active" : k === "done" ? "Done" : "Life admin"}
         </button>
       ))}
     </div>
@@ -248,6 +251,14 @@ export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: 
       {searching ? <Close size={20} /> : <Search size={20} />}
     </button>
   );
+
+  if (tab === "admin")
+    return (
+      <div className="screen tasks-screen">
+        {wide ? <div className="tasks-head">{seg}</div> : <TopSlot id="topbar-center">{seg}</TopSlot>}
+        <LifeAdmin toast={toast} />
+      </div>
+    );
 
   return (
     <div className="screen tasks-screen">

@@ -16,6 +16,7 @@ import * as P from "./people.ts";
 import * as D from "./docs.ts";
 import * as S from "./skills.ts";
 import * as ST from "./style.ts";
+import * as LA from "./lifeadmin.ts";
 import { SPOTIFY_PLAYBACK, SPOTIFY_PLAYLISTS, SPOTIFY_READ, SpotifyAuth, type OAuthRedirect } from "./connectors/spotify/auth.ts";
 import { createSpotifyServer } from "./connectors/spotify/server.ts";
 import { runTidy } from "./tidy.ts";
@@ -74,7 +75,7 @@ import * as T from "./tasks.ts";
 import { Workers, type WorkerEvent, type WorkerRun } from "./workers.ts";
 import * as R from "./routines.ts";
 
-export type LyraEvent = WorkerEvent | R.RoutineEvent | { type: "doc"; docId: number };
+export type LyraEvent = WorkerEvent | R.RoutineEvent | { type: "doc"; docId: number } | { type: "admin" };
 export type { Reminder } from "./reminders.ts";
 
 export interface SecretStore {
@@ -290,6 +291,25 @@ export class Lyra {
     const lyra = this;
     this.workspace = {
       main: memory,
+      lifeAdmin: {
+        connected: () => this.gmailOn,
+        list: () => LA.describeForModel(LA.listItems(this.db), LA.localDay(new Date(), this.p.timeZone)),
+        total: () => LA.monthlyTotal(LA.listItems(this.db)),
+        scan: async () => {
+          const r = await this.scanLifeAdmin();
+          return `${r.added} new, ${r.updated} updated`;
+        },
+        mark: (id, status, userText) => {
+          const it = this.db.get<LA.AdminItem>("SELECT * FROM admin_items WHERE id = ?", [id]);
+          if (!it) throw new Error("There's no item with that number.");
+          // after reading mail, only an item the user named in their own message can be changed
+          if (userText !== undefined && !userText.toLowerCase().includes(it.who.toLowerCase().split(/\s+/)[0] ?? "")) throw new Error(`Not changed: outside content was read this turn, and the user didn't mention ${it.who}. Ask them first.`);
+          LA.setStatus(this.db, id, status);
+          void this.db.flush();
+          this.listeners.forEach((l) => l({ type: "admin" }));
+          return LA.describeItem({ ...it, status }, LA.localDay(new Date(), this.p.timeZone));
+        },
+      },
       talk: () => ST.styleSection(this.userName === "you" ? "the user" : this.userName, ST.readStyle(this.db)?.notes, ST.mirrorOn(this.db)),
       skills: {
         index: () => S.describeSkills(S.listSkills(this.db)),
@@ -1256,6 +1276,7 @@ export class Lyra {
   tickRoutines(now = new Date()): number[] {
     const started = this.routinesRunner.tick(now);
     this.tickReminders(now);
+    this.tickLifeAdmin(now);
     if (!this.tickHeadsUp(now) && !this.tickCheckIn(now) && !this.tickTidy(now)) this.tickStyle(now);
     return started;
   }
@@ -1684,6 +1705,103 @@ export class Lyra {
   }
 
   /** Post what's due: reminders as a message, follow-ups after Lyra has checked. */
+  // ---------- life admin (Phase 18) ----------
+
+  private scanning = false;
+
+  private get gmailOn(): boolean {
+    return this.connectors.status().some((c) => c.id === "gmail" && c.state === "connected");
+  }
+
+  get lifeAdminOn(): boolean {
+    return getSetting(this.db, "lifeAdmin") !== "off";
+  }
+
+  /** The list, the monthly cost of subscriptions, and how the scan stands. */
+  lifeAdmin(): { on: boolean; gmail: boolean; items: LA.AdminItem[]; done: LA.AdminItem[]; total: string; lastScan: string | null; scanning: boolean; today: string } {
+    const all = LA.listItems(this.db, { status: "all" });
+    return {
+      on: this.lifeAdminOn,
+      gmail: this.gmailOn,
+      items: all.filter((i) => i.status === "open"),
+      done: all.filter((i) => i.status !== "open").slice(-30),
+      total: LA.monthlyTotal(all.filter((i) => i.status === "open")),
+      lastScan: getSetting(this.db, "lifeAdminAt") || null,
+      scanning: this.scanning,
+      today: LA.localDay(new Date(), this.p.timeZone),
+    };
+  }
+
+  async setLifeAdmin(on: boolean): Promise<void> {
+    setSetting(this.db, "lifeAdmin", on ? "on" : "off");
+    await this.db.flush();
+    this.listeners.forEach((l) => l({ type: "admin" }));
+  }
+
+  async setAdminStatus(id: number, status: LA.AdminItem["status"]): Promise<void> {
+    LA.setStatus(this.db, id, status);
+    await this.db.flush();
+    this.listeners.forEach((l) => l({ type: "admin" }));
+  }
+
+  /** Go through the inbox now: since the last scan (a month the first time). */
+  async scanLifeAdmin(): Promise<{ added: number; updated: number }> {
+    if (!this.gmailOn) throw new Error("Connect Gmail first, in Connections.");
+    if (this.scanning) throw new Error("Already going through your mail.");
+    this.scanning = true;
+    this.listeners.forEach((l) => l({ type: "admin" }));
+    try {
+      const last = getSetting(this.db, "lifeAdminAt");
+      const days = last ? Math.min(30, Math.max(2, Math.ceil((Date.now() - new Date(last).getTime()) / 86_400_000) + 1)) : 30;
+      const today = LA.localDay(new Date(), this.p.timeZone);
+      const provider = metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "proactive", this.db, this.p.timeZone);
+      const found = await LA.scanInbox({
+        provider,
+        connectors: this.connectors,
+        userName: this.userName,
+        timeZone: this.p.timeZone,
+        days,
+        known: LA.describeForModel(LA.listItems(this.db), today),
+      });
+      const r = LA.saveItems(this.db, found);
+      setSetting(this.db, "lifeAdminAt", new Date().toISOString());
+      LA.tidyItems(this.db, today);
+      await this.db.flush();
+      return r;
+    } finally {
+      this.scanning = false;
+      this.listeners.forEach((l) => l({ type: "admin" }));
+    }
+  }
+
+  /**
+   * On the routine tick: tidy the list, give any heads-ups due today (no model call), and
+   * once a day go through the inbox, in the daytime, when Gmail is connected.
+   */
+  tickLifeAdmin(now = new Date()): void {
+    if (!this.lifeAdminOn) return;
+    const today = LA.localDay(now, this.p.timeZone);
+    const local = now.toLocaleTimeString("en-GB", { timeZone: this.p.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    LA.tidyItems(this.db, today);
+    if (local >= "08:00" && local < "21:00" && !inQuietHours(local, this.proactive)) {
+      const n = LA.dueNotices(this.db, today);
+      if (n) {
+        addMessage(this.db, "assistant", n.text, { lifeAdmin: { ids: n.ids } }, null);
+        this.listeners.forEach((l) => l({ type: "message", channelId: null, notify: { title: "Life admin", body: n.text.split("\n")[0].slice(0, 160) } }));
+        void this.db.flush();
+      }
+    }
+    if (!this.gmailOn || this.scanning || this.busy) return;
+    if (!this.p.provider && this.choice().provider === "fake") return;
+    if (local < "06:00" || local >= "22:00") return;
+    const last = getSetting(this.db, "lifeAdminAt");
+    const tried = getSetting(this.db, "lifeAdminTriedAt");
+    if (last && now.getTime() - new Date(last).getTime() < 20 * 3600_000) return;
+    if (tried && now.getTime() - new Date(tried).getTime() < 3 * 3600_000) return;
+    setSetting(this.db, "lifeAdminTriedAt", now.toISOString());
+    void this.scanLifeAdmin().catch((e) => console.error("[lyra] life admin scan failed", e));
+  }
+
   private tickReminders(now: Date): void {
     const due = dueReminders(this.db, now);
     if (!due.length) return;

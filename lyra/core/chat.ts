@@ -4,7 +4,7 @@ import { checkTriage, TRIAGE_GUIDE, TRIAGE_SCHEMA, type Triage } from "./triage.
 import { addMessage, listMessages, updateMessageMeta, type Channel, type ChannelSummary, type DB, type MemoryNote, type StoredMessage, type TaskNote } from "./db.ts";
 import { CHANNEL_SECTIONS, SECTIONS, type Notebook } from "./memory.ts";
 import { buildSystemPrompt, type ChannelDigest } from "./prompt.ts";
-import { neutralize } from "./untrusted.ts";
+import { neutralize, wrapUntrusted } from "./untrusted.ts";
 import { describeSchedule, type RoutineInput } from "./routines.ts";
 import { uniqueSources, type ModelProvider, type Msg, type Part, type Source, type ToolDef } from "./providers/types.ts";
 import {
@@ -76,6 +76,15 @@ export interface Workspace {
   };
   /** How to talk like the user (empty when that's turned off). */
   talk?(): string;
+  /** Life admin (Phase 18): bills, subscriptions, packages, trips and returns from the inbox. */
+  lifeAdmin?: {
+    connected(): boolean;
+    list(): string;
+    total(): string;
+    scan(): Promise<string>;
+    /** userText: the user's own message, when outside content was read this turn */
+    mark(id: number, status: "done" | "dismissed" | "open", userText?: string): string;
+  };
   /** Skills (Phase 17): how the user wants particular jobs done. */
   skills?: {
     index(): string;
@@ -149,6 +158,28 @@ export function skillTools(ws: Workspace, canSave: boolean): ToolDef[] {
       },
     });
   return tools;
+}
+
+/** Phase 18: life admin. Reading the list counts as outside content (it came from email). */
+export function lifeAdminTools(ws: Workspace): ToolDef[] {
+  if (!ws.lifeAdmin?.connected()) return [];
+  return [
+    {
+      name: "life_admin",
+      description:
+        "The user's life admin, found in their email: bills (due dates, amounts), subscriptions (renewals, monthly cost), packages (arriving), trips (bookings), return windows. Use for 'what bills are due', 'what am I subscribed to', 'when's my package coming', 'my trip details'. scan: true goes through recent mail first (takes a minute); do that when they ask you to check or the list looks out of date.",
+      schema: { type: "object", properties: { scan: { type: "boolean" } } },
+    },
+    {
+      name: "update_life_admin",
+      description: "Mark a life admin item done (paid, arrived, returned) or dismissed (not theirs, not relevant), or open again. Use the #id from life_admin.",
+      schema: {
+        type: "object",
+        properties: { id: { type: "number" }, status: { type: "string", enum: ["done", "dismissed", "open"] } },
+        required: ["id", "status"],
+      },
+    },
+  ];
 }
 
 /** use_skill, shared by chat, workers and routines. */
@@ -634,7 +665,7 @@ export async function runTurn(
   try {
     const channels = ctx.workspace.channels();
     const gmailOn = ctx.connectors.status().some((c) => c.id === "gmail" && c.state === "connected");
-    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed(), !!ctx.workspace.music), ...peopleTools(ctx.workspace), ...docTools(ctx.workspace), ...triageTools(gmailOn), ...skillTools(ctx.workspace, true), ...(await ctx.connectors.tools())];
+    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed(), !!ctx.workspace.music), ...peopleTools(ctx.workspace), ...docTools(ctx.workspace), ...triageTools(gmailOn), ...skillTools(ctx.workspace, true), ...lifeAdminTools(ctx.workspace), ...(await ctx.connectors.tools())];
     const system = buildSystemPrompt({
       userName: ctx.userName,
       soul: ctx.soul,
@@ -650,6 +681,7 @@ export async function runTurn(
       docs: ctx.workspace.docs?.recent(),
       skills: ctx.workspace.skills?.index(),
       talk: ctx.workspace.talk?.(),
+      lifeAdmin: !!ctx.workspace.lifeAdmin?.connected(),
       model: ctx.provider.id === "fake" ? undefined : ctx.provider.model,
       music: ctx.connectors.status().some((c) => c.id === "spotify" && c.state === "connected")
         ? { playback: !!ctx.workspace.music, playlists: !!ctx.workspace.actions?.allowed().playlist }
@@ -765,6 +797,34 @@ export async function runTurn(
             content: ok ? "Shown as buttons under your reply." : state.tainted ? "Not shown: outside content was read this turn." : "Give one to three short options.",
             isError: !ok,
           });
+          continue;
+        }
+        if (call.name === "life_admin" || call.name === "update_life_admin") {
+          let content: string;
+          let ok = false;
+          try {
+            const la = ctx.workspace.lifeAdmin!;
+            if (call.name === "life_admin") {
+              let scanned = "";
+              if (call.input.scan === true) {
+                emit.status("Going through your mail");
+                scanned = `Went through recent mail (${await la.scan()}).\n\n`;
+              }
+              const total = la.total();
+              // everything on the list came from email: other people's words
+              state.tainted = true;
+              content = `${scanned}${wrapUntrusted("life admin, from the user's email", `${la.list()}${total ? `\n\nSubscriptions come to about ${total} a month.` : ""}`)}`;
+            } else {
+              const status = String(call.input.status) as "done" | "dismissed" | "open";
+              if (!["done", "dismissed", "open"].includes(status)) throw new Error("status is done, dismissed or open.");
+              content = `Marked ${status}: ${la.mark(Number(call.input.id), status, state.tainted ? userText : undefined)}.`;
+            }
+            ok = true;
+          } catch (e) {
+            content = (e as Error).message;
+          }
+          toolsUsed.push({ name: call.name, ok });
+          results.push({ type: "tool_result", id: call.id, name: call.name, content, isError: !ok });
           continue;
         }
         if (call.name === "use_skill" || call.name === "save_skill") {

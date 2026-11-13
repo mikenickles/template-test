@@ -96,6 +96,17 @@ await page.route("https://gmail.googleapis.com/**", (r) => {
     return r.fulfill({ json: { id: "m1", threadId: "t9" } });
   }
   if (u.includes("/profile")) return r.fulfill({ json: { emailAddress: "sam@example.com" } });
+  // one bill in the inbox, for life admin
+  if (/\/messages\?/.test(u)) return r.fulfill({ json: { messages: [{ id: "b1" }] } });
+  if (u.includes("/messages/b1"))
+    return r.fulfill({
+      json: {
+        id: "b1",
+        threadId: "abc123def456",
+        snippet: "Your bill of $84.50 is due soon.",
+        payload: { headers: [{ name: "From", value: "PG&E <bills@example.com>" }, { name: "Subject", value: "Your energy bill is ready" }, { name: "Date", value: "Thu, 12 Nov 2026 09:00:00 -0800" }] },
+      },
+    });
   return r.fulfill({ json: {} });
 });
 await page.goto("app://lyra/index.html#/access");
@@ -122,6 +133,17 @@ check(sent.length === 1 && raw.includes("To: dana@example.com") && sentBody === 
 check((await card.getByRole("button", { name: "Send", exact: true }).count()) === 0, "a sent email can't be sent again from the card");
 
 // ---- inbox triage, when asked (practice data) ----
+// ---- life admin: Lyra goes through the mail and lists the bill (practice data) ----
+await page.goto("app://lyra/index.html#/tasks?admin");
+await page.getByRole("button", { name: "Check now" }).click();
+await page.locator(".admin-item", { hasText: "PG&E" }).waitFor();
+check((await page.getByRole("link", { name: "Open in Gmail" }).count()) === 1, "life admin finds a bill in the mail and lists it, with Open in Gmail");
+await page.screenshot({ path: join(shots, "desktop-11-life-admin.png") });
+await page.locator(".admin-item", { hasText: "PG&E" }).getByRole("button", { name: "Paid" }).click();
+await page.locator(".admin-item", { hasText: "PG&E" }).waitFor({ state: "detached" });
+check(true, "marking a bill paid takes it off the list");
+await page.goto("app://lyra/index.html#/");
+
 await page.getByPlaceholder("Message Lyra").fill("go through my inbox");
 await page.getByRole("button", { name: "Send" }).click();
 const triage = page.getByRole("region", { name: "Inbox triage" });
