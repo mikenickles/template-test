@@ -72,6 +72,10 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### Glanceable replies (0.43.1)
+
+- The voice guide (`core/voice.md`, in every chat, routine and heads-up prompt) now carries the user's "understood at a glance" rules: a first line of about 15 words that holds the point and stands alone, most replies under about 25 words, short one-idea paragraphs, list lines that start with a **bold name:**, numbered only when they'll answer by number, no headings, and tables only when asked for.
+
 ### Rate a reply, and haptics (0.43)
 
 - **Thumbs up or down** under Lyra's latest reply (any reply from its long-press menu). A thumbs down asks what was off: Too long, Too short, Too formal, Too chatty, Missed the point, Got something wrong, or a few words of your own, or skip. Saved on the message (`meta.feedback`, `Lyra.rateReply`).

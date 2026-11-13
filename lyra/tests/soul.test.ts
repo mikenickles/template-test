@@ -36,7 +36,7 @@ describe("Lyra's soul", () => {
     for (const s of systems) {
       expect(s).toContain("You are Lyra: Sam's chief of staff, and their friend.");
       expect(s).toContain("## Taking the lead");
-      expect(s).toContain("## For errands: lead with the point"); // the voice guide is still there
+      expect(s).toContain("## For errands: write it to be understood at a glance"); // the voice guide is still there
       expect(s).not.toContain("{user}");
     }
   });
