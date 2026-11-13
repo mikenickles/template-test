@@ -332,6 +332,25 @@ try {
   await page.waitForTimeout(350);
   check((await page.locator(".drawer-panel .star-row", { hasText: "Rowan" }).count()) === 1, "drawer lists the channel");
   await page.getByRole("button", { name: "New channel" }).click();
+  // the phone keyboard opening shrinks the screen and redraws the app; the Name box must keep focus
+  await page.waitForTimeout(300);
+  // (in the browser, "the keyboard is up" is raised by the message box getting focus, so pretend that)
+  await page.getByLabel("Name").evaluate((el) => {
+    window.__nameBlurs = 0;
+    el.addEventListener("blur", () => window.__nameBlurs++);
+  });
+  for (let i = 0; i < 3; i++) {
+    await page.evaluate(() => {
+      const box = document.querySelector(".composer textarea");
+      box?.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      box?.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    });
+    await page.waitForTimeout(200);
+  }
+  check(
+    (await page.evaluate(() => window.__nameBlurs)) === 0 && (await page.getByLabel("Name").evaluate((el) => el === document.activeElement)),
+    "the New channel name box keeps focus while the keyboard opens (no flicker)",
+  );
   await page.getByLabel("Name").fill("Home");
   await page.getByRole("button", { name: "Change icon" }).click();
   await page.getByRole("radio", { name: "Home" }).click();

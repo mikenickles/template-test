@@ -355,16 +355,19 @@ function NewTaskDialog({
   const [research, setResearch] = useState(false);
   const [busy, setBusy] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
 
+  // once when it opens: focusing on every redraw makes the phone keyboard flicker
   useEffect(() => {
     const t = setTimeout(() => titleRef.current?.focus(), 120);
-    const key = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const key = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
     addEventListener("keydown", key);
     return () => {
       clearTimeout(t);
       removeEventListener("keydown", key);
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div className="dialog-layer" role="presentation">

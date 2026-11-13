@@ -115,17 +115,21 @@ export function NewChannelDialog({ onClose, onCreated, toast }: { onClose: () =>
   const [picking, setPicking] = useState(false);
   const [busy, setBusy] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
 
+  // Once, when the dialog opens (not on every redraw: the keyboard opening redraws the app,
+  // and focusing again each time made the keyboard flicker on the phone).
   useEffect(() => {
     // let the dialog land before the keyboard opens
     const t = setTimeout(() => nameRef.current?.focus(), 120);
-    const key = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const key = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
     addEventListener("keydown", key);
     return () => {
       clearTimeout(t);
       removeEventListener("keydown", key);
     };
-  }, [onClose]);
+  }, []);
 
   const create = async () => {
     if (!name.trim() || busy) return;

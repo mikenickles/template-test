@@ -43,13 +43,17 @@ export function Drawer({
   const [query, setQuery] = useState("");
   const unread = useUnread(open || docked);
 
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  // Focus the menu once when it opens, not on every redraw (that stole focus from the
+  // New channel dialog on top and made the phone keyboard flicker).
   useEffect(() => {
     if (!open || docked) return;
-    const key = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const key = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
     addEventListener("keydown", key);
     panel.current?.querySelector<HTMLElement>(".star-row.active, .star-row")?.focus();
     return () => removeEventListener("keydown", key);
-  }, [open, onClose, docked]);
+  }, [open, docked]);
 
   // a fresh search each time the menu opens
   useEffect(() => {
