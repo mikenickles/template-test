@@ -471,11 +471,11 @@ body[data-busy] .orb:has(.avatar)::after {
   /* the composer and tab bar float over the bottom: messages scroll behind them and fade out, like at the top */
   --below: calc(var(--composer-h, 76px) + var(--tabbar-h));
   padding: calc(var(--inset-top) + 148px) var(--s4) calc(var(--below) + var(--s4));
-  /* nothing shows behind Lyra's avatar, name and status: messages fade in just below them */
+  /* messages scroll up behind Lyra's avatar and status, fading the same light way as at the bottom */
   --fade: linear-gradient(
-    transparent calc(var(--inset-top) + 130px),
-    rgba(0, 0, 0, 0.5) calc(var(--inset-top) + 152px),
-    #000 calc(var(--inset-top) + 180px),
+    rgba(0, 0, 0, 0.1) 0,
+    rgba(0, 0, 0, 0.4) calc(var(--inset-top) + 110px),
+    #000 calc(var(--inset-top) + 170px),
     #000 calc(100% - var(--below) - 40px),
     rgba(0, 0, 0, 0.4) calc(100% - var(--below) + 20px),
     rgba(0, 0, 0, 0.1) 100%
