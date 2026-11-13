@@ -277,6 +277,28 @@ try {
   check((await page.locator(".bubble").count()) === 1, "channel chat starts empty and holds its own messages");
   await shot("light-9-channel-chat");
 
+  // ---- skills: teach one in chat, use it by name, see it on the Memory page ----
+  await page.getByPlaceholder("Message Rowan").fill("save a skill called Party prep: 1. Confirm the headcount\n2. Order the cake\n3. Text the parents");
+  await page.getByRole("button", { name: "Send" }).click();
+  await page.locator(".skill-chip", { hasText: "Learned Party prep" }).waitFor();
+  check(true, "Lyra learns a skill in chat, shown as a chip");
+  await page.getByPlaceholder("Message Rowan").fill("use my party prep skill");
+  await page.getByRole("button", { name: "Send" }).click();
+  await page.locator(".skill-chip", { hasText: "Followed Party prep" }).waitFor();
+  check(await page.getByText("Text the parents").last().isVisible(), "Lyra reads a skill's steps and follows them");
+  await shot("light-40-skill-chat");
+  await page.locator(".skill-chip", { hasText: "Followed Party prep" }).click();
+  await page.locator(".item", { hasText: "Party prep" }).waitFor();
+  check((await page.locator(".item", { hasText: "used once" }).count()) === 1, "the chip opens Memory, Skills, with the use counted");
+  await page.locator(".item", { hasText: "Party prep" }).click();
+  const skillSheet = page.getByRole("dialog", { name: "Party prep" });
+  await skillSheet.getByLabel("Use it when").fill("a party is coming up");
+  await skillSheet.getByRole("button", { name: "Save" }).click();
+  await page.locator(".item", { hasText: "a party is coming up" }).waitFor();
+  await shot("light-41-skills");
+  check(true, "a skill can be edited on the Skills tab");
+  await page.goto(`${base}/#/c/1`);
+
   // ---- docs: Lyra writes one, you open and edit it ----
   await page.goto(`${base}/#/`);
   await page.getByPlaceholder("Message Lyra").fill("make a doc called Packing list");

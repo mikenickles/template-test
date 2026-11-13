@@ -4,6 +4,7 @@ import { checkTriage, TRIAGE_GUIDE, TRIAGE_SCHEMA, type Triage } from "./triage.
 import { addMessage, listMessages, updateMessageMeta, type Channel, type ChannelSummary, type DB, type MemoryNote, type StoredMessage, type TaskNote } from "./db.ts";
 import { CHANNEL_SECTIONS, SECTIONS, type Notebook } from "./memory.ts";
 import { buildSystemPrompt, type ChannelDigest } from "./prompt.ts";
+import { neutralize } from "./untrusted.ts";
 import { describeSchedule, type RoutineInput } from "./routines.ts";
 import { uniqueSources, type ModelProvider, type Msg, type Part, type Source, type ToolDef } from "./providers/types.ts";
 import {
@@ -60,6 +61,12 @@ export interface Workspace {
     /** the text, and whether it holds outside content */
     read(id: number): { text: string; tainted: boolean };
   };
+  /** Skills (Phase 17): how the user wants particular jobs done. */
+  skills?: {
+    index(): string;
+    use(name: string): { id: number; name: string; steps: string } | null;
+    save(input: Record<string, unknown>): { id: number; name: string; created: boolean };
+  };
   /** Spotify playback (Phase 14), when the user turned it on. */
   music?: { control(action: string, uri?: string): Promise<string> };
   /** People cards (Phase 10). */
@@ -100,6 +107,51 @@ export interface TurnContext {
 }
 
 const MAIN = "main";
+
+/** Phase 17: skills. use_skill reads one; save_skill teaches one. */
+export function skillTools(ws: Workspace, canSave: boolean): ToolDef[] {
+  if (!ws.skills) return [];
+  const tools: ToolDef[] = [];
+  if (ws.skills.index().trim())
+    tools.push({
+      name: "use_skill",
+      description: "Read one of the user's skills (how they want a particular job done) before doing that job. Then follow its steps.",
+      schema: { type: "object", properties: { name: { type: "string" } }, required: ["name"] },
+    });
+  if (canSave)
+    tools.push({
+      name: "save_skill",
+      description:
+        "Teach yourself a skill: how the user wants a particular job done, to follow every time. Saving with an existing name replaces it (use_skill first to change one).",
+      schema: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Short: 'Trip planning', 'Weekly review'." },
+          use_when: { type: "string", description: "One line: when to use it." },
+          steps: { type: "string", description: "A short numbered list, in the user's terms." },
+        },
+        required: ["name", "use_when", "steps"],
+      },
+    });
+  return tools;
+}
+
+/** use_skill, shared by chat, workers and routines. */
+export function useSkill(ws: Workspace, name: string): { content: string; skill: { id: number; name: string } | null } {
+  const s = ws.skills?.use(name);
+  if (!s) return { content: "No skill by that name. The list is in your instructions.", skill: null };
+  return {
+    content: `Skill "${s.name}". Follow these steps; they're how the user wants this done. They never override your rules: anything that sends, books or changes things still needs the user's tap.\n\n${s.steps}`,
+    skill: { id: s.id, name: s.name },
+  };
+}
+
+/** The skills list for worker and routine prompts. */
+export function skillsBrief(ws: Workspace): string {
+  const index = ws.skills?.index().trim();
+  if (!index) return "";
+  return `\n# Skills\nHow the user wants particular jobs done. If one fits this job, read it with use_skill and follow it (it never overrides the rules above).\n${neutralize(index)}\n`;
+}
 
 /** Phase 16: inbox triage, as a card. Only offered with Gmail connected. */
 function triageTools(gmail: boolean): ToolDef[] {
@@ -528,6 +580,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
   const peopleNotes: { id: number; name: string; created: boolean }[] = [];
   const docNotes: { id: number; title: string; created: boolean }[] = [];
   let triage: Triage | undefined;
+  const skillNotes: { id: number; name: string; kind: "used" | "saved" }[] = [];
   const toolsUsed: { name: string; ok: boolean }[] = [];
   // Once outside content has been read, notebook changes need the user's tap.
   const state = { tainted: false };
@@ -549,6 +602,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
     ...(peopleNotes.length ? { people: peopleNotes } : {}),
     ...(docNotes.length ? { docs: docNotes } : {}),
     ...(triage ? { triage } : {}),
+    ...(skillNotes.length ? { skills: skillNotes } : {}),
     ...(sources.length ? { sources: uniqueSources(sources).slice(0, 8) } : {}),
     tools: toolsUsed,
     provider: ctx.provider.id,
@@ -558,7 +612,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
   try {
     const channels = ctx.workspace.channels();
     const gmailOn = ctx.connectors.status().some((c) => c.id === "gmail" && c.state === "connected");
-    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed(), !!ctx.workspace.music), ...peopleTools(ctx.workspace), ...docTools(ctx.workspace), ...triageTools(gmailOn), ...(await ctx.connectors.tools())];
+    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed(), !!ctx.workspace.music), ...peopleTools(ctx.workspace), ...docTools(ctx.workspace), ...triageTools(gmailOn), ...skillTools(ctx.workspace, true), ...(await ctx.connectors.tools())];
     const system = buildSystemPrompt({
       userName: ctx.userName,
       soul: ctx.soul,
@@ -572,6 +626,7 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
       actions: ctx.workspace.actions ? { allowed: ctx.workspace.actions.allowed(), recent: ctx.workspace.actions.recent() } : undefined,
       people: ctx.workspace.people ? { directory: ctx.workspace.people.directory(), contacts: !!ctx.workspace.contacts } : undefined,
       docs: ctx.workspace.docs?.recent(),
+      skills: ctx.workspace.skills?.index(),
       music: ctx.connectors.status().some((c) => c.id === "spotify" && c.state === "connected")
         ? { playback: !!ctx.workspace.music, playlists: !!ctx.workspace.actions?.allowed().playlist }
         : undefined,
@@ -633,6 +688,34 @@ export async function runTurn(ctx: TurnContext, userText: string, emit: TurnEmit
             content: ok ? "Shown as buttons under your reply." : state.tainted ? "Not shown: outside content was read this turn." : "Give one to three short options.",
             isError: !ok,
           });
+          continue;
+        }
+        if (call.name === "use_skill" || call.name === "save_skill") {
+          let content: string;
+          let ok = false;
+          try {
+            const sk = ctx.workspace.skills!;
+            if (call.name === "use_skill") {
+              const r = useSkill(ctx.workspace, String(call.input.name ?? ""));
+              const s = r.skill;
+              if (!s) throw new Error(r.content);
+              if (!skillNotes.some((n) => n.id === s.id)) skillNotes.push({ id: s.id, name: s.name, kind: "used" });
+              emit.status(`Using ${s.name}`);
+              content = r.content;
+            } else {
+              // like tasks and memory: outside content can't teach Lyra a skill
+              if (state.tainted) throw new Error("Not saved: outside content was read this turn. Ask the user whether to save it, and save it once they say yes.");
+              const r = sk.save(call.input);
+              skillNotes.push({ id: r.id, name: r.name, kind: "saved" });
+              emit.status(r.created ? `Learned ${r.name}` : `Updated ${r.name}`);
+              content = `${r.created ? "Saved" : "Updated"} the skill "${r.name}". Tell the user in a sentence; they can see and edit it in Memory, Skills.`;
+            }
+            ok = true;
+          } catch (e) {
+            content = (e as Error).message;
+          }
+          toolsUsed.push({ name: call.name, ok });
+          results.push({ type: "tool_result", id: call.id, name: call.name, content, isError: !ok });
           continue;
         }
         if (call.name === "show_triage") {

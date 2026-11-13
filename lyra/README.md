@@ -23,8 +23,8 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 | 14 | More connectors: Spotify first (more later), with approval cards for anything that writes | Done (Spotify) |
 | 15 | Research tasks: workers that read web pages and report back with sources | Done |
 | 16 | Inbox triage, when you ask (or as a routine you set up), replies drafted for your OK | Done |
-| 17 | Playbooks: procedures you teach once and run by name | Next |
-| 18 | Feedback and learning: thumbs up/down, a monthly "what I've learned" | Planned |
+| 17 | Skills: how you like particular jobs done, taught once, used when they fit | Done |
+| 18 | Feedback and learning: thumbs up/down, a monthly "what I've learned" | Next |
 | 19 | Phone smarts: other apps' notifications, "leaving soon" nudges | Planned |
 
 ### Windows app and sync (Phase 7b)
@@ -58,6 +58,14 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - Runs on the routine tick (`Lyra.tickHeadsUp`, `Routines.headsUp`), so like routines it runs on the phone when sync is on, never on the practice model, and not while Lyra is busy. What it said last time is passed to the next check so it doesn't repeat itself (settings `headsUpAt`, `headsUpLast`). Posts are tagged "Heads-up" and notify like a routine.
 - Heads-up and follow-up tokens show on the Usage page as their own kind of work ("proactive").
 - **Check-ins when it's quiet** (on with heads-ups, its own switch): when nothing needs you, Lyra asks for work like a colleague with a free afternoon. It offers one specific project grounded in your memory, mail, calendar and tasks, asks one question to know you better, or asks what it could take off your plate this week, with up to three replies to tap. About once a day on Light, up to twice on Active; only 9:00 to 20:00 and outside quiet hours; never while you're mid-conversation (2 hours), while something is waiting on you or a worker is running, or before you've answered the last one (gives up waiting after 3 days). Your answers go to memory; a yes gets started. Tap-replies are dropped if it read mail or the web. Recent check-ins are passed along so it doesn't repeat itself (`Lyra.tickCheckIn`, `checkInInstructions`, `meta.checkIn`, settings `checkInAt` / `checkInMessage` / `checkInRecent`). The Today view offers "What could you take on for me?" and "Ask me something" when nothing needs you.
+
+### Phase 17: skills
+
+- **Teach it once.** Tell Lyra how you like a job done ("when I plan a trip: check flights from SFO, block the dates, then a packing list. Save that as a skill.") and it saves a **skill**: a name, one line on when to use it, and the steps. Lyra also offers to save one when you explain how you like something done. Or write and edit them yourself in **Memory, Skills** (third tab, next to Notes and People).
+- **Used when it fits.** Lyra's instructions list only each skill's name and "use when"; when a request fits (or you ask for one by name), it reads the full steps with `use_skill` and follows them. Background workers and routines get the same list and `use_skill`, so a task or a scheduled routine can follow your skill too.
+- A chip under the reply says **Learned …** or **Followed …** and opens the Skills tab; each skill counts how often it's been used.
+- **Skills change how, not what.** They never override Lyra's rules: anything that sends, books or changes things still needs your tap. Like tasks and memory, a skill can't be saved or changed in a turn that read an email or a web page (`save_skill` is refused; Lyra asks you instead), and workers and routines can only read skills, not write them.
+- `core/skills.ts` (table `skills`: name, use_when, steps, uses, last_used_at; up to 100, names unique ignoring case), chat tools in `core/chat.ts` (`skillTools`, `useSkill`, `skillsBrief`), `meta.skills`, `Lyra.skills()/saveSkill()/deleteSkill()`, UI `SkillList`/`SkillSheet` in `web/src/screens/Memory.tsx`. Skills are in the database, so they sync and go into backups.
 
 ### Phase 16: inbox triage, when you ask
 

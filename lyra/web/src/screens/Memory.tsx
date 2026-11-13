@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Person } from "../../../core/people";
+import type { Skill } from "../../../core/skills";
 import { api, type Channel, type MemoryView } from "../api";
-import { ChannelIcon, Chevron } from "../icons";
+import { ChannelIcon, Chevron, Star } from "../icons";
 import { ago, parse } from "../when";
 
 const BLURB: Record<string, string> = {
@@ -15,7 +16,9 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
   const [view, setView] = useState<MemoryView | null>(null);
   const [draft, setDraft] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [tab, setTab] = useState<"notes" | "people">(() => (location.hash.includes("people") ? "people" : "notes"));
+  const [tab, setTab] = useState<"notes" | "people" | "skills">(() =>
+    location.hash.includes("people") ? "people" : location.hash.includes("skills") ? "skills" : "notes",
+  );
   const [tidyOn, setTidyOn] = useState<boolean | null>(null);
   const [tidying, setTidying] = useState(false);
 
@@ -97,7 +100,11 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
         )}
       </div>
       <p className="page-sub">
-        {tab === "people" ? "The people who matter to you, and what Lyra knows about each" : total ? `${total} ${total === 1 ? "fact" : "facts"}` : "Nothing saved yet"}
+        {tab === "people"
+          ? "The people who matter to you, and what Lyra knows about each"
+          : tab === "skills"
+            ? "How you like particular jobs done. Lyra follows one when a request fits"
+            : total ? `${total} ${total === 1 ? "fact" : "facts"}` : "Nothing saved yet"}
         {tab === "notes" && last ? ` · changed ${ago(parse(last.created_at))}` : ""}
       </p>
 
@@ -108,9 +115,13 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
         <button role="tab" aria-selected={tab === "people"} className={tab === "people" ? "on" : ""} onClick={() => setTab("people")}>
           People
         </button>
+        <button role="tab" aria-selected={tab === "skills"} className={tab === "skills" ? "on" : ""} onClick={() => setTab("skills")}>
+          Skills
+        </button>
       </div>
 
       {tab === "people" && <PeopleList toast={toast} />}
+      {tab === "skills" && <SkillList toast={toast} />}
 
       {tab === "notes" && view.sections.map((s) => (
         <section className="section" key={s.name}>
@@ -213,6 +224,115 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
 }
 
 const lines = (s: string) => s.split(/\n|,/).map((x) => x.trim()).filter(Boolean);
+
+/** Phase 17: skills, how the user wants particular jobs done. */
+function SkillList({ toast }: { toast: (m: string) => void }) {
+  const [skills, setSkills] = useState<Skill[] | null>(null);
+  const [editing, setEditing] = useState<Skill | "new" | null>(null);
+  const load = useCallback(() => void api.skills().then(setSkills, () => setSkills([])), []);
+  useEffect(load, [load]);
+  if (!skills) return <p className="hint">Loading…</p>;
+  return (
+    <section className="section">
+      {skills.length ? (
+        <div className="group">
+          {skills.map((s) => (
+            <button className="item skill-item" key={s.id} onClick={() => setEditing(s)}>
+              <span className="tile person-initial">
+                <Star size={16} />
+              </span>
+              <span className="body">
+                <div className="title">{s.name}</div>
+                <div className="sub">
+                  {s.use_when}
+                  {s.uses ? ` · used ${s.uses === 1 ? "once" : `${s.uses} times`}` : ""}
+                </div>
+              </span>
+              <Chevron className="chev" />
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="mem-empty">
+          No skills yet. Show Lyra how you like something done (“When I plan a trip: check flights, block my calendar, make a packing list. Save that as a skill.”), or write one here.
+        </p>
+      )}
+      <button className="btn quiet tidy-now" onClick={() => setEditing("new")}>
+        Add a skill
+      </button>
+      {editing && (
+        <SkillSheet
+          skill={editing === "new" ? null : editing}
+          toast={toast}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            load();
+          }}
+        />
+      )}
+    </section>
+  );
+}
+
+function SkillSheet({ skill, toast, onClose, onSaved }: { skill: Skill | null; toast: (m: string) => void; onClose: () => void; onSaved: () => void }) {
+  const [f, setF] = useState({ name: skill?.name ?? "", use_when: skill?.use_when ?? "", steps: skill?.steps ?? "" });
+  const [busy, setBusy] = useState(false);
+  const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
+  const save = async () => {
+    setBusy(true);
+    try {
+      await api.saveSkill(skill?.id ?? null, f);
+      toast("Saved");
+      onSaved();
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const remove = async () => {
+    if (!skill || !confirm(`Remove the skill “${skill.name}”?`)) return;
+    await api.deleteSkill(skill.id);
+    toast("Removed");
+    onSaved();
+  };
+  return (
+    <div className="dialog-layer sheet-layer" role="presentation">
+      <button className="dialog-scrim" aria-label="Close" tabIndex={-1} onClick={onClose} />
+      <div className="sheet person-sheet" role="dialog" aria-modal="true" aria-label={skill ? skill.name : "Add a skill"}>
+        <div className="action-edit">
+          <label className="action-field">
+            <span>Name</span>
+            <input value={f.name} maxLength={60} placeholder="Trip planning" onChange={set("name")} />
+          </label>
+          <label className="action-field">
+            <span>Use it when</span>
+            <input value={f.use_when} maxLength={200} placeholder="I ask you to plan a trip" onChange={set("use_when")} />
+          </label>
+          <label className="action-field">
+            <span>Steps</span>
+            <textarea rows={8} value={f.steps} placeholder={"1. Check flights from home\n2. Block the dates on my calendar\n3. Make a packing list"} onChange={set("steps")} />
+          </label>
+          <p className="hint">Skills change how Lyra does a job, not what it's allowed to do. Sending or booking still waits for your tap.</p>
+        </div>
+        <div className="action-buttons">
+          <button className="btn primary" disabled={busy || !f.name.trim() || !f.use_when.trim() || !f.steps.trim()} onClick={() => void save()}>
+            Save
+          </button>
+          <button className="btn quiet" onClick={onClose}>
+            Cancel
+          </button>
+          {skill && (
+            <button className="btn text" onClick={() => void remove()}>
+              Remove
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /** Phase 10: the people who matter, as cards. */
 function PeopleList({ toast }: { toast: (m: string) => void }) {

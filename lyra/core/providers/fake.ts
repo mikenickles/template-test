@@ -45,6 +45,8 @@ export class FakeProvider implements ModelProvider {
       if (result.name === "forget") return say("Done, that's gone.");
       if (result.name === "propose_email" || result.name === "propose_event") return say("It's ready for you to check.");
       if (result.name === "write_doc" || result.name === "update_doc") return say("It's in your Docs.");
+      if (result.name === "save_skill") return say("Learned it. I'll do it that way from now on.");
+      if (result.name === "use_skill") return say(`Doing it your way:\n\n${result.content.split("\n\n").slice(1).join("\n\n").slice(0, 400)}`);
       if (result.name === "show_triage") return say("Here's how your inbox sorts out (practice data: add an API key for the real thing).");
       return say(`Here's what I found.\n\n${result.content.replace(/<\/?untrusted_data[^>]*>/g, "").trim().slice(0, 400)}`);
     }
@@ -74,6 +76,12 @@ export class FakeProvider implements ModelProvider {
         can_wait: [{ thread_id: "abc123def457", from: "Example newsletter team", subject: "Monthly update", why: "Nothing to do" }],
         newsletters: [{ thread_id: "abc123def458", from: "Example store", subject: "Sale this weekend" }],
       });
+    // "save a skill called Trip planning: 1. Check flights 2. Pack": the practice model can learn a skill
+    const teach = text.match(/^save a skill called ([^:]+):\s*([\s\S]+)$/i);
+    if (teach && has("save_skill")) return call("save_skill", { name: teach[1].trim(), use_when: `you ask for ${teach[1].trim().toLowerCase()}`, steps: teach[2].trim() });
+    // "use my Trip planning skill"
+    const useIt = text.match(/^use my (.+?) skill\b/i);
+    if (useIt && has("use_skill")) return call("use_skill", { name: useIt[1] });
     // "make a doc called Packing list": the practice model can write a doc
     const doc = text.match(/^(?:make|write) (?:me )?a doc(?:ument)? (?:called|about|for) (.+)$/i);
     if (doc && has("write_doc")) return call("write_doc", { title: doc[1], body: "## To do\n- First thing\n- Second thing" });

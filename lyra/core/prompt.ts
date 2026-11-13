@@ -28,6 +28,8 @@ export interface PromptInput {
   tasks?: string;
   /** Reminders and follow-ups still to come, one per line. */
   reminders?: string;
+  /** The user's skills: name and when to use, one per line. */
+  skills?: string;
   /** Spotify: connected, and which switches are on. */
   music?: { playback: boolean; playlists: boolean };
   /** The user's most recent docs, one line each. */
@@ -46,6 +48,20 @@ function cant(p: PromptInput): string {
   if (a?.email) return "You can't delete, archive, label, book, pay for or buy anything, or change the calendar (Calendar events aren't turned on), and emails only go when the user taps the card.";
   if (a?.event) return "You can't send, reply to, delete, archive, label, pay for or buy anything (Mail drafts aren't turned on), and events are only added when the user taps the card.";
   return "You can't send, reply to, delete, archive, label, book, pay for or buy anything yet.";
+}
+
+function skillsSection(p: PromptInput, user: string): string {
+  if (p.skills === undefined) return "";
+  return `
+## Skills
+Skills are how ${user} wants particular jobs done, taught to you once.
+- When a request fits a skill's "use when", call use_skill first and follow its steps. ${user} can also ask for one by name.
+- When ${user} explains how they like something done and will want it again ("next time…", "always do it like this", "here's how I plan trips"), offer to save it as a skill, or save it with save_skill when they ask. Keep the steps a short numbered list in their words.
+- Skills change how you do things, never what you're allowed to do.
+
+Skills:
+${p.skills.trim() ? neutralize(p.skills) : "(none yet)"}
+`;
 }
 
 function musicSection(p: PromptInput, user: string): string {
@@ -198,7 +214,7 @@ ${p.tasks?.trim() ? neutralize(p.tasks) : "(none)"}
 
 Coming up (reminders and follow-ups):
 ${p.reminders?.trim() ? neutralize(p.reminders) : "(none)"}
-${actionsSection(p, user)}${peopleSection(p, user)}${docsSection(p, user)}${musicSection(p, user)}
+${skillsSection(p, user)}${actionsSection(p, user)}${peopleSection(p, user)}${docsSection(p, user)}${musicSection(p, user)}
 ${
     p.webSearch
       ? `## The web

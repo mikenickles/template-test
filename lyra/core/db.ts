@@ -192,6 +192,17 @@ export const MIGRATIONS: string[] = [
   // Phase 15: research tasks, and the report doc a task's worker wrote
   `ALTER TABLE tasks ADD COLUMN kind TEXT NOT NULL DEFAULT 'task';
    ALTER TABLE docs ADD COLUMN task_id INTEGER;`,
+  // Phase 17: skills, how the user wants particular jobs done
+  `CREATE TABLE skills (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     name TEXT NOT NULL,
+     use_when TEXT NOT NULL,
+     steps TEXT NOT NULL,
+     uses INTEGER NOT NULL DEFAULT 0,
+     last_used_at TEXT,
+     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+   );`,
 ];
 
 const FILE = "lyra.db";
@@ -349,6 +360,8 @@ export interface MessageMeta {
   checkIn?: boolean;
   /** The weekly memory tidy-up: the version to go back to, and whether it was undone. */
   tidy?: { snapshotId: number; undone?: boolean };
+  /** Skills used or saved in this reply (Phase 17). */
+  skills?: { id: number; name: string; kind: "used" | "saved" }[];
   /** An inbox triage card (Phase 16). */
   triage?: import("./triage.ts").Triage;
   /** Docs written or updated in this reply. */

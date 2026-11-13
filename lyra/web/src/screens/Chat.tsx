@@ -557,6 +557,15 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                       ))}
                     </div>
                   )}
+                  {!!m.meta.skills?.length && (
+                    <div className="people-notes">
+                      {m.meta.skills.map((s) => (
+                        <a key={`${s.kind}${s.id}`} className="person-chip skill-chip" href="#/memory?skills">
+                          {s.kind === "saved" ? `Learned ${s.name}` : `Followed ${s.name}`}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                   {!!m.meta.people?.length && (
                     <div className="people-notes">
                       {m.meta.people.map((p) => (

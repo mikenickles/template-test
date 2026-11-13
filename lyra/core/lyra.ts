@@ -14,6 +14,7 @@ import { CALENDAR_EVENTS, CALENDAR_READONLY, DRIVE_FILE, DRIVE_READONLY, GMAIL_C
 import * as A from "./actions.ts";
 import * as P from "./people.ts";
 import * as D from "./docs.ts";
+import * as S from "./skills.ts";
 import { SPOTIFY_PLAYBACK, SPOTIFY_PLAYLISTS, SPOTIFY_READ, SpotifyAuth, type OAuthRedirect } from "./connectors/spotify/auth.ts";
 import { createSpotifyServer } from "./connectors/spotify/server.ts";
 import { runTidy } from "./tidy.ts";
@@ -276,6 +277,19 @@ export class Lyra {
     const lyra = this;
     this.workspace = {
       main: memory,
+      skills: {
+        index: () => S.describeSkills(S.listSkills(this.db)),
+        use: (name) => {
+          const s = S.findSkill(this.db, name);
+          if (!s) return null;
+          S.markUsed(this.db, s.id);
+          return { id: s.id, name: s.name, steps: s.steps };
+        },
+        save: (input) => {
+          const r = S.saveSkill(this.db, { name: input.name, use_when: input.use_when, steps: input.steps });
+          return { id: r.skill.id, name: r.skill.name, created: r.created };
+        },
+      },
       docs: {
         recent: () => D.describeDocs(D.listDocs(this.db, 12)),
         write: (input, channelId, tainted) => {
@@ -1306,6 +1320,23 @@ export class Lyra {
       default:
         throw new Error("Action must be play, pause, next, previous or queue.");
     }
+  }
+
+  // ---------- skills (Phase 17) ----------
+
+  skills(): S.Skill[] {
+    return S.listSkills(this.db);
+  }
+
+  async saveSkill(id: number | null, input: { name: string; use_when: string; steps: string }): Promise<S.Skill> {
+    const r = S.saveSkill(this.db, { id, ...input });
+    await this.db.flush();
+    return r.skill;
+  }
+
+  async deleteSkill(id: number): Promise<void> {
+    S.deleteSkill(this.db, id);
+    await this.db.flush();
   }
 
   // ---------- docs (Phase 13) ----------

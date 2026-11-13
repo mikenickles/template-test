@@ -5438,8 +5438,12 @@ button.orb {
 
 /* ---------- Phase 10: people and the tidy-up ---------- */
 
+.mem-sections .page-sub {
+  margin-bottom: 0;
+}
+
 .mem-tabs {
-  margin: var(--s4) 0 var(--s2);
+  margin: var(--s5) 0 var(--s4);
   align-self: flex-start;
   display: inline-flex;
 }

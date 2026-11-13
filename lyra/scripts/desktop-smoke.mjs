@@ -130,6 +130,15 @@ check((await triage.getByText("Needs you · 1").count()) === 1 && (await triage.
 await triage.getByRole("button", { name: /Newsletters and promos/ }).click();
 await page.screenshot({ path: join(shots, "desktop-10-triage.png") });
 
+// ---- skills: teach one, then use it by name ----
+await page.getByPlaceholder("Message Lyra").fill("save a skill called Weekly review: 1. Look back at the week\n2. Plan Monday");
+await page.getByRole("button", { name: "Send" }).click();
+await page.locator(".skill-chip", { hasText: "Learned Weekly review" }).waitFor();
+await page.getByPlaceholder("Message Lyra").fill("use my weekly review skill");
+await page.getByRole("button", { name: "Send" }).click();
+await page.locator(".skill-chip", { hasText: "Followed Weekly review" }).waitFor();
+check(await page.getByText("Plan Monday").last().isVisible(), "a skill taught in chat is followed when asked for");
+
 // ---- Spotify: set up with your own app's Client ID, sign in through the browser (pretend) ----
 await app.evaluate(({ shell }) => {
   // instead of opening the browser: Spotify "sends the user back" straight away
