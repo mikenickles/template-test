@@ -10,6 +10,7 @@ import { ChannelInfo, NewChannelDialog } from "./screens/ChannelScreens";
 import { Chat } from "./screens/Chat";
 import { Memory } from "./screens/Memory";
 import { DocPage, Docs } from "./screens/Docs";
+import { QuickCapture } from "./QuickCapture";
 import { Settings, SETTINGS_SECTIONS, type SettingsSection } from "./screens/Settings";
 import { Soul } from "./screens/Soul";
 import { TaskPage, Tasks, WorkerLog } from "./screens/Tasks";
@@ -19,7 +20,7 @@ import { SyncConflict } from "./screens/SyncSection";
 import { StatusLine } from "./StatusLine";
 import { AwaySheet } from "./Away";
 import { deliver } from "./attach";
-import { appLock, isDesktop, notifier, shares } from "./platform";
+import { listen, appLock, isDesktop, notifier, shares } from "./platform";
 import { Star, TasksIcon } from "./icons";
 
 export type Route =
@@ -256,6 +257,20 @@ export function App() {
       }),
     [],
   );
+  // Quick capture: the Quick Settings tile, the widget's mic, or "Voice memo" in a chat's attach sheet.
+  // What you say goes to the main chat (a memo, to the chat it was started in).
+  const [capture, setCapture] = useState<{ mode: "quick" | "memo"; hash: string } | null>(null);
+  useEffect(() => listen.onCapture((m) => setCapture({ mode: m === "memo" ? "memo" : "quick", hash: "#/" })), []);
+  useEffect(() => {
+    const open = (e: Event) => setCapture({ mode: "memo", hash: (e as CustomEvent<string>).detail || "#/" });
+    addEventListener("lyra:memo", open);
+    return () => removeEventListener("lyra:memo", open);
+  }, []);
+  const captured = (hash: string, say: string) => {
+    sessionStorage.setItem("lyra.say", JSON.stringify({ hash, say, at: Date.now() }));
+    if (location.hash !== hash) location.hash = hash;
+    dispatchEvent(new Event("lyra:say"));
+  };
   // Workers change tasks in the background: keep the badge current.
   useEffect(() => onChange(() => refreshCounts()), [refreshCounts]);
   // The Chat tab returns to whichever chat you were last in.
@@ -472,6 +487,7 @@ export function App() {
         />
       )}
       <SyncConflict />
+      {capture && <QuickCapture mode={capture.mode} onSend={(t) => captured(capture.hash, t)} onClose={() => setCapture(null)} />}
       <AwaySheet />
       {/* over the app, not instead of it: a half-typed message or an open form is still there after unlocking */}
       {locked && <LockScreen onUnlock={unlocked} />}

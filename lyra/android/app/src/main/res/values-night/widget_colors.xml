@@ -3,4 +3,5 @@
     <color name="widget_bg">#16181D</color>
     <color name="widget_text">#ECEEF1</color>
     <color name="widget_muted">#9BA0A8</color>
+    <color name="widget_mic">#2A2D33</color>
 </resources>

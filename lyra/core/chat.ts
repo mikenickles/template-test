@@ -124,6 +124,9 @@ export interface Workspace {
     list(): string;
     create(kind: "remind" | "follow_up", text: string, at: string, channelId: number | null): { id: number; when: string };
     cancel(id: number): string;
+    /** a reminder for arriving at or leaving a place (set on the phone as a geofence) */
+    atPlace?(text: string, place: string, on: "arrive" | "leave", channelId: number | null): Promise<{ id: number; place: string }>;
+    cancelPlace?(id: number): string;
   };
 }
 
@@ -529,9 +532,23 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
       },
     },
     {
+      name: "remind_at_place",
+      description:
+        "Remind the user when they arrive at a place, or leave one: 'when I get to Costco', 'when I leave work'. It goes off on their phone, even with Lyra closed. place: a saved place's name (Home, Work…) or a name or address to look up near them.",
+      schema: {
+        type: "object",
+        properties: {
+          text: { type: "string", description: "What to remind them of, as they'd want to read it: 'Grab milk'." },
+          place: { type: "string", description: "Where: 'Home', 'Costco', '123 Main St'." },
+          on: { type: "string", enum: ["arrive", "leave"] },
+        },
+        required: ["text", "place"],
+      },
+    },
+    {
       name: "cancel_reminder",
-      description: "Cancel a reminder or follow-up that's no longer needed. The coming ones are listed in your instructions with their #id.",
-      schema: { type: "object", properties: { id: { type: "number" } }, required: ["id"] },
+      description: "Cancel a reminder or follow-up that's no longer needed. The coming ones are listed in your instructions with their #id (a place reminder's id starts with p, like p3).",
+      schema: { type: "object", properties: { id: { type: ["number", "string"] } }, required: ["id"] },
     },
     {
       name: "suggest_replies",
@@ -1324,13 +1341,18 @@ async function runTool(
     }
   }
 
-  if (name === "set_reminder" || name === "follow_up" || name === "cancel_reminder") {
+  if (name === "set_reminder" || name === "follow_up" || name === "cancel_reminder" || name === "remind_at_place") {
     const rs = ctx.workspace.reminders;
     if (!rs) return fail("Reminders aren't available.");
     if (name === "cancel_reminder") {
       if (state.tainted) return fail("Not cancelled: outside content was read this turn. Ask the user, and cancel it once they say yes.");
       try {
-        return { content: rs.cancel(Number(input.id)), isError: false };
+        const id = String(input.id ?? "");
+        if (/^p\d+$/i.test(id)) {
+          if (!rs.cancelPlace) return fail("Place reminders aren't available here.");
+          return { content: rs.cancelPlace(Number(id.slice(1))), isError: false };
+        }
+        return { content: rs.cancel(Number(id)), isError: false };
       } catch (e) {
         return fail((e as Error).message);
       }
@@ -1338,6 +1360,16 @@ async function runTool(
     // a reminder the user asked for in their own words is theirs to ask for, whatever was read since
     if (state.tainted && !state.asked(ASKED_REMINDER))
       return fail("Not set: outside content was read this turn and they didn't ask for a reminder. Say in a few words what you'd set and when, and offer it with suggest_replies; set it once they say yes.");
+    if (name === "remind_at_place") {
+      if (!rs.atPlace) return fail("Place reminders aren't available.");
+      try {
+        const r = await rs.atPlace(String(input.text ?? ""), String(input.place ?? ""), input.on === "leave" ? "leave" : "arrive", ctx.channel?.id ?? null);
+        emit.status(`Reminder set for ${r.place}`);
+        return { content: `Set (#p${r.id}): it goes off on their phone ${input.on === "leave" ? "when they leave" : "when they get to"} ${r.place}.`, isError: false };
+      } catch (e) {
+        return fail((e as Error).message);
+      }
+    }
     const kind = name === "set_reminder" ? "remind" : "follow_up";
     try {
       const r = rs.create(kind, String((kind === "remind" ? input.text : input.about) ?? ""), String(input.at ?? ""), ctx.channel?.id ?? null);

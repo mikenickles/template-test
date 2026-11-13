@@ -1,3 +1,4 @@
+import { PLACE_MIGRATION } from "./places.ts";
 import type { Database, SqlJsStatic, SqlValue } from "sql.js";
 
 /**
@@ -239,6 +240,8 @@ export const MIGRATIONS: string[] = [
   `ALTER TABLE docs ADD COLUMN kind TEXT NOT NULL DEFAULT 'doc';
    ALTER TABLE docs ADD COLUMN instructions TEXT NOT NULL DEFAULT '';
    ALTER TABLE docs ADD COLUMN refreshed_at TEXT;`,
+  // place reminders (geofences on the phone)
+  PLACE_MIGRATION,
 ];
 
 const FILE = "lyra.db";
@@ -406,6 +409,8 @@ export interface MessageMeta {
   docs?: { id: number; title: string; created: boolean; kind?: "doc" | "dashboard" }[];
   /** this post reached a phone by push (set on the home base) */
   pushed?: boolean;
+  /** a place reminder that went off */
+  placeReminder?: { id: number; place: string };
   /** what's on a scanned paper, with what the user did about each item */
   scan?: import("./scan.ts").Scan;
   /** People cards added or updated in this reply. */

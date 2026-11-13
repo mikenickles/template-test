@@ -9,6 +9,7 @@ import { ModelSettings } from "./ModelSettings";
 import { GoogleSetupSection, SyncSection } from "./SyncSection";
 import { UpdatesSection } from "./UpdatesSection";
 import { WeatherSection } from "./WeatherSection";
+import { PlacesSection } from "./PlacesSection";
 import { useEffect } from "react";
 
 export type SettingsSection = "model" | "usage" | "you" | "alerts" | "sync" | "about";
@@ -599,6 +600,7 @@ function AlertsSection({ state, run, busy, toast }: { state: AppState; run: (fn:
 
       <HeadsUps state={state} run={run} busy={busy} />
       <BackgroundSection toast={toast} />
+      <PlacesSection toast={toast} />
 
       <section className="section">
         <h2 className="section-label">Privacy</h2>

@@ -68,6 +68,7 @@ export class FakeProvider implements ModelProvider {
       }
       if (result.name === "save_skill") return say("Learned it. I'll do it that way from now on.");
       if (result.name === "use_skill") return say(`Doing it your way:\n\n${result.content.split("\n\n").slice(1).join("\n\n").slice(0, 400)}`);
+      if (result.name === "remind_at_place") return say("Done, I'll remind you when you get there 📍");
       if (result.name === "show_scan") return say("Three things on it. Tap to get a reminder or add one to your list (practice items: add an API key for the real thing).");
       if (result.name === "show_triage") return say("Here's how your inbox sorts out (practice data: add an API key for the real thing).");
       return say(`Here's what I found.\n\n${result.content.replace(/<\/?untrusted_data[^>]*>/g, "").trim().slice(0, 400)}`);
@@ -120,6 +121,16 @@ export class FakeProvider implements ModelProvider {
     if (has("save_dashboard")) {
       return call("save_dashboard", { subtitle: "New practice numbers", blocks: practiceBlocks(1 + (Date.now() % 6)) });
     }
+    // a voice memo: the practice model shows a sample card from it
+    const memo = text.match(/^voice memo:\s*([\s\S]+)$/i);
+    if (memo && has("show_scan")) {
+      const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+      const parts = memo[1].split(/\band\b|[.,;]/i).map((p) => p.trim()).filter((p) => p.length > 3).slice(0, 3);
+      return call("show_scan", { title: "From your memo", items: (parts.length ? parts : [memo[1]]).map((p, i) => (i === 0 ? { kind: "deadline", text: p, when: day(2) } : { kind: "todo", text: p })) });
+    }
+    // "remind me to grab milk when I get to Home": the practice model can set a place reminder
+    const atPlace = text.match(/^remind me to (.+?) when I (get to|leave) (.+)$/i);
+    if (atPlace && has("remind_at_place")) return call("remind_at_place", { text: atPlace[1], place: atPlace[3], on: atPlace[2].toLowerCase() === "leave" ? "leave" : "arrive" });
     // "make a dashboard called Spending": the practice model can make one (made-up numbers, said so)
     const dash = text.match(/^(?:make|build) (?:me )?a dashboard (?:called|about|for|of) (.+)$/i);
     if (dash && has("make_dashboard"))

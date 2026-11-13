@@ -248,6 +248,7 @@ export async function createPlatform(): Promise<Platform> {
     secrets: isNative ? nativeSecrets : isDesktop ? deskSecrets! : webSecrets,
     google: isNative ? nativeGoogle : isDesktop ? desktopGoogle : webGoogle,
     ...(isNative ? { contacts: phoneContacts } : {}),
+    ...(isNative ? { places: phonePlaces } : {}),
     ...(isNative ? { oauth: phoneOAuth } : desk?.oauth ? { oauth: deskOAuth } : {}),
   };
 }
@@ -305,6 +306,8 @@ const phoneContacts = {
 const REMINDER_BASE = 100_000;
 const NOTICE_BASE = 200_000;
 const ONE_OFF_BASE = 300_000;
+/** Leave-now nudges scheduled ahead: 500,000 + a number from the event. */
+const LEAVE_BASE = 500_000;
 /** Life admin heads-ups scheduled ahead: 2,000,000 + the item's id. */
 const ADMIN_BASE = 2_000_000;
 // (starts from the clock, so a notice after a reload doesn't replace one that's still unread)
@@ -433,12 +436,36 @@ export const notifier = {
     });
   },
 
+  /** Replace the leave-now nudges with these (each at its leave time, with a Directions button). */
+  async leaveNotices(list: { key: string; at: Date; title: string; body: string; maps: string }[]): Promise<void> {
+    if (!isNative) return;
+    const pending = await LocalNotifications.getPending().catch(() => ({ notifications: [] as { id: number }[] }));
+    const old = pending.notifications.filter((n) => n.id >= LEAVE_BASE && n.id < LEAVE_BASE + 100_000);
+    if (old.length) await LocalNotifications.cancel({ notifications: old.map((n) => ({ id: n.id })) });
+    const future = list.filter((n) => n.at.getTime() > Date.now() + 30_000);
+    if (!future.length || (await LocalNotifications.checkPermissions()).display !== "granted") return;
+    await LocalNotifications.registerActionTypes({ types: [{ id: "leave", actions: [{ id: "maps", title: "Directions", foreground: true }] }] }).catch(() => {});
+    const num = (k: string) => [...k].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 99_991, 7);
+    await LocalNotifications.schedule({
+      notifications: future.map((n) => ({
+        id: LEAVE_BASE + num(n.key),
+        title: n.title,
+        body: n.body,
+        actionTypeId: "leave",
+        extra: { hash: "#/", maps: n.maps },
+        schedule: { at: n.at, allowWhileIdle: true },
+      })),
+    });
+  },
+
   /** Opening a notification goes to the chat it's about; one of its buttons also sends that step there. */
   onOpen(fn: (hash: string, say?: string) => void): () => void {
     if (desk) return desk.onOpenHash((h) => fn(h));
     if (!isNative) return () => {};
     const sub = LocalNotifications.addListener("localNotificationActionPerformed", (a) => {
-      const extra = a.notification.extra as { hash?: string; options?: string[] } | undefined;
+      const extra = a.notification.extra as { hash?: string; options?: string[]; maps?: string } | undefined;
+      // a leave-now nudge: Directions (or the nudge itself) opens Maps
+      if (extra?.maps) return void Links.open({ url: extra.maps }).catch(() => window.open(extra.maps, "_blank"));
       const say = /^\d$/.test(a.actionId) ? extra?.options?.[Number(a.actionId)] : undefined;
       if (extra?.hash) fn(extra.hash, say);
     });
@@ -599,6 +626,63 @@ export const shares = {
 // ---------- working in the background ----------
 // Phone: "Keep watch" runs a quiet foreground service so Lyra keeps going in the background,
 // woken every 15 minutes. Computer: closing the window leaves Lyra in the tray.
+
+// ---------- location: place reminders and leave-now (phone only, once allowed) ----------
+
+const NativePlaces = registerPlugin<{
+  status(): Promise<{ access: "none" | "while-open" | "always" }>;
+  allow(o: { always: boolean }): Promise<{ access: "none" | "while-open" | "always" }>;
+  here(): Promise<{ lat: number; lng: number }>;
+  find(o: { query: string; lat?: number; lng?: number }): Promise<{ places: { lat: number; lng: number; label: string }[] }>;
+  fences(o: { list: { id: number; text: string; place: string; lat: number; lng: number; radius: number; on: "arrive" | "leave" }[] }): Promise<{ set: number }>;
+  fired(): Promise<{ ids: number[] }>;
+}>("LyraPlaces");
+
+const phonePlaces = {
+  access: async () => (await NativePlaces.status()).access,
+  here: () => NativePlaces.here(),
+  find: async (query: string, near?: { lat: number; lng: number }) => (await NativePlaces.find({ query, ...(near ?? {}) })).places,
+};
+
+export const places = {
+  available: isNative,
+  access: async (): Promise<"none" | "while-open" | "always" | "unavailable"> => (isNative ? (await NativePlaces.status()).access : "unavailable"),
+  /** always: also "Allow all the time", which place reminders need (they go off with Lyra closed) */
+  allow: async (always: boolean) => (await NativePlaces.allow({ always })).access,
+  here: () => NativePlaces.here(),
+  find: phonePlaces.find,
+  fences: async (list: Parameters<typeof NativePlaces.fences>[0]["list"]) => (isNative ? (await NativePlaces.fences({ list })).set : 0),
+  fired: async () => (isNative ? (await NativePlaces.fired()).ids : []),
+};
+
+// ---------- listening: quick capture and voice memos (the phone's speech recognition) ----------
+
+const NativeListen = registerPlugin<{
+  available(): Promise<{ available: boolean }>;
+  start(o: { memo: boolean }): Promise<void>;
+  stop(): Promise<void>;
+  cancel(): Promise<void>;
+  addListener(e: "words", fn: (o: { text?: string; done?: boolean; error?: string }) => void): Promise<{ remove(): Promise<void> }>;
+  addListener(e: "capture", fn: (o: { mode: string }) => void): Promise<{ remove(): Promise<void> }>;
+}>("LyraListen");
+
+export const listen = {
+  available: isNative,
+  start: (memo: boolean) => NativeListen.start({ memo }),
+  stop: () => NativeListen.stop(),
+  cancel: () => NativeListen.cancel().catch(() => {}),
+  onWords(fn: (o: { text?: string; done?: boolean; error?: string }) => void): () => void {
+    if (!isNative) return () => {};
+    const sub = NativeListen.addListener("words", fn);
+    return () => void sub.then((s) => s.remove());
+  },
+  /** the Quick Settings tile or the widget's mic opened Lyra */
+  onCapture(fn: (mode: string) => void): () => void {
+    if (!isNative) return () => {};
+    const sub = NativeListen.addListener("capture", (o) => fn(o.mode));
+    return () => void sub.then((s) => s.remove());
+  },
+};
 
 const NativePush = registerPlugin<{
   register(o: { projectId: string; appId: string; apiKey: string; senderId: string }): Promise<{ token: string }>;

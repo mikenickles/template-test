@@ -745,6 +745,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
               {(
                 [
                   ["Scan a paper (flyer, slip, receipt)", scanPick],
+                  ["Voice memo", null],
                   ["Take a photo", cameraPick],
                   ["Photo library", photoPick],
                   ["File (PDF or text)", filePick],
@@ -755,6 +756,8 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                   className="item"
                   onClick={() => {
                     setAttaching(false);
+                    // a voice memo opens the listening sheet, and what you say comes back to this chat
+                    if (!ref) return void dispatchEvent(new CustomEvent("lyra:memo", { detail: channelId === null ? "#/" : `#/c/${channelId}` }));
                     ref.current?.click();
                   }}
                 >

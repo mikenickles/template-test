@@ -23,6 +23,10 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(LinksPlugin.class);
         // push from the home base (your always-on computer), once you've set it up
         registerPlugin(PushPlugin.class);
+        // quick capture and voice memos (the phone's speech recognition), and the tile and widget mic
+        registerPlugin(ListenPlugin.class);
+        // place reminders and leave-now nudges, once you allow location
+        registerPlugin(PlacesPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

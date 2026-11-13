@@ -25,7 +25,8 @@ import { HOME_STALE_MS, readSyncState, Sync, type SnapshotInfo, type SyncResult 
 import { DriveSyncRemote } from "../../core/sync-drive";
 import { applyUpdate, checkForUpdate, watchForUpdates } from "./updater";
 import { watchWidget } from "./widget";
-import { background, createPlatform, deviceKind, isDesktop, isNative, keepBackupCopy, notifier, push, shareFile } from "./platform";
+import { background, createPlatform, deviceKind, isDesktop, isNative, keepBackupCopy, notifier, places, push, shareFile } from "./platform";
+import { directionsLink, driveSeconds, leaveAt } from "../../core/places";
 
 export type MemoryNote = CoreNote;
 export type Message = StoredMessage;
@@ -76,6 +77,7 @@ const ready: Promise<Lyra> = createPlatform().then(async (p) => {
   if (isNative) void CapApp.addListener("pause", () => void lyra.flush());
   addEventListener("pagehide", () => void lyra.flush());
   watchForNotices(lyra);
+  watchPlaces(lyra);
   void askToNotify(lyra);
   void signUpForPush(lyra);
   if (Number.isFinite(pulledAfter)) void tellWhatsNew(lyra, pulledAfter);
@@ -132,6 +134,7 @@ function runRoutines(lyra: Lyra): void {
   background.onTick(async () => {
     if (sync.state.enabled) await syncNow(lyra);
     if (restarting) return;
+    await onWake().catch(() => {});
     await tick();
     await Promise.race([lyra.routinesRunner.settle(), new Promise((r) => setTimeout(r, 150_000))]);
     await lyra.flush();
@@ -167,6 +170,87 @@ async function askToNotify(lyra: Lyra): Promise<void> {
     });
   } catch (e) {
     console.error("[lyra] notification permission", e);
+  }
+}
+
+// ---------- places: reminders on arrival, and when to leave ----------
+
+/** Leave-now nudges are this phone's choice (localStorage), since they use where it is. */
+export const LEAVE_NOW = "lyra.leaveNow";
+const placeCache = new Map<string, { lat: number; lng: number } | null>();
+/** Extra work for the phone's 15-minute wake-up (places), set once places are watched. */
+let onWake: () => Promise<void> = async () => {};
+let leaveAtLast = 0;
+
+function watchPlaces(lyra: Lyra): void {
+  if (!places.available) return;
+  // the pending place reminders become the phone's geofences
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const fences = () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      try {
+        if ((await places.access()) !== "always") return;
+        await places.fences(lyra.placeReminders().map((r) => ({ id: r.id, text: r.text, place: r.place, lat: r.lat, lng: r.lng, radius: r.radius, on: r.on_event })));
+      } catch (e) {
+        console.error("[lyra] place reminders", e);
+      }
+    }, 800);
+  };
+  // ones that went off while Lyra was closed (Android showed them): mark them done
+  const fired = async () => {
+    const ids = await places.fired().catch(() => [] as number[]);
+    if (ids.length) await lyra.placeRemindersFired(ids);
+  };
+  fences();
+  void fired().then(() => planLeaving(lyra, true));
+  lyra.onChange((e) => e.type === "reminder" && fences());
+  void CapApp.addListener("resume", () => {
+    void fired();
+    void planLeaving(lyra, true);
+  });
+  // on each 15-minute wake-up (run inside the routines' handler, which holds the wake lock)
+  onWake = async () => {
+    await fired();
+    await planLeaving(lyra, true);
+  };
+  setInterval(() => void planLeaving(lyra), 60_000);
+}
+
+/** Schedule a nudge at the time to leave for each event with a place in the next few hours. */
+async function planLeaving(lyra: Lyra, now = false): Promise<void> {
+  try {
+    if (localStorage.getItem(LEAVE_NOW) !== "1" || !lyra.state().notifications) return;
+    // every 10 minutes while open (and on each wake-up or return)
+    if (!now && Date.now() - leaveAtLast < 10 * 60_000) return;
+    leaveAtLast = Date.now();
+    if ((await places.access()) === "none") return;
+    const trips = await lyra.upcomingTrips();
+    if (!trips.length) return void (await notifier.leaveNotices([]));
+    const here = await places.here();
+    const out: Parameters<typeof notifier.leaveNotices>[0] = [];
+    for (const t of trips) {
+      let to = placeCache.get(t.place);
+      if (to === undefined) {
+        to = (await places.find(t.place, here).catch(() => []))[0] ?? null;
+        placeCache.set(t.place, to);
+      }
+      if (!to) continue;
+      const secs = await driveSeconds(here, to, (...a) => fetch(...a));
+      const at = secs === null ? null : leaveAt(t.start, secs);
+      if (!at || secs === null) continue;
+      const starts = new Date(t.start).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      out.push({
+        key: `${t.id}`,
+        at,
+        title: `Time to leave for ${t.title}`,
+        body: `About ${Math.round(secs / 60)} min by car from where you are (without traffic). It starts at ${starts}.`,
+        maps: directionsLink(to),
+      });
+    }
+    await notifier.leaveNotices(out);
+  } catch (e) {
+    console.error("[lyra] leave now", e);
   }
 }
 
@@ -613,6 +697,18 @@ export const api = {
   action: async (id: number) => (await ready).action(id),
   decideAction: async (id: number, choice: "send" | "draft" | "add" | "decline", edited?: Record<string, unknown>) => (await ready).decideAction(id, choice, edited),
   scanAction: async (messageId: number, which: number | "all") => (await ready).scanAction(messageId, which),
+  places: async () => (await ready).places(),
+  savePlace: async (name: string) => (await ready).savePlace(name),
+  forgetPlace: async (name: string) => (await ready).forgetPlace(name),
+  placeReminders: async () => (await ready).placeReminders(),
+  cancelPlaceReminder: async (id: number) => (await ready).cancelPlaceReminder(id),
+  /** Turn leave-now nudges on or off on this phone, and plan them right away. */
+  setLeaveNow: async (on: boolean) => {
+    const lyra = await ready;
+    localStorage.setItem(LEAVE_NOW, on ? "1" : "0");
+    if (on) await planLeaving(lyra, true);
+    else await notifier.leaveNotices([]);
+  },
 };
 
 export interface StreamHandlers {

@@ -68,6 +68,19 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+        <!-- place reminders: a geofence went off (works with Lyra closed) -->
+        <receiver android:name=".PlacesPlugin$FenceReceiver" android:exported="false" />
+        <!-- Quick Settings tile: one tap opens Lyra listening -->
+        <service
+            android:name=".CaptureTile"
+            android:exported="true"
+            android:icon="@drawable/ic_tile"
+            android:label="Lyra"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
         <!-- push from the home base: Lyra draws it, with buttons and the chat to open -->
         <service android:name=".LyraMessagingService" android:exported="false">
             <intent-filter>
@@ -95,6 +108,13 @@
 
     <!-- Permissions -->
 
+    <!-- quick capture and voice memos use the phone's speech recognition service -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
+
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- live voice: the microphone, only while a call is open (Android asks you first) -->
@@ -111,4 +131,8 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- Phase 10: look one name up in your contacts, only once you turn it on (Android asks first) -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- place reminders and leave-now nudges, only once you turn them on (Android asks first) -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 </manifest>

@@ -70,7 +70,7 @@ export function remindAt(i: ScanItem): string | null {
 export const SCAN_TOOL = {
   name: "show_scan",
   description:
-    "When the user sends a photo or file of a paper (a flyer, permission slip, receipt, invitation, schedule, bill, letter), show what on it needs doing as a card with buttons: each date, deadline, to-do and amount, one per item. The user taps to get a reminder or add it to their list. Then say the gist in a sentence; don't repeat the list.",
+    "When the user sends a photo or file of a paper (a flyer, permission slip, receipt, invitation, schedule, bill, letter), or a voice memo, show what in it needs doing as a card with buttons: each date, deadline, to-do and amount, one per item. The user taps to get a reminder or add it to their list. Then say the gist in a sentence; don't repeat the list.",
   schema: {
     type: "object",
     properties: {

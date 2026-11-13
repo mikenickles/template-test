@@ -43,6 +43,10 @@ public class LyraWidget extends AppWidgetProvider {
         if (b != null) v.setImageViewBitmap(R.id.widget_avatar, b);
         Intent open = c.getPackageManager().getLaunchIntentForPackage(c.getPackageName());
         v.setOnClickPendingIntent(R.id.widget_root, PendingIntent.getActivity(c, 1, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
+        Intent talk = new Intent(c, MainActivity.class)
+            .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            .putExtra(ListenPlugin.CAPTURE, "quick");
+        v.setOnClickPendingIntent(R.id.widget_mic, PendingIntent.getActivity(c, 2, talk, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
         return v;
     }
 
