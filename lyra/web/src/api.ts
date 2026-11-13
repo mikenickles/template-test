@@ -125,6 +125,12 @@ function autoName(iso: string): string {
   return `Lyra auto ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}.lyra`;
 }
 
+/** A text field with something typed in it, other than the message box (which is checked on its own). */
+function editingField(el: Element | null): boolean {
+  if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return false;
+  return !el.closest(".composer") && !!el.value.trim();
+}
+
 function restartApp(): void {
   restarting = true;
   location.replace(`${location.pathname}#/`);
@@ -135,8 +141,10 @@ async function syncNow(lyra: Lyra, opts: { pull?: boolean } = {}): Promise<SyncR
   if (!sync.state.enabled || restarting) return "off";
   // a half-written message or a photo waiting to send: not a moment to reload
   const typing = !!document.querySelector<HTMLTextAreaElement>(".composer textarea")?.value.trim() || !!document.querySelector(".drafts");
+  // nor while a form, sheet or editor is open (a doc, a routine, a person): the reload would throw the edits away
+  const editing = !!document.querySelector(".dialog-layer, .editor, .doc-screen textarea, .action-edit") || editingField(document.activeElement);
   // nor in the middle of a voice call
-  const canPull = opts.pull !== false && !lyra.busy && !typing && !document.body.dataset.call;
+  const canPull = opts.pull !== false && !lyra.busy && !typing && !editing && !document.body.dataset.call;
   try {
     const r = await sync.check(canPull);
     if (r === "pulled") restartApp();
@@ -387,6 +395,7 @@ export const api = {
   talkStyle: async () => (await ready).talkStyle(),
   learnStyleNow: async () => (await ready).learnStyleNow(),
   forgetStyle: async () => (await ready).forgetStyle(),
+  replyingIn: async () => (await ready).replyingIn(),
   skills: async () => (await ready).skills(),
   saveSkill: async (id: number | null, input: { name: string; use_when: string; steps: string }) => (await ready).saveSkill(id, input),
   deleteSkill: async (id: number) => (await ready).deleteSkill(id),

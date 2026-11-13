@@ -98,6 +98,7 @@ export function App() {
   const wide = useWide();
   const [state, setState] = useState<AppState | null>(null);
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [channelsLoaded, setChannelsLoaded] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [creating, setCreating] = useState(false);
   const creatingRef = useRef(creating);
@@ -121,6 +122,9 @@ export function App() {
   useEffect(() => {
     if (!isNative) return;
     const sub = CapApp.addListener("backButton", () => {
+      // a sheet or dialog is open (a person, a skill, attach, message actions…): back closes it
+      const scrim = document.querySelector<HTMLElement>(".dialog-layer .dialog-scrim");
+      if (scrim && !creatingRef.current) return scrim.click();
       if (creatingRef.current) return setCreating(false);
       if (drawerRef.current) return setDrawer(false);
       const to = backFrom(readRoute());
@@ -233,7 +237,10 @@ export function App() {
     () =>
       api
         .channels()
-        .then((next) => setChannels((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next)))
+        .then((next) => {
+          setChannelsLoaded(true);
+          setChannels((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+        })
         .catch(() => {}),
     [],
   );
@@ -278,7 +285,6 @@ export function App() {
       </div>
     );
   if (!state) return <div className="center-load">Loading…</div>;
-  if (locked) return <LockScreen onUnlock={unlocked} />;
 
   const initial = (state.userName !== "you" ? state.userName : "Me").charAt(0).toUpperCase();
   const inChat = route.name === "chat" || route.name === "tasks";
@@ -366,7 +372,7 @@ export function App() {
         {route.name === "chat" && !channelMissing && (
           <Chat key={route.channelId ?? "main"} focus={route.focus} hasOpenAI={state.keys.openai} userName={state.userName} toast={toast} channel={channel ?? null} onTasksChanged={refreshCounts} />
         )}
-        {channelMissing && <div className="center-load">Loading…</div>}
+        {channelMissing && <MissingChannel loaded={channelsLoaded} />}
         {route.name === "channel-info" && (
           <ChannelInfo key={route.channelId} id={route.channelId} toast={toast} onChange={refreshChannels} />
         )}
@@ -433,6 +439,8 @@ export function App() {
       )}
       <SyncConflict />
       <AwaySheet />
+      {/* over the app, not instead of it: a half-typed message or an open form is still there after unlocking */}
+      {locked && <LockScreen onUnlock={unlocked} />}
       {/* tapping the slid-aside chat closes the menu */}
       {!wide && <button className="shell-scrim" aria-label="Close menu" tabIndex={drawer ? 0 : -1} onClick={() => setDrawer(false)} />}
     </div>
@@ -452,6 +460,14 @@ function session(key: string, value?: string | null): string | null {
     // unavailable: Lyra just locks more often
   }
   return null;
+}
+
+/** A link to a channel that's gone (deleted here or on your other device): back to the main chat. */
+function MissingChannel({ loaded }: { loaded: boolean }) {
+  useEffect(() => {
+    if (loaded) location.replace("#/");
+  }, [loaded]);
+  return <div className="center-load">Loading…</div>;
 }
 
 /** Unlocked in this session, and not away for longer than the lock delay since. */

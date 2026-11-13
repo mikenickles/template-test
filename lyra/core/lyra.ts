@@ -639,6 +639,8 @@ export class Lyra {
     const a = A.getAction(this.db, id);
     if (!a) throw new Error("That's no longer here.");
     if (!A.claimAction(this.db, id)) throw new Error(a.status === "done" ? "That's already done." : a.status === "declined" ? "You said not now to that one." : "That's already being done.");
+    // saved as "being done" before anything is sent: if the app dies mid-send, the card says to check, and can't send twice
+    await this.db.flush();
     if (choice === "decline") {
       A.finishAction(this.db, id, { status: "declined" });
     } else {
@@ -849,7 +851,7 @@ export class Lyra {
     if (channel === undefined) throw new Error("That channel no longer exists.");
     // Back to back: while Lyra is answering in this chat, a new message joins that reply.
     const t = this.turn;
-    if (t && t.open && t.channelId === channelId && !attachments.length) {
+    if (t && t.open && !this.running?.signal.aborted && t.channelId === channelId && !attachments.length) {
       const user = addMessage(this.db, "user", clean, {}, channelId);
       t.items.push(clean);
       t.wake?.();
@@ -867,7 +869,8 @@ export class Lyra {
     let fail!: (e: unknown) => void;
     const done = new Promise<StoredMessage>((res, rej) => ((finish = res), (fail = rej)));
     done.catch(() => {});
-    const turn: NonNullable<Lyra["turn"]> = { channelId, items: [], open: true, done };
+    // not open for more until this message is saved (runTurn does that first thing)
+    const turn: NonNullable<Lyra["turn"]> = { channelId, items: [], open: false, done };
     this.turn = turn;
     const inbox: TurnInbox = {
       take: () => turn.items.splice(0),
@@ -876,6 +879,7 @@ export class Lyra {
     };
     try {
       const provider = metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "chat", this.db, this.p.timeZone);
+      turn.open = true;
       const message = await runTurn(
         {
           db: this.db,
@@ -895,6 +899,8 @@ export class Lyra {
         inbox,
       );
       finish(message);
+      // a chat screen that was closed and reopened mid-reply hears that it's done
+      this.listeners.forEach((l) => l({ type: "message", channelId }));
       // the cards in this reply know where they are, for "jump to it" from Today
       for (const id of message.meta.actions ?? []) this.db.run("UPDATE actions SET message_id = ? WHERE id = ?", [message.id, id]);
       return { message, user: userMessageBefore(this.db, channelId, message.id) };
@@ -907,6 +913,11 @@ export class Lyra {
       this.running = undefined;
       void this.db.flush();
     }
+  }
+
+  /** The chat a reply is being written in right now (undefined when none is). */
+  replyingIn(): number | null | undefined {
+    return this.turn?.channelId;
   }
 
   stop(): void {

@@ -335,7 +335,11 @@ export const notifier = {
     const old = pending.notifications.filter((n) => n.id >= REMINDER_BASE && n.id < NOTICE_BASE);
     if (old.length) await LocalNotifications.cancel({ notifications: old.map((n) => ({ id: n.id })) });
     if (!active.length || !(await allowed())) return;
-    const notifications = active.flatMap((r) =>
+    // A routine that runs many times a day ("every 15 min") gets no "tap to run" reminders: there would be
+    // hundreds (Android caps scheduled alarms) and ids only leave room for 10 times a day. Keep watch runs those.
+    const few = active.filter((r) => r.times.split(",").length <= 8);
+    if (!few.length) return;
+    const notifications = few.flatMap((r) =>
       r.times.split(",").flatMap((t, ti) => {
         const [hour, minute] = t.split(":").map(Number);
         return r.days.split("").map((d) => ({

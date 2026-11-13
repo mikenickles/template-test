@@ -668,9 +668,16 @@ export async function runTurn(
       return true;
     };
     let restarts = 0;
+    // a message that arrives during the last step earns a little more room, so it isn't dropped
+    let extra = 0;
+    let paused = false;
 
-    for (let step = 0; step < MAX_STEPS; step++) {
-      takeNew();
+    for (let step = 0; step < MAX_STEPS + extra; step++) {
+      // Stop was tapped between steps (say, while a tool was running)
+      if (signal?.aborted) throw new Error("Stopped");
+      // (not right after a pause: the model's turn has to be resumed as it stands)
+      if (!paused) takeNew();
+      paused = false;
       let started = false;
       // A message arriving while Lyra is still thinking (nothing written yet) restarts this
       // step with it included, so it's part of the same thought.
@@ -711,9 +718,15 @@ export async function runTurn(
       if (result.sources) sources.push(...result.sources);
       const calls = result.parts.filter((p): p is Extract<Part, { type: "tool_call" }> => p.type === "tool_call");
       if (!calls.length) {
-        if (result.stop === "pause") continue; // a long search: let the model carry on
+        if (result.stop === "pause") {
+          paused = true; // a long search: let the model carry on
+          continue;
+        }
         // they sent more while Lyra was answering: carry on and answer that too
-        if (takeNew()) continue;
+        if (takeNew()) {
+          if (step === MAX_STEPS + extra - 1 && extra < 2) extra++;
+          continue;
+        }
         break;
       }
 
@@ -809,6 +822,12 @@ export async function runTurn(
               if (r.tainted) state.tainted = true;
               content = r.text;
             } else {
+              // after reading mail or the web, Lyra can add to a doc but not replace one the user already had
+              if (call.name === "update_doc" && state.tainted && call.input.body !== undefined) {
+                const id = Number(call.input.id);
+                const mine = docNotes.some((n) => n.id === id && n.created) || docs.read(id).tainted;
+                if (!mine) throw new Error("Not replaced: outside content was read this turn. You can append to this doc, or ask the user before replacing its text.");
+              }
               const r =
                 call.name === "write_doc"
                   ? docs.write({ title: call.input.title, body: call.input.body }, ctx.channel?.id ?? null, state.tainted)
@@ -900,7 +919,8 @@ export async function runTurn(
       messages.push({ role: "user", parts: results });
       // Wrote the reply and reacted in one go: that's the whole answer, no need to ask the model again.
       if (started && calls.every((c) => c.name === "react") && !takeNew()) break;
-      if (step === MAX_STEPS - 1) say(`${reply.trim() ? "\n\n" : ""}I stopped there so this doesn't run on. Want me to keep going?`);
+      if (step === MAX_STEPS + extra - 1 && extra < 2 && takeNew()) extra++;
+      else if (step === MAX_STEPS + extra - 1) say(`${reply.trim() ? "\n\n" : ""}I stopped there so this doesn't run on. Want me to keep going?`);
     }
     inbox?.close();
     // A reaction alone is a complete reply, like a tapback on a text.
@@ -1052,6 +1072,7 @@ async function runTool(
     const rs = ctx.workspace.reminders;
     if (!rs) return fail("Reminders aren't available.");
     if (name === "cancel_reminder") {
+      if (state.tainted) return fail("Not cancelled: outside content was read this turn. Ask the user, and cancel it once they say yes.");
       try {
         return { content: rs.cancel(Number(input.id)), isError: false };
       } catch (e) {

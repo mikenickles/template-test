@@ -113,9 +113,9 @@ export const PRESETS: (RoutineInput & { key: string; blurb: string })[] = [
 
 /** "every 15 min", "every 2 hours", "every 30 minutes from 08:00 to 18:00" as a list of times. */
 function expandEvery(times: string): string {
-  const m = times.trim().match(/^every\s+(\d+)\s*(m|min|mins|minutes?|h|hrs?|hours?)(?:\s+from\s+(\d{1,2}:\d{2})\s+(?:to|until|-)\s+(\d{1,2}:\d{2}))?$/i);
+  const m = times.trim().match(/^every\s+(\d+)?\s*(m|min|mins|minutes?|h|hrs?|hours?)(?:\s+from\s+(\d{1,2}:\d{2})\s+(?:to|until|-)\s+(\d{1,2}:\d{2}))?$/i);
   if (!m) return times;
-  const step = Number(m[1]) * (/^h/i.test(m[2]) ? 60 : 1);
+  const step = Number(m[1] ?? 1) * (/^h/i.test(m[2]) ? 60 : 1);
   if (step < 5 || step > 720) throw new Error("Pick a gap between 5 minutes and 12 hours.");
   const toMin = (t: string) => {
     const [h, mm] = t.split(":").map(Number);

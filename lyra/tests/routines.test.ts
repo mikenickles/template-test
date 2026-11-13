@@ -65,6 +65,8 @@ describe("schedules", () => {
     expect(describeSchedule("every 1 hour from 09:00 to 17:00", "135")).toBe("Every hour, 9:00 AM to 5:00 PM, on Mon, Wed, Fri");
     expect(describeSchedule("07:00,09:10,12:00,15:00,21:00", "0123456")).toBe("Every day at 7:00 AM, 9:10 AM, 12:00 PM and 2 more");
     expect(compactTimes("07:00,20:00")).toBe("07:00, 20:00");
+    // what the edit form shows must be accepted back as typed
+    for (const t of ["09:00,10:00,11:00", "every 60 min", "every 2 hours", "every 15 min", "08:00,08:30,09:00"]) expect(parseTimes(compactTimes(parseTimes(t).map(({ h, m }) => `${h}:${String(m).padStart(2, "0")}`).join(","))).length).toBe(parseTimes(t).length);
     expect(() => parseTimes("every 1 min")).toThrow(/between 5 minutes/);
   });
 });

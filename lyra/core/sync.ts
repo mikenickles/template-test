@@ -88,6 +88,7 @@ export class Sync {
     public state: SyncState,
   ) {
     lyra.onDataChange(() => {
+      if (!this.frozen) this.changes++;
       if (this.state.enabled && !this.state.dirty && !this.frozen) {
         this.state.dirty = true;
         void this.save();
@@ -220,10 +221,15 @@ export class Sync {
     return made;
   }
 
+  /** Counts every local change, so one made while a push or pull is in flight isn't forgotten. */
+  private changes = 0;
+
   private async push(list: SnapshotInfo[]): Promise<SyncResult> {
+    const before = this.changes;
     const made = await this.upload(list, "snapshot");
     this.state.base = { id: made.id, rev: made.rev };
-    this.state.dirty = false;
+    // something changed while this was uploading: still dirty, it goes up next time
+    this.state.dirty = this.changes !== before;
     this.state.conflict = undefined;
     await this.save();
     // keep the newest few
@@ -233,7 +239,10 @@ export class Sync {
   }
 
   private async pull(latest: SnapshotInfo): Promise<SyncResult> {
+    const before = this.changes;
     const bytes = await this.remote.download(latest.id);
+    // changed here while downloading: don't overwrite it; the next check treats it as a conflict
+    if (this.changes !== before) return "busy";
     this.onSnapshot?.(bytes, latest);
     const pass = await this.passphrase();
     this.frozen = true;

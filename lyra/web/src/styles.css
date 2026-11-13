@@ -470,11 +470,12 @@ body[data-busy] .orb:has(.avatar)::after {
   overflow-x: hidden;
   /* the composer and tab bar float over the bottom: messages scroll behind them and fade out, like at the top */
   --below: calc(var(--composer-h, 76px) + var(--tabbar-h));
-  padding: calc(var(--inset-top) + 96px) var(--s4) calc(var(--below) + var(--s4));
+  padding: calc(var(--inset-top) + 148px) var(--s4) calc(var(--below) + var(--s4));
+  /* nothing shows behind Lyra's avatar, name and status: messages fade in just below them */
   --fade: linear-gradient(
-    rgba(0, 0, 0, 0.12) calc(var(--inset-top) + 24px),
-    rgba(0, 0, 0, 0.45) calc(var(--inset-top) + 80px),
-    #000 calc(var(--inset-top) + 150px),
+    transparent calc(var(--inset-top) + 130px),
+    rgba(0, 0, 0, 0.5) calc(var(--inset-top) + 152px),
+    #000 calc(var(--inset-top) + 180px),
     #000 calc(100% - var(--below) - 40px),
     rgba(0, 0, 0, 0.4) calc(100% - var(--below) + 20px),
     rgba(0, 0, 0, 0.1) 100%
@@ -1492,7 +1493,8 @@ a.item {
   left: 50%;
   bottom: calc(var(--inset-bottom) + 100px);
   transform: translateX(-50%);
-  z-index: 20;
+  /* above dialogs and sheets, so an error from a form is seen */
+  z-index: 90;
   max-width: calc(100% - 32px);
   padding: var(--s3) var(--s5);
   border-radius: 999px;
@@ -5849,5 +5851,28 @@ button.orb {
   margin-top: -6px;
   font-size: 12px;
   color: var(--text-muted);
+}
+
+/* "Softer" is the default in :root; stated here too so its preview card shows it whatever style is chosen */
+[data-bubbles="softer"] {
+  --me: #3a3834;
+  --me-text: #f6f4ee;
+}
+@media (prefers-color-scheme: dark) {
+  [data-bubbles="softer"] {
+    --me: #d4cfc4;
+    --me-text: #141310;
+  }
+  /* white on the lighter dark-mode warn/bad colors was too faint */
+  .badge,
+  .voice-btn.end {
+    color: #141310;
+  }
+}
+
+/* the lock sits over the whole app */
+.lock-screen {
+  z-index: 200;
+  background: var(--bg);
 }
 

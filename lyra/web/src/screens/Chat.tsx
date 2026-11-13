@@ -119,16 +119,33 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
   // A worker finished or asked something in this chat: show it.
   const pendingRef = useRef(false);
   pendingRef.current = !!pending;
-  useEffect(
+  // something was posted here while a reply was streaming: picked up when the reply is done
+  const missed = useRef(false);
+  // Lyra was already mid-reply when this screen opened (you left the chat and came back)
+  const [resumed, setResumed] = useState(false);
+  useEffect(() => {
+    void api.replyingIn().then((c) => c === channelId && setResumed(true), () => {});
+  }, [channelId]);
+  const reload = useCallback(
     () =>
-      onChange((e) => {
-        if (e.type !== "message" || e.channelId !== channelId || pendingRef.current) return;
-        void api.messages(channelId).then((r) => {
-          stick.current = true;
-          setMessages(r.messages);
+      api.messages(channelId).then((r) => {
+        setResumed(false);
+        // keep any earlier pages already loaded above the newest ones
+        setMessages((prev) => {
+          const first = r.messages[0]?.id ?? 0;
+          return [...(prev ?? []).filter((x) => x.id > 0 && x.id < first), ...r.messages];
         });
       }),
     [channelId],
+  );
+  useEffect(
+    () =>
+      onChange((e) => {
+        if (e.type !== "message" || e.channelId !== channelId) return;
+        if (pendingRef.current) missed.current = true;
+        else void reload();
+      }),
+    [channelId, reload],
   );
 
   // Lets the orb in the top bar pulse while Lyra is working.
@@ -212,10 +229,13 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
   useEffect(() => {
     focusTries.current = 0;
   }, [focus]);
+  const focused = useRef<number | null>(null);
   useEffect(() => {
-    if (!focus || !messages) return;
+    // jump once per message: later changes to the chat (a new message, a reaction) mustn't yank the view back
+    if (!focus || !messages || focused.current === focus) return;
     const el = logRef.current?.querySelector<HTMLElement>(`[data-mid="${focus}"]`);
     if (el) {
+      focused.current = focus;
       stick.current = false;
       setShowToday(false);
       requestAnimationFrame(() => el.scrollIntoView({ block: "center" }));
@@ -301,7 +321,9 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
     if (!text && !files.length) return;
     // A reply's being written: this joins it, like texting back to back.
     if (pending) {
+      if (files.length) return toast("Photos and files go once Lyra has finished this reply.");
       if (!text) return;
+      setShowToday(false);
       setInput("");
       requestAnimationFrame(grow);
       stick.current = true;
@@ -365,6 +387,10 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
       toast((e as Error).message);
     } finally {
       setPending(null);
+      if (missed.current) {
+        missed.current = false;
+        void reload();
+      }
     }
   };
 
@@ -641,6 +667,11 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
             );
           })}
 
+          {resumed && !pending && (
+            <div className="row lyra">
+              <Thinking label="" />
+            </div>
+          )}
           {pending && (
             <div className="row lyra">
               {pending.reply ? (

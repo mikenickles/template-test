@@ -108,4 +108,36 @@ describe("back-to-back messages", () => {
     expect(a.message.content).toMatch(/Stopped\.$/);
     expect(b.message.id).toBe(a.message.id);
   });
+
+  it("Stop tapped while a tool is running stops the reply", async () => {
+    const m = manual();
+    const lyra = await Lyra.start(platform({ provider: m.provider }));
+    const first = lyra.chat("what's on my list", { text: () => {}, status: () => {}, memory: () => {} });
+    await m.next(1);
+    lyra.stop(); // lands between this step's model call and the next
+    m.calls[0].finish({ parts: [{ type: "tool_call", id: "t1", name: "list_tasks", input: {} }], stop: "tool_use" });
+    const r = await first;
+    expect(m.calls.length).toBe(1);
+    expect(r.message.content).toMatch(/Stopped\.$/);
+  });
+
+  it("after reading the web, Lyra can't cancel a reminder or replace a doc the user already had", async () => {
+    const m = manual();
+    const lyra = await Lyra.start(platform({ provider: m.provider }));
+    const doc = await lyra.saveDoc(null, { title: "Trip", body: "My own notes" });
+    const run = async (name: string, input: Record<string, unknown>) => {
+      const n = m.calls.length;
+      const p = lyra.chat("go", { text: () => {}, status: () => {}, memory: () => {} });
+      await m.next(n + 1);
+      m.calls[n].finish({ parts: [{ type: "tool_call", id: "x" + n, name, input }], stop: "tool_use", searched: true } as GenerateResult);
+      await m.next(n + 2);
+      m.calls[n + 1].write("ok");
+      m.calls[n + 1].finish(say("ok"));
+      return (await p).message.meta.tools;
+    };
+    expect(await run("cancel_reminder", { id: 1 })).toContainEqual({ name: "cancel_reminder", ok: false });
+    expect(await run("update_doc", { id: doc.id, body: "Replaced by a web page" })).toContainEqual({ name: "update_doc", ok: false });
+    expect(lyra.doc(doc.id)!.body).toBe("My own notes");
+    expect(await run("update_doc", { id: doc.id, append: "From the web: opens at 9" })).toContainEqual({ name: "update_doc", ok: true });
+  });
 });
