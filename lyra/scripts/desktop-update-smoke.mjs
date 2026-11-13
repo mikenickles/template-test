@@ -60,7 +60,7 @@ let { app, page } = await launch();
 await page.getByText("I'm Lyra.").waitFor({ timeout: 20_000 });
 const before = await running(page);
 await page.goto("app://lyra/index.html#/access");
-await page.locator(".item", { hasText: "Files" }).click();
+await page.locator(".lp-svc", { hasText: "Files" }).click();
 await page.getByText("Google Drive is connected").waitFor();
 await page.goto("app://lyra/index.html#/settings/about");
 await page.locator("section", { hasText: "Updates" }).getByRole("button", { name: "Check" }).click();

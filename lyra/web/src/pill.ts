@@ -1,5 +1,5 @@
 // A pill that slides to the chosen option (the Chat/Tasks bar, segmented controls).
-// The container gets a <span className="pill" /> as a child; the chosen option has class "on".
+// The container gets a <span className="slide-pill" /> as a child; the chosen option has class "on".
 // `memo` remembers where the pill last was, so a control that's re-created when the page
 // changes still slides from the old option instead of appearing in place.
 import { useLayoutEffect, useState } from "react";
@@ -12,7 +12,7 @@ export function useSlidingPill(active: unknown, memo?: string): (el: HTMLElement
 
   useLayoutEffect(() => {
     if (!box) return;
-    const pill = box.querySelector<HTMLElement>(":scope > .pill");
+    const pill = box.querySelector<HTMLElement>(":scope > .slide-pill");
     if (!pill) return;
     const place = (animate: boolean) => {
       const on = box.querySelector<HTMLElement>(":scope > .on");

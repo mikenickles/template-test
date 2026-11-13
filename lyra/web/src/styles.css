@@ -6926,7 +6926,7 @@ a.drawer-head:hover {
   position: relative;
 }
 
-.pill {
+.slide-pill {
   position: absolute;
   top: 0;
   left: 0;
@@ -6943,17 +6943,17 @@ a.drawer-head:hover {
   will-change: transform, width;
 }
 
-.tabbar-inner > .pill {
+.tabbar-inner > .slide-pill {
   background: var(--drawer-active);
 }
 
-.seg > .pill,
-.seg-tabs > .pill {
+.seg > .slide-pill,
+.seg-tabs > .slide-pill {
   background: var(--surface);
   box-shadow: var(--shadow);
 }
 
-.seg-tabs > .pill {
+.seg-tabs > .slide-pill {
   border-radius: 18px;
 }
 
@@ -7092,7 +7092,7 @@ a.drawer-head:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pill {
+  .slide-pill {
     transition: none;
   }
   .app:not(.desk) .drawer-panel > * {
@@ -7196,4 +7196,313 @@ a.drawer-head:hover {
 
 .why-sheet .field {
   margin-bottom: var(--s3);
+}
+
+/* =========================================================================
+   The Lyra page: Lyra's profile (Access.tsx)
+   ========================================================================= */
+.lp-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin: var(--s2) 0 22px;
+}
+.lp-orb {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow:
+    0 0 0 6px color-mix(in srgb, var(--accent) 14%, transparent),
+    0 12px 32px rgba(19, 20, 22, 0.1);
+}
+.lp-orb .avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.lp-dot {
+  position: absolute;
+  right: 6px;
+  bottom: 8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--good);
+  box-shadow: 0 0 0 3px var(--bg);
+}
+.lp-name {
+  margin: 18px 0 2px;
+  font-size: 34px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+.lp-status {
+  margin: 0;
+  color: var(--text-muted);
+}
+.lp-actions {
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+  margin-top: 22px;
+}
+.lp-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--text);
+  text-decoration: none;
+}
+.lp-action .c {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  color: var(--accent-text);
+  transition: transform 160ms ease;
+}
+.lp-action:active .c {
+  transform: scale(0.92);
+}
+
+.lp-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 0 0 var(--s6);
+  overflow: hidden;
+}
+.lp-stat {
+  padding: 14px 8px;
+  text-align: center;
+  color: inherit;
+  text-decoration: none;
+}
+.lp-stat + .lp-stat {
+  border-left: 1px solid var(--border);
+}
+.lp-stat b {
+  display: block;
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.lp-stat span {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.lp-account {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: -4px 0 12px;
+  overflow-wrap: anywhere;
+}
+.lp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.app.desk .lp-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+.lp-svc {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  transition:
+    transform 160ms ease,
+    border-color var(--ease);
+}
+button.lp-svc:active {
+  transform: scale(0.97);
+}
+.lp-svc .t {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.lp-svc.off .t {
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+.lp-svc .n {
+  display: block;
+  font-weight: 600;
+  font-size: 16px;
+}
+.lp-svc .s {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.lp-svc .s i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--good);
+}
+.lp-svc.off .s i {
+  background: var(--text-muted);
+  opacity: 0.5;
+}
+.lp-svc .s.bad {
+  color: var(--bad);
+}
+.lp-svc .s.bad i {
+  background: var(--bad);
+  opacity: 1;
+}
+.lp-svc.more {
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  border-style: dashed;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 550;
+}
+.app.desk .lp-svc.more {
+  display: none;
+}
+
+.lp-promise {
+  background: var(--accent-soft);
+  border-radius: var(--radius);
+  padding: 18px 18px 8px;
+  margin-top: var(--s6);
+}
+.lp-promise h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 650;
+}
+.lp-promise h3 svg,
+.lp-promise li svg {
+  flex: none;
+  color: var(--accent-text);
+}
+.lp-promise ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.lp-promise li {
+  display: flex;
+  gap: 10px;
+  padding: 9px 0;
+  font-size: 14.5px;
+  line-height: 1.4;
+}
+.lp-promise li + li {
+  border-top: 1px solid color-mix(in srgb, var(--accent-text) 15%, transparent);
+}
+
+.lp-sheet-head {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin: 6px 4px 16px;
+}
+.lp-sheet-head .t {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.lp-sheet-head .t.off {
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+.lp-sheet-head h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 650;
+}
+.lp-sheet-head p {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.lp-can {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 4px 16px;
+  margin-bottom: 14px;
+}
+.lp-can div {
+  display: flex;
+  gap: 10px;
+  padding: 10px 0;
+  font-size: 15px;
+  line-height: 1.35;
+}
+.lp-can div + div {
+  border-top: 1px solid var(--border);
+}
+.lp-can svg {
+  flex: none;
+}
+.lp-can .yes {
+  color: var(--good);
+}
+.lp-can .no {
+  color: var(--text-muted);
+}
+.lp-sheet-group {
+  margin-bottom: 14px;
+}
+.lp-sheet .setup-box {
+  margin: 0 0 14px;
+}
+.lp-sheet-actions {
+  display: flex;
+  gap: 10px;
+}
+.lp-sheet-actions .btn {
+  flex: 1;
+  width: auto;
+  margin: 0;
+}
+.lp-bad {
+  color: var(--bad);
 }

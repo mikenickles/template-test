@@ -97,6 +97,30 @@ export const ThumbUp = (p: P) => (
   </Icon>
 );
 export const ThumbDown = (p: P) => <ThumbUp {...p} style={{ transform: "rotate(180deg)", ...p.style }} />;
+export const Pulse = (p: P) => (
+  <Icon {...p}>
+    <path d="M3.5 12h4l2.5-6 4 12 2.5-6h4" />
+  </Icon>
+);
+export const Bulb = (p: P) => (
+  <Icon {...p}>
+    <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" />
+  </Icon>
+);
+export const Shield = (p: P) => (
+  <Icon {...p}>
+    <path d="M12 3.5l7 2.8v5.2c0 4.4-3 7.9-7 9-4-1.1-7-4.6-7-9V6.3z" />
+    <path d="M9 12l2 2 4-4" />
+  </Icon>
+);
+export const People = (p: P) => (
+  <Icon {...p}>
+    <circle cx="9" cy="9" r="3.2" />
+    <path d="M3.5 19c.8-3 3-4.5 5.5-4.5s4.7 1.5 5.5 4.5" />
+    <circle cx="17" cy="10" r="2.4" />
+    <path d="M15.5 14.8c2.3.1 4 1.4 4.6 3.7" />
+  </Icon>
+);
 export const Cpu = (p: P) => (
   <Icon {...p}>
     <rect x="6" y="6" width="12" height="12" rx="2" />

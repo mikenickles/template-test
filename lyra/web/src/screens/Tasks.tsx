@@ -241,7 +241,7 @@ export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: 
 
   const seg = (
     <div className="seg-tabs" role="tablist" aria-label="Tasks" ref={segPill}>
-      <span className="pill" aria-hidden="true" />
+      <span className="slide-pill" aria-hidden="true" />
       {(["active", "done", "admin"] as const).map((k) => (
         <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>
           {k === "active" ? "Active" : k === "done" ? "Done" : "Life admin"}

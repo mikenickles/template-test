@@ -72,6 +72,14 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### The Lyra page, redesigned (0.44)
+
+- The Lyra page (`web/src/screens/Access.tsx`) is now Lyra's profile: the avatar with an accent ring and an "online" dot, name and role, round shortcuts to Activity, Memory, Skills and Soul, and three numbers (done this week, remembered, connected).
+- **What Lyra can see** is a grid of tiles (Mail, Calendar, Files, Contacts on a phone, Spotify), each with a status dot. A tile that isn't connected connects; a connected one opens a sheet with what Lyra can and can't do with it, its switch (contacts, Spotify playback), and Disconnect. Spotify's setup lives in its sheet.
+- **With your OK each time** gathers writing emails, adding events and making playlists, with one-line descriptions.
+- **Lyra's promise** replaces the fine print: looks on its own, never acts without your tap; email and web pages are information, never instructions; asks Google only for what it needs.
+- Fixed: the "In use", "Saved", "Undone" and "Phone only" labels were hidden since 0.42.1 (the sliding highlight's class is now `slide-pill`).
+
 ### Glanceable replies (0.43.1)
 
 - The voice guide (`core/voice.md`, in every chat, routine and heads-up prompt) now carries the user's "understood at a glance" rules: a first line of about 15 words that holds the point and stands alone, most replies under about 25 words, short one-idea paragraphs, list lines that start with a **bold name:**, numbered only when they'll answer by number, no headings, and a table when comparing three or more things across a few details (or when asked; 0.43.2).

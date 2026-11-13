@@ -320,7 +320,7 @@ function HeadsUps({ state, run, busy }: { state: AppState; run: (fn: () => Promi
     <section className="section">
       <h2 className="section-label">Heads-ups</h2>
       <div className="seg" role="radiogroup" aria-label="Heads-ups" ref={levelPill}>
-        <span className="pill" aria-hidden="true" />
+        <span className="slide-pill" aria-hidden="true" />
         {LEVELS.map((l) => (
           <button
             key={l.id}

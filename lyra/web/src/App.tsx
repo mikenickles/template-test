@@ -442,7 +442,7 @@ export function App() {
         {inChat && !wide && (
           <nav className={`tabbar${route.name === "chat" ? " floating" : ""}`} aria-label="Sections">
             <div className="tabbar-inner" ref={tabPill}>
-              <span className="pill" aria-hidden="true" />
+              <span className="slide-pill" aria-hidden="true" />
               <a
                 className={`tabbar-item${route.name === "chat" ? " on" : ""}`}
                 href={route.name === "chat" ? "#/" : lastChat}

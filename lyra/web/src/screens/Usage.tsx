@@ -51,7 +51,7 @@ export function Usage() {
   return (
     <div className="usage">
       <div className="seg" role="tablist" aria-label="Time range" ref={rangePill}>
-        <span className="pill" aria-hidden="true" />
+        <span className="slide-pill" aria-hidden="true" />
         {RANGES.map((r) => (
           <button key={r.id} role="tab" aria-selected={range === r.id} className={range === r.id ? "on" : ""} onClick={() => setRange(r.id)}>
             {r.label}

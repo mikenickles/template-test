@@ -110,7 +110,7 @@ await page.route("https://gmail.googleapis.com/**", (r) => {
   return r.fulfill({ json: {} });
 });
 await page.goto("app://lyra/index.html#/access");
-await page.getByRole("button", { name: /Connect Gmail/ }).click();
+await page.locator(".lp-svc", { hasText: "Mail" }).click();
 await page.getByText("Gmail is connected").waitFor();
 await page.getByRole("switch", { name: /Write emails/ }).click();
 await page.getByText("Lyra can write emails for your OK").waitFor();
@@ -197,12 +197,13 @@ await page.route("https://accounts.spotify.com/api/token", (r) => {
 });
 await page.route("https://api.spotify.com/v1/me", (r) => r.fulfill({ json: { id: "sam1", display_name: "Sam" } }));
 await page.goto("app://lyra/index.html#/access");
-await page.getByRole("button", { name: /Set up Spotify/ }).click();
-await page.getByLabel("Client ID").fill("0123456789abcdef0123456789abcdef");
-await page.getByRole("button", { name: "Connect", exact: true }).click();
+await page.locator(".lp-svc", { hasText: "Spotify" }).click();
+const spotifySheet = page.getByRole("dialog", { name: "Spotify" });
+await spotifySheet.getByLabel("Client ID").fill("0123456789abcdef0123456789abcdef");
+await spotifySheet.getByRole("button", { name: "Connect", exact: true }).click();
 await page.getByText("Spotify connected").waitFor();
 check(/^http:\/\/127\.0\.0\.1:\d+\/spotify$/.test(spotifyAsked), "Spotify sign-in comes back through 127.0.0.1 on this computer");
-check(await page.getByText("Can see what you play · Sam").isVisible(), "Spotify shows as connected, look-only");
+check(await spotifySheet.getByText("Spotify · Sam").isVisible(), "Spotify shows as connected, look-only");
 await page.getByRole("switch", { name: /Control playback/ }).click();
 await page.getByText("Lyra can control playback").waitFor();
 await page.screenshot({ path: join(shots, "desktop-9-spotify.png") });

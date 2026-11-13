@@ -125,11 +125,17 @@ try {
 
   await page.getByRole("button", { name: "Channels" }).click();
   await page.locator(".drawer-sections").getByRole("link", { name: "Lyra" }).click();
-  await page.getByText("What Lyra has access to").waitFor();
-  check((await page.getByText("Needs the Android app").count()) === 3, "browser preview says Google connections need the Android app");
+  await page.getByText("What Lyra can see").waitFor();
+  check((await page.getByText("Phone app only").count()) === 3, "browser preview says Google connections need the Android app");
+  check(await page.getByText("Lyra's promise").isVisible(), "the Lyra page carries Lyra's promise");
   await shot("light-3-access");
+  // a service opens a sheet with what Lyra can and can't do with it
+  await page.locator(".lp-svc", { hasText: "Mail" }).click();
+  const svc = page.getByRole("dialog", { name: "Mail" });
+  check(await svc.getByText("Send, delete or change anything on its own").isVisible(), "a service's sheet says what Lyra never does with it");
+  await svc.getByRole("button", { name: "Close", exact: true }).click();
 
-  await page.getByRole("link", { name: /Memory/ }).click();
+  await page.getByRole("link", { name: "Memory", exact: true }).click();
   await page.getByRole("heading", { name: "Memory" }).waitFor();
   await shot("light-4-memory");
   check(await page.getByRole("switch", { name: /Tidy my notes each week/ }).isChecked(), "the weekly memory tidy-up is on, with a switch");
