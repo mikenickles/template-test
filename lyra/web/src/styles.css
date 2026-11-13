@@ -7030,20 +7030,27 @@ a.drawer-head:hover {
   transition-delay: 180ms;
 }
 
-/* ---- pages settle in when you arrive ---- */
+/* ---- pages settle in when you arrive ----
+   A fade only: moving the page would carry along anything pinned to the screen inside it
+   (the + button, sheets), which then jumps back when the move ends. */
 .screen {
-  animation: page-in 320ms var(--glide) backwards;
+  animation: fade 280ms ease backwards;
+}
+
+/* the + button grows in on its own, a beat after the page */
+.fab {
+  animation: fab-in 420ms var(--settle) 120ms backwards;
+}
+
+@keyframes fab-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
 }
 
 .chat {
   animation: fade 260ms ease backwards;
-}
-
-@keyframes page-in {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 10px, 0);
-  }
 }
 
 /* ---- sheets rise from the bottom, dialogs land softly ---- */

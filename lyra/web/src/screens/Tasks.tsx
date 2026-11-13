@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { api, onChange, type Channel, type Task, type TaskDetail, type TaskStatus, type WorkerRun } from "../api";
 import { ChannelIcon, CheckCircle, Chevron, Close, File as FileIcon, Pencil, Plus, Search, Star, Stop, Trash } from "../icons";
@@ -162,9 +162,11 @@ function SwipeRow({ children, title, onLater, onDone, laterLabel = "Later" }: { 
 
 /** Puts children in the top bar's middle/right on the phone, or in the page on a computer. */
 function TopSlot({ id, children }: { id: string; children: ReactNode }) {
-  const [slot, setSlot] = useState<HTMLElement | null>(null);
-  useEffect(() => setSlot(document.getElementById(id)), [id]);
-  return slot ? createPortal(children, slot) : <>{children}</>;
+  // found before the first paint, and nothing drawn in the page meanwhile, so what goes in the
+  // top bar is made once (a tab selector made twice would lose its sliding pill)
+  const [slot, setSlot] = useState<HTMLElement | null>(() => document.getElementById(id));
+  useLayoutEffect(() => setSlot(document.getElementById(id)), [id]);
+  return slot ? createPortal(children, slot) : null;
 }
 
 export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: string) => void; channels: Channel[]; onCounts: () => void; wide?: boolean }) {
@@ -255,27 +257,30 @@ export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: 
     </button>
   );
 
+  // the same head on every tab, so the tab selector stays put and its pill slides
+  const head = wide ? (
+    <div className="tasks-head">
+      {seg}
+      {tab !== "admin" && searchBtn}
+    </div>
+  ) : (
+    <>
+      <TopSlot id="topbar-center">{seg}</TopSlot>
+      <TopSlot id="topbar-right">{tab !== "admin" ? searchBtn : null}</TopSlot>
+    </>
+  );
+
   if (tab === "admin")
     return (
       <div className="screen tasks-screen">
-        {wide ? <div className="tasks-head">{seg}</div> : <TopSlot id="topbar-center">{seg}</TopSlot>}
+        {head}
         <LifeAdmin toast={toast} />
       </div>
     );
 
   return (
     <div className="screen tasks-screen">
-      {wide ? (
-        <div className="tasks-head">
-          {seg}
-          {searchBtn}
-        </div>
-      ) : (
-        <>
-          <TopSlot id="topbar-center">{seg}</TopSlot>
-          <TopSlot id="topbar-right">{searchBtn}</TopSlot>
-        </>
-      )}
+      {head}
 
       {searching && (
         <input ref={searchRef} className="field search" type="search" placeholder="Search tasks" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search tasks" />

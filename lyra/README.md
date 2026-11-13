@@ -76,7 +76,7 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 
 - The Chat/Tasks bar, the Tasks tabs and the segmented switches (Usage range, Heads-ups level) have a pill that slides to the option you pick, with a small settle at the end (`web/src/pill.ts` `useSlidingPill`; it remembers where it was, so it slides even when the page rebuilds the control).
 - The menu opens a little slower on a softer curve (460 ms open, 340 ms close), and what's in it follows the panel in, one after another.
-- Pages settle in when you arrive, sheets rise from the bottom, dialogs and pop-up notices land softly, buttons give a little when pressed. "Reduce motion" on the phone turns it all down.
+- Pages fade in when you arrive (a fade only, so the + button and other pinned things never jump; the + button grows in a beat later; 0.42.2), the Tasks tab selector is made once for all three tabs so the pill slides to Life admin too, sheets rise from the bottom, dialogs and pop-up notices land softly, buttons give a little when pressed. "Reduce motion" on the phone turns it all down.
 
 ### Quick capture, voice memos, places (0.42)
 
