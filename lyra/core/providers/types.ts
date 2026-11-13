@@ -31,6 +31,24 @@ export interface ToolDef {
   schema: Record<string, unknown>;
 }
 
+/**
+ * Splits a system prompt into the part that stays the same from one request to the next
+ * (who Lyra is, her rules) and the part that changes (the time, tasks, memory). Providers
+ * that cache by prefix (Claude) cache the stable part across messages; others just drop it.
+ */
+export const SYSTEM_SPLIT = "\n\n<<lyra:stable-above>>\n\n";
+
+/** The system prompt as one text, marker removed. */
+export function plainSystem(system: string): string {
+  return system.replace(SYSTEM_SPLIT, "\n\n");
+}
+
+/** [stable, changing]; with no marker, all of it counts as changing. */
+export function splitSystem(system: string): [string, string] {
+  const i = system.indexOf(SYSTEM_SPLIT);
+  return i < 0 ? ["", system] : [system.slice(0, i), system.slice(i + SYSTEM_SPLIT.length)];
+}
+
 export interface GenerateRequest {
   system: string;
   messages: Msg[];

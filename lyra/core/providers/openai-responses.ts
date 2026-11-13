@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { uniqueSources, type GenerateRequest, type GenerateResult, type ModelProvider, type Msg, type Part, type Source } from "./types.ts";
+import { plainSystem, uniqueSources, type GenerateRequest, type GenerateResult, type ModelProvider, type Msg, type Part, type Source } from "./types.ts";
 
 /**
  * OpenAI through the Responses API. Newer OpenAI models (the reasoning
@@ -95,7 +95,7 @@ export class OpenAIResponsesProvider implements ModelProvider {
     const stream = await this.client.responses.create(
       {
         model: this.model,
-        instructions: req.system,
+        instructions: plainSystem(req.system),
         input: toResponsesInput(req.messages),
         store: false,
         stream: true,

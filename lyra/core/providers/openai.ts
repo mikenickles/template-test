@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { GenerateRequest, GenerateResult, ModelProvider, Msg, Part } from "./types.ts";
+import { plainSystem, type GenerateRequest, type GenerateResult, type ModelProvider, type Msg, type Part } from "./types.ts";
 
 type OMessage = OpenAI.Chat.ChatCompletionMessageParam;
 
@@ -64,7 +64,7 @@ export class OpenAIProvider implements ModelProvider {
         stream: true,
         stream_options: { include_usage: true },
         max_completion_tokens: req.maxTokens ?? 2048,
-        messages: toOpenAIMessages(req.system, req.messages),
+        messages: toOpenAIMessages(plainSystem(req.system), req.messages),
         ...(req.tools.length
           ? {
               tools: req.tools.map((t) => ({

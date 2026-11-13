@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { uniqueSources, type GenerateRequest, type GenerateResult, type ModelProvider, type Msg, type Part, type Source } from "./types.ts";
+import { splitSystem, uniqueSources, type GenerateRequest, type GenerateResult, type ModelProvider, type Msg, type Part, type Source } from "./types.ts";
 
 type AMessage = Anthropic.MessageParam;
 type ABlock = Anthropic.ContentBlockParam;
@@ -13,6 +13,29 @@ export function webFetchTool(model: string) {
 }
 /** Models that turned web fetch down: Lyra carries on without it. */
 const noFetch = new Set<string>();
+
+/**
+ * The system prompt as cache-friendly blocks: the stable part (who Lyra is, her rules) is
+ * cached across messages, the rest (time, tasks, memory) is cached for the tool steps of
+ * one reply. Tools come before the system prompt, so they're cached with the stable part.
+ */
+export function systemBlocks(system: string): Anthropic.TextBlockParam[] {
+  const [stable, changing] = splitSystem(system);
+  const blocks: Anthropic.TextBlockParam[] = [];
+  if (stable) blocks.push({ type: "text", text: stable, cache_control: { type: "ephemeral" } });
+  if (changing) blocks.push({ type: "text", text: changing, cache_control: { type: "ephemeral" } });
+  return blocks;
+}
+
+/** Mark the end of the conversation so a reply's later tool steps reuse it from the cache. */
+export function cacheLast(messages: AMessage[]): AMessage[] {
+  const last = messages.at(-1);
+  if (!last || typeof last.content === "string") return messages;
+  const block = last.content.at(-1) as { type?: string; cache_control?: unknown } | undefined;
+  if (!block || !["text", "tool_result", "image", "document"].includes(block.type ?? "")) return messages;
+  block.cache_control = { type: "ephemeral" };
+  return messages;
+}
 
 export function toAnthropicMessages(messages: Msg[]): AMessage[] {
   return messages
@@ -103,9 +126,8 @@ export class AnthropicProvider implements ModelProvider {
       {
         model: this.model,
         max_tokens: req.maxTokens ?? 2048,
-        // Cache the stable system prompt (voice + rules + memory) across turns.
-        system: [{ type: "text", text: req.system, cache_control: { type: "ephemeral" } }],
-        messages: toAnthropicMessages(req.messages),
+        system: systemBlocks(req.system),
+        messages: cacheLast(toAnthropicMessages(req.messages)),
         tools,
       },
       { signal: req.signal },

@@ -15,6 +15,7 @@ import { cleanItem } from "./memory.ts";
 import { uniqueSources, type ModelProvider, type Msg, type Part, type Source, type ToolDef } from "./providers/types.ts";
 import { describeTasks, listTasks } from "./tasks.ts";
 import { neutralize } from "./untrusted.ts";
+import { SYSTEM_SPLIT } from "./providers/types.ts";
 import { calendarAhead, character } from "./soul.ts";
 import VOICE from "./voice.md?raw";
 
@@ -255,7 +256,11 @@ function routinePrompt(r: RoutineJob, d: RoutineDeps, search: boolean, memory: s
   const tz = d.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const now = new Date().toLocaleString("en-US", { timeZone: tz, dateStyle: "full", timeStyle: "short" });
   const last = r.last_run_at ? new Date(r.last_run_at).toLocaleString("en-US", { timeZone: tz, dateStyle: "medium", timeStyle: "short" }) : "never";
-  return `You are running one of Lyra's scheduled routines for ${user}. Lyra is their personal chief of staff. Right now is ${now} (${tz}).
+  // stable part first (cached across runs), then what changes
+  return `You are running one of Lyra's scheduled routines for ${user}. Lyra is their personal chief of staff.
+
+# How Lyra writes the message
+${character(d.soul?.(), VOICE, user)}${SYSTEM_SPLIT}Right now is ${now} (${tz}).
 ${calendarAhead(new Date(), tz)}
 
 # The routine: ${neutralize(r.name)}
@@ -264,7 +269,7 @@ ${neutralize(r.instructions)}
 Last run: ${last}.${r.last_summary ? `\nWhat it reported last time (don't repeat it unless something changed):\n${neutralize(r.last_summary)}` : ""}
 
 # How to run it
-- Use your tools to check what the routine asks. Today's date is in the first line; work out date ranges yourself (e.g. Gmail's after:YYYY/MM/DD, list_events dates).
+- Use your tools to check what the routine asks. Today's date is above; work out date ranges yourself (e.g. Gmail's after:YYYY/MM/DD, list_events dates).
 ${search ? "- You can search the web for news and current facts." : "- You can't search the web."}
 - ${
     r.post_mode === "always"
@@ -275,9 +280,6 @@ ${search ? "- You can search the web for news and current facts." : "- You can't
 - You can't send, reply, pay, book, delete or change anything. If something needs doing, say what ${user} should do.
 - Never make things up. If a source couldn't be checked (not connected, error), say so in a few words.
 ${skillsBrief(d.workspace)}
-# How Lyra writes the message
-${character(d.soul?.(), VOICE, user)}
-
 # What Lyra knows about ${user}
 <memory>
 ${neutralize(memory.trim())}

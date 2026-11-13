@@ -14,6 +14,7 @@ import { createDoc, updateDoc } from "./docs.ts";
 import { uniqueSources, type ModelProvider, type Msg, type Part, type Source, type ToolDef } from "./providers/types.ts";
 import { addStep, getTask, log, setStepDone, STATUS_LABEL, taskDetail, updateTask, type TaskRow } from "./tasks.ts";
 import { neutralize } from "./untrusted.ts";
+import { SYSTEM_SPLIT } from "./providers/types.ts";
 import { calendarAhead, character } from "./soul.ts";
 import VOICE from "./voice.md?raw";
 
@@ -90,7 +91,11 @@ function workerPrompt(task: TaskRow, steps: string, deps: WorkerDeps, memory: st
   const user = deps.userName() === "you" ? "the user" : deps.userName();
   const tz = deps.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const now = new Date().toLocaleString("en-US", { timeZone: tz, dateStyle: "full", timeStyle: "short" });
-  return `You are one of Lyra's background workers. Lyra is ${user}'s personal chief of staff; you carry out one task for them, out of sight, and report back. Right now is ${now} (${tz}).
+  // stable part first (cached across steps and tasks), then what changes
+  return `You are one of Lyra's background workers. Lyra is ${user}'s personal chief of staff; you carry out one task for them, out of sight, and report back.
+
+# How Lyra writes (for your finish result)
+${character(deps.soul?.(), VOICE, user)}${SYSTEM_SPLIT}Right now is ${now} (${tz}).
 ${calendarAhead(new Date(), tz)}
 
 # Your task
@@ -110,9 +115,6 @@ ${steps ? `Checklist:\n${neutralize(steps)}` : ""}${task.channel_name ? `\nThis 
 - Never make things up. If you couldn't find something, say so.
 - For anything long (a comparison, a plan, research), save it with write_report and keep the finish result to a short summary.
 ${task.kind === "research" ? researchSection(user) : ""}${skillsBrief(deps.workspace)}
-# How Lyra writes (for your finish result)
-${character(deps.soul?.(), VOICE, user)}
-
 # What Lyra knows about ${user}
 <memory>
 ${neutralize(memory.trim())}

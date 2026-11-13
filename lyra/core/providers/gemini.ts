@@ -1,5 +1,5 @@
 import { GoogleGenAI, type Content, type Part as GPart } from "@google/genai";
-import { uniqueSources, type GenerateRequest, type GenerateResult, type ModelProvider, type Msg, type Part, type Source } from "./types.ts";
+import { plainSystem, uniqueSources, type GenerateRequest, type GenerateResult, type ModelProvider, type Msg, type Part, type Source } from "./types.ts";
 
 /** Models that refused Google Search next to Lyra's own tools; asked again without it. */
 const noSearch = new Set<string>();
@@ -117,7 +117,7 @@ export class GeminiProvider implements ModelProvider {
       model: this.model,
       contents: toGeminiContents(req.messages),
       config: {
-        systemInstruction: req.system,
+        systemInstruction: plainSystem(req.system),
         maxOutputTokens: req.maxTokens ?? 2048,
         abortSignal: req.signal,
         ...(tools.length ? { tools } : {}),
