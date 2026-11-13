@@ -13,6 +13,7 @@ import { DocPage, Docs } from "./screens/Docs";
 import { Settings, SETTINGS_SECTIONS, type SettingsSection } from "./screens/Settings";
 import { Soul } from "./screens/Soul";
 import { TaskPage, Tasks, WorkerLog } from "./screens/Tasks";
+import { Activity } from "./screens/Activity";
 import { RoutinePage } from "./screens/Routines";
 import { SyncConflict } from "./screens/SyncSection";
 import { StatusLine } from "./StatusLine";
@@ -31,6 +32,7 @@ export type Route =
   | { name: "access" }
   | { name: "memory" }
   | { name: "docs" }
+  | { name: "activity" }
   | { name: "doc"; docId: number }
   | { name: "soul" }
   | { name: "settings"; section?: SettingsSection };
@@ -49,7 +51,7 @@ export function readRoute(hash = location.hash): Route {
   if (r) return { name: "routine", routineId: Number(r[1]) };
   const s = path.match(/^settings\/(\w+)$/);
   if (s && (SETTINGS_SECTIONS as string[]).includes(s[1])) return { name: "settings", section: s[1] as SettingsSection };
-  if (path === "tasks" || path === "access" || path === "memory" || path === "soul" || path === "settings" || path === "docs") return { name: path };
+  if (path === "tasks" || path === "access" || path === "memory" || path === "soul" || path === "settings" || path === "docs" || path === "activity") return { name: path };
   return { name: "chat", channelId: null, focus: m };
 }
 
@@ -332,9 +334,9 @@ export function App() {
           {route.name === "chat" && !channel && (
             <div className="avatar-stack">
               {route.name === "chat" ? (
-                <button type="button" className="orb orb-sm" aria-label="Today" title="Today" onClick={() => dispatchEvent(new Event("lyra:today"))}>
+                <a className="orb orb-sm" href="#/activity" aria-label="What Lyra's been doing" title="Activity">
                   <Avatar />
-                </button>
+                </a>
               ) : (
                 <a className="orb orb-sm" href="#/" aria-label="Chat">
                   <Avatar />
@@ -383,6 +385,7 @@ export function App() {
         {route.name === "access" && <Access state={state} setState={setState} toast={toast} />}
         {route.name === "memory" && <Memory toast={toast} channels={channels} />}
         {route.name === "docs" && <Docs toast={toast} />}
+        {route.name === "activity" && <Activity toast={toast} />}
         {route.name === "doc" && <DocPage key={route.docId} id={route.docId} toast={toast} canGoogle={state.connectors.some((c) => c.state !== "unavailable")} />}
         {route.name === "soul" && <Soul toast={toast} userName={state.userName} />}
         {route.name === "settings" && <Settings key={route.section ?? "home"} state={state} setState={setState} toast={toast} section={route.section} />}

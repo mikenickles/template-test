@@ -19,6 +19,8 @@ import {
 import type { Attachment } from "../../core/attachments";
 import { backupName } from "../../core/backup";
 import type { Platform } from "../../core/lyra";
+import type { Activity, ActivityDetail, ActivityKind } from "../../core/activity";
+export type { Activity, ActivityDetail, ActivityKind };
 import { readSyncState, Sync, type SnapshotInfo, type SyncResult } from "../../core/sync";
 import { DriveSyncRemote } from "../../core/sync-drive";
 import { applyUpdate, checkForUpdate, watchForUpdates } from "./updater";
@@ -397,6 +399,8 @@ export const api = {
   forgetStyle: async () => (await ready).forgetStyle(),
   replyingIn: async () => (await ready).replyingIn(),
   lifeAdmin: async () => (await ready).lifeAdmin(),
+  activity: async (kind?: ActivityKind[]) => (await ready).activity({ kind }),
+  activityDetail: async (id: string) => (await ready).activityDetail(id),
   scanLifeAdmin: async () => (await ready).scanLifeAdmin(),
   setLifeAdmin: async (on: boolean) => (await ready).setLifeAdmin(on),
   setAdminStatus: async (id: number, status: "open" | "done" | "dismissed") => (await ready).setAdminStatus(id, status),

@@ -70,7 +70,8 @@ export function Drawer({
 
   return (
     <nav className={`drawer-panel${docked ? " docked" : ""}`} ref={panel} aria-label="Channels" aria-hidden={!open} inert={!open}>
-      <div className="drawer-head">
+      {/* Lyra herself: opens what she's been doing */}
+      <a className="drawer-head" href="#/activity" aria-label="Lyra: what she's been doing" onClick={() => !docked && onClose()}>
         <span className="orb drawer-orb">
           <Avatar />
         </span>
@@ -78,7 +79,7 @@ export function Drawer({
           <span className="drawer-title">Lyra</span>
           {status}
         </span>
-      </div>
+      </a>
 
       <label className="drawer-search">
         <Search size={18} />

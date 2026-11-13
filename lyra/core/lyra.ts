@@ -17,6 +17,7 @@ import * as D from "./docs.ts";
 import * as S from "./skills.ts";
 import * as ST from "./style.ts";
 import * as LA from "./lifeadmin.ts";
+import * as AC from "./activity.ts";
 import { SPOTIFY_PLAYBACK, SPOTIFY_PLAYLISTS, SPOTIFY_READ, SpotifyAuth, type OAuthRedirect } from "./connectors/spotify/auth.ts";
 import { createSpotifyServer } from "./connectors/spotify/server.ts";
 import { runTidy } from "./tidy.ts";
@@ -1321,6 +1322,7 @@ export class Lyra {
       const notes = await ST.learnStyle(provider, samples, ST.readStyle(this.db)?.notes ?? [], this.userName);
       if (!notes) throw new Error("Not enough to go on yet. Keep chatting and Lyra will pick it up.");
       ST.saveStyle(this.db, notes, samples.length);
+      AC.logActivity(this.db, { kind: "style", title: "Noticed how you talk", summary: notes[0] ?? "", status: "done", detail: notes.map((n) => `- ${n}`).join("\n") });
       await this.db.flush();
       return this.talkStyle();
     } finally {
@@ -1705,6 +1707,19 @@ export class Lyra {
   }
 
   /** Post what's due: reminders as a message, follow-ups after Lyra has checked. */
+  // ---------- the activity log ----------
+
+  /** Everything Lyra did on her own, newest first. */
+  activity(opts: { kind?: AC.ActivityKind[]; limit?: number } = {}): AC.Activity[] {
+    return AC.listActivity(this.db, opts);
+  }
+
+  activityDetail(id: string): AC.ActivityDetail {
+    const d = AC.activityDetail(this.db, id);
+    if (!d) throw new Error("That's no longer in the log.");
+    return d;
+  }
+
   // ---------- life admin (Phase 18) ----------
 
   private scanning = false;
@@ -1750,6 +1765,7 @@ export class Lyra {
     if (this.scanning) throw new Error("Already going through your mail.");
     this.scanning = true;
     this.listeners.forEach((l) => l({ type: "admin" }));
+    const startedAt = new Date().toISOString();
     try {
       const last = getSetting(this.db, "lifeAdminAt");
       const days = last ? Math.min(30, Math.max(2, Math.ceil((Date.now() - new Date(last).getTime()) / 86_400_000) + 1)) : 30;
@@ -1765,9 +1781,23 @@ export class Lyra {
       });
       const r = LA.saveItems(this.db, found);
       setSetting(this.db, "lifeAdminAt", new Date().toISOString());
+      AC.logActivity(this.db, {
+        kind: "life_admin",
+        title: "Went through your mail",
+        summary: r.added || r.updated ? `Found ${r.added} new${r.updated ? `, updated ${r.updated}` : ""}` : "Nothing new",
+        status: r.added || r.updated ? "done" : "quiet",
+        detail: `Looked at the last ${days} day${days === 1 ? "" : "s"} of mail for bills, subscriptions, packages, trips and return windows.${
+          found.length ? `\n\n${found.map((i) => `- ${i!.kind}: ${i!.who}${i!.title && i!.title !== i!.who ? `, ${i!.title}` : ""}`).join("\n")}` : ""
+        }`,
+        startedAt,
+      });
       LA.tidyItems(this.db, today);
       await this.db.flush();
       return r;
+    } catch (e) {
+      AC.logActivity(this.db, { kind: "life_admin", title: "Went through your mail", summary: "Couldn't finish", status: "failed", detail: (e as Error).message, startedAt });
+      void this.db.flush();
+      throw e;
     } finally {
       this.scanning = false;
       this.listeners.forEach((l) => l({ type: "admin" }));

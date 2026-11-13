@@ -249,8 +249,24 @@ try {
   await page.waitForTimeout(500);
   check((await page.getByRole("dialog", { name: "While you were away" }).count()) === 0, "a quick reload doesn't show it again");
 
-  // ---- Today: tap Lyra's face in the main chat ----
-  await page.getByRole("button", { name: "Today" }).click();
+  // ---- Activity: tap Lyra's face to see what she's been doing, and open a task run ----
+  await page.getByRole("link", { name: "What Lyra's been doing" }).click();
+  await page.getByRole("heading", { name: "Lyra" }).waitFor();
+  const run = page.locator(".activity-row", { hasText: "Find a plumber" }).first();
+  await run.waitFor();
+  check(true, "tapping Lyra's face opens her activity, with the task she worked on");
+  await shot("light-46-activity");
+  await run.click();
+  const actSheet = page.getByRole("dialog", { name: /Find a plumber/ });
+  await actSheet.getByText("Steps").waitFor();
+  check((await actSheet.locator(".activity-steps li").count()) > 0 && (await actSheet.getByRole("link", { name: "Open the task" }).count()) === 1, "opening one shows its status, result and the steps it took");
+  await shot("light-47-activity-detail");
+  await actSheet.getByRole("button", { name: "Close" }).click();
+  await page.goto(`${base}/#/`);
+  await page.locator(".bubble").first().waitFor();
+
+  // ---- Today: tap Chat while in the main chat ----
+  await page.getByRole("link", { name: "Chat" }).click();
   const today = page.getByRole("region", { name: "Today" });
   await today.waitFor();
   await today.locator(".today-item", { hasText: "Morning brief" }).first().waitFor();
@@ -668,7 +684,7 @@ try {
   // ---- proactive: reminders and suggested next steps ----
   await page.goto(`${base}/#/`);
   await page.locator(".bubble").first().waitFor();
-  await page.getByPlaceholder("Message Lyra").fill("Remind me in 20 minutes to stretch");
+  await page.getByPlaceholder("Message Lyra").fill("Remind me in 2 minutes to stretch");
   await page.getByRole("button", { name: "Send" }).click();
   await page.getByText("Okay, I'll remind you.").waitFor();
   await page.locator(".status-pill", { hasText: /Reminder at/ }).waitFor({ timeout: 15_000 });
