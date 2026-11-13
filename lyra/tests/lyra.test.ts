@@ -33,6 +33,9 @@ describe("Lyra engine", () => {
     expect((await lyra.saveSettings({ notifications: false })).notifications).toBe(false);
     expect((await lyra.saveSettings({ accent: "maroon" })).accent).toBe("maroon");
     await expect(lyra.saveSettings({ accent: "chartreuse" })).rejects.toThrow(/choices/);
+    expect(lyra.state().bubbles).toBe("softer");
+    expect((await lyra.saveSettings({ bubbles: "accent" })).bubbles).toBe("accent");
+    await expect(lyra.saveSettings({ bubbles: "rainbow" })).rejects.toThrow(/choices/);
     await lyra.saveSettings({ keys: { gemini: "g" } });
     await expect(lyra.saveSettings({ provider: "gemini", model: "bad model!" })).rejects.toThrow(/model name/);
     await expect(lyra.saveSettings({ openaiBaseUrl: "ftp://x" })).rejects.toThrow(/http/);

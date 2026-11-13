@@ -260,6 +260,17 @@ export function App() {
     }
   }, [state?.accent]);
 
+  // Same for the message bubble style.
+  useEffect(() => {
+    if (!state) return;
+    document.documentElement.dataset.bubbles = state.bubbles;
+    try {
+      localStorage.setItem("lyra.bubbles", state.bubbles);
+    } catch {
+      // fine: it's only to avoid a flash on start
+    }
+  }, [state?.bubbles]);
+
   if (failed && !state)
     return (
       <div className="center-load" style={{ padding: 24, textAlign: "center" }}>

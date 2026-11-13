@@ -14,6 +14,13 @@ import { useEffect } from "react";
 export type SettingsSection = "model" | "usage" | "you" | "alerts" | "sync" | "about";
 export const SETTINGS_SECTIONS: SettingsSection[] = ["model", "usage", "you", "alerts", "sync", "about"];
 
+const BUBBLE_CHOICES: { id: AppState["bubbles"]; label: string; about: string }[] = [
+  { id: "softer", label: "Softer", about: "Charcoal, or soft white in dark mode" },
+  { id: "accent", label: "Accent", about: "A tint of your accent color" },
+  { id: "neutral", label: "Soft neutral", about: "A quiet grey" },
+  { id: "classic", label: "Classic", about: "Solid black, or white in dark mode" },
+];
+
 const ACCENT_CHOICES: { id: AppState["accent"]; label: string }[] = [
   { id: "lime", label: "Lime" },
   { id: "orange", label: "Burnt orange" },
@@ -156,6 +163,29 @@ function YouSection({ state, setState, toast, run, busy }: Omit<Props, "section"
               <input type="radio" name="accent" value={c.id} checked={state.accent === c.id} disabled={busy} onChange={() => void run(() => api.saveSettings({ accent: c.id }), `${c.label} it is`)} />
               <span className="swatch-dot">{state.accent === c.id && <Check size={20} />}</span>
               <span>{c.label}</span>
+            </label>
+          ))}
+        </div>
+      </section>
+
+      <section className="section">
+        <h2 className="section-label">Your messages</h2>
+        <div className="bubble-styles" role="radiogroup" aria-label="Your messages">
+          {BUBBLE_CHOICES.map((b) => (
+            <label key={b.id} className="bubble-style" data-bubbles={b.id}>
+              <input
+                type="radio"
+                name="bubbles"
+                value={b.id}
+                checked={state.bubbles === b.id}
+                disabled={busy}
+                onChange={() => void run(() => api.saveSettings({ bubbles: b.id }), `${b.label} it is`)}
+              />
+              <span className="sample" aria-hidden="true">
+                Hey Lyra!
+              </span>
+              <span className="name">{b.label}</span>
+              <span className="about">{b.about}</span>
             </label>
           ))}
         </div>

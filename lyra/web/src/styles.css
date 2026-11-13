@@ -19,8 +19,9 @@
   --warn: #b7791f;
   --bad: #c2412d;
 
-  --me: #131416;
-  --me-text: #f3f1ea;
+  /* your messages: softer ink by default (Settings, You and appearance, Your messages) */
+  --me: #3a3834;
+  --me-text: #f6f4ee;
   --orb: #131416;
   --orb-edge: transparent;
   --orb-line: rgba(243, 241, 234, 0.42);
@@ -79,8 +80,8 @@
     --warn: #e0a940;
     --bad: #f07a68;
 
-    --me: #e4e7ec;
-    --me-text: #0d0f13;
+    --me: #d4cfc4;
+    --me-text: #141310;
     --orb: #171a20;
     --orb-edge: #2a2f39;
     --orb-line: rgba(236, 238, 241, 0.38);
@@ -536,7 +537,7 @@ body[data-busy] .orb:has(.avatar)::after {
   }
 }
 
-/* your messages: solid ink */
+/* your messages: their color comes from --me (see the [data-bubbles] styles at the end) */
 .bubble {
   max-width: min(82%, 520px);
   padding: 10px var(--s4) 11px;
@@ -5771,3 +5772,82 @@ button.orb {
 .style-notes li + li {
   margin-top: 2px;
 }
+
+/* ---- Your messages: bubble styles (Settings, You and appearance). Softer ink is the default in :root. ---- */
+[data-bubbles="classic"] {
+  --me: #131416;
+  --me-text: #f3f1ea;
+}
+[data-bubbles="accent"] {
+  --me: var(--accent-soft);
+  --me-text: var(--text);
+}
+[data-bubbles="neutral"] {
+  --me: #e5e1d4;
+  --me-text: var(--text);
+}
+@media (prefers-color-scheme: dark) {
+  [data-bubbles="classic"] {
+    --me: #e4e7ec;
+    --me-text: #0d0f13;
+  }
+  [data-bubbles="accent"] {
+    --me: color-mix(in srgb, var(--accent) 20%, var(--surface));
+    --me-text: var(--text);
+  }
+  [data-bubbles="neutral"] {
+    --me: #242832;
+    --me-text: var(--text);
+  }
+}
+
+/* the picker: each choice previews its own bubble */
+.bubble-styles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s3);
+}
+.bubble-style {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s2);
+  padding: var(--s3) var(--s4) var(--s4);
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+}
+.bubble-style:has(input:checked) {
+  border-color: var(--text);
+}
+.bubble-style:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.bubble-style input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.bubble-style .sample {
+  align-self: flex-end;
+  padding: 7px 12px;
+  border-radius: 16px 16px 5px 16px;
+  background: var(--me);
+  color: var(--me-text);
+  font-size: 14px;
+  line-height: 1.3;
+}
+.bubble-style .name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.bubble-style .about {
+  margin-top: -6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+

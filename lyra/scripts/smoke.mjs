@@ -427,6 +427,21 @@ try {
   await page.reload();
   await page.getByRole("radio", { name: "Burnt orange" }).waitFor();
   check((await page.getByRole("radio", { name: "Burnt orange" }).isChecked()) === true, "the accent color is saved");
+  // ---- your messages: four bubble styles ----
+  check((await page.evaluate(() => document.documentElement.dataset.bubbles)) === "softer", "your messages start in the softer style");
+  await page.getByText("Your messages").scrollIntoViewIfNeeded();
+  await shot("light-44-bubble-styles");
+  for (const [label, id] of [["Accent", "accent"], ["Soft neutral", "neutral"], ["Classic", "classic"], ["Softer", "softer"]]) {
+    await page.locator(`.bubble-style[data-bubbles="${id}"]`).click();
+    await page.getByText(`${label} it is`).waitFor();
+    await page.waitForFunction((v) => document.documentElement.dataset.bubbles === v, id);
+  }
+  check(true, "each message style can be picked and applies right away");
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.getByText("Your messages").scrollIntoViewIfNeeded();
+  await shot("dark-44-bubble-styles");
+  await page.emulateMedia({ colorScheme: "light" });
+
   // ---- talk like me ----
   const mirror = page.getByRole("switch", { name: /Talk like me/ });
   check(await mirror.isChecked(), "Talk like me is on by default");

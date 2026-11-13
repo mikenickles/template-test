@@ -115,6 +115,8 @@ export interface AppState {
   webSearch: boolean;
   /** The app's accent color, one of ACCENTS. */
   accent: Accent;
+  /** How the user's own message bubbles look, one of BUBBLES. */
+  bubbles: Bubbles;
   /** Phone notifications for news while Lyra is in the background, and routine reminders. */
   notifications: boolean;
   /** Lyra mirrors how the user talks. */
@@ -166,6 +168,9 @@ export interface WeatherPlace {
 /** Accent colors the user can pick in Settings. The colors themselves live in the app's stylesheet. */
 export const ACCENTS = ["lime", "orange", "yellow", "red", "maroon", "navy", "indigo", "teal"] as const;
 export type Accent = (typeof ACCENTS)[number];
+/** Your message bubbles: softer ink (default), the accent's tint, soft neutral, or the original solid ink. */
+export const BUBBLES = ["softer", "accent", "neutral", "classic"] as const;
+export type Bubbles = (typeof BUBBLES)[number];
 
 export interface MemoryView {
   content: string;
@@ -193,6 +198,7 @@ export interface SettingsPatch {
   openaiBaseUrl?: string;
   webSearch?: boolean;
   accent?: string;
+  bubbles?: string;
   notifications?: boolean;
   /** Talk like me: mirror how the user talks. */
   mirror?: boolean;
@@ -556,6 +562,7 @@ export class Lyra {
       },
       webSearch: this.webSearch,
       accent: this.accent,
+      bubbles: this.bubbles,
       notifications: getSetting(this.db, "notifications") !== "off",
       mirror: ST.mirrorOn(this.db),
       appLock: getSetting(this.db, "appLock") === "on",
@@ -750,6 +757,11 @@ export class Lyra {
     }
   }
 
+  get bubbles(): Bubbles {
+    const b = getSetting(this.db, "bubbles");
+    return (BUBBLES as readonly string[]).includes(b ?? "") ? (b as Bubbles) : "softer";
+  }
+
   get accent(): Accent {
     const a = getSetting(this.db, "accent");
     return (ACCENTS as readonly string[]).includes(a ?? "") ? (a as Accent) : "lime";
@@ -783,6 +795,10 @@ export class Lyra {
     if (patch.accent !== undefined) {
       if (!(ACCENTS as readonly string[]).includes(patch.accent)) throw new Error("That color isn't one of the choices.");
       setSetting(this.db, "accent", patch.accent);
+    }
+    if (patch.bubbles !== undefined) {
+      if (!(BUBBLES as readonly string[]).includes(patch.bubbles)) throw new Error("That style isn't one of the choices.");
+      setSetting(this.db, "bubbles", patch.bubbles);
     }
     for (const k of SECRET_KEYS) {
       const v = patch.keys?.[k];

@@ -8,6 +8,7 @@ import "./styles.css";
 try {
   const accent = localStorage.getItem("lyra.accent");
   if (accent) document.documentElement.dataset.accent = accent;
+  document.documentElement.dataset.bubbles = localStorage.getItem("lyra.bubbles") || "softer";
 } catch {
   // storage unavailable: the default accent shows until settings load
 }
