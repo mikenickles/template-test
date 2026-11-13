@@ -75,6 +75,8 @@ public class LyraWidget extends AppWidgetProvider {
                 }
             }
             refresh(c);
+            // the Keep watch notification says the same thing
+            KeepWatchService.refresh(c);
             call.resolve();
         }
     }

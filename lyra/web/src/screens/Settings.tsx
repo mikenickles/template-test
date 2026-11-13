@@ -345,10 +345,14 @@ function HeadsUps({ state, run, busy }: { state: AppState; run: (fn: () => Promi
 function BackgroundSection({ toast }: { toast: (m: string) => void }) {
   const [bg, setBg] = useState<BackgroundState | null | undefined>(undefined);
   const [routinesHere, setRoutinesHere] = useState(true);
+  const [homeBase, setHomeBase] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     void background.state().then(setBg, () => setBg(null));
-    void syncApi.status().then((s) => setRoutinesHere(s.routinesHere), () => {});
+    void syncApi.status().then((s) => {
+      setRoutinesHere(s.routinesHere);
+      setHomeBase(s.homeBase?.fresh ? s.homeBase.name : null);
+    }, () => {});
   }, []);
   if (bg === undefined || (!isNative && !isDesktop)) return null;
   const change = async (patch: Partial<BackgroundState>, done: string) => {
@@ -375,7 +379,7 @@ function BackgroundSection({ toast }: { toast: (m: string) => void }) {
                 <div className="title">{isNative ? "Keep watch" : "Keep running in the tray"}</div>
                 <div className="sub">
                   {isNative
-                    ? "Routines, heads-ups and follow-ups keep running after you leave Lyra, checked every 15 minutes. Android shows a small \u201ckeeping watch\u201d notification while it's on. Uses a little more battery."
+                    ? "Routines, heads-ups and follow-ups keep running after you leave Lyra, checked every 15 minutes. Android requires a notification while it's on, so it shows what's next and the latest from Lyra. Uses a little more battery."
                     : "Closing the window leaves Lyra in the tray, so routines, heads-ups and sync keep going. Quit from the tray icon."}
                 </div>
               </span>
@@ -405,6 +409,11 @@ function BackgroundSection({ toast }: { toast: (m: string) => void }) {
               </label>
             )}
           </div>
+          {isNative && homeBase && bg?.on && (
+            <p className="hint">
+              {homeBase} is Lyra's home base, so the background work happens there and this phone doesn't need Keep watch. You can turn it off; the notification goes with it. Your phone takes over on its own if {homeBase} goes quiet (when Lyra is open).
+            </p>
+          )}
           {isNative && <p className="hint">Swiping Lyra away from your recent apps stops it until you open it again.</p>}
           {isDesktop && !routinesHere && <p className="hint">With sync on, your phone runs routines and heads-ups. To run them on this computer instead, make it Lyra's home base under Sync and backup.</p>}
         </>
