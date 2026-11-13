@@ -50,7 +50,7 @@ export interface TurnInbox {
 }
 
 /** The reactions Lyra can put on a message, like a tapback. */
-export const REACTIONS = ["❤️", "👍", "😂", "🎉", "😮", "😢", "🙏", "🔥"] as const;
+export const REACTIONS = ["❤️", "👍", "😂", "🎉", "😮", "😢", "🙏", "🔥", "🙌", "😅"] as const;
 
 /** What a turn can see and change beyond its own chat: notebooks and channels. */
 export interface Workspace {
@@ -323,8 +323,8 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
       name: "react",
       description:
         "Put an emoji reaction on the user's latest message, the way a friend taps a reaction on a text. " +
-        "Use it now and then when it fits: good news, thanks, a joke, something sad, a win. Not on every message. " +
-        "When nothing more needs saying (\"thanks!\", \"ok cool\"), the reaction can be your whole reply: send no text.",
+        "Use it often, whenever the message has any feeling in it: good news, thanks, a joke, plans, excitement, a win, something sad. React and reply in the same turn. " +
+        "Write your reply and react in the same response. When nothing more needs saying (\"thanks!\", \"ok cool\"), the reaction can be your whole reply: send no text.",
       schema: {
         type: "object",
         properties: { emoji: { type: "string", enum: [...REACTIONS] } },
@@ -898,6 +898,8 @@ export async function runTurn(
         results.push({ type: "tool_result", id: call.id, name: call.name, content: r.content, isError: r.isError });
       }
       messages.push({ role: "user", parts: results });
+      // Wrote the reply and reacted in one go: that's the whole answer, no need to ask the model again.
+      if (started && calls.every((c) => c.name === "react") && !takeNew()) break;
       if (step === MAX_STEPS - 1) say(`${reply.trim() ? "\n\n" : ""}I stopped there so this doesn't run on. Want me to keep going?`);
     }
     inbox?.close();

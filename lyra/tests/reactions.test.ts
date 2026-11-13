@@ -60,3 +60,20 @@ describe("reactions", () => {
     expect(listMessages(t.db, null)[0].meta.reaction).toBeUndefined();
   });
 });
+
+describe("warm replies", () => {
+  it("a reply written together with a reaction ends there, without asking the model again", async () => {
+    const { Lyra } = await import("../core/lyra.ts");
+    const { FakeProvider } = await import("../core/providers/fake.ts");
+    const { platform } = await import("./helpers.ts");
+    const provider = new FakeProvider([
+      { parts: [{ type: "text", text: "That's huge, congratulations!! 🙌" }, { type: "tool_call", id: "r1", name: "react", input: { emoji: "🎉" } }], stop: "tool_use" },
+    ]);
+    const lyra = await Lyra.start(platform({ provider }));
+    const { message, user } = await lyra.chat("I got the job!!", { text: () => {}, status: () => {}, memory: () => {} });
+    expect(provider.requests.length).toBe(1);
+    expect(message.content).toBe("That's huge, congratulations!! 🙌");
+    expect(user.meta.reaction).toBe("🎉");
+    expect(provider.requests[0].system).toMatch(/React often/);
+  });
+});
