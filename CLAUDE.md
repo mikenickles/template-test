@@ -18,7 +18,7 @@ Two independent projects live here:
 - **No native dependencies**: the hub must run on Windows ARM64. Storage is the built-in `node:sqlite`. Do not add packages that need a compiler or prebuilt binaries.
 - **Layout**: `hub/agent/` (turn loop, approvals, memory, routines), `hub/providers/` (Claude, OpenAI, Gemini behind one interface), `hub/tools/` (Gmail, Calendar, Drive, Spotify, wallet), `web/` (plain ES modules served by the hub), `android/` (Kotlin WebView shell), `test/`.
 - **Safety rules are code, not prompt**: every tool declares a risk (`read`, `act`, `confirm`, `money`) and `hub/tools/execute.ts` decides when the owner must approve. New tools that reach other people, delete, or spend must be `confirm` or `money` and provide a `card`. Tools returning other people's text must set `untrusted: true`.
-- **Design**: the interface follows the house tokens in `web/styles.css`. Use only those variables; check phone width (380px) and dark mode.
+- **Design**: Arlo has its own look, defined by the tokens at the top of `web/styles.css`: warm paper and ink, one sun-yellow accent used sparingly (the mark, the owner's messages, the send button), ink for main buttons, Instrument Serif for headings, Geist for text and Geist Mono for small print. Use only those variables; check phone width (380px) and dark mode. The Android colours in `android/app/src/main/res/values*/colors.xml` mirror them.
 
 ```
 # from arlo/

@@ -1,9 +1,13 @@
 <resources>
-    <color name="bg">#F7F6F3</color>
+    <!-- Paper and ink, matching the hub's interface. -->
+    <color name="bg">#FBFAF6</color>
     <color name="surface">#FFFFFF</color>
-    <color name="text">#1C1B19</color>
-    <color name="muted">#6B6862</color>
-    <color name="border">#E4E1DA</color>
-    <color name="accent">#3D6BE0</color>
-    <color name="on_accent">#FFFFFF</color>
+    <color name="text">#17150F</color>
+    <color name="muted">#757067</color>
+    <color name="border">#E6E2D8</color>
+    <color name="accent">#17150F</color>
+    <color name="on_accent">#FBFAF6</color>
+    <!-- The app icon is the same in light and dark. -->
+    <color name="icon_ink">#17150F</color>
+    <color name="icon_sun">#FFD23F</color>
 </resources>

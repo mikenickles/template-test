@@ -35,7 +35,11 @@ const MIME: Record<string, string> = {
 const VENDOR: Record<string, string> = {
   'marked.js': 'node_modules/marked/lib/marked.esm.js',
   'purify.js': 'node_modules/dompurify/dist/purify.es.mjs',
-  'instrument-sans.woff2': 'node_modules/@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2',
+  'geist.woff2': 'node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2',
+  'geist-ext.woff2': 'node_modules/@fontsource-variable/geist/files/geist-latin-ext-wght-normal.woff2',
+  'geist-mono.woff2': 'node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2',
+  'serif.woff2': 'node_modules/@fontsource/instrument-serif/files/instrument-serif-latin-400-normal.woff2',
+  'serif-italic.woff2': 'node_modules/@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2',
 };
 
 /** Nothing is ever loaded from another site, even if a reply tries to make the page do so. */
@@ -351,7 +355,7 @@ export function createHandler(hooks: ServerHooks) {
     const { code, expires } = startPairing();
     const addresses = lanAddresses().map((ip) => `http://${ip}:${port}`);
     const link = addresses[0] ? `${addresses[0]}/pair#${code}` : null;
-    const qr = link ? await QRCode.toDataURL(link, { margin: 1, width: 440, color: { dark: '#1C1B19', light: '#FFFFFF' } }) : null;
+    const qr = link ? await QRCode.toDataURL(link, { margin: 1, width: 440, color: { dark: '#17150F', light: '#FFFFFF' } }) : null;
     return { code, expires, addresses, link, qr };
   });
   route('POST', /^\/api\/pair\/complete$/, 'public', (c) => {
