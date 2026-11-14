@@ -19,7 +19,7 @@ import { Star } from "../icons";
 import { setChatStatus } from "../StatusLine";
 import { STATUS_LABEL } from "./Tasks";
 import { StarChart, Thinking } from "../LyraMark";
-import { headline, Markdown } from "../markdown";
+import { Markdown } from "../markdown";
 import { clock, dayLabel, parse } from "../when";
 import { ask } from "../ask";
 
@@ -676,7 +676,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                       {lastOfGroup && m.id > 0 && <time className="stamp" dateTime={d.toISOString()}>{clock(d)}</time>}
                     </>
                   ) : !m.content.trim() && !m.meta.error ? null : (
-                    <div className={`reply${m.meta.error ? " error" : headline(m.content) ? " headline" : ""}`} {...holdProps(m)}>
+                    <div className={`reply${m.meta.error ? " error" : ""}`} {...holdProps(m)}>
                       <Markdown text={m.content} />
                     </div>
                   )}
@@ -783,7 +783,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
           {pending && (
             <div className="row lyra">
               {pending.reply ? (
-                <div className={`reply caret${headline(pending.reply) ? " headline" : ""}`}>
+                <div className="reply caret">
                   <Markdown text={pending.reply} />
                 </div>
               ) : (

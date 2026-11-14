@@ -25,7 +25,7 @@ import { StatusLine } from "./StatusLine";
 import { AwaySheet } from "./Away";
 import { deliver } from "./attach";
 import { listen, appLock, isDesktop, notifier, shares } from "./platform";
-import { Star, TasksIcon } from "./icons";
+import { File as FileIcon, Star, TasksIcon } from "./icons";
 
 export type Route =
   | { name: "chat"; channelId: number | null; focus?: number }
@@ -352,7 +352,8 @@ export function App() {
   if (!state) return <div className="center-load">Loading…</div>;
 
   const initial = (state.userName !== "you" ? state.userName : "Me").charAt(0).toUpperCase();
-  const inChat = route.name === "chat" || route.name === "tasks";
+  // the three pages on the bottom bar: Chat, Tasks, Artifacts
+  const inChat = route.name === "chat" || route.name === "tasks" || route.name === "docs";
   const channel = route.name === "chat" && route.channelId !== null ? channels.find((c) => c.id === route.channelId) : undefined;
   const channelMissing = route.name === "chat" && route.channelId !== null && !channel;
   const back = backFrom(route);
@@ -422,7 +423,7 @@ export function App() {
               <StatusLine state={state} />
             </div>
           )}
-          {!inChat && <span />}
+          {(!inChat || route.name === "docs") && <span />}
           {route.name === "tasks" ? (
             <div className="topbar-slot" id="topbar-right" />
           ) : inChat ? (
@@ -483,6 +484,10 @@ export function App() {
                   )}
                 </span>
                 <span>Tasks</span>
+              </a>
+              <a className={`tabbar-item${route.name === "docs" ? " on" : ""}`} href="#/artifacts" aria-current={route.name === "docs" ? "page" : undefined}>
+                <FileIcon size={20} />
+                <span>Artifacts</span>
               </a>
             </div>
           </nav>

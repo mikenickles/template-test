@@ -603,7 +603,7 @@ body[data-busy] .orb:has(.avatar)::after {
   }
 }
 
-/* Lyra's replies: open text, first line as the headline */
+/* Lyra's replies: open text, every line the same size */
 .reply {
   position: relative;
   max-width: min(94%, 600px);
@@ -623,17 +623,6 @@ body[data-busy] .orb:has(.avatar)::after {
   border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 0 4px var(--accent-soft);
-}
-
-.reply.headline > :first-child {
-  font-size: 21px;
-  line-height: 1.3;
-  font-weight: 600;
-  letter-spacing: -0.015em;
-}
-
-.reply.headline > :first-child + * {
-  margin-top: var(--s3);
 }
 
 .reply.error {
@@ -2152,7 +2141,7 @@ button.nav-item {
   max-width: 420px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--s2);
   padding: 6px;
   border-radius: 999px;
