@@ -8185,3 +8185,238 @@ body[data-music] .lp-orb {
 .app:has(.composer) .toast {
   bottom: calc(var(--inset-bottom) + 188px);
 }
+
+/* ---------- widgets under a reply (0.48): choices, a checklist, a place ---------- */
+.widget {
+  width: 100%;
+  max-width: 520px;
+  margin: var(--s3) 0 0 22px;
+  width: calc(100% - 22px);
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.widget-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.widget-count {
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.widget-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.widget-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  transition:
+    transform 160ms ease,
+    border-color var(--ease),
+    background var(--ease);
+}
+.widget-choice:not(:disabled):active {
+  transform: scale(0.98);
+}
+.widget-choice:disabled:not(.picked) {
+  opacity: 0.55;
+}
+.widget-choice.picked {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.widget-choice.picked svg {
+  color: var(--accent-text);
+}
+.widget-choice-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.widget-choice-label {
+  font-weight: 600;
+}
+.widget-choice-detail {
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+.widget .chev {
+  flex: none;
+  color: var(--text-muted);
+}
+.widget-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.widget-list li + li {
+  border-top: 1px solid var(--border);
+}
+.widget-check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.widget-check input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.widget-box {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 1.5px solid var(--text-muted);
+  transition:
+    background var(--ease),
+    border-color var(--ease);
+}
+.widget-check.done .widget-box {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.widget-check input:focus-visible + .widget-box {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.widget-check.done .widget-check-text {
+  color: var(--text-muted);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--text-muted) 50%, transparent);
+}
+.widget-place-name {
+  margin: 0;
+  font-weight: 650;
+  font-size: 17px;
+}
+.widget-place-line {
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.widget-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.widget-actions .btn {
+  text-decoration: none;
+}
+
+/* ---------- Today at a glance (0.48): weather, what Lyra did, what's on the calendar ---------- */
+.today-head {
+  margin-bottom: var(--s4);
+}
+.today-glance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 var(--s4);
+}
+.glance-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 13.5px;
+  font-weight: 550;
+  color: var(--text);
+  text-decoration: none;
+}
+.glance-chip.link {
+  color: var(--accent-text);
+}
+.today-agenda {
+  margin: 0 0 var(--s5);
+  padding: 12px 14px 6px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.today-agenda-label {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.today-agenda ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.today-agenda li {
+  display: flex;
+  gap: 12px;
+  padding: 9px 0;
+}
+.today-agenda li + li {
+  border-top: 1px solid var(--border);
+}
+.agenda-time {
+  flex: none;
+  min-width: 68px;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-text);
+}
+.agenda-what {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.agenda-title {
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.agenda-place {
+  font-size: 13px;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+.agenda-none {
+  margin: 0;
+  padding: 6px 0 8px;
+  color: var(--text-muted);
+}
+
+/* day buttons are only for a routine on a schedule */
+.day-picks[hidden] {
+  display: none;
+}

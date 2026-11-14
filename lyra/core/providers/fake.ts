@@ -69,6 +69,7 @@ export class FakeProvider implements ModelProvider {
       if (result.name === "save_skill") return say("Learned it. I'll do it that way from now on.");
       if (result.name === "use_skill") return say(`Doing it your way:\n\n${result.content.split("\n\n").slice(1).join("\n\n").slice(0, 400)}`);
       if (result.name === "remind_at_place") return say("Done, I'll remind you when you get there 📍");
+      if (result.name === "show") return say("Here you go (a practice example: add an API key for the real thing).");
       if (result.name === "show_scan") return say("Three things on it. Tap to get a reminder or add one to your list (practice items: add an API key for the real thing).");
       if (result.name === "show_triage") return say("Here's how your inbox sorts out (practice data: add an API key for the real thing).");
       return say(`Here's what I found.\n\n${result.content.replace(/<\/?untrusted_data[^>]*>/g, "").trim().slice(0, 400)}`);
@@ -97,6 +98,20 @@ export class FakeProvider implements ModelProvider {
       const p2 = (n: number) => String(n).padStart(2, "0");
       return call("set_reminder", { text: remind[2], at: `${at.getFullYear()}-${p2(at.getMonth() + 1)}-${p2(at.getDate())} ${p2(at.getHours())}:${p2(at.getMinutes())}` });
     }
+    // widgets: the practice model shows a sample of each kind
+    if (/^(which|pick|choose|compare)\b.*\b(plumber|option|one)/i.test(text.trim()) && has("show"))
+      return call("show", {
+        kind: "choices",
+        title: "Plumbers (practice)",
+        options: [
+          { label: "Ortiz Plumbing", detail: "Thu 8 to 10 AM · $95 visit" },
+          { label: "Bay Pipe Co", detail: "Fri 1 to 3 PM · $80 visit" },
+          { label: "Delta Rooter", detail: "Next week · $120 visit" },
+        ],
+      });
+    const pack = text.trim().match(/^(?:packing|shopping|grocery) list(?: for (.+))?$/i);
+    if (pack && has("show")) return call("show", { kind: "checklist", title: pack[1] ? `For ${pack[1]}` : "Your list", items: ["Tent and stakes", "Sleeping bags", "Headlamps", "Bug spray", "Marshmallows"] });
+    if (/^where('s| is) (.+)$/i.test(text.trim()) && has("show")) return call("show", { kind: "place", name: "Ortiz Plumbing (practice)", address: "1200 J St, Sacramento, CA", phone: "+1 916 555 0142", note: "Open until 5 PM" });
     if (/^what('s| is) next/i.test(text) && has("suggest_replies")) return call("suggest_replies", { options: ["Add it to my tasks", "Remind me Friday"] });
     const rem = text.match(/^remember(?: that)?[:\s]+(.+)$/i);
     if (rem && has("remember")) return call("remember", { section: "Open loops", text: rem[1] });

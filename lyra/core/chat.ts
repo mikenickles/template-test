@@ -7,7 +7,8 @@ import { buildSystemPrompt, type ChannelDigest } from "./prompt.ts";
 import { neutralize, wrapUntrusted } from "./untrusted.ts";
 import { DASHBOARD_SCHEMA } from "./dashboard.ts";
 import { checkScan, SCAN_TOOL, type Scan } from "./scan.ts";
-import { describeSchedule, type RoutineInput } from "./routines.ts";
+import { checkWidget, describeWidget, WIDGET_TOOL, type Widget } from "./widgets.ts";
+import type { RoutineInput } from "./routines.ts";
 import { uniqueSources, type ModelProvider, type Msg, type Part, type Source, type ToolDef } from "./providers/types.ts";
 import {
   addStep,
@@ -637,12 +638,25 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
         properties: {
           name: { type: "string", description: "Short, e.g. 'Friday school check'." },
           instructions: { type: "string", description: "What to check and what counts as worth posting. Written for the assistant that will run it." },
-          times: { type: "string", description: "Local times, HH:MM, comma-separated, e.g. '07:00' or '08:00,20:00'. For a repeating check: 'every 15 min', 'every 2 hours', or 'every 30 min from 08:00 to 18:00'." },
+          times: { type: "string", description: "Local times, HH:MM, comma-separated, e.g. '07:00' or '08:00,20:00'. For a repeating check: 'every 15 min', 'every 2 hours', or 'every 30 min from 08:00 to 18:00'. Leave out when it starts from `when`." },
+          when: {
+            type: "object",
+            description:
+              "Instead of a time: start the routine when something happens. mail: new mail from someone (from: a name, an address, or a word in the subject). place: the user arrives at or leaves one of their saved places (place, on: arrive|leave; the phone watches it). notification: a notification on their phone mentions some words (match). Use this for 'when Dana emails, tell me right away', 'when I get home, remind me of what's due tomorrow', 'when my package is delivered, add unboxing to my list'.",
+            properties: {
+              kind: { type: "string", enum: ["mail", "place", "notification"] },
+              from: { type: "string" },
+              place: { type: "string" },
+              on: { type: "string", enum: ["arrive", "leave"] },
+              match: { type: "string" },
+            },
+            required: ["kind"],
+          },
           days: { type: "string", description: "Days as digits, 0 = Sunday … 6 = Saturday. '0123456' every day, '12345' weekdays." },
           always_post: { type: "boolean", description: "Post every run (like a daily brief) instead of only when there's news." },
           channel: { type: "string", enum: ["none", ...channels.map((c) => c.name)], description: current ? `Defaults to this channel (${current.name}).` : "Where it posts. Defaults to the main chat." },
         },
-        required: ["name", "instructions", "times"],
+        required: ["name", "instructions"],
       },
     },
     {
@@ -777,6 +791,7 @@ export async function runTurn(
   };
   let triage: Triage | undefined;
   let scan: Scan | undefined;
+  let widget: Widget | undefined;
   const skillNotes: { id: number; name: string; kind: "used" | "saved" }[] = [];
   const toolsUsed: { name: string; ok: boolean }[] = [];
   // Once outside content has been read, notebook changes need the user's tap.
@@ -835,6 +850,7 @@ export async function runTurn(
     ...(docNotes.length ? { docs: docNotes } : {}),
     ...(triage ? { triage } : {}),
     ...(scan ? { scan } : {}),
+    ...(widget ? { widget } : {}),
     ...(skillNotes.length ? { skills: skillNotes } : {}),
     ...(sources.length ? { sources: uniqueSources(sources).slice(0, 8) } : {}),
     tools: toolsUsed,
@@ -845,7 +861,7 @@ export async function runTurn(
   try {
     const channels = ctx.workspace.channels();
     const gmailOn = ctx.connectors.status().some((c) => c.id === "gmail" && c.state === "connected");
-    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed(), !!ctx.workspace.music), ...peopleTools(ctx.workspace), ...docTools(ctx.workspace), ...triageTools(gmailOn), SCAN_TOOL, ...skillTools(ctx.workspace, true), ...lifeAdminTools(ctx.workspace), ...(await ctx.connectors.tools())];
+    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed(), !!ctx.workspace.music), ...peopleTools(ctx.workspace), ...docTools(ctx.workspace), ...triageTools(gmailOn), SCAN_TOOL, WIDGET_TOOL, ...skillTools(ctx.workspace, true), ...lifeAdminTools(ctx.workspace), ...(await ctx.connectors.tools())];
     const system = buildSystemPrompt({
       userName: ctx.userName,
       soul: ctx.soul,
@@ -975,6 +991,22 @@ export async function runTurn(
             content: ok ? "Reacted. Add text only if there's more to say." : `Pick one of: ${REACTIONS.join(" ")}`,
             isError: !ok,
           });
+          continue;
+        }
+        if (call.name === "show") {
+          // a widget the user acts on with their own taps: fine after outside content, with plain labels
+          let content: string;
+          let ok = false;
+          try {
+            if (widget) throw new Error("One widget per reply. Put the rest in your text.");
+            widget = checkWidget(call.input, state.tainted);
+            content = `${describeWidget(widget)}${kept(true) ? "" : " You have NOT written the reply yet: write it now, starting with the answer."}`;
+            ok = true;
+          } catch (e) {
+            content = (e as Error).message;
+          }
+          toolsUsed.push({ name: call.name, ok });
+          results.push({ type: "tool_result", id: call.id, name: call.name, content, isError: !ok });
           continue;
         }
         if (call.name === "show_scan") {
@@ -1223,7 +1255,7 @@ export async function runTurn(
       messages.push({ role: "user", parts: results });
       // Wrote the reply and reacted or offered buttons in one go: that's the whole answer, no need to
       // ask the model again (it would only add a line about the buttons).
-      if (started && calls.every((c) => c.name === "react" || c.name === "suggest_replies") && !takeNew()) break;
+      if (started && calls.every((c) => c.name === "react" || c.name === "suggest_replies" || (c.name === "show" && widget)) && !takeNew()) break;
       if (step === MAX_STEPS + extra - 1 && extra < 2 && takeNew()) extra++;
       else if (step === MAX_STEPS + extra - 1) own(`I stopped there so this doesn't run on. Want me to keep going?`);
     }
@@ -1288,7 +1320,7 @@ interface TurnState {
  * a result the reply became only about the thing that wasn't saved, and the answer was lost.
  */
 const ANSWER_FIRST =
-  " This is not an error and not news: your reply is still the full answer to what they asked. Mention this at most as one short offer at the very end (\"Want me to save that?\"), never as the reply itself, and never say it is waiting, held or needs confirming.";
+  " This is not an error and not news: your reply is still the full answer to what they asked. Mention this at most as one short offer at the very end (\"Want me to save that?\"), never as the reply itself, and never say it is waiting, held or needs confirming. Don't apologize for it or write a \"correction\": the user hasn't seen anything to correct.";
 
 const ASKED_REMINDER = /\b(remind(er|ers|s)?|nudge|ping me|don'?t let me forget|follow[- ]?up|check back|check in on|keep an eye|let me know (when|if|once)|tell me (when|if|once)|alert me|heads[- ]?up)\b/i;
 /** The user asking for something to go on their list. */
@@ -1486,16 +1518,19 @@ async function runTool(
           if (!found) return fail(`There's no ${ch} channel.`);
           channelId = found.id;
         }
+        const when = input.when && typeof input.when === "object" ? input.when : undefined;
         const r = await rs.create({
           name: String(input.name ?? ""),
           instructions: String(input.instructions ?? ""),
           times: String(input.times ?? ""),
           days: typeof input.days === "string" ? input.days : "0123456",
-          postMode: input.always_post ? "always" : "news",
+          // a routine set off by something happening says so each time, unless told otherwise
+          postMode: input.always_post ?? !!when ? "always" : "news",
           channelId,
+          ...(when ? { trigger: when } : {}),
         });
         emit.status(`Set up ${r.name}`);
-        const sched = describeSchedule(String(input.times ?? ""), typeof input.days === "string" ? input.days : "0123456");
+        const sched = rs.list().find((x) => x.id === r.id)?.schedule ?? "";
         return { content: `Routine #${r.id} "${r.name}" set: ${sched}. It's on the Tasks tab under Scheduled.`, isError: false };
       }
       const patch: Partial<RoutineInput> = {};

@@ -242,6 +242,8 @@ export const MIGRATIONS: string[] = [
    ALTER TABLE docs ADD COLUMN refreshed_at TEXT;`,
   // place reminders (geofences on the phone)
   PLACE_MIGRATION,
+  // 0.48: a routine can start from something happening (an email, a place, a notification) instead of the clock
+  `ALTER TABLE routines ADD COLUMN starts_on TEXT NOT NULL DEFAULT '';`,
   // 0.45: moving events, answering invitations, archiving mail and writing texts join the cards
   `CREATE TABLE actions_next (
      id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -431,6 +433,8 @@ export interface MessageMeta {
   pushed?: boolean;
   /** a place reminder that went off */
   placeReminder?: { id: number; place: string };
+  /** a widget under the reply: choices to tap, a checklist to tick, or a place card (0.48) */
+  widget?: import("./widgets.ts").Widget;
   /** what's on a scanned paper, with what the user did about each item */
   scan?: import("./scan.ts").Scan;
   /** People cards added or updated in this reply. */

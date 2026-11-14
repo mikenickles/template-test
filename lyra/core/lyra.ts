@@ -11,7 +11,7 @@ import { createGmailServer, gmailProfile } from "./connectors/gmail/server.ts";
 import { createCalendarServer } from "./connectors/calendar/server.ts";
 import { createDriveServer } from "./connectors/drive/server.ts";
 import { googleGet } from "./connectors/google-http.ts";
-import { createPhoneServer, type NoticeSource } from "./connectors/phone/server.ts";
+import { createPhoneServer, describeNotices, filterNotices, type NoticeSource } from "./connectors/phone/server.ts";
 import { CALENDAR_EVENTS, CALENDAR_READONLY, DRIVE_FILE, DRIVE_READONLY, GMAIL_COMPOSE, GMAIL_MODIFY, GMAIL_READONLY, grantIsAllowed, TokenSource, type GoogleAuth } from "./connectors/google.ts";
 import * as A from "./actions.ts";
 import * as P from "./people.ts";
@@ -177,6 +177,17 @@ export const HEADS_UP_EVERY: Record<ProactiveLevel, number> = { off: 0, light: 4
 const PROACTIVE_DEFAULT: Proactive = { level: "light", quietStart: "21:00", quietEnd: "07:00", checkIns: true, mailWatch: true };
 /** How often the mail watch looks (a plain search; the AI only reads what's new). */
 const MAIL_WATCH_EVERY = 5 * 60_000;
+/** The Today screen's glance: what's next on the calendar, and what Lyra has done today. */
+export interface Agenda {
+  /** false: no calendar connected (the screen offers to connect one) */
+  calendar: boolean;
+  events: { id: string; title: string; start: string; allDay: boolean; tomorrow: boolean; place: string }[];
+  /** things Lyra did since midnight (tasks, routines, heads-ups, reminders) */
+  did: number;
+}
+
+/** Fence ids for place triggers start here (place reminders use their own small ids). */
+export const PLACE_TRIGGER_BASE = 100_000;
 /** How long between check-ins at each level. */
 export const CHECK_IN_EVERY: Record<ProactiveLevel, number> = { off: 0, light: 24 * 3600_000, active: 8 * 3600_000 };
 /** A heads-up or check-in that couldn't run is tried again this much later. */
@@ -249,7 +260,7 @@ export type GoogleId = "gmail" | "calendar" | "drive";
 
 const GOOGLE_LINKS = ["gmail", "calendar", "drive"];
 /** Settings that stay with a device when another device's data arrives through sync. */
-const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications", "actions.gmail", "actions.calendar", "actions.archive", "actions.text", "notices", "contacts", "spotify", "spotify.playback", "spotify.playlists", "spotify.nowPlaying"];
+const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications", "actions.gmail", "actions.calendar", "actions.archive", "actions.text", "notices", "trigger.noticesAt", "contacts", "spotify", "spotify.playback", "spotify.playlists", "spotify.nowPlaying"];
 
 /** Phase 9: what Lyra may propose, each turned on by the user in Connections. */
 const ACTION_ACCESS = {
@@ -956,6 +967,24 @@ export class Lyra {
     return getMessage(this.db, messageId)!;
   }
 
+  /** A tap on a reply's widget: tick or untick a checklist line, or note which choice was picked. */
+  async widgetTap(messageId: number, index: number, on = true): Promise<StoredMessage> {
+    const m = getMessage(this.db, messageId);
+    const w = m?.meta.widget;
+    if (!m || !w) throw new Error("That card is gone.");
+    let next: typeof w;
+    if (w.kind === "checklist") {
+      if (!w.items[index]) throw new Error("That line is gone.");
+      next = { ...w, items: w.items.map((it, i) => (i === index ? { text: it.text, ...(on ? { done: true } : {}) } : it)) };
+    } else if (w.kind === "choices") {
+      if (!w.options[index]) throw new Error("That option is gone.");
+      next = { ...w, picked: index };
+    } else return m;
+    updateMessageMeta(this.db, messageId, { ...m.meta, widget: next });
+    await this.db.flush();
+    return getMessage(this.db, messageId)!;
+  }
+
   // ---------- places ----------
 
   /** Saved places (Home, Work…), synced; set from Settings with "save where I am now". */
@@ -1034,6 +1063,46 @@ export class Lyra {
       maxResults: 20,
     });
     return PL.tripsFrom(r.items ?? [], now, hours);
+  }
+
+  private agendaCache?: { at: number; day: string; value: Agenda };
+
+  /**
+   * For the Today screen (0.48): what's left on the calendar today and tomorrow morning, and how
+   * much Lyra has done since midnight. No AI: one calendar read, kept for five minutes.
+   */
+  async agenda(now = new Date()): Promise<Agenda> {
+    const tz = this.p.timeZone;
+    const dayOf = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+    const today = dayOf(now);
+    const midnight = localToDate(`${today} 00:00`, tz) ?? new Date(now.getTime() - 12 * 3600_000);
+    const did = AC.listActivity(this.db, { limit: 60 }).filter((a) => new Date(a.at).getTime() >= midnight.getTime()).length;
+    const calendar = this.connectors.status().some((c) => c.id === "calendar" && c.state === "connected");
+    if (!calendar) return { calendar: false, events: [], did };
+    const c = this.agendaCache;
+    if (c && c.day === today && now.getTime() - c.at < 5 * 60_000) return { ...c.value, did };
+    const g = googleGet("https://www.googleapis.com/calendar/v3", "Google Calendar", this.tokenFor("calendar"), this.fetch);
+    const tomorrowNoon = new Date(midnight.getTime() + 36 * 3600_000);
+    const r = await g.json<{ items?: { id: string; status?: string; summary?: string; location?: string; start?: { date?: string; dateTime?: string }; end?: { date?: string; dateTime?: string } }[] }>("/calendars/primary/events", {
+      timeMin: now.toISOString(),
+      timeMax: tomorrowNoon.toISOString(),
+      singleEvents: true,
+      orderBy: "startTime",
+      maxResults: 12,
+    });
+    const events = (r.items ?? [])
+      .filter((e) => e.status !== "cancelled" && (e.start?.dateTime || e.start?.date))
+      .map((e) => {
+        const allDay = !e.start?.dateTime;
+        const start = allDay ? `${e.start!.date}T12:00:00Z` : e.start!.dateTime!;
+        return { id: e.id, title: (e.summary ?? "").trim().slice(0, 80) || "(no title)", start, allDay, tomorrow: (allDay ? e.start!.date! : dayOf(new Date(start))) !== today, place: (e.location ?? "").trim().slice(0, 80) };
+      })
+      // an all-day event that began before today is still "today"
+      .map((e) => (e.allDay && e.start.slice(0, 10) < today ? { ...e, tomorrow: false } : e))
+      .slice(0, 5);
+    const value: Agenda = { calendar: true, events, did };
+    this.agendaCache = { at: now.getTime(), day: today, value };
+    return value;
   }
 
   /** The newest message's id (0 with none). */
@@ -1711,7 +1780,7 @@ export class Lyra {
   // ---------- routines ----------
 
   routines(): (R.RoutineRow & { schedule: string; running: boolean })[] {
-    return R.listRoutines(this.db).map((r) => ({ ...r, schedule: R.describeSchedule(r.times, r.days), running: this.routinesRunner.isRunning(r.id) }));
+    return R.listRoutines(this.db).map((r) => ({ ...r, schedule: R.describeWhen(r), running: this.routinesRunner.isRunning(r.id) }));
   }
 
   routine(id: number): { routine: R.RoutineRow & { schedule: string; running: boolean }; runs: R.RoutineRun[] } {
@@ -1725,7 +1794,20 @@ export class Lyra {
     return R.PRESETS.map((p) => ({ ...p, added: have.has(p.name.toLowerCase()) }));
   }
 
+  /** A trigger has to be something this setup can notice: a saved place, mail that's connected. */
+  private checkTriggerFits(input: Partial<R.RoutineInput>): void {
+    const t = input.trigger === undefined ? null : R.checkTrigger(input.trigger);
+    if (!t) return;
+    if (t.kind === "mail" && !this.gmailOn) throw new Error("Connect Mail first (on the Lyra page), so Lyra can see when that email arrives.");
+    if (t.kind === "place") {
+      const p = PL.matchPlace(this.places(), t.place);
+      if (!p) throw new Error(`"${t.place}" isn't a saved place yet. Save it on the phone: Settings, Notifications, Places and travel, "Save where I am now".`);
+      (input.trigger as { place: string }).place = p.name;
+    }
+  }
+
   async createRoutine(input: R.RoutineInput): Promise<R.RoutineRow> {
+    this.checkTriggerFits(input);
     const r = R.createRoutine(this.db, input);
     await this.db.flush();
     this.listeners.forEach((l) => l({ type: "routine", routineId: r.id }));
@@ -1739,6 +1821,7 @@ export class Lyra {
   }
 
   async updateRoutine(id: number, input: Partial<R.RoutineInput>): Promise<R.RoutineRow> {
+    this.checkTriggerFits(input);
     const r = R.updateRoutine(this.db, id, input);
     await this.db.flush();
     this.listeners.forEach((l) => l({ type: "routine", routineId: id }));
@@ -1755,11 +1838,101 @@ export class Lyra {
     this.routinesRunner.runNow(id);
   }
 
+  // ---------- triggers (0.48): routines that start when something happens ----------
+
+  private triggered(kind: R.Trigger["kind"]): { r: R.RoutineRow; t: R.Trigger }[] {
+    return R.listRoutines(this.db)
+      .filter((r) => r.enabled)
+      .map((r) => ({ r, t: R.triggerOf(r) }))
+      .filter((x): x is { r: R.RoutineRow; t: R.Trigger } => x.t?.kind === kind);
+  }
+
+  private checkingTriggers = false;
+
+  /**
+   * Mail triggers: every few minutes, one plain Gmail search per routine (no AI). The first look
+   * only notes what's already there; after that, new mail that matches starts the routine.
+   */
+  tickTriggers(now = new Date()): boolean {
+    const mail = this.triggered("mail");
+    if (!mail.length || !this.gmailOn || this.checkingTriggers) return false;
+    const last = getSetting(this.db, "triggersAt");
+    if (last && now.getTime() - new Date(last).getTime() < MAIL_WATCH_EVERY) return false;
+    setSetting(this.db, "triggersAt", now.toISOString());
+    this.checkingTriggers = true;
+    void (async () => {
+      for (const { r, t } of mail) {
+        const res = await this.connectors.call("gmail__search_mail", { query: R.mailTriggerQuery(t as Extract<R.Trigger, { kind: "mail" }>), max_results: 10 });
+        if (res.isError) continue;
+        const key = `trigger.seen.${r.id}`;
+        const before = getSetting(this.db, key);
+        let seen: string[] = [];
+        try {
+          seen = JSON.parse(before ?? "[]") as string[];
+        } catch {
+          seen = [];
+        }
+        const f = MW.fresh(MW.parseMailList(res.content), seen);
+        if (JSON.stringify(f.seen) !== JSON.stringify(seen) || before === undefined) setSetting(this.db, key, JSON.stringify(f.seen));
+        if (before === undefined || !f.fresh.length) continue;
+        this.routinesRunner.runNow(
+          r.id,
+          `New email${f.fresh.length > 1 ? "s" : ""} just arrived:\n${f.fresh.map((m) => `- from ${m.from || "(unknown)"}, subject "${m.subject || "(none)"}" (thread ${m.thread}; read it with read_thread)`).join("\n")}`,
+        );
+      }
+    })()
+      .catch((e) => console.error("[lyra] triggers", e))
+      .finally(() => (this.checkingTriggers = false));
+    return true;
+  }
+
+  /**
+   * Notification triggers, on the phone that reads them: any new notification since the last
+   * look that mentions the words starts the routine. Returns how many routines started.
+   */
+  async tickNoticeTriggers(now = new Date()): Promise<number> {
+    const list = this.triggered("notice");
+    if (!list.length || !this.p.notices || getSetting(this.db, "notices") !== "on") return 0;
+    const at = Number(getSetting(this.db, "trigger.noticesAt")) || 0;
+    setSetting(this.db, "trigger.noticesAt", String(now.getTime()));
+    if (!at) return 0; // the first look only starts the clock
+    const recent = await this.p.notices.recent(at).catch(() => []);
+    let started = 0;
+    for (const { r, t } of list) {
+      const hits = filterNotices(recent, { search: (t as Extract<R.Trigger, { kind: "notice" }>).match });
+      if (!hits.length) continue;
+      this.routinesRunner.runNow(r.id, `New on the phone just now:\n${describeNotices(hits.slice(0, 8), this.p.timeZone)}`);
+      started++;
+    }
+    return started;
+  }
+
+  /** Place triggers as fences for the phone to watch (ids from 100000, so they never meet a place reminder's). */
+  placeTriggers(): { id: number; text: string; place: string; lat: number; lng: number; radius: number; on: "arrive" | "leave" }[] {
+    const saved = this.places();
+    return this.triggered("place").flatMap(({ r, t }) => {
+      const pt = t as Extract<R.Trigger, { kind: "place" }>;
+      const p = PL.matchPlace(saved, pt.place);
+      return p ? [{ id: PLACE_TRIGGER_BASE + r.id, text: `Lyra is on it: ${r.name}`, place: p.name, lat: p.lat, lng: p.lng, radius: 150, on: pt.on }] : [];
+    });
+  }
+
+  /** The phone crossed a place trigger's fence: start those routines. */
+  placeTriggersFired(ids: number[]): void {
+    for (const id of ids) {
+      const hit = this.triggered("place").find((x) => x.r.id === id - PLACE_TRIGGER_BASE);
+      if (!hit) continue;
+      const t = hit.t as Extract<R.Trigger, { kind: "place" }>;
+      this.routinesRunner.runNow(hit.r.id, t.on === "leave" ? `The user just left ${t.place}.` : `The user just arrived at ${t.place}.`);
+    }
+  }
+
   /** Called every minute while the app is open, and when it opens: runs anything due. */
   tickRoutines(now = new Date()): number[] {
     const started = this.routinesRunner.tick(now);
     this.tickReminders(now);
     this.tickMailWatch(now);
+    this.tickTriggers(now);
     this.tickLifeAdmin(now);
     if (!this.tickHeadsUp(now) && !this.tickCheckIn(now) && !this.tickTidy(now)) this.tickStyle(now);
     return started;

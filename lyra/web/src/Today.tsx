@@ -4,6 +4,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Today } from "../../core/today";
 import { api, onChange } from "./api";
 import { SetupCard } from "./Setup";
+import { currentWeather, type Weather } from "./weather";
+import { shortTime } from "./statusText";
 
 /** The same gentle zigzag as the channel menu. */
 const SWAY = [2, 11, 0, 9, 3, 10];
@@ -39,6 +41,24 @@ export function TodayView({ onSend, onShowChat, hasChat, toast }: { onSend: (tex
     };
   }, []);
 
+  // the day at a glance (0.48): the weather, what's next on the calendar, what Lyra has done today
+  const [agenda, setAgenda] = useState<Awaited<ReturnType<typeof api.agenda>> | null>(null);
+  const [weather, setWeather] = useState<Weather | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () => void api.agenda().then((a) => alive && setAgenda(a), () => {});
+    load();
+    void api
+      .state()
+      .then((s) => (s.weatherPlace ? currentWeather(s.weatherPlace) : null))
+      .then((w) => alive && setWeather(w), () => {});
+    const tick = setInterval(load, 5 * 60_000);
+    return () => {
+      alive = false;
+      clearInterval(tick);
+    };
+  }, []);
+
   const box = useRef<HTMLDivElement>(null);
   const [points, setPoints] = useState<{ x: number; y: number }[]>([]);
   useLayoutEffect(() => {
@@ -63,6 +83,46 @@ export function TodayView({ onSend, onShowChat, hasChat, toast }: { onSend: (tex
     <section className="today" aria-label="Today">
       <p className="today-when">{dayPart()}</p>
       <h1 className="today-head">{headline(today)}</h1>
+
+      {(weather || agenda) && (
+        <div className="today-glance">
+          {weather && (
+            <span className="glance-chip">
+              <span aria-hidden="true">{weather.icon}</span> {weather.temp}° · {weather.text}
+            </span>
+          )}
+          {agenda && agenda.did > 0 && (
+            <a className="glance-chip link" href="#/activity">
+              Lyra did {agenda.did} {agenda.did === 1 ? "thing" : "things"} today
+            </a>
+          )}
+          {agenda && !agenda.calendar && (
+            <a className="glance-chip link" href="#/access">
+              Connect your calendar to see your day
+            </a>
+          )}
+        </div>
+      )}
+      {agenda?.calendar && (
+        <div className="today-agenda" aria-label="On your calendar">
+          <p className="today-agenda-label">On your calendar</p>
+          {agenda.events.length ? (
+            <ul>
+              {agenda.events.map((e) => (
+                <li key={e.id}>
+                  <span className="agenda-time">{e.allDay ? (e.tomorrow ? "Tomorrow" : "All day") : `${e.tomorrow ? "Tomorrow " : ""}${shortTime(new Date(e.start))}`}</span>
+                  <span className="agenda-what">
+                    <span className="agenda-title">{e.title}</span>
+                    {e.place && <span className="agenda-place">{e.place}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="agenda-none">Nothing else today.</p>
+          )}
+        </div>
+      )}
 
       {today.items.length > 0 ? (
         <div className="today-list" ref={box}>

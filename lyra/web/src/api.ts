@@ -10,6 +10,7 @@ import type { LyraEvent as WorkerEvent } from "../../core/lyra";
 import type { RoutineInput, RoutineRow, RoutineRun as CoreRoutineRun } from "../../core/routines";
 import {
   Lyra,
+  PLACE_TRIGGER_BASE,
   type AppState as CoreState,
   type ChannelInput,
   type ChannelView as CoreChannelView,
@@ -226,7 +227,8 @@ function watchPlaces(lyra: Lyra): void {
     timer = setTimeout(async () => {
       try {
         if ((await places.access()) !== "always") return;
-        await places.fences(lyra.placeReminders().map((r) => ({ id: r.id, text: r.text, place: r.place, lat: r.lat, lng: r.lng, radius: r.radius, on: r.on_event })));
+        // place reminders (each goes off once), and routines that start at a place (0.48; set again after each time)
+        await places.fences([...lyra.placeReminders().map((r) => ({ id: r.id, text: r.text, place: r.place, lat: r.lat, lng: r.lng, radius: r.radius, on: r.on_event })), ...lyra.placeTriggers()]);
       } catch (e) {
         console.error("[lyra] place reminders", e);
       }
@@ -235,11 +237,21 @@ function watchPlaces(lyra: Lyra): void {
   // ones that went off while Lyra was closed (Android showed them): mark them done
   const fired = async () => {
     const ids = await places.fired().catch(() => [] as number[]);
-    if (ids.length) await lyra.placeRemindersFired(ids);
+    const reminders = ids.filter((i) => i < PLACE_TRIGGER_BASE);
+    const triggers = ids.filter((i) => i >= PLACE_TRIGGER_BASE);
+    if (reminders.length) await lyra.placeRemindersFired(reminders);
+    if (triggers.length) {
+      lyra.placeTriggersFired(triggers);
+      fences(); // Android drops a fence once it's crossed: watch the place again
+    }
+    // routines that start from a phone notification
+    await lyra.tickNoticeTriggers().catch(() => 0);
   };
   fences();
   void fired().then(() => planLeaving(lyra, true));
-  lyra.onChange((e) => e.type === "reminder" && fences());
+  lyra.onChange((e) => (e.type === "reminder" || e.type === "routine") && fences());
+  // while Lyra is open, notifications that should start a routine are noticed within a minute
+  setInterval(() => void lyra.tickNoticeTriggers().catch(() => 0), 60_000);
   void CapApp.addListener("resume", () => {
     void fired();
     void planLeaving(lyra, true);
@@ -739,6 +751,8 @@ export const api = {
   action: async (id: number) => (await ready).action(id),
   decideAction: async (id: number, choice: "send" | "draft" | "add" | "do" | "decline", edited?: Record<string, unknown>) => (await ready).decideAction(id, choice, edited),
   scanAction: async (messageId: number, which: number | "all") => (await ready).scanAction(messageId, which),
+  agenda: async () => (await ready).agenda(),
+  widgetTap: async (messageId: number, index: number, on = true) => (await ready).widgetTap(messageId, index, on),
   places: async () => (await ready).places(),
   savePlace: async (name: string) => (await ready).savePlace(name),
   forgetPlace: async (name: string) => (await ready).forgetPlace(name),

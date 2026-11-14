@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { compactTimes } from "../../../core/routines";
+import { compactTimes, triggerOf } from "../../../core/routines";
 import { api, onChange, type Channel, type Reminder, type Routine, type RoutineRun } from "../api";
 import { Bell, ChannelIcon, Chevron, Clock, Close, Plus, Trash } from "../icons";
 import { Thinking } from "../LyraMark";
@@ -110,7 +110,7 @@ export function ScheduledSection({ toast }: { toast: (m: string) => void }) {
                 <a className="body routine-link" href={`#/r/${r.id}`}>
                   <div className="title">{r.name}</div>
                   <div className="sub">
-                    {r.schedule} · {nextLabel(r)}
+                    {r.next_run_at || !r.enabled || r.running ? `${r.schedule} · ${nextLabel(r)}` : r.schedule}
                   </div>
                 </a>
                 <input
@@ -178,7 +178,7 @@ function AddRoutineDialog({ toast, onClose, onAdded }: { toast: (m: string) => v
           ))}
         </div>
         <p className="hint" style={{ marginLeft: 0 }}>
-          Want something else? Tell Lyra in chat, like “every Sunday evening, tell me what's on next week”.
+          Want something else? Tell Lyra in chat, like “every Sunday evening, tell me what's on next week”, or have one start when something happens: “when Dana emails, tell me right away”, “when I get home, remind me what's due tomorrow”. Any routine can be switched to start that way from its Edit page.
         </p>
         <div className="dialog-actions" style={{ gridTemplateColumns: "1fr" }}>
           <button className="btn quiet" onClick={onClose}>
@@ -192,9 +192,22 @@ function AddRoutineDialog({ toast, onClose, onAdded }: { toast: (m: string) => v
 
 export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: string) => void; channels: Channel[] }) {
   const [data, setData] = useState<{ routine: Routine; runs: RoutineRun[] } | null>(null);
-  const [draft, setDraft] = useState<{ name: string; instructions: string; times: string; days: string; always: boolean; channelId: number | null } | null>(
-    null,
-  );
+  const [draft, setDraft] = useState<{
+    name: string;
+    instructions: string;
+    times: string;
+    days: string;
+    always: boolean;
+    channelId: number | null;
+    /** what starts it: the clock, or something happening (0.48) */
+    start: "time" | "mail" | "place" | "notice";
+    from: string;
+    place: string;
+    on: "arrive" | "leave";
+    match: string;
+  } | null>(null);
+  const [saved, setSaved] = useState<string[]>([]);
+  useEffect(() => void api.places().then((p) => setSaved(p.map((x) => x.name)), () => {}), []);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(
@@ -233,7 +246,22 @@ export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: st
         onSubmit={async (e) => {
           e.preventDefault();
           const ok = await save(
-            { name: draft.name, instructions: draft.instructions, times: draft.times, days: draft.days, postMode: draft.always ? "always" : "news", channelId: draft.channelId },
+            {
+              name: draft.name,
+              instructions: draft.instructions,
+              times: draft.times,
+              days: draft.days,
+              postMode: draft.always ? "always" : "news",
+              channelId: draft.channelId,
+              trigger:
+                draft.start === "mail"
+                  ? { kind: "mail", from: draft.from }
+                  : draft.start === "place"
+                    ? { kind: "place", place: draft.place, on: draft.on }
+                    : draft.start === "notice"
+                      ? { kind: "notice", match: draft.match }
+                      : null,
+            },
             "Saved",
           );
           if (ok) setDraft(null);
@@ -246,14 +274,78 @@ export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: st
           <input id="rt-name" value={draft.name} maxLength={60} placeholder=" " onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
           <label htmlFor="rt-name">Name</label>
         </div>
-        <label className="field-label" htmlFor="rt-times" style={{ marginTop: 20 }}>
-          Times (like 07:00, 18:30 or "every 15 min")
-        </label>
-        <input id="rt-times" className="field" value={draft.times} autoCapitalize="off" onChange={(e) => setDraft({ ...draft, times: e.target.value })} />
-        <p className="field-label" style={{ marginTop: 20 }} id="rt-days">
-          Days
+        <p className="field-label" style={{ marginTop: 20 }} id="rt-start">
+          Starts
         </p>
-        <div className="day-picks" role="group" aria-labelledby="rt-days">
+        <div className="chip-row" role="radiogroup" aria-labelledby="rt-start">
+          {(
+            [
+              ["time", "On a schedule"],
+              ["mail", "When someone emails"],
+              ["place", "At a place"],
+              ["notice", "On a notification"],
+            ] as const
+          ).map(([k, label]) => (
+            <button key={k} type="button" role="radio" aria-checked={draft.start === k} className={`pick${draft.start === k ? " on" : ""}`} onClick={() => setDraft({ ...draft, start: k })}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {draft.start === "mail" && (
+          <>
+            <label className="field-label" htmlFor="rt-from" style={{ marginTop: 16 }}>
+              From (a name, an address, or a word in the subject)
+            </label>
+            <input id="rt-from" className="field" value={draft.from} placeholder="Dana, or billing@pge.com" autoCapitalize="off" onChange={(e) => setDraft({ ...draft, from: e.target.value })} />
+            <p className="hint">Lyra looks every few minutes, with no AI until something arrives.</p>
+          </>
+        )}
+        {draft.start === "place" && (
+          <>
+            {saved.length ? (
+              <>
+                <div className="chip-row" role="radiogroup" aria-label="Place" style={{ marginTop: 16 }}>
+                  {saved.map((p) => (
+                    <button key={p} type="button" role="radio" aria-checked={draft.place === p} className={`pick${draft.place === p ? " on" : ""}`} onClick={() => setDraft({ ...draft, place: p })}>
+                      {p}
+                    </button>
+                  ))}
+                </div>
+                <div className="chip-row" role="radiogroup" aria-label="When" style={{ marginTop: 10 }}>
+                  {(["arrive", "leave"] as const).map((o) => (
+                    <button key={o} type="button" role="radio" aria-checked={draft.on === o} className={`pick${draft.on === o ? " on" : ""}`} onClick={() => setDraft({ ...draft, on: o })}>
+                      {o === "arrive" ? "When I get there" : "When I leave"}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="hint">No saved places yet. On your phone: Settings, Notifications, Places and travel, “Save where I am now”.</p>
+            )}
+            <p className="hint">Your phone watches the place, so it needs location set to “Allow all the time”.</p>
+          </>
+        )}
+        {draft.start === "notice" && (
+          <>
+            <label className="field-label" htmlFor="rt-match" style={{ marginTop: 16 }}>
+              Words in the notification (an app, a person, or what it says)
+            </label>
+            <input id="rt-match" className="field" value={draft.match} placeholder="delivered, or Mom" onChange={(e) => setDraft({ ...draft, match: e.target.value })} />
+            <p className="hint">Works on the phone, with Notifications turned on under “What Lyra can see” on the Lyra page.</p>
+          </>
+        )}
+        {draft.start === "time" && (
+          <>
+            <label className="field-label" htmlFor="rt-times" style={{ marginTop: 20 }}>
+              Times (like 07:00, 18:30 or "every 15 min")
+            </label>
+            <input id="rt-times" className="field" value={draft.times} autoCapitalize="off" onChange={(e) => setDraft({ ...draft, times: e.target.value })} />
+            <p className="field-label" style={{ marginTop: 20 }} id="rt-days">
+              Days
+            </p>
+          </>
+        )}
+        <div className="day-picks" role="group" aria-labelledby="rt-days" hidden={draft.start !== "time"}>
           {DAYS.map((d, i) => {
             const on = draft.days.includes(String(i));
             return (
@@ -317,7 +409,7 @@ export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: st
       </p>
       <h1 className="page-title">{r.name}</h1>
       <p className="task-brief">
-        {r.schedule}. {r.post_mode === "always" ? "Posts every time." : "Posts only when there's news."} {r.enabled && nextLabel(r)}.
+        {r.schedule}. {r.post_mode === "always" ? "Posts every time." : "Posts only when there's news."} {r.enabled && (r.next_run_at || r.running) ? `${nextLabel(r)}.` : ""}
       </p>
 
       {r.running && (
@@ -339,7 +431,22 @@ export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: st
           <button
             className="btn quiet"
             onClick={() =>
-              setDraft({ name: r.name, instructions: r.instructions, times: compactTimes(r.times), days: r.days, always: r.post_mode === "always", channelId: r.channel_id })
+              {
+                const t = triggerOf(r);
+                setDraft({
+                  name: r.name,
+                  instructions: r.instructions,
+                  times: compactTimes(r.times),
+                  days: r.days,
+                  always: r.post_mode === "always",
+                  channelId: r.channel_id,
+                  start: t ? t.kind : "time",
+                  from: t?.kind === "mail" ? t.from : "",
+                  place: t?.kind === "place" ? t.place : (saved[0] ?? ""),
+                  on: t?.kind === "place" ? t.on : "arrive",
+                  match: t?.kind === "notice" ? t.match : "",
+                });
+              }
             }
           >
             Edit

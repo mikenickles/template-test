@@ -683,6 +683,13 @@ export const notices = {
   clear: () => NativeNotices.clear(),
 };
 
+/** Directions in Google Maps: the Maps app on a phone, the browser on a computer. Only Maps links. */
+export async function openMaps(url: string): Promise<void> {
+  if (!url.startsWith("https://www.google.com/maps/dir/")) return;
+  if (isNative) return Links.open({ url }).catch(() => void window.open(url, "_blank"));
+  window.open(url, "_blank", "noopener");
+}
+
 // ---------- live progress while Lyra works on a task (0.45) ----------
 
 const NativeLive = registerPlugin<{
