@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#F7F6F3" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#141412" media="(prefers-color-scheme: dark)">
+  <title>Arlo</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="preload" href="/vendor/instrument-sans.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div class="who">
+        <span class="mark" aria-hidden="true"></span>
+        <span class="name" id="agent-name">Arlo</span>
+        <span class="pill warn" id="paused-pill" hidden>Paused</span>
+      </div>
+      <button class="icon-btn" id="menu-btn" aria-label="Open menu"></button>
+    </header>
+
+    <main class="thread" id="thread" aria-live="polite"></main>
+
+    <form class="composer" id="composer" autocomplete="off" hidden>
+      <div class="field">
+        <textarea id="input" rows="1" placeholder="Message Arlo" aria-label="Message Arlo"></textarea>
+        <button type="button" class="icon-btn quiet" id="mic-btn" aria-label="Speak" hidden></button>
+        <button type="submit" class="send idle" id="send-btn" aria-label="Send"></button>
+      </div>
+    </form>
+  </div>
+
+  <div class="scrim" id="scrim" hidden></div>
+  <aside class="sheet" id="sheet" aria-label="Menu" hidden></aside>
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
