@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { PlaceReminder, SavedPlace } from "../../../core/places";
 import { api, LEAVE_NOW } from "../api";
 import { places } from "../platform";
+import { ask, askText } from "../ask";
 
 type Access = Awaited<ReturnType<typeof places.access>>;
 
@@ -92,7 +93,7 @@ export function PlacesSection({ toast }: { toast: (m: string) => void }) {
               <div className="title">{p.name}</div>
               {p.label && <div className="sub">{p.label}</div>}
             </span>
-            <button className="btn text" disabled={busy} onClick={() => confirm(`Forget “${p.name}”?`) && void run(() => api.forgetPlace(p.name), "Forgotten")}>
+            <button className="btn text" disabled={busy} onClick={() => void ask(`Forget “${p.name}”?`).then<unknown>((ok) => ok && run(() => api.forgetPlace(p.name), "Forgotten"))}>
               Forget
             </button>
           </div>
@@ -100,9 +101,9 @@ export function PlacesSection({ toast }: { toast: (m: string) => void }) {
         <button
           className="item"
           disabled={busy || access === "none"}
-          onClick={() => {
-            const name = prompt("Save where you are now as… (Home, Work, Rowan's school)");
-            if (name?.trim()) void run(() => api.savePlace(name), `Saved ${name.trim()}`);
+          onClick={async () => {
+            const name = await askText("Save where you are now as…", { placeholder: "Home, Work, Rowan's school" });
+            if (name) void run(() => api.savePlace(name), `Saved ${name}`);
           }}
         >
           <span className="body">

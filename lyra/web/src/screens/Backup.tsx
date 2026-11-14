@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { MIN_PASSPHRASE } from "../../../core/backup";
 import { api } from "../api";
 import { thisDevice } from "../platform";
+import { ask } from "../ask";
 
 type Mode = { kind: "backup" } | { kind: "restore"; file: Uint8Array; name: string };
 
@@ -54,7 +55,7 @@ function PassphraseDialog({ mode, toast, onClose }: { mode: Mode; toast: (m: str
 
   const go = async () => {
     if (!ready || busy) return;
-    if (!backup && !confirm(`Restoring replaces everything Lyra has on ${thisDevice} with the backup. Continue?`)) return;
+    if (!backup && !(await ask(`Restoring replaces everything Lyra has on ${thisDevice} with the backup. Continue?`))) return;
     setBusy(true);
     setError(null);
     try {

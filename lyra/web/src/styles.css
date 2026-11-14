@@ -7987,3 +7987,201 @@ body[data-music] .lp-orb {
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
   }
 }
+
+/* ---------- getting started (0.47): the short checklist on the welcome screen and Today ---------- */
+.setup {
+  margin: 0 0 var(--s5);
+  padding: 14px 14px 6px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.setup-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.setup-title {
+  font-weight: 650;
+  font-size: 15px;
+}
+.setup-count {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.setup-hide {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: -4px -6px -4px 0;
+  border-radius: 50%;
+  color: var(--text-muted);
+}
+.setup-bar {
+  height: 4px;
+  margin: 10px 0 4px;
+  border-radius: 2px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.setup-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 500ms var(--glide);
+}
+.setup-steps-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.setup-steps-list li + li {
+  border-top: 1px solid var(--border);
+}
+.setup-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 0;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.setup-row.done {
+  padding: 8px 0;
+  color: var(--text-muted);
+}
+.setup-row.done .setup-step {
+  font-weight: 500;
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--text-muted) 50%, transparent);
+}
+.setup-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-muted);
+}
+.setup-mark.done {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.setup-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.setup-step {
+  font-weight: 600;
+  font-size: 15px;
+}
+.setup-sub {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+.setup .chev {
+  flex: none;
+  color: var(--text-muted);
+}
+.setup.compact {
+  margin: var(--s4) 0 0;
+}
+.hello .setup p {
+  margin: 0;
+}
+
+/* ---------- Lyra's own "are you sure?" (ask.tsx) ---------- */
+.ask-layer {
+  z-index: 95;
+  align-items: center;
+}
+.ask {
+  max-width: 380px;
+  padding: var(--s5) var(--s5) var(--s4);
+}
+.ask-title {
+  margin: 0 0 var(--s2);
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.ask-body {
+  margin: 0 0 var(--s2);
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.ask .field {
+  margin: var(--s2) 0;
+}
+.ask .dialog-actions {
+  margin-top: var(--s4);
+}
+.ask .btn.danger {
+  background: var(--bad);
+  border-color: var(--bad);
+  color: #fff;
+}
+
+/* ---------- Settings: find a setting by name (0.47) ---------- */
+.settings-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 var(--s4);
+  padding: 0 14px;
+  min-height: 48px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.settings-search:focus-within {
+  border-color: var(--text-muted);
+}
+.settings-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  font: inherit;
+  color: var(--text);
+}
+.settings-search input::-webkit-search-cancel-button {
+  display: none;
+}
+.settings-found .item {
+  min-height: 60px;
+}
+.settings-none {
+  margin: 0;
+  padding: var(--s4);
+}
+
+/* ---------- pop-up notices sit low on pages without the message box (they covered the middle) ---------- */
+.toast {
+  bottom: calc(var(--inset-bottom) + 28px);
+}
+.app:has(.tabbar) ~ .toast,
+.app:has(.tabbar) .toast {
+  bottom: calc(var(--inset-bottom) + 100px);
+}
+.app:has(.composer) ~ .toast,
+.app:has(.composer) .toast {
+  bottom: calc(var(--inset-bottom) + 188px);
+}

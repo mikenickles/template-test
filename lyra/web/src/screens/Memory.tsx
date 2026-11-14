@@ -4,6 +4,7 @@ import type { Skill } from "../../../core/skills";
 import { api, type Channel, type MemoryView } from "../api";
 import { ChannelIcon, Chevron, Plus, Star } from "../icons";
 import { ago, parse } from "../when";
+import { ask } from "../ask";
 
 const BLURB: Record<string, string> = {
   Rules: "How you like things done",
@@ -71,7 +72,7 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
   };
 
   const restore = async (id: number) => {
-    if (!confirm("Put memory back to how it was before this change?")) return;
+    if (!(await ask("Put memory back to how it was before this change?"))) return;
     try {
       setView(await api.restoreMemory(id));
       toast("Memory restored");
@@ -399,7 +400,7 @@ function TalkNotes({ toast }: { toast: (m: string) => void }) {
             {busy ? "Working…" : "Update now"}
           </button>
           {style.notes.length > 0 && (
-            <button className="btn text" disabled={busy} onClick={() => confirm("Forget how you talk? Lyra starts learning again from scratch.") && void act(() => api.forgetStyle(), "Forgotten")}>
+            <button className="btn text" disabled={busy} onClick={() => void ask("Forget how you talk? Lyra starts learning again from scratch.").then<unknown>((ok) => ok && act(() => api.forgetStyle(), "Forgotten"))}>
               Forget all
             </button>
           )}
@@ -478,7 +479,7 @@ function SkillSheet({ skill, toast, onClose, onSaved }: { skill: Skill | null; t
     }
   };
   const remove = async () => {
-    if (!skill || !confirm(`Remove the skill “${skill.name}”?`)) return;
+    if (!skill || !(await ask(`Remove the skill “${skill.name}”?`))) return;
     await api.deleteSkill(skill.id);
     toast("Removed");
     onSaved();
@@ -594,7 +595,7 @@ function PersonSheet({ person, toast, onClose, onSaved }: { person: Person | nul
     }
   };
   const remove = async () => {
-    if (!person || !confirm(`Remove ${person.name}'s card? Lyra forgets what it noted about them.`)) return;
+    if (!person || !(await ask(`Remove ${person.name}'s card? Lyra forgets what it noted about them.`))) return;
     await api.deletePerson(person.id);
     toast("Removed");
     onSaved();

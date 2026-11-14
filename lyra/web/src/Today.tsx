@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Today } from "../../core/today";
 import { api, onChange } from "./api";
+import { SetupCard } from "./Setup";
 
 /** The same gentle zigzag as the channel menu. */
 const SWAY = [2, 11, 0, 9, 3, 10];
@@ -23,7 +24,7 @@ function headline(t: Today): string {
   return t.items.length ? "Nothing needs you right now." : "All clear.";
 }
 
-export function TodayView({ onSend, onShowChat, hasChat }: { onSend: (text: string) => void; onShowChat: () => void; hasChat: boolean }) {
+export function TodayView({ onSend, onShowChat, hasChat, toast }: { onSend: (text: string) => void; onShowChat: () => void; hasChat: boolean; toast: (m: string) => void }) {
   const [today, setToday] = useState<Today | null>(null);
   useEffect(() => {
     let alive = true;
@@ -84,6 +85,8 @@ export function TodayView({ onSend, onShowChat, hasChat }: { onSend: (text: stri
       ) : (
         <p className="today-empty">No tasks waiting, nothing scheduled in the next day. Ask me anything, or set up a morning brief in Tasks.</p>
       )}
+
+      <SetupCard toast={toast} compact />
 
       <div className="today-quick">
         {(today.needs ? QUICK : QUIET).map((q) => (

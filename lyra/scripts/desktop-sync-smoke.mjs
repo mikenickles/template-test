@@ -130,10 +130,12 @@ check(await b.page.getByText("already syncing from Computer A").isVisible(), "a 
 await b.page.getByLabel("This device's name").fill("Computer B");
 await b.page.getByLabel("Sync passphrase").fill("not the passphrase");
 await b.page.getByRole("button", { name: "Join", exact: true }).click();
+await b.page.getByRole("alertdialog").getByRole("button").last().click(); // "this replaces what's on this device"
 await b.page.getByRole("alert").filter({ hasText: "passphrase" }).waitFor();
 check(true, "joining with the wrong passphrase is refused");
 await b.page.getByLabel("Sync passphrase").fill(PASS);
 await b.page.getByRole("button", { name: "Join", exact: true }).click();
+await b.page.getByRole("alertdialog").getByRole("button").last().click(); // "this replaces what's on this device"
 await b.shows("Sent on computer A");
 check(true, "joining loads the other device's chats (after a restart)");
 

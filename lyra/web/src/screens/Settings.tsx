@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { api, isNative, syncApi, type AppState, type SyncStatus } from "../api";
-import { Bell, Chart, Check, Chevron, Cloud, Cpu, Plug, Refresh, User } from "../icons";
+import { Search, Bell, Chart, Check, Chevron, Cloud, Cpu, Plug, Refresh, User } from "../icons";
 import { compact, dayKey } from "../usageData";
 import { Usage } from "./Usage";
 import { useSlidingPill } from "../pill";
@@ -14,6 +14,7 @@ import { UpdatesSection } from "./UpdatesSection";
 import { WeatherSection } from "./WeatherSection";
 import { PlacesSection } from "./PlacesSection";
 import { useEffect } from "react";
+import { ask } from "../ask";
 
 export type SettingsSection = "model" | "usage" | "you" | "alerts" | "sync" | "about";
 export const SETTINGS_SECTIONS: SettingsSection[] = ["model", "usage", "you", "alerts", "sync", "about"];
@@ -31,6 +32,43 @@ const THEME_CHOICES: { id: AppState["theme"]; label: string; about: string }[] =
   { id: "zine", label: "Zine", about: "Photocopied: ink edges, hard shadows, grain." },
   { id: "radio", label: "Night Radio", about: "Always dark, with a warm glow." },
   { id: "film", label: "Film", about: "Faded and soft, with a little grain." },
+];
+
+/** Every setting by name, with a few other words people might type, and where it lives. */
+const FINDER: { label: string; more: string; where: string; href: string; phone?: boolean }[] = [
+  { label: "AI model and API keys", more: "claude openai gemini gpt key provider brain practice", where: "AI model", href: "#/settings/model" },
+  { label: "Web search", more: "internet browse look up online", where: "AI model", href: "#/settings/model" },
+  { label: "Live voice", more: "talk call speak voice mode", where: "AI model", href: "#/settings/model" },
+  { label: "Usage", more: "tokens cost spend money how much", where: "Usage", href: "#/settings/usage" },
+  { label: "Your name", more: "call me who", where: "You and appearance", href: "#/settings/you" },
+  { label: "Look", more: "theme zine night radio film paper dark mode style grain", where: "You and appearance", href: "#/settings/you" },
+  { label: "Accent color", more: "colour lime orange theme", where: "You and appearance", href: "#/settings/you" },
+  { label: "Your messages", more: "bubble bubbles chat style", where: "You and appearance", href: "#/settings/you" },
+  { label: "Talk like me", more: "mirror slang how lyra talks style tone", where: "You and appearance", href: "#/settings/you" },
+  { label: "Weather", more: "city place forecast temperature", where: "You and appearance", href: "#/settings/you" },
+  { label: "Sounds", more: "audio noise chime bell mute", where: "You and appearance", href: "#/settings/you" },
+  { label: "Haptics", more: "vibrate vibration buzz tap feel", where: "You and appearance", href: "#/settings/you", phone: true },
+  { label: "Notifications", more: "notify alerts push checkup test permission", where: "Notifications and privacy", href: "#/settings/alerts" },
+  { label: "Heads-ups", more: "proactive off light active speak first", where: "Notifications and privacy", href: "#/settings/alerts" },
+  { label: "Quiet hours", more: "night sleep do not disturb overnight", where: "Notifications and privacy", href: "#/settings/alerts" },
+  { label: "Check-ins", more: "check in when it's quiet ask", where: "Notifications and privacy", href: "#/settings/alerts" },
+  { label: "Mail watch", more: "email new mail important people", where: "Notifications and privacy", href: "#/settings/alerts" },
+  { label: "Keep watch", more: "background battery closed tray always on", where: "Notifications and privacy", href: "#/settings/alerts" },
+  { label: "Places and location", more: "geofence place reminders saved places home work gps", where: "Notifications and privacy", href: "#/settings/alerts", phone: true },
+  { label: "Tell me when to leave", more: "leave now travel directions maps drive", where: "Notifications and privacy", href: "#/settings/alerts", phone: true },
+  { label: "App lock", more: "fingerprint face pin biometric privacy security", where: "Notifications and privacy", href: "#/settings/alerts", phone: true },
+  { label: "Sync between devices", more: "phone computer drive passphrase", where: "Sync and backup", href: "#/settings/sync" },
+  { label: "Home base", more: "always on computer laptop push firebase ring my phone", where: "Sync and backup", href: "#/settings/sync" },
+  { label: "Back up and restore", more: "backup export import move new phone file", where: "Sync and backup", href: "#/settings/sync" },
+  { label: "Updates", more: "version new release install", where: "Updates", href: "#/settings/about" },
+  { label: "Mail, Calendar and Files", more: "gmail google drive connect connections access disconnect", where: "The Lyra page", href: "#/access" },
+  { label: "Spotify", more: "music now playing playlists playback", where: "The Lyra page", href: "#/access" },
+  { label: "Phone notifications and contacts", more: "texts messages read notifications address book", where: "The Lyra page", href: "#/access", phone: true },
+  { label: "What Lyra may do with your OK", more: "send email write emails calendar changes archive tidy inbox texts playlists", where: "The Lyra page", href: "#/access" },
+  { label: "Memory", more: "what lyra knows notes people skills forget remember", where: "Memory", href: "#/memory" },
+  { label: "Soul", more: "personality character voice who lyra is", where: "Soul", href: "#/soul" },
+  { label: "Routines", more: "morning brief schedule scheduled daily", where: "Tasks", href: "#/tasks" },
+  { label: "Activity", more: "log history what lyra did", where: "Activity", href: "#/activity" },
 ];
 
 const ACCENT_CHOICES: { id: AppState["accent"]; label: string }[] = [
@@ -113,6 +151,7 @@ function SettingsHome({ state }: { state: AppState }) {
     void installer.version().then(setVersion, () => {});
     return syncApi.onChange(() => void syncApi.status().then(setSync, () => {}));
   }, []);
+  const [q, setQ] = useState("");
   const provider = state.providers.find((p) => p.id === state.choice.provider);
   const connected = state.connectors.filter((c) => c.state === "connected").length;
   const usable = state.connectors.filter((c) => c.state !== "unavailable").length;
@@ -129,11 +168,33 @@ function SettingsHome({ state }: { state: AppState }) {
     { href: "#/settings/about", icon: <Refresh />, title: TITLES.about, sub: `Lyra ${version}` },
   ];
 
+  // find any setting by a word in it (0.47): "quiet", "backup", "haptics", "spotify"
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const found = words.length ? FINDER.filter((f) => (isNative || !f.phone) && words.every((w) => `${f.label} ${f.more} ${f.where}`.toLowerCase().includes(w))) : [];
+
   return (
     <div className="screen">
       <h1 className="page-title">Settings</h1>
       <p className="page-sub">Lyra lives on {thisDevice}.</p>
-      <div className="group settings-home">
+      <label className="settings-search">
+        <Search size={18} />
+        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a setting" aria-label="Find a setting" />
+      </label>
+      {words.length > 0 && (
+        <div className="group settings-home settings-found">
+          {found.map((f) => (
+            <a className="item" href={f.href} key={f.label}>
+              <span className="body">
+                <div className="title">{f.label}</div>
+                <div className="sub">{f.where}</div>
+              </span>
+              <Chevron className="chev" />
+            </a>
+          ))}
+          {!found.length && <p className="hint settings-none">Nothing by that name. Try another word, or ask Lyra in chat.</p>}
+        </div>
+      )}
+      <div className="group settings-home" hidden={words.length > 0}>
         {rows.map((r) => (
           <a className="item" href={r.href} key={r.href}>
             <span className="tile">{r.icon}</span>
@@ -336,7 +397,7 @@ function TalkLikeMe({ state, run, busy, toast }: { state: AppState; run: (fn: ()
               {working ? "Listening…" : style.notes.length ? "Update now" : "Learn now"}
             </button>
             {style.notes.length > 0 && (
-              <button className="btn text" disabled={working} onClick={() => confirm("Forget what Lyra noticed about how you talk?") && void act(() => api.forgetStyle(), "Forgotten")}>
+              <button className="btn text" disabled={working} onClick={() => void ask("Forget what Lyra noticed about how you talk?").then<unknown>((ok) => ok && act(() => api.forgetStyle(), "Forgotten"))}>
                 Forget
               </button>
             )}

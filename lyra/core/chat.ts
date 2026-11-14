@@ -181,7 +181,7 @@ export function lifeAdminTools(ws: Workspace): ToolDef[] {
     {
       name: "life_admin",
       description:
-        "The user's life admin, found in their email: bills (due dates, amounts), subscriptions (renewals, monthly cost), packages (arriving), trips (bookings), return windows. Use for 'what bills are due', 'what am I subscribed to', 'when's my package coming', 'my trip details'. scan: true goes through recent mail first (takes a minute); do that when they ask you to check or the list looks out of date.",
+        "The user's life admin, found in their email: bills (due dates, amounts), subscriptions (renewals, monthly cost), packages (arriving), trips (bookings), return windows. Use for 'what bills are due', 'what am I subscribed to', 'when's my package coming', 'my trip details'. scan: true goes through recent mail first, which takes a minute: only when the user asks you to check their mail for these again. Otherwise read the list as it is (it's refreshed daily).",
       schema: { type: "object", properties: { scan: { type: "boolean" } } },
     },
     {
@@ -619,7 +619,7 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
     },
     {
       name: "suggest_replies",
-      description: "Offer the user up to three next steps as buttons under your reply, written as they'd say them. Tapping one sends it as their message. Write your reply text as usual too.",
+      description: "Offer the user up to three next steps as buttons under your reply, written as they'd say them. Tapping one sends it as their message. Write your reply first, with the full answer; call this in the same step as that text or after it, never in place of it.",
       schema: {
         type: "object",
         properties: { options: { type: "array", items: { type: "string", maxLength: 48 }, maxItems: 3 } },
@@ -1004,7 +1004,13 @@ export async function runTurn(
             type: "tool_result",
             id: call.id,
             name: call.name,
-            content: ok ? "Shown as buttons under your reply." : state.tainted ? "Not shown: after reading outside content, options must be short and can't carry an address or link." : "Give one to three short options.",
+            // Seen with a real model: buttons offered before the answer was written, then "Shown under
+            // your reply" read as "the reply is sent", and what followed was only an afterthought.
+            content: ok
+              ? kept(true)
+                ? "Shown as buttons under your reply."
+                : "Ready: they'll show as buttons under your reply. You have NOT written that reply yet. Write it now, in full, starting with the answer to what they asked."
+              : state.tainted ? "Not shown: after reading outside content, options must be short and can't carry an address or link." : "Give one to three short options.",
             isError: !ok,
           });
           continue;
@@ -1051,7 +1057,7 @@ export async function runTurn(
               content = r.content;
             } else {
               // like tasks and memory: outside content can't teach Lyra a skill
-              if (state.tainted) throw new Error("Not saved: outside content was read this turn. Ask the user whether to save it, and save it once they say yes.");
+              if (state.tainted) throw new Error(`Not saved: outside content was read this turn. Save it once the user says yes.${ANSWER_FIRST}`);
               const r = sk.save(call.input);
               skillNotes.push({ id: r.id, name: r.name, kind: "saved" });
               emit.status(r.created ? `Learned ${r.name}` : `Updated ${r.name}`);
@@ -1151,7 +1157,7 @@ export async function runTurn(
             const ws = ctx.workspace;
             if (call.name === "remember_person") {
               // like the notebook: after reading outside content, a card only changes with the user's word
-              if (state.tainted) throw new Error("Not saved: outside content was read this turn. Ask the user whether to save it, and save it once they say yes.");
+              if (state.tainted) throw new Error(`Not saved: outside content was read this turn. Save it once the user says yes.${ANSWER_FIRST}`);
               const r = ws.people!.remember(call.input);
               const i = peopleNotes.findIndex((n) => n.id === r.id);
               if (i === -1) peopleNotes.push(r);
@@ -1277,6 +1283,13 @@ interface TurnState {
 }
 
 /** The user asking, in their own words, for a reminder or for Lyra to check back. */
+/**
+ * Added to every "not done, outside content was read" result. Seen with a real model: after such
+ * a result the reply became only about the thing that wasn't saved, and the answer was lost.
+ */
+const ANSWER_FIRST =
+  " This is not an error and not news: your reply is still the full answer to what they asked. Mention this at most as one short offer at the very end (\"Want me to save that?\"), never as the reply itself, and never say it is waiting, held or needs confirming.";
+
 const ASKED_REMINDER = /\b(remind(er|ers|s)?|nudge|ping me|don'?t let me forget|follow[- ]?up|check back|check in on|keep an eye|let me know (when|if|once)|tell me (when|if|once)|alert me|heads[- ]?up)\b/i;
 /** The user asking for something to go on their list. */
 const ASKED_TASK = /\b(tasks?|to-?dos?|my list|add (it|that|this|them|those|these|everything|anything|all)|put (it|that|this|them|those) (on|in)|track (it|this|that|them))\b/i;
@@ -1314,7 +1327,7 @@ async function runTool(
           return fail((e as Error).message);
         }
         return {
-          content: "Held for approval: outside content was read this turn, so the user will tap to confirm before it's saved.",
+          content: "Shown to the user as a suggestion they can tap to keep (outside content was read this turn). Nothing more to do or say about it: carry on with the answer to what they asked.",
           isError: false,
         };
       }
@@ -1335,7 +1348,7 @@ async function runTool(
   }
 
   if (name === "create_channel") {
-    if (state.tainted) return fail("Not created: outside content was read this turn. Ask the user to confirm in their next message.");
+    if (state.tainted) return fail(`Not created: outside content was read this turn. Make it once the user says yes.${ANSWER_FIRST}`);
     try {
       const c = await ctx.workspace.createChannel({ name: String(input.name ?? ""), about: String(input.about ?? ""), icon: String(input.icon ?? "") });
       emit.status(`Made the ${c.name} channel`);
@@ -1350,7 +1363,7 @@ async function runTool(
     // to-do the user asked for themselves can still be added: it just waits, unstarted.
     const listOnly = state.tainted && name === "create_task" && state.asked(ASKED_TASK);
     if (state.tainted && !listOnly)
-      return fail("Not changed: outside content was read this turn. Tell the user in a few words what you'd add or change and offer it with suggest_replies; do it once they say yes.");
+      return fail(`Not changed: outside content was read this turn. Offer what you'd add or change with suggest_replies; do it once they say yes.${ANSWER_FIRST}`);
     try {
       if (name === "create_task") {
         const ch = String(input.channel ?? "").trim();
@@ -1426,7 +1439,7 @@ async function runTool(
     }
     // a reminder the user asked for in their own words is theirs to ask for, whatever was read since
     if (state.tainted && !state.asked(ASKED_REMINDER))
-      return fail("Not set: outside content was read this turn and they didn't ask for a reminder. Say in a few words what you'd set and when, and offer it with suggest_replies; set it once they say yes.");
+      return fail(`Not set: outside content was read this turn and they didn't ask for a reminder. Offer it with suggest_replies (what, and when); set it once they say yes.${ANSWER_FIRST}`);
     if (name === "remind_at_place") {
       if (!rs.atPlace) return fail("Place reminders aren't available.");
       try {

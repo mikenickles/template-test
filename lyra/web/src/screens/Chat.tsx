@@ -12,6 +12,7 @@ import { ActionCards } from "../ActionCard";
 import { TriageCard } from "../TriageCard";
 import { ScanCard } from "../ScanCard";
 import { TodayView } from "../Today";
+import { SetupCard } from "../Setup";
 import { markSeen } from "../seen";
 import { Star } from "../icons";
 import { setChatStatus } from "../StatusLine";
@@ -19,6 +20,7 @@ import { STATUS_LABEL } from "./Tasks";
 import { StarChart, Thinking } from "../LyraMark";
 import { headline, Markdown } from "../markdown";
 import { clock, dayLabel, parse } from "../when";
+import { ask } from "../ask";
 
 interface Pending {
   reply: string;
@@ -26,7 +28,8 @@ interface Pending {
   notes: MemoryNote[];
 }
 
-const STARTERS = ["What's new in my inbox?", "What do you know about me so far?", "Remember that I prefer short replies"];
+/** First things to say. The inbox one only once mail is connected. */
+const starters = (mail: boolean) => [mail ? "What's new in my inbox?" : "What can you do for me?", "What do you know about me so far?", "Remember that I prefer short replies"];
 const CHANNEL_STARTERS = ["What's still open here?", "Sum up where this stands", "What have we decided so far?"];
 
 function greeting(now = new Date()): string {
@@ -193,9 +196,12 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "auto" });
   }, []);
 
+  // the welcome screen reads from the top (also when its checklist loads in and makes it taller);
+  // a conversation sticks to the latest message
+  const welcome = useRef(true);
+  welcome.current = !(messages?.length || pending);
   useLayoutEffect(() => {
-    // the welcome screen reads from the top; a conversation sticks to the latest message
-    if (stick.current && (messages?.length || pending)) toBottom();
+    if (stick.current && !welcome.current) toBottom();
   }, [messages, pending, toBottom]);
 
   // Only your own scrolling (finger, wheel, keys) lets go of the latest message. Scrolls
@@ -208,8 +214,8 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
     const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
     const mine = Date.now() - touchedAt.current < 1200;
     if (near || mine) stick.current = near;
-    else if (stick.current) toBottom();
-    setAtBottom(near || stick.current);
+    else if (stick.current && !welcome.current) toBottom();
+    setAtBottom(near || stick.current || welcome.current);
   };
 
   // follow the latest message whenever the chat's size changes: the reply growing as it
@@ -221,7 +227,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
     let frame = 0;
     const follow = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => stick.current && toBottom());
+      frame = requestAnimationFrame(() => stick.current && !welcome.current && toBottom());
     };
     const watch = new ResizeObserver(follow);
     watch.observe(log);
@@ -447,6 +453,9 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
   useEffect(() => () => setChatStatus(null), []);
 
   // long-press a message: copy, pin or delete it
+  // the "What's new in my inbox?" starter only makes sense once mail is connected
+  const [mail, setMail] = useState(false);
+  useEffect(() => void api.state().then((s) => setMail(s.connectors.some((c) => c.id === "gmail" && c.state === "connected")), () => {}), []);
   const [acting, setActing] = useState<Message | null>(null);
   const press = useRef<{ t: number; x: number; y: number } | null>(null);
   const holdProps = (m: Message) =>
@@ -550,7 +559,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
         aria-live="polite"
       >
         <div className="log-inner">
-          {showToday && !channel && !empty && <TodayView onSend={(t) => void send(t)} onShowChat={() => setShowToday(false)} hasChat={messages.length > 0} />}
+          {showToday && !channel && !empty && <TodayView onSend={(t) => void send(t)} onShowChat={() => setShowToday(false)} hasChat={messages.length > 0} toast={toast} />}
 
           {hasMore && !showToday && (
             <button className="chip small" onClick={loadEarlier}>
@@ -583,8 +592,9 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
               <p className="eyebrow">{greeting()}</p>
               <h1>{userName !== "you" ? `Hi ${userName}, I'm Lyra.` : "Hi, I'm Lyra."}</h1>
               <p>Text me like you would a trusted assistant. I'll keep it short and remember what matters.</p>
+              <SetupCard toast={toast} />
               <div className="chips">
-                {STARTERS.map((s) => (
+                {starters(mail).map((s) => (
                   <button key={s} className="chip" onClick={() => send(s)}>
                     {s}
                     <ArrowUpRight size={18} />
@@ -710,7 +720,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                       className="btn quiet tidy-undo"
                       disabled={!!m.meta.tidy.undone}
                       onClick={async () => {
-                        if (!confirm("Put your notes back the way they were before this tidy-up? Anything saved since then is undone too.")) return;
+                        if (!(await ask("Put your notes back the way they were before this tidy-up? Anything saved since then is undone too."))) return;
                         try {
                           await api.undoTidy(m.id);
                           toast("Tidy-up undone");
@@ -1111,7 +1121,7 @@ function MessageActions({ message, onAct, onClose }: { message: Message; onAct: 
           <button
             className="item"
             onClick={() => {
-              if (confirm("Delete this message? Lyra will forget it was said, but anything it saved to memory stays.")) onAct("delete");
+              void ask("Delete this message? Lyra will forget it was said, but anything it saved to memory stays.").then<unknown>((ok) => ok && onAct("delete"));
             }}
           >
             <span className="body">

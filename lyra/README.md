@@ -72,6 +72,18 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### A test pass and polish (0.47)
+
+Lyra was run against a real model again (the local harness: real engine and prompt, made-up inbox and calendar), and the screens were walked through one by one.
+
+- **Replies that lost their answer** (found with the real model): after reading mail, a save or reminder Lyra tried on its own is held back, and the reply became only about that ("I tried to save Dana's email, it's waiting on your OK") with the actual answer missing. The same happened when Lyra offered reply buttons before writing its answer. Now every "not done" result tells Lyra the reply is still the full answer (`ANSWER_FIRST` in `core/chat.ts`), and `suggest_replies` called before any text answers "you have NOT written that reply yet". The voice guide is back to two short blocks after the first line, five list lines at most, and staying on what was asked.
+- **Lyra says what a switch would unlock**: asked to send an email (or change the calendar, or archive) while that's off, it does what it can and adds one line: "Turn on Write emails on the Lyra page and next time I can send it with one tap" (`canTurnOn` in `core/prompt.ts`). A life admin scan in chat only runs when you ask for one.
+- **Getting started**: a short checklist on the welcome screen (and one line on Today) with what makes Lyra useful: add a model key, your name, connect mail and calendar, allow notifications, get a morning brief. Each line goes straight there or does it in one tap, ticks itself off, and the card goes away when done or hidden (`web/src/Setup.tsx`). The first suggested message is "What's new in my inbox?" only once mail is connected. The welcome screen opens at the top.
+- **Find a setting**: a search box at the top of Settings finds any setting by a word in it ("quiet", "backup", "haptics", "spotify") and takes you to its page (`FINDER` in Settings.tsx).
+- **Lyra's own dialogs**: the 22 plain system pop-ups ("Delete …?", "Disconnect …?", "Save where you are as…") are now Lyra's own, with the button named for what happens (`web/src/ask.tsx`: `ask`, `askText`, `AskHost`).
+- **Plain words**: "Start worker" is "Hand it to Lyra", "Worker log" is "How Lyra worked on it", "What the worker found" is "What Lyra found".
+- Pop-up notices sit near the bottom on pages without the message box, instead of over the middle of the page.
+
 ### Now playing, looks, sounds (0.46)
 
 - **Now playing**: with Spotify connected, the song shows under Lyra's avatar with little moving bars, and the avatar's ring glows in your accent color while it plays (`Lyra.nowPlaying()`, looked up every 30 s while Lyra is on screen, no AI; `musicText` always fits; `body[data-music]`). Switch: Lyra page → Spotify → "Show what's playing".

@@ -203,11 +203,11 @@ try {
   await page.getByText("1 of 3 steps").waitFor();
   await shot("light-14-tasks");
   await page.getByRole("link", { name: /Find a plumber/ }).click();
-  await page.getByRole("button", { name: "Start worker" }).click();
+  await page.getByRole("button", { name: "Hand it to Lyra" }).click();
   await page.locator(".needs-text", { hasText: "Review the result and mark it done." }).waitFor();
   check(true, "a worker runs the task and hands it back as Ready for you");
   await shot("light-15-task-ready");
-  await page.getByRole("link", { name: /Worker log/ }).click();
+  await page.getByRole("link", { name: /How Lyra worked on it/ }).click();
   await page.getByText("Run 1").waitFor();
   check(true, "the worker log shows the run");
   await shot("light-16-worker-log");
@@ -506,9 +506,10 @@ try {
   await shot("dark-10-drawer");
   await page.emulateMedia({ colorScheme: "light" });
 
-  page.once("dialog", (d) => d.accept());
   await page.goto(`${base}/#/c/1/info`);
   await page.getByRole("button", { name: "Delete channel" }).click();
+  check(await page.getByRole("alertdialog", { name: /Delete Rowan\?/ }).getByText("Main memory stays as it is.").isVisible(), "deleting asks first, in Lyra's own dialog");
+  await page.getByRole("alertdialog").getByRole("button").last().click();
   await page.getByText("Hi Sam, I'm Lyra.").or(page.locator(".bubble").first()).waitFor();
   await page.getByRole("button", { name: "Channels" }).click();
   check((await page.locator(".drawer-panel .star-row", { hasText: "Rowan" }).count()) === 0, "deleting a channel removes it");
@@ -589,8 +590,8 @@ try {
   await page.goto(`${base}/#/`);
   const before = await page.locator(".bubble").count();
   await page.locator(".bubble", { hasText: "thanks!" }).click({ button: "right" });
-  page.once("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("alertdialog").getByRole("button").last().click();
   await page.getByText("Deleted", { exact: true }).waitFor();
   check((await page.locator(".bubble").count()) === before - 1, "deleting a message removes it");
 
@@ -609,14 +610,15 @@ try {
   await page.getByRole("button", { name: "Send" }).click();
   await page.locator(".bubble", { hasText: "after the backup" }).waitFor();
   await page.goto(`${base}/#/settings/sync`);
-  page.on("dialog", (d) => d.accept());
   await page.getByLabel("Backup file").setInputFiles(backupPath);
   await page.getByLabel("Passphrase").fill("not the passphrase");
   await page.getByRole("button", { name: "Restore", exact: true }).click(); // first: the confirm
+  await page.getByRole("alertdialog").getByRole("button").last().click();
   await page.getByRole("alert").filter({ hasText: "doesn't open" }).waitFor();
   check(true, "a wrong passphrase is refused");
   await page.getByLabel("Passphrase").fill("correct horse battery");
   await page.getByRole("button", { name: "Restore", exact: true }).click();
+  await page.getByRole("alertdialog").getByRole("button").last().click();
   await page.locator(".bubble", { hasText: "When is it?" }).waitFor();
   check((await page.locator(".bubble", { hasText: "after the backup" }).count()) === 0, "restore brings back the backed-up chat");
 

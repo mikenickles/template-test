@@ -46,7 +46,7 @@ export function Usage() {
   const total = view.series.reduce((n, s) => n + s.total, 0);
   const sum = (k: "input" | "output" | "requests") => view.series.reduce((n, s) => n + s[k], 0);
   const span = RANGES.find((r) => r.id === range)!.span;
-  const parts = ([["Chat", view.sources.chat], ["Workers", view.sources.worker], ["Routines", view.sources.routine], ["Heads-ups and follow-ups", view.sources.proactive]] as const).filter(([, n]) => n > 0);
+  const parts = ([["Chat", view.sources.chat], ["Tasks", view.sources.worker], ["Routines", view.sources.routine], ["Heads-ups and follow-ups", view.sources.proactive]] as const).filter(([, n]) => n > 0);
 
   return (
     <div className="usage">

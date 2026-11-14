@@ -9,6 +9,7 @@ import { ScheduledSection } from "./Routines";
 import { ago, parse } from "../when";
 import { useSlidingPill } from "../pill";
 import { haptic } from "../haptics";
+import { ask } from "../ask";
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
   up_next: "Up next",
@@ -441,7 +442,7 @@ function NewTaskDialog({
         <label className="item research-pick">
           <span className="body">
             <div className="title">Research it</div>
-            <div className="sub">A worker searches the web, reads the best sources, and writes you a report with them.</div>
+            <div className="sub">Lyra searches the web, reads the best sources, and writes you a report with them.</div>
           </span>
           <input type="checkbox" role="switch" className="switch" checked={research} onChange={(e) => setResearch(e.target.checked)} />
         </label>
@@ -521,7 +522,7 @@ export function TaskPage({ id, toast, onCounts }: { id: number; toast: (m: strin
 
   const setStatus = (status: TaskStatus, msg: string) => run(() => api.updateTask(id, { status }), msg);
   const startWorker = async (note?: string) => {
-    if (await run(() => api.startTask(id, note), note ? "Sent to the worker" : "Worker started")) {
+    if (await run(() => api.startTask(id, note), note ? "Sent to Lyra" : "Lyra's on it")) {
       setAnswer("");
       refresh();
     }
@@ -610,7 +611,7 @@ export function TaskPage({ id, toast, onCounts }: { id: number; toast: (m: strin
 
       {result && task.status !== "done" && (
         <div className="result-card">
-          <p className="needs-label result-label">What the worker found</p>
+          <p className="needs-label result-label">What Lyra found</p>
           <div className="reply">
             <Markdown text={result} />
           </div>
@@ -619,7 +620,7 @@ export function TaskPage({ id, toast, onCounts }: { id: number; toast: (m: strin
 
       {task.status === "ready" && task.needs && (
         <div className="needs">
-          <p className="needs-label">{waitingOnYou ? "The worker is asking" : "Lyra needs from you"}</p>
+          <p className="needs-label">{waitingOnYou ? "Lyra is asking" : "Lyra needs from you"}</p>
           <p className="needs-text">{task.needs}</p>
           {waitingOnYou ? (
             <form
@@ -677,7 +678,7 @@ export function TaskPage({ id, toast, onCounts }: { id: number; toast: (m: strin
         <div className="task-actions">
           {!activity && (task.status === "up_next" || task.status === "stopped") && (
             <button className="btn primary" disabled={busy} onClick={() => startWorker()}>
-              {runs.length ? "Resume worker" : "Start worker"}
+              {runs.length ? "Let Lyra continue" : "Hand it to Lyra"}
             </button>
           )}
           {task.status !== "done" ? (
@@ -716,16 +717,16 @@ export function TaskPage({ id, toast, onCounts }: { id: number; toast: (m: strin
         {runs.length > 0 ? (
           <a className="item flat worker-link" href={`#/t/${id}/log`}>
             <span className="body">
-              <div className="title">Worker log</div>
+              <div className="title">How Lyra worked on it</div>
               <div className="sub">
-                {runs.length} {runs.length === 1 ? "run" : "runs"} · every step the worker took
+                {runs.length} {runs.length === 1 ? "run" : "runs"} · every step Lyra took
               </div>
             </span>
             <Chevron className="chev" />
           </a>
         ) : (
           <p className="hint" style={{ marginLeft: 0 }}>
-            Start a worker and it writes its progress here as it goes.
+            Hand it to Lyra and its progress shows here as it goes.
           </p>
         )}
       </section>
@@ -735,7 +736,7 @@ export function TaskPage({ id, toast, onCounts }: { id: number; toast: (m: strin
           className="btn danger"
           disabled={busy}
           onClick={async () => {
-            if (!confirm(`Delete “${task.title}”? Its steps and log go too.`)) return;
+            if (!(await ask(`Delete “${task.title}”? Its steps and log go too.`))) return;
             if (await run(() => api.deleteTask(id), "Task deleted")) location.hash = "#/tasks";
           }}
         >
@@ -780,9 +781,9 @@ export function WorkerLog({ id }: { id: number }) {
 
   return (
     <div className="screen worker-log">
-      <h1 className="page-title">Worker log</h1>
+      <h1 className="page-title">How Lyra worked on it</h1>
       <p className="page-sub">{title}</p>
-      {runs.length === 0 && <p className="mem-empty">No worker has run on this task yet.</p>}
+      {runs.length === 0 && <p className="mem-empty">Lyra hasn't worked on this task yet.</p>}
       {runs.map((r, i) => {
         const msgs = JSON.parse(r.transcript) as { role: string; parts: LogPart[] }[];
         return (
@@ -800,7 +801,7 @@ export function WorkerLog({ id }: { id: number }) {
                   if (p.type === "text" && p.text?.trim())
                     return (
                       <li key={key} className={m.role === "user" ? "wl-you" : "wl-think"}>
-                        <span className="wl-kind">{m.role === "user" ? "Instruction" : "Worker"}</span>
+                        <span className="wl-kind">{m.role === "user" ? "Instruction" : "Lyra"}</span>
                         <span className="wl-text">{short(p.text)}</span>
                       </li>
                     );

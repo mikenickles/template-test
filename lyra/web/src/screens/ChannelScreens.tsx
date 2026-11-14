@@ -4,6 +4,7 @@ import { StatusText } from "./Tasks";
 import { PinnedList } from "./Pinned";
 import { CHANNEL_ICON_NAMES, ChannelIcon, Pencil, Trash } from "../icons";
 import { ago, parse } from "../when";
+import { ask } from "../ask";
 
 const BLURB: Record<string, string> = {
   Notes: "Facts about this subject",
@@ -403,8 +404,7 @@ export function ChannelInfo({ id, toast, onChange }: { id: number; toast: (m: st
                       <button
                         className="link-btn"
                         onClick={() =>
-                          confirm("Put the notebook back to how it was before this change?") &&
-                          run(() => api.restoreChannelNotebook(id, h.id), "Notebook restored")
+                          void ask("Put the notebook back to how it was before this change?").then<unknown>((ok) => ok && run(() => api.restoreChannelNotebook(id, h.id), "Notebook restored"))
                         }
                       >
                         Restore
@@ -421,7 +421,7 @@ export function ChannelInfo({ id, toast, onChange }: { id: number; toast: (m: st
               className="btn danger"
               disabled={busy}
               onClick={async () => {
-                if (!confirm(`Delete ${channel.name}? Its chat and notebook are removed for good. Main memory stays as it is.`)) return;
+                if (!(await ask(`Delete ${channel.name}? Its chat and notebook are removed for good. Main memory stays as it is.`))) return;
                 if (await run(() => api.deleteChannel(id), `${channel.name} deleted`)) {
                   onChange();
                   location.hash = "#/";

@@ -6,6 +6,7 @@ import { api, isNative, onChange, type AppState, type Channel } from "./api";
 import { Drawer } from "./Drawer";
 import { useSlidingPill } from "./pill";
 import { haptic } from "./haptics";
+import { AskHost } from "./ask";
 import { Back, ChannelIcon, Info, Layers, MenuIcon } from "./icons";
 import { Avatar } from "./LyraMark";
 import { Access } from "./screens/Access";
@@ -488,6 +489,7 @@ export function App() {
         )}
 
       </div>
+      <AskHost />
       {/* outside the page that slides aside for the menu, so a message from a form in the menu is seen */}
       {toastMsg && (
         <div className="toast" role="status">

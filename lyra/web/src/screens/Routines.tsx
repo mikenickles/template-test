@@ -4,6 +4,7 @@ import { api, onChange, type Channel, type Reminder, type Routine, type RoutineR
 import { Bell, ChannelIcon, Chevron, Clock, Close, Plus, Trash } from "../icons";
 import { Thinking } from "../LyraMark";
 import { ago, parse } from "../when";
+import { ask } from "../ask";
 
 const RUN_LABEL: Record<RoutineRun["status"], string> = {
   running: "Running",
@@ -383,7 +384,7 @@ export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: st
           className="btn danger"
           disabled={busy}
           onClick={async () => {
-            if (!confirm(`Delete “${r.name}”?`)) return;
+            if (!(await ask(`Delete “${r.name}”?`))) return;
             await api.deleteRoutine(id);
             toast("Routine deleted");
             location.hash = "#/tasks";

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { Markdown } from "../markdown";
+import { ask } from "../ask";
 
 /** Who Lyra is: read it, edit it, or go back to the original. */
 export function Soul({ toast, userName }: { toast: (m: string) => void; userName: string }) {
@@ -77,7 +78,7 @@ export function Soul({ toast, userName }: { toast: (m: string) => void; userName
       </div>
       {soul.custom && (
         <section className="section">
-          <button className="btn quiet" disabled={busy} onClick={() => confirm("Go back to Lyra's original soul? Your edits are removed.") && run(() => api.resetSoul(), "Back to the original")}>
+          <button className="btn quiet" disabled={busy} onClick={() => void ask("Go back to Lyra's original soul? Your edits are removed.").then<unknown>((ok) => ok && run(() => api.resetSoul(), "Back to the original"))}>
             Reset to the original
           </button>
         </section>

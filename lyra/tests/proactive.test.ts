@@ -251,6 +251,27 @@ describe("suggested next steps", () => {
     const { message } = await lyra.chat("When's the trip?", noop);
     expect(message.meta.suggestions).toEqual(["Add it to my tasks", "Remind me Friday", "Draft a reply"]);
   });
+
+  it("offered before the answer is written, Lyra is told the answer is still to come (a real model took 'shown' to mean sent)", async () => {
+    const provider = new FakeProvider([call("suggest_replies", { options: ["Draft a yes"] }), say("Yes, Ortiz wrote back Monday.")]);
+    const lyra = await Lyra.start(platform({ provider }));
+    const { message } = await lyra.chat("Did the plumber get back to me?", noop);
+    const result = provider.requests[1].messages.at(-1)!.parts[0] as { content: string };
+    expect(result.content).toMatch(/NOT written that reply yet[^]*starting with the answer/);
+    expect(message.content).toBe("Yes, Ortiz wrote back Monday.");
+    expect(message.meta.suggestions).toEqual(["Draft a yes"]);
+  });
+
+  it("tells Lyra which switch would let it do what was asked, only for services that are connected", async () => {
+    const provider = new FakeProvider([say("Hi."), say("Hi.")]);
+    const lyra = await Lyra.start(platform({ provider }));
+    await lyra.chat("hi", noop);
+    expect(provider.requests[0].system).not.toContain("With your OK each time");
+    await lyra.connectGoogle("gmail");
+    await lyra.chat("hi", noop);
+    expect(provider.requests[1].system).toMatch(/can let you send emails for them \(Write emails\), archive mail \(Tidy your inbox\)[^]*"With your OK each time" on the Lyra page/);
+    expect(provider.requests[1].system).not.toContain("Calendar changes");
+  });
 });
 
 describe("after reading outside content", () => {

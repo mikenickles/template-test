@@ -4,6 +4,7 @@ import type { SnapshotInfo } from "../../../core/sync";
 import { syncApi, type SyncStatus } from "../api";
 import { deviceKind, desktopGoogleSetup, isDesktop, openBackupsFolder } from "../platform";
 import { ago, parse } from "../when";
+import { ask } from "../ask";
 
 function useSyncStatus(): SyncStatus | null {
   const [s, setS] = useState<SyncStatus | null>(null);
@@ -52,7 +53,7 @@ export function SyncSection({ toast }: { toast: (m: string) => void }) {
   };
 
   const off = async () => {
-    if (!confirm("Turn off sync on this device? Everything stays here, and your other devices keep their copies.")) return;
+    if (!(await ask("Turn off sync on this device? Everything stays here, and your other devices keep their copies."))) return;
     await syncApi.disable();
     toast("Sync is off on this device");
   };
@@ -153,7 +154,7 @@ export function SyncSection({ toast }: { toast: (m: string) => void }) {
               </div>
             )}
             {s.home && push?.canSend && (
-              <button className="item" onClick={() => confirm("Stop ringing your phone from this computer? Your Firebase project stays as it is.") && void syncApi.forgetPush().then(() => toast("Push is off"))}>
+              <button className="item" onClick={() => void ask("Stop ringing your phone from this computer? Your Firebase project stays as it is.").then<unknown>((ok) => ok && syncApi.forgetPush().then(() => toast("Push is off")))}>
                 <span className="body">
                   <div className="title">Turn off push</div>
                 </span>
@@ -300,7 +301,7 @@ function SyncSetupDialog({ existing, toast, onClose }: { existing?: SnapshotInfo
 
   const go = async () => {
     if (!ok || busy) return;
-    if (joining && !confirm(`This replaces what Lyra has on this device with what's synced from ${existing!.deviceName}. Continue?`)) return;
+    if (joining && !(await ask(`This replaces what Lyra has on this device with what's synced from ${existing!.deviceName}. Continue?`))) return;
     setBusy(true);
     setError(null);
     try {

@@ -10,6 +10,7 @@ import { Chart, Chevron, File as FileIcon, Plus, Refresh } from "../icons";
 import { DocMarkdown } from "../markdown";
 import { copyText, isDesktop, shareFile } from "../platform";
 import { ago, parse } from "../when";
+import { ask } from "../ask";
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -131,14 +132,14 @@ function DashboardPage({ doc, toast, onChange: set }: { doc: Doc; toast: (m: str
         <button
           className="btn text"
           onClick={() =>
-            confirm(`Delete “${doc.title}”?`) &&
-            void api.deleteDoc(doc.id).then(
+            void ask(`Delete “${doc.title}”?`).then<unknown>((ok) => ok &&
+            api.deleteDoc(doc.id).then(
               () => {
                 toast("Deleted");
                 location.hash = "#/artifacts";
               },
               (e) => toast((e as Error).message),
-            )
+            ))
           }
         >
           Delete
@@ -259,12 +260,12 @@ export function DocPage({ id, toast, canGoogle }: { id: number; toast: (m: strin
         <button
           className="btn text"
           onClick={() =>
-            confirm(`Delete “${doc.title}”?${doc.gdoc_id ? " The copy in Google Docs stays." : ""}`) &&
-            void run(async () => {
+            void ask(`Delete “${doc.title}”?${doc.gdoc_id ? " The copy in Google Docs stays." : ""}`).then<unknown>((ok) => ok &&
+            run(async () => {
               await api.deleteDoc(id);
               toast("Deleted");
               location.hash = "#/artifacts";
-            })
+            }))
           }
         >
           Delete

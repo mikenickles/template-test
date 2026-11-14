@@ -7,6 +7,7 @@ import { Bell, Bulb, Calendar, ChatIcon, Check, Close, File, Inbox, Mail, Music,
 import { Avatar } from "../LyraMark";
 import { PinnedList } from "./Pinned";
 import { notices, type NoticeApp } from "../platform";
+import { ask } from "../ask";
 
 type GoogleId = "gmail" | "calendar" | "drive";
 type ServiceId = GoogleId | "contacts" | "notices" | "spotify";
@@ -83,7 +84,7 @@ export function Access({ state, setState, toast }: { state: AppState; setState: 
   };
 
   const disconnect = async (id: GoogleId) => {
-    if (!confirm(`Disconnect ${NAMES[id]}? Lyra will stop being able to use it.`)) return;
+    if (!(await ask(`Disconnect ${NAMES[id]}? Lyra will stop being able to use it.`))) return;
     try {
       setState(await api.disconnectGoogle(id));
       setNotice(null);
@@ -416,7 +417,7 @@ function ServiceSheet({
             </button>
           )}
           {id === "spotify" && spotify?.connected && (
-            <button className="btn quiet lp-bad" disabled={busy} onClick={() => confirm("Disconnect Spotify?") && void run(() => api.disconnectSpotify(), "Spotify disconnected", true)}>
+            <button className="btn quiet lp-bad" disabled={busy} onClick={() => void ask("Disconnect Spotify?").then<unknown>((ok) => ok && run(() => api.disconnectSpotify(), "Spotify disconnected", true))}>
               Disconnect
             </button>
           )}
