@@ -276,7 +276,7 @@ try {
 
   // ---- Activity: tap Lyra's face to see the activity log, and open a task run ----
   await page.getByRole("link", { name: "What Lyra's been doing" }).click();
-  await page.getByRole("heading", { name: "Lyra" }).waitFor();
+  await page.getByRole("heading", { name: "Activity" }).waitFor();
   const run = page.locator(".activity-row", { hasText: "Find a plumber" }).first();
   await run.waitFor();
   check(true, "tapping Lyra's face opens the activity log, with the task Lyra worked on");

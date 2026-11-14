@@ -72,6 +72,13 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### A cleaner Activity page (0.48.5)
+
+- A small header instead of the big avatar, with three numbers: done today, quiet checks, waiting for you.
+- Each day is one card; every row shows its time on the right and a status only when it needs one.
+- Checks that found nothing fold into a single quiet line ("Checked 3 times, nothing new"); tap it to see each one.
+- Filters are chips that scroll sideways and fade at the edge.
+
 ### Plain first lines, Artifacts on the bar (0.48.4)
 
 - Long replies no longer open with a big bold first line: every line of a reply is the same size.
