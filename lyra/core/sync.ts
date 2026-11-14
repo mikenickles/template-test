@@ -43,6 +43,8 @@ export interface HomeBeat {
 export const HOME_STALE_MS = 30 * 60_000;
 /** The home base holds its own work this long after another device last saved. */
 export const HOME_QUIET_MS = 90_000;
+/** ...and this long after another device last checked in (its app is open: someone is using Lyra there). */
+export const HOME_HOLD_MS = 150_000;
 
 /** A device saying "I'm up to date as of now" (so the home base knows what it already has). */
 export interface SeenMark {
@@ -82,6 +84,8 @@ export interface SyncState {
   home?: boolean;
   /** the home base's heartbeat as last seen (another device's, or this one's) */
   homeBeat?: HomeBeat;
+  /** home base: the copy of its own changes it set aside before loading another device's; its work is taken back in from there after the restart */
+  graftFrom?: string;
 }
 
 export type SyncResult = "off" | "up-to-date" | "pushed" | "pulled" | "conflict" | "busy";
@@ -248,7 +252,9 @@ export class Sync {
   /** Another device saved moments ago: someone is using it, so the home base holds its own work. */
   othersActive(now = Date.now()): boolean {
     const s = this.seen;
-    return !!s && s.device !== this.state.device && now - new Date(s.savedAt).getTime() < HOME_QUIET_MS;
+    if (s && s.device !== this.state.device && now - new Date(s.savedAt).getTime() < HOME_QUIET_MS) return true;
+    // a phone with Lyra open checks in every minute: while it does, the home base waits its turn
+    return this.marks.some((m) => m.device !== this.state.device && now - new Date(m.at).getTime() < HOME_HOLD_MS);
   }
 
   /**
@@ -283,13 +289,27 @@ export class Sync {
         // this one's are kept as a conflict copy, and its work runs again from there
         if (!canPull) result = "busy";
         else {
-          await this.upload(list, "conflict");
+          // ...and after the restart, what it did on its own is copied back in from that copy
+          this.state.graftFrom = (await this.upload(list, "conflict")).id;
           result = await this.pull(latest);
         }
       } else {
-        this.state.conflict = latest;
-        await this.save();
-        result = "conflict";
+        // The other side is the home base, which only works on its own: take its work in
+        // (its posts, what it has already checked) and carry on, instead of asking the user.
+        let merged = false;
+        if (latest.device === this.state.homeBeat?.device && latest.device !== this.state.device) {
+          try {
+            merged = !(await this.lyra.graft(await this.remote.download(latest.id), await this.passphrase())).human;
+          } catch (e) {
+            console.error("[lyra] sync merge", e);
+          }
+        }
+        if (merged) result = await this.push(list);
+        else {
+          this.state.conflict = latest;
+          await this.save();
+          result = "conflict";
+        }
       }
       if (result !== "busy" && result !== "conflict") {
         this.state.lastSync = new Date().toISOString();
@@ -395,6 +415,17 @@ export class Sync {
       this.state.justPulled = false;
       this.state.dirty = false;
       await this.save();
+    }
+    // the home base loaded a person's changes over its own: bring its own work back in
+    const from = this.state.graftFrom;
+    if (from) {
+      this.state.graftFrom = undefined;
+      await this.save();
+      try {
+        await this.lyra.graft(await this.remote.download(from), await this.passphrase());
+      } catch (e) {
+        console.error("[lyra] sync merge", e);
+      }
     }
   }
 }

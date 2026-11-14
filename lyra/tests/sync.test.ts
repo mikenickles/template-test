@@ -242,12 +242,56 @@ describe("Drive sync folder", () => {
     expect(laptop.sync.othersActive()).toBe(false); // (fresh engine: nothing seen yet)
     await laptop.sync.check();
     expect(laptop.sync.othersActive()).toBe(true);
-    expect(laptop.sync.othersActive(Date.now() + 120_000)).toBe(false);
-    // a phone with changes of its own still asks, as before
+    expect(laptop.sync.othersActive(Date.now() + 200_000)).toBe(false);
+    // something made by hand on the computer while the phone changed too is a real choice: it still asks
     await laptop.lyra.saveDoc(null, { title: "Later", body: "x" });
     await laptop.sync.check();
     await phone.lyra.saveDoc(null, { title: "Phone doc", body: "y" });
     expect(await phone.sync.check()).toBe("conflict");
+  });
+
+  it("merges the home base's own work into a phone that changed too, instead of asking which side to keep", async () => {
+    const drive = fakeDrive();
+    const phone = await device("Phone", drive);
+    await phone.sync.enable(PASS, "Phone");
+    const laptop = await device("Laptop", drive);
+    await laptop.sync.enable(PASS, "Laptop");
+    await laptop.restart();
+    await laptop.sync.setHome(true);
+    await phone.sync.check(); // the phone learns who the home base is
+    const raw = (d: { lyra: Lyra }) => (d.lyra as unknown as { db: { run(sql: string, p?: unknown[]): void; get<T>(sql: string, p?: unknown[]): T | undefined } }).db;
+
+    // the laptop posts a heads-up on its own and notes what mail it has seen; it saves
+    raw(laptop).run("INSERT INTO messages (role, content, meta) VALUES ('assistant', 'Heads up: your package is delayed.', ?)", [JSON.stringify({ headsUp: true })]);
+    raw(laptop).run("INSERT INTO settings (key, value) VALUES ('mailWatchSeen', '[\"aa01\"]')");
+    expect(await laptop.sync.check()).toBe("pushed");
+    // meanwhile you were chatting on the phone, which hadn't loaded that yet
+    await phone.lyra.chat("Remember the plumber comes Tuesday", noop);
+    expect(await phone.sync.check()).toBe("pushed"); // no question asked
+    expect(phone.sync.state.conflict).toBeUndefined();
+    expect(phone.texts()).toEqual(expect.arrayContaining(["Remember the plumber comes Tuesday", "Heads up: your package is delayed."]));
+    expect(raw(phone).get<{ value: string }>("SELECT value FROM settings WHERE key = 'mailWatchSeen'")?.value).toBe('["aa01"]');
+
+    // the laptop loads the merged version: both are there, the heads-up once
+    expect(await laptop.sync.check()).toBe("pulled");
+    await laptop.restart();
+    expect(laptop.texts().filter((t) => t.startsWith("Heads up")).length).toBe(1);
+    expect(laptop.texts()).toContain("Remember the plumber comes Tuesday");
+
+    // the other way round: the laptop did something on its own while the phone had already saved again
+    await phone.lyra.chat("And the electrician Thursday", noop);
+    await phone.sync.check();
+    raw(laptop).run("INSERT INTO messages (role, content, meta) VALUES ('assistant', 'Morning brief: two things today.', ?)", [JSON.stringify({ routine: { id: 1, name: "Morning brief" } })]);
+    expect(await laptop.sync.check()).toBe("pulled"); // the phone's side is loaded...
+    await laptop.restart(); // ...and the laptop's own post is brought back in, not lost and not run again
+    expect(laptop.texts()).toEqual(expect.arrayContaining(["And the electrician Thursday", "Morning brief: two things today."]));
+    expect(await laptop.sync.check()).toBe("pushed");
+    expect(await phone.sync.check()).toBe("pulled");
+
+    // while the phone's app is open (it checks in each minute), the home base waits its turn
+    await laptop.sync.check();
+    expect(laptop.sync.othersActive()).toBe(true);
+    expect(laptop.sync.othersActive(Date.now() + 200_000)).toBe(false);
   });
 
   it("lists what Lyra posted unasked since a message, for telling a device that just caught up", async () => {

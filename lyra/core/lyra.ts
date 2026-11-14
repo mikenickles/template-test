@@ -11,6 +11,7 @@ import { createGmailServer, gmailProfile } from "./connectors/gmail/server.ts";
 import { createCalendarServer } from "./connectors/calendar/server.ts";
 import { createDriveServer } from "./connectors/drive/server.ts";
 import { googleGet } from "./connectors/google-http.ts";
+import { graftHomeWork, type Grafted } from "./graft.ts";
 import { createPhoneServer, describeNotices, filterNotices, type NoticeSource } from "./connectors/phone/server.ts";
 import { CALENDAR_EVENTS, CALENDAR_READONLY, DRIVE_FILE, DRIVE_READONLY, GMAIL_COMPOSE, GMAIL_MODIFY, GMAIL_READONLY, grantIsAllowed, TokenSource, type GoogleAuth } from "./connectors/google.ts";
 import * as A from "./actions.ts";
@@ -260,7 +261,7 @@ export type GoogleId = "gmail" | "calendar" | "drive";
 
 const GOOGLE_LINKS = ["gmail", "calendar", "drive"];
 /** Settings that stay with a device when another device's data arrives through sync. */
-const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications", "actions.gmail", "actions.calendar", "actions.archive", "actions.text", "notices", "trigger.noticesAt", "contacts", "spotify", "spotify.playback", "spotify.playlists", "spotify.nowPlaying"];
+const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications", "actions.gmail", "actions.calendar", "actions.archive", "actions.text", "notices", "contacts", "spotify", "spotify.playback", "spotify.playlists", "spotify.nowPlaying"];
 
 /** Phase 9: what Lyra may propose, each turned on by the user in Connections. */
 const ACTION_ACCESS = {
@@ -1890,12 +1891,10 @@ export class Lyra {
    * Notification triggers, on the phone that reads them: any new notification since the last
    * look that mentions the words starts the routine. Returns how many routines started.
    */
-  async tickNoticeTriggers(now = new Date()): Promise<number> {
+  async tickNoticeTriggers(since: number): Promise<number> {
     const list = this.triggered("notice");
-    if (!list.length || !this.p.notices || getSetting(this.db, "notices") !== "on") return 0;
-    const at = Number(getSetting(this.db, "trigger.noticesAt")) || 0;
-    setSetting(this.db, "trigger.noticesAt", String(now.getTime()));
-    if (!at) return 0; // the first look only starts the clock
+    if (!list.length || !since || !this.p.notices || getSetting(this.db, "notices") !== "on") return 0;
+    const at = since;
     const recent = await this.p.notices.recent(at).catch(() => []);
     let started = 0;
     for (const { r, t } of list) {
@@ -2791,6 +2790,24 @@ export class Lyra {
     }
     const payload: BackupPayload = { format: "lyra-backup", version: 1, createdAt: new Date().toISOString(), db: toBase64(this.db.exportBytes()), files };
     return encryptBackup(payload, passphrase);
+  }
+
+  /**
+   * Copy the home base's own work (its posts, and its notes of what it already did) out of
+   * another device's snapshot into this device's data, instead of making the user pick a side.
+   * Copies nothing when a person changed things over there too.
+   */
+  async graft(file: Uint8Array, passphrase: string): Promise<Grafted> {
+    const payload = await decryptBackup(file, passphrase);
+    const other = new this.p.SQL.Database(fromBase64(payload.db));
+    try {
+      const r = graftHomeWork(this.db, other);
+      if (r.posts) this.listeners.forEach((l) => l({ type: "message", channelId: null }));
+      await this.db.flush();
+      return r;
+    } finally {
+      other.close();
+    }
   }
 
   /**

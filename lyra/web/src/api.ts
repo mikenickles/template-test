@@ -244,14 +244,20 @@ function watchPlaces(lyra: Lyra): void {
       lyra.placeTriggersFired(triggers);
       fences(); // Android drops a fence once it's crossed: watch the place again
     }
-    // routines that start from a phone notification
-    await lyra.tickNoticeTriggers().catch(() => 0);
+    await noticeTriggers();
+  };
+  // Routines that start from a phone notification. When it last looked is this phone's own
+  // note (not Lyra's data): writing it every minute would look like a change to sync.
+  const noticeTriggers = async () => {
+    const since = Number(localStorage.getItem("lyra.noticesAt")) || 0;
+    localStorage.setItem("lyra.noticesAt", String(Date.now()));
+    await lyra.tickNoticeTriggers(since).catch(() => 0);
   };
   fences();
   void fired().then(() => planLeaving(lyra, true));
   lyra.onChange((e) => (e.type === "reminder" || e.type === "routine") && fences());
   // while Lyra is open, notifications that should start a routine are noticed within a minute
-  setInterval(() => void lyra.tickNoticeTriggers().catch(() => 0), 60_000);
+  setInterval(() => void noticeTriggers(), 60_000);
   void CapApp.addListener("resume", () => {
     void fired();
     void planLeaving(lyra, true);

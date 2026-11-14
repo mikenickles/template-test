@@ -103,12 +103,13 @@ describe("triggers: routines that start when something happens", () => {
 
     await lyra.allowNotices(true);
     await lyra.createRoutine({ name: "Package", instructions: "Tell me it's here.", times: "", trigger: { kind: "notice", match: "delivered" } });
-    expect(await lyra.tickNoticeTriggers(new Date(now - 60_000))).toBe(0); // the first look starts the clock
+    expect(await lyra.tickNoticeTriggers(0)).toBe(0); // the first look only starts the clock
+    const looked = now - 60_000;
     now += 5_000;
-    expect(await lyra.tickNoticeTriggers(new Date(now + 1000))).toBe(1);
+    expect(await lyra.tickNoticeTriggers(looked)).toBe(1);
     await settle(lyra);
     expect(provider.requests[1].system).toMatch(/New on the phone just now:[^]*Amazon · Delivered: Left at the front door/);
-    expect(await lyra.tickNoticeTriggers(new Date(now + 60_000))).toBe(0); // not twice
+    expect(await lyra.tickNoticeTriggers(now + 1)).toBe(0); // not twice
   });
 });
 

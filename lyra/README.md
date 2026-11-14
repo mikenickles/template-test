@@ -72,6 +72,15 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### No more "Lyra changed on both devices" (0.48.1)
+
+With a home base, the phone kept asking which version to keep: the computer posted something on its own (an email watch, a heads-up) while the phone had unsent changes, and sync only knows whole snapshots.
+
+- **The phone merges instead of asking.** When the newer snapshot is the home base's, the phone copies the home base's own work into its data (`core/graft.ts` `graftHomeWork`: Lyra's own posts, what it has already checked, routine runs, delivered reminders, life admin items, the activity log) and saves. It still asks if a person changed something on the other side too (a message typed there, a task, doc, channel, person or skill made there).
+- **The home base loses nothing either.** When it loads a phone's changes over its own, it sets its own aside and copies its work back in after the restart (`SyncState.graftFrom`), so a heads-up isn't lost and isn't posted twice.
+- **The home base waits its turn**: while a phone has Lyra open (it checks in each minute), the computer holds its own work (`HOME_HOLD_MS`, 2.5 minutes).
+- The clock for notification triggers is kept on the phone, outside Lyra's data, so checking it each minute no longer counts as a change to sync.
+
 ### Triggers, widgets, Today at a glance (0.48)
 
 - **Triggers**: a routine can start when something happens instead of at a time (`Trigger` in `core/routines.ts`, column `routines.starts_on`). **When someone emails** (a name, an address or a word in the subject: one plain Gmail search every five minutes, no AI until something arrives; the first look only notes what's there), **at a place** (arriving at or leaving a saved place; the phone watches it as a geofence, so it needs location "Allow all the time"), or **on a phone notification** that mentions some words (the phone, with Notifications on). What happened is handed to the run as data ("What just set it off"), never as instructions. Set one up by asking ("when Dana emails, tell me right away") or switch any routine under Edit → Starts. They post every time by default.
