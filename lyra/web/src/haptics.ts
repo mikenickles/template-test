@@ -2,6 +2,7 @@
 // a task ticked off. Nothing on a computer. Off with Settings → You → Haptics (this phone only).
 import { Haptics, ImpactStyle, NotificationType } from "@capacitor/haptics";
 import { isNative } from "./platform";
+import { sound } from "./sounds";
 
 const KEY = "lyra.haptics";
 
@@ -34,5 +35,8 @@ export const haptic = {
   /** a firmer tap: a long-press, a swipe that's far enough to act */
   press: () => go(() => Haptics.impact({ style: ImpactStyle.Medium })),
   /** something got done: a task ticked, a reminder set */
-  done: () => go(() => Haptics.notification({ type: NotificationType.Success })),
+  done: () => {
+    sound.done(); // with sounds on, the same moments get three quick notes (on a computer too)
+    go(() => Haptics.notification({ type: NotificationType.Success }));
+  },
 };

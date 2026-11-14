@@ -5,6 +5,7 @@ import { compact, dayKey } from "../usageData";
 import { Usage } from "./Usage";
 import { useSlidingPill } from "../pill";
 import { haptic, hapticsOn, setHaptics } from "../haptics";
+import { setSounds, sound, soundsOn } from "../sounds";
 import { appLock, background, installer, isDesktop, notifier, thisDevice, type BackgroundState } from "../platform";
 import { BackupSection } from "./Backup";
 import { ModelSettings } from "./ModelSettings";
@@ -22,6 +23,14 @@ const BUBBLE_CHOICES: { id: AppState["bubbles"]; label: string; about: string }[
   { id: "accent", label: "Accent", about: "A tint of your accent color" },
   { id: "neutral", label: "Soft neutral", about: "A quiet grey" },
   { id: "classic", label: "Classic", about: "Solid black, or white in dark mode" },
+];
+
+/** The whole look, as a mood. Each card previews itself. */
+const THEME_CHOICES: { id: AppState["theme"]; label: string; about: string }[] = [
+  { id: "paper", label: "Paper", about: "Warm paper and ink. The original." },
+  { id: "zine", label: "Zine", about: "Photocopied: ink edges, hard shadows, grain." },
+  { id: "radio", label: "Night Radio", about: "Always dark, with a warm glow." },
+  { id: "film", label: "Film", about: "Faded and soft, with a little grain." },
 ];
 
 const ACCENT_CHOICES: { id: AppState["accent"]; label: string }[] = [
@@ -160,6 +169,24 @@ function YouSection({ state, setState, toast, run, busy }: Omit<Props, "section"
       </section>
 
       <section className="section">
+        <h2 className="section-label">Look</h2>
+        <div className="theme-styles" role="radiogroup" aria-label="Look">
+          {THEME_CHOICES.map((t) => (
+            <label key={t.id} className="theme-style" data-theme={t.id}>
+              <input type="radio" name="theme" value={t.id} checked={state.theme === t.id} disabled={busy} onChange={() => void run(() => api.saveSettings({ theme: t.id }), `${t.label} it is`)} />
+              <span className="theme-sample" aria-hidden="true">
+                <i className="theme-dot" />
+                <i className="theme-line" />
+                <i className="theme-line short" />
+              </span>
+              <span className="name">{t.label}</span>
+              <span className="about">{t.about}</span>
+            </label>
+          ))}
+        </div>
+      </section>
+
+      <section className="section">
         <h2 className="section-label">Accent color</h2>
         <div className="swatches" role="radiogroup" aria-label="Accent color">
           {ACCENT_CHOICES.map((c) => (
@@ -199,18 +226,37 @@ function YouSection({ state, setState, toast, run, busy }: Omit<Props, "section"
 
       <WeatherSection state={state} setState={setState} toast={toast} />
 
-      {isNative && <HapticsSection />}
+      <HapticsSection />
     </>
   );
 }
 
-/** Little taps under your finger (this phone only). */
+/** Sounds (any device, off to start) and little taps under your finger (the phone). */
 function HapticsSection() {
   const [on, setOn] = useState(hapticsOn);
+  const [sounds, setSoundsOn] = useState(soundsOn);
   return (
     <section className="section">
       <h2 className="section-label">Feel</h2>
       <div className="group">
+        <label className="item">
+          <span className="body">
+            <div className="title">Sounds</div>
+            <div className="sub">A few soft notes: when you send, when Lyra answers, when something gets done, and a bell when Lyra speaks first.</div>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            className="switch"
+            checked={sounds}
+            onChange={(e) => {
+              setSounds(e.target.checked);
+              setSoundsOn(e.target.checked);
+              if (e.target.checked) sound.reply(true);
+            }}
+          />
+        </label>
+        {isNative && (
         <label className="item">
           <span className="body">
             <div className="title">Haptics</div>
@@ -228,6 +274,7 @@ function HapticsSection() {
             }}
           />
         </label>
+        )}
       </div>
     </section>
   );

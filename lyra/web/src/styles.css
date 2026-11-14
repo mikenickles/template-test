@@ -7604,3 +7604,386 @@ button.lp-svc:active {
   font: inherit;
   text-decoration: underline;
 }
+
+
+/* =========================================================================
+   Looks (0.46): the whole app as a mood. Set on <html data-theme>, and on each
+   card of the picker so it previews itself. Paper is the original; Zine and Film
+   follow the phone's light/dark; Night Radio is always dark. The accent color and
+   the bubble style stay the user's own choice in every look.
+   ========================================================================= */
+
+/* Paper, restated so its picker card looks right inside another look */
+[data-theme="paper"] {
+  --bg: #f3f1ea; --surface: #fbfaf6; --surface-2: #e9e6dc; --text: #131416; --text-muted: #67665f; --border: #dcd8cc;
+  --shadow: 0 1px 2px rgba(19, 20, 22, 0.04), 0 10px 30px rgba(19, 20, 22, 0.07);
+}
+
+/* ---- Zine: photocopied. Ink edges, hard shadows, tighter corners, typewriter labels, grain. ---- */
+[data-theme="zine"] {
+  --bg: #f2eee2; --surface: #fcf9ef; --surface-2: #e5e0d0; --text: #111111; --text-muted: #55524a; --border: #1c1c1c;
+  --good: #1f6b40; --warn: #9a6410; --bad: #b3301e;
+  --orb: #111111; --orb-edge: #111111; --orb-line: rgba(242, 238, 226, 0.5); --orb-star: #f2eee2; --chart-line: #1c1c1c;
+  --drawer-bg: #e8e3d3; --drawer-hover: rgba(17, 17, 17, 0.05); --drawer-active: rgba(17, 17, 17, 0.1); --drawer-active-edge: #111111;
+  --tree-line: #1c1c1c; --scrim: rgba(17, 17, 17, 0.45);
+  --shadow: 3px 3px 0 #111111;
+  --radius: 10px; --radius-sm: 6px;
+  --mono: ui-monospace, "SF Mono", "Roboto Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+
+/* ---- Night Radio: always dark, plum-black with a warm amber glow from above. ---- */
+[data-theme="radio"] {
+  --bg: #130d10; --surface: #1e1519; --surface-2: #2b1e23; --text: #f5e9de; --text-muted: #b39c90; --border: #3b2a30;
+  --good: #6fcf97; --warn: #f0b24a; --bad: #f58270;
+  --orb: #1e1519; --orb-edge: #4a343c; --orb-line: rgba(245, 233, 222, 0.38); --orb-star: #f5e9de; --chart-line: #57414b;
+  --drawer-bg: #0c0709; --drawer-hover: rgba(245, 233, 222, 0.05); --drawer-active: rgba(245, 233, 222, 0.09); --drawer-active-edge: rgba(245, 233, 222, 0.22);
+  --tree-line: #4c3941; --scrim: rgba(0, 0, 0, 0.55);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 10px 34px rgba(255, 140, 70, 0.1);
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; --series-5: #d55181; --series-other: #6b7280;
+  color-scheme: dark;
+}
+
+/* ---- Film: faded and soft. Lower contrast, a warm cast, a little grain. ---- */
+[data-theme="film"] {
+  --bg: #ebe6db; --surface: #f4f0e6; --surface-2: #dfd9cb; --text: #2c2a26; --text-muted: #7b766b; --border: #d2cbbb;
+  --orb: #2c2a26; --orb-line: rgba(235, 230, 219, 0.42); --orb-star: #ebe6db; --chart-line: #b9b2a2;
+  --drawer-bg: #e0dacc; --tree-line: #bfb8a8; --scrim: rgba(44, 42, 38, 0.3);
+  --shadow: 0 1px 2px rgba(44, 42, 38, 0.03), 0 12px 34px rgba(70, 60, 44, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="paper"] {
+    --bg: #141310; --surface: #1d1c18; --surface-2: #27251f; --text: #eeebe3; --text-muted: #9d988b; --border: #302e27;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
+  }
+  [data-theme="zine"] {
+    --bg: #0e0e0e; --surface: #181818; --surface-2: #242424; --text: #f1ede0; --text-muted: #a9a598; --border: #8f8b7e;
+    --good: #5cc48a; --warn: #e0a940; --bad: #f07a68;
+    --orb: #181818; --orb-edge: #f1ede0; --orb-line: rgba(241, 237, 224, 0.45); --orb-star: #f1ede0; --chart-line: #8f8b7e;
+    --drawer-bg: #080808; --drawer-hover: rgba(241, 237, 224, 0.06); --drawer-active: rgba(241, 237, 224, 0.12); --drawer-active-edge: #f1ede0;
+    --tree-line: #8f8b7e; --scrim: rgba(0, 0, 0, 0.6);
+    --shadow: 3px 3px 0 rgba(241, 237, 224, 0.7);
+  }
+  [data-theme="film"] {
+    --bg: #1b1a17; --surface: #242320; --surface-2: #2e2c28; --text: #ddd7ca; --text-muted: #9a948a; --border: #383530;
+    --orb: #242320; --orb-edge: #3d3a34; --orb-line: rgba(221, 215, 202, 0.36); --orb-star: #ddd7ca; --chart-line: #4a463e;
+    --drawer-bg: #141311; --tree-line: #45413a; --scrim: rgba(0, 0, 0, 0.45);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 34px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Night Radio is dark whatever the phone is set to: the dark accent and bubble colors, always */
+[data-theme="radio"][data-accent="lime"],
+[data-theme="radio"] [data-accent="lime"] {
+  --accent: #cbf25c;
+  --accent-ink: #10130a;
+  --accent-soft: #232c14;
+  --accent-text: #cbf25c;
+}
+[data-theme="radio"][data-accent="orange"],
+[data-theme="radio"] [data-accent="orange"] {
+  --accent: #ec7a40;
+  --accent-ink: #1a0b04;
+  --accent-soft: #3a2116;
+  --accent-text: #f29462;
+}
+[data-theme="radio"][data-accent="yellow"],
+[data-theme="radio"] [data-accent="yellow"] {
+  --accent: #f6cc48;
+  --accent-ink: #1a1404;
+  --accent-soft: #332a10;
+  --accent-text: #f6cc48;
+}
+[data-theme="radio"][data-accent="red"],
+[data-theme="radio"] [data-accent="red"] {
+  --accent: #f25c52;
+  --accent-ink: #1c0605;
+  --accent-soft: #3a1714;
+  --accent-text: #f6827a;
+}
+[data-theme="radio"][data-accent="maroon"],
+[data-theme="radio"] [data-accent="maroon"] {
+  --accent: #c85a6d;
+  --accent-ink: #1a0609;
+  --accent-soft: #361b20;
+  --accent-text: #e3889a;
+}
+[data-theme="radio"][data-accent="navy"],
+[data-theme="radio"] [data-accent="navy"] {
+  --accent: #7096da;
+  --accent-ink: #0a1020;
+  --accent-soft: #18233b;
+  --accent-text: #94b1e8;
+}
+[data-theme="radio"][data-accent="indigo"],
+[data-theme="radio"] [data-accent="indigo"] {
+  --accent: #8c8df2;
+  --accent-ink: #0d0d24;
+  --accent-soft: #23234b;
+  --accent-text: #a7a8f6;
+}
+[data-theme="radio"][data-accent="teal"],
+[data-theme="radio"] [data-accent="teal"] {
+  --accent: #3dc3b1;
+  --accent-ink: #04140f;
+  --accent-soft: #13302c;
+  --accent-text: #62d4c4;
+}
+[data-theme="radio"][data-bubbles="classic"],
+[data-theme="radio"] [data-bubbles="classic"] {
+  --me: #e4e7ec;
+  --me-text: #141310;
+}
+[data-theme="radio"][data-bubbles="accent"],
+[data-theme="radio"] [data-bubbles="accent"] {
+  --me: color-mix(in srgb, var(--accent) 20%, var(--surface));
+  --me-text: var(--text);
+}
+[data-theme="radio"][data-bubbles="neutral"],
+[data-theme="radio"] [data-bubbles="neutral"] {
+  --me: #2b2924;
+  --me-text: var(--text);
+}
+[data-theme="radio"][data-bubbles="softer"],
+[data-theme="radio"] [data-bubbles="softer"] {
+  --me: #d4cfc4;
+  --me-text: #141310;
+}
+[data-theme="radio"] .badge,
+[data-theme="radio"] .voice-btn.end {
+  color: #130d10;
+}
+
+/* ---- what sits over the page: grain (Zine, Film) and the glow (Night Radio). Never in the way of a tap. ---- */
+html[data-theme="zine"] body::after,
+html[data-theme="film"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.1;
+}
+html[data-theme="film"] body::after {
+  opacity: 0.075;
+}
+html[data-theme="film"] body::before,
+html[data-theme="radio"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 399;
+  pointer-events: none;
+}
+html[data-theme="film"] body::before {
+  /* a faded print: warm at the top, a little cool at the bottom */
+  background: linear-gradient(rgba(255, 196, 140, 0.07), transparent 45%, rgba(120, 160, 190, 0.05));
+}
+html[data-theme="radio"] body::before {
+  background: radial-gradient(120% 55% at 50% -12%, rgba(255, 150, 80, 0.16), transparent 70%);
+}
+
+/* ---- Zine details ---- */
+html[data-theme="zine"] .section-label,
+html[data-theme="zine"] .status-pill,
+html[data-theme="zine"] .stamp,
+html[data-theme="zine"] .day,
+html[data-theme="zine"] .lp-stat span,
+html[data-theme="zine"] .action-state {
+  font-family: var(--mono);
+  letter-spacing: 0.02em;
+}
+html[data-theme="zine"] .section-label {
+  letter-spacing: 0.08em;
+}
+html[data-theme="zine"] .avatar {
+  filter: grayscale(1) contrast(1.2);
+}
+html[data-theme="zine"] .group,
+html[data-theme="zine"] .lp-svc,
+html[data-theme="zine"] .lp-stats,
+html[data-theme="zine"] .action-card,
+html[data-theme="zine"] .dialog,
+html[data-theme="zine"] .sheet,
+html[data-theme="zine"] .composer form,
+html[data-theme="zine"] .tabbar-inner {
+  border: 1.5px solid var(--border);
+}
+html[data-theme="zine"] .group,
+html[data-theme="zine"] .lp-svc,
+html[data-theme="zine"] .lp-stats,
+html[data-theme="zine"] .action-card {
+  box-shadow: var(--shadow);
+}
+html[data-theme="zine"] .btn {
+  border-radius: 8px;
+}
+html[data-theme="zine"] .bubble {
+  border-radius: 12px 12px 2px 12px;
+}
+html[data-theme="zine"] .lp-promise {
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+/* ---- Night Radio details: things that are lit, glow ---- */
+html[data-theme="radio"] .orb {
+  box-shadow:
+    inset 0 0 0 1px var(--orb-edge),
+    0 0 26px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+html[data-theme="radio"] .send:not(:disabled),
+html[data-theme="radio"] .fab,
+html[data-theme="radio"] .btn.primary {
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+html[data-theme="radio"] .switch:checked {
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+/* ---- Film details ---- */
+html[data-theme="film"] .avatar {
+  filter: saturate(0.78) sepia(0.14) contrast(0.96);
+}
+
+/* ---- the picker (Settings, You and appearance, Look) ---- */
+.theme-styles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s3);
+}
+.theme-style {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s2);
+  padding: var(--s3);
+  border-radius: 20px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: transform 160ms ease;
+}
+.theme-style:active {
+  transform: scale(0.98);
+}
+.theme-style:has(input:checked) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.theme-style:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.theme-style input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.theme-sample {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 6px;
+  align-items: center;
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.theme-dot {
+  grid-row: 1 / 3;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.theme-line {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--text);
+}
+.theme-line.short {
+  width: 60%;
+  background: var(--text-muted);
+}
+.theme-style .name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.theme-style .about {
+  margin-top: -6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+[data-theme="radio"] .theme-dot {
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* ---------- now playing (0.46): little bars in the status, and Lyra's headphones glow ---------- */
+.status-bars {
+  flex: none;
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 11px;
+}
+.status-bars i {
+  width: 2.5px;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--accent-text);
+  transform-origin: bottom;
+  animation: bars 0.9s ease-in-out infinite;
+}
+.status-bars i:nth-child(2) {
+  animation-duration: 0.7s;
+  animation-delay: -0.3s;
+}
+.status-bars i:nth-child(3) {
+  animation-duration: 1.1s;
+  animation-delay: -0.6s;
+}
+@keyframes bars {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+body[data-music] .orb:has(.avatar),
+body[data-music] .lp-orb {
+  animation: music-glow 2.4s ease-in-out infinite;
+}
+@keyframes music-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent),
+      0 0 10px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--accent) 60%, transparent),
+      0 0 22px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .status-bars i,
+  body[data-music] .orb:has(.avatar),
+  body[data-music] .lp-orb {
+    animation: none;
+  }
+  body[data-music] .orb:has(.avatar) {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+}

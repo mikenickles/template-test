@@ -24,6 +24,12 @@ export function chatText(label: string): string {
 export const workingText = (title: string, count = 1) => (count > 1 ? `Working on ${count} tasks` : fit(`Working on: ${title}`, `Working: ${title}`, "Working on a task"));
 export const routineText = (name: string) => fit(`Running ${name}`, "Running a routine");
 export const readyText = (n: number) => fit(`${n} ${n === 1 ? "thing" : "things"} ready for you`, `${n} ready for you`, "Tasks ready for you");
+/** What's playing on Spotify: "Song · Artist", or just the song, cut to fit if it's very long (little bars are drawn beside it). */
+export function musicText(title: string, artist: string): string {
+  const t = title.replace(/\s*[\(\[][^)\]]*[\)\]]\s*/g, " ").replace(/\s+-\s+.*$/, "").trim() || title.trim();
+  const cut = [...t].slice(0, STATUS_MAX - 3).join("").trimEnd();
+  return fit(...(artist ? [`${t} · ${artist}`] : []), t, `${cut}…`);
+}
 export const weatherText = (icon: string, temp: number, text: string) => fit(`${icon} ${temp}° · ${text}`, `${icon} ${temp}°`);
 
 /** "Morning brief at 7 AM", "Brief tomorrow 8 AM", or nothing if not within a day. Always fits. */

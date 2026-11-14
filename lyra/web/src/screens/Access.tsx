@@ -357,6 +357,20 @@ function ServiceSheet({
           <div className="group lp-sheet-group">
             <label className="item">
               <span className="body">
+                <div className="title">Show what's playing</div>
+                <div className="sub">The song shows under Lyra's avatar, and its headphones glow.</div>
+              </span>
+              <input
+                type="checkbox"
+                role="switch"
+                className="switch"
+                checked={spotify.nowPlaying}
+                disabled={busy}
+                onChange={(e) => void run(() => api.showNowPlaying(e.target.checked), e.target.checked ? "Lyra shows what's playing" : "Now playing: off")}
+              />
+            </label>
+            <label className="item">
+              <span className="body">
                 <div className="title">Control playback</div>
                 <div className="sub">Play, pause, skip or queue when you ask. Spotify only allows this with Premium.</div>
               </span>

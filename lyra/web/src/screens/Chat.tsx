@@ -2,6 +2,7 @@ import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useRef, useSta
 import { api, onChange, sendChat, type Channel, type MemoryNote, type Message, type TaskNote } from "../api";
 import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chart, Chevron, Close, File as FileIcon, Minus, Wave, More, Pin, Plus, Spark, Stop, TasksIcon, ThumbDown, ThumbUp } from "../icons";
 import { haptic } from "../haptics";
+import { sound } from "../sounds";
 import { FEEDBACK_REASONS } from "../../../core/style";
 import { noteOf, onIncoming, prepare, prepareShared, strip, takeIncoming, type Draft } from "../attach";
 import { MAX_ATTACHMENTS } from "../../../core/attachments";
@@ -360,6 +361,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
     const files = given ?? drafts;
     if (!text && !files.length) return;
     haptic.tap();
+    sound.send();
     // A reply's being written: this joins it, like texting back to back.
     if (pending) {
       if (files.length) return toast("Photos and files go once Lyra has finished this reply.");
@@ -420,6 +422,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
             return list.some((x) => x.id === msg.id) ? list : [...list, msg];
           });
           if (msg.meta.tasks?.length) onTasksChanged?.();
+          if (!msg.meta.error) sound.reply();
         },
       }, channelId, files.map(strip));
     } catch (e) {

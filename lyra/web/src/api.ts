@@ -27,6 +27,7 @@ import { applyUpdate, checkForUpdate, watchForUpdates } from "./updater";
 import { watchWidget } from "./widget";
 import { background, createPlatform, deviceKind, isDesktop, isNative, keepBackupCopy, live, notifier, places, push, shareFile } from "./platform";
 import { directionsLink, driveSeconds, leaveAt } from "../../core/places";
+import { sound } from "./sounds";
 
 export type MemoryNote = CoreNote;
 export type Message = StoredMessage;
@@ -546,7 +547,9 @@ const firstLine = (text: string) => text.trim().split("\n")[0].replace(/[*`#>]/g
 const chatHash = (channelId: number | null) => (channelId === null ? "#/" : `#/c/${channelId}`);
 
 function notice(lyra: Lyra, title: string, body: string, hash: string, options: string[] = []): void {
-  if (inFront() || !lyra.state().notifications) return;
+  // on screen: no notification, just Lyra's bell if sounds are on
+  if (inFront()) return void sound.notice();
+  if (!lyra.state().notifications) return;
   void notifier.now(title, body, hash, options).catch(() => {});
 }
 
@@ -701,6 +704,8 @@ export const api = {
   allowNotices: async (on: boolean) => (await ready).allowNotices(on),
   syncNotices: async () => (await ready).syncNotices(),
   spotifyState: async () => (await ready).spotifyState(),
+  nowPlaying: async () => (await ready).nowPlaying(),
+  showNowPlaying: async (on: boolean) => (await ready).showNowPlaying(on),
   connectSpotify: async (clientId?: string) => (await ready).connectSpotify(clientId),
   disconnectSpotify: async () => (await ready).disconnectSpotify(),
   allowSpotify: async (what: "playback" | "playlists", on: boolean) => (await ready).allowSpotify(what, on),

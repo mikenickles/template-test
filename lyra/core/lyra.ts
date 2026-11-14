@@ -136,6 +136,8 @@ export interface AppState {
   accent: Accent;
   /** How the user's own message bubbles look, one of BUBBLES. */
   bubbles: Bubbles;
+  /** The app's look, one of THEMES. */
+  theme: Theme;
   /** Phone notifications for news while Lyra is in the background, and routine reminders. */
   notifications: boolean;
   /** Lyra mirrors how the user talks. */
@@ -200,6 +202,9 @@ export type Accent = (typeof ACCENTS)[number];
 /** Your message bubbles: softer ink (default), the accent's tint, soft neutral, or the original solid ink. */
 export const BUBBLES = ["softer", "accent", "neutral", "classic"] as const;
 export type Bubbles = (typeof BUBBLES)[number];
+/** The app's whole look, a mood: Paper (the original), Zine, Night Radio (always dark) or Film. Styles live in the stylesheet. */
+export const THEMES = ["paper", "zine", "radio", "film"] as const;
+export type Theme = (typeof THEMES)[number];
 
 export interface MemoryView {
   content: string;
@@ -228,6 +233,7 @@ export interface SettingsPatch {
   webSearch?: boolean;
   accent?: string;
   bubbles?: string;
+  theme?: string;
   notifications?: boolean;
   /** Talk like me: mirror how the user talks. */
   mirror?: boolean;
@@ -243,7 +249,7 @@ export type GoogleId = "gmail" | "calendar" | "drive";
 
 const GOOGLE_LINKS = ["gmail", "calendar", "drive"];
 /** Settings that stay with a device when another device's data arrives through sync. */
-const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications", "actions.gmail", "actions.calendar", "actions.archive", "actions.text", "notices", "contacts", "spotify", "spotify.playback", "spotify.playlists"];
+const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications", "actions.gmail", "actions.calendar", "actions.archive", "actions.text", "notices", "contacts", "spotify", "spotify.playback", "spotify.playlists", "spotify.nowPlaying"];
 
 /** Phase 9: what Lyra may propose, each turned on by the user in Connections. */
 const ACTION_ACCESS = {
@@ -719,6 +725,7 @@ export class Lyra {
       webSearch: this.webSearch,
       accent: this.accent,
       bubbles: this.bubbles,
+      theme: this.theme,
       notifications: getSetting(this.db, "notifications") !== "off",
       mirror: ST.mirrorOn(this.db),
       appLock: getSetting(this.db, "appLock") === "on",
@@ -1232,6 +1239,11 @@ export class Lyra {
     return (BUBBLES as readonly string[]).includes(b ?? "") ? (b as Bubbles) : "softer";
   }
 
+  get theme(): Theme {
+    const t = getSetting(this.db, "theme");
+    return (THEMES as readonly string[]).includes(t ?? "") ? (t as Theme) : "paper";
+  }
+
   get accent(): Accent {
     const a = getSetting(this.db, "accent");
     return (ACCENTS as readonly string[]).includes(a ?? "") ? (a as Accent) : "lime";
@@ -1265,6 +1277,10 @@ export class Lyra {
     if (patch.accent !== undefined) {
       if (!(ACCENTS as readonly string[]).includes(patch.accent)) throw new Error("That color isn't one of the choices.");
       setSetting(this.db, "accent", patch.accent);
+    }
+    if (patch.theme !== undefined) {
+      if (!(THEMES as readonly string[]).includes(patch.theme)) throw new Error("That look isn't one of the choices.");
+      setSetting(this.db, "theme", patch.theme);
     }
     if (patch.bubbles !== undefined) {
       if (!(BUBBLES as readonly string[]).includes(patch.bubbles)) throw new Error("That style isn't one of the choices.");
@@ -1950,8 +1966,9 @@ export class Lyra {
     return !!this.spotifyLink;
   }
 
-  async spotifyState(): Promise<{ available: boolean; clientId: string | null; connected: boolean; name?: string; playback: boolean; playlists: boolean }> {
+  async spotifyState(): Promise<{ available: boolean; clientId: string | null; connected: boolean; name?: string; playback: boolean; playlists: boolean; nowPlaying: boolean }> {
     return {
+      nowPlaying: this.spotifyLinked && getSetting(this.db, "spotify.nowPlaying") !== "off",
       available: !!this.p.oauth,
       clientId: await this.spotify.clientId(),
       connected: this.spotifyLinked,
@@ -1987,6 +2004,28 @@ export class Lyra {
   }
 
   /** Playback control or playlist changes: turning one on signs in again with that permission added. */
+  /**
+   * The song playing on the user's Spotify right now, for the line under Lyra's avatar
+   * (null when nothing is playing, Spotify isn't connected, or the switch is off). No AI involved.
+   */
+  async nowPlaying(): Promise<{ title: string; artist: string } | null> {
+    if (!this.spotifyLinked || getSetting(this.db, "spotify.nowPlaying") === "off") return null;
+    try {
+      const r = await this.spotify.get<{ is_playing?: boolean; item?: { name?: string; artists?: { name: string }[]; show?: { name?: string } } }>("/me/player?additional_types=episode");
+      if (!r?.is_playing || !r.item?.name) return null;
+      return { title: r.item.name, artist: r.item.artists?.[0]?.name ?? r.item.show?.name ?? "" };
+    } catch {
+      return null; // a nicety: never an error
+    }
+  }
+
+  /** Showing what's playing under the avatar: on by default once Spotify is connected. */
+  async showNowPlaying(on: boolean): Promise<AppState> {
+    setSetting(this.db, "spotify.nowPlaying", on ? "on" : "off");
+    await this.db.flush();
+    return this.state();
+  }
+
   async allowSpotify(what: "playback" | "playlists", on: boolean): Promise<AppState> {
     if (!this.spotifyLinked) throw new Error("Connect Spotify first.");
     if (on) {

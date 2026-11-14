@@ -1,4 +1,5 @@
 import { App as CapApp } from "@capacitor/app";
+import { SystemBars, SystemBarsStyle } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, isNative, onChange, type AppState, type Channel } from "./api";
@@ -305,6 +306,19 @@ export function App() {
     window.clearTimeout((toast as unknown as { t?: number }).t);
     (toast as unknown as { t?: number }).t = window.setTimeout(() => setToastMsg(null), 3200);
   }, []);
+
+  // The look (0.46): on <html>, remembered for the next launch's first paint. Night Radio is
+  // always dark, so the phone's status bar icons go light with it.
+  useEffect(() => {
+    if (!state) return;
+    document.documentElement.dataset.theme = state.theme;
+    try {
+      localStorage.setItem("lyra.theme", state.theme);
+    } catch {
+      // fine: it's only to avoid a flash on start
+    }
+    if (isNative) void SystemBars.setStyle({ style: state.theme === "radio" ? SystemBarsStyle.Dark : SystemBarsStyle.Default }).catch(() => {});
+  }, [state?.theme]);
 
   // Keep the chosen accent on <html>, and remember it for the next launch's first paint.
   useEffect(() => {

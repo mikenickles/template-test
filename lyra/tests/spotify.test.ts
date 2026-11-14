@@ -12,7 +12,7 @@ const T1 = "spotify:track:4uLU6hMCjMI75M1A2tKUQC";
 const T2 = "spotify:track:7ouMYWpwJ422jRcDASZB7P";
 
 /** A pretend Spotify: sign-in page, token endpoint and Web API. */
-function fakeSpotify(opts: { grant?: string; noDevice?: boolean } = {}) {
+function fakeSpotify(opts: { grant?: string; noDevice?: boolean; playing?: boolean } = {}) {
   const calls: { method: string; url: string; body?: string }[] = [];
   const asked: URL[] = [];
   const oauth = {
@@ -34,6 +34,7 @@ function fakeSpotify(opts: { grant?: string; noDevice?: boolean } = {}) {
     }
     const path = u.replace("https://api.spotify.com/v1", "");
     if (path === "/me") return json({ id: "sam1", display_name: "Sam" });
+    if (path.startsWith("/me/player?")) return opts.playing === undefined ? new Response(null, { status: 204 }) : json({ is_playing: opts.playing, item: { name: "Karma Police", artists: [{ name: "Radiohead" }] } });
     if (path.startsWith("/search")) return json({ tracks: { items: [{ name: "Karma Police", uri: T1, artists: [{ name: "Radiohead" }], album: { name: "OK Computer" } }] } });
     if (path.startsWith("/tracks?ids=")) return json({ tracks: [{ uri: T1, name: "Karma Police", artists: [{ name: "Radiohead" }] }, { uri: T2, name: "No Surprises", artists: [{ name: "Radiohead" }] }] });
     if (path === "/me/player/play") return opts.noDevice ? json({ error: { status: 404, message: "Player command failed: No active device found", reason: "NO_ACTIVE_DEVICE" } }, 404) : new Response(null, { status: 204 });
@@ -67,6 +68,36 @@ describe("Spotify", () => {
     const result = provider.requests[1].messages.at(-1)!.parts[0] as { content: string };
     expect(result.content).toMatch(/untrusted_data[^]*Karma Police · Radiohead · OK Computer · spotify:track:/);
     expect(message.meta.tools).toEqual([{ name: "spotify__search", ok: true }]);
+  });
+
+  it("says what's playing for the line under the avatar, with a switch, and never throws", async () => {
+    const none = fakeSpotify();
+    const off = await Lyra.start(platform({ oauth: none.oauth, fetch: none.fetch }));
+    expect(await off.nowPlaying()).toBeNull(); // not connected
+    await off.connectSpotify(CLIENT);
+    expect(await off.nowPlaying()).toBeNull(); // nothing open on any device
+
+    const paused = fakeSpotify({ playing: false });
+    const p = await Lyra.start(platform({ oauth: paused.oauth, fetch: paused.fetch }));
+    await p.connectSpotify(CLIENT);
+    expect(await p.nowPlaying()).toBeNull();
+
+    const s = fakeSpotify({ playing: true });
+    const lyra = await Lyra.start(platform({ oauth: s.oauth, fetch: s.fetch }));
+    await lyra.connectSpotify(CLIENT);
+    expect(await lyra.nowPlaying()).toEqual({ title: "Karma Police", artist: "Radiohead" });
+    expect((await lyra.spotifyState()).nowPlaying).toBe(true);
+    await lyra.showNowPlaying(false);
+    const before = s.calls.length;
+    expect(await lyra.nowPlaying()).toBeNull();
+    expect(s.calls.length).toBe(before); // off: Spotify isn't even asked
+  });
+
+  it("keeps the look you pick, and only looks it knows", async () => {
+    const lyra = await Lyra.start(platform());
+    expect(lyra.state().theme).toBe("paper");
+    expect((await lyra.saveSettings({ theme: "radio" })).theme).toBe("radio");
+    await expect(lyra.saveSettings({ theme: "vaporwave" })).rejects.toThrow(/look/);
   });
 
   it("refuses a grant wider than asked for", async () => {
