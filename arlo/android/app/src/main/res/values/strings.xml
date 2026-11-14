@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Arlo</string>
+    <string name="setup_title">Find your Arlo.</string>
+    <string name="setup_body">On your computer, open Arlo\'s menu, choose Phone, and show a pairing code. Then scan it here.</string>
+    <string name="scan">Scan pairing code</string>
+    <string name="address_hint">Or type the address, like 192.168.1.20:8787</string>
+    <string name="connect">Connect</string>
+    <string name="error_title">I can\'t reach your computer.</string>
+    <string name="error_body">Check that Arlo is running there and that this phone is on the same Wi‑Fi (or on Tailscale).</string>
+    <string name="retry">Try again</string>
+    <string name="change">Use a different address</string>
+    <string name="channel_name">Messages from Arlo</string>
+    <string name="bad_address">That doesn\'t look like an address.</string>
+    <string name="no_scanner">Scanning isn\'t available on this phone. Type the address instead.</string>
+    <string name="speak_prompt">Go ahead</string>
+</resources>

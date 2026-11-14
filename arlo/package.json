@@ -11,7 +11,7 @@
     "start": "node hub/main.ts",
     "dev": "node --watch hub/main.ts",
     "demo": "node hub/main.ts --demo",
-    "test": "node --test \"test/**/*.test.ts\"",
+    "test": "node --test --test-timeout=30000 \"test/**/*.test.ts\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
