@@ -1,12 +1,12 @@
 // Phase 16: an inbox triage, as a card under Lyra's reply: what needs you, what can
-// wait, and newsletters. Each email opens in Gmail; ones that need you can get a reply drafted.
+// wait, and newsletters. Each email opens in Gmail. No reply buttons: the user asks when they want one.
 import { useState } from "react";
 import type { Triage, TriageItem } from "../../core/triage";
 import { Mail, Star } from "./icons";
 
 const gmail = (thread: string) => `https://mail.google.com/mail/u/0/#inbox/${thread}`;
 
-export function TriageCard({ t, onSend }: { t: Triage; onSend: (text: string) => void }) {
+export function TriageCard({ t }: { t: Triage }) {
   const [showFyi, setShowFyi] = useState(false);
   const row = (i: TriageItem, needs = false) => (
     <li key={i.thread} className={`triage-item${needs ? " triage-needs" : ""}`}>
@@ -16,11 +16,6 @@ export function TriageCard({ t, onSend }: { t: Triage; onSend: (text: string) =>
         <span className="triage-subject">{i.subject}</span>
         {i.why && <span className="triage-why">{i.why}</span>}
         <span className="triage-actions">
-          {needs && (
-            <button type="button" className="triage-btn" onClick={() => onSend(`Draft a reply to thread ${i.thread}`)}>
-              Draft a reply
-            </button>
-          )}
           <a className="triage-btn" href={gmail(i.thread)} target="_blank" rel="noreferrer noopener">
             Open in Gmail
           </a>

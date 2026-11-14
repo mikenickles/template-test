@@ -2,7 +2,7 @@
 // Lyra reads the mail with its read-only Gmail tools and shows the result as a card:
 // what needs the user, what can wait, and newsletters / promotions.
 export interface TriageItem {
-  /** Gmail thread id (for "Open in Gmail" and "Draft a reply") */
+  /** Gmail thread id (for "Open in Gmail") */
   thread: string;
   from: string;
   subject: string;

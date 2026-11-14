@@ -682,7 +682,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                   )}
                   {!!m.meta.memory?.length && <Notes notes={m.meta.memory} onAction={(i, a) => answerNote(m, i, a)} />}
                   {!!m.meta.tasks?.length && <TaskNotes notes={m.meta.tasks} />}
-                  {m.meta.triage && <TriageCard t={m.meta.triage} onSend={(text) => void send(text)} />}
+                  {m.meta.triage && <TriageCard t={m.meta.triage} />}
                   {m.meta.scan && m.id > 0 && <ScanCard messageId={m.id} scan={m.meta.scan} toast={toast} />}
                   {m.meta.widget && m.id > 0 && <WidgetCard messageId={m.id} widget={m.meta.widget} toast={toast} onSend={(text) => void send(text)} live={m.id === lastId && !pending} />}
                   {!!m.meta.actions?.length && <ActionCards ids={m.meta.actions} toast={toast} />}

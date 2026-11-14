@@ -1,8 +1,8 @@
 /**
  * Mail watch: every few minutes, a plain Gmail search (no AI) for new mail from the people
  * who matter (anyone with a People card, or what Gmail marks Important). Only when something
- * new turns up does Lyra read it and decide whether to tell the user, with the next steps as
- * buttons on the notification. Newsletters, promotions and automated mail never get that far.
+ * new turns up does Lyra read it and decide whether to tell the user. It only tells: no
+ * offers to reply (the user answers almost none). Newsletters, promotions and automated mail never get that far.
  */
 import type { Person } from "./people.ts";
 
@@ -53,7 +53,7 @@ export function mailWatchInstructions(items: MailItem[], userName: string): stri
 The new messages (read the ones that might matter with read_thread, using the thread id):
 ${items.map((i) => `- thread ${i.thread}: from ${i.from || "(unknown)"}, "${i.subject || "(no subject)"}"`).join("\n")}
 
-Post only if one of them needs ${user}: a question waiting on their answer, a change of plans, a deadline, something to sign or pay, news they'd want now. Otherwise call nothing_new: an FYI, a thank-you or a newsletter isn't worth interrupting them for.
+Post only if one of them is worth knowing about now: a question for them, a change of plans, a deadline, something to sign or pay, news they'd want. Otherwise call nothing_new: an FYI, a thank-you or a newsletter isn't worth interrupting them for.
 
-If you post, write it like a text from you: who it's from and what they need, in a sentence or two, with any date or amount exactly as written. Then give the next steps as options they can tap, written as they'd say them: "Draft a reply", "Remind me tonight", "Add it to my calendar". The first option should be the most likely one. Never more than three.`;
+If you post, write it like a text from you: who it's from and what it says, in a sentence or two, with any date or amount exactly as written. You're only letting them know. Don't ask whether they want to reply, don't offer to draft anything, and don't pass options: ${user} answers almost no email, and will ask if they want a reply.`;
 }

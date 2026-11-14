@@ -1289,9 +1289,13 @@ async function pickNotebook(ctx: TurnContext, name: unknown): Promise<{ book: No
 export function plainOptions(options: unknown, tainted: boolean): string[] {
   return (Array.isArray(options) ? options : [])
     .map((o) => String(o).replace(/\s+/g, " ").trim())
+    .filter((o) => !REPLY_OFFER.test(o))
     .filter((o) => o && o.length <= (tainted ? 48 : 60) && !(tainted && /@|:\/\/|www\.|\.(com|net|org|io)\b/i.test(o)))
     .slice(0, 3);
 }
+
+/** A button offering to answer an email. The user answers almost none, and asks when they want one drafted. */
+const REPLY_OFFER = /\b(repl(y|ies)|respond|write back|draft (a |an |the |my )?(yes|no|response|answer|email|note))\b/i;
 
 /** Tools that only look things up: what Lyra says alongside one was said before Lyra had the answer. */
 const LOOKUPS = new Set(["life_admin", "read_doc", "read_channel", "list_tasks", "list_routines", "look_up_person", "find_contact", "use_skill"]);

@@ -149,12 +149,12 @@ describe("runTurn", () => {
 
   it("a reply with buttons is complete: the model isn't asked again", async () => {
     const t = await setup([
-      { parts: [{ type: "text", text: "Ortiz can come Thursday at 8." }, { type: "tool_call", id: "c1", name: "suggest_replies", input: { options: ["Draft a yes", "Remind me later"] } }], stop: "tool_use" },
+      { parts: [{ type: "text", text: "Ortiz can come Thursday at 8." }, { type: "tool_call", id: "c1", name: "suggest_replies", input: { options: ["Book Thursday", "Remind me later"] } }], stop: "tool_use" },
       say("Pick one and I'll get started."),
     ]);
     const saved = await runTurn(t.ctx, "plumber?", t.emit);
     expect(saved.content).toBe("Ortiz can come Thursday at 8.");
-    expect(saved.meta.suggestions).toEqual(["Draft a yes", "Remind me later"]);
+    expect(saved.meta.suggestions).toEqual(["Book Thursday", "Remind me later"]);
     expect(t.provider.requests).toHaveLength(1);
   });
 

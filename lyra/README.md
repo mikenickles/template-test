@@ -72,6 +72,14 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### Email is news, not homework (0.48.3)
+
+Lyra no longer asks you to answer email. When it tells you about mail (the mail watch, heads-ups,
+routines, an inbox rundown in chat) it says who wrote and what it says, and stops. The "Draft a
+reply" button is gone from the inbox card, and any button offering to reply or draft a response is
+dropped before it reaches a message or a notification. Asking for a reply yourself ("reply to Dana
+saying yes") works as before.
+
 ### Text and avatar size (0.48.2)
 
 Settings → You and appearance → Size: pick how big the text in chats is (Small, Regular, Large,

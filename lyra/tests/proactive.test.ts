@@ -249,17 +249,17 @@ describe("suggested next steps", () => {
   it("keeps up to three as buttons on the reply", async () => {
     const lyra = await Lyra.start(platform({ provider: new FakeProvider([call("suggest_replies", { options: ["Add it to my tasks", "Remind me Friday", "Draft a reply", "A fourth"] }), say("The trip is Friday.")]) }));
     const { message } = await lyra.chat("When's the trip?", noop);
-    expect(message.meta.suggestions).toEqual(["Add it to my tasks", "Remind me Friday", "Draft a reply"]);
+    expect(message.meta.suggestions).toEqual(["Add it to my tasks", "Remind me Friday", "A fourth"]); // offers to answer an email are dropped
   });
 
   it("offered before the answer is written, Lyra is told the answer is still to come (a real model took 'shown' to mean sent)", async () => {
-    const provider = new FakeProvider([call("suggest_replies", { options: ["Draft a yes"] }), say("Yes, Ortiz wrote back Monday.")]);
+    const provider = new FakeProvider([call("suggest_replies", { options: ["Remind me Friday"] }), say("Yes, Ortiz wrote back Monday.")]);
     const lyra = await Lyra.start(platform({ provider }));
     const { message } = await lyra.chat("Did the plumber get back to me?", noop);
     const result = provider.requests[1].messages.at(-1)!.parts[0] as { content: string };
     expect(result.content).toMatch(/NOT written that reply yet[^]*starting with the answer/);
     expect(message.content).toBe("Yes, Ortiz wrote back Monday.");
-    expect(message.meta.suggestions).toEqual(["Draft a yes"]);
+    expect(message.meta.suggestions).toEqual(["Remind me Friday"]);
   });
 
   it("tells Lyra which switch would let it do what was asked, only for services that are connected", async () => {

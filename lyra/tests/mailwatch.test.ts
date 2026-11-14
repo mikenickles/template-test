@@ -90,8 +90,8 @@ describe("mail watch", () => {
     expect(asked.length).toBe(2);
     expect(asked[0].system).toContain('from Rebecca Hickey <rh@school.org>, "Field trip moved"');
     expect(asked[0].system).not.toContain("Old news");
-    expect(notices).toEqual([{ title: "Mail from Rebecca Hickey", body: "Rebecca says the field trip moved to Thursday. Slip still due Tuesday.", options: ["Draft a reply", "Remind me tonight"] }]);
-    expect(lyra.messages(null).at(-1)!.meta).toMatchObject({ headsUp: true, suggestions: ["Draft a reply", "Remind me tonight"] });
+    expect(notices).toEqual([{ title: "Mail from Rebecca Hickey", body: "Rebecca says the field trip moved to Thursday. Slip still due Tuesday.", options: ["Remind me tonight"] }]);
+    expect(lyra.messages(null).at(-1)!.meta).toMatchObject({ headsUp: true, suggestions: ["Remind me tonight"] }); // the offer to reply is dropped
 
     // in quiet hours it doesn't look; turned off, it doesn't either
     expect(lyra.tickMailWatch(new Date("2026-11-14T07:00:00Z"))).toBe(false); // 11 PM

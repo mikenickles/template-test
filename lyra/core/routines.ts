@@ -433,7 +433,7 @@ function finishTools(mode: PostMode, withTriage = false): ToolDef[] {
           type: "array",
           items: { type: "string", maxLength: 48 },
           maxItems: 3,
-          description: "Up to three short replies the user can tap for the obvious next step, written as they'd say them: 'Draft a yes', 'Remind me tonight', 'Not now'. Leave out when there's no next step.",
+          description: "Up to three short things the user can tap for the obvious next step, written as they'd say them: 'Remind me tonight', 'Add it to my calendar', 'Not now'. Leave out when there's no next step. Never an offer to reply to an email or draft one: when you report mail you're only letting them know.",
         },
       },
       required: ["message"],
