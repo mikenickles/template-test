@@ -15,6 +15,8 @@ import { WeatherSection } from "./WeatherSection";
 import { PlacesSection } from "./PlacesSection";
 import { useEffect } from "react";
 import { ask } from "../ask";
+import { AVATAR_SIZES, TEXT_SIZES, avatarSize, setAvatarSize, setTextSize, textSize } from "../sizes";
+import { Orb } from "../LyraMark";
 
 export type SettingsSection = "model" | "usage" | "you" | "alerts" | "sync" | "about";
 export const SETTINGS_SECTIONS: SettingsSection[] = ["model", "usage", "you", "alerts", "sync", "about"];
@@ -44,6 +46,8 @@ const FINDER: { label: string; more: string; where: string; href: string; phone?
   { label: "Look", more: "theme zine night radio film paper dark mode style grain", where: "You and appearance", href: "#/settings/you" },
   { label: "Accent color", more: "colour lime orange theme", where: "You and appearance", href: "#/settings/you" },
   { label: "Your messages", more: "bubble bubbles chat style", where: "You and appearance", href: "#/settings/you" },
+  { label: "Text size", more: "font bigger smaller larger display zoom read", where: "You and appearance", href: "#/settings/you" },
+  { label: "Avatar size", more: "lyra picture orb bigger smaller display", where: "You and appearance", href: "#/settings/you" },
   { label: "Talk like me", more: "mirror slang how lyra talks style tone", where: "You and appearance", href: "#/settings/you" },
   { label: "Weather", more: "city place forecast temperature", where: "You and appearance", href: "#/settings/you" },
   { label: "Sounds", more: "audio noise chime bell mute", where: "You and appearance", href: "#/settings/you" },
@@ -283,12 +287,74 @@ function YouSection({ state, setState, toast, run, busy }: Omit<Props, "section"
         </div>
       </section>
 
+      <SizeSection />
+
       <TalkLikeMe state={state} run={run} busy={busy} toast={toast} />
 
       <WeatherSection state={state} setState={setState} toast={toast} />
 
       <HapticsSection />
     </>
+  );
+}
+
+/** How big the chat text and Lyra's avatar are, on this device. */
+function SizeSection() {
+  const [text, setText] = useState(textSize);
+  const [avatar, setAvatar] = useState(avatarSize);
+  const textPill = useSlidingPill(text);
+  const avatarPill = useSlidingPill(avatar);
+  return (
+    <section className="section">
+      <h2 className="section-label">Size</h2>
+      <div className="size-preview" aria-hidden="true">
+        <Orb />
+        <p>This is how big Lyra and its messages look.</p>
+      </div>
+      <div className="size-row">
+        <span>Text in chats</span>
+        <div className="seg four" role="radiogroup" aria-label="Text size" ref={textPill}>
+          <span className="slide-pill" aria-hidden="true" />
+          {TEXT_SIZES.map((s) => (
+            <button
+              key={s.id}
+              role="radio"
+              aria-checked={text === s.id}
+              className={text === s.id ? "on" : ""}
+              onClick={() => {
+                setTextSize(s.id);
+                setText(s.id);
+                haptic.select();
+              }}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="size-row">
+        <span>Lyra's avatar</span>
+        <div className="seg" role="radiogroup" aria-label="Avatar size" ref={avatarPill}>
+          <span className="slide-pill" aria-hidden="true" />
+          {AVATAR_SIZES.map((s) => (
+            <button
+              key={s.id}
+              role="radio"
+              aria-checked={avatar === s.id}
+              className={avatar === s.id ? "on" : ""}
+              onClick={() => {
+                setAvatarSize(s.id);
+                setAvatar(s.id);
+                haptic.select();
+              }}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="hint">Only on this device.</p>
+    </section>
   );
 }
 

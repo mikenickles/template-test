@@ -3,6 +3,9 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./styles.css";
+import { applySizes } from "./sizes";
+
+applySizes(); // text and avatar size, before the first paint
 
 // Apply the saved accent before the first paint, so the app doesn't flash lime.
 try {

@@ -368,8 +368,8 @@ a.orb:active {
 }
 
 .orb-sm {
-  width: 66px;
-  height: 66px;
+  width: var(--orb-sm);
+  height: var(--orb-sm);
 }
 
 .orb-lg {
@@ -559,7 +559,7 @@ body[data-busy] .orb:has(.avatar)::after {
   border-radius: 22px 22px 6px 22px;
   background: var(--me);
   color: var(--me-text);
-  font-size: 17px;
+  font-size: var(--chat-text);
   line-height: 1.4;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -608,7 +608,7 @@ body[data-busy] .orb:has(.avatar)::after {
   position: relative;
   max-width: min(94%, 600px);
   padding-left: 22px;
-  font-size: 17px;
+  font-size: var(--chat-text);
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -989,7 +989,7 @@ body[data-busy] .orb:has(.avatar)::after {
   border: 0;
   outline: 0;
   background: transparent;
-  font-size: 17px;
+  font-size: var(--chat-text);
   line-height: 1.4;
   padding: 11px 0;
   max-height: 160px;
@@ -8419,4 +8419,44 @@ body[data-music] .lp-orb {
 /* day buttons are only for a routine on a schedule */
 .day-picks[hidden] {
   display: none;
+}
+
+/* ---------- Display size (this device): chat text and Lyra's avatar ---------- */
+:root {
+  --chat-text: 17px;
+  --orb-sm: 66px;
+}
+[data-text="small"] { --chat-text: 15px; }
+[data-text="large"] { --chat-text: 19px; }
+[data-text="larger"] { --chat-text: 22px; }
+[data-avatar="small"] { --orb-sm: 48px; }
+[data-avatar="large"] { --orb-sm: 84px; }
+
+.size-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin-bottom: var(--s4);
+}
+.size-row > span {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.seg.four {
+  grid-template-columns: repeat(4, 1fr);
+}
+.size-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  margin-bottom: var(--s4);
+  border-radius: var(--radius, 18px);
+  background: var(--surface);
+}
+.size-preview .orb { flex: none; }
+.size-preview p {
+  margin: 0;
+  font-size: var(--chat-text);
+  line-height: 1.5;
 }

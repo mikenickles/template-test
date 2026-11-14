@@ -72,6 +72,13 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### Text and avatar size (0.48.2)
+
+Settings → You and appearance → Size: pick how big the text in chats is (Small, Regular, Large,
+Largest) and how big Lyra's avatar sits at the top of the chat (Small, Regular, Large). A preview
+shows the result as you tap. Kept on this device only, so the phone and the computer can differ.
+Cards inside replies (lists of choices, scans, actions) keep their own size.
+
 ### No more "Lyra changed on both devices" (0.48.1)
 
 With a home base, the phone kept asking which version to keep: the computer posted something on its own (an email watch, a heads-up) while the phone had unsent changes, and sync only knows whole snapshots.
