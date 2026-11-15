@@ -483,10 +483,10 @@ function WithYourOk({
       kind: "event",
       icon: <Calendar />,
       title: "Calendar changes",
-      sub: linked("calendar") ? "Add, move or answer events, only when you tap" : "Connect Calendar first",
+      sub: linked("calendar") ? "Add, move, answer or remove events, only when you tap" : "Connect Calendar first",
       ready: linked("calendar"),
       checked: state.actions.event,
-      set: (on: boolean) => flip("event", () => api.allowActions("event", on), on ? "Lyra can add events with your OK" : "Add calendar events: off"),
+      set: (on: boolean) => flip("event", () => api.allowActions("event", on), on ? "Lyra can change your calendar with your OK" : "Calendar changes: off"),
     },
     {
       kind: "archive",

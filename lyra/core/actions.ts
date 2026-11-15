@@ -7,7 +7,7 @@ import { googleGet } from "./connectors/google-http.ts";
 import { NeedsConsentError, type TokenSource } from "./connectors/google.ts";
 import { describeDue, localToDate } from "./reminders.ts";
 
-export type ActionKind = "email" | "event" | "playlist" | "move" | "rsvp" | "archive" | "text";
+export type ActionKind = "email" | "event" | "playlist" | "move" | "rsvp" | "archive" | "text" | "remove";
 export type ActionStatus = "proposed" | "working" | "done" | "declined";
 
 export interface EmailDraft {
@@ -54,6 +54,19 @@ export interface MoveDraft {
   guests: number;
 }
 
+/** Take an event off the user's calendar. Their own event is cancelled for everyone; an invitation only leaves their calendar. */
+export interface RemoveDraft {
+  eventId: string;
+  title: string;
+  when: string;
+  /** other people on it (told it's cancelled, when the user organizes it) */
+  guests: number;
+  /** the user organizes it, so removing it cancels it for the guests too */
+  mine: boolean;
+  /** a repeating event's whole series, not one day of it */
+  series: boolean;
+}
+
 /** Answer an invitation: yes, no or maybe, with an optional note to the organizer. */
 export interface RsvpDraft {
   eventId: string;
@@ -76,7 +89,7 @@ export interface TextDraft {
   body: string;
 }
 
-export type ActionPayload = EmailDraft | EventDraft | PlaylistDraft | MoveDraft | RsvpDraft | ArchiveDraft | TextDraft;
+export type ActionPayload = EmailDraft | EventDraft | PlaylistDraft | MoveDraft | RsvpDraft | ArchiveDraft | TextDraft | RemoveDraft;
 
 const EVENT_ID = /^[a-zA-Z0-9_-]{5,1024}$/;
 const THREAD_ID = /^[0-9a-f]{6,32}$/i;
@@ -226,6 +239,10 @@ export function describeAction(a: Pick<ActionRow, "kind" | "payload">, timeZone?
     const m = a.payload as MoveDraft;
     const to = m.allDay ? m.start : describeDue(localToDate(m.start, timeZone)!, timeZone);
     return `Move "${m.title}" from ${m.was} to ${to}${m.guests ? ` (${m.guests} guests told)` : ""}`;
+  }
+  if (a.kind === "remove") {
+    const r = a.payload as RemoveDraft;
+    return `Remove "${r.title}" (${r.when}) from the calendar${r.series ? ", every time it repeats" : ""}${r.mine && r.guests ? ` (${r.guests} guests told it's cancelled)` : ""}`;
   }
   if (a.kind === "rsvp") {
     const r = a.payload as RsvpDraft;
@@ -435,6 +452,28 @@ export interface CalendarEvent {
   end?: { date?: string; dateTime?: string };
   attendees?: { email?: string; displayName?: string; self?: boolean; responseStatus?: string; comment?: string; organizer?: boolean }[];
   organizer?: { email?: string; displayName?: string; self?: boolean };
+  /** set on a repeating event itself (the whole series) */
+  recurrence?: string[];
+}
+
+/** What removing this event would do, read from the event as it is on the calendar. */
+export function checkRemove(e: CalendarEvent, timeZone?: string): RemoveDraft {
+  const others = (e.attendees ?? []).filter((a) => !a.self).length;
+  return { eventId: e.id, title: e.summary?.trim() || "(no title)", when: eventWhen(e, timeZone), guests: others, mine: !e.organizer || !!e.organizer.self, series: !!e.recurrence?.length };
+}
+
+export async function doRemove(d: ActionDeps, r: RemoveDraft): Promise<ActionResult> {
+  if (!d.events) throw new Error("Lyra isn't allowed to change your calendar yet. Turn it on in Connections, then try again.");
+  // guests hear about it only when it's the user's own event being cancelled
+  const url = `${CAL}/${encodeURIComponent(r.eventId)}?sendUpdates=${r.mine && r.guests ? "all" : "none"}`;
+  const res = await d.fetch(url, { method: "DELETE", headers: { authorization: `Bearer ${await bearer(d.events, "add calendar events")}` } });
+  if (res.status === 401 || res.status === 403) {
+    await d.events.invalidate();
+    throw new Error(`Google refused (${res.status}). Turn "Calendar changes" off and on again in Connections, then try again.`);
+  }
+  // already gone counts as removed
+  if (!res.ok && res.status !== 404 && res.status !== 410) throw new Error(`Google said ${res.status}.`);
+  return { did: "removed", at: new Date().toISOString() };
 }
 
 /** "Fri, Nov 14, 3:00 PM" or "Fri, Nov 14, all day", for cards and prompts. */

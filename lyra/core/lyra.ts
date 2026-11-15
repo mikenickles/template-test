@@ -271,7 +271,7 @@ const ACTION_ACCESS = {
 };
 type GoogleAction = keyof typeof ACTION_ACCESS;
 /** Which permission each kind of card needs: moving and answering events use the calendar one. */
-const NEEDS: Record<"email" | "event" | "move" | "rsvp" | "archive", GoogleAction> = { email: "email", event: "event", move: "event", rsvp: "event", archive: "archive" };
+const NEEDS: Record<"email" | "event" | "move" | "rsvp" | "archive" | "remove", GoogleAction> = { email: "email", event: "event", move: "event", rsvp: "event", archive: "archive", remove: "event" };
 
 /** Lyra's Google connectors. Each asks for one read-only permission. */
 const GOOGLE: {
@@ -482,6 +482,12 @@ export class Lyra {
             return { id: row.id, summary: A.describeAction(row) };
           }
           if (!this.actionsAllowed()[kind]) throw new Error(`You can't ${ACTION_ACCESS[NEEDS[kind]].what} yet: the user can turn it on in Connections.`);
+          if (kind === "remove") {
+            // the card shows the event as it really is on the calendar: what it's called, when, and who else is on it
+            const e = await A.getEvent({ fetch: this.fetch }, this.tokenFor("calendar"), A.checkEventId(input.event_id));
+            const row = A.createAction(this.db, "remove", A.checkRemove(e, this.p.timeZone), tainted, channelId);
+            return { id: row.id, summary: A.describeAction(row, this.p.timeZone) };
+          }
           if (kind === "move" || kind === "rsvp") {
             // the card shows the event as it really is on the calendar, not as the model described it
             const e = await A.getEvent({ fetch: this.fetch }, this.tokenFor("calendar"), A.checkEventId(input.event_id));
@@ -758,7 +764,7 @@ export class Lyra {
     return (this.actionTokens[kind] ??= new TokenSource(this.p.google, [ACTION_ACCESS[kind].scope]));
   }
 
-  actionsAllowed(): { email: boolean; event: boolean; move: boolean; rsvp: boolean; archive: boolean; text: boolean; playlist: boolean } {
+  actionsAllowed(): { email: boolean; event: boolean; move: boolean; rsvp: boolean; remove: boolean; archive: boolean; text: boolean; playlist: boolean } {
     const on = (k: GoogleAction) => !!this.link(ACTION_ACCESS[k].link) && getSetting(this.db, ACTION_ACCESS[k].setting) === "on";
     const event = on("event");
     return {
@@ -766,6 +772,7 @@ export class Lyra {
       event,
       move: event,
       rsvp: event,
+      remove: event,
       archive: on("archive"),
       // only opens the messaging app with the text ready: on by default on a phone
       text: !!this.p.sms && getSetting(this.db, "actions.text") !== "off",
@@ -1202,6 +1209,8 @@ export class Lyra {
               ? await A.doMove(deps, payload as A.MoveDraft)
               : a.kind === "rsvp"
                 ? await A.doRsvp(deps, payload as A.RsvpDraft)
+                : a.kind === "remove"
+                  ? await A.doRemove(deps, payload as A.RemoveDraft)
                 : a.kind === "archive"
                   ? await A.doArchive(deps, payload as A.ArchiveDraft)
                   : await A.doEvent(deps, payload as A.EventDraft);

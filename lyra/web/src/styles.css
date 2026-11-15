@@ -8651,3 +8651,9 @@ body[data-music] .lp-orb {
   white-space: normal;
   opacity: 0.75;
 }
+
+/* 0.50: a removal card's warning line (a repeating event) */
+.action-warn {
+  color: var(--bad);
+  font-weight: 600;
+}

@@ -1,7 +1,7 @@
 // A proposed email or calendar event, as a card under Lyra's reply. Shows exactly what
 // will happen; nothing does until the user taps Send / Save to Drafts / Add.
 import { useEffect, useState } from "react";
-import type { ActionRow, ArchiveDraft, EmailDraft, EventDraft, MoveDraft, PlaylistDraft, RsvpDraft, TextDraft } from "../../core/actions";
+import type { ActionRow, ArchiveDraft, EmailDraft, EventDraft, MoveDraft, PlaylistDraft, RemoveDraft, RsvpDraft, TextDraft } from "../../core/actions";
 import { api, onChange } from "./api";
 import { Calendar, ChatIcon, Mail, Music } from "./icons";
 import { haptic } from "./haptics";
@@ -25,6 +25,7 @@ const DONE: Record<string, string> = {
   made: "Playlist made",
   added_songs: "Songs added",
   moved: "Moved",
+  removed: "Removed from your calendar",
   accepted: "Said yes",
   declined: "Said no",
   tentative: "Said maybe",
@@ -55,7 +56,7 @@ function ActionCard({ id, toast }: { id: number; toast: (m: string) => void }) {
   if (a === null) return <div className="action-card gone">This was removed.</div>;
 
   if (a.kind === "playlist") return <PlaylistCard a={a} setA={setA} toast={toast} />;
-  if (a.kind === "move" || a.kind === "rsvp" || a.kind === "archive" || a.kind === "text") return <SimpleCard a={a} setA={setA} toast={toast} />;
+  if (a.kind === "move" || a.kind === "rsvp" || a.kind === "archive" || a.kind === "text" || a.kind === "remove") return <SimpleCard a={a} setA={setA} toast={toast} />;
   const email = a.kind === "email" ? (a.payload as EmailDraft) : null;
   const event = a.kind === "event" ? (a.payload as EventDraft) : null;
   const open = a.status === "proposed";
@@ -314,6 +315,26 @@ function SimpleCard({ a, setA, toast }: { a: ActionRow; setA: (r: ActionRow) => 
         <div className="action-sub action-was">{m.was}</div>
         <div className="action-sub action-now">→ {to}</div>
         {m.guests > 0 && <div className="action-sub">{m.guests === 1 ? "1 guest is" : `${m.guests} guests are`} told about the new time.</div>}
+      </>
+    );
+  } else if (a.kind === "remove") {
+    const r = a.payload as RemoveDraft;
+    kind = "Remove from calendar";
+    go = r.series ? "Remove every one" : "Remove it";
+    label = "Event removal for your OK";
+    content = (
+      <>
+        <div className="action-title">{r.title}</div>
+        <div className="action-sub">{r.when}</div>
+        {r.series && <div className="action-sub action-warn">This repeats: every one of them comes off, not just this day.</div>}
+        <div className="action-sub">
+          {!r.mine
+            ? "It comes off your calendar only. It stays on for everyone else."
+            : r.guests > 0
+              ? `${r.guests === 1 ? "1 guest is" : `${r.guests} guests are`} told it's cancelled.`
+              : "Nobody else is on it."}{" "}
+          Google Calendar keeps it in its trash for 30 days.
+        </div>
       </>
     );
   } else if (a.kind === "rsvp") {

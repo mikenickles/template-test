@@ -42,7 +42,7 @@ export interface PromptInput {
   /** People cards: the directory, and whether the phone's contacts can be searched. */
   people?: { directory: string; contacts: boolean };
   /** Emails and events Lyra may propose, and recent proposals with what happened to them. */
-  actions?: { allowed: { email: boolean; event: boolean; move?: boolean; rsvp?: boolean; archive?: boolean; text?: boolean }; recent: string };
+  actions?: { allowed: { email: boolean; event: boolean; move?: boolean; rsvp?: boolean; remove?: boolean; archive?: boolean; text?: boolean }; recent: string };
   /** The model answering this turn, so Lyra can say which one if asked. */
   model?: string;
   /** The model's built-in web search is on. */
@@ -69,7 +69,7 @@ function canTurnOn(p: PromptInput, user: string): string {
   const has = (id: string) => p.connectors.some((c) => c.id === id && c.state === "connected");
   const off = [
     has("gmail") && !a?.email && "send emails for them (Write emails)",
-    has("calendar") && !a?.event && "add, move or answer calendar events (Calendar changes)",
+    has("calendar") && !a?.event && "add, move, answer or remove calendar events (Calendar changes)",
     has("gmail") && !a?.archive && "archive mail (Tidy your inbox)",
   ].filter(Boolean) as string[];
   if (!off.length) return "";
@@ -145,6 +145,7 @@ function actionsSection(p: PromptInput, user: string): string {
     w.event && "calendar events (propose_event)",
     w.move && "a new time for an event ${user} organizes (propose_reschedule)",
     w.rsvp && "an answer to an invitation (propose_rsvp)",
+    w.remove && "taking an event off ${user}'s calendar when they ask (propose_remove_event)",
     w.archive && "archiving emails to tidy the inbox (propose_archive)",
     w.text && "text messages, which open in ${user}'s messaging app ready to send (propose_text)",
   ].filter(Boolean) as string[];

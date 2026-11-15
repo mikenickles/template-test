@@ -202,6 +202,46 @@ describe("the phone's notifications", () => {
   });
 });
 
+describe("removing an event", () => {
+  it("takes the user's own event off the calendar only after the tap, and tells the guests", async () => {
+    const { lyra, api, provider } = await setup([call("propose_remove_event", { event_id: "mine123" }), say("Ready for you to check.")]);
+    await lyra.allowActions("event", true);
+    const { message } = await lyra.chat("Cancel team sync on Friday", noop);
+    expect(provider.requests[0].tools.map((t) => t.name)).toContain("propose_remove_event");
+    const id = message.meta.actions![0];
+    expect(lyra.action(id)).toMatchObject({ kind: "remove", status: "proposed", payload: { eventId: "mine123", title: "Team sync", guests: 1, mine: true, series: false } });
+    // nothing has touched the calendar yet
+    expect(api.calls.filter((c) => c.method !== "GET")).toEqual([]);
+    const done = await lyra.decideAction(id, "do");
+    expect(done).toMatchObject({ status: "done", result: { did: "removed" } });
+    const del = api.calls.filter((c) => c.method === "DELETE");
+    expect(del.length).toBe(1);
+    expect(del[0].url).toContain("/events/mine123?sendUpdates=all");
+    // a second tap can't remove anything again
+    await lyra.decideAction(id, "do").catch(() => {});
+    expect(api.calls.filter((c) => c.method === "DELETE").length).toBe(1);
+  });
+
+  it("an invitation only leaves the user's own calendar, and saying no to the card removes nothing", async () => {
+    const { lyra, api } = await setup([call("propose_remove_event", { event_id: "invite456" }), say("Ready."), call("propose_remove_event", { event_id: "invite456" }), say("Ready.")]);
+    await lyra.allowActions("event", true);
+    const first = (await lyra.chat("Take book club off my calendar", noop)).message.meta.actions![0];
+    expect(lyra.action(first)).toMatchObject({ payload: { title: "Book club", mine: false } });
+    await lyra.decideAction(first, "decline");
+    expect(api.calls.filter((c) => c.method === "DELETE")).toEqual([]);
+    const second = (await lyra.chat("Actually yes, remove book club", noop)).message.meta.actions![0];
+    await lyra.decideAction(second, "do");
+    expect(api.calls.find((c) => c.method === "DELETE")!.url).toContain("/events/invite456?sendUpdates=none");
+  });
+
+  it("isn't offered until calendar changes are turned on", async () => {
+    const { lyra, provider } = await setup([say("Sure.")]);
+    await lyra.chat("hi", noop);
+    expect(provider.requests[0].tools.map((t) => t.name)).not.toContain("propose_remove_event");
+    expect(lyra.state().actions.event).toBe(false);
+  });
+});
+
 describe("live progress", () => {
   it("lists the tasks being worked, with Lyra's latest step and the checklist so far", async () => {
     const lyra = await Lyra.start(platform({ timeZone: TZ }));
