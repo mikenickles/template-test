@@ -6,7 +6,7 @@ import { Usage } from "./Usage";
 import { useSlidingPill } from "../pill";
 import { haptic, hapticsOn, setHaptics } from "../haptics";
 import { setSounds, sound, soundsOn } from "../sounds";
-import { appLock, background, installer, isDesktop, notifier, thisDevice, type BackgroundState } from "../platform";
+import { appLock, background, installer, isDesktop, listen, notifier, thisDevice, type BackgroundState } from "../platform";
 import { BackupSection } from "./Backup";
 import { ModelSettings } from "./ModelSettings";
 import { GoogleSetupSection, SyncSection } from "./SyncSection";
@@ -50,6 +50,8 @@ const FINDER: { label: string; more: string; where: string; href: string; phone?
   { label: "Avatar size", more: "lyra picture orb bigger smaller display", where: "You and appearance", href: "#/settings/you" },
   { label: "Talk like me", more: "mirror slang how lyra talks style tone", where: "You and appearance", href: "#/settings/you" },
   { label: "Weather", more: "city place forecast temperature", where: "You and appearance", href: "#/settings/you" },
+  { label: "Make Lyra your assistant", more: "default digital assistant gesture power button home corner swipe gemini google hey", where: "You and appearance", href: "#/settings/you", phone: true },
+  { label: "Shortcuts", more: "app icon long press quick tile widget talk voice memo reach faster", where: "You and appearance", href: "#/settings/you", phone: true },
   { label: "Sounds", more: "audio noise chime bell mute", where: "You and appearance", href: "#/settings/you" },
   { label: "Haptics", more: "vibrate vibration buzz tap feel", where: "You and appearance", href: "#/settings/you", phone: true },
   { label: "Notifications", more: "notify alerts push checkup test permission", where: "Notifications and privacy", href: "#/settings/alerts" },
@@ -294,7 +296,51 @@ function YouSection({ state, setState, toast, run, busy }: Omit<Props, "section"
       <WeatherSection state={state} setState={setState} toast={toast} />
 
       <HapticsSection />
+
+      <ReachSection toast={toast} />
     </>
+  );
+}
+
+/** The fastest ways to Lyra from outside the app (the phone): the assistant gesture, icon shortcuts, the tile, the widget. */
+function ReachSection({ toast }: { toast: (m: string) => void }) {
+  const [state, setState] = useState<"on" | "off" | "unknown" | null>(null);
+  useEffect(() => {
+    const check = () => void listen.assistant().then(setState, () => {});
+    check();
+    // back from the phone's settings page
+    document.addEventListener("visibilitychange", check);
+    return () => document.removeEventListener("visibilitychange", check);
+  }, []);
+  if (state === null) return null;
+  return (
+    <section className="section">
+      <h2 className="section-label">Reach Lyra faster</h2>
+      <div className="group">
+        <button className="item" onClick={() => void listen.chooseAssistant().catch((e) => toast((e as Error).message))}>
+          <span className="body">
+            <div className="title">Make Lyra your assistant</div>
+            <div className="sub">
+              {state === "on"
+                ? "Lyra is this phone's assistant: the assistant gesture (holding the power or home button, or swiping in from a corner) opens it listening."
+                : "Pick Lyra under Digital assistant app, and the phone's assistant gesture (holding the power or home button, or swiping in from a corner) opens Lyra listening instead."}
+            </div>
+          </span>
+          {state === "on" ? <span className="pill">On</span> : <Chevron size={18} className="chev" />}
+        </button>
+      </div>
+      <ul className="reach-list">
+        <li>
+          <b>Lyra's icon:</b> press and hold it for Talk to Lyra, Voice memo, Tasks and Today.
+        </li>
+        <li>
+          <b>Quick Settings:</b> add the Lyra tile to talk from anywhere.
+        </li>
+        <li>
+          <b>Home screen:</b> add the Lyra widget for what's next and a mic.
+        </li>
+      </ul>
+    </section>
   );
 }
 

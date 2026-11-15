@@ -256,6 +256,12 @@ export function App() {
     () =>
       notifier.onOpen((hash, say) => {
         if (say) sessionStorage.setItem("lyra.say", JSON.stringify({ hash, say, at: Date.now() }));
+        // the "Today" app icon shortcut: the main chat, on its Today view
+        if (hash === "#/?today") {
+          sessionStorage.setItem("lyra.showToday", "1");
+          hash = "#/";
+          setTimeout(() => dispatchEvent(new Event("lyra:today-show")), 50);
+        }
         if (location.hash !== hash) location.hash = hash;
         dispatchEvent(new Event("lyra:say"));
       }),

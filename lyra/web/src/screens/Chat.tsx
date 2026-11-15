@@ -15,7 +15,7 @@ import { WidgetCard } from "../WidgetCard";
 import { TodayView } from "../Today";
 import { SetupCard } from "../Setup";
 import { markSeen } from "../seen";
-import { Star } from "../icons";
+import { Pencil, Refresh, Star } from "../icons";
 import { setChatStatus } from "../StatusLine";
 import { STATUS_LABEL } from "./Tasks";
 import { StarChart, Thinking } from "../LyraMark";
@@ -94,8 +94,18 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
   useEffect(() => {
     if (channel) return;
     const toggle = () => setShowToday((v) => !v);
+    // asked for by name (the Today app icon shortcut), also when it arrived before this chat was on screen
+    const show = () => {
+      if (sessionStorage.getItem("lyra.showToday")) setShowToday(true);
+      sessionStorage.removeItem("lyra.showToday");
+    };
+    show();
     addEventListener("lyra:today", toggle);
-    return () => removeEventListener("lyra:today", toggle);
+    addEventListener("lyra:today-show", show);
+    return () => {
+      removeEventListener("lyra:today", toggle);
+      removeEventListener("lyra:today-show", show);
+    };
   }, []);
 
   // a button tapped on a notification: send that step here, once (and only if it was just now)
@@ -508,10 +518,43 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
     }
   };
 
-  const act = async (m: Message, what: "copy" | "pin" | "delete" | "up" | "down") => {
+  // Edit and Try again work on the last exchange only: your latest message and what Lyra said to it.
+  const lastAsk = (() => {
+    const list = messages ?? [];
+    let i = list.length - 1;
+    while (i >= 0 && list[i].role === "assistant") i--;
+    const m = list[i];
+    const after = list.slice(i + 1);
+    if (!m || m.id < 0 || pending || m.meta.attachments?.length || m.meta.voice) return null;
+    // only a plain answer can be taken back: nothing Lyra saved, set, made or proposed, and nothing it posted on its own
+    const did = (v: unknown) => (Array.isArray(v) ? v.length > 0 : v !== undefined && v !== false && v !== null);
+    const plain = after.every((r) => r.id > 0 && !DID.some((k) => did(r.meta[k])));
+    return plain ? { message: m, after } : null;
+  })();
+  const canEdit = (m: Message) => lastAsk?.message.id === m.id;
+  const canRetry = (m: Message) => !!lastAsk && lastAsk.after.length === 1 && lastAsk.after[0].id === m.id;
+
+  /** Take back the last exchange: put your message back in the box to change, or send it again as it was. */
+  const redo = async (again: boolean) => {
+    if (!lastAsk) return;
+    const { message, after } = lastAsk;
+    for (const x of [...after, message]) await api.deleteMessage(x.id);
+    const gone = new Set([message.id, ...after.map((x) => x.id)]);
+    setMessages((list) => (list ?? []).filter((x) => !gone.has(x.id)));
+    if (again) return void sendRef.current?.(message.content);
+    setInput(message.content);
+    requestAnimationFrame(() => {
+      grow();
+      boxRef.current?.focus();
+    });
+  };
+
+  const act = async (m: Message, what: "copy" | "pin" | "delete" | "up" | "down" | "edit" | "retry") => {
     setActing(null);
     try {
-      if (what === "up" || what === "down") {
+      if (what === "edit" || what === "retry") {
+        await redo(what === "retry");
+      } else if (what === "up" || what === "down") {
         await rate(m, m.meta.feedback?.rating === what ? null : what);
       } else if (what === "copy") {
         await copyText(m.content);
@@ -757,8 +800,18 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                           <ThumbDown size={16} />
                         </button>
                       )}
+                      {canRetry(m) && !m.meta.feedback && (
+                        <button className="rate-btn" aria-label="Try again" title="Try again" onClick={() => void redo(true)}>
+                          <Refresh size={16} />
+                        </button>
+                      )}
                       {m.meta.feedback?.why && <span className="rate-why">{m.meta.feedback.why}</span>}
                     </div>
+                  )}
+                  {m.meta.error && canRetry(m) && (
+                    <button className="btn quiet retry-btn" onClick={() => void redo(true)}>
+                      <Refresh size={16} /> Try again
+                    </button>
                   )}
                   {!!m.meta.suggestions?.length && m.id === lastId && !pending && (
                     <div className="suggestions" aria-label="Suggested replies">
@@ -830,7 +883,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
           </div>
         </div>
       )}
-      {acting && <MessageActions message={acting} onAct={(w) => void act(acting, w)} onClose={() => setActing(null)} />}
+      {acting && <MessageActions message={acting} canEdit={canEdit(acting)} canRetry={canRetry(acting)} onAct={(w) => void act(acting, w)} onClose={() => setActing(null)} />}
       {whyFor && (
         <WhySheet
           onSend={(why) => {
@@ -1082,7 +1135,22 @@ function WhySheet({ onSend }: { onSend: (why: string) => void }) {
   );
 }
 
-function MessageActions({ message, onAct, onClose }: { message: Message; onAct: (what: "copy" | "pin" | "delete" | "up" | "down") => void; onClose: () => void }) {
+/** What a reply's meta holds when Lyra did something with it (or posted it unasked): those can't be taken back by Try again. */
+const DID = ["memory", "tasks", "worker", "routine", "voice", "reminder", "actions", "checkIn", "tidy", "skills", "docs", "placeReminder", "scan", "people", "headsUp", "lifeAdmin"] as const;
+
+function MessageActions({
+  message,
+  canEdit,
+  canRetry,
+  onAct,
+  onClose,
+}: {
+  message: Message;
+  canEdit: boolean;
+  canRetry: boolean;
+  onAct: (what: "copy" | "pin" | "delete" | "up" | "down" | "edit" | "retry") => void;
+  onClose: () => void;
+}) {
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     addEventListener("keydown", esc);
@@ -1099,6 +1167,22 @@ function MessageActions({ message, onAct, onClose }: { message: Message; onAct: 
               <div className="title">Copy</div>
             </span>
           </button>
+          {canEdit && (
+            <button className="item" onClick={() => onAct("edit")}>
+              <span className="body">
+                <div className="title">Edit and send again</div>
+              </span>
+              <Pencil size={18} />
+            </button>
+          )}
+          {canRetry && (
+            <button className="item" onClick={() => onAct("retry")}>
+              <span className="body">
+                <div className="title">Try again</div>
+              </span>
+              <Refresh size={18} />
+            </button>
+          )}
           <button className="item" onClick={() => onAct("pin")}>
             <span className="body">
               <div className="title">{message.meta.pinned ? "Unpin" : "Pin"}</div>

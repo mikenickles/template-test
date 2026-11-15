@@ -72,6 +72,20 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### Easier to reach, easier to fix, and birthdays (0.49)
+
+- **Try again and Edit.** Under Lyra's latest reply there's a Try again button next to the thumbs
+  (and on a reply that failed). Press and hold your latest message for "Edit and send again": it
+  goes back in the box to change. Both only work on the last exchange, and only when Lyra didn't
+  save, set, make or propose anything with that reply.
+- **Lyra as the phone's assistant.** Settings, You and appearance, Reach Lyra faster opens the
+  phone's Digital assistant app page. Pick Lyra and the assistant gesture (holding the power or
+  home button, or swiping in from a corner) opens Lyra listening.
+- **App icon shortcuts.** Press and hold Lyra's icon for Talk to Lyra, Voice memo, Tasks and Today.
+- **Birthdays.** A people card has a Birthday field ("March 3" or "March 3 1984"), and Lyra fills
+  it in when you mention one. You get a heads-up up to three days ahead and on the day, every year,
+  written by code (no AI call), once a day from 8:00 outside quiet hours.
+
 ### A cleaner Activity page (0.48.5)
 
 - A small header instead of the big avatar, with three numbers: done today, quiet checks, waiting for you.

@@ -279,7 +279,7 @@ function peopleTools(ws: Workspace): ToolDef[] {
     {
       name: "remember_person",
       description:
-        "Add someone who matters to the user, or add to their card: who they are to the user, an email or phone, another name they go by, or one fact about them. One fact per call.",
+        "Add someone who matters to the user, or add to their card: who they are to the user, an email or phone, another name they go by, their birthday, or one fact about them. One fact per call. A birthday on a card gets the user a heads-up a few days before and on the day, every year.",
       schema: {
         type: "object",
         properties: {
@@ -288,6 +288,7 @@ function peopleTools(ws: Workspace): ToolDef[] {
           email: { type: "string" },
           phone: { type: "string" },
           alias: { type: "string", description: "Another name they go by: 'Mom'." },
+          birthday: { type: "string", description: "Their birthday: YYYY-MM-DD, or MM-DD when the year isn't known." },
           fact: { type: "string", description: "One thing worth remembering about them." },
         },
         required: ["name"],

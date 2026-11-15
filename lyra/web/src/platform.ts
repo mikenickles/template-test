@@ -723,6 +723,8 @@ const NativeListen = registerPlugin<{
   cancel(): Promise<void>;
   addListener(e: "words", fn: (o: { text?: string; done?: boolean; error?: string }) => void): Promise<{ remove(): Promise<void> }>;
   addListener(e: "capture", fn: (o: { mode: string }) => void): Promise<{ remove(): Promise<void> }>;
+  assistant(): Promise<{ state: "on" | "off" | "unknown" }>;
+  chooseAssistant(): Promise<void>;
 }>("LyraListen");
 
 export const listen = {
@@ -735,7 +737,11 @@ export const listen = {
     const sub = NativeListen.addListener("words", fn);
     return () => void sub.then((s) => s.remove());
   },
-  /** the Quick Settings tile or the widget's mic opened Lyra */
+  /** Is Lyra the phone's assistant app (the one the assistant gesture opens)? null where there's no such thing. */
+  assistant: async (): Promise<"on" | "off" | "unknown" | null> => (isNative ? (await NativeListen.assistant().catch(() => ({ state: "unknown" as const }))).state : null),
+  /** the phone's own page for picking the assistant app */
+  chooseAssistant: () => NativeListen.chooseAssistant(),
+  /** the Quick Settings tile, the widget's mic, an app icon shortcut or the assistant gesture opened Lyra */
   onCapture(fn: (mode: string) => void): () => void {
     if (!isNative) return () => {};
     const sub = NativeListen.addListener("capture", (o) => fn(o.mode));

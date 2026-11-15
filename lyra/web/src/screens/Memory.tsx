@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Person } from "../../../core/people";
+import { birthdayLabel, type Person } from "../../../core/people";
 import type { Skill } from "../../../core/skills";
 import { api, type Channel, type MemoryView } from "../api";
 import { ChannelIcon, Chevron, Plus, Star } from "../icons";
@@ -537,7 +537,7 @@ function PeopleList({ toast }: { toast: (m: string) => void }) {
               <span className="tile person-initial">{p.name.charAt(0).toUpperCase()}</span>
               <span className="body">
                 <div className="title">{p.name}</div>
-                <div className="sub">{[p.relation, p.emails[0], p.notes.length ? `${p.notes.length} ${p.notes.length === 1 ? "note" : "notes"}` : ""].filter(Boolean).join(" · ") || "No details yet"}</div>
+                <div className="sub">{[p.relation, p.birthday ? `🎂 ${birthdayLabel(p.birthday)}` : "", p.emails[0], p.notes.length ? `${p.notes.length} ${p.notes.length === 1 ? "note" : "notes"}` : ""].filter(Boolean).join(" · ") || "No details yet"}</div>
               </span>
               <Chevron className="chev" />
             </button>
@@ -568,6 +568,7 @@ function PersonSheet({ person, toast, onClose, onSaved }: { person: Person | nul
   const [f, setF] = useState({
     name: person?.name ?? "",
     relation: person?.relation ?? "",
+    birthday: person?.birthday ? `${birthdayLabel(person.birthday)}${person.birthday.length > 5 ? `, ${person.birthday.slice(0, 4)}` : ""}` : "",
     aliases: person?.aliases.join(", ") ?? "",
     emails: person?.emails.join(", ") ?? "",
     phones: person?.phones.join(", ") ?? "",
@@ -581,6 +582,7 @@ function PersonSheet({ person, toast, onClose, onSaved }: { person: Person | nul
       await api.savePerson(person?.id ?? null, {
         name: f.name,
         relation: f.relation,
+        birthday: f.birthday,
         aliases: lines(f.aliases),
         emails: lines(f.emails),
         phones: lines(f.phones),
@@ -613,6 +615,7 @@ function PersonSheet({ person, toast, onClose, onSaved }: { person: Person | nul
         <div className="action-edit">
           {field("name", "Name")}
           {field("relation", "Who they are to you")}
+          {field("birthday", "Birthday (like March 3, or March 3 1984)")}
           {field("emails", "Email")}
           {field("phones", "Phone")}
           {field("aliases", "Also called")}

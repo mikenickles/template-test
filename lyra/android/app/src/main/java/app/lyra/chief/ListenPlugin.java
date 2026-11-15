@@ -46,11 +46,44 @@ public class ListenPlugin extends Plugin {
 
     /** Opened from the tile or the widget's mic: tell the app to show the capture sheet. */
     private void deliver(Intent intent) {
-        if (intent == null || !intent.hasExtra(CAPTURE)) return;
+        if (intent == null) return;
+        // the phone's assistant gesture (Lyra picked as the digital assistant app) opens it listening too
+        boolean assist = Intent.ACTION_ASSIST.equals(intent.getAction());
+        if (!assist && !intent.hasExtra(CAPTURE)) return;
         JSObject o = new JSObject();
-        o.put("mode", intent.getStringExtra(CAPTURE));
+        o.put("mode", assist ? "quick" : intent.getStringExtra(CAPTURE));
         intent.removeExtra(CAPTURE);
+        if (assist) intent.setAction(Intent.ACTION_MAIN); // once only: not again on a rotation
         notifyListeners("capture", o, true);
+    }
+
+    /** Is Lyra the phone's assistant app? ("unknown" before Android 10, where the phone doesn't say.) */
+    @PluginMethod
+    public void assistant(PluginCall call) {
+        JSObject r = new JSObject();
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            android.app.role.RoleManager roles = getContext().getSystemService(android.app.role.RoleManager.class);
+            r.put("state", roles != null && roles.isRoleHeld(android.app.role.RoleManager.ROLE_ASSISTANT) ? "on" : "off");
+        } else {
+            r.put("state", "unknown");
+        }
+        call.resolve(r);
+    }
+
+    /** Open the phone's page for choosing the assistant app (it can't be set from inside an app). */
+    @PluginMethod
+    public void chooseAssistant(PluginCall call) {
+        String[] pages = { android.provider.Settings.ACTION_VOICE_INPUT_SETTINGS, android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS, android.provider.Settings.ACTION_SETTINGS };
+        for (String page : pages) {
+            try {
+                getContext().startActivity(new Intent(page).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                call.resolve();
+                return;
+            } catch (Exception e) {
+                // this phone has no such page: try the next
+            }
+        }
+        call.reject("Couldn't open the phone's settings");
     }
 
     @PluginMethod

@@ -27,6 +27,16 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- long-press Lyra's icon: Talk to Lyra, Voice memo, Tasks, Today -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+
+            <!-- lets you pick Lyra as the phone's assistant (Settings, Default apps, Digital assistant app):
+                 the assistant gesture then opens Lyra listening. An activity, not a voice interaction
+                 service, so the phone's speech recognition is left as it is. -->
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
 
             <!-- Share to Lyra: text and links, photos, PDFs -->
             <intent-filter android:label="@string/app_name">

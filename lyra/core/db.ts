@@ -262,6 +262,8 @@ export const MIGRATIONS: string[] = [
      SELECT id, kind, status, payload, result, error, tainted, channel_id, created_at, decided_at, message_id FROM actions;
    DROP TABLE actions;
    ALTER TABLE actions_next RENAME TO actions;`,
+  // 0.49: birthdays on people cards ("MM-DD" or "YYYY-MM-DD")
+  `ALTER TABLE people ADD COLUMN birthday TEXT NOT NULL DEFAULT ''`,
 ];
 
 const FILE = "lyra.db";

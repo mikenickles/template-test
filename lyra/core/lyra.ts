@@ -1933,6 +1933,7 @@ export class Lyra {
     this.tickMailWatch(now);
     this.tickTriggers(now);
     this.tickLifeAdmin(now);
+    this.tickBirthdays(now);
     if (!this.tickHeadsUp(now) && !this.tickCheckIn(now) && !this.tickTidy(now)) this.tickStyle(now);
     return started;
   }
@@ -2365,7 +2366,7 @@ export class Lyra {
     return P.getPerson(this.db, id);
   }
 
-  async savePerson(id: number | null, patch: Partial<Pick<P.Person, "name" | "aliases" | "emails" | "phones" | "relation" | "notes">>): Promise<P.Person> {
+  async savePerson(id: number | null, patch: Partial<Pick<P.Person, "name" | "aliases" | "emails" | "phones" | "relation" | "notes" | "birthday">>): Promise<P.Person> {
     const p = id === null ? P.rememberPerson(this.db, { name: patch.name ?? "", relation: patch.relation }).person : P.getPerson(this.db, id);
     if (!p) throw new Error("That person is no longer here.");
     const saved = P.updatePerson(this.db, p.id, patch);
@@ -2648,6 +2649,33 @@ export class Lyra {
    * On the routine tick: tidy the list, give any heads-ups due today (no model call), and
    * once a day go through the inbox, in the daytime, when Gmail is connected.
    */
+  /**
+   * Birthdays on people cards: a heads-up a few days ahead and one on the day, written by code
+   * (no model call). Looked at once a day, from 8:00, outside quiet hours, unless heads-ups are off.
+   */
+  tickBirthdays(now = new Date()): void {
+    if (this.proactive.level === "off") return;
+    const today = LA.localDay(now, this.p.timeZone);
+    if (getSetting(this.db, "birthdaysAt") === today) return;
+    const local = now.toLocaleTimeString("en-GB", { timeZone: this.p.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    if (local < "08:00" || local >= "21:00" || inQuietHours(local, this.proactive)) return;
+    setSetting(this.db, "birthdaysAt", today);
+    let seen: Record<string, string> = {};
+    try {
+      seen = JSON.parse(getSetting(this.db, "birthdaySeen") ?? "{}");
+    } catch {
+      // start over
+    }
+    const n = P.birthdayNotices(P.listPeople(this.db), today, seen);
+    if (!n) return;
+    setSetting(this.db, "birthdaySeen", JSON.stringify(n.seen));
+    if (!n.text) return;
+    const options = n.soon ? ["Remind me that morning"] : [];
+    addMessage(this.db, "assistant", n.text, { headsUp: true, ...(options.length ? { suggestions: options } : {}) }, null);
+    this.listeners.forEach((l) => l({ type: "message", channelId: null, notify: { title: "Birthday", body: n.text.split("\n")[0].slice(0, 160), options } }));
+    void this.db.flush();
+  }
+
   tickLifeAdmin(now = new Date()): void {
     if (!this.lifeAdminOn) return;
     const today = LA.localDay(now, this.p.timeZone);
