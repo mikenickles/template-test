@@ -7740,16 +7740,17 @@ button.lp-svc:active {
 
 /* ---- Night Radio: always dark, plum-black with a warm amber glow from above. ---- */
 [data-theme="radio"] {
-  /* (0.50.2) the dark is tinted by the user's accent, not a fixed orange: night with your color in it */
-  --bg: color-mix(in srgb, var(--accent) 7%, #0c0c0d); --surface: color-mix(in srgb, var(--accent) 9%, #161617);
-  --surface-2: color-mix(in srgb, var(--accent) 12%, #202022); --border: color-mix(in srgb, var(--accent) 16%, #2b2b2e);
-  --text: #f2f0eb; --text-muted: color-mix(in srgb, var(--accent) 14%, #a4a3a0);
+  /* (0.50.3) the dark is tinted by --night, a color picked to pair with each accent (set with the accents below) */
+  --night: #7a3fa0;
+  --bg: color-mix(in srgb, var(--night) 12%, #0c0c0d); --surface: color-mix(in srgb, var(--night) 13%, #161617);
+  --surface-2: color-mix(in srgb, var(--night) 16%, #202022); --border: color-mix(in srgb, var(--night) 22%, #2b2b2e);
+  --text: #f2f0eb; --text-muted: color-mix(in srgb, var(--night) 18%, #a4a3a0);
   --good: #6fcf97; --warn: #f0b24a; --bad: #f58270;
-  --orb: var(--surface); --orb-edge: color-mix(in srgb, var(--accent) 26%, #38383b); --orb-line: rgba(242, 240, 235, 0.38); --orb-star: #f2f0eb;
-  --chart-line: color-mix(in srgb, var(--accent) 22%, #444447);
-  --drawer-bg: color-mix(in srgb, var(--accent) 5%, #080809); --drawer-hover: rgba(242, 240, 235, 0.05); --drawer-active: rgba(242, 240, 235, 0.09); --drawer-active-edge: rgba(242, 240, 235, 0.22);
-  --tree-line: color-mix(in srgb, var(--accent) 20%, #3a3a3d); --scrim: rgba(0, 0, 0, 0.55);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 10px 34px color-mix(in srgb, var(--accent) 10%, transparent);
+  --orb: var(--surface); --orb-edge: color-mix(in srgb, var(--night) 30%, #38383b); --orb-line: rgba(242, 240, 235, 0.38); --orb-star: #f2f0eb;
+  --chart-line: color-mix(in srgb, var(--night) 28%, #444447);
+  --drawer-bg: color-mix(in srgb, var(--night) 9%, #080809); --drawer-hover: rgba(242, 240, 235, 0.05); --drawer-active: rgba(242, 240, 235, 0.09); --drawer-active-edge: rgba(242, 240, 235, 0.22);
+  --tree-line: color-mix(in srgb, var(--night) 26%, #3a3a3d); --scrim: rgba(0, 0, 0, 0.55);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 10px 34px color-mix(in srgb, var(--night) 14%, transparent);
   --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; --series-5: #d55181; --series-other: #6b7280;
   color-scheme: dark;
 }
@@ -7786,6 +7787,7 @@ button.lp-svc:active {
 /* Night Radio is dark whatever the phone is set to: the dark accent and bubble colors, always */
 [data-theme="radio"][data-accent="lime"],
 [data-theme="radio"] [data-accent="lime"] {
+  --night: #7a3fa0;
   --accent: #cbf25c;
   --accent-ink: #10130a;
   --accent-soft: #232c14;
@@ -7793,6 +7795,7 @@ button.lp-svc:active {
 }
 [data-theme="radio"][data-accent="orange"],
 [data-theme="radio"] [data-accent="orange"] {
+  --night: #2f6f9a;
   --accent: #ec7a40;
   --accent-ink: #1a0b04;
   --accent-soft: #3a2116;
@@ -7800,6 +7803,7 @@ button.lp-svc:active {
 }
 [data-theme="radio"][data-accent="yellow"],
 [data-theme="radio"] [data-accent="yellow"] {
+  --night: #4a4fb0;
   --accent: #f6cc48;
   --accent-ink: #1a1404;
   --accent-soft: #332a10;
@@ -7807,6 +7811,7 @@ button.lp-svc:active {
 }
 [data-theme="radio"][data-accent="red"],
 [data-theme="radio"] [data-accent="red"] {
+  --night: #1f8a80;
   --accent: #f25c52;
   --accent-ink: #1c0605;
   --accent-soft: #3a1714;
@@ -7814,6 +7819,7 @@ button.lp-svc:active {
 }
 [data-theme="radio"][data-accent="maroon"],
 [data-theme="radio"] [data-accent="maroon"] {
+  --night: #3f7a5a;
   --accent: #c85a6d;
   --accent-ink: #1a0609;
   --accent-soft: #361b20;
@@ -7821,6 +7827,7 @@ button.lp-svc:active {
 }
 [data-theme="radio"][data-accent="navy"],
 [data-theme="radio"] [data-accent="navy"] {
+  --night: #b0703a;
   --accent: #7096da;
   --accent-ink: #0a1020;
   --accent-soft: #18233b;
@@ -7828,6 +7835,7 @@ button.lp-svc:active {
 }
 [data-theme="radio"][data-accent="indigo"],
 [data-theme="radio"] [data-accent="indigo"] {
+  --night: #6f7f2a;
   --accent: #8c8df2;
   --accent-ink: #0d0d24;
   --accent-soft: #23234b;
@@ -7835,6 +7843,7 @@ button.lp-svc:active {
 }
 [data-theme="radio"][data-accent="teal"],
 [data-theme="radio"] [data-accent="teal"] {
+  --night: #a33a5c;
   --accent: #3dc3b1;
   --accent-ink: #04140f;
   --accent-soft: #13302c;
@@ -7892,7 +7901,7 @@ html[data-theme="film"] body::before {
   background: linear-gradient(rgba(255, 196, 140, 0.07), transparent 45%, rgba(120, 160, 190, 0.05));
 }
 html[data-theme="radio"] body::before {
-  background: radial-gradient(120% 55% at 50% -12%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%);
+  background: radial-gradient(120% 55% at 50% -12%, color-mix(in srgb, var(--night) 24%, transparent), transparent 70%);
 }
 
 /* ---- Zine details ---- */
