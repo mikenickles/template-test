@@ -2,6 +2,7 @@
 // recent chat; over time Lyra keeps a few notes on their way of talking (slang, energy,
 // punctuation, emoji, swearing), learned from the user's own messages only, never email
 // or the web. The notes describe how they talk, not what they talk about.
+import { splitQuote } from "./quote.ts";
 import type { DB } from "./db.ts";
 import { getSetting, setSetting } from "./db.ts";
 import type { ModelProvider, ToolDef } from "./providers/types.ts";
@@ -49,8 +50,8 @@ export function cleanNotes(raw: unknown): string[] {
 export function styleSamples(db: DB, limit = 80): string[] {
   return db
     .all<{ content: string }>("SELECT content FROM messages WHERE role = 'user' AND TRIM(content) <> '' ORDER BY id DESC LIMIT ?", [limit * 2])
-    .map((m) => m.content.trim())
-    .filter((t) => t.length <= MAX_SAMPLE)
+    .map((m) => splitQuote(m.content).text.trim())
+    .filter((t) => t && t.length <= MAX_SAMPLE)
     .slice(0, limit)
     .reverse();
 }

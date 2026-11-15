@@ -154,6 +154,13 @@ export const MenuIcon = (p: P) => (
     <path d="M4 7h16M4 12h10M4 17h13" />
   </Icon>
 );
+/** a turn-back arrow: reply to this message */
+export const Reply = (p: P) => (
+  <Icon {...p}>
+    <path d="M9 14L4 9l5-5M4 9h9a7 7 0 017 7v3" />
+  </Icon>
+);
+
 export const Pencil = (p: P) => (
   <Icon {...p}>
     <path d="M14.5 5.5l4 4M4 20l1-5L15.5 4.5a2.1 2.1 0 013 0l1 1a2.1 2.1 0 010 3L9 19z" />

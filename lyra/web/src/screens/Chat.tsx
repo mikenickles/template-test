@@ -15,7 +15,8 @@ import { WidgetCard } from "../WidgetCard";
 import { TodayView } from "../Today";
 import { SetupCard } from "../Setup";
 import { markSeen } from "../seen";
-import { Pencil, Refresh, Star } from "../icons";
+import { Pencil, Refresh, Reply as ReplyIcon, Star } from "../icons";
+import { excerptOf, splitQuote, withQuote } from "../../../core/quote";
 import { setChatStatus } from "../StatusLine";
 import { STATUS_LABEL } from "./Tasks";
 import { StarChart, Thinking } from "../LyraMark";
@@ -295,6 +296,8 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
 
   // ---- photos and files waiting to be sent with the next message ----
   const [drafts, setDrafts] = useState<Draft[]>([]);
+  // the message being answered (long-press, Reply): its excerpt rides along as a quote
+  const [replyTo, setReplyTo] = useState<{ id: number; excerpt: string; mine: boolean } | null>(null);
   const [attaching, setAttaching] = useState(false);
   const [dragging, setDragging] = useState(false);
   const filePick = useRef<HTMLInputElement>(null);
@@ -374,9 +377,11 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
   }, [channelId]);
 
   const send = async (raw: string, given?: Draft[]) => {
-    const text = raw.trim();
     const files = given ?? drafts;
-    if (!text && !files.length) return;
+    if (!raw.trim() && !files.length) return;
+    // answering one message: only what's typed in the box carries the quote (not a tapped button or a notification's reply)
+    const text = replyTo && raw === input && raw.trim() ? withQuote(replyTo.excerpt, raw) : raw.trim();
+    if (raw === input) setReplyTo(null);
     haptic.tap();
     sound.send();
     // A reply's being written: this joins it, like texting back to back.
@@ -542,22 +547,27 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
     const gone = new Set([message.id, ...after.map((x) => x.id)]);
     setMessages((list) => (list ?? []).filter((x) => !gone.has(x.id)));
     if (again) return void sendRef.current?.(message.content);
-    setInput(message.content);
+    const was = splitQuote(message.content);
+    if (was.quote) setReplyTo({ id: 0, excerpt: was.quote, mine: false });
+    setInput(was.text);
     requestAnimationFrame(() => {
       grow();
       boxRef.current?.focus();
     });
   };
 
-  const act = async (m: Message, what: "copy" | "pin" | "delete" | "up" | "down" | "edit" | "retry") => {
+  const act = async (m: Message, what: "copy" | "pin" | "delete" | "up" | "down" | "edit" | "retry" | "reply") => {
     setActing(null);
     try {
-      if (what === "edit" || what === "retry") {
+      if (what === "reply") {
+        setReplyTo({ id: m.id, excerpt: excerptOf(splitQuote(m.content).text), mine: m.role === "user" });
+        requestAnimationFrame(() => boxRef.current?.focus());
+      } else if (what === "edit" || what === "retry") {
         await redo(what === "retry");
       } else if (what === "up" || what === "down") {
         await rate(m, m.meta.feedback?.rating === what ? null : what);
       } else if (what === "copy") {
-        await copyText(m.content);
+        await copyText(splitQuote(m.content).text);
         toast("Copied");
       } else if (what === "pin") {
         const next = await api.pinMessage(m.id, !m.meta.pinned);
@@ -709,7 +719,15 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                   ) : m.role === "user" ? (
                     <>
                       <div className={`bubble${m.meta.reaction ? " reacted" : ""}`} {...holdProps(m)}>
-                        {m.content}
+                        {(() => {
+                          const q = splitQuote(m.content);
+                          return (
+                            <>
+                              {q.quote && <span className="bubble-quote">{q.quote}</span>}
+                              {q.text}
+                            </>
+                          );
+                        })()}
                         {m.meta.reaction && (
                           <span className="reaction" role="img" aria-label={`Lyra reacted ${m.meta.reaction}`}>
                             {m.meta.reaction}
@@ -920,6 +938,17 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
             void addFiles(e.dataTransfer.files);
           }}
         >
+          {replyTo && (
+            <div className="replying">
+              <span className="replying-body">
+                <span className="replying-label">{replyTo.mine ? "Replying to your message" : "Replying to Lyra"}</span>
+                <span className="replying-text">{replyTo.excerpt}</span>
+              </span>
+              <button type="button" className="replying-close" aria-label="Stop replying to that message" onClick={() => setReplyTo(null)}>
+                <Close size={16} />
+              </button>
+            </div>
+          )}
           {drafts.length > 0 && (
             <ul className="drafts" aria-label="Attached">
               {drafts.map((d) => (
@@ -1148,7 +1177,7 @@ function MessageActions({
   message: Message;
   canEdit: boolean;
   canRetry: boolean;
-  onAct: (what: "copy" | "pin" | "delete" | "up" | "down" | "edit" | "retry") => void;
+  onAct: (what: "copy" | "pin" | "delete" | "up" | "down" | "edit" | "retry" | "reply") => void;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -1160,9 +1189,17 @@ function MessageActions({
     <div className="dialog-layer sheet-layer" role="presentation">
       <button className="dialog-scrim" aria-label="Close" tabIndex={-1} onClick={onClose} />
       <div className="sheet" role="dialog" aria-modal="true" aria-label="Message actions">
-        <p className="sheet-preview">{message.content.replace(/[*`#>]/g, "").slice(0, 160)}</p>
+        <p className="sheet-preview">{splitQuote(message.content).text.replace(/[*`#>]/g, "").slice(0, 160)}</p>
         <div className="group">
-          <button className="item" onClick={() => onAct("copy")} autoFocus>
+          {!!message.content.trim() && !message.meta.error && (
+            <button className="item" onClick={() => onAct("reply")} autoFocus>
+              <span className="body">
+                <div className="title">Reply</div>
+              </span>
+              <ReplyIcon size={18} />
+            </button>
+          )}
+          <button className="item" onClick={() => onAct("copy")}>
             <span className="body">
               <div className="title">Copy</div>
             </span>

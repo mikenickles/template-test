@@ -1,4 +1,5 @@
 import type { Connectors } from "./connectors/registry.ts";
+import { splitQuote } from "./quote.ts";
 import { attachmentParts, attachmentReminder, checkAttachments, type Attachment } from "./attachments.ts";
 import { checkTriage, TRIAGE_GUIDE, TRIAGE_SCHEMA, type Triage } from "./triage.ts";
 import { addMessage, listMessages, updateMessageMeta, type Channel, type ChannelSummary, type DB, type MemoryNote, type MessageMeta, type StoredMessage, type TaskNote } from "./db.ts";
@@ -776,7 +777,8 @@ export async function runTurn(
   const ownWords = () => {
     const mine = listMessages(ctx.db, channelId, 12)
       .filter((m) => m.role === "user")
-      .map((m) => m.content.trim());
+      // (without a quote they were answering: quoted text is Lyra's, or someone else's, never their ask)
+      .map((m) => splitQuote(m.content).text.trim());
     return mine.slice(mine[mine.length - 1]?.length >= 20 ? -1 : -3);
   };
   /** Their latest message that says something (not just "yes, go ahead"). */
