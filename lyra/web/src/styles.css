@@ -7740,12 +7740,16 @@ button.lp-svc:active {
 
 /* ---- Night Radio: always dark, plum-black with a warm amber glow from above. ---- */
 [data-theme="radio"] {
-  --bg: #130d10; --surface: #1e1519; --surface-2: #2b1e23; --text: #f5e9de; --text-muted: #b39c90; --border: #3b2a30;
+  /* (0.50.2) the dark is tinted by the user's accent, not a fixed orange: night with your color in it */
+  --bg: color-mix(in srgb, var(--accent) 7%, #0c0c0d); --surface: color-mix(in srgb, var(--accent) 9%, #161617);
+  --surface-2: color-mix(in srgb, var(--accent) 12%, #202022); --border: color-mix(in srgb, var(--accent) 16%, #2b2b2e);
+  --text: #f2f0eb; --text-muted: color-mix(in srgb, var(--accent) 14%, #a4a3a0);
   --good: #6fcf97; --warn: #f0b24a; --bad: #f58270;
-  --orb: #1e1519; --orb-edge: #4a343c; --orb-line: rgba(245, 233, 222, 0.38); --orb-star: #f5e9de; --chart-line: #57414b;
-  --drawer-bg: #0c0709; --drawer-hover: rgba(245, 233, 222, 0.05); --drawer-active: rgba(245, 233, 222, 0.09); --drawer-active-edge: rgba(245, 233, 222, 0.22);
-  --tree-line: #4c3941; --scrim: rgba(0, 0, 0, 0.55);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 10px 34px rgba(255, 140, 70, 0.1);
+  --orb: var(--surface); --orb-edge: color-mix(in srgb, var(--accent) 26%, #38383b); --orb-line: rgba(242, 240, 235, 0.38); --orb-star: #f2f0eb;
+  --chart-line: color-mix(in srgb, var(--accent) 22%, #444447);
+  --drawer-bg: color-mix(in srgb, var(--accent) 5%, #080809); --drawer-hover: rgba(242, 240, 235, 0.05); --drawer-active: rgba(242, 240, 235, 0.09); --drawer-active-edge: rgba(242, 240, 235, 0.22);
+  --tree-line: color-mix(in srgb, var(--accent) 20%, #3a3a3d); --scrim: rgba(0, 0, 0, 0.55);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 10px 34px color-mix(in srgb, var(--accent) 10%, transparent);
   --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; --series-5: #d55181; --series-other: #6b7280;
   color-scheme: dark;
 }
@@ -7888,7 +7892,7 @@ html[data-theme="film"] body::before {
   background: linear-gradient(rgba(255, 196, 140, 0.07), transparent 45%, rgba(120, 160, 190, 0.05));
 }
 html[data-theme="radio"] body::before {
-  background: radial-gradient(120% 55% at 50% -12%, rgba(255, 150, 80, 0.16), transparent 70%);
+  background: radial-gradient(120% 55% at 50% -12%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%);
 }
 
 /* ---- Zine details ---- */
