@@ -12,7 +12,6 @@ import { ActionCards } from "../ActionCard";
 import { TriageCard } from "../TriageCard";
 import { ScanCard } from "../ScanCard";
 import { WidgetCard } from "../WidgetCard";
-import { TodayView } from "../Today";
 import { SetupCard } from "../Setup";
 import { markSeen } from "../seen";
 import { Pencil, Refresh, Reply as ReplyIcon, Star } from "../icons";
@@ -46,12 +45,10 @@ interface ChatProps {
   toast: (msg: string) => void;
   channel: Channel | null;
   onTasksChanged?: () => void;
-  /** a message to scroll to and highlight (from search or the Today view) */
+  /** a message to scroll to and highlight (from search) */
   focus?: number;
 }
 
-/** Coming back to the main chat after this long opens the Today view. */
-const TODAY_AFTER = 30 * 60_000;
 
 /** Skip re-rendering the whole conversation unless something it shows changed (e.g. while the menu slides). */
 export const Chat = memo(ChatView, (a, b) => {
@@ -83,32 +80,6 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
   const boxRef = useRef<HTMLTextAreaElement>(null);
   const stick = useRef(true);
 
-  // ---- the Today view (main chat only) ----
-  const [showToday, setShowToday] = useState(false);
-  const todayDecided = useRef(false);
-  useEffect(() => {
-    if (channel || todayDecided.current || !messages) return;
-    todayDecided.current = true;
-    const last = messages.at(-1);
-    if (last && !focus && Date.now() - parse(last.created_at).getTime() > TODAY_AFTER) setShowToday(true);
-  }, [messages, channel, focus]);
-  useEffect(() => {
-    if (channel) return;
-    const toggle = () => setShowToday((v) => !v);
-    // asked for by name (the Today app icon shortcut), also when it arrived before this chat was on screen
-    const show = () => {
-      if (sessionStorage.getItem("lyra.showToday")) setShowToday(true);
-      sessionStorage.removeItem("lyra.showToday");
-    };
-    show();
-    addEventListener("lyra:today", toggle);
-    addEventListener("lyra:today-show", show);
-    return () => {
-      removeEventListener("lyra:today", toggle);
-      removeEventListener("lyra:today-show", show);
-    };
-  }, []);
-
   // a button tapped on a notification: send that step here, once (and only if it was just now)
   const sendRef = useRef<(t: string) => Promise<void>>(async () => {});
   useEffect(() => {
@@ -118,7 +89,6 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
         const here = channelId === null ? "#/" : `#/c/${channelId}`;
         if (!o || o.hash.split("?")[0] !== here || Date.now() - o.at > 60_000) return;
         sessionStorage.removeItem("lyra.say");
-        setShowToday(false);
         void sendRef.current(o.say);
       } catch {
         sessionStorage.removeItem("lyra.say");
@@ -135,13 +105,6 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
   }, [channelId]);
   useEffect(() => {
   }, [channel]);
-  useEffect(() => {
-    if (showToday) logRef.current?.scrollTo({ top: 0 });
-    else {
-      stick.current = true;
-      requestAnimationFrame(() => logRef.current?.scrollTo({ top: logRef.current.scrollHeight }));
-    }
-  }, [showToday]);
 
   // what's on screen counts as seen (for the "new" marks in the menu)
   useEffect(() => {
@@ -273,7 +236,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
     requestAnimationFrame(() => (el.scrollTop = el.scrollHeight - before));
   };
 
-  // jump to one message (from search or the Today view), loading earlier pages if needed
+  // jump to one message (from search), loading earlier pages if needed
   const focusTries = useRef(0);
   useEffect(() => {
     focusTries.current = 0;
@@ -286,7 +249,6 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
     if (el) {
       focused.current = focus;
       stick.current = false;
-      setShowToday(false);
       requestAnimationFrame(() => el.scrollIntoView({ block: "center" }));
       return;
     }
@@ -388,7 +350,6 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
     if (pending) {
       if (files.length) return toast("Photos and files go once Lyra has finished this reply.");
       if (!text) return;
-      setShowToday(false);
       setInput("");
       requestAnimationFrame(grow);
       stick.current = true;
@@ -416,7 +377,6 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
       }
       return;
     }
-    setShowToday(false);
     setInput("");
     setDrafts([]);
     requestAnimationFrame(grow);
@@ -613,9 +573,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
         aria-live="polite"
       >
         <div className="log-inner">
-          {showToday && !channel && !empty && <TodayView onSend={(t) => void send(t)} onShowChat={() => setShowToday(false)} hasChat={messages.length > 0} toast={toast} />}
-
-          {hasMore && !showToday && (
+          {hasMore && (
             <button className="chip small" onClick={loadEarlier}>
               Show earlier messages
             </button>
@@ -658,7 +616,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
             </div>
           )}
 
-          {!showToday && messages.map((m, i) => {
+          {messages.map((m, i) => {
             // a reaction on its own is shown on your message; its empty reply takes no room
             if (m.role === "assistant" && !m.content.trim() && !m.meta.error && !m.meta.memory?.length && !m.meta.tasks?.length) return null;
             const d = parse(m.created_at);

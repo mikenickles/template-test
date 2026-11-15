@@ -331,7 +331,7 @@ function ReachSection({ toast }: { toast: (m: string) => void }) {
       </div>
       <ul className="reach-list">
         <li>
-          <b>Lyra's icon:</b> press and hold it for Talk to Lyra, Voice memo, Tasks and Today.
+          <b>Lyra's icon:</b> press and hold it for Talk to Lyra, Voice memo and Tasks.
         </li>
         <li>
           <b>Quick Settings:</b> add the Lyra tile to talk from anywhere.

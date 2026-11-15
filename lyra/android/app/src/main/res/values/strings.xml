@@ -5,8 +5,6 @@
     <string name="package_name">app.lyra.chief</string>
     <string name="custom_url_scheme">app.lyra.chief</string>
     <string name="widget_description">What Lyra is doing, what\'s ready for you, and what\'s next</string>
-    <string name="shortcut_today">Today</string>
-    <string name="shortcut_today_long">Today at a glance</string>
     <string name="shortcut_tasks">Tasks</string>
     <string name="shortcut_tasks_long">Your tasks</string>
     <string name="shortcut_memo">Voice memo</string>

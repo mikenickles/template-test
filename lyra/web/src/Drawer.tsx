@@ -5,7 +5,7 @@ import { Avatar } from "./LyraMark";
 import { onSeen, seenNow } from "./seen";
 import type { SearchHit } from "../../core/today";
 
-/** How far each star sits from the line's spine: a gentle zigzag, like the Today view. */
+/** How far each star sits from the line's spine: a gentle zigzag, like a star chart. */
 const SWAY = [0, 9, 1, 8, 2, 10];
 
 /**
@@ -200,14 +200,7 @@ function Constellation({
       <a
         className={`star-row everything${current === null ? " active" : ""}`}
         href="#/"
-        onClick={(e) => {
-          // already there: Everything flips to the Today view and back
-          if (current === null) {
-            e.preventDefault();
-            dispatchEvent(new Event("lyra:today"));
-          }
-          onPick();
-        }}
+        onClick={() => onPick()}
       >
         <span className="star-slot">
           <span className="star vega" />

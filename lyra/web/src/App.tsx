@@ -256,12 +256,6 @@ export function App() {
     () =>
       notifier.onOpen((hash, say) => {
         if (say) sessionStorage.setItem("lyra.say", JSON.stringify({ hash, say, at: Date.now() }));
-        // the "Today" app icon shortcut: the main chat, on its Today view
-        if (hash === "#/?today") {
-          sessionStorage.setItem("lyra.showToday", "1");
-          hash = "#/";
-          setTimeout(() => dispatchEvent(new Event("lyra:today-show")), 50);
-        }
         if (location.hash !== hash) location.hash = hash;
         dispatchEvent(new Event("lyra:say"));
       }),
@@ -469,13 +463,6 @@ export function App() {
                 className={`tabbar-item${route.name === "chat" ? " on" : ""}`}
                 href={route.name === "chat" ? "#/" : lastChat}
                 aria-current={route.name === "chat" ? "page" : undefined}
-                onClick={(e) => {
-                  // already in the main chat: Chat flips between Today and the conversation
-                  if (route.name === "chat" && route.channelId === null) {
-                    e.preventDefault();
-                    dispatchEvent(new Event("lyra:today"));
-                  }
-                }}
               >
                 <Star size={18} />
                 <span>Chat</span>
@@ -621,11 +608,6 @@ function DeskBar({ route, channel, back }: { route: Route; channel?: Channel; ba
         </div>
       )}
       <span className="desk-drag" />
-      {inChat && !channel && (
-        <button type="button" className="desk-action" aria-label="Today" title="Today" onClick={() => dispatchEvent(new Event("lyra:today"))}>
-          <Star size={18} />
-        </button>
-      )}
       {inChat && (
         <a className="desk-action" href={channel ? `#/c/${channel.id}/info` : "#/access"} aria-label={channel ? `${channel.name}: channel details` : "What Lyra can access"} title="Details">
           <Info size={20} />

@@ -290,17 +290,6 @@ try {
   await page.goto(`${base}/#/`);
   await page.locator(".bubble").first().waitFor();
 
-  // ---- Today: tap Chat while in the main chat ----
-  await page.getByRole("link", { name: "Chat" }).click();
-  const today = page.getByRole("region", { name: "Today" });
-  await today.waitFor();
-  await today.locator(".today-item", { hasText: "Morning brief" }).first().waitFor();
-  check(true, "the Today view lists what Lyra did and what's coming");
-  await shot("light-35-today");
-  await today.getByRole("button", { name: "Back to the conversation" }).click();
-  await today.waitFor({ state: "detached" });
-  check(true, "Today flips back to the conversation");
-
   // ---- channels ----
   await page.goto(`${base}/#/`);
   await page.getByRole("button", { name: "Channels" }).click();

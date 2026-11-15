@@ -72,6 +72,13 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### No more Today page (0.50.1)
+
+The Today view is gone, to keep Lyra simple: opening the app (or tapping Chat, or the Everything
+star in the menu) always shows the conversation. The "Today" app icon shortcut and the desktop's
+Today button went with it. What's on your calendar and what Lyra did are still a question away,
+and the Activity page (tap Lyra's avatar) still lists everything Lyra did.
+
 ### Removing calendar events, with your OK (0.50)
 
 Ask Lyra to cancel or remove something from your calendar and it makes a card showing the event as
