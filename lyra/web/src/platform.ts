@@ -765,8 +765,8 @@ export const push = {
 };
 
 const NativeBackground = registerPlugin<{
-  status(): Promise<{ on: boolean }>;
-  set(o: { on: boolean }): Promise<{ on: boolean }>;
+  status(): Promise<{ on: boolean; every?: number }>;
+  set(o: { on: boolean; every?: number }): Promise<{ on: boolean; every?: number }>;
   done(): Promise<void>;
   battery(): Promise<{ unrestricted: boolean }>;
   askBattery(): Promise<void>;
@@ -778,12 +778,17 @@ export interface BackgroundState {
   on: boolean;
   /** computer only: starts with Windows, in the tray */
   atLogin?: boolean;
+  /** (0.53.2) phone only: minutes between background wake-ups (15, 30 or 60) */
+  every?: number;
 }
 
 export const background = {
   /** null: this device can't (a browser, or a Windows app from before the tray) */
   async state(): Promise<BackgroundState | null> {
-    if (isNative) return { on: (await NativeBackground.status()).on };
+    if (isNative) {
+      const s = await NativeBackground.status();
+      return { on: s.on, every: s.every ?? 15 };
+    }
     if (desk?.shell) {
       const p = await desk.shell.prefs();
       return { on: p.tray, atLogin: p.openAtLogin };
@@ -791,7 +796,11 @@ export const background = {
     return null;
   },
   async set(s: Partial<BackgroundState>): Promise<BackgroundState | null> {
-    if (isNative) return { on: (await NativeBackground.set({ on: !!s.on })).on };
+    if (isNative) {
+      const cur = await NativeBackground.status();
+      const r = await NativeBackground.set({ on: s.on ?? cur.on, every: s.every ?? cur.every ?? 15 });
+      return { on: r.on, every: r.every ?? 15 };
+    }
     if (desk?.shell) {
       const p = await desk.shell.setPrefs({ ...(s.on !== undefined ? { tray: s.on } : {}), ...(s.atLogin !== undefined ? { openAtLogin: s.atLogin } : {}) });
       return { on: p.tray, atLogin: p.openAtLogin };

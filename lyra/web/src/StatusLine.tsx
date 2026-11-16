@@ -66,7 +66,7 @@ function useStatusItems(state: AppState): StatusItem[] {
     };
     void load();
     const off = onChange(() => void load()); // tasks, routines and reminders all announce changes
-    const t = setInterval(() => void load(), 60_000);
+    const t = setInterval(() => document.visibilityState === "visible" && void load(), 60_000);
     return () => {
       alive = false;
       off();

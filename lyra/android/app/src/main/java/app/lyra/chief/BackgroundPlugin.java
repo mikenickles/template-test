@@ -28,7 +28,11 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 public class BackgroundPlugin extends Plugin {
 
     private static final String PREFS = "lyra_background";
-    private static final long EVERY = 15 * 60_000L;
+    /** (0.53.2) how often it wakes, in minutes: 15, 30 or 60 (pref "every") */
+    static long every(Context c) {
+        int m = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt("every", 15);
+        return (m == 30 || m == 60 ? m : 15) * 60_000L;
+    }
     private static final long WAKE_MAX = 3 * 60_000L;
 
     /** The running app, if any (the alarm finds it here). */
@@ -58,6 +62,7 @@ public class BackgroundPlugin extends Plugin {
     public void status(PluginCall call) {
         JSObject r = new JSObject();
         r.put("on", enabled(getContext()));
+        r.put("every", every(getContext()) / 60_000L);
         call.resolve(r);
     }
 
@@ -65,7 +70,10 @@ public class BackgroundPlugin extends Plugin {
     public void set(PluginCall call) {
         boolean on = Boolean.TRUE.equals(call.getBoolean("on", false));
         SharedPreferences p = getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        p.edit().putBoolean("on", on).apply();
+        SharedPreferences.Editor e = p.edit().putBoolean("on", on);
+        Integer every = call.getInt("every");
+        if (every != null && (every == 15 || every == 30 || every == 60)) e.putInt("every", every);
+        e.apply();
         if (on) begin(getContext());
         else {
             cancelAlarm(getContext());
@@ -74,6 +82,7 @@ public class BackgroundPlugin extends Plugin {
         }
         JSObject r = new JSObject();
         r.put("on", on);
+        r.put("every", every(getContext()) / 60_000L);
         call.resolve(r);
     }
 
@@ -141,7 +150,7 @@ public class BackgroundPlugin extends Plugin {
     /** Inexact, so Android can batch it with other wake-ups; allowed even in Doze (at most every ~10 minutes). */
     static void schedule(Context c) {
         AlarmManager am = c.getSystemService(AlarmManager.class);
-        am.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + EVERY, alarmIntent(c));
+        am.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + every(c), alarmIntent(c));
     }
 
     static void cancelAlarm(Context c) {

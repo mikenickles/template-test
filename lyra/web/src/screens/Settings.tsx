@@ -60,7 +60,7 @@ const FINDER: { label: string; more: string; where: string; href: string; phone?
   { label: "Quiet hours", more: "night sleep do not disturb overnight", where: "Notifications and privacy", href: "#/settings/alerts" },
   { label: "Check-ins", more: "check in when it's quiet ask", where: "Notifications and privacy", href: "#/settings/alerts" },
   { label: "Mail watch", more: "email new mail important people", where: "Notifications and privacy", href: "#/settings/alerts" },
-  { label: "Keep watch", more: "background battery closed tray always on", where: "Notifications and privacy", href: "#/settings/alerts" },
+  { label: "Keep watch", more: "background battery closed tray always on check every interval", where: "Notifications and privacy", href: "#/settings/alerts" },
   { label: "Places and location", more: "geofence place reminders saved places home work gps", where: "Notifications and privacy", href: "#/settings/alerts", phone: true },
   { label: "Tell me when to leave", more: "leave now travel directions maps drive", where: "Notifications and privacy", href: "#/settings/alerts", phone: true },
   { label: "App lock", more: "fingerprint face pin biometric privacy security", where: "Notifications and privacy", href: "#/settings/alerts", phone: true },
@@ -655,7 +655,7 @@ function BackgroundSection({ toast }: { toast: (m: string) => void }) {
                 <div className="title">{isNative ? "Keep watch" : "Keep running in the tray"}</div>
                 <div className="sub">
                   {isNative
-                    ? "Routines, heads-ups and follow-ups keep running after you leave Lyra, checked every 15 minutes. Android requires a notification while it's on, so it shows what's next and the latest from Lyra. Uses a little more battery."
+                    ? `Routines, heads-ups and follow-ups keep running after you leave Lyra, checked every ${bg.every ?? 15} minutes. Android requires a notification while it's on, so it shows what's next and the latest from Lyra. Uses a little more battery.`
                     : "Closing the window leaves Lyra in the tray, so routines, heads-ups and sync keep going. Quit from the tray icon."}
                 </div>
               </span>
@@ -668,6 +668,29 @@ function BackgroundSection({ toast }: { toast: (m: string) => void }) {
                 onChange={(e) => void change({ on: e.target.checked }, e.target.checked ? (isNative ? "Keeping watch" : "Lyra stays in the tray") : isNative ? "Stopped keeping watch" : "Closing the window quits Lyra")}
               />
             </label>
+            {isNative && bg.on && (
+              <div className="item">
+                <span className="body">
+                  <div className="title">Check every</div>
+                  <div className="sub">Less often saves battery; reminders and alarms still arrive on time.</div>
+                </span>
+                <div className="seg" role="radiogroup" aria-label="Check every">
+                  {[15, 30, 60].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      role="radio"
+                      aria-checked={(bg.every ?? 15) === m}
+                      className={(bg.every ?? 15) === m ? "on" : ""}
+                      disabled={busy}
+                      onClick={() => void change({ every: m }, m === 60 ? "Checking every hour" : `Checking every ${m} minutes`)}
+                    >
+                      {m === 60 ? "1 hr" : `${m} min`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {isDesktop && (
               <label className="item">
                 <span className="body">

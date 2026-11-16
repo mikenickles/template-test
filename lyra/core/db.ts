@@ -305,6 +305,18 @@ export class DB {
   private timer: ReturnType<typeof setTimeout> | undefined;
   /** Called after any change to the data (sync uses it to know there's something to send). */
   onWrite?: () => void;
+  /** (0.53.2) inside quietly(): saved here, but not news for sync on its own */
+  private hush = 0;
+
+  /** Changes that are only Lyra's own notes of when it last looked: saved, but they don't make sync upload. */
+  quietly<T>(fn: () => T): T {
+    this.hush++;
+    try {
+      return fn();
+    } finally {
+      this.hush--;
+    }
+  }
   private saving: Promise<void> = Promise.resolve();
 
   private constructor(
@@ -363,7 +375,7 @@ export class DB {
   }
 
   private changed() {
-    this.onWrite?.();
+    if (!this.hush) this.onWrite?.();
     if (!this.store) return;
     clearTimeout(this.timer);
     this.timer = setTimeout(() => void this.flush(), this.saveDelay);
@@ -575,6 +587,15 @@ export function getSetting(db: DB, key: string): string | undefined {
   return db.get<{ value: string }>("SELECT value FROM settings WHERE key = ?", [key])?.value;
 }
 
+/**
+ * (0.53.2) Settings that only note when Lyra last looked at something (mail, heads-ups, triggers…).
+ * They change on every background check; uploading a whole encrypted copy for each one ran the battery
+ * down. They're saved on the device and travel with the next real change.
+ */
+const STAMP = /^(mailWatchAt|mailWatchSeen|headsUpAt|headsUpLast|headsUpPrint|headsUpSkipped|checkInAt|checkInRecent|lifeAdminTriedAt|triggersAt|birthdaysAt|birthdaySeen|styleTriedAt)$|^trigger\.seen\./;
+
 export function setSetting(db: DB, key: string, value: string): void {
-  db.run("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", [key, value]);
+  const write = () => db.run("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", [key, value]);
+  if (STAMP.test(key)) db.quietly(write);
+  else write();
 }

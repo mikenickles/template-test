@@ -72,6 +72,20 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### Easier on the battery (0.53.2)
+
+- **Checks no longer upload everything.** Each background check saved a few timestamps (when mail
+  was last looked at, when the last heads-up ran). With sync on, that counted as a change, so every
+  15 minutes the whole database was encrypted and uploaded to Drive. Those timestamps are now saved
+  quietly; sync only uploads when something real changes.
+- **Nothing ticks every minute behind your back.** The per-minute timers (routine tick, phone
+  notification triggers, "time to leave", the status line) now run only while Lyra is on screen.
+  In the background, Keep watch's own wake-up does that work.
+- **Fewer restarts in the background.** A phone that isn't the home base pulls from sync at most
+  once an hour while in the background instead of on every wake-up (a pull reloads the app).
+- **Check every 15 min, 30 min or 1 hr.** Settings, Notifications, In the background. Reminders
+  and alarms are scheduled with the phone, so they still arrive on time.
+
 ### Tools on demand, and what's cached (0.53.1)
 
 - **Rarer tools load when needed.** Routines, dashboards, docs, scans, inbox triage, new channels,

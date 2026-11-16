@@ -136,11 +136,17 @@ function runRoutines(lyra: Lyra): void {
     }
   };
   void tick();
-  setInterval(() => void tick(), 60_000);
+  // (0.53.2) on the phone, only while Lyra is on screen: out of sight, the 15-minute wake-up does it
+  setInterval(() => (!isNative || active) && void tick(), 60_000);
   // the phone keeping watch in the background: load what the home base did (that restarts Lyra, which
   // then tells you what's new), or run what's due here, give it a couple of minutes, save, send to sync
   background.onTick(async () => {
-    if (sync.state.enabled) await syncNow(lyra);
+    // (0.53.2) loading another device's copy restarts Lyra, which costs battery: while another device
+    // does the background work, catch up at most once an hour (opening Lyra always catches up)
+    const lastPull = Number(localStorage.getItem("lyra.bgPullAt")) || 0;
+    const pull = routinesRunHere() || Date.now() - lastPull > 60 * 60_000;
+    if (sync.state.enabled && pull) localStorage.setItem("lyra.bgPullAt", String(Date.now()));
+    if (sync.state.enabled) await syncNow(lyra, { pull });
     if (restarting) return;
     await onWake().catch(() => {});
     await tick();
@@ -257,7 +263,7 @@ function watchPlaces(lyra: Lyra): void {
   void fired().then(() => planLeaving(lyra, true));
   lyra.onChange((e) => (e.type === "reminder" || e.type === "routine") && fences());
   // while Lyra is open, notifications that should start a routine are noticed within a minute
-  setInterval(() => void noticeTriggers(), 60_000);
+  setInterval(() => active && void noticeTriggers(), 60_000);
   void CapApp.addListener("resume", () => {
     void fired();
     void planLeaving(lyra, true);
@@ -266,8 +272,9 @@ function watchPlaces(lyra: Lyra): void {
   onWake = async () => {
     await fired();
     await planLeaving(lyra, true);
+    await noticeTriggers();
   };
-  setInterval(() => void planLeaving(lyra), 60_000);
+  setInterval(() => active && void planLeaving(lyra), 60_000);
 }
 
 /** Schedule a nudge at the time to leave for each event with a place in the next few hours. */
