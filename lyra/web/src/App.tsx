@@ -399,7 +399,7 @@ export function App() {
           {route.name === "chat" && !channel && (
             <div className="avatar-stack">
               {route.name === "chat" ? (
-                <a className="orb orb-sm" href="#/activity" aria-label="What Lyra's been doing" title="Activity">
+                <a className="orb orb-sm" href="#/access" aria-label="Lyra" title="Lyra">
                   <Avatar />
                 </a>
               ) : (

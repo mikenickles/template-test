@@ -4887,6 +4887,20 @@ a.status-pill:active {
   transition: background var(--ease);
 }
 
+/* phone: only Settings is left, as one row under the channels */
+.drawer-sections.single {
+  display: flex;
+}
+
+.drawer-sections.single .drawer-section {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 18px;
+  font-size: 15px;
+}
+
 .drawer-section:hover,
 .drawer-section.active {
   background: var(--drawer-active);

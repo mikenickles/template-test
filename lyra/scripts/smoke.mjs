@@ -123,9 +123,10 @@ try {
   await page.getByText("Undone").waitFor();
   check(true, "undo from chat works");
 
-  await page.getByRole("button", { name: "Channels" }).click();
-  await page.locator(".drawer-sections").getByRole("link", { name: "Lyra" }).click();
+  check((await page.locator(".drawer-sections a").count()) === 1, "the phone drawer keeps only Settings");
+  await page.locator(".topbar a.orb").click();
   await page.getByText("What Lyra can see").waitFor();
+  check(true, "the chat's avatar opens the Lyra page");
   check((await page.getByText("Phone app only").count()) === 3, "browser preview says Google connections need the Android app");
   check(await page.getByText("Lyra's promise").isVisible(), "the Lyra page carries Lyra's promise");
   await shot("light-3-access");
@@ -274,12 +275,13 @@ try {
   await page.waitForTimeout(500);
   check((await page.getByRole("dialog", { name: "While you were away" }).count()) === 0, "a quick reload doesn't show it again");
 
-  // ---- Activity: tap Lyra's face to see the activity log, and open a task run ----
-  await page.getByRole("link", { name: "What Lyra's been doing" }).click();
+  // ---- Activity: Lyra's face opens the Lyra page, its Activity shortcut the log ----
+  await page.locator(".topbar a.orb").click();
+  await page.locator("a.lp-action[href='#/activity']").click();
   await page.getByRole("heading", { name: "Activity" }).waitFor();
   const run = page.locator(".activity-row", { hasText: "Find a plumber" }).first();
   await run.waitFor();
-  check(true, "tapping Lyra's face opens the activity log, with the task Lyra worked on");
+  check(true, "the Lyra page opens the activity log, with the task Lyra worked on");
   await shot("light-46-activity");
   await run.click();
   const actSheet = page.getByRole("dialog", { name: /Find a plumber/ });
@@ -571,8 +573,7 @@ try {
   await page.getByRole("button", { name: "Pin", exact: true }).click();
   await page.locator(".pin-tag").first().waitFor();
   check(true, "long-press pins a message");
-  await page.getByRole("button", { name: "Channels" }).click();
-  await page.locator(".drawer-sections").getByRole("link", { name: "Lyra" }).click();
+  await page.locator(".topbar a.orb").click();
   await page.locator(".pinned-item", { hasText: "When is it?" }).waitFor();
   check(true, "pinned messages show on the info page");
   await shot("light-25-pinned");

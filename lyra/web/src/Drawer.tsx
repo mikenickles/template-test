@@ -113,8 +113,9 @@ export function Drawer({
           ))}
         </div>
       ) : (
-        <div className="drawer-sections">
-          {sections.map((s) => (
+        // phone: Tasks and Artifacts are in the tab bar, the Lyra page is the chat's avatar
+        <div className="drawer-sections single">
+          {sections.filter((s) => s.href === "#/settings").map((s) => (
             <a key={s.href} className={`drawer-section${s.on ? " active" : ""}`} href={s.href} onClick={onClose}>
               <span className="drawer-section-icon">
                 {s.icon}
