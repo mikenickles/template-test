@@ -362,7 +362,7 @@ try {
   await page.getByText("Stove").waitFor();
   check((await page.getByRole("button", { name: /Google Doc/ }).count()) === 0, "a doc can be edited (no Google button where Google can't sign in)");
   await page.getByRole("link", { name: "Back" }).click();
-  await page.locator(".item", { hasText: "Packing list" }).waitFor();
+  await page.locator(".art-card", { hasText: "Packing list" }).waitFor();
   check(await page.getByRole("heading", { name: "Artifacts" }).isVisible(), "Artifacts lists it");
 
   // ---- scan a paper: the photo goes straight to Lyra, and the card's buttons do the work ----
@@ -419,7 +419,7 @@ try {
   await page.goto(`${base}/#/docs`);
   await page.getByRole("tab", { name: "Dashboards" }).click();
   check(
-    (await page.locator(".item", { hasText: "Spending" }).count()) === 1 && (await page.locator(".item", { hasText: "Packing list" }).count()) === 0,
+    (await page.locator(".art-card", { hasText: "Spending" }).count()) === 1 && (await page.locator(".art-card", { hasText: "Packing list" }).count()) === 0,
     "Artifacts filters to dashboards (and #/docs still opens it)",
   );
   await shot("light-43-artifacts");

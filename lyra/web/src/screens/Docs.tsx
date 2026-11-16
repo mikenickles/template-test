@@ -6,7 +6,7 @@ import { checkDashboard, describeDashboard, type Dashboard } from "../../../core
 import type { Doc } from "../../../core/docs";
 import { api, onChange } from "../api";
 import { DashboardView } from "../Dashboard";
-import { Chart, Chevron, File as FileIcon, Plus, Refresh } from "../icons";
+import { Chart, File as FileIcon, Plus, Refresh } from "../icons";
 import { DocMarkdown } from "../markdown";
 import { copyText, isDesktop, shareFile } from "../platform";
 import { ago, parse } from "../when";
@@ -74,19 +74,18 @@ export function Docs({ toast }: { toast: (m: string) => void }) {
       {docs === null ? (
         <p className="hint">Loading…</p>
       ) : shown.length ? (
-        <div className="group">
+        <div className="art-grid">
           {shown.map((d) => (
-            <a className="item" key={d.id} href={`#/d/${d.id}`}>
-              <span className={`tile${d.kind === "dashboard" ? " tile-dash" : ""}`}>{d.kind === "dashboard" ? <Chart size={20} /> : <FileIcon size={20} />}</span>
-              <span className="body">
-                <div className="title">{d.title}</div>
-                <div className="sub">
-                  {d.kind === "dashboard" ? "Dashboard · " : ""}
-                  {d.kind === "dashboard" && d.refreshed_at ? `Refreshed ${ago(parse(d.refreshed_at))}` : `Updated ${ago(parse(d.updated_at))}`}
-                  {d.gdoc_id ? " · in Google Docs" : ""}
-                </div>
+            <a className="art-card" key={d.id} href={`#/d/${d.id}`} aria-label={`${d.kind === "dashboard" ? "Dashboard" : "Doc"}: ${d.title}`}>
+              <ArtPreview d={d} />
+              <span className="art-body">
+                <span className="art-title">{d.title}</span>
+                <span className="art-meta">
+                  {d.kind === "dashboard" ? <Chart size={13} /> : <FileIcon size={13} />}
+                  {ago(parse(d.kind === "dashboard" && d.refreshed_at ? d.refreshed_at : d.updated_at))}
+                  {d.gdoc_id ? " · Google Docs" : ""}
+                </span>
               </span>
-              <Chevron className="chev" />
             </a>
           ))}
         </div>
@@ -94,6 +93,44 @@ export function Docs({ toast }: { toast: (m: string) => void }) {
         <p className="mem-empty">{docs.length ? (filter === "dashboard" ? "No dashboards yet. Ask Lyra for one in chat." : "No docs yet.") : "Nothing here yet."}</p>
       )}
     </div>
+  );
+}
+
+/** A little picture of what's inside: a dashboard's first number and bars, or a doc's opening lines. */
+function ArtPreview({ d }: { d: Doc }) {
+  if (d.kind === "dashboard") {
+    const dash = dashboardOf(d);
+    const stat = dash?.blocks.flatMap((b) => (b.type === "stats" ? b.items : []))[0];
+    const bars = dash?.blocks.flatMap((b) => (b.type === "bar" ? b.items : [])).slice(0, 4) ?? [];
+    const max = Math.max(1, ...bars.map((b) => b.value));
+    return (
+      <span className="art-preview dash" aria-hidden="true">
+        {stat && (
+          <>
+            <span className="art-stat-label">{stat.label}</span>
+            <span className="art-stat">{stat.value}</span>
+          </>
+        )}
+        {bars.length > 0 && (
+          <span className="art-bars">
+            {bars.map((b, i) => (
+              <i key={i} style={{ width: `${Math.max(8, (b.value / max) * 100)}%` }} />
+            ))}
+          </span>
+        )}
+        {!stat && !bars.length && <Chart size={28} />}
+      </span>
+    );
+  }
+  const lines = d.body
+    .split("\n")
+    .map((l) => l.replace(/^#+\s*|^[-*]\s+(\[[ x]\]\s*)?|^\d+\.\s+|[*_`>|]/g, "").trim())
+    .filter(Boolean)
+    .slice(0, 6);
+  return (
+    <span className="art-preview doc" aria-hidden="true">
+      {lines.length ? lines.map((l, i) => <span key={i}>{l}</span>) : <FileIcon size={28} />}
+    </span>
   );
 }
 
