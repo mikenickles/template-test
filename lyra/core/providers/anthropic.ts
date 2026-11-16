@@ -145,7 +145,7 @@ export class AnthropicProvider implements ModelProvider {
       parts,
       sources,
       searched,
-      usage: { input: (u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0), output: u.output_tokens ?? 0 },
+      usage: { input: (u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0), output: u.output_tokens ?? 0, cached: u.cache_read_input_tokens ?? 0 },
       stop: r === "tool_use" ? "tool_use" : r === "max_tokens" ? "max_tokens" : r === "pause_turn" ? "pause" : "end",
     };
   }

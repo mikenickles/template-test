@@ -295,6 +295,8 @@ export const MIGRATIONS: string[] = [
      output INTEGER NOT NULL DEFAULT 0
    );
    CREATE INDEX usage_log_day ON usage_log (day);`,
+  // 0.53.1: how much of each call's input came from the provider's cache
+  `ALTER TABLE usage_log ADD COLUMN cached INTEGER NOT NULL DEFAULT 0`,
 ];
 
 const FILE = "lyra.db";
@@ -475,7 +477,7 @@ export interface MessageMeta {
   /** Posted by a heads-up check Lyra ran on its own. */
   headsUp?: boolean;
   /** (0.52) what this reply used: all its model calls added up */
-  usage?: { input: number; output: number; calls: number; model: string };
+  usage?: { input: number; output: number; calls: number; model: string; cached?: number };
   /** Life admin heads-up (Phase 18): the items it was about */
   lifeAdmin?: { ids: number[] };
   /** Next steps Lyra offers as buttons (only on its latest reply). */

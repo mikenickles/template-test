@@ -50,6 +50,8 @@ export interface UsageCall {
   model: string;
   input: number;
   output: number;
+  /** of input, read from the provider's cache */
+  cached: number;
 }
 
 /** Tokens per job between two local days, most first. */
@@ -59,6 +61,7 @@ export interface JobUsage {
   calls: number;
   input: number;
   output: number;
+  cached: number;
   last: string;
 }
 
@@ -67,12 +70,13 @@ export interface UsageTally {
   calls: number;
   input: number;
   output: number;
+  cached: number;
   model: string;
 }
-export const newTally = (): UsageTally => ({ calls: 0, input: 0, output: 0, model: "" });
+export const newTally = (): UsageTally => ({ calls: 0, input: 0, output: 0, cached: 0, model: "" });
 
 export function recordCall(db: DB, c: Omit<UsageCall, "id" | "at">): void {
-  const r = db.run<{ id: number }>("INSERT INTO usage_log (day, source, job, provider, model, input, output) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id", [
+  const r = db.run<{ id: number }>("INSERT INTO usage_log (day, source, job, provider, model, input, output, cached) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id", [
     c.day,
     c.source,
     c.job.slice(0, 120),
@@ -80,6 +84,7 @@ export function recordCall(db: DB, c: Omit<UsageCall, "id" | "at">): void {
     c.model,
     Math.max(0, Math.round(c.input)),
     Math.max(0, Math.round(c.output)),
+    Math.max(0, Math.round(c.cached)),
   ]);
   // keep 90 days
   if (r && r.id % 200 === 0) db.run("DELETE FROM usage_log WHERE at < strftime('%Y-%m-%dT%H:%M:%fZ','now','-90 days')");
@@ -87,7 +92,7 @@ export function recordCall(db: DB, c: Omit<UsageCall, "id" | "at">): void {
 
 export function usageByJob(db: DB, from: string, to: string): JobUsage[] {
   return db.all<JobUsage>(
-    `SELECT job, source, COUNT(*) AS calls, SUM(input) AS input, SUM(output) AS output, MAX(at) AS last
+    `SELECT job, source, COUNT(*) AS calls, SUM(input) AS input, SUM(output) AS output, SUM(cached) AS cached, MAX(at) AS last
      FROM usage_log WHERE day >= ? AND day <= ? GROUP BY job, source ORDER BY SUM(input) + SUM(output) DESC LIMIT 200`,
     [from, to],
   );
@@ -110,11 +115,12 @@ export function metered(provider: ModelProvider, source: UsageSource, db: DB, ti
         try {
           const day = localDay(new Date(), timeZone);
           recordUsage(db, { day, provider: provider.id, model: provider.model, source, ...result.usage });
-          recordCall(db, { day, source, job: job || JOB_NAMES[source], provider: provider.id, model: provider.model, input: result.usage.input ?? 0, output: result.usage.output ?? 0 });
+          recordCall(db, { day, source, job: job || JOB_NAMES[source], provider: provider.id, model: provider.model, input: result.usage.input ?? 0, output: result.usage.output ?? 0, cached: result.usage.cached ?? 0 });
           if (tally) {
             tally.calls++;
             tally.input += result.usage.input ?? 0;
             tally.output += result.usage.output ?? 0;
+            tally.cached += result.usage.cached ?? 0;
             tally.model = provider.model;
           }
         } catch (e) {

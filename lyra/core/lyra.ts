@@ -1566,7 +1566,7 @@ export class Lyra {
         inbox,
       );
       if (tally.calls) {
-        message.meta = { ...message.meta, usage: { input: tally.input, output: tally.output, calls: tally.calls, model: tally.model } };
+        message.meta = { ...message.meta, usage: { input: tally.input, output: tally.output, calls: tally.calls, model: tally.model, cached: tally.cached } };
         updateMessageMeta(this.db, message.id, message.meta);
       }
       finish(message);

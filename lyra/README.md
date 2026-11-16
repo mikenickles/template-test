@@ -72,6 +72,18 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### Tools on demand, and what's cached (0.53.1)
+
+- **Rarer tools load when needed.** Routines, dashboards, docs, scans, inbox triage, new channels,
+  skills, place reminders and playlists are named in one short "more tools" entry instead of being
+  described in full with every message; Lyra loads one the moment a reply needs it. That's about
+  2,800 fewer tokens on every call (tool descriptions went from about 6,200 to 3,400 with Mail,
+  Calendar and Files connected). The list sent stays the same from message to message, so it stays
+  in the provider's cache.
+- **Cached tokens are shown.** Most of each request (Lyra's rules and tools) is the same as the
+  one before, and providers read that part from a cache at a fraction of the price. The Usage page
+  (by job and latest calls) and a reply's own count now show how much was cached.
+
 ### Spending fewer tokens without doing less (0.53)
 
 - **Quick actions in one call.** A reminder, follow-up, task, memory note, person card or a card

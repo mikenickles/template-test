@@ -26,7 +26,7 @@ describe("recording token usage", () => {
     );
     const { message } = await lyra.chat("anything open?", noop);
     // both calls of the reply, added up on the reply
-    expect(message.meta.usage).toEqual({ input: 2000, output: 50, calls: 2, model: "fake" });
+    expect(message.meta.usage).toEqual({ input: 2000, output: 50, calls: 2, model: "fake", cached: 0 });
     expect(lyra.messages(null).at(-1)!.meta.usage?.calls).toBe(2);
     const r = await lyra.createRoutine({ name: "Bills", instructions: "Any bills?", times: "08:00", postMode: "news" });
     lyra.runRoutine(r.id);

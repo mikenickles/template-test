@@ -876,7 +876,13 @@ export async function runTurn(
   try {
     const channels = ctx.workspace.channels();
     const gmailOn = ctx.connectors.status().some((c) => c.id === "gmail" && c.state === "connected");
-    const tools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed(), !!ctx.workspace.music), ...peopleTools(ctx.workspace), ...docTools(ctx.workspace), ...triageTools(gmailOn), SCAN_TOOL, WIDGET_TOOL, ...skillTools(ctx.workspace, true), ...lifeAdminTools(ctx.workspace), ...(await ctx.connectors.tools())];
+    const allTools = [...memoryTools(channels, ctx.channel), ...actionTools(ctx.workspace.actions?.allowed(), !!ctx.workspace.music), ...peopleTools(ctx.workspace), ...docTools(ctx.workspace), ...triageTools(gmailOn), SCAN_TOOL, WIDGET_TOOL, ...skillTools(ctx.workspace, true), ...lifeAdminTools(ctx.workspace), ...(await ctx.connectors.tools())];
+    // (0.53.1) Tools for rarer jobs (routines, dashboards, docs, scans, triage…) aren't sent in full with
+    // every message: they're named in more_tools and loaded for the rest of the reply when needed. The
+    // set sent is the same from one message to the next, so it stays in the provider's cache.
+    const extras = allTools.filter((t) => ON_DEMAND.has(t.name));
+    const tools = allTools.filter((t) => !ON_DEMAND.has(t.name));
+    if (extras.length) tools.push(moreTools(extras));
     const system = buildSystemPrompt({
       userName: ctx.userName,
       soul: ctx.soul,
@@ -992,6 +998,21 @@ export async function runTurn(
 
       const results: Part[] = [];
       for (const call of calls) {
+        if (call.name === "more_tools") {
+          const asked = (Array.isArray(call.input.names) ? call.input.names : [call.input.names]).map((n) => String(n ?? "").trim());
+          const added = extras.filter((t) => asked.includes(t.name) && !tools.some((x) => x.name === t.name));
+          tools.push(...added);
+          const have = asked.filter((n) => tools.some((t) => t.name === n));
+          const unknown = asked.filter((n) => n && !have.includes(n));
+          results.push({
+            type: "tool_result",
+            id: call.id,
+            name: call.name,
+            content: have.length ? `Ready: ${have.join(", ")}. Call ${have.length > 1 ? "them" : "it"} now.${unknown.length ? ` Not available: ${unknown.join(", ")}.` : ""}` : `None of those are available. You can load: ${extras.map((t) => t.name).join(", ")}.`,
+            isError: !have.length,
+          });
+          continue;
+        }
         if (call.name === "react") {
           const emoji = String(call.input.emoji ?? "");
           const ok = (REACTIONS as readonly string[]).includes(emoji);
@@ -1331,6 +1352,35 @@ export function plainOptions(options: unknown, tainted: boolean): string[] {
 
 /** A button offering to answer an email. The user answers almost none, and asks when they want one drafted. */
 const REPLY_OFFER = /\b(repl(y|ies)|respond|write back|draft (a |an |the |my )?(yes|no|response|answer|email|note))\b/i;
+
+/** (0.53.1) Tools for less frequent jobs, loaded on demand with more_tools. */
+export const ON_DEMAND = new Set([
+  "show_triage",
+  "create_routine",
+  "update_routine",
+  "list_routines",
+  "make_dashboard",
+  "update_dashboard",
+  "show_scan",
+  "write_doc",
+  "update_doc",
+  "read_doc",
+  "create_channel",
+  "save_skill",
+  "remind_at_place",
+  "update_life_admin",
+  "propose_playlist",
+]);
+
+/** The one tool that names the on-demand ones: a line each, instead of their full schemas. */
+function moreTools(extras: ToolDef[]): ToolDef {
+  const line = (t: ToolDef) => `- ${t.name}: ${t.description.split(/(?<=[.:])\s/)[0].replace(/[.:]$/, "").slice(0, 110)}`;
+  return {
+    name: "more_tools",
+    description: `Load more of your tools for this reply, then call them in your next step. Load one whenever you need it; never tell the user you can't do one of these.\n${extras.map(line).join("\n")}`,
+    schema: { type: "object", properties: { names: { type: "array", items: { type: "string" }, description: "The tools to load, by name." } }, required: ["names"] },
+  };
+}
 
 /** (0.53) Quick actions: once one works, the turn can end without another model call. */
 const QUICK_DONE = new Set(["set_reminder", "follow_up", "remind_at_place", "cancel_reminder", "create_task", "update_task", "remember", "forget", "remember_person", "save_skill"]);

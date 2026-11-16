@@ -41,3 +41,29 @@ describe("long chats keep a running summary (0.53)", () => {
     expect(quick.requests).toHaveLength(0);
   });
 });
+
+describe("tools on demand (0.53.1)", () => {
+  it("rarer tools are named in more_tools, and loading one adds it for the rest of the reply", async () => {
+    const call = (name: string, input: Record<string, unknown>, id = "c1"): GenerateResult => ({ parts: [{ type: "tool_call", id, name, input }], stop: "tool_use" });
+    const p = new FakeProvider([call("more_tools", { names: ["create_routine", "nope"] }), say("Which days?")]);
+    const lyra = await Lyra.start(platform({ provider: p }));
+    await lyra.chat("check the school mail every friday", noop);
+    const first = p.requests[0].tools.map((t) => t.name);
+    expect(first).not.toContain("create_routine");
+    expect(first).not.toContain("make_dashboard");
+    expect(first).toContain("set_reminder");
+    expect(p.requests[0].tools.find((t) => t.name === "more_tools")!.description).toMatch(/^- create_routine: /m);
+    expect(p.requests[1].tools.map((t) => t.name)).toContain("create_routine");
+    const told = p.requests[1].messages.at(-1)!.parts[0];
+    expect(told.type === "tool_result" && told.content).toMatch(/^Ready: create_routine\. Call it now\. Not available: nope\./);
+    // the same tools go out with every message, so the provider's cache holds
+    await lyra.chat("thanks", noop);
+    expect(p.requests.at(-1)!.tools.map((t) => t.name)).toEqual(first);
+  });
+
+  it("the practice model loads a tool before using it", async () => {
+    const lyra = await Lyra.start(platform());
+    const { message } = await lyra.chat("make a dashboard called Spending", noop);
+    expect(message.meta.docs?.[0]).toMatchObject({ kind: "dashboard", title: "Spending" });
+  });
+});

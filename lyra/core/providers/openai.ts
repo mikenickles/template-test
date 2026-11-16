@@ -82,7 +82,7 @@ export class OpenAIProvider implements ModelProvider {
     const calls = new Map<number, { id: string; name: string; args: string }>();
     let usage: GenerateResult["usage"];
     for await (const chunk of stream) {
-      if (chunk.usage) usage = { input: chunk.usage.prompt_tokens ?? 0, output: chunk.usage.completion_tokens ?? 0 };
+      if (chunk.usage) usage = { input: chunk.usage.prompt_tokens ?? 0, output: chunk.usage.completion_tokens ?? 0, cached: chunk.usage.prompt_tokens_details?.cached_tokens ?? 0 };
       const choice = chunk.choices[0];
       if (!choice) continue;
       const d = choice.delta;

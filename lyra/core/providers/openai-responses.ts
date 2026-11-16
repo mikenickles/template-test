@@ -118,7 +118,7 @@ export class OpenAIResponsesProvider implements ModelProvider {
     for await (const ev of stream) {
       switch (ev.type) {
         case "response.completed":
-          if (ev.response.usage) usage = { input: ev.response.usage.input_tokens ?? 0, output: ev.response.usage.output_tokens ?? 0 };
+          if (ev.response.usage) usage = { input: ev.response.usage.input_tokens ?? 0, output: ev.response.usage.output_tokens ?? 0, cached: ev.response.usage.input_tokens_details?.cached_tokens ?? 0 };
           break;
         case "response.output_text.delta":
           text += ev.delta;
@@ -152,7 +152,7 @@ export class OpenAIResponsesProvider implements ModelProvider {
         }
         case "response.incomplete":
           stop = "max_tokens";
-          if (ev.response.usage) usage = { input: ev.response.usage.input_tokens ?? 0, output: ev.response.usage.output_tokens ?? 0 };
+          if (ev.response.usage) usage = { input: ev.response.usage.input_tokens ?? 0, output: ev.response.usage.output_tokens ?? 0, cached: ev.response.usage.input_tokens_details?.cached_tokens ?? 0 };
           break;
         case "response.failed":
           throw new Error(ev.response.error?.message ?? "OpenAI couldn't finish the reply.");

@@ -83,6 +83,8 @@ export interface Usage {
   input: number;
   /** tokens the model wrote (reasoning included, where the provider bills it) */
   output: number;
+  /** (0.53.1) of `input`, how many the provider read from its cache (billed at a fraction of the price) */
+  cached?: number;
 }
 
 /** Keep the first of each URL, in order. */

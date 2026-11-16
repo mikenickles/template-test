@@ -12,7 +12,7 @@ export class FakeProvider implements ModelProvider {
   constructor(private script: GenerateResult[] = []) {}
 
   async generate(req: GenerateRequest, onText: (d: string) => void): Promise<GenerateResult> {
-    this.requests.push({ ...req, messages: structuredClone(req.messages) });
+    this.requests.push({ ...req, tools: [...req.tools], messages: structuredClone(req.messages) });
     // "take your time…": the practice model thinks for a couple of seconds, so you can send more meanwhile
     const lastText = req.messages.at(-1)?.parts.map((p) => (p.type === "text" ? p.text : "")).join("\n") ?? "";
     if (!this.script.length && /^take your time/i.test(lastText.trim())) {
@@ -39,13 +39,19 @@ export class FakeProvider implements ModelProvider {
   }
 
   private rules(req: GenerateRequest): GenerateResult {
-    const last = req.messages[req.messages.length - 1];
-    const has = (name: string) => req.tools.some((t) => t.name === name);
+    // (0.53.1) right after loading tools with more_tools: carry on with what the user asked
+    const lastMsg = req.messages[req.messages.length - 1];
+    const loaded = lastMsg?.parts.some((p) => p.type === "tool_result" && p.name === "more_tools");
+    const last = loaded ? req.messages[req.messages.length - 3] : lastMsg;
+    const present = (name: string) => req.tools.some((t) => t.name === name);
+    const loadable = (name: string) => req.tools.some((t) => t.name === "more_tools" && new RegExp(`^- ${name}:`, "m").test(t.description));
+    const has = (name: string) => present(name) || loadable(name);
     const say = (text: string): GenerateResult => ({ parts: [{ type: "text", text }], stop: "end" });
-    const call = (name: string, input: Record<string, unknown>): GenerateResult => ({
-      parts: [{ type: "tool_call", id: `fake_${Date.now().toString(36)}`, name, input } as Part],
-      stop: "tool_use",
-    });
+    const call = (name: string, input: Record<string, unknown>): GenerateResult =>
+      // a tool that's only named in more_tools: load it first, the way a real model would
+      !present(name) && loadable(name)
+        ? { parts: [{ type: "tool_call", id: `fake_${Date.now().toString(36)}`, name: "more_tools", input: { names: [name] } } as Part], stop: "tool_use" }
+        : { parts: [{ type: "tool_call", id: `fake_${Date.now().toString(36)}`, name, input } as Part], stop: "tool_use" };
     // (0.53) quick actions: the short reply goes out with the call, as Lyra's prompt asks
     const callSaying = (text: string, name: string, input: Record<string, unknown>): GenerateResult => {
       const r = call(name, input);

@@ -58,7 +58,8 @@ describe("skills", () => {
     const first = await lyra.chat("When I plan a trip, check flights from SFO, block the dates, then a packing list. Save that.", noop);
     expect(first.message.meta.skills).toEqual([{ id: 1, name: "Trip planning", kind: "saved" }]);
     expect(m.requests.chat[0].system).toMatch(/## Skills[^]*\(none yet\)/);
-    expect(m.requests.chat[0].tools.map((t) => t.name)).toContain("save_skill");
+    // (0.53.1) save_skill is loaded on demand: named in more_tools
+    expect(m.requests.chat[0].tools.find((t) => t.name === "more_tools")?.description).toMatch(/^- save_skill: /m);
     expect(m.requests.chat[0].tools.map((t) => t.name)).not.toContain("use_skill");
 
     m.chat.push(call("use_skill", { name: "trip planning" }), say("Flights first."));

@@ -1161,7 +1161,8 @@ function MessageActions({
         {message.meta.usage && (
           <p className="sheet-usage">
             This reply: {(message.meta.usage.input + message.meta.usage.output).toLocaleString("en-US")} tokens ({message.meta.usage.input.toLocaleString("en-US")} read, {message.meta.usage.output.toLocaleString("en-US")} written)
-            {message.meta.usage.calls > 1 ? `, ${message.meta.usage.calls} calls` : ""} · {message.meta.usage.model}
+            {message.meta.usage.calls > 1 ? `, ${message.meta.usage.calls} calls` : ""}
+            {message.meta.usage.cached ? `; ${message.meta.usage.cached.toLocaleString("en-US")} read from the cache` : ""} · {message.meta.usage.model}
           </p>
         )}
         <div className="group">

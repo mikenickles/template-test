@@ -152,6 +152,7 @@ export function Usage() {
       <div className="usage-more">
         <JobsAndCalls range={range} today={today} />
       </div>
+      <p className="hint">"Cached" tokens are the part of a request that's the same as the one before (Lyra's rules and tools); providers read those from a cache at a fraction of the normal price, so they cost much less than their count suggests.</p>
       <p className="hint">Counts are what each provider reported for Lyra's requests on your synced devices. "Sent" is everything the model read (your message, memory, history); "written" is its reply. Your provider's bill is the final word on cost.</p>
     </div>
   );
@@ -187,7 +188,7 @@ function JobsAndCalls({ range, today }: { range: UsageRange; today: Date }) {
                 <span className="body">
                   <div className="title">{j.job}</div>
                   <div className="sub">
-                    {j.calls.toLocaleString("en-US")} {j.calls === 1 ? "call" : "calls"} · {compact(j.input)} read · {compact(j.output)} written
+                    {j.calls.toLocaleString("en-US")} {j.calls === 1 ? "call" : "calls"} · {compact(j.input)} read{j.cached ? ` (${Math.round((j.cached / Math.max(1, j.input)) * 100)}% cached)` : ""} · {compact(j.output)} written
                   </div>
                   <span className="usage-job-bar" aria-hidden="true">
                     <i style={{ width: `${Math.max(2, ((j.input + j.output) / top) * 100)}%` }} />
@@ -226,7 +227,7 @@ function JobsAndCalls({ range, today }: { range: UsageRange; today: Date }) {
                 <span className="usage-call-n">
                   {compact(c.input + c.output)}
                   <small>
-                    {compact(c.input)} in · {compact(c.output)} out
+                    {compact(c.input)} in{c.cached ? ` (${compact(c.cached)} cached)` : ""} · {compact(c.output)} out
                   </small>
                 </span>
               </div>
