@@ -38,8 +38,69 @@ export function usageBetween(db: DB, from: string, to: string): UsageRow[] {
   return db.all<UsageRow>("SELECT day, provider, model, source, requests, input, output FROM usage WHERE day >= ? AND day <= ? ORDER BY day", [from, to]);
 }
 
-/** A provider that writes down what each call used. */
-export function metered(provider: ModelProvider, source: UsageSource, db: DB, timeZone?: string): ModelProvider {
+/** One model call, kept for 90 days (0.52): what it was for, and what it used. */
+export interface UsageCall {
+  id: number;
+  at: string;
+  day: string;
+  source: UsageSource;
+  /** what the call was for, in words: "Chat", "Routine: Morning brief", "Task: Find a plumber", "Mail watch" */
+  job: string;
+  provider: string;
+  model: string;
+  input: number;
+  output: number;
+}
+
+/** Tokens per job between two local days, most first. */
+export interface JobUsage {
+  job: string;
+  source: UsageSource;
+  calls: number;
+  input: number;
+  output: number;
+  last: string;
+}
+
+/** Adds up the calls of one piece of work (a chat reply), for its message. */
+export interface UsageTally {
+  calls: number;
+  input: number;
+  output: number;
+  model: string;
+}
+export const newTally = (): UsageTally => ({ calls: 0, input: 0, output: 0, model: "" });
+
+export function recordCall(db: DB, c: Omit<UsageCall, "id" | "at">): void {
+  const r = db.run<{ id: number }>("INSERT INTO usage_log (day, source, job, provider, model, input, output) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id", [
+    c.day,
+    c.source,
+    c.job.slice(0, 120),
+    c.provider,
+    c.model,
+    Math.max(0, Math.round(c.input)),
+    Math.max(0, Math.round(c.output)),
+  ]);
+  // keep 90 days
+  if (r && r.id % 200 === 0) db.run("DELETE FROM usage_log WHERE at < strftime('%Y-%m-%dT%H:%M:%fZ','now','-90 days')");
+}
+
+export function usageByJob(db: DB, from: string, to: string): JobUsage[] {
+  return db.all<JobUsage>(
+    `SELECT job, source, COUNT(*) AS calls, SUM(input) AS input, SUM(output) AS output, MAX(at) AS last
+     FROM usage_log WHERE day >= ? AND day <= ? GROUP BY job, source ORDER BY SUM(input) + SUM(output) DESC LIMIT 200`,
+    [from, to],
+  );
+}
+
+export function recentCalls(db: DB, limit = 50): UsageCall[] {
+  return db.all<UsageCall>("SELECT * FROM usage_log ORDER BY id DESC LIMIT ?", [Math.min(200, limit)]);
+}
+
+const JOB_NAMES: Record<UsageSource, string> = { chat: "Chat", worker: "Task", routine: "Routine", proactive: "Lyra on its own", voice: "Voice" };
+
+/** A provider that writes down what each call used: by day and model, and as its own line with what it was for. */
+export function metered(provider: ModelProvider, source: UsageSource, db: DB, timeZone?: string, job?: string, tally?: UsageTally): ModelProvider {
   return {
     id: provider.id,
     model: provider.model,
@@ -47,7 +108,15 @@ export function metered(provider: ModelProvider, source: UsageSource, db: DB, ti
       const result = await provider.generate(req, onText);
       if (result.usage && (result.usage.input || result.usage.output)) {
         try {
-          recordUsage(db, { day: localDay(new Date(), timeZone), provider: provider.id, model: provider.model, source, ...result.usage });
+          const day = localDay(new Date(), timeZone);
+          recordUsage(db, { day, provider: provider.id, model: provider.model, source, ...result.usage });
+          recordCall(db, { day, source, job: job || JOB_NAMES[source], provider: provider.id, model: provider.model, input: result.usage.input ?? 0, output: result.usage.output ?? 0 });
+          if (tally) {
+            tally.calls++;
+            tally.input += result.usage.input ?? 0;
+            tally.output += result.usage.output ?? 0;
+            tally.model = provider.model;
+          }
         } catch (e) {
           console.error("[lyra] usage not recorded", e);
         }

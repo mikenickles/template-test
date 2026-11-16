@@ -39,7 +39,7 @@ export interface WorkerDeps {
   db: DB;
   workspace: Workspace;
   connectors: Connectors;
-  provider: () => Promise<ModelProvider>;
+  provider: (job?: string) => Promise<ModelProvider>;
   userName: () => string;
   soul?: () => string | undefined;
   timeZone?: string;
@@ -298,7 +298,7 @@ export class Workers {
     this.sources.set(taskId, sources);
     const search = !!this.d.webSearch?.();
     try {
-      const provider = await this.d.provider();
+      const provider = await this.d.provider(`Task: ${getTask(this.d.db, taskId)?.title ?? taskId}`);
       const tools = [...WORKER_TOOLS, ...skillTools(this.d.workspace, false), ...(await this.d.connectors.tools())];
       while (!signal.aborted) {
         const detail = taskDetail(db, taskId);

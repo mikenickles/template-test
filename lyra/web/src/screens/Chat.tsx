@@ -16,6 +16,7 @@ import { SetupCard } from "../Setup";
 import { markSeen } from "../seen";
 import { Pencil, Refresh, Reply as ReplyIcon, Star } from "../icons";
 import { excerptOf, splitQuote, withQuote } from "../../../core/quote";
+import { showTokens, tokenLine } from "../tokens";
 import { setChatStatus } from "../StatusLine";
 import { STATUS_LABEL } from "./Tasks";
 import { StarChart, Thinking } from "../LyraMark";
@@ -258,6 +259,13 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
 
   // ---- photos and files waiting to be sent with the next message ----
   const [drafts, setDrafts] = useState<Draft[]>([]);
+  // each reply's token count under it (Settings, Usage)
+  const [tokens, setTokens] = useState(showTokens);
+  useEffect(() => {
+    const on = () => setTokens(showTokens());
+    addEventListener("lyra:tokens", on);
+    return () => removeEventListener("lyra:tokens", on);
+  }, []);
   // the message being answered (long-press, Reply): its excerpt rides along as a quote
   const [replyTo, setReplyTo] = useState<{ id: number; excerpt: string; mine: boolean } | null>(null);
   const [attaching, setAttaching] = useState(false);
@@ -754,6 +762,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                     </button>
                   )}
                   {!!m.meta.sources?.length && <Sources list={m.meta.sources} />}
+                  {tokens && m.meta.usage && !(m.meta.feedback || (m.id === lastId && !pending)) && <span className="reply-tokens">{tokenLine(m.meta.usage)}</span>}
                   {m.role === "assistant" && m.id > 0 && !m.meta.error && !!m.content.trim() && (m.meta.feedback || (m.id === lastId && !pending)) && (
                     <div className={`rate${m.meta.feedback ? " rated" : ""}`} role="group" aria-label="Rate this reply">
                       {(!m.meta.feedback || m.meta.feedback.rating === "up") && (
@@ -782,6 +791,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                         </button>
                       )}
                       {m.meta.feedback?.why && <span className="rate-why">{m.meta.feedback.why}</span>}
+                      {tokens && m.meta.usage && <span className="reply-tokens">{tokenLine(m.meta.usage)}</span>}
                     </div>
                   )}
                   {m.meta.error && canRetry(m) && (
@@ -1148,6 +1158,12 @@ function MessageActions({
       <button className="dialog-scrim" aria-label="Close" tabIndex={-1} onClick={onClose} />
       <div className="sheet" role="dialog" aria-modal="true" aria-label="Message actions">
         <p className="sheet-preview">{splitQuote(message.content).text.replace(/[*`#>]/g, "").slice(0, 160)}</p>
+        {message.meta.usage && (
+          <p className="sheet-usage">
+            This reply: {(message.meta.usage.input + message.meta.usage.output).toLocaleString("en-US")} tokens ({message.meta.usage.input.toLocaleString("en-US")} read, {message.meta.usage.output.toLocaleString("en-US")} written)
+            {message.meta.usage.calls > 1 ? `, ${message.meta.usage.calls} calls` : ""} · {message.meta.usage.model}
+          </p>
+        )}
         <div className="group">
           {!!message.content.trim() && !message.meta.error && (
             <button className="item" onClick={() => onAct("reply")} autoFocus>

@@ -282,6 +282,19 @@ export const MIGRATIONS: string[] = [
      SELECT id, kind, status, payload, result, error, tainted, channel_id, created_at, decided_at, message_id FROM actions;
    DROP TABLE actions;
    ALTER TABLE actions_next RENAME TO actions;`,
+  // 0.52: every model call, with what it was for (Usage page: by job, recent calls; a reply's own count)
+  `CREATE TABLE usage_log (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+     day TEXT NOT NULL,
+     source TEXT NOT NULL,
+     job TEXT NOT NULL,
+     provider TEXT NOT NULL,
+     model TEXT NOT NULL,
+     input INTEGER NOT NULL DEFAULT 0,
+     output INTEGER NOT NULL DEFAULT 0
+   );
+   CREATE INDEX usage_log_day ON usage_log (day);`,
 ];
 
 const FILE = "lyra.db";
@@ -461,6 +474,8 @@ export interface MessageMeta {
   people?: { id: number; name: string; created: boolean }[];
   /** Posted by a heads-up check Lyra ran on its own. */
   headsUp?: boolean;
+  /** (0.52) what this reply used: all its model calls added up */
+  usage?: { input: number; output: number; calls: number; model: string };
   /** Life admin heads-up (Phase 18): the items it was about */
   lifeAdmin?: { ids: number[] };
   /** Next steps Lyra offers as buttons (only on its latest reply). */

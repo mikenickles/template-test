@@ -2,6 +2,9 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { UsageRow } from "../../../core/usage";
 import { LIVE_PRICE_PER_MINUTE } from "../../../core/live";
 import { api } from "../api";
+import type { JobUsage, UsageCall } from "../../../core/usage";
+import { setShowTokens, showTokens } from "../tokens";
+import { clock, dayLabel, parse } from "../when";
 import { useSlidingPill } from "../pill";
 import { buildBuckets, buildSeries, compact, niceScale, rangeDays, type Bucket, type Series, type UsageRange } from "../usageData";
 
@@ -146,8 +149,120 @@ export function Usage() {
           {parts.length > 1 && <p className="hint">{parts.map(([name, n]) => `${name} ${Math.round((n / total) * 100)}%`).join(" · ")}</p>}
         </>
       )}
+      <div className="usage-more">
+        <JobsAndCalls range={range} today={today} />
+      </div>
       <p className="hint">Counts are what each provider reported for Lyra's requests on your synced devices. "Sent" is everything the model read (your message, memory, history); "written" is its reply. Your provider's bill is the final word on cost.</p>
     </div>
+  );
+}
+
+/** (0.52) Where the tokens went: per job for the range, the latest calls, and a switch for counts under replies. */
+function JobsAndCalls({ range, today }: { range: UsageRange; today: Date }) {
+  const [jobs, setJobs] = useState<JobUsage[] | null>(null);
+  const [calls, setCalls] = useState<UsageCall[] | null>(null);
+  const [allJobs, setAllJobs] = useState(false);
+  const [moreCalls, setMoreCalls] = useState(false);
+  const [under, setUnder] = useState(showTokens);
+  useEffect(() => {
+    const [from, to] = rangeDays(range, today);
+    api.usageByJob(from, to).then(setJobs, () => setJobs([]));
+    api.recentCalls(60).then(setCalls, () => setCalls([]));
+  }, [range, today]);
+  const top = Math.max(1, ...(jobs ?? []).map((j) => j.input + j.output));
+  const shownJobs = allJobs ? (jobs ?? []) : (jobs ?? []).slice(0, 8);
+  const shownCalls = moreCalls ? (calls ?? []) : (calls ?? []).slice(0, 12);
+  return (
+    <>
+      <section className="section">
+        <h2 className="section-label">By job</h2>
+        {jobs === null ? (
+          <p className="hint">Loading…</p>
+        ) : !jobs.length ? (
+          <p className="hint">Nothing yet in this range. Jobs are counted from version 0.52 on.</p>
+        ) : (
+          <div className="group usage-jobs">
+            {shownJobs.map((j) => (
+              <div className="item usage-job" key={`${j.job}|${j.source}`}>
+                <span className="body">
+                  <div className="title">{j.job}</div>
+                  <div className="sub">
+                    {j.calls.toLocaleString("en-US")} {j.calls === 1 ? "call" : "calls"} · {compact(j.input)} read · {compact(j.output)} written
+                  </div>
+                  <span className="usage-job-bar" aria-hidden="true">
+                    <i style={{ width: `${Math.max(2, ((j.input + j.output) / top) * 100)}%` }} />
+                  </span>
+                </span>
+                <span className="usage-job-total">{compact(j.input + j.output)}</span>
+              </div>
+            ))}
+            {jobs.length > 8 && (
+              <button className="item link-row" onClick={() => setAllJobs((v) => !v)}>
+                <span className="body">
+                  <div className="title">{allJobs ? "Show fewer" : `Show all ${jobs.length}`}</div>
+                </span>
+              </button>
+            )}
+          </div>
+        )}
+      </section>
+
+      <section className="section">
+        <h2 className="section-label">Latest calls</h2>
+        {calls === null ? (
+          <p className="hint">Loading…</p>
+        ) : !calls.length ? (
+          <p className="hint">No calls recorded yet.</p>
+        ) : (
+          <div className="group">
+            {shownCalls.map((c) => (
+              <div className="item usage-call" key={c.id}>
+                <span className="body">
+                  <div className="title">{c.job}</div>
+                  <div className="sub">
+                    {dayLabel(parse(c.at))} {clock(parse(c.at))} · {c.model}
+                  </div>
+                </span>
+                <span className="usage-call-n">
+                  {compact(c.input + c.output)}
+                  <small>
+                    {compact(c.input)} in · {compact(c.output)} out
+                  </small>
+                </span>
+              </div>
+            ))}
+            {calls.length > 12 && (
+              <button className="item link-row" onClick={() => setMoreCalls((v) => !v)}>
+                <span className="body">
+                  <div className="title">{moreCalls ? "Show fewer" : `Show ${calls.length - 12} more`}</div>
+                </span>
+              </button>
+            )}
+          </div>
+        )}
+      </section>
+
+      <section className="section">
+        <div className="group">
+          <label className="item">
+            <span className="body">
+              <div className="title">Tokens under each reply</div>
+              <div className="sub">A small count under Lyra's replies on this device. Press and hold a reply to see its full count any time.</div>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              className="switch"
+              checked={under}
+              onChange={(e) => {
+                setShowTokens(e.target.checked);
+                setUnder(e.target.checked);
+              }}
+            />
+          </label>
+        </div>
+      </section>
+    </>
   );
 }
 

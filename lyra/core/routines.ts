@@ -366,7 +366,7 @@ export interface RoutineDeps {
   connectors: Connectors;
   /** the model to run with; `source` says which kind of work it's counted as on the Usage page */
   /** "quick": the background model (looking around); "main": the one picked in Settings (writing to the user) */
-  provider: (source?: "routine" | "proactive", tier?: "main" | "quick") => Promise<ModelProvider>;
+  provider: (source?: "routine" | "proactive", tier?: "main" | "quick", job?: string) => Promise<ModelProvider>;
   /** Is the background model a different one from the main model? (Only then is there a hand-off.) */
   splitModels?: () => Promise<boolean>;
   userName: () => string;
@@ -658,7 +658,9 @@ export class Routines {
       // a check that usually finds nothing looks around on the background model; when it finds
       // something to say, the main model takes over and writes it (see the hand-off below)
       let quick = r.post_mode === "news" && !!(await this.d.splitModels?.().catch(() => false));
-      let provider = await this.d.provider(source, quick ? "quick" : "main");
+      // what the calls are for, on the Usage page: a routine by its name, Lyra's own checks by theirs
+      const job = source === "routine" ? `Routine: ${r.name}` : r.name;
+      let provider = await this.d.provider(source, quick ? "quick" : "main", job);
       const search = !!this.d.webSearch?.();
       const notebook = r.channel_id ? (await this.d.workspace.notebook(r.channel_id).catch(() => undefined))?.read() : undefined;
       const system = routinePrompt(
@@ -691,7 +693,7 @@ export class Routines {
         // hand-off: the background model found news; the main model reads the same notes and writes it
         if (quick && calls.some((c) => c.name === "post")) {
           quick = false;
-          provider = await this.d.provider(source, "main");
+          provider = await this.d.provider(source, "main", job);
           for (const call of calls)
             results.push({
               type: "tool_result",

@@ -8792,3 +8792,53 @@ body[data-music] .lp-orb {
 .activity-filters.artifact-filters {
   margin: var(--s4) calc(-1 * var(--s4)) var(--s5);
 }
+
+/* ---------- 0.52: tokens by job, latest calls, a reply's own count ---------- */
+.usage-job .body {
+  min-width: 0;
+}
+.usage-job-bar {
+  display: block;
+  height: 4px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.usage-job-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.usage-job-total,
+.usage-call-n {
+  flex: none;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.usage-call-n small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.reply-tokens {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.reply-tokens:not(.rate .reply-tokens) {
+  margin: 2px 0 0 22px;
+}
+.sheet-usage {
+  margin: -4px 0 var(--s3);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.usage-more {
+  margin-top: var(--s6, 32px);
+}

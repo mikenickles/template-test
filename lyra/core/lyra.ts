@@ -63,7 +63,7 @@ import {
   type Reminder,
 } from "./reminders.ts";
 import type { Attachment } from "./attachments.ts";
-import { localDay, metered, recordUsage, usageBetween, type UsageRow } from "./usage.ts";
+import { localDay, metered, newTally, recentCalls, recordUsage, usageBetween, usageByJob, type JobUsage, type UsageCall, type UsageRow } from "./usage.ts";
 import { LIVE_MODEL, LIVE_VOICES, liveSession, type LiveVoice } from "./live.ts";
 import { listModels, type ModelOption } from "./providers/models.ts";
 import { quickModelFor } from "./providers/routing.ts";
@@ -626,7 +626,7 @@ export class Lyra {
       db,
       workspace: this.workspace,
       connectors: this.connectors,
-      provider: async () => metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "worker", db, p.timeZone),
+      provider: async (job?: string) => metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "worker", db, p.timeZone, job),
       userName: () => this.userName,
       soul: () => this.customSoul,
       timeZone: p.timeZone,
@@ -638,7 +638,7 @@ export class Lyra {
       db,
       workspace: this.workspace,
       connectors: this.connectors,
-      provider: async (source = "routine", tier = "main") => metered(await this.modelFor(tier), source, db, p.timeZone),
+      provider: async (source = "routine", tier = "main", job?: string) => metered(await this.modelFor(tier), source, db, p.timeZone, job),
       splitModels: async () => (this.p.quickProvider ? true : !this.p.provider && (await this.quickChoice()).model !== this.choice().model),
       userName: () => this.userName,
       soul: () => this.customSoul,
@@ -1325,6 +1325,16 @@ export class Lyra {
     await this.db.flush();
   }
 
+  /** Tokens per job between two local days (YYYY-MM-DD, inclusive). */
+  usageByJob(from: string, to: string): JobUsage[] {
+    return usageByJob(this.db, from, to);
+  }
+
+  /** The latest model calls, newest first. */
+  recentCalls(limit = 50): UsageCall[] {
+    return recentCalls(this.db, limit);
+  }
+
   /** Token usage between two local days (YYYY-MM-DD, inclusive). */
   usage(from: string, to: string): UsageRow[] {
     return usageBetween(this.db, from, to);
@@ -1477,7 +1487,9 @@ export class Lyra {
       close: () => (turn.open = false),
     };
     try {
-      const provider = metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "chat", this.db, this.p.timeZone);
+      // the reply's own count: every call this turn makes, shown with the reply
+      const tally = newTally();
+      const provider = metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "chat", this.db, this.p.timeZone, channel ? `Chat: ${channel.name}` : "Chat", tally);
       turn.open = true;
       const message = await runTurn(
         {
@@ -1497,6 +1509,10 @@ export class Lyra {
         attachments,
         inbox,
       );
+      if (tally.calls) {
+        message.meta = { ...message.meta, usage: { input: tally.input, output: tally.output, calls: tally.calls, model: tally.model } };
+        updateMessageMeta(this.db, message.id, message.meta);
+      }
       finish(message);
       // a chat screen that was closed and reopened mid-reply hears that it's done
       this.listeners.forEach((l) => l({ type: "message", channelId }));
@@ -2090,7 +2106,7 @@ export class Lyra {
       const samples = ST.styleSamples(this.db);
       const rated = ST.ratedReplies(this.db);
       if (samples.length < 10 && rated.length < 3) throw new Error("Lyra needs a few more of your messages to go on. Keep chatting!");
-      const provider = metered(await this.modelFor("quick"), "proactive", this.db, this.p.timeZone);
+      const provider = metered(await this.modelFor("quick"), "proactive", this.db, this.p.timeZone, "Learning how you talk");
       const notes = await ST.learnStyle(provider, samples, ST.readStyle(this.db)?.notes ?? [], this.userName, rated);
       if (!notes) throw new Error("Not enough to go on yet. Keep chatting and Lyra will pick it up.");
       ST.saveStyle(this.db, notes, samples.length);
@@ -2137,7 +2153,7 @@ export class Lyra {
     if (this.tidying) throw new Error("Already tidying.");
     this.tidying = true;
     try {
-      const provider = metered(await this.modelFor("quick"), "proactive", this.db, this.p.timeZone);
+      const provider = metered(await this.modelFor("quick"), "proactive", this.db, this.p.timeZone, "Memory tidy-up");
       const before = this.memory.read();
       const today = new Date().toLocaleDateString("en-US", { timeZone: this.p.timeZone, dateStyle: "full" });
       const r = await runTidy(provider, before, this.memory.sections, this.userName, today);
@@ -2334,7 +2350,7 @@ export class Lyra {
     if (this.refreshing.has(id)) throw new Error("Already refreshing it.");
     this.refreshing.add(id);
     try {
-      const provider = metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "chat", this.db, this.p.timeZone);
+      const provider = metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "chat", this.db, this.p.timeZone, `Dashboard: ${d.title}`);
       const la = this.gmailOn
         ? [{ name: "life_admin", description: "Bills, subscriptions, packages, trips and returns found in the user's email.", schema: { type: "object", properties: {} } }]
         : [];
@@ -2656,7 +2672,7 @@ export class Lyra {
       const last = getSetting(this.db, "lifeAdminAt");
       const days = last ? Math.min(30, Math.max(2, Math.ceil((Date.now() - new Date(last).getTime()) / 86_400_000) + 1)) : 30;
       const today = LA.localDay(new Date(), this.p.timeZone);
-      const provider = metered(await this.modelFor("quick"), "proactive", this.db, this.p.timeZone);
+      const provider = metered(await this.modelFor("quick"), "proactive", this.db, this.p.timeZone, "Life admin inbox scan");
       const found = await LA.scanInbox({
         provider,
         connectors: this.connectors,

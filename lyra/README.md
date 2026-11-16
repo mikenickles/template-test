@@ -72,6 +72,19 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### Where every token goes (0.52)
+
+Lyra now writes down every model call with what it was for. Settings, Usage has two new sections:
+
+- **By job:** tokens per job for the range you pick, biggest first: Chat (and each channel), each
+  routine by name, each task Lyra worked on, Mail watch, Heads-up check, Check-in, Follow-up,
+  dashboard refreshes, memory tidy-ups, learning how you talk and life admin scans.
+- **Latest calls:** the last 60 calls, each with its time, job, model and tokens in and out.
+
+Every reply also keeps its own count (all of its model calls added up). Press and hold a reply to
+see it, or turn on "Tokens under each reply" on the Usage page to see it under every reply.
+Calls are kept for 90 days; jobs are counted from this version on.
+
 ### Model routing (0.51)
 
 Lyra's own background work now runs on a smaller, cheaper model from the same provider: mail

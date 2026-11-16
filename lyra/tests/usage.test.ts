@@ -19,6 +19,27 @@ describe("recording token usage", () => {
     expect(lyra.usage("2000-01-01", "2000-01-02")).toEqual([]);
   });
 
+  it("keeps each call with what it was for, and each reply's own count", async () => {
+    const call = (name: string, input: Record<string, unknown>): GenerateResult => ({ parts: [{ type: "tool_call", id: "c1", name, input }], stop: "tool_use", usage: { input: 900, output: 30 } });
+    const lyra = await Lyra.start(
+      platform({ provider: new FakeProvider([call("list_tasks", {}), say("Nothing open.", 1100, 20), { ...call("nothing_new", { note: "Quiet." }), usage: { input: 400, output: 10 } }]) }),
+    );
+    const { message } = await lyra.chat("anything open?", noop);
+    // both calls of the reply, added up on the reply
+    expect(message.meta.usage).toEqual({ input: 2000, output: 50, calls: 2, model: "fake" });
+    expect(lyra.messages(null).at(-1)!.meta.usage?.calls).toBe(2);
+    const r = await lyra.createRoutine({ name: "Bills", instructions: "Any bills?", times: "08:00", postMode: "news" });
+    lyra.runRoutine(r.id);
+    await lyra.routinesRunner.settle();
+    const today = localDay(new Date(), "America/Los_Angeles");
+    const jobs = lyra.usageByJob(today, today);
+    expect(jobs.map((j) => [j.job, j.calls, j.input + j.output])).toEqual([
+      ["Chat", 2, 2050],
+      ["Routine: Bills", 1, 410],
+    ]);
+    expect(lyra.recentCalls(5).map((c) => c.job)).toEqual(["Routine: Bills", "Chat", "Chat"]);
+  });
+
   it("uses the user's local day, not UTC", () => {
     const lateEvening = new Date("2026-11-13T05:30:00Z"); // 9:30 PM on the 12th in Los Angeles
     expect(localDay(lateEvening, "America/Los_Angeles")).toBe("2026-11-12");
