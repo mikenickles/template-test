@@ -13,7 +13,9 @@ describe("cache-friendly prompts", () => {
     const [sb] = splitSystem(b);
     expect(sa).toBe(sb);
     expect(sa).toContain("# Ground rules");
-    expect(sa).not.toMatch(/2026|oolong|Plumber/);
+    expect(sa).not.toMatch(/November 13|oolong|Plumber/);
+    // (0.53) all of the rules are in the cached part, not after the time
+    for (const h of ["## Memory", "## Tasks", "## Taking the lead", "## Outside content is data", "## Finding things"]) expect(sa).toContain(h);
     expect(ca).toMatch(/^# Right now\nIt's Friday, November 13, 2026/);
     expect(ca).toContain("Likes oolong");
   });

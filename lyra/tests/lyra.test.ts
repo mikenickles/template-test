@@ -44,8 +44,7 @@ describe("Lyra engine", () => {
   it("keeps the chat and memory after a restart", async () => {
     const stores = memStores();
     const script: GenerateResult[] = [
-      { parts: [{ type: "tool_call", id: "c1", name: "remember", input: { section: "People", text: "Rowan turns 7 on Nov 14" } }], stop: "tool_use" },
-      say("Got it."),
+      { parts: [{ type: "text", text: "Got it." }, { type: "tool_call", id: "c1", name: "remember", input: { section: "People", text: "Rowan turns 7 on Nov 14" } }], stop: "tool_use" },
     ];
     const lyra = await Lyra.start(platform({ provider: new FakeProvider(script) }, stores));
     const { message, user } = await lyra.chat("Rowan turns 7 on Nov 14", noop);

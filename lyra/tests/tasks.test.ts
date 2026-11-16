@@ -82,12 +82,12 @@ describe("tasks", () => {
   it("lets Lyra create a task in the current channel and keep it current", async () => {
     const { lyra, push, requests } = await start();
     const rowan = await lyra.createChannel({ name: "Rowan" });
-    push(call("create_task", { title: "Order the cake", details: "Berry Chantilly, half sheet", steps: ["Call Whole Foods", "Pay deposit"], start: false }), say("Added."));
+    push(call("create_task", { title: "Order the cake", details: "Berry Chantilly, half sheet", steps: ["Call Whole Foods", "Pay deposit"], start: false }));
     const { message } = await lyra.chat("Can you handle the cake?", noop, rowan.id);
     expect(message.meta.tasks).toEqual([{ id: 1, title: "Order the cake", kind: "created", status: "up_next" }]);
     expect(lyra.task(1).task).toMatchObject({ channel_name: "Rowan", steps_total: 2 });
 
-    push(call("update_task", { id: 1, status: "Ready for you", needs: "Half sheet or full?", finish_steps: [1], note: "Whole Foods has both sizes" }), say("One question."));
+    push(call("update_task", { id: 1, status: "Ready for you", needs: "Half sheet or full?", finish_steps: [1], note: "Whole Foods has both sizes" }));
     await lyra.chat("I called them", noop, rowan.id);
     const d = lyra.task(1);
     expect(d.task).toMatchObject({ status: "ready", needs: "Half sheet or full?", steps_done: 1 });

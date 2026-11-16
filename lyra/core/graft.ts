@@ -17,7 +17,7 @@ import type { DB } from "./db.ts";
 /** Message marks that mean "Lyra posted this on its own". */
 const OWN = ["routine", "headsUp", "checkIn", "lifeAdmin", "tidy", "reminder", "placeReminder"];
 /** What the home base has already looked at or done (so it isn't done again from older notes). */
-const STAMPS = ["mailWatchAt", "mailWatchSeen", "headsUpAt", "headsUpLast", "checkInAt", "checkInRecent", "lifeAdminAt", "lifeAdminTriedAt", "tidyAt", "styleTriedAt", "triggersAt", "birthdaysAt", "birthdaySeen"];
+const STAMPS = ["mailWatchAt", "mailWatchSeen", "headsUpAt", "headsUpLast", "checkInAt", "checkInRecent", "lifeAdminAt", "lifeAdminTriedAt", "tidyAt", "styleTriedAt", "triggersAt", "birthdaysAt", "birthdaySeen", "headsUpPrint", "headsUpSkipped"];
 const DAYS = 3;
 
 function rows<T>(other: Database, sql: string, params: (string | number | null)[] = []): T[] {

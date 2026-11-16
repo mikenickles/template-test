@@ -123,13 +123,27 @@ describe("runTurn", () => {
     expect(t.events.text).toBe("Nothing new from the school this week.");
   });
 
-  it("keeps what was said alongside a save, with a blank line before what follows", async () => {
+  it("a quick action ends the turn: what was said alongside it is the reply, with no second model call", async () => {
     const t = await setup([
       { parts: [{ type: "text", text: "Got it, the gate code is 4412." }, { type: "tool_call", id: "c1", name: "remember", input: { section: "Rules", text: "Gate code: 4412" } }], stop: "tool_use" },
       say("Anything else for the house?"),
     ]);
     const saved = await runTurn(t.ctx, "the gate code is 4412", t.emit);
-    expect(saved.content).toBe("Got it, the gate code is 4412.\n\nAnything else for the house?");
+    expect(saved.content).toBe("Got it, the gate code is 4412.");
+    expect(t.provider.requests.length).toBe(1);
+  });
+
+  it("a quick action with nothing said alongside gets a line written from what was set", async () => {
+    const t = await setup([call("remember", { section: "Rules", text: "Gate code: 4412" }), say("Should not be asked for.")]);
+    const saved = await runTurn(t.ctx, "the gate code is 4412", t.emit);
+    expect(saved.content).toBe("Noted.");
+    expect(t.provider.requests.length).toBe(1);
+  });
+
+  it("a failed quick action, or one after reading outside content, goes back to the model", async () => {
+    const t = await setup([call("remember", { section: "No such section", text: "x" }), say("Where should that go?")]);
+    expect((await runTurn(t.ctx, "remember x", t.emit)).content).toBe("Where should that go?");
+    expect(t.provider.requests.length).toBe(2);
   });
 
   it("an answer written again after a tool was refused is kept once, and a long answer isn't mistaken for narration", async () => {
@@ -182,5 +196,17 @@ describe("historyFor", () => {
       { role: "user", parts: [{ type: "text", text: "b\n\nc" }] },
       { role: "assistant", parts: [{ type: "text", text: "d" }] },
     ]);
+  });
+});
+
+describe("quick action lines", () => {
+  it("say what was set, in the user's time", async () => {
+    const { doneLine } = await import("../core/chat.ts");
+    const now = new Date("2026-11-14T18:00:00Z");
+    const r = (content: string) => ({ type: "tool_result" as const, id: "c", name: "x", content, isError: false });
+    expect(doneLine([{ name: "set_reminder", input: { text: "Call Mom", at: "2026-11-15 10:00" } }], [r("ok")], "America/Los_Angeles", now)).toBe("Done, I'll remind you Sun 10:00 AM.");
+    expect(doneLine([{ name: "create_task", input: { title: "Find a plumber" } }], [r("Added task #3: Find a plumber. It's waiting as Up next.")])).toBe("Added to your tasks: Find a plumber.");
+    expect(doneLine([{ name: "remember", input: {} }, { name: "remember", input: {} }], [r("Saved."), r("Saved.")])).toBe("Noted.");
+    expect(doneLine([{ name: "propose_email", input: {} }], [r("Ready")])).toBe("Here it is for you to check.");
   });
 });

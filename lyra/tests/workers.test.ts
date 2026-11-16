@@ -86,7 +86,7 @@ describe("background workers", () => {
 
   it("asks the user a question, waits, and carries on with the answer", async () => {
     const { lyra, chat, work, workerRequests } = await start();
-    chat.push(call("create_task", { title: "Pick a plumber", details: "Kitchen leak" }), say("On it."));
+    chat.push(call("create_task", { title: "Pick a plumber", details: "Kitchen leak" }));
     work.push(call("ask_user", { question: "Ortiz ($95) or Lee ($120, sooner)?" }));
     await lyra.chat("find me a plumber", noop);
     await lyra.workers.settle();

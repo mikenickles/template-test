@@ -46,6 +46,11 @@ export class FakeProvider implements ModelProvider {
       parts: [{ type: "tool_call", id: `fake_${Date.now().toString(36)}`, name, input } as Part],
       stop: "tool_use",
     });
+    // (0.53) quick actions: the short reply goes out with the call, as Lyra's prompt asks
+    const callSaying = (text: string, name: string, input: Record<string, unknown>): GenerateResult => {
+      const r = call(name, input);
+      return { ...r, parts: [{ type: "text", text }, ...r.parts] };
+    };
 
     const result = last?.parts.find((p) => p.type === "tool_result");
     if (result && result.type === "tool_result") {
@@ -96,7 +101,7 @@ export class FakeProvider implements ModelProvider {
     if (remind && has("set_reminder")) {
       const at = new Date(Date.now() + Number(remind[1]) * 60_000);
       const p2 = (n: number) => String(n).padStart(2, "0");
-      return call("set_reminder", { text: remind[2], at: `${at.getFullYear()}-${p2(at.getMonth() + 1)}-${p2(at.getDate())} ${p2(at.getHours())}:${p2(at.getMinutes())}` });
+      return callSaying("Okay, I'll remind you.", "set_reminder", { text: remind[2], at: `${at.getFullYear()}-${p2(at.getMonth() + 1)}-${p2(at.getDate())} ${p2(at.getHours())}:${p2(at.getMinutes())}` });
     }
     // widgets: the practice model shows a sample of each kind
     if (/^(which|pick|choose|compare)\b.*\b(plumber|option|one)/i.test(text.trim()) && has("show"))
@@ -114,9 +119,9 @@ export class FakeProvider implements ModelProvider {
     if (/^where('s| is) (.+)$/i.test(text.trim()) && has("show")) return call("show", { kind: "place", name: "Ortiz Plumbing (practice)", address: "1200 J St, Sacramento, CA", phone: "+1 916 555 0142", note: "Open until 5 PM" });
     if (/^what('s| is) next/i.test(text) && has("suggest_replies")) return call("suggest_replies", { options: ["Add it to my tasks", "Remind me Friday"] });
     const rem = text.match(/^remember(?: that)?[:\s]+(.+)$/i);
-    if (rem && has("remember")) return call("remember", { section: "Open loops", text: rem[1] });
+    if (rem && has("remember")) return callSaying("Got it.", "remember", { section: "Open loops", text: rem[1] });
     const forget = text.match(/^forget[:\s]+(.+)$/i);
-    if (forget && has("forget")) return call("forget", { section: "Open loops", match: forget[1] });
+    if (forget && has("forget")) return callSaying("Done, that's gone.", "forget", { section: "Open loops", match: forget[1] });
     // "go through my inbox": the practice model shows a sample triage card (made-up example mail)
     if (/^(go through|triage|sort) my inbox/i.test(text.trim()) && has("show_triage"))
       return call("show_triage", {
@@ -158,7 +163,7 @@ export class FakeProvider implements ModelProvider {
     if (doc && has("write_doc")) return call("write_doc", { title: doc[1], body: "## To do\n- First thing\n- Second thing" });
     // "email dana@example.com saying yes to Friday": the practice model can propose an email (the user still taps Send)
     const mail = text.match(/^e-?mail (\S+@\S+) saying (.+)$/i);
-    if (mail && has("propose_email")) return call("propose_email", { to: [mail[1]], subject: "Quick note", body: mail[2] });
+    if (mail && has("propose_email")) return callSaying("It's ready for you to check.", "propose_email", { to: [mail[1]], subject: "Quick note", body: mail[2] });
     if (/\b(e-?mail|inbox|mail)\b/i.test(text) && has("gmail__search_mail"))
       return call("gmail__search_mail", { query: "newer_than:7d", max_results: 5 });
     return say(

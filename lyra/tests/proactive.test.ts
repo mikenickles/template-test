@@ -60,7 +60,6 @@ describe("reminders and follow-ups", () => {
   it("follows up later: checks with its tools and posts an update", async () => {
     const provider = new FakeProvider([
       call("follow_up", { about: "Has Ortiz Plumbing replied with a quote?", at: inLA(120) }),
-      say("I'll check back this afternoon."),
       // the follow-up run
       call("post", { message: "Still nothing from Ortiz. Want me to draft a nudge?" }),
     ]);
@@ -83,7 +82,7 @@ describe("reminders and follow-ups", () => {
     expect(lyra.messages(null).at(-1)!.meta.tools).toEqual([{ name: "set_reminder", ok: false }]);
     expect(lyra.reminders()).toEqual([]);
 
-    const p2 = new FakeProvider([call("set_reminder", { text: "Dentist", at: inLA(600) }), say("Done."), call("cancel_reminder", { id: 1 }), say("Dropped it.")]);
+    const p2 = new FakeProvider([call("set_reminder", { text: "Dentist", at: inLA(600) }), call("cancel_reminder", { id: 1 })]);
     const l2 = await Lyra.start(platform({ provider: p2 }));
     await l2.saveSettings({ proactive: { level: "off" } });
     await l2.chat("remind me about the dentist", noop);
@@ -136,7 +135,13 @@ describe("heads-ups", () => {
     expect(events).toContainEqual({ type: "message", channelId: null, notify: { title: "Heads-up from Lyra", body: "Dana's waiting on your answer about Friday.", options: [] } });
     expect(provider.requests[0].system).toMatch(/Keep it to what matters today or tomorrow/);
 
+    // (0.53) four hours on and nothing has changed: no AI call at all
     lyra.tickHeadsUp(new Date(t.getTime() + 4 * 3600_000 + 60_000));
+    await lyra.routinesRunner.settle();
+    expect(provider.requests).toHaveLength(1);
+    // something changed (a new task): the next check looks, and knows what it said last time
+    await lyra.createTask({ title: "Call the school" });
+    lyra.tickHeadsUp(new Date(t.getTime() + 8 * 3600_000 + 120_000));
     await lyra.routinesRunner.settle();
     expect(provider.requests[1].system).toContain("Dana's waiting on your answer about Friday.");
   });

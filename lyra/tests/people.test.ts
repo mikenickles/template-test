@@ -29,8 +29,8 @@ describe("people cards", () => {
 
   it("Lyra saves people from chat, looks them up, and won't change a card after reading mail", async () => {
     const provider = new FakeProvider([
+      // a quick action: the reply is written from what was saved, with no second call
       call("remember_person", { name: "Ms. Patel", relation: "Rowan's teacher", email: "patel@school.org" }),
-      say("Got it."),
       call("look_up_person", { name: "Ms. Patel" }),
       say("Her email is patel@school.org."),
       call("gmail__search_mail", { query: "from:school" }),
@@ -43,9 +43,10 @@ describe("people cards", () => {
     await lyra.connectGoogle("gmail");
     const { message } = await lyra.chat("Rowan's teacher is Ms. Patel, patel@school.org", noop);
     expect(message.meta.people).toEqual([{ id: 1, name: "Ms. Patel", created: true }]);
+    expect(message.content).toBe("Noted about Ms. Patel.");
     await lyra.chat("What's her email?", noop);
-    expect(provider.requests[2].system).toMatch(/- Ms\. Patel: Rowan's teacher · patel@school\.org/);
-    const looked = provider.requests[3].messages.at(-1)!.parts[0] as { content: string };
+    expect(provider.requests[1].system).toMatch(/- Ms\. Patel: Rowan's teacher · patel@school\.org/);
+    const looked = provider.requests[2].messages.at(-1)!.parts[0] as { content: string };
     expect(looked.content).toMatch(/Email: patel@school\.org/);
     const r = await lyra.chat("check the school mail", noop);
     expect(r.message.meta.tools).toContainEqual({ name: "remember_person", ok: false });

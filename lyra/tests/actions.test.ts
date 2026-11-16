@@ -82,14 +82,14 @@ describe("emails and events need the user's tap", () => {
 
   it("proposes an email as a card; nothing goes out until Send, and only once", async () => {
     const { lyra, apis, provider } = await setup([
-      call("propose_email", { to: ["dana@example.com"], subject: "Friday", body: "Hi Dana,\n\nYes, Friday works.\n\nSam" }),
-      say("Your reply to Dana is ready for you to check."),
+      { parts: [{ type: "text", text: "Your reply to Dana is ready for you to check." }, { type: "tool_call", id: "c1", name: "propose_email", input: { to: ["dana@example.com"], subject: "Friday", body: "Hi Dana,\n\nYes, Friday works.\n\nSam" } }], stop: "tool_use" },
+      say("(not asked for: a card needs no second call)"),
     ]);
     const { message } = await lyra.chat("Tell Dana yes for Friday", noop);
     expect(message.meta.actions).toHaveLength(1);
+    expect(message.content).toBe("Your reply to Dana is ready for you to check.");
+    expect(provider.requests).toHaveLength(1);
     expect(apis.calls.filter((c) => c.method === "POST")).toEqual([]);
-    const result = provider.requests[1].messages.at(-1)!.parts[0] as { content: string };
-    expect(result.content).toMatch(/NOT sent/);
     const id = message.meta.actions![0];
     expect(lyra.action(id)).toMatchObject({ kind: "email", status: "proposed", tainted: false });
 
@@ -128,9 +128,13 @@ describe("emails and events need the user's tap", () => {
 
   it("adds an event only on Add, inviting people only if asked", async () => {
     const { lyra, apis } = await setup([
-      call("propose_event", { title: "Dentist", start: "2027-03-07 15:00", end: "2027-03-07 16:00", location: "Main St" }),
-      call("propose_event", { title: "Camping", start: "2027-06-12", end: "2027-06-14", attendees: ["lee@example.com"] }, "c2"),
-      say("Both are ready for your OK."),
+      {
+        parts: [
+          { type: "tool_call", id: "c1", name: "propose_event", input: { title: "Dentist", start: "2027-03-07 15:00", end: "2027-03-07 16:00", location: "Main St" } },
+          { type: "tool_call", id: "c2", name: "propose_event", input: { title: "Camping", start: "2027-06-12", end: "2027-06-14", attendees: ["lee@example.com"] } },
+        ],
+        stop: "tool_use",
+      },
     ]);
     const { message } = await lyra.chat("dentist friday 3 and camping", noop);
     const [a, b] = message.meta.actions!;

@@ -223,7 +223,7 @@ describe("removing an event", () => {
   });
 
   it("an invitation only leaves the user's own calendar, and saying no to the card removes nothing", async () => {
-    const { lyra, api } = await setup([call("propose_remove_event", { event_id: "invite456" }), say("Ready."), call("propose_remove_event", { event_id: "invite456" }), say("Ready.")]);
+    const { lyra, api } = await setup([call("propose_remove_event", { event_id: "invite456" }), call("propose_remove_event", { event_id: "invite456" })]);
     await lyra.allowActions("event", true);
     const first = (await lyra.chat("Take book club off my calendar", noop)).message.meta.actions![0];
     expect(lyra.action(first)).toMatchObject({ payload: { title: "Book club", mine: false } });

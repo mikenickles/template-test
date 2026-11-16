@@ -72,6 +72,22 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### Spending fewer tokens without doing less (0.53)
+
+- **Quick actions in one call.** A reminder, follow-up, task, memory note, person card or a card
+  for your OK no longer needs a second model call just to say "Done". The reply is what Lyra wrote
+  alongside the action, or a line written from what was set ("Done, I'll remind you Sun 10:00 AM.").
+  Anything that fails, or comes after reading mail or the web, still goes back to the model.
+- **Heads-ups skip when nothing changed.** Before a heads-up check runs the AI, Lyra looks without
+  AI at your recent inbox, the next 16 hours of your calendar, open tasks, memory and bills. If it's
+  all as it was at the last check (same day), there's nothing new to say and no AI call is made.
+- **Long chats keep a summary.** Once a chat is long, its older messages are folded into a short
+  running summary by the background model. Replies send that summary and only the newest 12-28
+  messages instead of up to 40.
+- **More of every request is cached.** All of Lyra's rules now come before the current time in the
+  instructions, so about 9,400 tokens are the same from one message to the next (up from about
+  6,500) and providers can reuse them. Only about 1,000 change per message.
+
 ### Where every token goes (0.52)
 
 Lyra now writes down every model call with what it was for. Settings, Usage has two new sections:

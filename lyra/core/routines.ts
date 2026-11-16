@@ -508,6 +508,11 @@ export class Routines {
     this.enqueue(id, spark);
   }
 
+  /** Work that leads to a run (a look before a heads-up): settle() waits for it too. */
+  track(p: Promise<unknown>): void {
+    this.queue = this.queue.then(() => p.then(() => {}, () => {}));
+  }
+
   /** Resolves when queued runs are done (for tests). */
   async settle(): Promise<void> {
     let q: Promise<void>;

@@ -20,9 +20,7 @@ describe("place reminders", () => {
   it("are set from chat by a saved place's name or by looking one up near you, and go off once", async () => {
     const provider = new FakeProvider([
       call("remind_at_place", { text: "Grab milk", place: "Costco" }),
-      say("Done, I'll remind you when you get there."),
       call("remind_at_place", { text: "Call Mom", place: "home", on: "arrive" }, "c2"),
-      say("Done."),
       call("remind_at_place", { text: "x", place: "the moon" }, "c3"),
       say("Couldn't find it."),
     ]);

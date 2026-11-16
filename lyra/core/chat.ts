@@ -1,6 +1,7 @@
 import type { Connectors } from "./connectors/registry.ts";
 import { splitQuote } from "./quote.ts";
 import { attachmentParts, attachmentReminder, checkAttachments, type Attachment } from "./attachments.ts";
+import { describeDue, localToDate } from "./reminders.ts";
 import { checkTriage, TRIAGE_GUIDE, TRIAGE_SCHEMA, type Triage } from "./triage.ts";
 import { addMessage, listMessages, updateMessageMeta, type Channel, type ChannelSummary, type DB, type MemoryNote, type MessageMeta, type StoredMessage, type TaskNote } from "./db.ts";
 import { CHANNEL_SECTIONS, SECTIONS, type Notebook } from "./memory.ts";
@@ -144,6 +145,8 @@ export interface TurnContext {
   timeZone?: string;
   /** The model may search the web with its built-in search. */
   webSearch?: boolean;
+  /** (0.53) a running summary of this chat up to a message: older messages aren't sent, the summary is */
+  earlier?: { upTo: number; text: string };
 }
 
 const MAIN = "main";
@@ -765,7 +768,8 @@ export async function runTurn(
   const attached = checkAttachments(attachments);
   const userMessage = addMessage(ctx.db, "user", userText, attached.length ? { attachments: attached } : {}, channelId);
   let reacted = false;
-  const messages = historyFor(listMessages(ctx.db, channelId, HISTORY));
+  const upTo = ctx.earlier?.upTo ?? 0;
+  const messages = historyFor(listMessages(ctx.db, channelId, HISTORY).filter((m) => m.id > upTo));
   if (attached.length) {
     // this turn the model gets the files themselves, in place of the "attached earlier" note
     const mine = messages[messages.length - 1];
@@ -888,6 +892,7 @@ export async function runTurn(
       docs: ctx.workspace.docs?.recent(),
       skills: ctx.workspace.skills?.index(),
       talk: ctx.workspace.talk?.(),
+      earlier: ctx.earlier?.text,
       lifeAdmin: !!ctx.workspace.lifeAdmin?.connected(),
       model: ctx.provider.id === "fake" ? undefined : ctx.provider.model,
       music: ctx.connectors.status().some((c) => c.id === "spotify" && c.state === "connected")
@@ -910,6 +915,8 @@ export async function runTurn(
     // a message that arrives during the last step earns a little more room, so it isn't dropped
     let extra = 0;
     let paused = false;
+    // (0.53) every call this turn so far was a quick action: its reply needs no second model call
+    let allQuick = true;
 
     for (let step = 0; step < MAX_STEPS + extra; step++) {
       // Stop was tapped between steps (say, while a tool was running)
@@ -1267,6 +1274,23 @@ export async function runTurn(
       // Wrote the reply and reacted or offered buttons in one go: that's the whole answer, no need to
       // ask the model again (it would only add a line about the buttons).
       if (started && calls.every((c) => c.name === "react" || c.name === "suggest_replies" || (c.name === "show" && widget)) && !takeNew()) break;
+      // (0.53) A quick action that worked (a reminder set, a task added, a note kept, a card made)
+      // in a turn that did nothing else: the reply is what was written alongside it, or a line written
+      // here from what was set. Asking the model again would only say "Done" for a whole request.
+      allQuick &&= calls.every((c) => QUICK_DONE.has(c.name) || c.name in PROPOSALS || c.name === "react" || c.name === "suggest_replies" || (c.name === "show" && !!widget));
+      if (
+        allQuick &&
+        !state.tainted &&
+        calls.some((c) => QUICK_DONE.has(c.name) || c.name in PROPOSALS) &&
+        results.every((r) => r.type !== "tool_result" || !r.isError) &&
+        !takeNew()
+      ) {
+        if (!started) {
+          const line = doneLine(calls, results, ctx.timeZone);
+          if (line) own(line);
+        }
+        break;
+      }
       if (step === MAX_STEPS + extra - 1 && extra < 2 && takeNew()) extra++;
       else if (step === MAX_STEPS + extra - 1) own(`I stopped there so this doesn't run on. Want me to keep going?`);
     }
@@ -1307,6 +1331,47 @@ export function plainOptions(options: unknown, tainted: boolean): string[] {
 
 /** A button offering to answer an email. The user answers almost none, and asks when they want one drafted. */
 const REPLY_OFFER = /\b(repl(y|ies)|respond|write back|draft (a |an |the |my )?(yes|no|response|answer|email|note))\b/i;
+
+/** (0.53) Quick actions: once one works, the turn can end without another model call. */
+const QUICK_DONE = new Set(["set_reminder", "follow_up", "remind_at_place", "cancel_reminder", "create_task", "update_task", "remember", "forget", "remember_person", "save_skill"]);
+
+/** The line Lyra says after quick actions when the model wrote nothing alongside them. */
+export function doneLine(calls: { name: string; input: Record<string, unknown> }[], results: Part[], timeZone?: string, now = new Date()): string {
+  const when = (at: unknown) => {
+    const d = localToDate(String(at ?? ""), timeZone);
+    return d ? describeDue(d, timeZone, now) : "";
+  };
+  const one = (s: unknown, max = 60) => String(s ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+  const lines = calls.map((c, i) => {
+    const r = results[i];
+    const content = r && r.type === "tool_result" ? r.content : "";
+    switch (c.name) {
+      case "set_reminder":
+        return when(c.input.at) ? `Done, I'll remind you ${when(c.input.at)}.` : "Reminder set.";
+      case "follow_up":
+        return when(c.input.at) ? `I'll check back ${when(c.input.at)}.` : "I'll check back.";
+      case "remind_at_place":
+        return `Done, I'll remind you when you ${c.input.on === "leave" ? "leave" : "get to"} ${one(c.input.place, 40) || "there"}.`;
+      case "cancel_reminder":
+        return "Cancelled.";
+      case "create_task":
+        return /worker is on/i.test(content) ? `On it: ${one(c.input.title)}.` : `Added to your tasks: ${one(c.input.title)}.`;
+      case "update_task":
+        return "Updated.";
+      case "remember":
+        return "Noted.";
+      case "forget":
+        return "Forgotten.";
+      case "remember_person":
+        return `Noted about ${one(c.input.name, 40)}.`;
+      case "save_skill":
+        return "Learned it. I'll do it that way from now on.";
+      default:
+        return c.name in PROPOSALS ? "Here it is for you to check." : "";
+    }
+  });
+  return [...new Set(lines.filter(Boolean))].join(" ");
+}
 
 /** Tools that only look things up: what Lyra says alongside one was said before Lyra had the answer. */
 const LOOKUPS = new Set(["life_admin", "read_doc", "read_channel", "list_tasks", "list_routines", "look_up_person", "find_contact", "use_skill"]);

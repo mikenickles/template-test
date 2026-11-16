@@ -54,7 +54,7 @@ describe("skills", () => {
     const m = models();
     const lyra = await Lyra.start(platform({ provider: m.provider }));
     await lyra.saveSettings({ proactive: { level: "off" } });
-    m.chat.push(call("save_skill", TRIP), say("Saved. I'll plan trips that way."));
+    m.chat.push(call("save_skill", TRIP));
     const first = await lyra.chat("When I plan a trip, check flights from SFO, block the dates, then a packing list. Save that.", noop);
     expect(first.message.meta.skills).toEqual([{ id: 1, name: "Trip planning", kind: "saved" }]);
     expect(m.requests.chat[0].system).toMatch(/## Skills[^]*\(none yet\)/);
@@ -63,8 +63,8 @@ describe("skills", () => {
 
     m.chat.push(call("use_skill", { name: "trip planning" }), say("Flights first."));
     const second = await lyra.chat("Plan Lisbon in May", noop);
-    expect(m.requests.chat[2].system).toContain("- Trip planning: I ask you to plan a trip");
-    const got = m.requests.chat[3].messages.at(-1)!.parts[0] as { content: string; isError: boolean };
+    expect(m.requests.chat[1].system).toContain("- Trip planning: I ask you to plan a trip");
+    const got = m.requests.chat[2].messages.at(-1)!.parts[0] as { content: string; isError: boolean };
     expect(got.isError).toBe(false);
     expect(got.content).toMatch(/still needs the user's tap[^]*1\. Check flights from SFO/);
     expect(second.message.meta.skills).toEqual([{ id: 1, name: "Trip planning", kind: "used" }]);
