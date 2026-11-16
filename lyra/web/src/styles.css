@@ -8788,3 +8788,7 @@ body[data-music] .lp-orb {
 .art-meta svg {
   flex: none;
 }
+/* the filter chips keep their sideways scroll (edge to edge) but sit clear of the grid */
+.activity-filters.artifact-filters {
+  margin: var(--s4) calc(-1 * var(--s4)) var(--s5);
+}
