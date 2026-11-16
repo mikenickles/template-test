@@ -66,6 +66,7 @@ import type { Attachment } from "./attachments.ts";
 import { localDay, metered, recordUsage, usageBetween, type UsageRow } from "./usage.ts";
 import { LIVE_MODEL, LIVE_VOICES, liveSession, type LiveVoice } from "./live.ts";
 import { listModels, type ModelOption } from "./providers/models.ts";
+import { quickModelFor } from "./providers/routing.ts";
 import type { ProviderId } from "./providers/index.ts";
 import { decryptBackup, encryptBackup, fromBase64, toBase64, type BackupPayload } from "./backup.ts";
 import { channelNotebookSpec, cleanItem, mainNotebookSpec, Notebook, type Snapshot, type TextStore } from "./memory.ts";
@@ -109,6 +110,8 @@ export interface Platform {
   timeZone?: string;
   /** Tests pass a provider directly instead of choosing one from settings. */
   provider?: ModelProvider;
+  /** Tests: the background (quick) model, when it should differ from `provider`. */
+  quickProvider?: ModelProvider;
   /** Signing in to services other than Google (Spotify): the browser and back. */
   oauth?: OAuthRedirect;
   /** The phone's notifications, once the user allows Notification access in Android settings (0.45). */
@@ -149,6 +152,8 @@ export interface AppState {
   weatherPlace: WeatherPlace | null;
   /** The voice GPT-Live speaks with in live voice mode. */
   liveVoice: LiveVoice;
+  /** "auto" (paired with the main model), "same" (the main model), or a model id */
+  backgroundModel: string;
   /** Heads-ups: Lyra checks in on its own and speaks up only when something needs you. */
   proactive: Proactive;
   /** Lyra may propose emails / calendar events (you approve each one). */
@@ -252,6 +257,7 @@ export interface SettingsPatch {
   appLock?: boolean;
   weatherPlace?: WeatherPlace | null;
   liveVoice?: string;
+  backgroundModel?: string;
   proactive?: Partial<Proactive>;
 }
 
@@ -632,7 +638,8 @@ export class Lyra {
       db,
       workspace: this.workspace,
       connectors: this.connectors,
-      provider: async (source = "routine") => metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), source, db, p.timeZone),
+      provider: async (source = "routine", tier = "main") => metered(await this.modelFor(tier), source, db, p.timeZone),
+      splitModels: async () => (this.p.quickProvider ? true : !this.p.provider && (await this.quickChoice()).model !== this.choice().model),
       userName: () => this.userName,
       soul: () => this.customSoul,
       timeZone: p.timeZone,
@@ -716,6 +723,29 @@ export class Lyra {
 
   // ---------- settings ----------
 
+  /** The model for a job: "main" (the one picked in Settings) or "quick" (Lyra's own background work). */
+  private async modelFor(tier: "main" | "quick"): Promise<ModelProvider> {
+    if (tier === "quick" && this.p.quickProvider) return this.p.quickProvider;
+    if (this.p.provider) return this.p.provider;
+    return createProvider(this.keys, tier === "quick" ? await this.quickChoice() : this.choice());
+  }
+
+  private quickCache: { main: string; model: string } | null = null;
+
+  /** The background model: the setting "backgroundModel" ("auto", "same", or a model id). Auto pairs it with the main model. */
+  async quickChoice(): Promise<ProviderChoice> {
+    const main = this.choice();
+    const set = getSetting(this.db, "backgroundModel") || "auto";
+    if (main.provider === "fake" || set === "same") return main;
+    if (set !== "auto") return { provider: main.provider, model: set };
+    const key = `${main.provider}:${main.model}`;
+    if (this.quickCache?.main !== key) {
+      const ids = await listModels(this.keys, main.provider, this.fetch).then((m) => m.map((x) => x.id), () => null);
+      this.quickCache = { main: key, model: quickModelFor(main, ids) };
+    }
+    return { provider: main.provider, model: this.quickCache.model };
+  }
+
   private choice(): ProviderChoice {
     const saved = getSetting(this.db, "provider");
     const providers = listProviders(this.keys);
@@ -749,6 +779,7 @@ export class Lyra {
       appLock: getSetting(this.db, "appLock") === "on",
       weatherPlace: this.weatherPlace,
       liveVoice: this.liveVoice,
+      backgroundModel: getSetting(this.db, "backgroundModel") || "auto",
       proactive: this.proactive,
       actions: (({ email, event, archive, text }) => ({ email, event, archive, text: this.p.sms ? text : null }))(this.actionsAllowed()),
       contacts: this.p.contacts?.available ? this.contactsOn : null,
@@ -1332,6 +1363,11 @@ export class Lyra {
     if (patch.userName !== undefined) setSetting(this.db, "userName", patch.userName.trim().slice(0, 40));
     if (patch.webSearch !== undefined) setSetting(this.db, "webSearch", patch.webSearch ? "on" : "off");
     if (patch.appLock !== undefined) setSetting(this.db, "appLock", patch.appLock ? "on" : "off");
+    if (patch.backgroundModel !== undefined) {
+      const v = patch.backgroundModel.trim();
+      if (!/^(auto|same|[\w.:/-]{1,100})$/.test(v)) throw new Error("That model name looks wrong.");
+      setSetting(this.db, "backgroundModel", v);
+    }
     if (patch.liveVoice !== undefined) {
       if (!(LIVE_VOICES as readonly string[]).includes(patch.liveVoice)) throw new Error("That voice isn't one of the choices.");
       setSetting(this.db, "liveVoice", patch.liveVoice);
@@ -2054,7 +2090,7 @@ export class Lyra {
       const samples = ST.styleSamples(this.db);
       const rated = ST.ratedReplies(this.db);
       if (samples.length < 10 && rated.length < 3) throw new Error("Lyra needs a few more of your messages to go on. Keep chatting!");
-      const provider = metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "proactive", this.db, this.p.timeZone);
+      const provider = metered(await this.modelFor("quick"), "proactive", this.db, this.p.timeZone);
       const notes = await ST.learnStyle(provider, samples, ST.readStyle(this.db)?.notes ?? [], this.userName, rated);
       if (!notes) throw new Error("Not enough to go on yet. Keep chatting and Lyra will pick it up.");
       ST.saveStyle(this.db, notes, samples.length);
@@ -2101,7 +2137,7 @@ export class Lyra {
     if (this.tidying) throw new Error("Already tidying.");
     this.tidying = true;
     try {
-      const provider = metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "proactive", this.db, this.p.timeZone);
+      const provider = metered(await this.modelFor("quick"), "proactive", this.db, this.p.timeZone);
       const before = this.memory.read();
       const today = new Date().toLocaleDateString("en-US", { timeZone: this.p.timeZone, dateStyle: "full" });
       const r = await runTidy(provider, before, this.memory.sections, this.userName, today);
@@ -2620,7 +2656,7 @@ export class Lyra {
       const last = getSetting(this.db, "lifeAdminAt");
       const days = last ? Math.min(30, Math.max(2, Math.ceil((Date.now() - new Date(last).getTime()) / 86_400_000) + 1)) : 30;
       const today = LA.localDay(new Date(), this.p.timeZone);
-      const provider = metered(this.p.provider ?? (await createProvider(this.keys, this.choice())), "proactive", this.db, this.p.timeZone);
+      const provider = metered(await this.modelFor("quick"), "proactive", this.db, this.p.timeZone);
       const found = await LA.scanInbox({
         provider,
         connectors: this.connectors,

@@ -39,6 +39,7 @@ const THEME_CHOICES: { id: AppState["theme"]; label: string; about: string }[] =
 /** Every setting by name, with a few other words people might type, and where it lives. */
 const FINDER: { label: string; more: string; where: string; href: string; phone?: boolean }[] = [
   { label: "AI model and API keys", more: "claude openai gemini gpt key provider brain practice", where: "AI model", href: "#/settings/model" },
+  { label: "Background model", more: "cheaper smaller haiku terra flash routing cost save money quick model", where: "AI model", href: "#/settings/model" },
   { label: "Web search", more: "internet browse look up online", where: "AI model", href: "#/settings/model" },
   { label: "Live voice", more: "talk call speak voice mode", where: "AI model", href: "#/settings/model" },
   { label: "Usage", more: "tokens cost spend money how much", where: "Usage", href: "#/settings/usage" },

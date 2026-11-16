@@ -365,7 +365,10 @@ export interface RoutineDeps {
   workspace: Workspace;
   connectors: Connectors;
   /** the model to run with; `source` says which kind of work it's counted as on the Usage page */
-  provider: (source?: "routine" | "proactive") => Promise<ModelProvider>;
+  /** "quick": the background model (looking around); "main": the one picked in Settings (writing to the user) */
+  provider: (source?: "routine" | "proactive", tier?: "main" | "quick") => Promise<ModelProvider>;
+  /** Is the background model a different one from the main model? (Only then is there a hand-off.) */
+  splitModels?: () => Promise<boolean>;
   userName: () => string;
   soul?: () => string | undefined;
   timeZone?: string;
@@ -449,6 +452,9 @@ function finishTools(mode: PostMode, withTriage = false): ToolDef[] {
     },
   ];
 }
+
+/** What the main model is told when a background check found something to post. */
+const HANDOFF = "Not posted yet: this is worth telling the user. Write the message now, in your own words and following how Lyra writes, and call post with it (and options, if any). Don't look anything up again unless you need to.";
 
 export class Routines {
   private queue: Promise<void> = Promise.resolve();
@@ -649,7 +655,10 @@ export class Routines {
       post(text, uniqueSources(sources).slice(0, 8), plainOptions(options, tainted), card);
     };
     try {
-      const provider = await this.d.provider(source);
+      // a check that usually finds nothing looks around on the background model; when it finds
+      // something to say, the main model takes over and writes it (see the hand-off below)
+      let quick = r.post_mode === "news" && !!(await this.d.splitModels?.().catch(() => false));
+      let provider = await this.d.provider(source, quick ? "quick" : "main");
       const search = !!this.d.webSearch?.();
       const notebook = r.channel_id ? (await this.d.workspace.notebook(r.channel_id).catch(() => undefined))?.read() : undefined;
       const system = routinePrompt(
@@ -679,6 +688,21 @@ export class Routines {
           return;
         }
         const results: Part[] = [];
+        // hand-off: the background model found news; the main model reads the same notes and writes it
+        if (quick && calls.some((c) => c.name === "post")) {
+          quick = false;
+          provider = await this.d.provider(source, "main");
+          for (const call of calls)
+            results.push({
+              type: "tool_result",
+              id: call.id,
+              name: call.name,
+              content: call.name === "post" ? HANDOFF : "Not run: the message comes first.",
+              isError: call.name !== "post",
+            });
+          messages.push({ role: "user", parts: results });
+          continue;
+        }
         for (const call of calls) {
           if (call.name === "post") {
             const text = String(call.input.message ?? "").trim();

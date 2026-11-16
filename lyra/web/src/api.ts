@@ -654,6 +654,7 @@ export const api = {
   latestMessageIds: async () => (await ready).latestMessageIds(),
   snoozeTask: async (id: number, until: string | null) => (await ready).snoozeTask(id, until),
   models: async (provider: "anthropic" | "openai" | "gemini" | "fake") => (await ready).models(provider),
+  quickChoice: async () => (await ready).quickChoice(),
   deleteMessage: async (id: number) => (await ready).deleteMessage(id),
   pinMessage: async (id: number, pinned: boolean) => (await ready).pinMessage(id, pinned),
   rateReply: async (id: number, rating: "up" | "down" | null, why?: string) => (await ready).rateReply(id, rating, why),

@@ -46,6 +46,8 @@ export function ModelSettings({ state, run, busy }: { state: AppState; run: (fn:
         </div>
       </section>
 
+      {current.provider !== "fake" && <BackgroundModel state={state} run={run} busy={busy} />}
+
       <section className="section">
         <h2 className="section-label">Live voice</h2>
         <div className="group">
@@ -91,6 +93,61 @@ export function ModelSettings({ state, run, busy }: { state: AppState; run: (fn:
         {state.keys.openaiBaseUrl && current.provider === "openai" && <p className="hint">Your own model server doesn't support web search.</p>}
       </section>
     </>
+  );
+}
+
+/** Lyra's own background work (mail watch, heads-ups, quiet checks) runs on a smaller model; anything it tells you is written by the main one. */
+function BackgroundModel({ state, run, busy }: { state: AppState; run: (fn: () => Promise<AppState>, done: string) => Promise<void>; busy: boolean }) {
+  const [models, setModels] = useState<Model[]>([]);
+  const [auto, setAuto] = useState<string | null>(null);
+  const provider = state.choice.provider;
+  useEffect(() => {
+    let alive = true;
+    api.models(provider).then((m) => alive && setModels(m), () => {});
+    api.quickChoice().then((c) => alive && setAuto(c.model), () => {});
+    return () => {
+      alive = false;
+    };
+  }, [provider, state.choice.model, state.backgroundModel]);
+  const label = (id: string) => models.find((m) => m.id === id)?.label ?? id;
+  const v = state.backgroundModel;
+  const same = auto === state.choice.model;
+  return (
+    <section className="section">
+      <h2 className="section-label">Background model</h2>
+      <div className="group">
+        <label className="item">
+          <span className="body">
+            <div className="title">For Lyra's own checks</div>
+            <div className="sub">
+              Mail watch, heads-ups, quiet routines, tidy-ups and inbox scans run on this one. Your chats, tasks and anything Lyra tells you are still written by your main model.
+              {v === "auto" && auto ? (same ? ` No smaller partner for ${label(state.choice.model)}, so it uses that.` : ` Now: ${label(auto)}.`) : ""}
+            </div>
+          </span>
+        </label>
+        <div className="item">
+          <select
+            className="select"
+            aria-label="Background model"
+            value={v}
+            disabled={busy}
+            onChange={(e) => {
+              const next = e.target.value;
+              void run(() => api.saveSettings({ backgroundModel: next }), next === "auto" ? "Background model: paired automatically" : next === "same" ? "Background work uses your main model" : `Background model: ${label(next)}`);
+            }}
+          >
+            <option value="auto">Pick for me{auto && v === "auto" && !same ? ` (${label(auto)})` : ""}</option>
+            <option value="same">Same as main</option>
+            {models.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+            {v !== "auto" && v !== "same" && !models.some((m) => m.id === v) && <option value={v}>{v}</option>}
+          </select>
+        </div>
+      </div>
+    </section>
   );
 }
 
