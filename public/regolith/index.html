@@ -2941,7 +2941,7 @@ function switchWeapon(ch, slot) {
   if (slot === 4) { if (!ch.weapons[4].length) return; if (ch.slot === 4) { ch.grenadeIdx++; refreshWeaponModel(ch); return; } }
   else if (!ch.weapons[slot] || ch.slot === slot) return;
   const w = curWeapon(ch); if (w && w.reloadT > 0) w.reloadT = 0;
-  ch.lastSlot = ch.slot; ch.slot = slot; ch.switchT = 0.42; ch.scoped = 0; ch.aimGrenade = false;
+  ch.lastSlot = ch.slot; ch.slot = slot; ch.switchT = 0.42; ch.scoped = 0; ch.aimGrenade = false; ch.ads = false; ch.adsT = ch.adsK = 0;
   refreshWeaponModel(ch); if (ch === human) sfx('draw', null, { vol: 0.5 });
 }
 function bestSlot(ch) { return ch.weapons[1] ? 1 : ch.weapons[2] ? 2 : 3; }
@@ -3057,8 +3057,9 @@ function knifeAttack(ch, w) {
 // per-frame weapon update. inp = { fire, firePressed, alt, reload }
 function updateWeapon(ch, dt, inp) {
   ch.switchT = Math.max(0, (ch.switchT || 0) - dt);
-  const wasAds = ch.ads; ch.adsK = damp(ch.adsK || 0, wasAds ? 1 : 0, 16, dt); ch.ads = false; // aim state from last frame (one-frame lag is invisible)
-  const w = curWeapon(ch); if (!w) return;
+  const w = curWeapon(ch); const wasAds = ch.ads; ch.ads = false; // aim state from last frame (one-frame lag is invisible)
+  { const at = (w && ADS[w.def.id] ? ADS[w.def.id].t : 0.28); ch.adsT = clamp((ch.adsT || 0) + (wasAds ? dt / at : -dt / (at * 0.75)), 0, 1); ch.adsK = easeAds(ch.adsT); }
+  if (!w) return;
   if (!w.grenade && w.reloadT > 0) { w.reloadT -= dt; if (w.reloadT <= 0) finishReload(w); }
   if (!ch.isBot && w.def.kind === 'gun') { const quiet = gameTime - w.lastShot > w.def.interval + 0.06; if (quiet) { ch.recoilP = damp(ch.recoilP, 0, w.def.recover, dt); ch.recoilY = damp(ch.recoilY, 0, w.def.recover, dt); } }
   if (ch.busy || ch.switchT > 0 || ch.frozen && roundState.phase === 'buy') { if (w.grenade) ch.aimGrenade = false; return; }
@@ -3151,8 +3152,12 @@ function updateGrenadeArc() {
 const VM = { root: new THREE.Group(), guns: {}, id: null, team: -1, armR: null, armL: null, handR: null, handL: null, handC: null, flash: null, flashT: 0, kick: 0, rot: 0, swayX: 0, swayY: 0, reloadK: 0, drawK: 1, slash: 0, land: 0 };
 vmScene.add(VM.root);
 // aim down sights: the sight point (gun space, unscaled) sits on the view axis d metres ahead; zoom scales the FOV
-const ADS = { rifle: { p: [0, 0.173, -0.062], d: 0.28, zoom: 0.72 }, smg: { p: [0, 0.147, -0.05], d: 0.24, zoom: 0.8 }, shotgun: { p: [0, 0.103, 0.06], d: 0.08, zoom: 0.88 },
-  lmg: { p: [0, 0.128, 0.12], d: 0.12, zoom: 0.8 }, pistol: { p: [0, 0.0605, 0.02], d: 0.3, zoom: 0.86 }, magnum: { p: [0, 0.0605, 0.02], d: 0.3, zoom: 0.84 } };
+// t = seconds to aim in (out is 25% quicker); heavier guns are slower
+const ADS = { rifle: { p: [0, 0.173, -0.062], d: 0.28, zoom: 0.72, t: 0.3 }, smg: { p: [0, 0.147, -0.05], d: 0.24, zoom: 0.8, t: 0.24 }, shotgun: { p: [0, 0.103, 0.06], d: 0.08, zoom: 0.88, t: 0.32 },
+  lmg: { p: [0, 0.128, 0.12], d: 0.12, zoom: 0.8, t: 0.45 }, pistol: { p: [0, 0.0605, 0.02], d: 0.3, zoom: 0.86, t: 0.2 }, magnum: { p: [0, 0.0605, 0.02], d: 0.3, zoom: 0.84, t: 0.22 } };
+// how heavy each weapon feels in the hands: scales sway, lag, the aim-in arc and settle
+const WEIGHT = { knife: 0.5, pistol: 0.65, magnum: 0.75, smg: 0.8, rifle: 1.0, shotgun: 1.1, sniper: 1.25, lmg: 1.55, frag: 0.5, smoke: 0.5 };
+const easeAds = (t) => t * t * t * (t * (t * 6 - 15) + 10); // smootherstep: slow start, slow finish
 // [x, y, z, yaw]: long guns are yawed muzzle-left so the handguard's side faces the camera (concept framing)
 const VM_POSE = { rifle: [0.17, -0.2, -0.415, 0.2], smg: [0.16, -0.19, -0.4, 0.16], shotgun: [0.17, -0.2, -0.45, 0.16], sniper: [0.165, -0.195, -0.47, 0.12], lmg: [0.175, -0.215, -0.45, 0.16], pistol: [0.135, -0.15, -0.4], magnum: [0.135, -0.15, -0.4], knife: [0.16, -0.16, -0.34], frag: [0.14, -0.15, -0.3], smoke: [0.14, -0.15, -0.3] };
 // first-person forearms and gloves are Blender models; gloves are authored in gun space (origin = grip point) and
@@ -3185,9 +3190,19 @@ function updateViewModel(dt, mdx, mdy) {
   VM.root.visible = show; if (!show) return;
   const g = VM.guns[id]; const base = VM_POSE[id] || VM_POSE.rifle; const w = curWeapon(p);
   // sway (lags behind the mouse), bob, kick, landing dip, reload & draw animation
-  VM.swayX = damp(VM.swayX, clamp(-mdx * 0.00035, -0.04, 0.04), 9, dt); VM.swayY = damp(VM.swayY, clamp(mdy * 0.00035, -0.04, 0.04), 9, dt);
+  // weighted sway: the gun hangs on a soft spring behind mouse velocity (frame-rate independent), overshoots a touch and settles
+  const W = WEIGHT[id] ?? 1, idt = 1 / Math.max(dt, 1 / 240); dt = Math.min(dt, 0.05); // long frames (tab switch) must not kick the springs
+  VM.mvx = damp(VM.mvx || 0, mdx * idt, 18, dt); VM.mvy = damp(VM.mvy || 0, mdy * idt, 18, dt);
+  const tx = clamp(-VM.mvx * 6e-6 * W, -0.05, 0.05), ty = clamp(VM.mvy * 6e-6 * W, -0.05, 0.05), K = 150 / W, C = 2 * Math.sqrt(K) * 0.62;
+  for (let i = 0, h = dt / 2; i < 2; i++) { VM.svx = (VM.svx || 0) + ((tx - VM.swayX) * K - (VM.svx || 0) * C) * h; VM.svy = (VM.svy || 0) + ((ty - VM.swayY) * K - (VM.svy || 0) * C) * h; VM.swayX += VM.svx * h; VM.swayY += VM.svy * h; }
   const sp = hSpeed(p), moving = p.onGround ? clamp(sp / CFG.runSpeed, 0, 1.2) : (p.wr ? 1 : 0);
-  const ak = p.adsK || 0, loose = 1 - ak * 0.85;
+  const ak = p.adsK || 0, loose = 1 - ak * 0.8;
+  // aim-in arc (gun dips, cants and tips while travelling) and a small settle bounce when it lands at the eye
+  const arc = Math.sin(Math.PI * ak) * W, dir = p.ads ? 1 : -1;
+  if (VM.prevAk !== undefined && VM.prevAk < 0.995 && ak >= 0.995) VM.setV = (VM.setV || 0) - 0.9 * W;
+  if (VM.prevAk !== undefined && VM.prevAk > 0.02 && ak <= 0.02) VM.setV = (VM.setV || 0) + 0.6 * W;
+  VM.prevAk = ak; VM.set = VM.set || 0; VM.setV = VM.setV || 0; const sh = Math.min(dt, 0.05) / 3; for (let i = 0; i < 3; i++) { VM.setV += (-VM.set * 260 / W - VM.setV * 16 / Math.sqrt(W)) * sh; VM.set += VM.setV * sh; }
+  const breathe = ak * W, bt = gameTime;
   const ph = p.stepPhase * 2.2 + (p.wr ? gameTime * 7.5 : 0); const bobX = Math.sin(ph) * 0.016 * moving * loose, bobY = -Math.abs(Math.cos(ph)) * 0.019 * moving * loose;
   VM.kick = damp(VM.kick, 0, 14, dt); VM.rot = damp(VM.rot, 0, 11, dt); VM.drawK = Math.min(1, VM.drawK + dt / 0.42); VM.slash = Math.max(0, VM.slash - dt * 3.2);
   const reloading = w && !w.grenade && w.reloadT > 0; VM.reloadK = damp(VM.reloadK, reloading ? 1 : 0, 9, dt);
@@ -3196,8 +3211,10 @@ function updateViewModel(dt, mdx, mdy) {
   const rlPhase = reloading ? 1 - w.reloadT / w.def.reload : 0; const magDip = reloading ? Math.sin(rlPhase * Math.PI) * 0.06 : 0;
   let bx = base[0], by = base[1], bz = base[2], byaw = base[3] ?? 0.03; const A = ADS[id];
   if (A && ak > 0) { const s = g.scale.x; bx = lerp(bx, -A.p[0] * s, ak); by = lerp(by, -A.p[1] * s, ak); bz = lerp(bz, -A.d - A.p[2] * s, ak); byaw = lerp(byaw, 0, ak); }
-  g.position.set(bx + (VM.swayX + bobX) * loose, by + (VM.swayY + bobY) * loose - draw * 0.25 - VM.reloadK * 0.05 - magDip + p.dip * 0.25 * loose - VM.air * 0.012 * loose, bz + VM.kick * 0.035);
-  g.rotation.set(VM.rot * 0.045 + VM.reloadK * 0.45 + draw * 0.6 - VM.swayY * 2 * loose, byaw + VM.swayX * 2 * loose + VM.reloadK * 0.25, VM.reloadK * 0.5 + (p.wr ? -p.wr.side * 0.1 * loose : 0) - VM.slash * 0.6, 'XYZ');
+  bx += arc * 0.012 + Math.sin(bt * 1.05) * 0.0011 * breathe; by += -arc * 0.02 + VM.set * 0.012 + Math.sin(bt * 2.1) * 0.0008 * breathe; bz += VM.set * 0.018;
+  const sw = 0.35 + 0.65 * loose; // aimed: sway shrinks but never vanishes, so the gun still feels held
+  g.position.set(bx + VM.swayX * sw + bobX * loose, by + VM.swayY * sw + bobY * loose - draw * 0.25 - VM.reloadK * 0.05 - magDip + p.dip * 0.25 * loose - VM.air * 0.012 * loose, bz + VM.kick * 0.035);
+  g.rotation.set(VM.rot * 0.045 + VM.reloadK * 0.45 + draw * 0.6 - VM.swayY * 2 * sw - arc * 0.06 * dir - VM.set * 0.05, byaw + VM.swayX * 2 * sw + VM.reloadK * 0.25, VM.reloadK * 0.5 + VM.swayX * 1.4 * sw + arc * 0.14 + (p.wr ? -p.wr.side * 0.1 * loose : 0) - VM.slash * 0.6, 'XYZ');
   if (id === 'knife' && VM.slash > 0) { g.position.x -= VM.slash * 0.12; g.rotation.y += VM.slash * 0.9; }
   g.updateMatrix(); g.updateMatrixWorld(true);
   // arms follow the grips
@@ -3712,7 +3729,7 @@ function startRound(first) {
   for (const ch of chars) {
     if (!ch.alive || first) { ch.weapons = { 1: null, 2: newWeapon('pistol'), 3: newWeapon('knife'), 4: [] }; ch.armor = 0; ch.helmet = false; ch.kit = false; }
     for (const s of [1, 2]) { const w = ch.weapons[s]; if (w) { w.mag = w.def.mag; w.reserve = w.def.reserve; w.reloadT = 0; w.shots = 0; } }
-    ch.alive = true; ch.health = 100; ch.busy = false; ch.useHeld = false; ch.scoped = 0; ch.aimGrenade = false; ch.recoilP = ch.recoilY = 0; ch.punch = 0;
+    ch.alive = true; ch.health = 100; ch.busy = false; ch.useHeld = false; ch.scoped = 0; ch.aimGrenade = false; ch.recoilP = ch.recoilY = 0; ch.punch = 0; ch.ads = false; ch.adsT = ch.adsK = 0;
     const sp = SPAWNS[ch.team][order[ch.team][used[ch.team]++ % SPAWNS[ch.team].length]];
     ch.pos.set(sp.x + rr(-0.4, 0.4), 0, sp.z + rr(-0.4, 0.4)); ch.resetMotion(); ch.frozen = true;
     ch.yaw = ch.team === TEAM_ARES ? 0 + rr(-0.2, 0.2) : Math.PI + rr(-0.2, 0.2); ch.pitch = 0;
@@ -3773,7 +3790,7 @@ function detonate() {
   endRound(TEAM_ARES, 'detonate');
 }
 function killCharacter(ch, killer, def, headshot) {
-  ch.alive = false; ch.health = 0; ch.deaths++; ch.busy = false; ch.scoped = 0; ch.useHeld = false; ch.aimGrenade = false;
+  ch.alive = false; ch.health = 0; ch.deaths++; ch.busy = false; ch.scoped = 0; ch.useHeld = false; ch.aimGrenade = false; ch.ads = false; ch.adsT = ch.adsK = 0;
   if (killer && killer !== ch && killer.team !== ch.team) { killer.kills++; addMoney(killer, def && def.reward !== undefined ? def.reward : 300); }
   if (roundState.charge.carrier === ch) dropCharge(ch);
   if (ch.model) ch.model.visible = true;
@@ -4117,8 +4134,9 @@ function updateCamera(dt) {
   camera.rotation.set(p.pitch + p.recoilP + p.punch + sy, p.yaw + p.recoilY + sx, p.roll, 'YXZ');
   const w = curWeapon(p); const scoped = p.scoped && w && w.def.scope;
   const ak = p.adsK || 0, zoom = w && ADS[w.def.id] ? ADS[w.def.id].zoom : 1;
-  const fovT = scoped ? (p.scoped === 1 ? 26 : 10) : settings.fov * (1 + (zoom - 1) * ak) + clamp((hSpeed(p) - 7.5) * 1.2, 0, 6) * (1 - ak);
-  camera.fov = scoped ? fovT : damp(camera.fov, fovT, ak > 0.02 ? 22 : 10, dt); camera.updateProjectionMatrix();
+  p.fovKick = damp(p.fovKick || 0, clamp((hSpeed(p) - 7.5) * 1.2, 0, 6) * (1 - ak), 10, dt);
+  if (scoped) camera.fov = p.scoped === 1 ? 26 : 10; else { const f = settings.fov * (1 + (zoom - 1) * ak) + p.fovKick; camera.fov = p.wasScoped ? damp(camera.fov, f, 10, dt) : f; if (Math.abs(camera.fov - f) < 0.05) p.wasScoped = false; }
+  if (scoped) p.wasScoped = true; camera.updateProjectionMatrix();
 }
 let titleT = 0;
 function titleCamera(dt) {
@@ -4160,7 +4178,7 @@ async function boot() {
     render(dt = 0) { if (game.state === 'title') titleCamera(dt); renderFrame(dt); },
     tp(x, y, z, yaw = human.yaw, pitch = 0) { human.pos.set(x, y, z); human.vel.set(0, 0, 0); human.yaw = yaw; human.pitch = pitch; human.resetMotion(); human.frozen = roundState.phase === 'buy'; },
     giveWeapon: (id) => { giveWeapon(human, id); const d = WDEF[id]; if (d.slot !== 4) { human.slot = d.slot; refreshWeaponModel(human); } },
-    explode, popSmoke, fxDustPuff, GRENADES, SMOKES, buildSoldier, buildGun, setSoldierGun, animateSoldier, poseSoldier, composer, vmScene, VM, raycastWorld, RAY, navFindPath, switchWeapon, updateWeapon, curWeapon, applyDamage, rayCharacter, HB, get AMBI() { return AMBI; }, get AMB() { return AMB; },
+    explode, popSmoke, fxDustPuff, GRENADES, SMOKES, buildSoldier, buildGun, setSoldierGun, animateSoldier, poseSoldier, composer, vmScene, VM, raycastWorld, RAY, navFindPath, switchWeapon, updateWeapon, curWeapon, applyDamage, rayCharacter, HB, get AMBI() { return AMBI; }, updateViewModel, get AMB() { return AMB; },
   };
   titleCamera(0);
   if (!/[?&]noloop/.test(location.search)) requestAnimationFrame(frame); else renderFrame(0);
