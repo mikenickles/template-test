@@ -102,6 +102,7 @@ export function SetupCard({ toast, compact = false }: { toast: (m: string) => vo
     }
   });
   const [busy, setBusy] = useState<string | null>(null);
+  const [all, setAll] = useState(false);
   const left = steps.filter((s) => !s.done);
   if (hidden || !steps.length || !left.length) return null;
   const done = steps.length - left.length;
@@ -120,14 +121,16 @@ export function SetupCard({ toast, compact = false }: { toast: (m: string) => vo
     }
   };
 
-  // on the Today view: one line, the next thing to do
-  const shown = compact ? left.slice(0, 1) : steps;
+  // (0.54) just the next thing to do; the whole list one tap away (it used to fill the welcome
+  // screen and hide behind the message box)
+  const shown = compact || !all ? left.slice(0, 1) : steps;
+  const more = steps.length - shown.length;
   return (
     <section className={`setup${compact ? " compact" : ""}`} aria-label="Getting started">
       <div className="setup-head">
         <span className="setup-title">{compact ? "Finish setting up" : "Getting started"}</span>
         <span className="setup-count" aria-label={`${done} of ${steps.length} done`}>
-          {done} of {steps.length}
+          {left.length === 1 ? "1 step left" : `${left.length} steps left`}
         </span>
         <button
           className="setup-hide"
@@ -177,6 +180,11 @@ export function SetupCard({ toast, compact = false }: { toast: (m: string) => vo
           );
         })}
       </ul>
+      {!compact && (more > 0 || all) && (
+        <button className="setup-more" aria-expanded={all} onClick={() => setAll((v) => !v)}>
+          {all ? "Show less" : `See all ${steps.length} steps`}
+        </button>
+      )}
     </section>
   );
 }

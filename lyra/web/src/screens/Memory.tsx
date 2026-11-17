@@ -109,7 +109,7 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
   return (
     <div className="screen mem-sections">
       <h1 className="page-title">Memory</h1>
-      <p className="page-sub">Everything Lyra knows about you. Tap anything to change it, or to make Lyra forget it.</p>
+      <p className="page-sub">What Lyra knows about you. Tap to change or forget.</p>
 
       <div className="seg-tabs mem-tabs" role="tablist" aria-label="Memory">
         {TABS.map((t) => (

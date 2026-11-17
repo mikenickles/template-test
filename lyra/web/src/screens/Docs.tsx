@@ -11,6 +11,7 @@ import { DocMarkdown } from "../markdown";
 import { copyText, isDesktop, shareFile } from "../platform";
 import { ago, parse } from "../when";
 import { ask } from "../ask";
+import { MoreMenu } from "../MoreMenu";
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -61,7 +62,7 @@ export function Docs({ toast }: { toast: (m: string) => void }) {
           <Plus size={16} /> New doc
         </button>
       </div>
-      <p className="page-sub">Docs and dashboards Lyra made for you. Ask in chat: “make me a packing list for the camping trip” or “make a dashboard of my subscriptions”.</p>
+      <p className="page-sub">Made by Lyra. Ask in chat for a doc or a dashboard.</p>
       {!!docs?.length && (
         <div className="activity-filters artifact-filters" role="tablist" aria-label="Show">
           {FILTERS.map((f) => (
@@ -166,21 +167,24 @@ function DashboardPage({ doc, toast, onChange: set }: { doc: Doc; toast: (m: str
             Copy
           </button>
         )}
-        <button
-          className="btn text"
-          onClick={() =>
-            void ask(`Delete “${doc.title}”?`).then<unknown>((ok) => ok &&
-            api.deleteDoc(doc.id).then(
-              () => {
-                toast("Deleted");
-                location.hash = "#/artifacts";
-              },
-              (e) => toast((e as Error).message),
-            ))
-          }
-        >
-          Delete
-        </button>
+        <MoreMenu
+          label="More for this dashboard"
+          items={[
+            {
+              label: "Delete",
+              bad: true,
+              onClick: () =>
+                void ask(`Delete “${doc.title}”?`).then<unknown>((ok) => ok &&
+                api.deleteDoc(doc.id).then(
+                  () => {
+                    toast("Deleted");
+                    location.hash = "#/artifacts";
+                  },
+                  (e) => toast((e as Error).message),
+                )),
+            },
+          ]}
+        />
       </div>
       {dash ? <DashboardView d={dash} /> : <p className="mem-empty">This dashboard can't be shown. Ask Lyra to make it again.</p>}
       {doc.instructions.trim() ? (
@@ -276,37 +280,40 @@ export function DocPage({ id, toast, canGoogle }: { id: number; toast: (m: strin
         <button className="btn quiet" onClick={() => void copyText(`# ${doc.title}\n\n${doc.body}`).then(() => toast("Copied"), () => toast("Couldn't copy. Your browser didn't allow it."))}>
           Copy
         </button>
-        {/* on a computer, Copy and Google Docs cover it (the desktop save dialog is for backups) */}
-        {!isDesktop && <button className="btn quiet" onClick={() => void run(() => shareFile(`${doc.title.replace(/[^\w .-]+/g, "").trim() || "Lyra doc"}.md`, new TextEncoder().encode(`# ${doc.title}\n\n${doc.body}\n`)))}>
-          Share
-        </button>}
-        {canGoogle && (
-          <button
-            className="btn quiet"
-            disabled={busy}
-            onClick={() =>
-              void run(async () => {
-                setDoc(await api.saveDocToGoogle(id));
-                toast(doc.gdoc_id ? "Google Doc updated" : "Saved to Google Docs");
-              })
-            }
-          >
-            {busy ? "Saving…" : doc.gdoc_id ? "Update Google Doc" : "Save to Google Docs"}
-          </button>
-        )}
-        <button
-          className="btn text"
-          onClick={() =>
-            void ask(`Delete “${doc.title}”?${doc.gdoc_id ? " The copy in Google Docs stays." : ""}`).then<unknown>((ok) => ok &&
-            run(async () => {
-              await api.deleteDoc(id);
-              toast("Deleted");
-              location.hash = "#/artifacts";
-            }))
-          }
-        >
-          Delete
-        </button>
+        {/* (0.54) the rest in one menu, so the row doesn't wrap */}
+        <MoreMenu
+          label="More for this doc"
+          items={[
+            // on a computer, Copy and Google Docs cover it (the desktop save dialog is for backups)
+            ...(!isDesktop
+              ? [{ label: "Share", onClick: () => void run(() => shareFile(`${doc.title.replace(/[^\w .-]+/g, "").trim() || "Lyra doc"}.md`, new TextEncoder().encode(`# ${doc.title}\n\n${doc.body}\n`))) }]
+              : []),
+            ...(canGoogle
+              ? [
+                  {
+                    label: busy ? "Saving…" : doc.gdoc_id ? "Update Google Doc" : "Save to Google Docs",
+                    disabled: busy,
+                    onClick: () =>
+                      void run(async () => {
+                        setDoc(await api.saveDocToGoogle(id));
+                        toast(doc.gdoc_id ? "Google Doc updated" : "Saved to Google Docs");
+                      }),
+                  },
+                ]
+              : []),
+            {
+              label: "Delete",
+              bad: true,
+              onClick: () =>
+                void ask(`Delete “${doc.title}”?${doc.gdoc_id ? " The copy in Google Docs stays." : ""}`).then<unknown>((ok) => ok &&
+                run(async () => {
+                  await api.deleteDoc(id);
+                  toast("Deleted");
+                  location.hash = "#/artifacts";
+                })),
+            },
+          ]}
+        />
       </div>
       <article className="doc-body">
         <DocMarkdown text={doc.body} />

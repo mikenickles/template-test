@@ -48,9 +48,10 @@ try {
   check(true, "app starts on the welcome screen");
   await shot("light-1-welcome");
 
-  await page.getByRole("link", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Channels" }).click();
+  await page.locator(".drawer-sections").getByRole("link", { name: "Settings" }).click();
   await page.getByRole("link", { name: /AI model.*Practice mode/ }).waitFor();
-  check((await page.locator(".settings-home .item").count()) === 7, "settings opens on seven clear areas");
+  check((await page.locator(".settings-home .item").count()) === 6, "settings opens on six clear areas");
   await shot("light-5-settings");
   await page.getByRole("link", { name: /You and appearance/ }).click();
   await page.getByLabel("What should Lyra call you?").fill("Sam");
@@ -124,6 +125,12 @@ try {
   check(true, "undo from chat works");
 
   check((await page.locator(".drawer-sections a").count()) === 1, "the phone drawer keeps only Settings");
+  await page.getByRole("button", { name: "Search all chats" }).click();
+  await page.locator(".app.drawer-open").waitFor();
+  await page.waitForFunction(() => document.activeElement?.matches(".drawer-search input"));
+  check(true, "the chat's search button opens the menu with the search box ready");
+  await page.keyboard.press("Escape");
+  await page.waitForSelector(".app:not(.drawer-open)");
   await page.locator(".topbar a.orb").click();
   await page.getByText("What Lyra can see").waitFor();
   check(true, "the chat's avatar opens the Lyra page");
@@ -227,10 +234,14 @@ try {
   await page.getByRole("button", { name: /^Done: Find a plumber/ }).click();
   await page.getByText("Nothing on your plate.").waitFor();
   check(true, "swiping a task reveals Later and Done");
-  await page.getByRole("tab", { name: "Done" }).click();
-  await page.getByText("Find a plumber for the kitchen leak").waitFor();
-  check(true, "marking done moves a task to the Done tab");
-  await page.getByRole("tab", { name: "Active" }).click();
+  await page.locator(".g-done button", { hasText: "Done" }).click();
+  await page.locator(".g-done .task-row", { hasText: "Find a plumber for the kitchen leak" }).waitFor();
+  check(true, "marking done folds a task into Done at the bottom of Active");
+  {
+    const t = (await page.locator(".toast").count()) ? await page.locator(".toast").boundingBox() : null;
+    const bar = await page.locator(".tabbar-inner").boundingBox();
+    check(!t || t.y + t.height <= bar.y + 1, "pop-up notes sit above the bottom bar, not over the page");
+  }
   await page.getByRole("link", { name: "Chat" }).click();
   await page.getByText("practice model").first().waitFor();
   check(true, "Chat tab goes back to the chat");
@@ -245,6 +256,7 @@ try {
 
   // ---- routines ----
   await page.getByRole("link", { name: "Tasks" }).click();
+  await page.getByRole("tab", { name: "Scheduled" }).click();
   await page.getByRole("button", { name: "Routine" }).click();
   await page.getByRole("button", { name: /Morning brief/ }).click();
   await page.getByText("Morning brief added").waitFor();
@@ -277,7 +289,7 @@ try {
 
   // ---- Activity: Lyra's face opens the Lyra page, its Activity shortcut the log ----
   await page.locator(".topbar a.orb").click();
-  await page.locator("a.lp-action[href='#/activity']").click();
+  await page.getByRole("link", { name: "Activity", exact: true }).click();
   await page.getByRole("heading", { name: "Activity" }).waitFor();
   const run = page.locator(".activity-row", { hasText: "Find a plumber" }).first();
   await run.waitFor();
@@ -314,6 +326,7 @@ try {
   await page.getByText("practice model").waitFor();
   check((await page.locator(".bubble").count()) === 1, "channel chat starts empty and holds its own messages");
   await shot("light-9-channel-chat");
+  check((await page.locator(".topbar .channel-head .channel-badge").count()) === 1 && (await page.locator(".topbar .channel-head .avatar").count()) === 0, "a channel's top bar shows the channel's icon, not Lyra's face");
 
   // ---- back to back: a second message while Lyra is still thinking joins the same reply ----
   await page.getByPlaceholder("Message Rowan").fill("take your time: plan dinner friday");
@@ -774,7 +787,7 @@ try {
   await page.locator(".bubble", { hasText: "Add it to my tasks" }).waitFor();
   await page.getByRole("button", { name: "Remind me Friday" }).waitFor({ state: "detached" });
   check(true, "suggested next steps are buttons that send as your message, then go away");
-  await page.goto(`${base}/#/tasks`);
+  await page.goto(`${base}/#/tasks?scheduled`);
   await page.locator(".reminders .item", { hasText: "stretch" }).waitFor();
   await shot("light-33-scheduled-reminder");
   await page.getByRole("button", { name: /Cancel reminder: stretch/ }).click();
@@ -817,6 +830,7 @@ try {
 
   // ---- a research task, added by hand ----
   await page.goto(`${base}/#/tasks`);
+  await page.getByRole("tab", { name: "Active" }).click();
   await page.getByRole("button", { name: "New task" }).click();
   await page.getByLabel("Title").fill("Compare compact strollers under $400");
   await page.getByRole("switch", { name: /Research it/ }).check();

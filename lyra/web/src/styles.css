@@ -471,11 +471,12 @@ body[data-busy] .orb:has(.avatar)::after {
   /* the composer and tab bar float over the bottom: messages scroll behind them and fade out, like at the top */
   --below: calc(var(--composer-h, 76px) + var(--tabbar-h));
   padding: calc(var(--inset-top) + 148px) var(--s4) calc(var(--below) + var(--s4));
-  /* messages scroll up behind Lyra's avatar and status, fading the same light way as at the bottom */
+  /* messages scroll up behind Lyra's avatar and status and fade almost away there (0.54: they
+     used to stay 40% visible and ran into the status line) */
   --fade: linear-gradient(
-    rgba(0, 0, 0, 0.1) 0,
-    rgba(0, 0, 0, 0.4) calc(var(--inset-top) + 110px),
-    #000 calc(var(--inset-top) + 170px),
+    transparent 0,
+    transparent calc(var(--inset-top) + var(--fade-top, 110px)),
+    #000 calc(var(--inset-top) + var(--fade-top, 110px) + 42px),
     #000 calc(100% - var(--below) - 40px),
     rgba(0, 0, 0, 0.4) calc(100% - var(--below) + 20px),
     rgba(0, 0, 0, 0.1) 100%
@@ -1621,10 +1622,24 @@ button.item:disabled {
 
 .chat.in-channel .log {
   padding-top: calc(var(--inset-top) + 124px);
+  --fade-top: 124px;
 }
 
-.channel-head:active .orb {
+.channel-head:active .orb,
+.channel-head:active .channel-badge {
   transform: scale(0.95);
+}
+
+/* (0.54) in a channel the top shows the channel's own icon, not Lyra's face */
+.channel-badge.head {
+  width: var(--orb-sm);
+  height: var(--orb-sm);
+  border-radius: 30%;
+  margin-bottom: 0;
+  box-shadow:
+    inset 0 0 0 1px var(--orb-edge),
+    var(--shadow);
+  transition: transform var(--ease);
 }
 
 .channel-chip {
@@ -7397,6 +7412,71 @@ a.drawer-head:hover {
   transform: scale(0.92);
 }
 
+/* (0.54) Memory and Activity first, as two big cards; Skills and Soul as chips under them */
+.lp-big {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 22px 0 10px;
+}
+.lp-big-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  text-decoration: none;
+  transition: transform 160ms ease;
+}
+.lp-big-card:active {
+  transform: scale(0.97);
+}
+.lp-big-card .c {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 8px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.lp-big-card .n {
+  font-size: 16px;
+  font-weight: 650;
+}
+.lp-big-card .s {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.lp-small {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 var(--s6);
+}
+.lp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 550;
+  text-decoration: none;
+}
+.lp-chip svg {
+  color: var(--accent-text);
+}
+
 .lp-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -8308,8 +8388,13 @@ body[data-music] .lp-orb {
 }
 
 /* ---------- pop-up notices sit low on pages without the message box (they covered the middle) ---------- */
+/* (0.54) smaller, and App.tsx puts them right above the bottom bar / message box when there is one */
 .toast {
-  bottom: calc(var(--inset-bottom) + 28px);
+  bottom: calc(var(--inset-bottom) + 20px);
+  padding: 8px 16px;
+  font-size: 13.5px;
+  line-height: 1.35;
+  text-align: center;
 }
 .app:has(.tabbar) ~ .toast,
 .app:has(.tabbar) .toast {
@@ -8855,4 +8940,36 @@ body[data-music] .lp-orb {
 }
 .usage-more {
   margin-top: var(--s6, 32px);
+}
+
+/* ---------- 0.54: the "⋯" at the end of a row of actions ---------- */
+.btn.more-btn {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  justify-content: center;
+}
+.task-actions .btn.more-btn {
+  width: 48px;
+}
+
+/* 0.54: Getting started shows the next step; the rest behind this */
+.setup-more {
+  display: block;
+  margin: 2px 0 0;
+  padding: 6px 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-text);
+  cursor: pointer;
+}
+
+/* 0.54: three tabs on Tasks (Active, Scheduled, Life admin) fit a phone's top bar on one line each */
+#topbar-center .seg-tabs button {
+  padding: 0 11px;
+  font-size: 13px;
+  white-space: nowrap;
 }

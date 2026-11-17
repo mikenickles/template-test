@@ -1,13 +1,13 @@
 import { App as CapApp } from "@capacitor/app";
 import { SystemBars, SystemBarsStyle } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api, isNative, onChange, type AppState, type Channel } from "./api";
 import { Drawer } from "./Drawer";
 import { useSlidingPill } from "./pill";
 import { haptic } from "./haptics";
 import { AskHost } from "./ask";
-import { Back, ChannelIcon, Info, Layers, MenuIcon } from "./icons";
+import { Back, ChannelIcon, Info, Layers, MenuIcon, Search } from "./icons";
 import { Avatar } from "./LyraMark";
 import { Access } from "./screens/Access";
 import { ChannelInfo, NewChannelDialog } from "./screens/ChannelScreens";
@@ -109,6 +109,8 @@ export function App() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [channelsLoaded, setChannelsLoaded] = useState(false);
   const [drawer, setDrawer] = useState(false);
+  // (0.54) the chat's search button opens the menu with the search box ready
+  const [drawerSearch, setDrawerSearch] = useState(false);
   const [creating, setCreating] = useState(false);
   const creatingRef = useRef(creating);
   creatingRef.current = creating;
@@ -305,8 +307,21 @@ export function App() {
   const toast = useCallback((m: string) => {
     setToastMsg(m);
     window.clearTimeout((toast as unknown as { t?: number }).t);
-    (toast as unknown as { t?: number }).t = window.setTimeout(() => setToastMsg(null), 3200);
+    // (0.54) short notes go quickly; a longer one (an error) stays long enough to read
+    (toast as unknown as { t?: number }).t = window.setTimeout(() => setToastMsg(null), Math.min(4500, 2000 + m.length * 35));
   }, []);
+  // (0.54) a note sits just above whatever is at the bottom (message box, tab bar, + button),
+  // never in the middle of what you're reading
+  const [toastBottom, setToastBottom] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    if (!toastMsg) return;
+    let top = innerHeight;
+    document.querySelectorAll<HTMLElement>(".composer, .tabbar, .fab").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.height && r.bottom > innerHeight * 0.6) top = Math.min(top, r.top);
+    });
+    setToastBottom(top < innerHeight ? Math.round(innerHeight - top + 10) : null);
+  }, [toastMsg]);
 
   // The look (0.46): on <html>, remembered for the next launch's first paint. Night Radio is
   // always dark, so the phone's status bar icons go light with it.
@@ -364,6 +379,7 @@ export function App() {
         open={drawer || wide}
         docked={wide}
         onClose={() => setDrawer(false)}
+        searchFirst={drawerSearch}
         channels={channels}
         current={route.name === "chat" ? route.channelId : undefined}
         onNewChannel={() => setCreating(true)}
@@ -385,6 +401,7 @@ export function App() {
               onClick={() => {
                 void refreshChannels();
                 haptic.tap();
+                setDrawerSearch(false);
                 setDrawer(true);
               }}
             >
@@ -413,8 +430,8 @@ export function App() {
           {inChat && channel && (
             <div className="avatar-stack in-channel">
               <a className="channel-head" href={`#/c/${channel.id}/info`} aria-label={`${channel.name}: channel details`}>
-                <span className="orb orb-sm">
-                  <Avatar />
+                <span className="channel-badge head">
+                  <ChannelIcon name={channel.icon} size={26} />
                 </span>
                 <span className="channel-chip">
                   <span>{channel.name}</span>
@@ -426,10 +443,19 @@ export function App() {
           {(!inChat || route.name === "docs") && <span />}
           {route.name === "tasks" ? (
             <div className="topbar-slot" id="topbar-right" />
-          ) : inChat ? (
-            <a className="ring initial" href="#/settings" aria-label="Settings">
-              {initial}
-            </a>
+          ) : route.name === "chat" ? (
+            <button
+              className="ring"
+              aria-label="Search all chats"
+              onClick={() => {
+                void refreshChannels();
+                haptic.tap();
+                setDrawerSearch(true);
+                setDrawer(true);
+              }}
+            >
+              <Search size={20} />
+            </button>
           ) : (
             <span />
           )}
@@ -490,7 +516,7 @@ export function App() {
       <AskHost />
       {/* outside the page that slides aside for the menu, so a message from a form in the menu is seen */}
       {toastMsg && (
-        <div className="toast" role="status">
+        <div className="toast" role="status" style={toastBottom !== null ? { bottom: toastBottom } : undefined}>
           {toastMsg}
         </div>
       )}

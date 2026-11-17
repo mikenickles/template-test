@@ -10,6 +10,7 @@ import { ago, parse } from "../when";
 import { useSlidingPill } from "../pill";
 import { haptic } from "../haptics";
 import { ask } from "../ask";
+import { MoreMenu } from "../MoreMenu";
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
   up_next: "Up next",
@@ -175,10 +176,16 @@ function TopSlot({ id, children }: { id: string; children: ReactNode }) {
 }
 
 export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: string) => void; channels: Channel[]; onCounts: () => void; wide?: boolean }) {
-  const [tab, setTab] = useState<"active" | "done" | "admin">(() =>
-    location.hash.includes("admin") ? "admin" : sessionStorage.getItem("lyra.tasksTab") === "done" ? "done" : "active",
-  );
+  // (0.54) Active · Scheduled · Life admin; finished tasks fold away at the bottom of Active
+  const [tab, setTab] = useState<"active" | "scheduled" | "admin">(() => {
+    if (location.hash.includes("admin")) return "admin";
+    if (location.hash.includes("scheduled")) return "scheduled";
+    const saved = sessionStorage.getItem("lyra.tasksTab");
+    return saved === "scheduled" || saved === "admin" ? saved : "active";
+  });
   const [rows, setRows] = useState<Task[] | null>(null);
+  const [done, setDone] = useState<Task[]>([]);
+  const [showDone, setShowDone] = useState(false);
   const [q, setQ] = useState("");
   const [searching, setSearching] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -186,10 +193,12 @@ export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: 
   const segPill = useSlidingPill(tab, "tasks-tabs");
 
   const load = useCallback(() => {
+    if (tab !== "active") return;
     api
-      .tasks({ status: tab === "done" ? "done" : "open", q: q || undefined })
+      .tasks({ status: "open", q: q || undefined })
       .then(setRows)
       .catch((e) => toast(e.message));
+    api.tasks({ status: "done", q: q || undefined }).then(setDone, () => {});
   }, [tab, q, toast]);
 
   useEffect(load, [load]);
@@ -243,9 +252,9 @@ export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: 
   const seg = (
     <div className="seg-tabs" role="tablist" aria-label="Tasks" ref={segPill}>
       <span className="slide-pill" aria-hidden="true" />
-      {(["active", "done", "admin"] as const).map((k) => (
+      {(["active", "scheduled", "admin"] as const).map((k) => (
         <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>
-          {k === "active" ? "Active" : k === "done" ? "Done" : "Life admin"}
+          {k === "active" ? "Active" : k === "scheduled" ? "Scheduled" : "Life admin"}
         </button>
       ))}
     </div>
@@ -267,14 +276,22 @@ export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: 
   const head = wide ? (
     <div className="tasks-head">
       {seg}
-      {tab !== "admin" && searchBtn}
+      {tab === "active" && searchBtn}
     </div>
   ) : (
     <>
       <TopSlot id="topbar-center">{seg}</TopSlot>
-      <TopSlot id="topbar-right">{tab !== "admin" ? searchBtn : null}</TopSlot>
+      <TopSlot id="topbar-right">{tab === "active" ? searchBtn : null}</TopSlot>
     </>
   );
+
+  if (tab === "scheduled")
+    return (
+      <div className="screen tasks-screen">
+        {head}
+        <ScheduledSection toast={toast} />
+      </div>
+    );
 
   if (tab === "admin")
     return (
@@ -298,10 +315,10 @@ export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: 
         </div>
       ) : rows.length === 0 ? (
         <div className="tasks-empty">
-          <p className="tasks-empty-title">{q ? "No tasks match." : tab === "done" ? "Nothing finished yet." : "Nothing on your plate."}</p>
-          {!q && tab === "active" && <p>Hand Lyra something in chat, like “find me a plumber before Monday”, or tap + to add a task yourself.</p>}
+          <p className="tasks-empty-title">{q ? "No open tasks match." : "Nothing on your plate."}</p>
+          {!q && <p>Ask Lyra in chat, or tap + to add one.</p>}
         </div>
-      ) : tab === "active" ? (
+      ) : (
         <>
           {groups
             .filter((g) => g.items.length)
@@ -338,15 +355,17 @@ export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: 
             </section>
           )}
         </>
-      ) : (
-        <section className="task-group">
-          {rows.map((t) => (
-            <TaskRowView key={t.id} t={t} onToggle={toggle} />
-          ))}
-        </section>
       )}
 
-      {tab === "active" && !q && <ScheduledSection toast={toast} />}
+      {done.length > 0 && (
+        <section className="task-group g-done">
+          <button className="section-label link-like" aria-expanded={showDone || !!q} onClick={() => setShowDone((v) => !v)}>
+            Done <span className="count">{done.length}</span>
+            <Chevron size={14} className={`fold${showDone || q ? " open" : ""}`} />
+          </button>
+          {(showDone || !!q) && done.map((t) => <TaskRowView key={t.id} t={t} onToggle={toggle} />)}
+        </section>
+      )}
 
       <button className="fab" aria-label="New task" onClick={() => setCreating(true)}>
         <Plus size={28} strokeWidth={2} />
@@ -690,16 +709,13 @@ export function TaskPage({ id, toast, onCounts }: { id: number; toast: (m: strin
               Reopen
             </button>
           )}
-          {!activity && task.status !== "stopped" && task.status !== "done" && (
-            <button className="btn quiet" disabled={busy} onClick={() => setStatus("stopped", "Stopped")}>
-              Stop
-            </button>
-          )}
-          {task.status === "stopped" && (
-            <button className="btn quiet" disabled={busy} onClick={() => setStatus("up_next", "Back in Up next")}>
-              Move to Up next
-            </button>
-          )}
+          <MoreMenu
+            label="More for this task"
+            items={[
+              ...(!activity && task.status !== "stopped" && task.status !== "done" ? [{ label: "Stop", disabled: busy, onClick: () => void setStatus("stopped", "Stopped") }] : []),
+              ...(task.status === "stopped" ? [{ label: "Move to Up next", disabled: busy, onClick: () => void setStatus("up_next", "Back in Up next") }] : []),
+            ]}
+          />
         </div>
       </section>
 

@@ -119,48 +119,33 @@ export function Access({ state, setState, toast }: { state: AppState; setState: 
         </span>
         <h1 className="lp-name">Lyra</h1>
         <p className="lp-status">Your chief of staff · here for you</p>
-        <nav className="lp-actions" aria-label="Lyra">
-          <a className="lp-action" href="#/activity">
-            <span className="c">
-              <Pulse />
-            </span>
-            Activity
-          </a>
-          <a className="lp-action" href="#/memory">
-            <span className="c">
-              <Notebook />
-            </span>
-            Memory
-          </a>
-          <a className="lp-action" href="#/memory?skills">
-            <span className="c">
-              <Bulb />
-            </span>
-            Skills
-          </a>
-          <a className="lp-action" href="#/soul">
-            <span className="c">
-              <Spark />
-            </span>
-            Soul
-          </a>
-        </nav>
       </div>
 
-      <div className="lp-stats">
-        <a className="lp-stat" href="#/activity">
-          <b>{counts?.done ?? "–"}</b>
-          <span>done this week</span>
+      {/* (0.54) the two places you go most, big; a number only once there is one */}
+      <nav className="lp-big" aria-label="Lyra">
+        <a className="lp-big-card" href="#/memory" aria-label="Memory">
+          <span className="c">
+            <Notebook />
+          </span>
+          <span className="n">Memory</span>
+          <span className="s">{counts?.remembered ? `${counts.remembered} thing${counts.remembered === 1 ? "" : "s"} remembered` : "What Lyra knows"}</span>
         </a>
-        <a className="lp-stat" href="#/memory">
-          <b>{counts?.remembered ?? "–"}</b>
-          <span>remembered</span>
+        <a className="lp-big-card" href="#/activity" aria-label="Activity">
+          <span className="c">
+            <Pulse />
+          </span>
+          <span className="n">Activity</span>
+          <span className="s">{counts?.done ? `${counts.done} done this week` : "What Lyra's been doing"}</span>
         </a>
-        <div className="lp-stat">
-          <b>{connected}</b>
-          <span>connected</span>
-        </div>
-      </div>
+      </nav>
+      <nav className="lp-small" aria-label="More about Lyra">
+        <a className="lp-chip" href="#/memory?skills">
+          <Bulb size={16} /> Skills
+        </a>
+        <a className="lp-chip" href="#/soul">
+          <Spark size={16} /> Soul
+        </a>
+      </nav>
 
       {notice && (
         <div className={`banner ${notice.tone}`} role={notice.tone === "bad" ? "alert" : "status"}>
@@ -177,7 +162,9 @@ export function Access({ state, setState, toast }: { state: AppState; setState: 
       <PinnedList channelId={null} toast={toast} />
 
       <section className="section">
-        <h2 className="section-label">What Lyra can see</h2>
+        <h2 className="section-label">
+          What Lyra can see {connected > 0 && <span className="count">{connected}</span>}
+        </h2>
         {account && <p className="lp-account">Google · {account} · read only</p>}
         <div className="lp-grid">
           {tiles.map((t) => (

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { compactTimes, triggerOf } from "../../../core/routines";
 import { api, onChange, type Channel, type Reminder, type Routine, type RoutineRun } from "../api";
-import { Bell, ChannelIcon, Chevron, Clock, Close, Plus, Trash } from "../icons";
+import { Bell, ChannelIcon, Clock, Close, Plus, Trash } from "../icons";
 import { Thinking } from "../LyraMark";
 import { ago, parse } from "../when";
 import { ask } from "../ask";
@@ -37,18 +37,10 @@ export function ScheduledSection({ toast }: { toast: (m: string) => void }) {
   const loadSoon = useCallback(() => void api.reminders().then(setSoon, () => {}), []);
   useEffect(loadSoon, [loadSoon]);
   useEffect(() => onChange((e) => e.type === "reminder" && loadSoon()), [loadSoon]);
-  const [open, setOpen] = useState(() => sessionStorage.getItem("lyra.scheduledOpen") !== "0");
   const [adding, setAdding] = useState(false);
   const load = useCallback(() => void api.routines().then(setRows, () => setRows([])), []);
   useEffect(load, [load]);
   useEffect(() => onChange((e) => e.type === "routine" && load()), [load]);
-  useEffect(() => {
-    try {
-      sessionStorage.setItem("lyra.scheduledOpen", open ? "1" : "0");
-    } catch {
-      /* private mode */
-    }
-  }, [open]);
 
   const toggle = async (r: Routine, on: boolean) => {
     try {
@@ -61,17 +53,12 @@ export function ScheduledSection({ toast }: { toast: (m: string) => void }) {
   };
 
   return (
-    <section className="task-group scheduled">
-      <div className="bar">
-        <button className="section-label link-like" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-          Scheduled {rows && rows.length + soon.length > 0 && <span className="count">{rows.length + soon.length}</span>}
-          <Chevron size={14} className={`fold${open ? " open" : ""}`} />
-        </button>
-        <button className="btn quiet small-btn" onClick={() => setAdding(true)}>
-          <Plus size={16} /> Routine
-        </button>
-      </div>
-      {open && soon.length > 0 && (
+    <>
+    {soon.length > 0 && (
+      <section className="task-group scheduled">
+        <h2 className="section-label">
+          Reminders <span className="count">{soon.length}</span>
+        </h2>
         <div className="group reminders">
           {soon.map((r) => (
             <div className="item" key={`r${r.id}`}>
@@ -101,9 +88,19 @@ export function ScheduledSection({ toast }: { toast: (m: string) => void }) {
             </div>
           ))}
         </div>
-      )}
-      {open &&
-        (rows?.length ? (
+      </section>
+    )}
+    <section className="task-group scheduled">
+      <div className="bar">
+        <h2 className="section-label">
+          Routines {!!rows?.length && <span className="count">{rows.length}</span>}
+        </h2>
+        <button className="btn quiet small-btn" onClick={() => setAdding(true)}>
+          <Plus size={16} /> Routine
+        </button>
+      </div>
+      {rows &&
+        (rows.length ? (
           <div className="group">
             {rows.map((r) => (
               <div className="item" key={r.id}>
@@ -125,12 +122,11 @@ export function ScheduledSection({ toast }: { toast: (m: string) => void }) {
             ))}
           </div>
         ) : (
-          <p className="mem-empty">
-            Routines check things on a schedule and post here only when there's news. Add a morning brief, or ask Lyra: “every Friday at 4, check for school emails”.
-          </p>
+          <p className="mem-empty">Routines check things on a schedule and post only when there's news. Try a morning brief, or ask Lyra: “every Friday at 4, check for school emails”.</p>
         ))}
       {adding && <AddRoutineDialog toast={toast} onClose={() => setAdding(false)} onAdded={() => (setAdding(false), load())} />}
     </section>
+    </>
   );
 }
 

@@ -112,9 +112,10 @@ export function Activity({ toast }: { toast: (m: string) => void }) {
         </span>
       </div>
 
-      {items !== null && items.length > 0 && filter === "all" && (
-        <div className="activity-stats">
-          {stats.map((t) => (
+      {/* (0.54) only the numbers that have something in them */}
+      {items !== null && items.length > 0 && filter === "all" && stats.some((t) => t.n) && (
+        <div className="activity-stats" style={{ gridTemplateColumns: `repeat(${stats.filter((t) => t.n).length}, 1fr)` }}>
+          {stats.filter((t) => t.n).map((t) => (
             <div key={t.label} className={t.n ? "" : "zero"}>
               <b>{t.n}</b>
               <span>{t.label}</span>
