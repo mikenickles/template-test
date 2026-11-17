@@ -1269,7 +1269,7 @@ function hcyl(x, y, z, r, len, yaw, mat, o = {}) {
   const g0 = new THREE.CylinderGeometry(o.rTop ?? r, r, len, o.seg || 18, 1, !!o.open);
   const us = o.uvs || UV_SCALE.get(mat) || 4; const uv = g0.attributes.uv;
   for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * Math.max(1, Math.round(TAU * r / us)), uv.getY(i) * len / us);
-  g0.applyMatrix4(M4.makeRotationX(Math.PI / 2)); g0.applyMatrix4(M4.makeRotationY(yaw)); g0.applyMatrix4(M4.makeTranslation(x, y, z));
+  g0.applyMatrix4(M4.makeRotationX(Math.PI / 2)); if (o.tilt) g0.applyMatrix4(M4.makeRotationX(-o.tilt)); g0.applyMatrix4(M4.makeRotationY(yaw)); g0.applyMatrix4(M4.makeTranslation(x, y, z));
   addStatic(prepGeo(g0), mat, o.far);
   if (o.col !== false) colOBB(x, y - r, z, r * 1.8, r * 2, len, yaw, o.surf || surfOf(mat));
 }
@@ -1842,6 +1842,7 @@ function scatterRocks() {
     if (overlapAny(x, groundHeight(x, z) + 0.02, z, s * 1.4, 0.3)) continue;
     const set = [INST.pebA, INST.pebB, INST.pebC][i % 3]; set.add(x, groundHeight(x, z) - s * 0.1, z, r() * TAU, s * (0.8 + r() * 0.35), s * (0.9 + r() * 0.3), s * (0.8 + r() * 0.35));
   }
+  scatterDressing();
 }
 // strategic positions for the bots
 function defineNavPoints() {
@@ -1864,9 +1865,337 @@ function defineNavPoints() {
   NAV_POINTS.postPlant = { A: [P(-48, -50), P(-68, -51), P(-47, -70), P(-68, -69)], B: [P(46, -50), P(72, -56), P(50, -78), P(70, -76)] };
 }
 function buildMap() {
+  CRATERS.push({ x: -30, z: 64, r: 3.2, depth: 0.55, rim: 0.25 }, { x: 30, z: 67, r: 3, depth: 0.5, rim: 0.22 }, { x: -36, z: -80, r: 3.5, depth: 0.6, rim: 0.25 }, { x: 64, z: -24, r: 2.8, depth: 0.45, rim: 0.2 }, { x: -50, z: 0, r: 3, depth: 0.5, rim: 0.22 });
   CRATERS.push({ x: 0, z: 10, r: 11, depth: 2.4, rim: 0.55 }, { x: -66, z: 8, r: 5, depth: 0.9, rim: 0.3 }, { x: 48, z: 58, r: 4.5, depth: 0.8, rim: 0.3 },
     { x: 0, z: 175, r: 36, depth: 6, rim: 2.5 }, { x: -170, z: -40, r: 50, depth: 7, rim: 3 }, { x: 150, z: 120, r: 30, depth: 5, rim: 2 });
-  buildGround(); buildBoundary(); buildAresColony(); buildCanyon(); buildMid(); buildEastYard(); buildOlympus(); buildScenery();
+  buildGround(); buildBoundary(); buildAresColony(); buildCanyon(); buildMid(); buildEastYard(); buildOlympus(); buildScenery(); buildDressing();
+}
+// =====================================================================
+// 6b. SET DRESSING & AMBIENCE — clutter, cables, floodlights, vents, signs, wreckage, animated props;
+//     emitters for wind-blown sand, dust devils, steam, sparks, sand trickles and distant dust plumes
+// =====================================================================
+const AMBI = { vents: [], sparks: [], trickles: [], devils: [], beacons: [], spin: [], socks: [], halos: [] };
+const DRESS_MAT = {};
+const WIND = new THREE.Vector3(1, 0, 0.35).normalize();
+
+function dressMaterials() {
+  // tyre tracks: two lugged tread bands, alpha only
+  const c = makeCanvas(128, 256), g = c.getContext('2d');
+  for (const x0 of [6, 78]) for (let y = 0; y < 256; y += 16) {
+    g.fillStyle = 'rgba(70,32,20,0.55)'; g.fillRect(x0, y, 44, 16);
+    g.fillStyle = 'rgba(40,18,12,0.5)'; g.beginPath(); g.moveTo(x0, y + 2); g.lineTo(x0 + 22, y + 9); g.lineTo(x0 + 44, y + 2); g.lineTo(x0 + 44, y + 7); g.lineTo(x0 + 22, y + 14); g.lineTo(x0, y + 7); g.fill();
+  }
+  const t = canvasTex(c); t.wrapS = THREE.ClampToEdgeWrapping;
+  DRESS_MAT.tracks = new THREE.MeshStandardMaterial({ map: t, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  // windsock stripes
+  const s = makeCanvas(64, 8), sg = s.getContext('2d');
+  for (let i = 0; i < 5; i++) { sg.fillStyle = i % 2 ? '#f2efe8' : '#e8642a'; sg.fillRect(i * 12.8, 0, 12.8, 8); }
+  DRESS_MAT.sock = new THREE.MeshStandardMaterial({ map: canvasTex(s, true, false), side: THREE.DoubleSide, roughness: 0.8 });
+  DRESS_MAT.flag = new THREE.MeshStandardMaterial({ color: 0xff6a1e, side: THREE.DoubleSide, roughness: 0.8, emissive: 0x3a1004 });
+  DRESS_MAT.chute = new THREE.MeshStandardMaterial({ map: DRESS_MAT.sock.map, side: THREE.DoubleSide, roughness: 0.9 }); DRESS_MAT.chute.map = DRESS_MAT.sock.map.clone(); DRESS_MAT.chute.map.wrapS = DRESS_MAT.chute.map.wrapT = THREE.RepeatWrapping; DRESS_MAT.chute.map.repeat.set(4, 1); DRESS_MAT.chute.map.needsUpdate = true;
+  DRESS_MAT.dish = new THREE.MeshStandardMaterial({ color: 0xe8e4dc, roughness: 0.45, metalness: 0.2, side: THREE.DoubleSide, envMapIntensity: ENV_INT });
+}
+
+// ---------- ground details
+function tracks(pts, w = 1.9) {
+  const curve = new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, 0, z)));
+  const n = Math.max(8, Math.round(curve.getLength() / 0.6)), P = curve.getSpacedPoints(n);
+  const pos = [], uv = []; let dist = 0;
+  for (let i = 0; i < n; i++) {
+    const a = P[i], b = P[i + 1], dx = b.x - a.x, dz = b.z - a.z, l = Math.hypot(dx, dz) || 1, nx = -dz / l * w / 2, nz = dx / l * w / 2;
+    const q = [[a.x - nx, a.z - nz, 0, dist], [a.x + nx, a.z + nz, 1, dist], [b.x - nx, b.z - nz, 0, dist + l], [b.x + nx, b.z + nz, 1, dist + l]];
+    for (const k of [0, 2, 1, 1, 2, 3]) { const [x, z, u, d] = q[k]; pos.push(x, groundHeight(x, z) + 0.03, z); uv.push(u, d / 2.2); }
+    dist += l;
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.computeVertexNormals();
+  addStatic(g, DRESS_MAT.tracks);
+}
+function cable(pts, r = 0.055, mat = MAT.rubber) { // pts: [x, y(above ground), z]
+  const curve = new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => new THREE.Vector3(x, groundHeight(x, z) + r + y, z)));
+  addStatic(prepGeo(new THREE.TubeGeometry(curve, Math.max(8, Math.round(curve.getLength() * 2)), r, 6)), mat);
+}
+function debris(x, z, r, n, seed = 1) { // scattered hull panels and struts, half buried
+  const rg = mulberry32(seed);
+  for (let i = 0; i < n; i++) {
+    const a = rg() * TAU, d = r * Math.sqrt(rg()), px = x + Math.cos(a) * d, pz = z + Math.sin(a) * d, big = rg() < 0.35;
+    const mat = [MAT.panelL, MAT.metalMid, MAT.metalDark, MAT.white][(rg() * 4) | 0];
+    if (big) box(px, groundHeight(px, pz) - 0.08, pz, 0.8 + rg() * 1.1, 0.05, 0.5 + rg() * 0.8, mat, { yaw: rg() * TAU, rx: (rg() - 0.5) * 0.7, rz: (rg() - 0.5) * 0.7, col: false });
+    else box(px, groundHeight(px, pz) - 0.05, pz, 0.08, 0.08, 0.6 + rg() * 1.2, MAT.metalDark, { yaw: rg() * TAU, rx: (rg() - 0.5) * 0.5, col: false, uv: 'face' });
+  }
+}
+function surveyFlag(x, z, h = 1.1) {
+  const y = groundHeight(x, z); box(x, y, z, 0.03, h, 0.03, MAT.metalMid, { col: false, uv: 'face' });
+  const f = new THREE.PlaneGeometry(0.34, 0.2); f.translate(0.17, 0, 0); f.rotateY(-0.6); f.translate(x, y + h - 0.1, z); addStatic(prepGeo(f), DRESS_MAT.flag);
+}
+
+// ---------- lights and beacons (emissive panels + additive halo sprites; no extra real lights)
+function halo(x, y, z, color, size, blink = 0, phase = 0) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.soft, color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: blink ? 0.75 : 0.42, fog: true }));
+  s.position.set(x, y, z); s.scale.setScalar(size); s.renderOrder = 3; scene.add(s);
+  if (blink) AMBI.beacons.push({ s, period: blink, phase, base: 0.85 }); else AMBI.halos.push(s);
+  return s;
+}
+function floodlight(x, z, yaw, h = 5.5) {
+  const y = groundHeight(x, z), fx = Math.sin(yaw), fz = Math.cos(yaw);
+  cyl(x, y, z, 0.11, h, MAT.metalDark, { seg: 8 }); cyl(x, y, z, 0.32, 0.25, MAT.metalDark, { seg: 10, col: false });
+  box(x + fx * 0.35, y + h - 0.05, z + fz * 0.35, 0.12, 0.12, 0.9, MAT.metalDark, { yaw, col: false, uv: 'face' });
+  for (const s of [-1, 1]) {
+    const hx = x + fx * 0.7 + fz * s * 0.32, hz = z + fz * 0.7 - fx * s * 0.32;
+    box(hx, y + h - 0.35, hz, 0.55, 0.42, 0.24, MAT.metalMid, { yaw, rx: 0.5, col: false, uv: 'face' });
+    box(hx + fx * 0.13, y + h - 0.33, hz + fz * 0.13, 0.46, 0.33, 0.04, MAT.lightWhite, { yaw, rx: 0.5, col: false, uv: 'face' });
+    halo(hx + fx * 0.3, y + h - 0.45, hz + fz * 0.3, 0xfff0d8, 1.3);
+  }
+}
+function wallLamp(x, y, z, yaw, color = 0xfff0d8, mat = MAT.lightWhite) {
+  const fx = Math.sin(yaw), fz = Math.cos(yaw);
+  box(x, y, z, 0.7, 0.18, 0.28, MAT.metalDark, { yaw, col: false, uv: 'face' }); box(x + fx * 0.06, y - 0.03, z + fz * 0.06, 0.6, 0.05, 0.2, mat, { yaw, col: false, uv: 'face' });
+  halo(x + fx * 0.25, y - 0.15, z + fz * 0.25, color, 1.0);
+}
+function beacon(x, y, z, color = 0xff3020, period = 1.6, phase = 0) { box(x - 0.09, y - 0.09, z - 0.09, 0.18, 0.18, 0.18, color === 0xff3020 ? MAT.lightRed : MAT.lightOrange, { col: false, uv: 'face' }); return halo(x, y + 0.02, z, color, 2.2, period, phase); }
+
+// ---------- machinery
+function generator(x, z, yaw, vents = true) {
+  const y = groundHeight(x, z), fx = Math.sin(yaw), fz = Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
+  box(x, y, z, 2.0, 1.3, 1.1, MAT.metalMid, { yaw }); box(x, y + 1.3, z, 2.05, 0.08, 1.15, MAT.metalDark, { yaw, col: false });
+  for (let i = -3; i <= 3; i++) box(x + rx * i * 0.22 + fx * 0.56, y + 0.35, z + rz * i * 0.22 + fz * 0.56, 0.06, 0.75, 0.04, MAT.metalDark, { yaw, col: false, uv: 'face' });
+  box(x, y + 0.02, z, 2.1, 0.12, 1.2, MAT.hazard, { yaw, col: false, uv: 'face' });
+  box(x - rx * 0.62 + fx * 0.57, y + 0.85, z - rz * 0.62 + fz * 0.57, 0.36, 0.22, 0.03, MAT.lightOrange, { yaw, col: false, uv: 'face' });
+  const ex = x + rx * 0.7, ez = z + rz * 0.7; cyl(ex, y + 1.3, ez, 0.11, 0.9, MAT.metalDark, { seg: 8, col: false }); cyl(ex, y + 2.2, ez, 0.14, 0.12, MAT.metalDark, { seg: 8, col: false });
+  if (vents) AMBI.vents.push({ x: ex, y: y + 2.35, z: ez, kind: 'exhaust', rate: 5, t: 0 });
+  return { x, y, z };
+}
+function gasRack(x, z, yaw, n = 4) {
+  const y = groundHeight(x, z), rx = Math.cos(yaw), rz = -Math.sin(yaw);
+  for (let i = 0; i < n; i++) { const o = (i - (n - 1) / 2) * 0.5, cx = x + rx * o, cz = z + rz * o; cyl(cx, y, cz, 0.2, 1.6, i % 2 ? MAT.white : MAT.trimTeal, { seg: 12, col: false }); cyl(cx, y + 1.6, cz, 0.2, 0.18, MAT.white, { rTop: 0.08, seg: 12, col: false }); cyl(cx, y + 1.78, cz, 0.05, 0.12, MAT.metalDark, { seg: 6, col: false }); }
+  box(x, y + 1.1, z, n * 0.5 + 0.1, 0.06, 0.5, MAT.metalDark, { yaw, col: false, uv: 'face' }); box(x, y, z, n * 0.5 + 0.1, 0.08, 0.5, MAT.metalDark, { yaw, col: false, uv: 'face' });
+  colOBB(x, y, z, n * 0.5 + 0.1, 1.8, 0.5, yaw, 'metal');
+}
+function floorVent(x, z, r = 0.9) {
+  const y = groundHeight(x, z); cyl(x, y - 0.05, z, r + 0.12, 0.13, MAT.metalDark, { seg: 16, col: false }); box(x, y + 0.075, z, r * 1.6, 0.02, r * 1.6, MAT.grate, { col: false, uvs: 1 });
+  AMBI.vents.push({ x, y: y + 0.1, z, kind: 'steam', rate: 7, t: 0, r });
+}
+function roofUnit(x, y, z, yaw) { // AC / scrubber box with a fan, steam on top
+  box(x, y, z, 1.6, 0.9, 1.2, MAT.metalMid, { yaw, col: false }); cyl(x, y + 0.9, z, 0.45, 0.08, MAT.metalDark, { seg: 14, col: false });
+  box(x, y + 0.99, z, 0.8, 0.02, 0.8, MAT.grate, { yaw, col: false, uvs: 1 }); AMBI.vents.push({ x, y: y + 1.0, z, kind: 'steam', rate: 3, t: 0, r: 0.3 });
+}
+function antennaCluster(x, y, z, n = 3, seed = 3) {
+  const rg = mulberry32(seed);
+  for (let i = 0; i < n; i++) { const ax = x + (rg() - 0.5) * 1.6, az = z + (rg() - 0.5) * 1.6, h = 1.6 + rg() * 2.6; cyl(ax, y, az, 0.04, h, MAT.metalDark, { seg: 6, col: false }); cyl(ax, y + h * 0.6, az, 0.12, 0.08, MAT.metalMid, { seg: 8, col: false }); if (i === 0) beacon(ax, y + h + 0.1, az, 0xff3020, 1.4 + rg(), rg() * 2); }
+}
+function dish(x, y, z, r, yaw, tilt = 0.6, spin = 0) {
+  const grp = new THREE.Group(); grp.position.set(x, y, z);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 1.0, 8), MAT.metalDark); post.position.y = 0.5; grp.add(post);
+  const head = new THREE.Group(); head.position.y = 1.0; head.rotation.y = yaw; grp.add(head);
+  const bowl = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 8, 0, TAU, 0, 0.75), DRESS_MAT.dish); bowl.rotation.x = -Math.PI / 2 + tilt; bowl.position.z = 0.1; bowl.scale.set(1, 1, 0.55); head.add(bowl);
+  const feed = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, r * 0.9, 6), MAT.metalDark); feed.rotation.x = Math.PI / 2 - tilt; feed.position.set(0, Math.sin(tilt) * r * 0.45, -Math.cos(tilt) * r * 0.45 + 0.1); head.add(feed);
+  grp.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  scene.add(grp); if (spin) AMBI.spin.push({ o: head, w: spin });
+}
+function windsock(x, z, h = 4.2, y0 = null) {
+  const y = y0 ?? groundHeight(x, z); cyl(x, y, z, 0.05, h, MAT.metalMid, { seg: 6, col: false });
+  const piv = new THREE.Group(); piv.position.set(x, y + h - 0.15, z); scene.add(piv);
+  const g = new THREE.CylinderGeometry(0.12, 0.26, 1.5, 12, 4, true); g.rotateZ(Math.PI / 2); g.translate(0.78, 0, 0);
+  const m = new THREE.Mesh(g, DRESS_MAT.sock); m.castShadow = true; piv.add(m);
+  AMBI.socks.push({ piv, m, phase: x * 0.37 + z });
+}
+function sign(x, z, yaw, lines, color = '#1f2a36', accent = '#ffd34a', w = 2.2, h = 1.1, y0 = null, posts = true) {
+  const c = makeCanvas(512, 256), g = c.getContext('2d');
+  g.fillStyle = color; g.fillRect(0, 0, 512, 256); g.fillStyle = accent; g.fillRect(0, 0, 512, 18); g.fillRect(0, 238, 512, 18);
+  g.fillStyle = '#f4efe6'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  lines.forEach((t, i) => { g.font = `700 ${i ? 46 : 64}px Barlow Condensed, Arial Narrow, sans-serif`; g.fillText(t, 256, 128 + (i - (lines.length - 1) / 2) * 72); });
+  const y = y0 ?? groundHeight(x, z) + 1.3, fx = Math.sin(yaw), fz = Math.cos(yaw);
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: canvasTex(c, true, false), roughness: 0.7, emissive: 0xffffff, emissiveMap: canvasTex(c, true, false), emissiveIntensity: 0.15 }));
+  mesh.position.set(x + fx * 0.04, y, z + fz * 0.04); mesh.rotation.y = yaw; mesh.receiveShadow = true; scene.add(mesh);
+  box(x - fx * 0.02, y - h / 2 - 0.04, z - fz * 0.02, w + 0.1, h + 0.08, 0.05, MAT.metalDark, { yaw, col: false, uv: 'face' });
+  if (posts) for (const s of [-1, 1]) { const px = x + Math.cos(yaw) * s * (w / 2 - 0.15), pz = z - Math.sin(yaw) * s * (w / 2 - 0.15); box(px - fx * 0.06, groundHeight(px, pz), pz - fz * 0.06, 0.08, y - groundHeight(px, pz), 0.08, MAT.metalDark, { col: false, uv: 'face' }); }
+}
+function droneWreck(x, z, yaw) {
+  const y = groundHeight(x, z);
+  box(x, y + 0.05, z, 1.1, 0.35, 0.8, MAT.white, { yaw, rx: 0.25, rz: -0.35, col: false }); box(x, y + 0.38, z, 0.5, 0.14, 0.4, MAT.metalDark, { yaw, rx: 0.25, rz: -0.35, col: false });
+  for (const [dx, dz, bent] of [[0.75, 0.55, 0], [-0.75, 0.55, 0.6], [0.75, -0.55, 0], [-0.9, -0.3, 1.1]]) {
+    const c = Math.cos(yaw), s = Math.sin(yaw), px = x + dx * c + dz * s, pz = z - dx * s + dz * c;
+    box(px, y + 0.18 + bent * 0.05, pz, 0.08, 0.06, 0.9, MAT.metalDark, { yaw: yaw + Math.atan2(dx, dz), rx: bent * 0.4, col: false, uv: 'face' });
+    cyl(px, y + 0.24, pz, 0.32, 0.03, MAT.metalMid, { seg: 12, col: false });
+  }
+  debris(x + 1.2, z + 0.6, 2.2, 6, 77);
+  AMBI.sparks.push({ x: x + 0.2, y: y + 0.45, z, t: 1 }); AMBI.vents.push({ x: x - 0.2, y: y + 0.4, z: z + 0.1, kind: 'smoke', rate: 4, t: 0 });
+}
+function forklift(x, z, yaw) {
+  const y = groundHeight(x, z), fx = Math.sin(yaw), fz = Math.cos(yaw);
+  box(x, y + 0.3, z, 1.2, 0.8, 1.9, MAT.trimOrange, { yaw, col: false }); box(x - fx * 0.3, y + 1.1, z - fz * 0.3, 1.1, 0.06, 1.1, MAT.metalDark, { yaw, col: false });
+  for (const s of [-1, 1]) { const px = x + Math.cos(yaw) * s * 0.5, pz = z - Math.sin(yaw) * s * 0.5; box(px - fx * 0.75, y + 0.3, pz - fz * 0.75, 0.06, 0.85, 0.06, MAT.metalDark, { col: false, uv: 'face' }); box(px + fx * 0.95, y, pz + fz * 0.95, 0.1, 2.2, 0.1, MAT.metalDark, { yaw, col: false, uv: 'face' }); box(px + fx * 1.45, y + 0.05, pz + fz * 1.45, 0.12, 0.05, 0.9, MAT.metalMid, { yaw, col: false, uv: 'face' }); }
+  for (const [a, b] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.65], [0.6, 0.65]]) { const px = x + Math.cos(yaw) * a + fx * b, pz = z - Math.sin(yaw) * a + fz * b; hcyl(px, y + 0.3, pz, 0.3, 0.25, yaw + Math.PI / 2, MAT.rubber, { col: false, seg: 12 }); }
+  beacon(x - fx * 0.3, y + 1.3, z - fz * 0.3, 0xff8a20, 0.8);
+  colOBB(x + fx * 0.25, y, z + fz * 0.25, 1.3, 2.2, 2.6, yaw, 'metal');
+}
+function trickle(x, y, z, rate = 9) { AMBI.trickles.push({ x, y, z, gy: groundHeight(x, z), rate, t: 0 }); }
+
+function sandDrift(x, z, len, w, h, yaw) { // wind-blown sand banked against walls (low, walk-through)
+  const g = new THREE.SphereGeometry(1, 18, 6, 0, TAU, 0, Math.PI / 2); const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const k = noise3(p.getX(i) * 2 + x, p.getZ(i) * 2, z) - 0.5; p.setXYZ(i, p.getX(i) * len / 2 * (1 + k * 0.2), p.getY(i) * h * (1 + k * 0.5), p.getZ(i) * w / 2 * (1 + k * 0.3)); }
+  g.rotateY(yaw); g.translate(x, groundHeight(x, z) - 0.06, z); g.computeVertexNormals(); const q = prepGeo(g); worldUV(q, 8); addStatic(q, MAT.ground);
+}
+function powerLine(pts, h = 6.2) {
+  const tops = [];
+  for (const [x, z] of pts) {
+    const y = groundHeight(x, z); cyl(x, y, z, 0.13, h, MAT.metalDark, { seg: 8, colScale: 1 }); box(x - 0.9, y + h - 0.5, z - 0.07, 1.8, 0.12, 0.14, MAT.metalDark, { col: false, uv: 'face' });
+    for (const dx of [-0.75, 0, 0.75]) cyl(x + dx, y + h - 0.38 + (dx ? 0 : 0.35), z, 0.05, 0.16, MAT.white, { seg: 6, col: false });
+    tops.push([x, y + h - 0.2, z]);
+  }
+  for (let i = 0; i + 1 < tops.length; i++) for (const [dx, dy] of [[-0.75, 0], [0, 0.35], [0.75, 0]]) {
+    const a = tops[i], b = tops[i + 1], P = [];
+    for (let k = 0; k <= 10; k++) { const t = k / 10; P.push(new THREE.Vector3(a[0] + dx + (b[0] - a[0]) * t, a[1] + dy + (b[1] - a[1]) * t - Math.sin(t * Math.PI) * 0.9, a[2] + (b[2] - a[2]) * t)); }
+    addStatic(prepGeo(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(P), 12, 0.025, 4)), MAT.rubber);
+  }
+}
+function supplyPod(x, z, yaw, tilt = 0.35, chute = true) { // crashed cargo drop pod, half buried, with its parachute
+  const y = groundHeight(x, z), fx = Math.sin(yaw), fz = Math.cos(yaw);
+  hcyl(x, y + 0.55, z, 0.85, 2.4, yaw, MAT.white, { seg: 16, col: false, tilt });
+  hcyl(x + fx * 1.25, y + 0.55 + Math.sin(tilt) * 1.2, z + fz * 1.25, 0.86, 0.35, yaw, MAT.trimOrange, { seg: 16, col: false, tilt });
+  hcyl(x - fx * 1.32, y + 0.55 - Math.sin(tilt) * 1.2, z - fz * 1.32, 0.6, 0.4, yaw, MAT.metalDark, { seg: 14, rTop: 0.86, col: false, tilt });
+  for (const s of [-1, 1]) box(x + Math.cos(yaw) * s * 0.86, y + 0.4, z - Math.sin(yaw) * s * 0.86, 0.06, 0.5, 1.4, MAT.hazard, { yaw, col: false, uv: 'face' });
+  colOBB(x, y, z, 1.8, 1.3, 2.6, yaw, 'metal'); sandDrift(x - fx * 1.4, z - fz * 1.4, 3.2, 2.6, 0.55, yaw + Math.PI / 2);
+  if (chute) { const g = new THREE.SphereGeometry(2.6, 18, 6, 0, TAU, 0, 0.9); const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) { const k = noise3(p.getX(i) + x, p.getZ(i), z); p.setY(i, (p.getY(i) - 2.6 * Math.cos(0.9)) * 0.35 + k * 0.25); }
+    g.rotateY(yaw); g.translate(x + fx * 3.6, y + 0.02, z + fz * 3.6); g.computeVertexNormals(); const m = new THREE.Mesh(g, DRESS_MAT.chute); m.receiveShadow = true; scene.add(m);
+    for (const s of [-1, 0, 1]) cable([[x + fx * 1.4, 0.5, z + fz * 1.4], [x + fx * 2.2 + Math.cos(yaw) * s * 0.8, 0.1, z + fz * 2.2 - Math.sin(yaw) * s * 0.8], [x + fx * 3 + Math.cos(yaw) * s * 1.6, 0.25, z + fz * 3 - Math.sin(yaw) * s * 1.6]], 0.015, MAT.metalMid); }
+}
+
+// ---------- placement
+function buildDressing() {
+  dressMaterials();
+  // Ares Colony: floodlit pads, generator + cabling, radar, windsocks, rover tracks heading to mid
+  floodlight(-25, 62, 0.6); floodlight(26, 63, -0.6); floodlight(-21.5, 104.5, Math.PI / 2); floodlight(21.5, 101, -Math.PI / 2);
+  generator(-21.2, 100, Math.PI / 2); cable([[-20, 0, 100], [-19.2, 0, 99.2], [-18.3, 0.4, 98.6]]);
+  cable([[-17, 0, 74.2], [-14, 0, 80], [-10, 0, 88], [-6, 0, 96.1]]); cable([[18, 0, 76.2], [16, 0, 84], [10.5, 0, 92], [8, 0, 96.1]], 0.05);
+  dish(7.6, 9.5, 98.6, 1.3, 0.4, 0.75, 0.6); antennaCluster(-12, 14.5, 103.5, 3, 11);
+  windsock(-31, 66); windsock(40, 68);
+  gasRack(47.5, 88, 0.3); gasRack(-47, 84, -0.2, 3);
+  tracks([[1, 96], [-2, 84], [2, 70], [-2, 58], [3, 44], [0, 30], [2.5, 16], [3.6, 9.5]]); tracks([[-17, 68], [-10, 80], [-4, 92]]); tracks([[18, 70], [12, 82], [6, 93]]);
+  for (const [x, z] of [[-11.5, 64], [16, 61], [-30, 58], [33, 58], [-36, 64]]) surveyFlag(x, z);
+  sign(0, 66.8, 0, ['◄ CANYON    MID ▲    YARD ►', 'OLYMPUS STATION 180 m'], '#2a1a16', '#ff6a2a', 3.2, 1.2);
+  for (const [x, z, ph] of [[-23.1, 67.5, 0], [23.1, 69.5, 0.7]]) beacon(x, groundHeight(x, z) + 0.15, z, 0xff8a20, 1.2, ph);
+  // mid: crashed rover sparks and smoke, debris, refinery and relay rooftops, cables, lamps, sand trickling off the arch
+  AMBI.sparks.push({ x: 3.0, y: groundHeight(3.5, 8) + 1.6, z: 8.4, t: 0 }); AMBI.vents.push({ x: 4.6, y: groundHeight(4.6, 7.6) + 1.2, z: 7.6, kind: 'smoke', rate: 3, t: 0 });
+  debris(1, 12, 6, 14, 5);
+  for (const z of [26, 36, 43.5, 54]) wallLamp(-13.75, 3.2, z, Math.PI / 2);
+  roofUnit(-19, 11, 28, 0); roofUnit(-28, 11, 44, 0.2); roofUnit(-21, 11, 50, 0); antennaCluster(-30, 11, 26, 3, 21);
+  roofUnit(22, 9, 46, 0); dish(26.5, 9, 52, 1.0, -0.6, 0.55); antennaCluster(19, 7, 26, 2, 31); roofUnit(27, 7, 30, 0);
+  roofUnit(22, 10, -20, 0); roofUnit(30, 10, 2, 0); antennaCluster(32, 10, -10, 3, 41);
+  cable([[-13.6, 0, 20.5], [-6, 0, 21], [2, 0, 20], [9.4, 0, 21.6]]); cable([[-13.6, 0, 20.9], [-6, 0, 21.4], [2, 0, 20.4], [9.4, 0, 21.9]], 0.04, MAT.trimOrange); box(9.9, 0, 21.8, 0.6, 0.7, 0.5, MAT.metalMid, { col: false }); box(9.9, 0.45, 21.52, 0.3, 0.12, 0.02, MAT.lightOrange, { col: false, uv: 'face' });
+  floodlight(-12.3, 19.8, 2.4, 5); floodlight(14.2, -14, -2.0, 5);
+  for (const x of [-6, -1.5, 4.5]) trickle(x, 11.15, -7.6 + (x % 2) * 0.4, 7); for (const [x, z] of [[-64, 9], [-70.5, 9.6]]) trickle(x, 7.95, z, 8);
+  for (const [x, z] of [[-6, 24], [9, 3], [-11, 12]]) surveyFlag(x, z);
+  // canyon: crashed survey drone, cabling to the refinery tanks, lamps
+  droneWreck(-51.5, 36.5, 0.7); debris(-62, -8, 5, 10, 9);
+  for (const z of [29, 37, 45]) wallLamp(-39.5, 5, z, -Math.PI / 2, 0xffd0a0, MAT.lightOrange);
+  cable([[-39.4, 0, 27], [-41, 0, 33], [-40, 0, 41], [-39.4, 0, 47]], 0.07); floodlight(-46, 52, 0.3, 6);
+  for (const [x, z] of [[-55, -30], [-60, 50], [-48, 2]]) surveyFlag(x, z);
+  // east yard: forklift, steam off the pipe rack, lamps and beacons on the rack, scrap pile
+  forklift(48.5, 35.5, 0.4); debris(60, 57, 4, 10, 13);
+  for (const z of [-6, 22, 43]) AMBI.vents.push({ x: 73.2, y: 3.2, z, kind: 'steam', rate: 3, t: 0, r: 0.2 });
+  for (const [z, ph] of [[-20, 0], [8, 0.6], [36, 1.2]]) beacon(73.5, 5.3, z, 0xff8a20, 1.8, ph);
+  floodlight(46.5, 0, 0.8, 6); floodlight(64, 57, -2.4, 6);
+  // Olympus: courtyard steam vents, wall lamps, generators, gas racks, signage, comm-tower beacons and radar
+  floorVent(0, -40); floorVent(-9, -44.5, 0.7); floorVent(9.5, -45, 0.7); floorVent(0, -78, 0.8);
+  for (const x of [-34, -18, 18, 34]) wallLamp(x, 6.2, -27.35, Math.PI);
+  for (const x of [-34, -18, 18, 34]) wallLamp(x, 6.2, -26.65, 0);
+  generator(38.8, -33, -Math.PI / 2); cable([[38, 0, -31.6], [37, 0, -29], [39.6, 1.0, -28]]);
+  generator(-25.3, -98.5, Math.PI / 2); generator(25.3, -98.5, -Math.PI / 2);
+  gasRack(-40.4, -32, Math.PI / 2, 3); gasRack(-27.3, -88.5, 0); gasRack(27.3, -88.5, 0);
+  sign(0, -26.6, 0, ['OLYMPUS STATION', 'AUTHORISED PERSONNEL ONLY'], '#e6e1d6', '#2f62d6', 5.2, 1.4, 7.9, false);
+  sign(-7.5, -30.5, 0, ['◄ SITE A    SITE B ►'], '#1f2a36', '#2f62d6', 2.8, 0.9);
+  sign(-41.6, -50, Math.PI / 2, ['SITE A', 'REACTOR HALL'], '#1f2a36', '#ffd34a', 2.0, 1.0, 3.2, false);
+  sign(39.6, -50, -Math.PI / 2, ['SITE B', 'HANGAR'], '#1f2a36', '#ffd34a', 2.0, 1.0, 3.2, false);
+  for (const [x, z, h, ph] of [[-26, -76, 22, 0], [26, -78, 24, 0.8]]) { beacon(x, h + 0.45, z, 0xff3020, 1.5, ph); }
+  dish(26, 24.12, -78, 1.2, 0, 0.5, 0.45); windsock(-26, -76, 2.6, 22.12);
+  for (const x of [-18, 18]) floodlight(x, -86, x < 0 ? 0.5 : -0.5, 6);
+  antennaCluster(-33, 6, -99, 3, 51); antennaCluster(33, 6, -99, 2, 61); roofUnit(-4, 8, -58, 0); roofUnit(5, 8, -61, 0.3);
+  cable([[-27.2, 0, -97], [-24, 0, -95], [-21, 0, -100.4]]); cable([[27.2, 0, -97], [24, 0, -95], [21, 0, -100.4]]);
+  // dust devils wander the open ground (Ares yard, mid crater, canyon floor, B apron)
+  for (const [x0, x1, z0, z1, ph] of [[-12, 14, 50, 70, 0], [-10, 12, -2, 22, 13], [-70, -46, -20, 26, 27], [44, 70, -36, -24, 41]]) AMBI.devils.push({ x0, x1, z0, z1, ph, x: (x0 + x1) / 2, z: (z0 + z1) / 2, vx: 0, vz: 0, on: 0 });
+  // power lines, drop pods, sand drifts against walls
+  powerLine([[38, 99], [47, 86], [52, 72], [61, 64], [70, 59]]); powerLine([[-28.5, -85.5], [-41, -85.5], [-53, -85.5], [-65, -85.5]]); powerLine([[28.5, -86.5], [41, -86.5], [53, -86.5], [65, -86.5]]);
+  supplyPod(29, 63, 2.3, 0.3); supplyPod(-45.5, 21.5, -0.6, 0.4); supplyPod(56, -21.5, 1.0, 0.25, false);
+  for (const [x, z, len, w, h, yaw] of [[-30, -25.4, 9, 2.6, 0.45, 0], [-15, -25.6, 6, 2.2, 0.35, 0], [20, -25.4, 8, 2.6, 0.45, 0], [33, -25.5, 6, 2.2, 0.4, 0],
+    [12.9, 30, 6, 2.2, 0.4, Math.PI / 2], [12.9, 48, 7, 2.4, 0.45, Math.PI / 2], [-24, 20.7, 10, 2.6, 0.5, 0], [-12, 95.2, 6, 2.2, 0.35, 0], [4, 95.3, 5, 2, 0.3, 0],
+    [-40.8, -60, 8, 2.4, 0.45, Math.PI / 2], [38.8, -66, 7, 2.2, 0.4, Math.PI / 2], [-26, -34.8, 8, 2.4, 0.4, 0], [-12.8, 40, 8, 2.4, 0.45, Math.PI / 2], [-35.5, 30, 6, 2.2, 0.4, Math.PI / 2]]) sandDrift(x, z, len, w, h, yaw);
+}
+// flat rock slabs and stone clusters on open ground (run after the collision grid exists)
+function scatterDressing() {
+  const r = mulberry32(777); const B = MAP_BOUNDS;
+  const ok = (x, z, s) => surfaceBelow(x, z, 30, -10, s) <= groundHeight(x, z) + 0.05 && !overlapAny(x, groundHeight(x, z) + 0.02, z, s * 1.2, 0.3);
+  for (let i = 0; i < 260; i++) { // slabs
+    const x = B.minx + r() * (B.maxx - B.minx), z = B.minz + r() * (B.maxz - B.minz), s = 0.4 + r() * 0.9; if (!ok(x, z, s)) continue;
+    pick([INST.pebA, INST.pebB, INST.pebC]).add(x, groundHeight(x, z) - s * 0.06, z, r() * TAU, s * (1.1 + r() * 0.6), s * 0.18, s * (0.8 + r() * 0.5));
+  }
+  for (let c = 0; c < 70; c++) { // clusters: one mid stone with pebbles round it
+    const x = B.minx + r() * (B.maxx - B.minx), z = B.minz + r() * (B.maxz - B.minz); if (!ok(x, z, 0.5)) continue;
+    const n = 4 + (r() * 7) | 0;
+    for (let i = 0; i < n; i++) { const a = r() * TAU, d = Math.pow(r(), 0.7) * 1.4, px = x + Math.cos(a) * d, pz = z + Math.sin(a) * d, s = i === 0 ? 0.32 + r() * 0.2 : 0.07 + r() * 0.14; if (!ok(px, pz, s)) continue; pick([INST.pebA, INST.pebB, INST.pebC]).add(px, groundHeight(px, pz) - s * 0.15, pz, r() * TAU, s, s * (0.7 + r() * 0.4), s * (0.8 + r() * 0.4)); }
+  }
+}
+
+// ---------- runtime
+let AMB = null, PLUMES = null;
+const _wc = new THREE.Color(), STEAM_COL = new THREE.Color(0xe8e2dc), EXH_COL = new THREE.Color(0x6a605c), SAND_COL = new THREE.Color(0xd08a66), DEVIL_COL = new THREE.Color(0xb46a4a);
+function initAmbience() { AMB = new Particles(2200, TEX.smoke, false); PLUMES = new Particles(48, TEX.smoke, false); }
+function updateAmbience(dt) {
+  if (!AMB) return; const cp = camera.position, t = gameTime;
+  // wind-blown sand: low streamers around the viewer, in gusts
+  const gust = 0.55 + 0.45 * Math.sin(t * 0.21) * Math.sin(t * 0.07 + 1.3);
+  if (cp.y < 30) for (let n = Math.floor(dt * 70 * gust + rand()); n > 0; n--) {
+    const a = rand() * TAU, d = 4 + Math.sqrt(rand()) * 34, x = cp.x + Math.cos(a) * d, z = cp.z + Math.sin(a) * d, sp = 3 + rand() * 4 * gust;
+    AMB.spawn(x, groundHeight(x, z) + 0.05 + rand() * 0.35, z, WIND.x * sp, rand() * 0.25, WIND.z * sp, 1.6 + rand() * 1.4, 0.4, 2.0 + rand() * 1.8, SAND_COL, 0.2 + 0.14 * gust, 0.05, 0.25, 0.25);
+  }
+  // gust sheets: big faint veils of sand sweeping across the ground now and then
+  AMBI.gustT = (AMBI.gustT ?? 4) - dt;
+  if (AMBI.gustT < 0 && cp.y < 30) { AMBI.gustT = 7 + rand() * 9; const a = rand() * TAU, d = 10 + rand() * 18, bx = cp.x + Math.cos(a) * d - WIND.x * 14, bz = cp.z + Math.sin(a) * d - WIND.z * 14;
+    for (let i = 0; i < 26; i++) { const o = rr(-9, 9), x = bx - WIND.z * o + rr(-2, 2), z = bz + WIND.x * o + rr(-2, 2), sp = 7 + rand() * 3; AMB.spawn(x, groundHeight(x, z) + 0.4 + rand() * 1.6, z, WIND.x * sp, 0.3, WIND.z * sp, 3 + rand() * 1.5, 2.5, 6 + rand() * 3, SAND_COL, 0.13, 0, 0.15, 0.3); } }
+  // vents, exhausts, smouldering wrecks
+  for (const v of AMBI.vents) {
+    const dx = v.x - cp.x, dz = v.z - cp.z; if (dx * dx + dz * dz > 9000) continue;
+    v.t += dt * v.rate * (v.kind === 'steam' ? 0.7 + 0.6 * Math.max(0, Math.sin(t * 0.9 + v.x)) : 1);
+    for (; v.t > 1; v.t--) {
+      const r = (v.r || 0.1) * Math.sqrt(rand()), a = rand() * TAU;
+      if (v.kind === 'steam') AMB.spawn(v.x + Math.cos(a) * r, v.y, v.z + Math.sin(a) * r, WIND.x * 0.4 + rr(-0.15, 0.15), 1.2 + rand() * 0.8, WIND.z * 0.4 + rr(-0.15, 0.15), 2.4 + rand(), 0.45, 2.8, STEAM_COL, 0.32, -0.1, 0.5, 0.15);
+      else if (v.kind === 'exhaust') AMB.spawn(v.x, v.y, v.z, WIND.x * 0.6 + rr(-0.1, 0.1), 0.9 + rand() * 0.4, WIND.z * 0.6, 2.6, 0.22, 1.7, EXH_COL, 0.32, -0.05, 0.4, 0.1);
+      else AMB.spawn(v.x + rr(-0.2, 0.2), v.y, v.z + rr(-0.2, 0.2), WIND.x * 0.5, 0.6 + rand() * 0.5, WIND.z * 0.5, 3 + rand() * 1.5, 0.3, 2.4, EXH_COL, 0.2, -0.04, 0.3, 0.2);
+    }
+  }
+  // electrical sparks from wreckage
+  for (const s of AMBI.sparks) {
+    const dx = s.x - cp.x, dz = s.z - cp.z; if (dx * dx + dz * dz > 6400) continue;
+    s.t -= dt; if (s.t > 0) continue; s.t = 0.6 + rand() * 3.2;
+    for (let i = 0, k = 6 + rand() * 10; i < k; i++) GLOW.spawn(s.x, s.y, s.z, rr(-1.6, 1.6), rr(0.4, 2.4), rr(-1.6, 1.6), 0.35 + rand() * 0.5, 0.07, 0.02, COL.spark, 1, 3.7, 0.6);
+    GLOW.spawn(s.x, s.y, s.z, 0, 0, 0, 0.12, 0.6, 0.9, COL.flash, 0.8);
+  }
+  // sand trickling off rock overhangs
+  for (const tr of AMBI.trickles) {
+    const dx = tr.x - cp.x, dz = tr.z - cp.z; if (dx * dx + dz * dz > 6400) continue;
+    tr.t += dt * tr.rate * (0.6 + 0.4 * Math.sin(t * 1.3 + tr.x));
+    for (; tr.t > 1; tr.t--) { AMB.spawn(tr.x + rr(-0.15, 0.15), tr.y, tr.z + rr(-0.1, 0.1), rr(-0.05, 0.05), -0.4, rr(-0.05, 0.05), Math.sqrt(2 * (tr.y - tr.gy) / 3.7) + 0.2, 0.12, 0.35, SAND_COL, 0.35, 3.7, 0.05); if (rand() < 0.25) AMB.spawn(tr.x + rr(-0.3, 0.3), tr.gy + 0.1, tr.z + rr(-0.3, 0.3), rr(-0.3, 0.3), 0.3, rr(-0.3, 0.3), 1.2, 0.3, 1.1, SAND_COL, 0.18, 0, 0.8); }
+  }
+  // dust devils: wander inside their zone, fade in and out every ~40 s
+  for (const d of AMBI.devils) {
+    const cyc = (t + d.ph) % 42; d.on = cyc < 26 ? Math.min(1, cyc / 3, (26 - cyc) / 3) : 0; if (d.on <= 0) continue;
+    d.vx += (Math.sin(t * 0.31 + d.ph) * 1.2 + WIND.x * 0.4 - d.vx) * dt * 0.5; d.vz += (Math.cos(t * 0.27 + d.ph * 1.7) * 1.2 + WIND.z * 0.4 - d.vz) * dt * 0.5;
+    d.x = clamp(d.x + d.vx * dt, d.x0, d.x1); d.z = clamp(d.z + d.vz * dt, d.z0, d.z1);
+    const dx = d.x - cp.x, dz = d.z - cp.z; if (dx * dx + dz * dz > 16000) continue; const gy = groundHeight(d.x, d.z);
+    for (let n = Math.floor(dt * 110 * d.on + rand()); n > 0; n--) {
+      const h = Math.pow(rand(), 1.6) * 9, a = rand() * TAU + t * 5, r = 0.35 + h * 0.22, ca = Math.cos(a), sa = Math.sin(a), sp = 2.6 + h * 0.3;
+      AMB.spawn(d.x + ca * r, gy + h, d.z + sa * r, -sa * sp + d.vx, 1.6 + rand(), ca * sp + d.vz, 0.9 + rand() * 0.7, 0.5 + h * 0.1, 1.6 + h * 0.22, DEVIL_COL, 0.36 * d.on, 0, 1.2, 0.2);
+    }
+    if (rand() < dt * 12 * d.on) AMB.spawn(d.x + rr(-1, 1), gy + 0.2, d.z + rr(-1, 1), rr(-1, 1), 0.4, rr(-1, 1), 1.6, 1.2, 3.5, SAND_COL, 0.16 * d.on, 0, 0.8);
+  }
+  // distant dust plumes drifting over the mesas
+  while (PLUMES.n < 26) { const a = rand() * TAU, d = 230 + rand() * 120; PLUMES.spawn(Math.cos(a) * d, 8 + rand() * 30, Math.sin(a) * d, WIND.x * 3, 0.2, WIND.z * 3, 30 + rand() * 30, 50 + rand() * 30, 110, _wc.set(0xd8977e), 0.2, 0, 0, 0.35); }
+  AMB.update(dt); PLUMES.update(dt);
+  // animated props
+  for (const b of AMBI.beacons) { const k = ((t + b.phase) % b.period) / b.period; b.s.material.opacity = k < 0.18 ? b.base : k < 0.3 ? b.base * (1 - (k - 0.18) / 0.12) : 0.05; }
+  for (const s of AMBI.spin) s.o.rotation.y += s.w * dt;
+  const wy = Math.atan2(-WIND.z, WIND.x);
+  for (const s of AMBI.socks) { const g = 0.55 + 0.45 * Math.sin(t * 0.21 + s.phase * 0.1); s.piv.rotation.set(0, wy + Math.sin(t * 0.9 + s.phase) * 0.25, -(1 - g) * 1.1 + Math.sin(t * 7 + s.phase) * 0.04); s.m.scale.y = s.m.scale.z = 0.85 + g * 0.15; }
 }
 
 // =====================================================================
@@ -2877,7 +3206,7 @@ function updateViewModel(dt, mdx, mdy) {
 }
 
 // =====================================================================
-// 12. FX — billboard particles (dust, smoke, fire), tracers, decals, floating dust motes
+// 12. FX — billboard particles (dust, smoke, fire), tracers, decals, floating dust motes (ambient emitters: 6b)
 // =====================================================================
 class Particles {
   constructor(max, map, additive) {
@@ -2945,6 +3274,7 @@ function initFX() {
   MOTES.mesh = new THREE.Points(mg, new THREE.PointsMaterial({ map: TEX.soft, color: 0xf0caa0, size: 0.07, transparent: true, opacity: 0.55, depthWrite: false, sizeAttenuation: true }));
   MOTES.mesh.frustumCulled = false; scene.add(MOTES.mesh);
   FLASHLIGHT.light = new THREE.PointLight(0xffc880, 0, 9, 2); scene.add(FLASHLIGHT.light);
+  initAmbience();
 }
 const DECALS = { max: 120, i: 0, mesh: null }, MOTES = { mesh: null }, FLASHLIGHT = { light: null, t: 0 };
 const _dq = new THREE.Quaternion(), _dn = new THREE.Vector3(), _dz = new THREE.Vector3(0, 0, 1);
@@ -3010,7 +3340,7 @@ function fxSmokePuff(s, burst) {
   DUST.spawn(s.x + Math.cos(a) * r, s.y + rr(-1.2, 1.4), s.z + Math.sin(a) * r, Math.cos(a) * rr(0.2, 0.8), rr(0.0, 0.25), Math.sin(a) * rr(0.2, 0.8), rr(3.5, 5.5), rr(2.5, 3.5), rr(4.5, 6.5), COL.smoke, 0.75, 0.0, 0.4, 0.25);
 }
 function updateFX(dt) {
-  DUST.update(dt); GLOW.update(dt); updateTracers(dt); fxPadIdle(dt);
+  updateAmbience(dt); DUST.update(dt); GLOW.update(dt); updateTracers(dt); fxPadIdle(dt);
   if (FLASHLIGHT.t > 0) { FLASHLIGHT.t -= dt; if (FLASHLIGHT.light.distance < 20) FLASHLIGHT.light.intensity = 25; } else { FLASHLIGHT.light.intensity = 0; FLASHLIGHT.light.distance = 9; }
   // motes wrap around the camera and drift on the wind
   const mp = MOTES.mesh.geometry.attributes.position.array, cp = camera.position;
@@ -3818,7 +4148,7 @@ async function boot() {
     render(dt = 0) { if (game.state === 'title') titleCamera(dt); renderFrame(dt); },
     tp(x, y, z, yaw = human.yaw, pitch = 0) { human.pos.set(x, y, z); human.vel.set(0, 0, 0); human.yaw = yaw; human.pitch = pitch; human.resetMotion(); human.frozen = roundState.phase === 'buy'; },
     giveWeapon: (id) => { giveWeapon(human, id); const d = WDEF[id]; if (d.slot !== 4) { human.slot = d.slot; refreshWeaponModel(human); } },
-    explode, popSmoke, fxDustPuff, GRENADES, SMOKES, buildSoldier, buildGun, setSoldierGun, animateSoldier, poseSoldier, composer, vmScene, VM, raycastWorld, RAY, navFindPath, switchWeapon, updateWeapon, curWeapon, applyDamage, rayCharacter, HB,
+    explode, popSmoke, fxDustPuff, GRENADES, SMOKES, buildSoldier, buildGun, setSoldierGun, animateSoldier, poseSoldier, composer, vmScene, VM, raycastWorld, RAY, navFindPath, switchWeapon, updateWeapon, curWeapon, applyDamage, rayCharacter, HB, get AMBI() { return AMBI; }, get AMB() { return AMB; },
   };
   titleCamera(0);
   if (!/[?&]noloop/.test(location.search)) requestAnimationFrame(frame); else renderFrame(0);
