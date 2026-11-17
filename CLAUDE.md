@@ -3,18 +3,17 @@
 ## Repository Overview
 
 **Project**: template-test
-**Status**: New/empty repository — no application code has been added yet.
 **Remote**: `mikenickles/template-test`
 
-## Getting Started
+The repo holds an Astro + Tailwind blog (`src/`, `astro.config.mjs`) and a standalone browser game in `public/regolith/`.
 
-This repository is freshly initialized. When project code is added, update this file with:
+## REGOLITH (Mars FPS) — `public/regolith/index.html`
 
-- Language, framework, and runtime versions
-- Directory structure overview
-- Setup instructions (`install`, `build`, etc.)
-- How to run tests and linters
-- Key architectural decisions and conventions
+- Single self-contained HTML file: inline CSS/HUD markup plus one ES module. three.js **0.160.0** (core + `examples/jsm` addons) loads from jsDelivr through an import map; Google Fonts is optional (system fallback).
+- Run: open the file in a desktop Chromium/Firefox, or `npm run dev` and visit `/regolith/` (Astro serves `public/` as-is).
+- The module is split into numbered sections (search for `// 0. CONFIG` … `// 17. MAIN LOOP`): config, utilities, renderer/sky, procedural textures, collision world, map builder, map layout, navigation, input, character physics, models, weapons, FX, audio, bots, game rules, HUD, main loop. Gameplay tuning lives in `CFG` (section 0) and `WDEF` (weapons).
+- Physics is custom: vertical-cylinder characters vs AABB/OBB/cylinder/dome/ramp colliders in a spatial grid, 120 Hz sub-steps. All geometry and textures are procedural; static geometry is merged per material and props are instanced.
+- Debug/test hooks: `?debug` skips pointer lock, `?noloop` disables the render loop, and `window.__regolith` exposes `start()`, `step()`, `render()`, `tp()` etc. for headless (Playwright) testing.
 
 ## Development Workflow
 
