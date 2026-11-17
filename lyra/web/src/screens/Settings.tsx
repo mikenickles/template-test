@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { api, isNative, syncApi, type AppState, type SyncStatus } from "../api";
-import { Search, Bell, Chart, Check, Chevron, Cloud, Cpu, Refresh, User } from "../icons";
+import { Search, Bell, Chart, Check, Chevron, Cloud, Cpu, Plug, Refresh, User } from "../icons";
 import { compact, dayKey } from "../usageData";
 import { Usage } from "./Usage";
 import { useSlidingPill } from "../pill";
@@ -163,12 +163,15 @@ function SettingsHome({ state }: { state: AppState }) {
   const accent = ACCENT_CHOICES.find((a) => a.id === state.accent)?.label ?? "";
   const alerts = [state.notifications ? "Notifications on" : "Notifications off", `heads-ups ${state.proactive.level}`, ...(isNative ? [state.appLock ? "app lock on" : "app lock off"] : [])].join(", ");
 
+  const connected = state.connectors.filter((c) => c.state === "connected").length;
+  const usable = state.connectors.filter((c) => c.state !== "unavailable").length;
   const rows: { href: string; icon: ReactNode; title: string; sub: string }[] = [
     { href: "#/settings/model", icon: <Cpu />, title: TITLES.model, sub: state.choice.provider === "fake" ? "Practice mode. Add a key to use a real model." : `${provider?.label} · ${state.choice.model}` },
     { href: "#/settings/usage", icon: <Chart />, title: TITLES.usage, sub: usage === null ? "Tokens per model, by day, week or month" : usage ? `${compact(usage)} tokens today` : "No tokens used today" },
     { href: "#/settings/you", icon: <User />, title: TITLES.you, sub: [state.userName !== "you" ? state.userName : "Name not set", accent, state.weatherPlace?.name.split(",")[0]].filter(Boolean).join(" · ") },
     { href: "#/settings/alerts", icon: <Bell />, title: TITLES.alerts, sub: alerts },
     { href: "#/settings/sync", icon: <Cloud />, title: TITLES.sync, sub: sync?.enabled ? (sync.lastError ? "Sync needs attention" : `Syncing as ${sync.deviceName}`) : "Sync is off" },
+    { href: "#/access", icon: <Plug />, title: "Connections", sub: connected ? `${connected} of ${usable} connected` : "Mail, Calendar and Files: none connected yet" },
     { href: "#/settings/about", icon: <Refresh />, title: TITLES.about, sub: `Lyra ${version}` },
   ];
 

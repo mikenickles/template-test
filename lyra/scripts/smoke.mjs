@@ -48,10 +48,9 @@ try {
   check(true, "app starts on the welcome screen");
   await shot("light-1-welcome");
 
-  await page.getByRole("button", { name: "Channels" }).click();
-  await page.locator(".drawer-sections").getByRole("link", { name: "Settings" }).click();
+  await page.getByRole("link", { name: "Settings" }).click();
   await page.getByRole("link", { name: /AI model.*Practice mode/ }).waitFor();
-  check((await page.locator(".settings-home .item").count()) === 6, "settings opens on six clear areas");
+  check((await page.locator(".settings-home .item").count()) === 7, "settings opens on seven clear areas");
   await shot("light-5-settings");
   await page.getByRole("link", { name: /You and appearance/ }).click();
   await page.getByLabel("What should Lyra call you?").fill("Sam");
@@ -125,12 +124,6 @@ try {
   check(true, "undo from chat works");
 
   check((await page.locator(".drawer-sections a").count()) === 1, "the phone drawer keeps only Settings");
-  await page.getByRole("button", { name: "Search all chats" }).click();
-  await page.locator(".app.drawer-open").waitFor();
-  await page.waitForFunction(() => document.activeElement?.matches(".drawer-search input"));
-  check(true, "the chat's search button opens the menu with the search box ready");
-  await page.keyboard.press("Escape");
-  await page.waitForSelector(".app:not(.drawer-open)");
   await page.locator(".topbar a.orb").click();
   await page.getByText("What Lyra can see").waitFor();
   check(true, "the chat's avatar opens the Lyra page");

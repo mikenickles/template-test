@@ -76,10 +76,9 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 
 - **Tasks has three tabs: Active, Scheduled, Life admin.** Reminders and routines get their own
   tab instead of a folded list at the bottom; finished tasks fold into "Done" at the end of Active.
-- **Search from the chat.** The button at the top right opens search across every chat.
 - **Channels look like channels.** The top of a channel shows its own icon; tap it for its details.
 - **The Lyra page leads with Memory and Activity**, as two big cards, with Skills and Soul under them.
-  Connections live only there (Settings no longer repeats them).
+- (0.54.1) The top-right circle opens Settings again, and Settings keeps its Connections row.
 - **Quieter pop-ups.** "Saved" and friends are smaller, go sooner, and sit just above the bottom bar
   or message box instead of over what you're reading. Messages also fade fully under the top bar.
 - **Tidier buttons.** Tasks, docs and dashboards keep one or two main buttons; the rest are under "⋯".

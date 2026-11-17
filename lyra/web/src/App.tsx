@@ -7,7 +7,7 @@ import { Drawer } from "./Drawer";
 import { useSlidingPill } from "./pill";
 import { haptic } from "./haptics";
 import { AskHost } from "./ask";
-import { Back, ChannelIcon, Info, Layers, MenuIcon, Search } from "./icons";
+import { Back, ChannelIcon, Info, Layers, MenuIcon } from "./icons";
 import { Avatar } from "./LyraMark";
 import { Access } from "./screens/Access";
 import { ChannelInfo, NewChannelDialog } from "./screens/ChannelScreens";
@@ -109,8 +109,6 @@ export function App() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [channelsLoaded, setChannelsLoaded] = useState(false);
   const [drawer, setDrawer] = useState(false);
-  // (0.54) the chat's search button opens the menu with the search box ready
-  const [drawerSearch, setDrawerSearch] = useState(false);
   const [creating, setCreating] = useState(false);
   const creatingRef = useRef(creating);
   creatingRef.current = creating;
@@ -379,7 +377,6 @@ export function App() {
         open={drawer || wide}
         docked={wide}
         onClose={() => setDrawer(false)}
-        searchFirst={drawerSearch}
         channels={channels}
         current={route.name === "chat" ? route.channelId : undefined}
         onNewChannel={() => setCreating(true)}
@@ -401,7 +398,6 @@ export function App() {
               onClick={() => {
                 void refreshChannels();
                 haptic.tap();
-                setDrawerSearch(false);
                 setDrawer(true);
               }}
             >
@@ -443,19 +439,10 @@ export function App() {
           {(!inChat || route.name === "docs") && <span />}
           {route.name === "tasks" ? (
             <div className="topbar-slot" id="topbar-right" />
-          ) : route.name === "chat" ? (
-            <button
-              className="ring"
-              aria-label="Search all chats"
-              onClick={() => {
-                void refreshChannels();
-                haptic.tap();
-                setDrawerSearch(true);
-                setDrawer(true);
-              }}
-            >
-              <Search size={20} />
-            </button>
+          ) : inChat ? (
+            <a className="ring initial" href="#/settings" aria-label="Settings">
+              {initial}
+            </a>
           ) : (
             <span />
           )}

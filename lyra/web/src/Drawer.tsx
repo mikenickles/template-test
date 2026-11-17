@@ -23,7 +23,6 @@ export function Drawer({
   readyCount = 0,
   initial = "",
   status,
-  searchFirst = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -39,8 +38,6 @@ export function Drawer({
   initial?: string;
   /** Desktop: Lyra's status, under its name */
   status?: ReactNode;
-  /** opened from the chat's search button: put the cursor in the search box */
-  searchFirst?: boolean;
 }) {
   const panel = useRef<HTMLElement>(null);
   const [query, setQuery] = useState("");
@@ -48,16 +45,13 @@ export function Drawer({
 
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
-  const searchRef = useRef(searchFirst);
-  searchRef.current = searchFirst;
   // Focus the menu once when it opens, not on every redraw (that stole focus from the
   // New channel dialog on top and made the phone keyboard flicker).
   useEffect(() => {
     if (!open || docked) return;
     const key = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
     addEventListener("keydown", key);
-    if (searchRef.current) panel.current?.querySelector<HTMLElement>(".drawer-search input")?.focus();
-    else panel.current?.querySelector<HTMLElement>(".star-row.active, .star-row")?.focus();
+    panel.current?.querySelector<HTMLElement>(".star-row.active, .star-row")?.focus();
     return () => removeEventListener("keydown", key);
   }, [open, docked]);
 
