@@ -470,7 +470,7 @@ function WithYourOk({
       kind: "event",
       icon: <Calendar />,
       title: "Calendar changes",
-      sub: linked("calendar") ? "Add, move, answer or remove events, only when you tap" : "Connect Calendar first",
+      sub: linked("calendar") ? "Add, move, change, answer or remove events, only when you tap" : "Connect Calendar first",
       ready: linked("calendar"),
       checked: state.actions.event,
       set: (on: boolean) => flip("event", () => api.allowActions("event", on), on ? "Lyra can change your calendar with your OK" : "Calendar changes: off"),
@@ -478,11 +478,20 @@ function WithYourOk({
     {
       kind: "archive",
       icon: <Inbox />,
-      title: "Tidy your inbox",
-      sub: linked("gmail") ? "Archives mail only when you tap Archive" : "Connect Mail first",
+      title: "Organize your mail",
+      sub: linked("gmail") ? "Archive, trash, label, star or mark read, only when you tap" : "Connect Mail first",
       ready: linked("gmail"),
       checked: state.actions.archive,
-      set: (on: boolean) => flip("archive", () => api.allowActions("archive", on), on ? "Lyra can tidy your inbox with your OK" : "Tidy your inbox: off"),
+      set: (on: boolean) => flip("archive", () => api.allowActions("archive", on), on ? "Lyra can organize your mail with your OK" : "Organize your mail: off"),
+    },
+    {
+      kind: "drive",
+      icon: <File />,
+      title: "Change your files",
+      sub: linked("drive") ? "Create, rename, move, edit or trash files in Drive, only when you tap" : "Connect Files first",
+      ready: linked("drive"),
+      checked: !!state.actions.file,
+      set: (on: boolean) => flip("drive", () => api.allowActions("drive", on), on ? "Lyra can change your Drive files with your OK" : "Change your files: off"),
     },
     ...(state.actions.text !== null
       ? [

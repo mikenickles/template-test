@@ -72,6 +72,22 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### Gmail, Calendar and Drive, all the way (0.55)
+
+Everything is still a card first: nothing changes until you tap, and most things can be undone.
+
+- **Mail:** archive, trash, restore, label (a new label is made if needed), star, and mark read or
+  unread, up to 25 threads per card. Trash is as far as it goes: Gmail empties its trash after 30
+  days, and Lyra can never delete anything permanently. Turn on **Organize your mail** (it replaces
+  Tidy your inbox).
+- **Calendar:** change an event's title, place, notes or guests, with before and after on the card
+  (on top of adding, moving, answering and removing). Under **Calendar changes**.
+- **Drive:** make a Google Doc, folder or text file; rename, move, trash or restore anything; add
+  text to the end of a doc, or replace exact words in it. Turn on **Change your files**, which asks
+  Google for access to all of Drive (Google may show a warning for this, since Lyra is your own app).
+- **Undo** on the card puts back mail changes, event edits, renames, moves, trash and new files.
+  Text edits stay in the file's version history in Google.
+
 ### Easier to find your way around (0.54)
 
 - **Tasks has three tabs: Active, Scheduled, Life admin.** Reminders and routines get their own

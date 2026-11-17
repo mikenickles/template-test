@@ -117,8 +117,8 @@ export interface Workspace {
   contacts?: { find(name: string): Promise<string> };
   /** Emails and events Lyra proposes; the user approves each one on a card. */
   actions?: {
-    allowed(): { email: boolean; event: boolean; playlist?: boolean; move?: boolean; rsvp?: boolean; archive?: boolean; text?: boolean; remove?: boolean };
-    propose(kind: "email" | "event" | "playlist" | "move" | "rsvp" | "archive" | "text" | "remove", input: Record<string, unknown>, tainted: boolean, channelId: number | null): Promise<{ id: number; summary: string }>;
+    allowed(): { email: boolean; event: boolean; playlist?: boolean; move?: boolean; rsvp?: boolean; archive?: boolean; text?: boolean; remove?: boolean; mail?: boolean; edit_event?: boolean; file?: boolean };
+    propose(kind: "email" | "event" | "playlist" | "move" | "rsvp" | "archive" | "text" | "remove" | "mail" | "edit_event" | "file", input: Record<string, unknown>, tainted: boolean, channelId: number | null): Promise<{ id: number; summary: string }>;
     /** recent proposals and what happened to them, one per line */
     recent(): string;
   };
@@ -415,15 +415,56 @@ function actionTools(allowed: ReturnType<NonNullable<Workspace["actions"]>["allo
         required: ["event_id", "response"],
       },
     });
-  if (allowed?.archive)
+  if (allowed?.edit_event)
     tools.push({
-      name: "propose_archive",
+      name: "propose_edit_event",
       description:
-        "Archive email threads (out of the inbox; still in All Mail and search), for the user to approve. It's a card listing each one; nothing moves until they tap Archive. Good for clearing newsletters, receipts and done threads. Use thread ids from search_mail, up to 25.",
+        "Change an event's title, place, notes or guests, for the user to approve (a card showing before and after; nothing changes until they tap, and they can undo it). Only events they organize; guests are told. For a new time use propose_reschedule. Get the event_id from list_events. Only for changes the user asked for in their own words.",
       schema: {
         type: "object",
-        properties: { thread_ids: { type: "array", items: { type: "string" }, description: "Thread ids from search_mail." } },
-        required: ["thread_ids"],
+        properties: {
+          event_id: { type: "string", description: "The event's id from list_events." },
+          title: { type: "string" },
+          location: { type: "string", description: "The new place (empty to clear it)." },
+          description: { type: "string", description: "The new notes, in full (empty to clear them)." },
+          add_guests: { type: "array", items: { type: "string" }, description: "Email addresses to invite." },
+          remove_guests: { type: "array", items: { type: "string" }, description: "Guests' email addresses to take off." },
+        },
+        required: ["event_id"],
+      },
+    });
+  if (allowed?.mail)
+    tools.push({
+      name: "propose_mail_change",
+      description:
+        "Archive, trash, restore, label, star or mark email threads read/unread, for the user to approve. It's a card listing each one from Gmail; nothing changes until they tap, and they can undo it. Trash isn't permanent (Gmail empties it after 30 days). Use thread ids from search_mail, up to 25. Trash only what the user asked to delete, in their own words.",
+      schema: {
+        type: "object",
+        properties: {
+          thread_ids: { type: "array", items: { type: "string" }, description: "Thread ids from search_mail." },
+          change: { type: "string", enum: ["archive", "move_to_inbox", "trash", "restore", "mark_read", "mark_unread", "star", "unstar", "add_label", "remove_label"] },
+          label: { type: "string", description: "For add_label / remove_label: the label's name (a new one is made if needed)." },
+        },
+        required: ["thread_ids", "change"],
+      },
+    });
+  if (allowed?.file)
+    tools.push({
+      name: "propose_file_change",
+      description:
+        "Change the user's Google Drive, for them to approve: create a Google Doc, folder or text file; rename, move, trash or restore a file; add text to the end of a Google Doc or text file, or replace exact words in one. A card shows exactly what happens; nothing changes until they tap, and most can be undone. Get ids from search_files (folders too). Before replace, read_file and copy the words exactly. Sheets and Slides can only be renamed, moved or trashed. Trash only what the user asked to delete, in their own words.",
+      schema: {
+        type: "object",
+        properties: {
+          change: { type: "string", enum: ["create", "rename", "move", "trash", "restore", "append", "replace"] },
+          file_id: { type: "string", description: "The file's id from search_files (not for create)." },
+          kind: { type: "string", enum: ["doc", "folder", "text"], description: "create: what to make (doc is a Google Doc)." },
+          name: { type: "string", description: "create: its name; rename: the new name." },
+          folder_id: { type: "string", description: "move: the folder it goes to; create: where to make it (leave out for My Drive)." },
+          text: { type: "string", description: "create: its text (Markdown for a doc); append: what to add; replace: the new words." },
+          find: { type: "string", description: "replace: the exact words to find; every one is replaced." },
+        },
+        required: ["change"],
       },
     });
   if (allowed?.text)
@@ -445,14 +486,16 @@ function actionTools(allowed: ReturnType<NonNullable<Workspace["actions"]>["allo
 }
 
 /** Tools that only make a card for the user's OK, and what kind of card. */
-const PROPOSALS: Record<string, { kind: "email" | "event" | "playlist" | "move" | "rsvp" | "archive" | "text" | "remove"; label: string }> = {
+const PROPOSALS: Record<string, { kind: "email" | "event" | "playlist" | "move" | "rsvp" | "archive" | "text" | "remove" | "mail" | "edit_event" | "file"; label: string }> = {
   propose_email: { kind: "email", label: "Email" },
   propose_event: { kind: "event", label: "Event" },
   propose_playlist: { kind: "playlist", label: "Playlist" },
   propose_reschedule: { kind: "move", label: "New time" },
   propose_rsvp: { kind: "rsvp", label: "Answer" },
   propose_remove_event: { kind: "remove", label: "Remove event" },
-  propose_archive: { kind: "archive", label: "Inbox tidy" },
+  propose_mail_change: { kind: "mail", label: "Mail change" },
+  propose_edit_event: { kind: "edit_event", label: "Event change" },
+  propose_file_change: { kind: "file", label: "Drive change" },
   propose_text: { kind: "text", label: "Text" },
 };
 

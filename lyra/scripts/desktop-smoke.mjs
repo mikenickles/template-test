@@ -81,6 +81,7 @@ await page.screenshot({ path: join(shots, "desktop-2-chat.png") });
 
 // ---- an email for your OK: nothing goes until you tap Send (pretend Google) ----
 const sent = [];
+const mailChanges = [];
 await app.evaluate(({ ipcMain }) => {
   ipcMain.removeHandler("google:authorize");
   const granted = new Set();
@@ -96,6 +97,14 @@ await page.route("https://gmail.googleapis.com/**", (r) => {
     return r.fulfill({ json: { id: "m1", threadId: "t9" } });
   }
   if (u.includes("/profile")) return r.fulfill({ json: { emailAddress: "sam@example.com" } });
+  // 0.55: trash and Undo (untrash) on the bill's thread
+  const tt = u.match(/\/threads\/abc123def456\/(trash|untrash)$/);
+  if (tt) {
+    mailChanges.push(tt[1]);
+    return r.fulfill({ json: { id: "abc123def456" } });
+  }
+  if (u.includes("/threads/abc123def456"))
+    return r.fulfill({ json: { id: "abc123def456", messages: [{ payload: { headers: [{ name: "Subject", value: "Your energy bill is ready" }, { name: "From", value: "PG&E <bills@example.com>" }] } }] } });
   // one bill in the inbox, for life admin
   if (/\/messages\?/.test(u)) return r.fulfill({ json: { messages: [{ id: "b1" }] } });
   if (u.includes("/messages/b1"))
@@ -131,6 +140,24 @@ const raw = Buffer.from(sent[0]?.raw ?? "", "base64url").toString("utf8");
 const sentBody = Buffer.from(raw.split("\r\n\r\n")[1] ?? "", "base64").toString("utf8");
 check(sent.length === 1 && raw.includes("To: dana@example.com") && sentBody === "Yes, Friday works. See you then!", "tapping Send sends it once, with your edits");
 check((await card.getByRole("button", { name: "Send", exact: true }).count()) === 0, "a sent email can't be sent again from the card");
+
+// ---- 0.55: organize mail with your OK: trash a thread, then Undo ----
+await page.goto("app://lyra/index.html#/access");
+await page.getByRole("switch", { name: /Organize your mail/ }).click();
+await page.getByText("Lyra can organize your mail with your OK").waitFor();
+await page.goto("app://lyra/index.html#/");
+await page.getByPlaceholder("Message Lyra").fill("trash the bill email");
+await page.getByRole("button", { name: "Send" }).click();
+const trashCard = page.getByRole("group", { name: "Mail change for your OK" });
+await trashCard.waitFor();
+check(mailChanges.length === 0 && (await trashCard.getByText("Your energy bill is ready").isVisible()), "a trash card lists the email from Gmail, and nothing is trashed yet");
+await page.screenshot({ path: join(shots, "desktop-15-mail-change.png") });
+await trashCard.getByRole("button", { name: "Move to trash 1" }).click();
+await trashCard.getByText(/^In the trash ·/).waitFor();
+await trashCard.getByRole("button", { name: "Undo" }).click();
+await trashCard.getByText(/^Undone ·/).waitFor();
+check(mailChanges.join(",") === "trash,untrash", "tapping trashes it once, and Undo restores it");
+await page.screenshot({ path: join(shots, "desktop-16-mail-undone.png") });
 
 // ---- inbox triage, when asked (practice data) ----
 // ---- notification checkup: what stops Lyra reaching you, each with its fix ----

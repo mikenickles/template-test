@@ -51,7 +51,9 @@ describe("read-only Google grants", () => {
     // adding events (Phase 9, approved one by one) is allowed alongside; full calendar control is not
     expect(grantIsAllowed([CALENDAR_READONLY, "https://www.googleapis.com/auth/calendar.events"], CALENDAR_READONLY)).toBe(true);
     expect(grantIsAllowed([CALENDAR_READONLY, "https://www.googleapis.com/auth/calendar"], CALENDAR_READONLY)).toBe(false);
-    expect(grantIsAllowed([DRIVE_READONLY, "https://www.googleapis.com/auth/drive"], DRIVE_READONLY)).toBe(false);
+    // 0.55: all of Drive is allowed (for "Change your files"), but all of Gmail (permanent deletion) never is
+    expect(grantIsAllowed([DRIVE_READONLY, "https://www.googleapis.com/auth/drive"], DRIVE_READONLY)).toBe(true);
+    expect(grantIsAllowed([GMAIL_READONLY, "https://mail.google.com/"], GMAIL_READONLY)).toBe(false);
   });
 });
 

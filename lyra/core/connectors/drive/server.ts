@@ -39,10 +39,11 @@ export function isTextual(mime: string): boolean {
   return mime.startsWith("text/") || ["application/json", "application/xml", "application/x-yaml", "application/csv"].includes(mime);
 }
 
-/** Drive search syntax needs quotes and backslashes escaped. */
-export function driveQuery(words: string): string {
+/** Drive search syntax needs quotes and backslashes escaped. (0.55) Optionally inside one folder, or in the trash. */
+export function driveQuery(words: string, opts: { folder?: string; trash?: boolean } = {}): string {
   const w = words.trim().replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-  return w ? `(name contains '${w}' or fullText contains '${w}') and trashed = false` : "trashed = false";
+  const where = [`trashed = ${opts.trash ? "true" : "false"}`, ...(opts.folder ? [`'${opts.folder}' in parents`] : [])].join(" and ");
+  return w ? `(name contains '${w}' or fullText contains '${w}') and ${where}` : where;
 }
 
 export function describeFile(f: DriveFile): string {
@@ -69,12 +70,14 @@ export function createDriveServer(tokens: TokenSource, fetchFn: typeof fetch = f
       inputSchema: {
         query: z.string().describe("Words to look for. Empty for recent files."),
         max_results: z.number().int().min(1).max(25).optional(),
+        folder_id: z.string().regex(/^[\w-]+$/, "a Drive folder id").optional().describe("Only what's inside this folder (an id from search_files)."),
+        in_trash: z.boolean().optional().describe("Look in the trash instead."),
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async ({ query, max_results }) => {
+    async ({ query, max_results, folder_id, in_trash }) => {
       const r = await g.json<{ files?: DriveFile[] }>("/files", {
-        q: driveQuery(query),
+        q: driveQuery(query, { folder: folder_id, trash: in_trash }),
         pageSize: max_results ?? 10,
         orderBy: query.trim() ? undefined : "modifiedTime desc",
         fields: FIELDS,

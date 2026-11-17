@@ -69,7 +69,7 @@ describe("emails and events need the user's tap", () => {
     const { lyra, g, provider } = await setup([say("Sure."), say("Sure.")], []);
     await lyra.chat("hi", noop);
     expect(provider.requests[0].tools.map((t) => t.name)).not.toContain("propose_email");
-    expect(lyra.state().actions).toEqual({ email: false, event: false, archive: false, text: null });
+    expect(lyra.state().actions).toEqual({ email: false, event: false, archive: false, file: false, text: null });
     await lyra.allowActions("email", true);
     expect(g.asked.at(-1)).toEqual([GMAIL_COMPOSE]);
     await lyra.chat("hi again", noop);

@@ -8,10 +8,15 @@ export const DRIVE_READONLY = "https://www.googleapis.com/auth/drive.readonly";
  */
 export const GMAIL_COMPOSE = "https://www.googleapis.com/auth/gmail.compose";
 export const CALENDAR_EVENTS = "https://www.googleapis.com/auth/calendar.events";
-/** Only if the user turns on "Tidy your inbox": archive threads they approve, one card at a time. */
+/** Only if the user turns on "Organize your mail": archive, trash, label, star or mark threads they approve, one card at a time (never permanent deletion). */
 export const GMAIL_MODIFY = "https://www.googleapis.com/auth/gmail.modify";
 /** Phase 13: only the files Lyra itself creates in Drive (its Google Docs). It can't see any other file. */
 export const DRIVE_FILE = "https://www.googleapis.com/auth/drive.file";
+/**
+ * (0.55) Only if the user turns on "Change your files": create, rename, move, edit and trash
+ * any file in Drive, each one card at a time. Reading still uses drive.readonly.
+ */
+export const DRIVE_FULL = "https://www.googleapis.com/auth/drive";
 /** Lyra's own hidden folder in your Drive, for sync. It can't see or change any of your files. */
 export const DRIVE_APPDATA = "https://www.googleapis.com/auth/drive.appdata";
 
@@ -20,7 +25,7 @@ export const DRIVE_APPDATA = "https://www.googleapis.com/auth/drive.appdata";
  * hidden sync folder (which holds nothing of yours but Lyra's encrypted snapshots),
  * and the two approve-each-one permissions above. Google returns earlier grants
  * alongside new ones, so each of these has to be allowed here or it would spoil
- * every read-only grant. Anything wider (all of Gmail, deleting, all of Drive or
+ * every read-only grant. Anything wider (permanent deletion in Gmail, Gmail settings,
  * Calendar settings) is refused.
  */
 const ALLOWED = new Set([
@@ -32,6 +37,7 @@ const ALLOWED = new Set([
   CALENDAR_EVENTS,
   GMAIL_MODIFY,
   DRIVE_FILE,
+  DRIVE_FULL,
   "openid",
   "email",
   "profile",

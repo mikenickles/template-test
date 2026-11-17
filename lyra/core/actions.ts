@@ -7,7 +7,7 @@ import { googleGet } from "./connectors/google-http.ts";
 import { NeedsConsentError, type TokenSource } from "./connectors/google.ts";
 import { describeDue, localToDate } from "./reminders.ts";
 
-export type ActionKind = "email" | "event" | "playlist" | "move" | "rsvp" | "archive" | "text" | "remove";
+export type ActionKind = "email" | "event" | "playlist" | "move" | "rsvp" | "archive" | "text" | "remove" | "mail" | "edit_event" | "file";
 export type ActionStatus = "proposed" | "working" | "done" | "declined";
 
 export interface EmailDraft {
@@ -89,7 +89,197 @@ export interface TextDraft {
   body: string;
 }
 
-export type ActionPayload = EmailDraft | EventDraft | PlaylistDraft | MoveDraft | RsvpDraft | ArchiveDraft | TextDraft | RemoveDraft;
+// ---------- 0.55: the rest of Gmail, Calendar and Drive, each still one card and one tap ----------
+
+/** What can be done to mail threads, and what undoes each. Trash is the furthest: nothing is deleted for good. */
+export type MailOp = "archive" | "inbox" | "trash" | "untrash" | "read" | "unread" | "star" | "unstar" | "label" | "unlabel";
+export const MAIL_OPS: Record<MailOp, { verb: string; done: string; undo: MailOp }> = {
+  archive: { verb: "Archive", done: "Archived", undo: "inbox" },
+  inbox: { verb: "Move to inbox", done: "Back in the inbox", undo: "archive" },
+  trash: { verb: "Move to trash", done: "In the trash", undo: "untrash" },
+  untrash: { verb: "Restore", done: "Restored", undo: "trash" },
+  read: { verb: "Mark read", done: "Marked read", undo: "unread" },
+  unread: { verb: "Mark unread", done: "Marked unread", undo: "read" },
+  star: { verb: "Star", done: "Starred", undo: "unstar" },
+  unstar: { verb: "Unstar", done: "Unstarred", undo: "star" },
+  label: { verb: "Label", done: "Labelled", undo: "unlabel" },
+  unlabel: { verb: "Remove label", done: "Label removed", undo: "label" },
+};
+
+/** Something done to mail threads: listed on the card straight from Gmail. */
+export interface MailDraft {
+  op: MailOp;
+  threads: { id: string; subject: string; from: string }[];
+  /** for label / unlabel: no id yet means a new label, made when the user taps */
+  label?: { id?: string; name: string };
+}
+
+const MAIL_WORDS: Record<string, MailOp> = {
+  archive: "archive",
+  inbox: "inbox",
+  move_to_inbox: "inbox",
+  unarchive: "inbox",
+  trash: "trash",
+  delete: "trash",
+  untrash: "untrash",
+  restore: "untrash",
+  read: "read",
+  mark_read: "read",
+  unread: "unread",
+  mark_unread: "unread",
+  star: "star",
+  unstar: "unstar",
+  label: "label",
+  add_label: "label",
+  unlabel: "unlabel",
+  remove_label: "unlabel",
+};
+
+export function checkMailChange(input: Record<string, unknown>): { op: MailOp; ids: string[]; label: string } {
+  const word = String(input.change ?? "archive").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const op = MAIL_WORDS[word];
+  if (!op) throw new Error('change must be one of: archive, move_to_inbox, trash, restore, mark_read, mark_unread, star, unstar, add_label, remove_label.');
+  const ids = checkArchive(input);
+  const label = oneLine(input.label, 100);
+  if ((op === "label" || op === "unlabel") && !label) throw new Error("Which label? Give its name.");
+  return { op, ids, label };
+}
+
+/** Change what an event says or who's on it. Its time is propose_reschedule's job. */
+export interface EditEventDraft {
+  eventId: string;
+  /** as it is now, for the card */
+  title: string;
+  when: string;
+  /** only what changes */
+  changes: { title?: string; location?: string; description?: string; addGuests?: string[]; removeGuests?: string[] };
+  /** what it was, so Undo can put it back */
+  before: { title: string; location: string; description: string; attendees: NonNullable<CalendarEvent["attendees"]> };
+  /** other people on it after the change (they're told) */
+  guests: number;
+}
+
+export function checkEditEvent(input: Record<string, unknown>, e: CalendarEvent): Pick<EditEventDraft, "changes" | "before" | "guests"> {
+  const attendees = e.attendees ?? [];
+  const others = attendees.filter((a) => !a.self);
+  if (e.organizer && !e.organizer.self && others.length)
+    throw new Error(`The user isn't the organizer of "${e.summary ?? "that event"}", so it can't be changed for everyone. Offer to email the organizer instead.`);
+  const before = { title: e.summary ?? "", location: e.location ?? "", description: e.description ?? "", attendees };
+  const changes: EditEventDraft["changes"] = {};
+  if (input.title !== undefined) {
+    const t = oneLine(input.title, 200);
+    if (!t) throw new Error("The new title is empty.");
+    if (t !== before.title) changes.title = t;
+  }
+  if (input.location !== undefined) {
+    const l = oneLine(input.location, 300);
+    if (l !== before.location) changes.location = l;
+  }
+  if (input.description !== undefined) {
+    const d = String(input.description ?? "").replace(/\r\n?/g, "\n").trim().slice(0, 4000);
+    if (d !== before.description.trim()) changes.description = d;
+  }
+  const on = new Set(attendees.map((a) => (a.email ?? "").toLowerCase()));
+  const add = addresses(input.add_guests, "add_guests").filter((a) => !on.has(a));
+  const remove = addresses(input.remove_guests, "remove_guests");
+  for (const r of remove) if (!on.has(r)) throw new Error(`${r} isn't on that event.`);
+  if (attendees.some((a) => a.self && remove.includes((a.email ?? "").toLowerCase()))) throw new Error("To take the user off an event, answer no with propose_rsvp or remove it with propose_remove_event.");
+  if (add.length) changes.addGuests = add;
+  if (remove.length) changes.removeGuests = remove;
+  if (others.length + add.length - remove.length > 50) throw new Error("That's more than 50 guests.");
+  if (!Object.keys(changes).length) throw new Error("Nothing would change: the event already says that. For a new time use propose_reschedule.");
+  return { changes, before, guests: others.length - remove.length + add.length };
+}
+
+/** What can be done to a Drive file or folder. Trash is the furthest: Drive keeps it for 30 days. */
+export type FileOp = "create" | "rename" | "move" | "trash" | "restore" | "append" | "replace";
+
+export interface FileDraft {
+  op: FileOp;
+  /** every op but create */
+  fileId?: string;
+  /** the file's name now (create: the new file's name) */
+  name: string;
+  /** "Google Doc", "folder", "text file"… */
+  kind: string;
+  /** rename */
+  newName?: string;
+  /** move: where to; create: where it goes (none: My Drive) */
+  folder?: { id: string; name: string };
+  /** move: where it was, for Undo */
+  from?: { id: string; name: string }[];
+  /** create (a doc or text file): its text; append: what's added at the end; replace: the new words */
+  text?: string;
+  /** replace: the words to find (every one is replaced) */
+  find?: string;
+  /** replace: how many times they're there now */
+  count?: number;
+  link?: string;
+}
+
+export const FOLDER = "application/vnd.google-apps.folder";
+export const GDOC = "application/vnd.google-apps.document";
+const DRIVE_ID = /^[\w-]{10,200}$/;
+const NEW_KINDS: Record<string, { kind: string; mime: string }> = {
+  doc: { kind: "Google Doc", mime: GDOC },
+  folder: { kind: "folder", mime: FOLDER },
+  text: { kind: "text file", mime: "text/plain" },
+};
+
+export function checkDriveId(v: unknown, what = "file_id"): string {
+  const id = String(v ?? "").trim();
+  if (!DRIVE_ID.test(id)) throw new Error(`${what} must be an id from search_files.`);
+  return id;
+}
+
+/** What the model asked for, before the file's real name and place are read from Drive. */
+export function checkFileChange(input: Record<string, unknown>): {
+  op: FileOp;
+  fileId?: string;
+  folderId?: string;
+  newName?: string;
+  name?: string;
+  newKind?: { kind: string; mime: string };
+  text?: string;
+  find?: string;
+} {
+  const op = String(input.change ?? "").trim().toLowerCase() as FileOp;
+  if (!["create", "rename", "move", "trash", "restore", "append", "replace"].includes(op)) throw new Error("change must be one of: create, rename, move, trash, restore, append, replace.");
+  const text = input.text === undefined ? undefined : String(input.text).replace(/\r\n?/g, "\n").slice(0, 50_000);
+  const folderId = input.folder_id ? checkDriveId(input.folder_id, "folder_id") : undefined;
+  if (op === "create") {
+    const newKind = NEW_KINDS[String(input.kind ?? "doc").toLowerCase()];
+    if (!newKind) throw new Error('kind must be "doc", "folder" or "text".');
+    const name = oneLine(input.name, 200);
+    if (!name) throw new Error("Give the new file a name.");
+    if (newKind.mime !== FOLDER && !text?.trim()) throw new Error("Give the new file its text.");
+    return { op, name, newKind, folderId, ...(newKind.mime !== FOLDER ? { text: text!.trim() } : {}) };
+  }
+  const fileId = checkDriveId(input.file_id);
+  if (op === "rename") {
+    const newName = oneLine(input.name, 200);
+    if (!newName) throw new Error("Give the new name.");
+    return { op, fileId, newName };
+  }
+  if (op === "move") {
+    if (!folderId) throw new Error("Which folder? Give folder_id from search_files.");
+    return { op, fileId, folderId };
+  }
+  if (op === "append") {
+    if (!text?.trim()) throw new Error("What should be added? Give text.");
+    return { op, fileId, text: text.trim() };
+  }
+  if (op === "replace") {
+    const find = String(input.find ?? "").replace(/\r\n?/g, "\n");
+    if (!find.trim()) throw new Error("Give the exact words to find (find) and what replaces them (text).");
+    if (text === undefined) throw new Error("Give the new words as text (empty to take them out).");
+    if (find.length > 2000) throw new Error("find is too long: give a shorter, exact piece.");
+    return { op, fileId, find, text };
+  }
+  return { op, fileId };
+}
+
+export type ActionPayload = EmailDraft | EventDraft | PlaylistDraft | MoveDraft | RsvpDraft | ArchiveDraft | TextDraft | RemoveDraft | MailDraft | EditEventDraft | FileDraft;
 
 const EVENT_ID = /^[a-zA-Z0-9_-]{5,1024}$/;
 const THREAD_ID = /^[0-9a-f]{6,32}$/i;
@@ -144,6 +334,8 @@ export interface ActionResult {
   did: string;
   at: string;
   link?: string;
+  /** (0.55) the user tapped Undo, and it was put back */
+  undone?: string;
 }
 
 export interface ActionRow {
@@ -235,6 +427,24 @@ function toLocal(d: Date, timeZone?: string): string {
 
 /** One line for prompts and lists: what it is, not the whole text. */
 export function describeAction(a: Pick<ActionRow, "kind" | "payload">, timeZone?: string): string {
+  if (a.kind === "mail") {
+    const m = a.payload as MailDraft;
+    const t = m.threads;
+    return `${MAIL_OPS[m.op].verb}${m.label ? ` "${m.label.name}"` : ""}: ${t.length} email${t.length === 1 ? "" : "s"} (${t.slice(0, 3).map((x) => `"${x.subject}"`).join(", ")}${t.length > 3 ? "…" : ""})`;
+  }
+  if (a.kind === "edit_event") {
+    const v = a.payload as EditEventDraft;
+    const c = v.changes;
+    const bits = [
+      c.title !== undefined && `title to "${c.title}"`,
+      c.location !== undefined && (c.location ? `place to "${c.location}"` : "no place"),
+      c.description !== undefined && "new notes",
+      c.addGuests?.length && `invite ${c.addGuests.join(", ")}`,
+      c.removeGuests?.length && `take off ${c.removeGuests.join(", ")}`,
+    ].filter(Boolean);
+    return `Change "${v.title}" (${v.when}): ${bits.join(", ")}`;
+  }
+  if (a.kind === "file") return describeFileChange(a.payload as FileDraft);
   if (a.kind === "move") {
     const m = a.payload as MoveDraft;
     const to = m.allDay ? m.start : describeDue(localToDate(m.start, timeZone)!, timeZone);
@@ -321,13 +531,15 @@ export function finishAction(db: DB, id: number, outcome: { status: "done" | "de
 
 export interface ActionDeps {
   fetch: typeof fetch;
+  /** (0.55) the whole of Drive: files the user approves changes to, one card at a time */
+  drive?: TokenSource;
   /** gmail.compose: create drafts, send */
   compose: TokenSource;
   /** gmail.readonly: the thread being replied to */
   mailRead: TokenSource;
   /** calendar.events */
   events: TokenSource;
-  /** gmail.modify: archiving (only when the user turned "Tidy your inbox" on) */
+  /** gmail.modify: archiving (only when the user turned "Organize your mail" on) */
   modify?: TokenSource;
   timeZone?: string;
 }
@@ -454,6 +666,8 @@ export interface CalendarEvent {
   organizer?: { email?: string; displayName?: string; self?: boolean };
   /** set on a repeating event itself (the whole series) */
   recurrence?: string[];
+  location?: string;
+  description?: string;
 }
 
 /** What removing this event would do, read from the event as it is on the calendar. */
@@ -521,7 +735,210 @@ export async function doRsvp(d: ActionDeps, v: RsvpDraft): Promise<ActionResult>
 }
 
 export async function doArchive(d: ActionDeps, a: ArchiveDraft): Promise<ActionResult> {
-  if (!d.modify) throw new Error("Lyra isn't allowed to tidy your inbox yet. Turn it on in Connections, then try again.");
-  for (const t of a.threads) await post(d, `${GMAIL}/threads/${t.id}/modify`, d.modify, "tidy your inbox", { removeLabelIds: ["INBOX"] });
+  if (!d.modify) throw new Error("Lyra isn't allowed to organize your mail yet. Turn it on in Connections, then try again.");
+  for (const t of a.threads) await post(d, `${GMAIL}/threads/${t.id}/modify`, d.modify, "organize your mail", { removeLabelIds: ["INBOX"] });
   return { did: "archived", at: new Date().toISOString() };
+}
+
+// ---------- 0.55: mail, event details, Drive files ----------
+
+/** The labels a change adds or takes off (trash and restore have their own calls). */
+function mailLabels(op: MailOp, labelId?: string): { addLabelIds?: string[]; removeLabelIds?: string[] } {
+  switch (op) {
+    case "archive":
+      return { removeLabelIds: ["INBOX"] };
+    case "inbox":
+      return { addLabelIds: ["INBOX"] };
+    case "read":
+      return { removeLabelIds: ["UNREAD"] };
+    case "unread":
+      return { addLabelIds: ["UNREAD"] };
+    case "star":
+      return { addLabelIds: ["STARRED"] };
+    case "unstar":
+      return { removeLabelIds: ["STARRED"] };
+    case "label":
+      return { addLabelIds: [labelId!] };
+    case "unlabel":
+      return { removeLabelIds: [labelId!] };
+    default:
+      return {};
+  }
+}
+
+/** Does it, and returns the payload as done (a new label's id is kept, so Undo can take it off). */
+export async function doMail(d: ActionDeps, m: MailDraft): Promise<{ result: ActionResult; payload: MailDraft }> {
+  if (!d.modify) throw new Error("Lyra isn't allowed to organize your mail yet. Turn it on in Connections, then try again.");
+  let label = m.label;
+  if (m.op === "label" && label && !label.id) {
+    const r = await post(d, `${GMAIL}/labels`, d.modify, "organize your mail", { name: label.name, labelListVisibility: "labelShow", messageListVisibility: "show" });
+    label = { id: String(r.id), name: label.name };
+  }
+  for (const t of m.threads) {
+    if (m.op === "trash" || m.op === "untrash") await post(d, `${GMAIL}/threads/${t.id}/${m.op}`, d.modify, "organize your mail", {});
+    else await post(d, `${GMAIL}/threads/${t.id}/modify`, d.modify, "organize your mail", mailLabels(m.op, label?.id));
+  }
+  return { result: { did: `mail_${m.op}`, at: new Date().toISOString() }, payload: { ...m, ...(label ? { label } : {}) } };
+}
+
+/** The guest list after the change: the people taken off go, the new ones join. */
+function guestList(v: EditEventDraft): NonNullable<CalendarEvent["attendees"]> {
+  const out = new Set((v.changes.removeGuests ?? []).map((x) => x.toLowerCase()));
+  return [...v.before.attendees.filter((a) => !out.has((a.email ?? "").toLowerCase())), ...(v.changes.addGuests ?? []).map((email) => ({ email }))];
+}
+
+export async function doEditEvent(d: ActionDeps, v: EditEventDraft, undo = false): Promise<ActionResult> {
+  const c = v.changes;
+  const body: Record<string, unknown> = undo
+    ? {
+        ...(c.title !== undefined ? { summary: v.before.title } : {}),
+        ...(c.location !== undefined ? { location: v.before.location } : {}),
+        ...(c.description !== undefined ? { description: v.before.description } : {}),
+        ...(c.addGuests || c.removeGuests ? { attendees: v.before.attendees } : {}),
+      }
+    : {
+        ...(c.title !== undefined ? { summary: c.title } : {}),
+        ...(c.location !== undefined ? { location: c.location } : {}),
+        ...(c.description !== undefined ? { description: c.description } : {}),
+        ...(c.addGuests || c.removeGuests ? { attendees: guestList(v) } : {}),
+      };
+  const tell = v.guests > 0 || !!c.removeGuests?.length;
+  const r = await post(d, `${CAL}/${encodeURIComponent(v.eventId)}?sendUpdates=${tell ? "all" : "none"}`, d.events, "add calendar events", body, "PATCH");
+  return { did: "changed", at: new Date().toISOString(), link: typeof r.htmlLink === "string" && r.htmlLink.startsWith("https://") ? r.htmlLink : undefined };
+}
+
+export function describeFileChange(f: FileDraft): string {
+  switch (f.op) {
+    case "create":
+      return `New ${f.kind} "${f.name}"${f.folder ? ` in ${f.folder.name}` : ""}`;
+    case "rename":
+      return `Rename "${f.name}" to "${f.newName}"`;
+    case "move":
+      return `Move "${f.name}" to ${f.folder?.name ?? "a folder"}`;
+    case "trash":
+      return `Trash "${f.name}" (${f.kind})`;
+    case "restore":
+      return `Restore "${f.name}" from the trash`;
+    case "append":
+      return `Add to the end of "${f.name}": "${(f.text ?? "").slice(0, 60)}${(f.text ?? "").length > 60 ? "…" : ""}"`;
+    case "replace":
+      return `In "${f.name}", replace "${(f.find ?? "").slice(0, 40)}" with "${(f.text ?? "").slice(0, 40)}" (${f.count ?? 0}×)`;
+  }
+}
+
+const DRIVE = "https://www.googleapis.com/drive/v3/files";
+const DRIVE_UPLOAD = "https://www.googleapis.com/upload/drive/v3/files";
+const DOCS = "https://docs.googleapis.com/v1/documents";
+
+async function driveFetch(d: ActionDeps, url: string, init: RequestInit): Promise<Response> {
+  if (!d.drive) throw new Error("Lyra isn't allowed to change your Drive files yet. Turn it on in Connections, then try again.");
+  const headers = { ...(init.headers as Record<string, string>), authorization: `Bearer ${await bearer(d.drive, "change your Drive files")}` };
+  const r = await d.fetch(url, { ...init, headers });
+  if (r.status === 401 || r.status === 403) {
+    await d.drive.invalidate();
+    const j = (await r.json().catch(() => ({}))) as { error?: { message?: string } };
+    throw new Error(`Google refused (${r.status})${j.error?.message ? `: ${j.error.message}` : ""}. If it's your file, turn "Change your files" off and on again in Connections, then try again.`);
+  }
+  if (r.status === 404) throw new Error("That file isn't in Drive anymore (or Lyra can't reach it).");
+  if (!r.ok) {
+    const j = (await r.json().catch(() => ({}))) as { error?: { message?: string } };
+    throw new Error(`Google said ${r.status}${j.error?.message ? `: ${j.error.message}` : ""}.`);
+  }
+  return r;
+}
+
+const driveJson = async <T>(d: ActionDeps, url: string, init: RequestInit = {}): Promise<T> => (await (await driveFetch(d, url, init)).json()) as T;
+const jsonInit = (method: string, body: unknown): RequestInit => ({ method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+const linkOf = (j: { webViewLink?: string }) => (j.webViewLink?.startsWith("https://") ? j.webViewLink : undefined);
+
+function multipart(meta: Record<string, unknown>, type: string, text: string): { body: string; type: string } {
+  const boundary = `lyra${crypto.randomUUID().replace(/-/g, "")}`;
+  return {
+    type: `multipart/related; boundary=${boundary}`,
+    body: `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: ${type}; charset=UTF-8\r\n\r\n${text}\r\n--${boundary}--`,
+  };
+}
+
+/** Does it; a new file's id is kept on the payload so Undo can trash it again. */
+export async function doFile(d: ActionDeps, f: FileDraft): Promise<{ result: ActionResult; payload: FileDraft }> {
+  const done = (did: string, link?: string, payload: FileDraft = f) => ({ result: { did, at: new Date().toISOString(), ...(link ? { link } : {}) }, payload });
+  const fields = "fields=id,webViewLink&supportsAllDrives=true";
+  switch (f.op) {
+    case "create": {
+      const parents = f.folder ? { parents: [f.folder.id] } : {};
+      if (f.kind === "folder") {
+        const j = await driveJson<{ id: string; webViewLink?: string }>(d, `${DRIVE}?${fields}`, jsonInit("POST", { name: f.name, mimeType: FOLDER, ...parents }));
+        return done("file_created", linkOf(j), { ...f, fileId: j.id, link: linkOf(j) });
+      }
+      const doc = f.kind === "Google Doc";
+      const send = (type: string) => {
+        const m = multipart({ name: f.name, ...(doc ? { mimeType: GDOC } : {}), ...parents }, type, f.text ?? "");
+        return driveFetch(d, `${DRIVE_UPLOAD}?uploadType=multipart&${fields}`, { method: "POST", headers: { "content-type": m.type }, body: m.body });
+      };
+      // Markdown keeps a Google Doc's headings and lists; plain text if Google won't convert it
+      const r = doc ? await send("text/markdown").catch(() => send("text/plain")) : await send("text/plain");
+      const j = (await r.json()) as { id: string; webViewLink?: string };
+      return done("file_created", linkOf(j), { ...f, fileId: j.id, link: linkOf(j) });
+    }
+    case "rename": {
+      const j = await driveJson<{ webViewLink?: string }>(d, `${DRIVE}/${f.fileId}?${fields}`, jsonInit("PATCH", { name: f.newName }));
+      return done("file_renamed", linkOf(j));
+    }
+    case "move": {
+      const from = (f.from ?? []).map((p) => p.id).join(",");
+      const j = await driveJson<{ webViewLink?: string }>(d, `${DRIVE}/${f.fileId}?addParents=${f.folder!.id}${from ? `&removeParents=${from}` : ""}&${fields}`, jsonInit("PATCH", {}));
+      return done("file_moved", linkOf(j));
+    }
+    case "trash":
+    case "restore": {
+      const j = await driveJson<{ webViewLink?: string }>(d, `${DRIVE}/${f.fileId}?${fields}`, jsonInit("PATCH", { trashed: f.op === "trash" }));
+      return done(f.op === "trash" ? "file_trashed" : "file_restored", linkOf(j));
+    }
+    case "append":
+    case "replace": {
+      if (f.kind === "Google Doc") {
+        const request =
+          f.op === "append"
+            ? { insertText: { text: `\n${f.text}`, endOfSegmentLocation: {} } }
+            : { replaceAllText: { containsText: { text: f.find, matchCase: true }, replaceText: f.text ?? "" } };
+        const j = await driveJson<{ replies?: { replaceAllText?: { occurrencesChanged?: number } }[] }>(d, `${DOCS}/${f.fileId}:batchUpdate`, jsonInit("POST", { requests: [request] }));
+        if (f.op === "replace" && !j.replies?.[0]?.replaceAllText?.occurrencesChanged) throw new Error("Those words aren't in the doc anymore, so nothing changed.");
+        return done(f.op === "append" ? "file_added" : "file_replaced", f.link);
+      }
+      // a plain text file: read it, change it, write it back
+      const now = await (await driveFetch(d, `${DRIVE}/${f.fileId}?alt=media&supportsAllDrives=true`, {})).text();
+      let next: string;
+      if (f.op === "append") next = `${now.replace(/\s+$/, "")}\n${f.text}\n`;
+      else {
+        if (!now.includes(f.find!)) throw new Error("Those words aren't in the file anymore, so nothing changed.");
+        next = now.split(f.find!).join(f.text ?? "");
+      }
+      await driveFetch(d, `${DRIVE_UPLOAD}/${f.fileId}?uploadType=media&supportsAllDrives=true`, { method: "PATCH", headers: { "content-type": "text/plain; charset=UTF-8" }, body: next });
+      return done(f.op === "append" ? "file_added" : "file_replaced", f.link);
+    }
+  }
+}
+
+/** The change that puts a done one back, or null when there's no clean way to (text edits: Drive's version history has the old one). */
+export function fileUndo(f: FileDraft): FileDraft | null {
+  switch (f.op) {
+    case "create":
+      return f.fileId ? { ...f, op: "trash" } : null;
+    case "rename":
+      return { ...f, name: f.newName!, newName: f.name };
+    case "move":
+      return f.from?.length ? { ...f, folder: f.from[0], from: [f.folder!] } : null;
+    case "trash":
+      return { ...f, op: "restore" };
+    case "restore":
+      return { ...f, op: "trash" };
+    default:
+      return null;
+  }
+}
+
+/** Whether a done card can offer Undo. */
+export function undoable(a: Pick<ActionRow, "kind" | "payload">): boolean {
+  if (a.kind === "mail" || a.kind === "archive" || a.kind === "edit_event") return true;
+  return a.kind === "file" && fileUndo(a.payload as FileDraft) !== null;
 }

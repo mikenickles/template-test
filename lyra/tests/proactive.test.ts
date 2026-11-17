@@ -274,7 +274,7 @@ describe("suggested next steps", () => {
     expect(provider.requests[0].system).not.toContain("With your OK each time");
     await lyra.connectGoogle("gmail");
     await lyra.chat("hi", noop);
-    expect(provider.requests[1].system).toMatch(/can let you send emails for them \(Write emails\), archive mail \(Tidy your inbox\)[^]*"With your OK each time" on the Lyra page/);
+    expect(provider.requests[1].system).toMatch(/can let you send emails for them \(Write emails\), archive, trash, label or mark mail \(Organize your mail\)[^]*"With your OK each time" on the Lyra page/);
     expect(provider.requests[1].system).not.toContain("Calendar changes");
   });
 });

@@ -120,13 +120,13 @@ describe("more actions with your OK", () => {
   });
 
   it("archives mail only with its own permission, listing each thread straight from Gmail", async () => {
-    const { lyra, g, api } = await setup([call("propose_archive", { thread_ids: ["aa11bb22", "cc33dd44"] }), say("Ready.")]);
+    const { lyra, g, api } = await setup([call("propose_mail_change", { thread_ids: ["aa11bb22", "cc33dd44"], change: "archive" }), say("Ready.")]);
     expect(lyra.state().actions.archive).toBe(false);
     await lyra.allowActions("archive", true);
     expect(g.asked.at(-1)).toEqual([GMAIL_MODIFY]);
     const { message } = await lyra.chat("Clear out those newsletters", noop);
     const a = lyra.action(message.meta.actions![0])!;
-    expect(a).toMatchObject({ kind: "archive", payload: { threads: [{ id: "aa11bb22", subject: "Newsletter aa11bb22", from: "Shop" }, { id: "cc33dd44" }] } });
+    expect(a).toMatchObject({ kind: "mail", payload: { op: "archive", threads: [{ id: "aa11bb22", subject: "Newsletter aa11bb22", from: "Shop" }, { id: "cc33dd44" }] } });
     expect(api.calls.filter((c) => c.method === "POST")).toEqual([]);
     await lyra.decideAction(a.id, "do");
     const posts = api.calls.filter((c) => c.method === "POST");
@@ -135,6 +135,11 @@ describe("more actions with your OK", () => {
       "https://gmail.googleapis.com/gmail/v1/users/me/threads/cc33dd44/modify",
     ]);
     expect(posts[0].body).toEqual({ removeLabelIds: ["INBOX"] });
+    // (0.55) Undo puts them back in the inbox
+    const undone = await lyra.undoAction(a.id);
+    expect(undone.result?.undone).toBeTruthy();
+    expect(api.calls.filter((c) => c.method === "POST").slice(2).map((p) => p.body)).toEqual([{ addLabelIds: ["INBOX"] }, { addLabelIds: ["INBOX"] }]);
+    await expect(lyra.undoAction(a.id)).rejects.toThrow(/nothing to undo/);
   });
 
   it("writes a text that opens in Messages, only on a phone", async () => {

@@ -44,7 +44,7 @@ export interface PromptInput {
   /** People cards: the directory, and whether the phone's contacts can be searched. */
   people?: { directory: string; contacts: boolean };
   /** Emails and events Lyra may propose, and recent proposals with what happened to them. */
-  actions?: { allowed: { email: boolean; event: boolean; move?: boolean; rsvp?: boolean; remove?: boolean; archive?: boolean; text?: boolean }; recent: string };
+  actions?: { allowed: { email: boolean; event: boolean; move?: boolean; rsvp?: boolean; remove?: boolean; archive?: boolean; text?: boolean; mail?: boolean; edit_event?: boolean; file?: boolean }; recent: string };
   /** The model answering this turn, so Lyra can say which one if asked. */
   model?: string;
   /** The model's built-in web search is on. */
@@ -71,8 +71,9 @@ function canTurnOn(p: PromptInput, user: string): string {
   const has = (id: string) => p.connectors.some((c) => c.id === id && c.state === "connected");
   const off = [
     has("gmail") && !a?.email && "send emails for them (Write emails)",
-    has("calendar") && !a?.event && "add, move, answer or remove calendar events (Calendar changes)",
-    has("gmail") && !a?.archive && "archive mail (Tidy your inbox)",
+    has("calendar") && !a?.event && "add, move, change, answer or remove calendar events (Calendar changes)",
+    has("gmail") && !a?.archive && "archive, trash, label or mark mail (Organize your mail)",
+    has("drive") && !a?.file && "create, rename, move, edit or trash Drive files (Change your files)",
   ].filter(Boolean) as string[];
   if (!off.length) return "";
   return `${user} can let you ${off.join(", ")}, each still only on their tap, by turning it on under "With your OK each time" on the Lyra page. When they ask for one of these, do what you can now (a draft in chat, the details to copy) and end with one short line that says so, like "Turn on Write emails on the Lyra page and next time I can send it with one tap." Say it then, every time it applies; never bring it up otherwise. `;
@@ -141,14 +142,16 @@ ${p.people.directory.trim() ? neutralize(p.people.directory) : "(none yet)"}
 function actionsSection(p: PromptInput, user: string): string {
   const a = p.actions;
   const w = a?.allowed;
-  if (!a || !w || (!w.email && !w.event && !w.archive && !w.text)) return "";
+  if (!a || !w || (!w.email && !w.event && !w.archive && !w.text && !w.file)) return "";
   const list = [
     w.email && "emails (propose_email)",
     w.event && "calendar events (propose_event)",
     w.move && "a new time for an event ${user} organizes (propose_reschedule)",
     w.rsvp && "an answer to an invitation (propose_rsvp)",
     w.remove && "taking an event off ${user}'s calendar when they ask (propose_remove_event)",
-    w.archive && "archiving emails to tidy the inbox (propose_archive)",
+    w.edit_event && "changes to an event's title, place, notes or guests (propose_edit_event)",
+    w.mail && "archiving, trashing, labelling, starring or marking emails read (propose_mail_change)",
+    w.file && "creating, renaming, moving, editing or trashing files in Google Drive (propose_file_change)",
     w.text && "text messages, which open in ${user}'s messaging app ready to send (propose_text)",
   ].filter(Boolean) as string[];
   const what = list.length > 1 ? `${list.slice(0, -1).join(", ")} and ${list.at(-1)}` : list[0];

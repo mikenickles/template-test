@@ -77,6 +77,14 @@ export class FakeProvider implements ModelProvider {
         const due = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
         return call("save_items", { items: thread && from ? [{ kind: "bill", thread_id: thread, who: from, title: "Bill", amount: Number.isFinite(amount) ? amount : undefined, due_on: due }] : [] });
       }
+      // "trash the bill email": after the search, a card for the first thread found (the user still taps)
+      const asked = [...req.messages].reverse().find((m) => m.role === "user" && m.parts.some((p) => p.type === "text"));
+      const tidy = asked?.parts.map((p) => (p.type === "text" ? p.text : "")).join("").match(/^(trash|archive|star) (?:the |my )?.+? e-?mails?$/i);
+      if (result.name === "gmail__search_mail" && tidy && has("propose_mail_change")) {
+        const thread = result.content.match(/thread: ([0-9a-f]{6,32})/i)?.[1];
+        if (thread) return call("propose_mail_change", { thread_ids: [thread], change: tidy[1].toLowerCase() });
+      }
+      if (result.name === "propose_mail_change" || result.name === "propose_file_change" || result.name === "propose_edit_event") return say("It's ready for you to check.");
       if (result.name === "save_skill") return say("Learned it. I'll do it that way from now on.");
       if (result.name === "use_skill") return say(`Doing it your way:\n\n${result.content.split("\n\n").slice(1).join("\n\n").slice(0, 400)}`);
       if (result.name === "remind_at_place") return say("Done, I'll remind you when you get there 📍");
@@ -170,6 +178,8 @@ export class FakeProvider implements ModelProvider {
     // "email dana@example.com saying yes to Friday": the practice model can propose an email (the user still taps Send)
     const mail = text.match(/^e-?mail (\S+@\S+) saying (.+)$/i);
     if (mail && has("propose_email")) return callSaying("It's ready for you to check.", "propose_email", { to: [mail[1]], subject: "Quick note", body: mail[2] });
+    const tidy = text.match(/^(?:trash|archive|star) (?:the |my )?(.+?) e-?mails?$/i);
+    if (tidy && has("propose_mail_change") && has("gmail__search_mail")) return call("gmail__search_mail", { query: tidy[1], max_results: 1 });
     if (/\b(e-?mail|inbox|mail)\b/i.test(text) && has("gmail__search_mail"))
       return call("gmail__search_mail", { query: "newer_than:7d", max_results: 5 });
     return say(

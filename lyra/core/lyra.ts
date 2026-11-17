@@ -9,11 +9,11 @@ import type { SqlJsStatic } from "sql.js";
 import { CHANNEL_ICONS, runTurn, type TurnEmitter, type TurnInbox, type Workspace } from "./chat.ts";
 import { createGmailServer, gmailProfile } from "./connectors/gmail/server.ts";
 import { createCalendarServer } from "./connectors/calendar/server.ts";
-import { createDriveServer } from "./connectors/drive/server.ts";
+import { createDriveServer, isTextual } from "./connectors/drive/server.ts";
 import { googleGet } from "./connectors/google-http.ts";
 import { graftHomeWork, type Grafted } from "./graft.ts";
 import { createPhoneServer, describeNotices, filterNotices, type NoticeSource } from "./connectors/phone/server.ts";
-import { CALENDAR_EVENTS, CALENDAR_READONLY, DRIVE_FILE, DRIVE_READONLY, GMAIL_COMPOSE, GMAIL_MODIFY, GMAIL_READONLY, grantIsAllowed, TokenSource, type GoogleAuth } from "./connectors/google.ts";
+import { CALENDAR_EVENTS, CALENDAR_READONLY, DRIVE_FILE, DRIVE_FULL, DRIVE_READONLY, GMAIL_COMPOSE, GMAIL_MODIFY, GMAIL_READONLY, grantIsAllowed, TokenSource, type GoogleAuth } from "./connectors/google.ts";
 import * as A from "./actions.ts";
 import * as P from "./people.ts";
 import * as D from "./docs.ts";
@@ -158,7 +158,7 @@ export interface AppState {
   proactive: Proactive;
   /** Lyra may propose emails / calendar events (you approve each one). */
   /** email/event/archive: allowed on this device; text: null where there's no phone to text from */
-  actions: { email: boolean; event: boolean; archive: boolean; text: boolean | null };
+  actions: { email: boolean; event: boolean; archive: boolean; file: boolean; text: boolean | null };
   /** Phone contacts: on/off, or null where there are none (computer, browser). */
   contacts: boolean | null;
   /** Reading the phone's notifications: on/off, or null where there are none (computer, browser). */
@@ -267,17 +267,29 @@ export type GoogleId = "gmail" | "calendar" | "drive";
 
 const GOOGLE_LINKS = ["gmail", "calendar", "drive"];
 /** Settings that stay with a device when another device's data arrives through sync. */
-const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications", "actions.gmail", "actions.calendar", "actions.archive", "actions.text", "notices", "contacts", "spotify", "spotify.playback", "spotify.playlists", "spotify.nowPlaying"];
+const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications", "actions.gmail", "actions.calendar", "actions.archive", "actions.drive", "actions.text", "notices", "contacts", "spotify", "spotify.playback", "spotify.playlists", "spotify.nowPlaying"];
 
 /** Phase 9: what Lyra may propose, each turned on by the user in Connections. */
 const ACTION_ACCESS = {
   email: { link: "gmail" as GoogleId, setting: "actions.gmail", scope: GMAIL_COMPOSE, what: "draft and send mail" },
   event: { link: "calendar" as GoogleId, setting: "actions.calendar", scope: CALENDAR_EVENTS, what: "add calendar events" },
-  archive: { link: "gmail" as GoogleId, setting: "actions.archive", scope: GMAIL_MODIFY, what: "tidy your inbox" },
+  archive: { link: "gmail" as GoogleId, setting: "actions.archive", scope: GMAIL_MODIFY, what: "organize your mail" },
+  // 0.55: create, rename, move, edit and trash files in Drive
+  drive: { link: "drive" as GoogleId, setting: "actions.drive", scope: DRIVE_FULL, what: "change your Drive files" },
 };
 type GoogleAction = keyof typeof ACTION_ACCESS;
 /** Which permission each kind of card needs: moving and answering events use the calendar one. */
-const NEEDS: Record<"email" | "event" | "move" | "rsvp" | "archive" | "remove", GoogleAction> = { email: "email", event: "event", move: "event", rsvp: "event", archive: "archive", remove: "event" };
+const NEEDS: Record<"email" | "event" | "move" | "rsvp" | "archive" | "remove" | "mail" | "edit_event" | "file", GoogleAction> = {
+  email: "email",
+  event: "event",
+  move: "event",
+  rsvp: "event",
+  archive: "archive",
+  remove: "event",
+  mail: "archive",
+  edit_event: "event",
+  file: "drive",
+};
 
 /** Lyra's Google connectors. Each asks for one read-only permission. */
 const GOOGLE: {
@@ -515,6 +527,14 @@ export class Lyra {
             const row = A.createAction(this.db, kind, payload, tainted, channelId);
             return { id: row.id, summary: A.describeAction(row, this.p.timeZone) };
           }
+          if (kind === "mail") return this.proposeMail(input, tainted, channelId);
+          if (kind === "edit_event") {
+            // the card shows the event as it really is, and keeps what it was for Undo
+            const e = await A.getEvent({ fetch: this.fetch }, this.tokenFor("calendar"), A.checkEventId(input.event_id));
+            const row = A.createAction(this.db, "edit_event", { eventId: e.id, title: e.summary?.trim() || "(no title)", when: A.eventWhen(e, this.p.timeZone), ...A.checkEditEvent(input, e) }, tainted, channelId);
+            return { id: row.id, summary: A.describeAction(row, this.p.timeZone) };
+          }
+          if (kind === "file") return this.proposeFile(input, tainted, channelId);
           if (kind === "archive") {
             // subject and sender straight from Gmail, so the card lists exactly what will move
             const g = googleGet("https://gmail.googleapis.com/gmail/v1/users/me", "Gmail", this.tokenFor("gmail"), this.fetch);
@@ -836,7 +856,7 @@ export class Lyra {
       liveVoice: this.liveVoice,
       backgroundModel: getSetting(this.db, "backgroundModel") || "auto",
       proactive: this.proactive,
-      actions: (({ email, event, archive, text }) => ({ email, event, archive, text: this.p.sms ? text : null }))(this.actionsAllowed()),
+      actions: (({ email, event, archive, file, text }) => ({ email, event, archive, file, text: this.p.sms ? text : null }))(this.actionsAllowed()),
       contacts: this.p.contacts?.available ? this.contactsOn : null,
       notices: this.p.notices ? getSetting(this.db, "notices") === "on" : null,
     };
@@ -850,7 +870,7 @@ export class Lyra {
     return (this.actionTokens[kind] ??= new TokenSource(this.p.google, [ACTION_ACCESS[kind].scope]));
   }
 
-  actionsAllowed(): { email: boolean; event: boolean; move: boolean; rsvp: boolean; remove: boolean; archive: boolean; text: boolean; playlist: boolean } {
+  actionsAllowed(): { email: boolean; event: boolean; move: boolean; rsvp: boolean; remove: boolean; archive: boolean; mail: boolean; edit_event: boolean; file: boolean; text: boolean; playlist: boolean } {
     const on = (k: GoogleAction) => !!this.link(ACTION_ACCESS[k].link) && getSetting(this.db, ACTION_ACCESS[k].setting) === "on";
     const event = on("event");
     return {
@@ -859,7 +879,10 @@ export class Lyra {
       move: event,
       rsvp: event,
       remove: event,
+      edit_event: event,
       archive: on("archive"),
+      mail: on("archive"),
+      file: on("drive"),
       // only opens the messaging app with the text ready: on by default on a phone
       text: !!this.p.sms && getSetting(this.db, "actions.text") !== "off",
       playlist: this.spotifyLinked && getSetting(this.db, "spotify.playlists") === "on",
@@ -888,7 +911,7 @@ export class Lyra {
     }
     const a = ACTION_ACCESS[kind];
     if (on) {
-      if (!this.link(a.link)) throw new Error(`Connect ${a.link === "gmail" ? "Mail" : "Calendar"} first.`);
+      if (!this.link(a.link)) throw new Error(`Connect ${a.link === "gmail" ? "Mail" : a.link === "drive" ? "Files" : "Calendar"} first.`);
       if (!this.p.google.available) throw new Error("Google sign-in isn't available here.");
       const r = await this.p.google.authorize([a.scope], true);
       if (!grantIsAllowed(r.grantedScopes, a.scope)) throw new Error("Google granted more than Lyra asked for, so Lyra didn't keep it.");
@@ -1286,8 +1309,16 @@ export class Lyra {
           mailRead: this.tokenFor("gmail"),
           events: this.actionToken("event"),
           modify: this.actionToken("archive"),
+          drive: this.actionToken("drive"),
           timeZone: this.p.timeZone,
         };
+        if (a.kind === "mail" || a.kind === "file") {
+          const r = a.kind === "mail" ? await A.doMail(deps, payload as A.MailDraft) : await A.doFile(deps, payload as A.FileDraft);
+          A.finishAction(this.db, id, { status: "done", payload: r.payload, result: r.result });
+          await this.db.flush();
+          this.listeners.forEach((l) => l({ type: "message", channelId: a.channel_id }));
+          return A.getAction(this.db, id)!;
+        }
         const result =
           a.kind === "email"
             ? await A.doEmail(deps, payload as A.EmailDraft, choice === "draft" ? "draft" : "send")
@@ -1299,12 +1330,112 @@ export class Lyra {
                   ? await A.doRemove(deps, payload as A.RemoveDraft)
                 : a.kind === "archive"
                   ? await A.doArchive(deps, payload as A.ArchiveDraft)
-                  : await A.doEvent(deps, payload as A.EventDraft);
+                  : a.kind === "edit_event"
+                    ? await A.doEditEvent(deps, payload as A.EditEventDraft)
+                    : await A.doEvent(deps, payload as A.EventDraft);
         A.finishAction(this.db, id, { status: "done", payload, result });
       } catch (e) {
         A.finishAction(this.db, id, { status: "proposed", error: (e as Error).message.slice(0, 300) });
       }
     }
+    await this.db.flush();
+    this.listeners.forEach((l) => l({ type: "message", channelId: a.channel_id }));
+    return A.getAction(this.db, id)!;
+  }
+
+  // ---------- 0.55: the rest of Gmail, Calendar and Drive, each a card first ----------
+
+  /** Mail threads to archive, trash, label, star or mark: subjects and senders straight from Gmail. */
+  private async proposeMail(input: Record<string, unknown>, tainted: boolean, channelId: number | null): Promise<{ id: number; summary: string }> {
+    const { op, ids, label } = A.checkMailChange(input);
+    const g = googleGet("https://gmail.googleapis.com/gmail/v1/users/me", "Gmail", this.tokenFor("gmail"), this.fetch);
+    let lab: A.MailDraft["label"];
+    if (op === "label" || op === "unlabel") {
+      const r = await g.json<{ labels?: { id: string; name: string }[] }>("/labels", {});
+      const found = (r.labels ?? []).find((l) => l.name.toLowerCase() === label.toLowerCase());
+      if (!found && op === "unlabel") throw new Error(`There's no label called "${label}".`);
+      lab = found ? { id: found.id, name: found.name } : { name: label };
+    }
+    const threads: A.MailDraft["threads"] = [];
+    for (const id of ids) {
+      const t = await g.json<{ messages?: { payload?: { headers?: { name: string; value: string }[] } }[] }>(`/threads/${id}`, { format: "metadata", metadataHeaders: ["Subject", "From"] }).catch(() => null);
+      const h = t?.messages?.[0]?.payload?.headers ?? [];
+      const v = (n: string) => h.find((x) => x.name.toLowerCase() === n.toLowerCase())?.value ?? "";
+      if (t?.messages?.length) threads.push({ id, subject: v("Subject").slice(0, 120) || "(no subject)", from: v("From").replace(/\s*<[^>]+>/, "").slice(0, 60) });
+    }
+    if (!threads.length) throw new Error("Gmail didn't find those threads.");
+    const row = A.createAction(this.db, "mail", { op, threads, ...(lab ? { label: lab } : {}) }, tainted, channelId);
+    return { id: row.id, summary: A.describeAction(row) };
+  }
+
+  /** A Drive change, with the file's real name, kind and place read from Drive for the card. */
+  private async proposeFile(input: Record<string, unknown>, tainted: boolean, channelId: number | null): Promise<{ id: number; summary: string }> {
+    const c = A.checkFileChange(input);
+    const g = googleGet("https://www.googleapis.com/drive/v3", "Google Drive", this.tokenFor("drive"), this.fetch);
+    type F = { id: string; name: string; mimeType: string; parents?: string[]; trashed?: boolean; webViewLink?: string; capabilities?: { canEdit?: boolean; canTrash?: boolean } };
+    const meta = (id: string) => g.json<F>(`/files/${id}`, { fields: "id,name,mimeType,parents,trashed,webViewLink,capabilities(canEdit,canTrash)", supportsAllDrives: true });
+    const folder = async (id: string) => {
+      const f = await meta(id);
+      if (f.mimeType !== A.FOLDER) throw new Error(`"${f.name}" isn't a folder.`);
+      if (f.trashed) throw new Error(`The folder "${f.name}" is in the trash.`);
+      return { id: f.id, name: f.name };
+    };
+    const kindOf = (mime: string) =>
+      mime === A.GDOC ? "Google Doc" : mime === A.FOLDER ? "folder" : mime.endsWith(".spreadsheet") ? "Google Sheet" : mime.endsWith(".presentation") ? "Google Slides" : mime === "application/pdf" ? "PDF" : isTextual(mime) ? "text file" : mime.split("/")[1] || "file";
+    let draft: A.FileDraft;
+    if (c.op === "create") {
+      draft = { op: "create", name: c.name!, kind: c.newKind!.kind, ...(c.folderId ? { folder: await folder(c.folderId) } : {}), ...(c.text !== undefined ? { text: c.text } : {}) };
+    } else {
+      const f = await meta(c.fileId!);
+      const base = { fileId: f.id, name: f.name, kind: kindOf(f.mimeType), ...(f.webViewLink?.startsWith("https://") ? { link: f.webViewLink } : {}) };
+      if (c.op === "restore" && !f.trashed) throw new Error(`"${f.name}" isn't in the trash.`);
+      if (c.op !== "restore" && f.trashed) throw new Error(`"${f.name}" is in the trash. Restore it first.`);
+      if (c.op === "trash" && f.capabilities?.canTrash === false) throw new Error(`The user can't trash "${f.name}": someone else owns it. They can remove it from their own Drive view instead.`);
+      if (c.op !== "trash" && c.op !== "restore" && f.capabilities?.canEdit === false) throw new Error(`"${f.name}" is shared with the user read-only, so it can't be changed.`);
+      if (c.op === "rename") {
+        if (c.newName === f.name) throw new Error(`It's already called "${f.name}".`);
+        draft = { ...base, op: "rename", newName: c.newName };
+      } else if (c.op === "move") {
+        const to = await folder(c.folderId!);
+        if (to.id === f.id) throw new Error("A folder can't go inside itself.");
+        if (f.parents?.includes(to.id)) throw new Error(`"${f.name}" is already in ${to.name}.`);
+        const from = await Promise.all((f.parents ?? []).map(async (p) => ({ id: p, name: await meta(p).then((x) => x.name, () => "its folder") })));
+        draft = { ...base, op: "move", folder: to, from };
+      } else if (c.op === "append" || c.op === "replace") {
+        if (!(f.mimeType === A.GDOC || isTextual(f.mimeType))) throw new Error(`Lyra can change the text of Google Docs and plain text files, not a ${base.kind}.`);
+        if (c.op === "replace") {
+          const now = f.mimeType === A.GDOC ? await g.text(`/files/${f.id}/export`, { mimeType: "text/plain" }) : await g.text(`/files/${f.id}`, { alt: "media", supportsAllDrives: true });
+          const count = now.replace(/\r\n/g, "\n").split(c.find!).length - 1;
+          if (!count) throw new Error(`Those words aren't in "${f.name}". Read it with read_file and give the exact words as they are written.`);
+          draft = { ...base, op: "replace", find: c.find, text: c.text ?? "", count };
+        } else draft = { ...base, op: "append", text: c.text };
+      } else draft = { ...base, op: c.op };
+    }
+    const row = A.createAction(this.db, "file", draft, tainted, channelId);
+    return { id: row.id, summary: A.describeAction(row) };
+  }
+
+  /** Put back a done change, on the user's tap: mail, an event's details, a Drive file. */
+  async undoAction(id: number): Promise<A.ActionRow> {
+    const a = A.getAction(this.db, id);
+    if (!a || a.status !== "done" || a.result?.undone || !A.undoable(a)) throw new Error("There's nothing to undo there.");
+    const deps: A.ActionDeps = {
+      fetch: this.fetch,
+      compose: this.actionToken("email"),
+      mailRead: this.tokenFor("gmail"),
+      events: this.actionToken("event"),
+      modify: this.actionToken("archive"),
+      drive: this.actionToken("drive"),
+      timeZone: this.p.timeZone,
+    };
+    const need = NEEDS[a.kind as keyof typeof NEEDS];
+    if (need && getSetting(this.db, ACTION_ACCESS[need].setting) !== "on") throw new Error(`Lyra isn't allowed to ${ACTION_ACCESS[need].what} on this device anymore. Turn it on in Connections to undo it.`);
+    if (a.kind === "mail" || a.kind === "archive") {
+      const m: A.MailDraft = a.kind === "archive" ? { op: "archive", threads: (a.payload as A.ArchiveDraft).threads } : (a.payload as A.MailDraft);
+      await A.doMail(deps, { ...m, op: A.MAIL_OPS[m.op].undo });
+    } else if (a.kind === "edit_event") await A.doEditEvent(deps, a.payload as A.EditEventDraft, true);
+    else await A.doFile(deps, A.fileUndo(a.payload as A.FileDraft)!);
+    A.finishAction(this.db, id, { status: "done", result: { ...a.result!, undone: new Date().toISOString() } });
     await this.db.flush();
     this.listeners.forEach((l) => l({ type: "message", channelId: a.channel_id }));
     return A.getAction(this.db, id)!;
@@ -2948,7 +3079,7 @@ export class Lyra {
     }
     await this.tokenFor(id).invalidate();
     this.db.run("DELETE FROM settings WHERE key = ?", [id]);
-    for (const k of ["email", "event"] as const) if (ACTION_ACCESS[k].link === id) this.db.run("DELETE FROM settings WHERE key = ?", [ACTION_ACCESS[k].setting]);
+    for (const k of Object.keys(ACTION_ACCESS) as GoogleAction[]) if (ACTION_ACCESS[k].link === id) this.db.run("DELETE FROM settings WHERE key = ?", [ACTION_ACCESS[k].setting]);
     await this.connectors.reset();
     await this.db.flush();
     return this.state();
