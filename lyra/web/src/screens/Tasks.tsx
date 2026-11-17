@@ -94,7 +94,7 @@ function SwipeRow({ children, title, onLater, onDone, laterLabel = "Later" }: { 
   const dragged = useRef(false);
   return (
     <div
-      className="swipe"
+      className={`swipe${dx || dragging ? " moved" : ""}`}
       // the buttons can also be reached with the keyboard or a screen reader: the row opens when one has focus
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null) && !dragging) setDx(0);

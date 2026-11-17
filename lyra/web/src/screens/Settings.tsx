@@ -15,7 +15,7 @@ import { WeatherSection } from "./WeatherSection";
 import { PlacesSection } from "./PlacesSection";
 import { useEffect } from "react";
 import { ask } from "../ask";
-import { AVATAR_SIZES, TEXT_SIZES, avatarSize, setAvatarSize, setTextSize, textSize } from "../sizes";
+import { AVATAR_SIZES, TEXT_SIZES, ambientOn, avatarSize, setAmbient, setAvatarSize, setTextSize, textSize } from "../sizes";
 import { Orb } from "../LyraMark";
 
 export type SettingsSection = "model" | "usage" | "you" | "alerts" | "sync" | "about";
@@ -54,6 +54,7 @@ const FINDER: { label: string; more: string; where: string; href: string; phone?
   { label: "Make Lyra your assistant", more: "default digital assistant gesture power button home corner swipe gemini google hey", where: "You and appearance", href: "#/settings/you", phone: true },
   { label: "Shortcuts", more: "app icon long press quick tile widget talk voice memo reach faster", where: "You and appearance", href: "#/settings/you", phone: true },
   { label: "Sounds", more: "audio noise chime bell mute", where: "You and appearance", href: "#/settings/you" },
+  { label: "Gentle motion", more: "animation haze background breathing avatar glow moving battery", where: "You and appearance", href: "#/settings/you" },
   { label: "Haptics", more: "vibrate vibration buzz tap feel", where: "You and appearance", href: "#/settings/you", phone: true },
   { label: "Notifications", more: "notify alerts push checkup test permission", where: "Notifications and privacy", href: "#/settings/alerts" },
   { label: "Heads-ups", more: "proactive off light active speak first", where: "Notifications and privacy", href: "#/settings/alerts" },
@@ -409,10 +410,27 @@ function SizeSection() {
 function HapticsSection() {
   const [on, setOn] = useState(hapticsOn);
   const [sounds, setSoundsOn] = useState(soundsOn);
+  const [ambient, setAmbientOn] = useState(ambientOn);
   return (
     <section className="section">
       <h2 className="section-label">Feel</h2>
       <div className="group">
+        <label className="item">
+          <span className="body">
+            <div className="title">Gentle motion</div>
+            <div className="sub">A soft haze that drifts behind everything, and Lyra's avatar breathes (a little quicker while it's thinking). Off saves a touch of battery.</div>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            className="switch"
+            checked={ambient}
+            onChange={(e) => {
+              setAmbient(e.target.checked);
+              setAmbientOn(e.target.checked);
+            }}
+          />
+        </label>
         <label className="item">
           <span className="body">
             <div className="title">Sounds</div>

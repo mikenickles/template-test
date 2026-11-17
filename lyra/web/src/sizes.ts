@@ -28,6 +28,24 @@ function read<T extends string>(key: string, all: readonly { id: T }[]): T {
   return "regular" as T;
 }
 
+// (0.57) Gentle motion: the moving haze behind the app and Lyra's breathing avatar. On unless turned off.
+const AMBIENT = "lyra.ambient";
+export function ambientOn(): boolean {
+  try {
+    return localStorage.getItem(AMBIENT) !== "off";
+  } catch {
+    return true;
+  }
+}
+export function setAmbient(on: boolean): void {
+  try {
+    localStorage.setItem(AMBIENT, on ? "on" : "off");
+  } catch {
+    /* stays for this visit only */
+  }
+  document.documentElement.dataset.ambient = on ? "on" : "off";
+}
+
 export const textSize = (): TextSize => read(TEXT, TEXT_SIZES);
 export const avatarSize = (): AvatarSize => read(AVATAR, AVATAR_SIZES);
 
@@ -35,6 +53,7 @@ export const avatarSize = (): AvatarSize => read(AVATAR, AVATAR_SIZES);
 export function applySizes(): void {
   document.documentElement.dataset.text = textSize();
   document.documentElement.dataset.avatar = avatarSize();
+  document.documentElement.dataset.ambient = ambientOn() ? "on" : "off";
 }
 
 function save(key: string, value: string): void {

@@ -124,7 +124,7 @@ try {
   check(true, "undo from chat works");
 
   check((await page.locator(".drawer-sections a").count()) === 1, "the phone drawer keeps only Settings");
-  await page.locator(".topbar a.orb").click();
+  await page.locator(".topbar a.orb").click({ force: true });
   await page.getByText("What Lyra can see").waitFor();
   check(true, "the chat's avatar opens the Lyra page");
   check((await page.getByText("Phone app only").count()) === 3, "browser preview says Google connections need the Android app");
@@ -281,7 +281,7 @@ try {
   check((await page.getByRole("dialog", { name: "While you were away" }).count()) === 0, "a quick reload doesn't show it again");
 
   // ---- Activity: Lyra's face opens the Lyra page, its Activity shortcut the log ----
-  await page.locator(".topbar a.orb").click();
+  await page.locator(".topbar a.orb").click({ force: true });
   await page.getByRole("link", { name: "Activity", exact: true }).click();
   await page.getByRole("heading", { name: "Activity" }).waitFor();
   const run = page.locator(".activity-row", { hasText: "Find a plumber" }).first();
@@ -579,7 +579,7 @@ try {
   await page.getByRole("button", { name: "Pin", exact: true }).click();
   await page.locator(".pin-tag").first().waitFor();
   check(true, "long-press pins a message");
-  await page.locator(".topbar a.orb").click();
+  await page.locator(".topbar a.orb").click({ force: true });
   await page.locator(".pinned-item", { hasText: "When is it?" }).waitFor();
   check(true, "pinned messages show on the info page");
   await shot("light-25-pinned");
