@@ -13,6 +13,7 @@ The repo holds an Astro + Tailwind blog (`src/`, `astro.config.mjs`) and a stand
 - Run: open the file in a desktop Chromium/Firefox, or `npm run dev` and visit `/regolith/` (Astro serves `public/` as-is).
 - The module is split into numbered sections (search for `// 0. CONFIG` … `// 17. MAIN LOOP`): config, utilities, renderer/sky, procedural textures, collision world, map builder, map layout, navigation, input, character physics, models, weapons, FX, audio, bots, game rules, HUD, main loop. Gameplay tuning lives in `CFG` (section 0) and `WDEF` (weapons).
 - Physics is custom: vertical-cylinder characters vs AABB/OBB/cylinder/dome/ramp colliders in a spatial grid, 120 Hz sub-steps. All geometry and textures are procedural; static geometry is merged per material and props are instanced.
+- Soldiers, guns and first-person arms/gloves are modelled in Blender by the scripts in `tools/regolith-blender/` (`pip install bpy`, then `python build_assets.py`). They bake ambient occlusion into vertex colours and emit a gzip+base64 blob; that blob is the `ASSET_B64` constant in `index.html` (replace that line to update models). `loadAssets()` unpacks it; soldiers are skinned to the procedural rig in `buildSoldier`.
 - Debug/test hooks: `?debug` skips pointer lock, `?noloop` disables the render loop, and `window.__regolith` exposes `start()`, `step()`, `render()`, `tp()` etc. for headless (Playwright) testing.
 
 ## Development Workflow
