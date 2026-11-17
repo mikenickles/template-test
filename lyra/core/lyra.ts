@@ -12,6 +12,7 @@ import { createCalendarServer } from "./connectors/calendar/server.ts";
 import { createDriveServer, isTextual } from "./connectors/drive/server.ts";
 import { googleGet } from "./connectors/google-http.ts";
 import { graftHomeWork, type Grafted } from "./graft.ts";
+import { createBrowserServer, type BrowserLink } from "./connectors/browser/server.ts";
 import { createPhoneServer, describeNotices, filterNotices, type NoticeSource } from "./connectors/phone/server.ts";
 import { CALENDAR_EVENTS, CALENDAR_READONLY, DRIVE_FILE, DRIVE_FULL, DRIVE_READONLY, GMAIL_COMPOSE, GMAIL_MODIFY, GMAIL_READONLY, grantIsAllowed, TokenSource, type GoogleAuth } from "./connectors/google.ts";
 import * as A from "./actions.ts";
@@ -116,6 +117,8 @@ export interface Platform {
   oauth?: OAuthRedirect;
   /** The phone's notifications, once the user allows Notification access in Android settings (0.45). */
   notices?: NoticeSource & { access(): Promise<boolean> };
+  /** (0.56) Lyra's extension in the user's own browser, through the Windows app: open and read pages. */
+  browser?: BrowserLink & { listen(on: boolean): Promise<void> };
   /** The phone's messaging app: opens a text ready to send (Android only). */
   sms?: { compose(number: string, body: string): Promise<void> };
   /** The phone's address book (Android only), searched by name. */
@@ -163,6 +166,8 @@ export interface AppState {
   contacts: boolean | null;
   /** Reading the phone's notifications: on/off, or null where there are none (computer, browser). */
   notices: boolean | null;
+  /** (0.56) Lyra using your own browser through its extension: on/off, or null where it can't (phone, older Windows app). */
+  browser: boolean | null;
 }
 
 export const PROACTIVE_LEVELS = ["off", "light", "active"] as const;
@@ -267,7 +272,7 @@ export type GoogleId = "gmail" | "calendar" | "drive";
 
 const GOOGLE_LINKS = ["gmail", "calendar", "drive"];
 /** Settings that stay with a device when another device's data arrives through sync. */
-const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications", "actions.gmail", "actions.calendar", "actions.archive", "actions.drive", "actions.text", "notices", "contacts", "spotify", "spotify.playback", "spotify.playlists", "spotify.nowPlaying"];
+const DEVICE_SETTINGS = [...GOOGLE_LINKS, "appLock", "notifications", "actions.gmail", "actions.calendar", "actions.archive", "actions.drive", "actions.text", "notices", "contacts", "spotify", "spotify.playback", "spotify.playlists", "spotify.nowPlaying", "browser"];
 
 /** Phase 9: what Lyra may propose, each turned on by the user in Connections. */
 const ACTION_ACCESS = {
@@ -626,6 +631,17 @@ export class Lyra {
         server: () => createSpotifyServer(this.spotify),
       },
       {
+        id: "browser",
+        label: "Browser",
+        access: "Can open and read pages in its own window of your browser",
+        allow: ["open_page", "read_page"],
+        labels: { open_page: "Opening the page", read_page: "Reading the page" },
+        available: () => !!p.browser,
+        connected: () => getSetting(this.db, "browser") === "on",
+        account: () => undefined,
+        server: () => createBrowserServer(p.browser!),
+      },
+      {
         id: "phone",
         label: "Phone",
         access: "Can read your phone's notifications",
@@ -698,6 +714,8 @@ export class Lyra {
     lyra.customSoul = (await p.texts.read("soul.md"))?.trim() || undefined;
     for (const k of SECRET_KEYS) lyra.keys[k] = (await p.secrets.get(`key.${k}`)) ?? undefined;
     lyra.keys.openaiBaseUrl = getSetting(db, "openaiBaseUrl") || undefined;
+    // (0.56) the Windows app listens for Lyra's browser extension only while it's turned on
+    if (p.browser && getSetting(db, "browser") === "on") await p.browser.listen(true).catch(() => {});
     // Workers cut off when the app was closed carry on where they stopped (not after
     // loading another device's data: those runs belong to that device).
     if (opts.resumeWorkers !== false) lyra.workers.resumeInterrupted();
@@ -859,6 +877,7 @@ export class Lyra {
       actions: (({ email, event, archive, file, text }) => ({ email, event, archive, file, text: this.p.sms ? text : null }))(this.actionsAllowed()),
       contacts: this.p.contacts?.available ? this.contactsOn : null,
       notices: this.p.notices ? getSetting(this.db, "notices") === "on" : null,
+      browser: this.p.browser ? getSetting(this.db, "browser") === "on" : null,
     };
   }
 
@@ -2638,6 +2657,22 @@ export class Lyra {
    * Reading notifications follows Android's Notification access: on once the user allows it
    * there (Lyra can't turn it on itself), off when they turn it off here or there.
    */
+  /** (0.56) Let Lyra use your own browser (through its extension): the Windows app starts listening for it. */
+  async allowBrowser(on: boolean): Promise<AppState> {
+    if (!this.p.browser) throw new Error("Using your browser works in Lyra's Windows app (the newest one).");
+    await this.p.browser.listen(on);
+    if (!on) await this.p.browser.close().catch(() => {});
+    setSetting(this.db, "browser", on ? "on" : "off");
+    await this.db.flush();
+    await this.connectors.reset();
+    return this.state();
+  }
+
+  /** The link as it is now: listening, and whether the extension is connected. */
+  browserStatus(): Promise<{ listening: boolean; connected: boolean; agent: string }> {
+    return this.p.browser ? this.p.browser.status() : Promise.resolve({ listening: false, connected: false, agent: "" });
+  }
+
   async allowNotices(on: boolean): Promise<AppState> {
     if (on) {
       if (!this.p.notices) throw new Error("Reading notifications works in the Android app.");

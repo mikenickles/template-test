@@ -1,5 +1,6 @@
 // The only doors from the app into the computer: Lyra's own files, its secrets,
-// Google sign-in, backups and notifications. Nothing else from Node is exposed.
+// Google sign-in, backups, notifications, and (shell 5) the link to Lyra's extension
+// in your own browser. Nothing else from Node is exposed.
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("lyraDesktop", {
@@ -37,6 +38,18 @@ contextBridge.exposeInMainWorld("lyraDesktop", {
   shell: {
     prefs: () => ipcRenderer.invoke("shell:prefs"),
     setPrefs: (p) => ipcRenderer.invoke("shell:setPrefs", p),
+  },
+  // Lyra's extension in your own browser (shell 5)
+  browser: {
+    listen: (on) => ipcRenderer.invoke("browser:listen", on),
+    status: () => ipcRenderer.invoke("browser:status"),
+    do: (cmd, args) => ipcRenderer.invoke("browser:do", cmd, args),
+    showExtension: () => ipcRenderer.invoke("browser:showExtension"),
+    onChange: (fn) => {
+      const h = () => fn();
+      ipcRenderer.on("browser:changed", h);
+      return () => ipcRenderer.removeListener("browser:changed", h);
+    },
   },
   updates: {
     info: () => ipcRenderer.invoke("updates:info"),

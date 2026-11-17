@@ -72,6 +72,19 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### Your browser, step 1: Lyra reads pages there (0.56)
+
+- **Lyra's extension for Vivaldi** (or Chrome, Edge). Add it once, then Lyra opens and reads
+  pages in **its own window** of your browser, where you're already signed in to your sites:
+  "open my Amazon orders and tell me what's arriving". Your own tabs are left alone.
+- **Read only for now.** It can't click, type, buy or send anything yet; those come next, each
+  with your OK. It never sees passwords or what's typed into fields, and what pages say is
+  treated as information, never as instructions.
+- **Only Lyra's extension can connect,** only on this computer, and only while **Your browser**
+  is on (Lyra page, Browser). Needs the new Windows app (a full install this time).
+- **Setup:** Lyra page, Browser, turn it on, Show the extension's folder; then in Vivaldi go to
+  vivaldi://extensions, turn on Developer mode, Load unpacked, and pick that folder.
+
 ### Gmail, Calendar and Drive, all the way (0.55)
 
 Everything is still a card first: nothing changes until you tap, and most things can be undone.

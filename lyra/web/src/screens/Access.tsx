@@ -3,19 +3,21 @@
 // and to disconnect), what it may do with your OK, and its promise.
 import { useEffect, useState, type ReactNode } from "react";
 import { api, type AppState, type ConnectorStatus } from "../api";
-import { Bell, Bulb, Calendar, ChatIcon, Check, Close, File, Inbox, Mail, Music, Notebook, People, Plus, Pulse, Shield, Spark } from "../icons";
+import { Bell, Bulb, Calendar, ChatIcon, Check, Close, File, Globe, Inbox, Mail, Music, Notebook, People, Plus, Pulse, Shield, Spark } from "../icons";
+import { browserLink } from "../platform";
 import { Avatar } from "../LyraMark";
 import { PinnedList } from "./Pinned";
 import { notices, type NoticeApp } from "../platform";
 import { ask } from "../ask";
 
 type GoogleId = "gmail" | "calendar" | "drive";
-type ServiceId = GoogleId | "contacts" | "notices" | "spotify";
+type ServiceId = GoogleId | "contacts" | "notices" | "spotify" | "browser";
+type BrowserStatus = Awaited<ReturnType<typeof api.browserStatus>>;
 type SpotifyState = Awaited<ReturnType<typeof api.spotifyState>>;
 
-const ICONS: Record<ServiceId, ReactNode> = { gmail: <Mail />, calendar: <Calendar />, drive: <File />, contacts: <People />, notices: <Bell />, spotify: <Music /> };
+const ICONS: Record<ServiceId, ReactNode> = { gmail: <Mail />, calendar: <Calendar />, drive: <File />, contacts: <People />, notices: <Bell />, spotify: <Music />, browser: <Globe /> };
 const NAMES: Record<GoogleId, string> = { gmail: "Gmail", calendar: "Google Calendar", drive: "Google Drive" };
-const SHORT: Record<ServiceId, string> = { gmail: "Mail", calendar: "Calendar", drive: "Files", contacts: "Contacts", notices: "Notifications", spotify: "Spotify" };
+const SHORT: Record<ServiceId, string> = { gmail: "Mail", calendar: "Calendar", drive: "Files", contacts: "Contacts", notices: "Notifications", spotify: "Spotify", browser: "Browser" };
 const PROMISE: Record<GoogleId, string> = {
   gmail: "Lyra can now read your mail. It can't send, delete or change anything on its own.",
   calendar: "Lyra can now see your schedule. It can't add, change or answer events on its own.",
@@ -27,13 +29,18 @@ function abilities(id: ServiceId, state: AppState, spotify: SpotifyState | null)
   switch (id) {
     case "gmail":
       return {
-        yes: ["Read and search your mail", ...(state.actions.email ? ["Write emails for you to check and send"] : []), ...(state.actions.archive ? ["Archive mail you approve"] : [])],
+        yes: ["Read and search your mail", ...(state.actions.email ? ["Write emails for you to check and send"] : []), ...(state.actions.archive ? ["Archive, trash, label or mark mail you approve"] : [])],
         no: ["Send, delete or change anything on its own"],
       };
     case "calendar":
-      return { yes: ["See your schedule", ...(state.actions.event ? ["Add, move or answer events when you tap"] : [])], no: ["Add, change or answer events on its own"] };
+      return { yes: ["See your schedule", ...(state.actions.event ? ["Add, move, change or answer events when you tap"] : [])], no: ["Add, change or answer events on its own"] };
     case "drive":
-      return { yes: ["Find and read your files"], no: ["Change, share or delete them"] };
+      return { yes: ["Find and read your files", ...(state.actions.file ? ["Create, rename, move, edit or trash files you approve"] : [])], no: [state.actions.file ? "Change anything on its own, or share it" : "Change, share or delete them"] };
+    case "browser":
+      return {
+        yes: ["Open and read pages in its own window of your browser, where you're signed in", "Only for what you ask about"],
+        no: ["Click, type, buy or send anything (not yet)", "Touch your own tabs", "See your passwords or what you type"],
+      };
     case "contacts":
       return { yes: ["Look up one name when you mention someone"], no: ["Copy or upload your address book"] };
     case "notices":
@@ -52,6 +59,14 @@ function abilities(id: ServiceId, state: AppState, spotify: SpotifyState | null)
 export function Access({ state, setState, toast }: { state: AppState; setState: (s: AppState) => void; toast: (m: string) => void }) {
   const [counts, setCounts] = useState<{ done: number; remembered: number } | null>(null);
   const [spotify, setSpotify] = useState<SpotifyState | null>(null);
+  // (0.56) Lyra's extension in your own browser: whether it's connected right now
+  const [browser, setBrowser] = useState<BrowserStatus | null>(null);
+  useEffect(() => {
+    if (state.browser === null) return;
+    const load = () => void api.browserStatus().then(setBrowser, () => {});
+    load();
+    return browserLink?.onChange(load);
+  }, [state.browser]);
   const [busy, setBusy] = useState<ServiceId | null>(null);
   const [open, setOpen] = useState<ServiceId | null>(null);
   const [notice, setNotice] = useState<{ tone: "good" | "bad"; title: string; body: string } | null>(null);
@@ -106,6 +121,9 @@ export function Access({ state, setState, toast }: { state: AppState; setState: 
     })),
     ...(state.notices !== null ? [{ id: "notices" as const, on: !!state.notices, status: state.notices ? "Reading" : "Off", tap: () => setOpen("notices") }] : []),
     ...(state.contacts !== null ? [{ id: "contacts" as const, on: !!state.contacts, status: state.contacts ? "On this phone" : "Off", tap: () => setOpen("contacts") }] : []),
+    ...(state.browser !== null
+      ? [{ id: "browser" as const, on: !!state.browser && !!browser?.connected, status: !state.browser ? "Off" : browser?.connected ? "Connected" : "Waiting for your browser", tap: () => setOpen("browser") }]
+      : []),
     ...(spotify ? [{ id: "spotify" as const, on: spotify.connected, status: spotify.connected ? "Connected" : spotify.available ? "Not connected" : "Phone or Windows app", tap: () => setOpen("spotify") }] : []),
   ];
   const connected = tiles.filter((t) => t.on).length;
@@ -275,9 +293,13 @@ function ServiceSheet({
   };
 
   const can = abilities(id, state, spotify);
-  const on = id === "notices" ? !!state.notices : id === "contacts" ? !!state.contacts : id === "spotify" ? !!spotify?.connected : google?.state === "connected";
+  const on = id === "browser" ? !!state.browser : id === "notices" ? !!state.notices : id === "contacts" ? !!state.contacts : id === "spotify" ? !!spotify?.connected : google?.state === "connected";
   const sub =
-    id === "notices"
+    id === "browser"
+      ? state.browser
+        ? "On this computer"
+        : "Off"
+      : id === "notices"
       ? state.notices
         ? "On this phone only"
         : "Off"
@@ -321,6 +343,7 @@ function ServiceSheet({
         </div>
 
         {id === "notices" && <NoticesPanel state={state} setState={setState} toast={toast} />}
+        {id === "browser" && <BrowserPanel state={state} setState={setState} toast={toast} />}
 
         {id === "contacts" && (
           <div className="group lp-sheet-group">
@@ -543,6 +566,71 @@ function WithYourOk({
  * Reading the phone's notifications: Android turns it on (Notification access), Lyra can't.
  * Off: what it means and a button to Android's page. On: which apps to leave out, and off.
  */
+/**
+ * (0.56) Lyra's extension in your own browser (Vivaldi, Chrome, Edge): the switch, how to add
+ * the extension once, and whether it's connected. Only on the Windows app.
+ */
+function BrowserPanel({ state, setState, toast }: { state: AppState; setState: (s: AppState) => void; toast: (m: string) => void }) {
+  const [status, setStatus] = useState<BrowserStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [folder, setFolder] = useState<string | null>(null);
+  useEffect(() => {
+    const load = () => void api.browserStatus().then(setStatus, () => {});
+    load();
+    const t = setInterval(load, 3000);
+    const off = browserLink?.onChange(load);
+    return () => (clearInterval(t), off?.());
+  }, [state.browser]);
+  const flip = async (on: boolean) => {
+    setBusy(true);
+    try {
+      setState(await api.allowBrowser(on));
+      toast(on ? "Lyra is waiting for your browser" : "Lyra won't use your browser");
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const show = async () => {
+    try {
+      setFolder(await browserLink!.showExtension());
+    } catch (e) {
+      toast((e as Error).message);
+    }
+  };
+  return (
+    <>
+      <div className="group lp-sheet-group">
+        <label className="item">
+          <span className="body">
+            <div className="title">Let Lyra use your browser</div>
+            <div className="sub">{state.browser ? (status?.connected ? "Connected" : "Waiting for the extension…") : "Off: the extension can't reach Lyra"}</div>
+          </span>
+          <input type="checkbox" role="switch" className="switch" checked={!!state.browser} disabled={busy} onChange={(e) => void flip(e.target.checked)} />
+        </label>
+      </div>
+      {state.browser && !status?.connected && (
+        <ol className="browser-steps">
+          <li>
+            <button className="btn quiet" onClick={() => void show()}>
+              Show the extension's folder
+            </button>
+            {folder && <span className="browser-folder">{folder}</span>}
+          </li>
+          <li>
+            In Vivaldi, go to <b>vivaldi://extensions</b> (in Chrome, chrome://extensions) and turn on <b>Developer mode</b>.
+          </li>
+          <li>
+            Click <b>Load unpacked</b> and pick that folder. It connects by itself while Lyra and your browser are both open.
+          </li>
+        </ol>
+      )}
+      {state.browser && status?.connected && <p className="hint">Lyra opens pages in its own window there and reads them. Your own tabs are left alone. Ask something like “open my Amazon orders and tell me what's arriving”.</p>}
+    </>
+  );
+}
+
 function NoticesPanel({ state, setState, toast }: { state: AppState; setState: (s: AppState) => void; toast: (m: string) => void }) {
   const [apps, setApps] = useState<NoticeApp[] | null>(null);
   const [asked, setAsked] = useState(false);

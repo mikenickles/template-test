@@ -16,7 +16,8 @@ const BUNDLED_DIST = path.join(__dirname, "dist");
 // 2: lets the app use the microphone for live voice.
 // 3: keeps running in the tray when the window is closed, and can open at sign-in.
 // 4: sign-in to Spotify (its page in the browser, back through 127.0.0.1).
-const SHELL_VERSION = 4;
+// 5: the link to Lyra's extension in your own browser (Vivaldi, Chrome, Edge...), on 127.0.0.1.
+const SHELL_VERSION = 5;
 let DIST = BUNDLED_DIST;
 let activeVersion = null;
 const ICON = path.join(__dirname, "icon.png");
@@ -537,6 +538,182 @@ ipcMain.handle("updates:installPack", async (_e, bytes) => {
 ipcMain.handle("app:relaunch", () => {
   app.relaunch();
   app.exit(0);
+});
+
+// ---------- your browser (shell 5): Lyra's extension, reached only from this computer ----------
+// Lyra's extension in Vivaldi (or Chrome, Edge) connects here over a WebSocket on 127.0.0.1.
+// Only that extension is let in (browsers always send the page's or extension's true origin,
+// and its id is fixed by the key in its manifest), and only while the user has turned
+// "Your browser" on. The app can ask for a fixed few things: open a page, read it, close.
+const BROWSER_PORT = 47615;
+const EXTENSION_ID = "nfjpmjibepkhclmbgnlkkebpjhpfopef";
+const BROWSER_CMDS = new Set(["open", "read", "close"]);
+let browserServer = null;
+let browserSock = null;
+let browserAgent = "";
+let browserSeq = 0;
+const browserWaits = new Map();
+
+const browserChanged = () => win?.webContents.send("browser:changed");
+
+function wsSend(socket, text) {
+  const data = Buffer.from(text, "utf8");
+  let head;
+  if (data.length < 126) head = Buffer.from([0x81, data.length]);
+  else if (data.length < 65536) {
+    head = Buffer.alloc(4);
+    head[0] = 0x81;
+    head[1] = 126;
+    head.writeUInt16BE(data.length, 2);
+  } else {
+    head = Buffer.alloc(10);
+    head[0] = 0x81;
+    head[1] = 127;
+    head.writeBigUInt64BE(BigInt(data.length), 2);
+  }
+  socket.write(Buffer.concat([head, data]));
+}
+
+function browserDropped(socket) {
+  if (browserSock !== socket) return;
+  browserSock = null;
+  browserAgent = "";
+  for (const w of browserWaits.values()) {
+    clearTimeout(w.timer);
+    w.reject(new Error("The browser disconnected."));
+  }
+  browserWaits.clear();
+  browserChanged();
+}
+
+function onBrowserMessage(socket, text) {
+  let m;
+  try {
+    m = JSON.parse(text);
+  } catch {
+    return;
+  }
+  if (m.type === "hello") {
+    browserAgent = String(m.agent ?? "").slice(0, 300);
+    browserChanged();
+  } else if (m.type === "done") {
+    const w = browserWaits.get(m.id);
+    if (!w) return;
+    browserWaits.delete(m.id);
+    clearTimeout(w.timer);
+    if (m.ok) w.resolve(m.result);
+    else w.reject(new Error(String(m.error ?? "The browser couldn't do that.").slice(0, 300)));
+  }
+}
+
+function startBrowserLink() {
+  if (browserServer) return;
+  browserServer = http.createServer((_req, res) => {
+    res.writeHead(404);
+    res.end();
+  });
+  browserServer.on("upgrade", (req, socket) => {
+    const key = req.headers["sec-websocket-key"];
+    if (req.headers.origin !== `chrome-extension://${EXTENSION_ID}` || req.url !== "/lyra" || typeof key !== "string") {
+      socket.end("HTTP/1.1 403 Forbidden\r\n\r\n");
+      return;
+    }
+    const accept = crypto.createHash("sha1").update(`${key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`).digest("base64");
+    socket.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`);
+    if (browserSock) browserSock.destroy();
+    browserSock = socket;
+    socket.setNoDelay(true);
+    let buf = Buffer.alloc(0);
+    let parts = [];
+    socket.on("data", (chunk) => {
+      buf = Buffer.concat([buf, chunk]);
+      if (buf.length > 16 * 1024 * 1024) return socket.destroy();
+      while (buf.length >= 2) {
+        const fin = buf[0] & 0x80;
+        const op = buf[0] & 0x0f;
+        // a browser always masks what it sends
+        if (!(buf[1] & 0x80)) return socket.destroy();
+        let len = buf[1] & 0x7f;
+        let off = 2;
+        if (len === 126) {
+          if (buf.length < 4) return;
+          len = buf.readUInt16BE(2);
+          off = 4;
+        } else if (len === 127) {
+          if (buf.length < 10) return;
+          len = Number(buf.readBigUInt64BE(2));
+          off = 10;
+        }
+        if (buf.length < off + 4 + len) return;
+        const mask = buf.subarray(off, off + 4);
+        const data = Buffer.from(buf.subarray(off + 4, off + 4 + len));
+        for (let i = 0; i < data.length; i++) data[i] ^= mask[i & 3];
+        buf = buf.subarray(off + 4 + len);
+        if (op === 8) return socket.end(Buffer.from([0x88, 0]));
+        if (op === 9) socket.write(Buffer.concat([Buffer.from([0x8a, data.length]), data]));
+        else if (op === 1 || op === 0) {
+          parts.push(data);
+          if (fin) {
+            const text = Buffer.concat(parts).toString("utf8");
+            parts = [];
+            onBrowserMessage(socket, text);
+          }
+        }
+      }
+    });
+    socket.on("close", () => browserDropped(socket));
+    socket.on("error", () => browserDropped(socket));
+  });
+  // another copy of Lyra (or something else) has the port: no browser link this run
+  browserServer.on("error", () => {
+    browserServer = null;
+  });
+  browserServer.listen(BROWSER_PORT, "127.0.0.1");
+}
+
+function stopBrowserLink() {
+  browserSock?.destroy();
+  browserServer?.close();
+  browserServer = null;
+}
+
+function browserDo(cmd, args) {
+  if (!browserSock || !browserAgent) return Promise.reject(new Error("NOT_CONNECTED"));
+  const id = ++browserSeq;
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      browserWaits.delete(id);
+      reject(new Error("The browser took too long."));
+    }, 60_000);
+    browserWaits.set(id, { resolve, reject, timer });
+    wsSend(browserSock, JSON.stringify({ type: "do", id, cmd, args }));
+  });
+}
+
+/** The extension's files, copied out of the app so the browser can load them from a normal folder. */
+function extensionFolder() {
+  const src = path.join(DIST, "browser-extension");
+  const dst = path.join(app.getPath("userData"), "browser-extension");
+  fs.mkdirSync(dst, { recursive: true });
+  for (const name of fs.readdirSync(src)) fs.writeFileSync(path.join(dst, name), fs.readFileSync(path.join(src, name)));
+  return dst;
+}
+
+ipcMain.handle("browser:listen", (_e, on) => {
+  if (on) startBrowserLink();
+  else stopBrowserLink();
+});
+ipcMain.handle("browser:status", () => ({ listening: !!browserServer, connected: !!browserSock && !!browserAgent, agent: browserAgent }));
+ipcMain.handle("browser:do", (_e, cmd, args) => {
+  if (!BROWSER_CMDS.has(cmd)) throw new Error("Not something the browser link does.");
+  const url = cmd === "open" ? String(args?.url ?? "") : "";
+  if (cmd === "open" && !/^https?:\/\/[^\s]+$/i.test(url)) throw new Error("Only web pages (http or https).");
+  return browserDo(cmd, cmd === "open" ? { url } : {});
+});
+ipcMain.handle("browser:showExtension", async () => {
+  const dir = extensionFolder();
+  await shell.openPath(dir);
+  return dir;
 });
 
 app.whenReady().then(() => {

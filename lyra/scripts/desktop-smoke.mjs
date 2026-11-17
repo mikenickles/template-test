@@ -236,6 +236,51 @@ await page.getByText("Lyra can control playback").waitFor();
 await page.screenshot({ path: join(shots, "desktop-9-spotify.png") });
 check(true, "playback control is its own switch");
 
+// ---- 0.56: your browser, through Lyra's extension (a real Chromium with the real extension) ----
+{
+  const http = await import("node:http");
+  const site = http.createServer((req, res) => {
+    res.writeHead(200, { "content-type": "text/html" });
+    res.end("<title>Your orders</title><main><h1>Orders</h1><p>Hiking boots arrive Thursday.</p><a href='/track'>Track package</a></main>");
+  });
+  await new Promise((r) => site.listen(0, "127.0.0.1", r));
+  const siteUrl = `http://127.0.0.1:${site.address().port}/orders`;
+  await page.keyboard.press("Escape");
+  await page.goto("app://lyra/index.html#/access");
+  await page.locator(".lp-svc", { hasText: "Browser" }).click();
+  await page.getByRole("switch", { name: /Let Lyra use your browser/ }).click();
+  await page.getByText("Waiting for the extension…").waitFor();
+  check((await page.getByRole("button", { name: "Show the extension's folder" }).count()) === 1, "turning it on shows how to add the extension");
+  await page.screenshot({ path: join(shots, "desktop-17-browser-setup.png") });
+  const { chromium } = require("playwright");
+  const ext = join(stage, "dist/browser-extension");
+  const browser = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), "lyra-vivaldi-")), {
+    headless: false,
+    args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`],
+  });
+  try {
+    await page.getByText("Lyra opens pages in its own window there").waitFor({ timeout: 30_000 });
+    check(true, "the extension connects to Lyra by itself");
+    await page.screenshot({ path: join(shots, "desktop-18-browser-connected.png") });
+    // a web page can't pretend to be the extension
+    const own = browser.pages()[0];
+    await own.goto(siteUrl);
+    const sneaky = await own.evaluate(() => new Promise((r) => { const w = new WebSocket("ws://127.0.0.1:47615/lyra"); w.onopen = () => r("open"); w.onerror = () => r("refused"); }));
+    check(sneaky === "refused", "a web page can't connect to Lyra's link");
+    await page.keyboard.press("Escape");
+    await page.goto("app://lyra/index.html#/");
+    await page.getByPlaceholder("Message Lyra").fill(`open ${siteUrl}`);
+    await page.getByRole("button", { name: "Send" }).click();
+    await page.locator(".reply", { hasText: "Hiking boots arrive Thursday." }).last().waitFor({ timeout: 30_000 });
+    check(true, "Lyra opens a page in the browser and reads it");
+    check(browser.pages().filter((p) => p.url() === siteUrl).length === 2 && own.url() === siteUrl, "it uses its own window; your tab is left alone");
+    await page.screenshot({ path: join(shots, "desktop-19-browser-read.png") });
+  } finally {
+    await browser.close();
+    site.close();
+  }
+}
+
 // closing the window keeps Lyra running in the tray; the setting turns that off
 check((await page.evaluate(() => window.lyraDesktop.shell.prefs())).tray === true, "keeping running in the tray is on by default");
 await page.goto("app://lyra/index.html#/settings/alerts");

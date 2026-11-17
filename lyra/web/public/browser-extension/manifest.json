@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Lyra",
+  "version": "0.1.0",
+  "description": "Lets Lyra on this computer open and read pages in its own window of this browser. Nothing else can use it.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAksbUSs2/Ctv/p9g7K9CDJB2nKFosBMT8FvMR8uDDg9GpOyhPcqAAAY9JGU0s79S5dJGreT44vgZmjuX2C/fHSdB/PTWWL+aXKHj7uLWMYYOCdpz1gvUG1+76ZK9YQ1UdJnJW6+Vpakxy4xpjaPENbSCIQ6D+xxhcKsdpQ/mstV8swj5X6h8p1Um5gP1IxvUsFPWSI4Vqj6ZQBVB/z2mkUfCLzlx/grlalt9MyFm9m+eoAtAye1VnB0LpBKxPSV0y2YF/nYQywwfn7kDG4/OfFTNl9bFYEfWeLteZPMUHkooC+CtZLE7lIMrUnHc1qKwusjcyuIoBomV0mlEhLs4feQIDAQAB",
+  "minimum_chrome_version": "116",
+  "background": { "service_worker": "background.js" },
+  "permissions": ["tabs", "scripting", "storage", "alarms"],
+  "host_permissions": ["<all_urls>"],
+  "action": { "default_title": "Lyra", "default_popup": "popup.html", "default_icon": { "128": "icon.png" } },
+  "icons": { "128": "icon.png" }
+}

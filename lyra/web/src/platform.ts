@@ -17,6 +17,7 @@ import wasmUrl from "sql.js/dist/sql-wasm.wasm?url";
 import { NeedsConsentError, type GoogleAuth } from "../../core/connectors/google";
 import type { BlobStore } from "../../core/db";
 import type { Platform, SecretStore } from "../../core/lyra";
+import type { BrowserPage } from "../../core/connectors/browser/server";
 import type { OAuthRedirect } from "../../core/connectors/spotify/auth";
 import { App as CapApp } from "@capacitor/app";
 import type { TextStore } from "../../core/memory";
@@ -33,6 +34,14 @@ interface DesktopBridge {
   onOpenHash(fn: (hash: string) => void): () => void;
   /** shell 4 and later: sign-in pages for other services (Spotify), back through 127.0.0.1 */
   oauth?: { loopback(url: string): Promise<{ redirectUri: string; returned: string }> };
+  /** shell 5: Lyra's extension in the user's own browser */
+  browser?: {
+    listen(on: boolean): Promise<void>;
+    status(): Promise<{ listening: boolean; connected: boolean; agent: string }>;
+    do(cmd: string, args?: Record<string, unknown>): Promise<unknown>;
+    showExtension(): Promise<string>;
+    onChange(fn: () => void): () => void;
+  };
   /** shell 3 and later */
   shell?: { prefs(): Promise<ShellPrefs>; setPrefs(p: Partial<ShellPrefs>): Promise<ShellPrefs> };
   updates: {
@@ -252,8 +261,24 @@ export async function createPlatform(): Promise<Platform> {
     ...(isNative ? { places: phonePlaces } : {}),
     ...(isNative ? { notices: phoneNotices } : {}),
     ...(isNative ? { oauth: phoneOAuth } : desk?.oauth ? { oauth: deskOAuth } : {}),
+    ...(desk?.browser ? { browser: deskBrowser(desk.browser) } : {}),
   };
 }
+
+// ---------- your browser (0.56): Lyra's extension, through the Windows app ----------
+
+function deskBrowser(b: NonNullable<DesktopBridge["browser"]>): NonNullable<Platform["browser"]> {
+  return {
+    listen: clean((on: boolean) => b.listen(on)),
+    status: clean(() => b.status()),
+    open: clean((url: string) => b.do("open", { url }) as Promise<BrowserPage>),
+    read: clean(() => b.do("read") as Promise<BrowserPage>),
+    close: clean(async () => void (await b.do("close"))),
+  };
+}
+
+/** The Windows app's browser link, for the Lyra page: show the extension's folder, hear when it connects. */
+export const browserLink = desk?.browser ? { showExtension: clean(() => desk.browser!.showExtension()), onChange: (fn: () => void) => desk.browser!.onChange(fn) } : null;
 
 // ---------- signing in to other services (Spotify) ----------
 // Phone: the browser opens Spotify's page, which sends the user back via app.lyra.chief://spotify.

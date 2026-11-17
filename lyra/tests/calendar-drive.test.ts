@@ -101,6 +101,7 @@ describe("Calendar and Drive connectors", () => {
       ["drive", "connected"],
       // no sign-in for other services in this test platform
       ["spotify", "unavailable"],
+      ["browser", "unavailable"],
       ["phone", "unavailable"],
     ]);
     expect((await c.tools()).map((t) => t.name).sort()).toEqual(["calendar__list_calendars", "calendar__list_events", "drive__read_file", "drive__search_files"]);
@@ -146,6 +147,6 @@ describe("Calendar and Drive connectors", () => {
     expect(lyra.state().connectors[2].state).toBe("connected");
     await lyra.disconnectGoogle("drive");
     expect(revokes()).toBe(1);
-    expect(lyra.state().connectors.filter((c) => c.id !== "spotify" && c.id !== "phone").every((c) => c.state === "not_connected")).toBe(true);
+    expect(lyra.state().connectors.filter((c) => c.id !== "spotify" && c.id !== "phone" && c.id !== "browser").every((c) => c.state === "not_connected")).toBe(true);
   });
 });

@@ -178,6 +178,9 @@ export class FakeProvider implements ModelProvider {
     // "email dana@example.com saying yes to Friday": the practice model can propose an email (the user still taps Send)
     const mail = text.match(/^e-?mail (\S+@\S+) saying (.+)$/i);
     if (mail && has("propose_email")) return callSaying("It's ready for you to check.", "propose_email", { to: [mail[1]], subject: "Quick note", body: mail[2] });
+    // "open https://…": the practice model reads it in the user's browser (0.56)
+    const page = text.match(/^open (https?:\/\/\S+)$/i);
+    if (page && has("browser__open_page")) return call("browser__open_page", { url: page[1] });
     const tidy = text.match(/^(?:trash|archive|star) (?:the |my )?(.+?) e-?mails?$/i);
     if (tidy && has("propose_mail_change") && has("gmail__search_mail")) return call("gmail__search_mail", { query: tidy[1], max_results: 1 });
     if (/\b(e-?mail|inbox|mail)\b/i.test(text) && has("gmail__search_mail"))

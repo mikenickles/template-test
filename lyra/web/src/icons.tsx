@@ -215,6 +215,12 @@ export const TasksIcon = (p: P) => (
     <path d="M4 6.5l1.8 1.8L9 5M4 15.5l1.8 1.8L9 14M12.5 7h7.5M12.5 16h7.5" />
   </Icon>
 );
+export const Globe = (p: P) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M3.5 12h17M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.2-3.6-8.5S9.6 5.9 12 3.5z" />
+  </Icon>
+);
 export const Search = (p: P) => (
   <Icon {...p}>
     <circle cx="11" cy="11" r="6.5" />
