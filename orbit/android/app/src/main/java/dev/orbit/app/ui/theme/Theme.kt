@@ -60,7 +60,7 @@ private val DarkColors = OrbitColors(
     line = Color(0x33FFFFFF),
     text = Color(0xFFFAFAFA),
     textSecondary = Color(0xFFA1A1AA),
-    textTertiary = Color(0xFF71717A),
+    textTertiary = Color(0xFF8A8A93),
     primary = Color(0xFFFAFAFA),
     onPrimary = Color(0xFF09090B),
     live = Color(0xFF34D399),
@@ -68,20 +68,21 @@ private val DarkColors = OrbitColors(
     dangerSurface = Color(0x1FF87171),
 )
 
+// Light is its own design, not an inversion: a faintly tinted page with white surfaces on it.
 private val LightColors = OrbitColors(
     isDark = false,
-    bg = Color(0xFFFFFFFF),
-    surface = Color(0xFFF7F7F8),
-    surfaceRaised = Color(0xFFF1F1F3),
-    surfaceHigh = Color(0xFFE7E7EA),
-    hairline = Color(0x12000000),
-    line = Color(0x33000000),
+    bg = Color(0xFFF4F4F5),
+    surface = Color(0xFFFFFFFF),
+    surfaceRaised = Color(0xFFFFFFFF),
+    surfaceHigh = Color(0xFFE2E2E6),
+    hairline = Color(0x14000000),
+    line = Color(0x38000000),
     text = Color(0xFF09090B),
     textSecondary = Color(0xFF52525B),
-    textTertiary = Color(0xFF8B8B94),
+    textTertiary = Color(0xFF6B6B74),
     primary = Color(0xFF09090B),
     onPrimary = Color(0xFFFFFFFF),
-    live = Color(0xFF059669),
+    live = Color(0xFF047857),
     danger = Color(0xFFDC2626),
     dangerSurface = Color(0x14DC2626),
 )
@@ -100,29 +101,45 @@ private fun sans(size: Double, line: Int, weight: FontWeight, tracking: Double) 
     fontFamily = Geist, fontWeight = weight, fontSize = size.sp, lineHeight = line.sp, letterSpacing = tracking.em,
 )
 
-/** The type scale. Tracking tightens as size grows; mono is reserved for machine-facing detail. */
+private fun mono(size: Int, line: Int, weight: FontWeight = FontWeight.Normal, tracking: Double = 0.0) = TextStyle(
+    fontFamily = GeistMono, fontWeight = weight, fontSize = size.sp, lineHeight = line.sp, letterSpacing = tracking.em,
+)
+
+/**
+ * The whole type scale; screens don't make their own sizes. Tracking tightens as size grows.
+ * Mono is reserved for what a machine reads: model ids, addresses, codes, times.
+ */
 object OrbitType {
     val display = sans(30.0, 36, FontWeight.SemiBold, -0.032)
     val titleL = sans(22.0, 28, FontWeight.SemiBold, -0.024)
     val titleM = sans(17.0, 22, FontWeight.SemiBold, -0.016)
-    val titleS = sans(15.0, 20, FontWeight.Medium, -0.01)
-    val body = sans(16.0, 25, FontWeight.Normal, -0.008)
-    val bodyM = sans(14.5, 21, FontWeight.Normal, -0.005)
+
+    /** Names, buttons, row titles. */
+    val titleS = sans(15.0, 20, FontWeight.SemiBold, -0.01)
+    val body = sans(16.0, 24, FontWeight.Normal, -0.008)
+    val bodyM = sans(15.0, 21, FontWeight.Normal, -0.006)
     val bodyS = sans(13.0, 18, FontWeight.Normal, 0.0)
     val label = sans(13.0, 16, FontWeight.Medium, -0.004)
+    val caption = sans(12.0, 16, FontWeight.Normal, 0.0)
 
-    /** Model ids, addresses, timestamps. */
-    val mono = TextStyle(fontFamily = GeistMono, fontWeight = FontWeight.Normal, fontSize = 11.5.sp, lineHeight = 15.sp)
+    val mono = mono(12, 16)
+    val monoL = mono(15, 22)
+    val monoDigit = mono(24, 30, FontWeight.Medium)
 
     /** Section headers, set in capitals. */
-    val overline = TextStyle(
-        fontFamily = GeistMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, lineHeight = 14.sp, letterSpacing = 0.09.em,
-    )
+    val overline = mono(11, 14, FontWeight.Medium, 0.09)
 }
 
-/** Corner radii and the screen gutter. */
+/** Shared spacing and corner radii. */
 object OrbitDimens {
     val gutter = 20.dp
+
+    /** Between one section and the next. */
+    val section = 28.dp
+
+    /** Between a label and the control it names. */
+    val labelGap = 12.dp
+    val rowPad = 16.dp
     val radiusS = 12.dp
     val radiusM = 16.dp
     val radiusL = 22.dp

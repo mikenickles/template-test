@@ -12,6 +12,9 @@ Two independent projects live here:
     providers through their OpenAI-compatible HTTP APIs. State is a JSON file in `~/.orbit-hub`.
   - `orbit/android/`: Kotlin + Jetpack Compose (Material 3), single `app` module, package `dev.orbit.app`.
     Screens are stateless composables in `ui/screens`; `AppViewModel` and `RoomViewModel` hold state.
+    Design system: colors, type and spacing come only from `ui/theme/Theme.kt` (`Orbit.colors`, `OrbitType`,
+    `OrbitDimens`); controls, icons and avatars from `ui/components`. The interface stays neutral so avatars are
+    the only color. Don't add one-off sizes, Material icons, or new colors in a screen.
 
 ## Development Workflow
 

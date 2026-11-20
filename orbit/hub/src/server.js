@@ -265,7 +265,7 @@ export class Hub {
         this.pairLockedUntil = Date.now() + PAIR_LOCK_MS;
         this.#rotatePairingCode();
       }
-      throw new HttpError(403, 'That pairing code is not right. Check the code shown on your PC.');
+      throw new HttpError(403, "That code didn't match. Check the one shown on your PC.");
     }
     const token = crypto.randomBytes(32).toString('base64url');
     this.store.state.devices.push({

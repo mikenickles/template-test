@@ -24,11 +24,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,10 +39,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.orbit.app.data.Agent
 import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.data.OrbitJson
@@ -54,14 +51,16 @@ import dev.orbit.app.ui.components.AgentAvatar
 import dev.orbit.app.ui.components.AvatarPalette
 import dev.orbit.app.ui.components.BarAction
 import dev.orbit.app.ui.components.EYES_COUNT
+import dev.orbit.app.ui.components.FieldLabel
 import dev.orbit.app.ui.components.IconPill
 import dev.orbit.app.ui.components.OrbitField
+import dev.orbit.app.ui.components.OrbitIcon
 import dev.orbit.app.ui.components.Overline
 import dev.orbit.app.ui.components.Pill
-import dev.orbit.app.ui.components.PrimaryButton
 import dev.orbit.app.ui.components.SHAPE_COUNT
 import dev.orbit.app.ui.components.ScreenBar
 import dev.orbit.app.ui.components.randomAvatar
+import dev.orbit.app.ui.components.tap
 import dev.orbit.app.ui.components.tint
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitDimens
@@ -120,43 +119,68 @@ fun AgentEditorScreen(
     Scaffold(
         containerColor = c.bg,
         topBar = {
-            ScreenBar(if (initial == null) "New agent" else "Edit agent", onBack) { BarAction("Save", ::save, enabled = canSave) }
+            ScreenBar(if (initial == null) "New agent" else "Edit agent", onBack) {
+                BarAction(if (initial == null) "Create" else "Save", ::save, enabled = canSave)
+            }
         },
     ) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(bottom = 40.dp),
+            Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(bottom = 48.dp),
         ) {
             IdentityCard(avatar, name, role, model, onShuffle = { avatar = randomAvatar() })
 
-            Section("Color")
-            LazyRow(contentPadding = PaddingValues(horizontal = OrbitDimens.gutter), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(AvatarPalette.size) { index ->
-                    val selected = avatar.color.mod(AvatarPalette.size) == index
-                    // The selected swatch sits inside a ring, with a gap between the two.
-                    Box(
-                        Modifier
-                            .size(40.dp)
-                            .border(2.dp, if (selected) c.text else Color.Transparent, CircleShape)
-                            .clip(CircleShape)
-                            .clickable { avatar = avatar.copy(color = index) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Box(Modifier.size(28.dp).clip(CircleShape).background(AvatarPalette[index]))
+            Section("Look")
+            Gutter {
+                FieldLabel("Color")
+                // All ten fit the width, so none hides off-screen. The row runs 5dp past the gutter on
+                // each side (the selection ring's margin) so the first dot itself sits on the gutter.
+                Row(
+                    Modifier.layout { measurable, constraints ->
+                        val width = constraints.maxWidth + 10.dp.roundToPx()
+                        val row = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
+                        layout(constraints.maxWidth, row.height) { row.place(-5.dp.roundToPx(), 0) }
+                    },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    AvatarPalette.forEachIndexed { index, color ->
+                        val selected = avatar.color.mod(AvatarPalette.size) == index
+                        Box(
+                            Modifier
+                                .size(34.dp)
+                                .border(2.dp, if (selected) c.text else Color.Transparent, CircleShape)
+                                .tap(CircleShape) { avatar = avatar.copy(color = index) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Box(Modifier.size(24.dp).clip(CircleShape).background(color.fill))
+                        }
                     }
                 }
-            }
-            PartPicker("Shape", SHAPE_COUNT, avatar.shape.mod(SHAPE_COUNT), { avatar.copy(shape = it) }) { avatar = it }
-            PartPicker("Eyes", EYES_COUNT, avatar.eyes.mod(EYES_COUNT), { avatar.copy(eyes = it) }) { avatar = it }
 
-            Section("Name")
+                Spacer(Modifier.height(20.dp))
+                FieldLabel("Shape")
+                PartRow(0 until SHAPE_COUNT, avatar.shape.mod(SHAPE_COUNT), { avatar.copy(shape = it) }) { avatar = it }
+
+                Spacer(Modifier.height(20.dp))
+                FieldLabel("Eyes")
+                // Two rows of four, so every option is visible at once.
+                val eyes = avatar.eyes.mod(EYES_COUNT)
+                PartRow(0 until EYES_COUNT / 2, eyes, { avatar.copy(eyes = it) }) { avatar = it }
+                Spacer(Modifier.height(8.dp))
+                PartRow(EYES_COUNT / 2 until EYES_COUNT, eyes, { avatar.copy(eyes = it) }) { avatar = it }
+            }
+
+            Section("Identity")
             Gutter {
+                FieldLabel("Name")
                 OrbitField(name, { name = it.take(40) }, "Nova", keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words))
+                Spacer(Modifier.height(20.dp))
+                FieldLabel("Role")
+                OrbitField(role, { role = it.take(80) }, "the planner")
             }
-            Section("Role")
-            Gutter { OrbitField(role, { role = it.take(80) }, "the planner") }
 
-            Section("Runs on")
+            Section("Model")
             Gutter {
+                FieldLabel("Provider")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     for (option in providers) {
                         Pill(
@@ -174,16 +198,16 @@ fun AgentEditorScreen(
                 }
                 if (provider != null && !provider.configured) {
                     Text(
-                        "${provider.label} has no API key on your hub yet. Add one to config.json on the PC and restart the hub.",
+                        "${provider.label} needs an API key. Add one to config.json on your PC, then restart the hub.",
                         Modifier.padding(top = 10.dp),
                         style = OrbitType.bodyS,
                         color = c.danger,
                     )
                 }
+                Spacer(Modifier.height(20.dp))
+                FieldLabel("Model id")
+                OrbitField(model, { model = it.take(120) }, "Model id", textStyle = OrbitType.monoL)
             }
-
-            Section("Model")
-            Gutter { OrbitField(model, { model = it.take(120) }, "Model id", textStyle = OrbitType.mono.copy(fontSize = 14.sp, lineHeight = 22.sp)) }
             val suggestions = remember(models, model) {
                 models.filter { it != model && it.contains(model.trim(), ignoreCase = true) }.ifEmpty { models.filter { it != model } }.take(24)
             }
@@ -204,12 +228,10 @@ fun AgentEditorScreen(
                     singleLine = false, minLines = 5,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 )
-                Spacer(Modifier.height(28.dp))
-                PrimaryButton(if (initial == null) "Add to crew" else "Save changes", ::save, enabled = canSave)
                 if (onDelete != null) {
-                    TextButton(onClick = onDelete, Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                        Text("Delete agent", style = OrbitType.label, color = c.danger)
-                    }
+                    // Kept well away from Save, at the very end of the form.
+                    Spacer(Modifier.height(40.dp))
+                    DangerRow("Delete agent", onDelete)
                 }
             }
         }
@@ -218,12 +240,25 @@ fun AgentEditorScreen(
 
 @Composable
 private fun Section(title: String) {
-    Overline(title, Modifier.padding(start = OrbitDimens.gutter, top = 26.dp, bottom = 10.dp))
+    Overline(title, Modifier.padding(start = OrbitDimens.gutter, top = OrbitDimens.section + 4.dp, bottom = 16.dp))
 }
 
 @Composable
 private fun Gutter(content: @Composable () -> Unit) {
     Column(Modifier.padding(horizontal = OrbitDimens.gutter)) { content() }
+}
+
+/** A destructive action as a full-width outlined row. */
+@Composable
+fun DangerRow(label: String, onClick: () -> Unit) {
+    val c = Orbit.colors
+    val shape = RoundedCornerShape(OrbitDimens.radiusM)
+    Box(
+        Modifier.fillMaxWidth().height(52.dp).clip(shape).border(1.dp, c.hairline, shape).background(c.surface).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, style = OrbitType.titleS, color = c.danger)
+    }
 }
 
 /** The agent as others will see it, updating live as it's edited. */
@@ -237,7 +272,7 @@ private fun IdentityCard(avatar: AvatarSpec, name: String, role: String, model: 
             .fillMaxWidth()
             .clip(shape)
             .background(c.surface)
-            .background(Brush.verticalGradient(listOf(avatar.tint().copy(alpha = if (c.isDark) 0.2f else 0.26f), Color.Transparent)))
+            .background(Brush.verticalGradient(listOf(avatar.tint().copy(alpha = if (c.isDark) 0.2f else 0.24f), Color.Transparent)))
             .border(1.dp, c.hairline, shape),
     ) {
         Column(Modifier.fillMaxWidth().padding(top = 32.dp, bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -250,41 +285,50 @@ private fun IdentityCard(avatar: AvatarSpec, name: String, role: String, model: 
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            val detail = listOf(role.trim(), model.trim()).filter { it.isNotEmpty() }.joinToString("  ·  ")
-            if (detail.isNotEmpty()) {
+            if (role.isNotBlank()) {
                 Text(
-                    detail,
-                    Modifier.padding(top = 4.dp, start = 24.dp, end = 24.dp),
-                    style = OrbitType.mono,
+                    role.trim(),
+                    Modifier.padding(top = 2.dp, start = 24.dp, end = 24.dp),
+                    style = OrbitType.bodyM,
                     color = c.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            if (model.isNotBlank()) {
+                Text(
+                    model.trim(),
+                    Modifier.padding(top = 10.dp, start = 24.dp, end = 24.dp),
+                    style = OrbitType.mono,
+                    color = c.textTertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
-        IconPill(Icons.Default.Refresh, "Shuffle avatar", onShuffle, Modifier.align(Alignment.TopEnd).padding(12.dp))
+        IconPill(OrbitIcon.Dice, "Shuffle avatar", onShuffle, Modifier.align(Alignment.TopEnd).padding(12.dp))
     }
 }
 
-/** A row of previews, one per option for a single part of the avatar. */
+/** Equal-width previews of one part of the avatar, one per option in [options]. */
 @Composable
-private fun PartPicker(label: String, count: Int, selected: Int, variant: (Int) -> AvatarSpec, onPick: (AvatarSpec) -> Unit) {
+private fun PartRow(options: IntRange, selected: Int, variant: (Int) -> AvatarSpec, onPick: (AvatarSpec) -> Unit) {
     val c = Orbit.colors
     val shape = RoundedCornerShape(OrbitDimens.radiusM)
-    Section(label)
-    LazyRow(contentPadding = PaddingValues(horizontal = OrbitDimens.gutter), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(count) { index ->
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (index in options) {
             val isSelected = index == selected
             Box(
                 Modifier
-                    .size(58.dp)
+                    .weight(1f)
+                    .height(60.dp)
                     .clip(shape)
-                    .background(if (isSelected) c.surfaceRaised else c.surface)
+                    .background(c.surface)
                     .border(if (isSelected) 1.5.dp else 1.dp, if (isSelected) c.text else c.hairline, shape)
                     .clickable { onPick(variant(index)) },
                 contentAlignment = Alignment.Center,
             ) {
-                AgentAvatar(variant(index), size = 34.dp)
+                AgentAvatar(variant(index), size = 36.dp)
             }
         }
     }

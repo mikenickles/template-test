@@ -5,8 +5,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -29,78 +31,91 @@ import dev.orbit.app.ui.theme.OrbitDimens
 import dev.orbit.app.ui.theme.OrbitType
 
 private sealed interface Block {
-    data class Prose(val text: String) : Block
+    /** Running text. [heading] makes it a bold line. */
+    data class Paragraph(val text: String, val heading: Boolean = false) : Block
+
+    /** One list item: its marker ("•" or "2.") and its text. */
+    data class Item(val marker: String, val text: String) : Block
     data class Code(val text: String) : Block
 }
 
 // **bold**, `code`, *italic*, @mention
 private val Inline = Regex("""\*\*(.+?)\*\*|`([^`\n]+)`|(?<![\w*])\*(?!\s)([^*\n]+?)(?<!\s)\*(?![\w*])|(?<![\w@])@[\p{L}\p{N}_]+""")
 private val Heading = Regex("""^#{1,6}\s+(.*)$""")
-private val Bullet = Regex("""^(\s*)[-*•]\s+(.*)$""")
+private val Bullet = Regex("""^\s*[-*•]\s+(.*)$""")
+private val Numbered = Regex("""^\s*(\d{1,3})[.)]\s+(.*)$""")
 
-private fun splitBlocks(source: String): List<Block> {
+private fun parse(source: String): List<Block> {
     val blocks = mutableListOf<Block>()
-    val current = StringBuilder()
+    val paragraph = StringBuilder()
+    val code = StringBuilder()
     var inCode = false
-    fun flush() {
-        val text = current.toString().trim('\n')
-        if (text.isNotEmpty()) blocks += if (inCode) Block.Code(text) else Block.Prose(text)
-        current.clear()
+    fun flushParagraph() {
+        if (paragraph.isNotBlank()) blocks += Block.Paragraph(paragraph.toString().trim('\n'))
+        paragraph.clear()
     }
     for (line in source.lines()) {
         if (line.trimStart().startsWith("```")) {
-            flush()
+            if (inCode) {
+                blocks += Block.Code(code.toString().trimEnd('\n'))
+                code.clear()
+            } else {
+                flushParagraph()
+            }
             inCode = !inCode
-        } else {
-            current.append(line).append('\n')
+            continue
+        }
+        if (inCode) {
+            code.append(line).append('\n')
+            continue
+        }
+        val heading = Heading.find(line)
+        val bullet = Bullet.find(line)
+        val numbered = Numbered.find(line)
+        when {
+            line.isBlank() -> flushParagraph()
+            heading != null -> {
+                flushParagraph()
+                blocks += Block.Paragraph(heading.groupValues[1], heading = true)
+            }
+            bullet != null -> {
+                flushParagraph()
+                blocks += Block.Item("•", bullet.groupValues[1])
+            }
+            numbered != null -> {
+                flushParagraph()
+                blocks += Block.Item("${numbered.groupValues[1]}.", numbered.groupValues[2])
+            }
+            else -> paragraph.append(line).append('\n')
         }
     }
-    flush()
+    if (inCode && code.isNotBlank()) blocks += Block.Code(code.toString().trimEnd('\n')) // still streaming
+    flushParagraph()
     return blocks
 }
 
-private fun renderProse(
-    text: String,
-    mentions: Map<String, Color>,
-    fallbackMention: Color,
-    codeBackground: Color,
-): AnnotatedString = buildAnnotatedString {
-    val lines = text.lines()
-    lines.forEachIndexed { index, raw ->
-        val heading = Heading.find(raw)
-        val bullet = if (heading == null) Bullet.find(raw) else null
-        val line = when {
-            heading != null -> heading.groupValues[1]
-            bullet != null -> "${bullet.groupValues[1]}•  ${bullet.groupValues[2]}"
-            else -> raw
-        }
-        val start = length
-        var cursor = 0
-        for (match in Inline.findAll(line)) {
-            append(line.substring(cursor, match.range.first))
-            val (bold, code, italic) = match.destructured
-            when {
-                bold.isNotEmpty() -> withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(bold) }
-                code.isNotEmpty() -> withStyle(
-                    SpanStyle(fontFamily = GeistMono, fontSize = 14.sp, background = codeBackground),
-                ) { append(code) }
-                italic.isNotEmpty() -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(italic) }
-                else -> {
-                    // A mention takes the color of the agent it names.
-                    val color = mentions[match.value.drop(1).lowercase()]
-                    withStyle(SpanStyle(color = color ?: fallbackMention, fontWeight = FontWeight.SemiBold)) { append(match.value) }
-                }
+private fun inline(text: String, mentions: Map<String, Color>): AnnotatedString = buildAnnotatedString {
+    var cursor = 0
+    for (match in Inline.findAll(text)) {
+        append(text.substring(cursor, match.range.first))
+        val (bold, code, italic) = match.destructured
+        when {
+            bold.isNotEmpty() -> withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(bold) }
+            code.isNotEmpty() -> withStyle(SpanStyle(fontFamily = GeistMono, fontSize = 14.sp, fontWeight = FontWeight.Medium)) { append(code) }
+            italic.isNotEmpty() -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(italic) }
+            else -> {
+                // A mention takes the color of the agent it names.
+                val color = mentions[match.value.drop(1).lowercase()] ?: Color.Unspecified
+                withStyle(SpanStyle(color = color, fontWeight = FontWeight.SemiBold)) { append(match.value) }
             }
-            cursor = match.range.last + 1
         }
-        append(line.substring(cursor))
-        if (heading != null) addStyle(SpanStyle(fontWeight = FontWeight.Bold), start, length)
-        if (index != lines.lastIndex) append('\n')
+        cursor = match.range.last + 1
     }
+    append(text.substring(cursor))
 }
 
 /**
- * Renders the common subset of Markdown that models write in chat: emphasis, code, lists, headings.
+ * Renders the subset of Markdown that models write in chat: paragraphs, emphasis, lists, headings, code.
  * [mentions] maps a lowercase agent handle (name without spaces) to the color its @mention is drawn in.
  */
 @Composable
@@ -111,27 +126,44 @@ fun MarkdownText(
     mentions: Map<String, Color> = emptyMap(),
 ) {
     val c = Orbit.colors
-    val blocks = remember(text) { splitBlocks(text) }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        for (block in blocks) {
+    val blocks = remember(text) { parse(text) }
+    Column(modifier) {
+        blocks.forEachIndexed { index, block ->
+            // List items sit closer to each other than paragraphs do.
+            val previous = blocks.getOrNull(index - 1)
+            val gap = when {
+                previous == null -> 0.dp
+                block is Block.Item && previous is Block.Item -> 4.dp
+                else -> 10.dp
+            }
+            val spaced = Modifier.padding(top = gap)
             when (block) {
-                is Block.Prose -> Text(
-                    remember(block.text, mentions, c) { renderProse(block.text, mentions, c.text, c.surfaceHigh) },
-                    style = OrbitType.body,
+                is Block.Paragraph -> Text(
+                    remember(block, mentions) { inline(block.text, mentions) },
+                    spaced,
+                    style = if (block.heading) OrbitType.body.copy(fontWeight = FontWeight.SemiBold) else OrbitType.body,
                     color = color,
                 )
-                is Block.Code -> Text(
-                    block.text,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(OrbitDimens.radiusS))
-                        .background(c.surface)
-                        .border(1.dp, c.hairline, RoundedCornerShape(OrbitDimens.radiusS))
-                        .horizontalScroll(rememberScrollState())
-                        .padding(14.dp),
-                    style = OrbitType.mono.copy(fontSize = 13.sp, lineHeight = 20.sp),
-                    color = color,
-                )
+                // The marker sits in its own column, so wrapped lines align with the text, not the bullet.
+                is Block.Item -> Row(spaced, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(block.marker, Modifier.widthIn(min = 14.dp), style = OrbitType.body, color = c.textSecondary)
+                    Text(remember(block, mentions) { inline(block.text, mentions) }, style = OrbitType.body, color = color)
+                }
+                is Block.Code -> {
+                    val shape = RoundedCornerShape(OrbitDimens.radiusS)
+                    Text(
+                        block.text,
+                        modifier = spaced
+                            .fillMaxWidth()
+                            .clip(shape)
+                            .background(c.surface)
+                            .border(1.dp, c.hairline, shape)
+                            .horizontalScroll(rememberScrollState())
+                            .padding(14.dp),
+                        style = OrbitType.mono.copy(fontSize = 13.sp, lineHeight = 20.sp),
+                        color = color,
+                    )
+                }
             }
         }
     }

@@ -26,7 +26,6 @@ import dev.orbit.app.ui.AppState
 import dev.orbit.app.ui.PairState
 import dev.orbit.app.ui.RoomUiState
 import dev.orbit.app.ui.components.AgentAvatar
-import dev.orbit.app.ui.components.AvatarStack
 import dev.orbit.app.ui.components.CrewTile
 import dev.orbit.app.ui.components.EYES_COUNT
 import dev.orbit.app.ui.components.SHAPE_COUNT
@@ -56,7 +55,7 @@ class ScreenshotTest {
     private val nova = Agent("a1", "Nova", "the planner", "Plan things.", "anthropic", "claude-opus-5-5", AvatarSpec(0, 7, 1))
     private val pixel = Agent("a2", "Pixel", "the builder", "Build things.", "openai", "gpt-large", AvatarSpec(1, 5, 5))
     private val sage = Agent("a3", "Sage", "the skeptic", "Poke holes.", "ollama", "llama-local", AvatarSpec(4, 2, 2))
-    private val mochi = Agent("a4", "Mochi", "the writer", "", "xai", "grok-fast", AvatarSpec(3, 8, 3))
+    private val mochi = Agent("a4", "Mochi", "the writer", "", "xai", "grok-fast", AvatarSpec(3, 9, 3))
     private val agents = listOf(nova, pixel, sage, mochi)
 
     private val launch = Room(
@@ -75,7 +74,7 @@ class ScreenshotTest {
         Provider("xai", "xAI", false),
         Provider("gemini", "Gemini", false),
         Provider("ollama", "Ollama (local)", true),
-        Provider("demo", "Demo (no key)", true, listOf("demo")),
+        Provider("demo", "Demo", true, listOf("demo")),
     )
     private val app = AppState(
         loaded = true, hub = HubInfo("Mike's PC", "0.1.0"), agents = agents, rooms = listOf(launch, trip, empty), providers = providers,
@@ -109,7 +108,7 @@ class ScreenshotTest {
     @Composable
     private fun Home(state: AppState = app) = HomeScreen(state, {}, {}, {}, {}, {}, {}, now = now)
 
-    /** Every shape against every eye style, across the palette. */
+    /** Every shape against every eye style across the palette, then the small sizes and room tiles. */
     @Composable
     private fun AvatarSheet() {
         Column(
@@ -121,12 +120,17 @@ class ScreenshotTest {
                     for (shape in 0 until SHAPE_COUNT) AgentAvatar(AvatarSpec(shape, eyes * 5 + shape, eyes), size = 56.dp)
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                for (size in listOf(20, 26, 34, 42)) AgentAvatar(AvatarSpec(size % 5, size % 7, size % 8), size = size.dp)
-                AvatarStack(SampleCrew, size = 34.dp, max = 5)
-                CrewTile(SampleCrew.take(4))
-                CrewTile(SampleCrew.take(3))
+            for (size in listOf(34, 28, 24)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    for (eyes in 0 until EYES_COUNT) AgentAvatar(AvatarSpec(eyes % SHAPE_COUNT, eyes + 2, eyes), size = size.dp)
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                CrewTile(SampleCrew.take(1))
                 CrewTile(SampleCrew.take(2))
+                CrewTile(SampleCrew.take(3))
+                CrewTile(SampleCrew.drop(2))
+                AgentAvatar(SampleCrew[2], Modifier.padding(start = 8.dp), size = 34.dp, thinking = true)
             }
         }
     }
@@ -134,20 +138,21 @@ class ScreenshotTest {
     @Test fun avatars() = shot("avatars") { AvatarSheet() }
     @Test fun avatarsLight() = shot("avatars-light", dark = false) { AvatarSheet() }
     @Test fun pair() = shot("pair") { PairScreen(PairState(found = listOf(FoundHub("Mike's PC", "192.168.1.20:8787"))), {}) { _, _ -> } }
-    @Test fun pairLight() = shot("pair-light", dark = false) { PairScreen(PairState(error = "That pairing code is not right. Check the code shown on your PC."), {}) { _, _ -> } }
+    @Test fun pairLight() = shot("pair-light", dark = false) { PairScreen(PairState(error = "That code didn't match. Check the one shown on your PC."), {}) { _, _ -> } }
     @Test fun home() = shot("home") { Home() }
     @Test fun homeLight() = shot("home-light", dark = false) { Home() }
     @Test fun homeEmpty() = shot("home-empty") { Home(app.copy(rooms = emptyList(), offline = true)) }
     @Test fun room() = shot("room") { RoomScreen(launch, listOf(nova, pixel, sage), chat, {}, {}, {}, {}, {}) }
     @Test fun roomLight() = shot("room-light", dark = false) {
         RoomScreen(
-            trip, listOf(sage, mochi),
+            launch, listOf(nova, pixel, sage),
             chat.copy(
                 run = RunState(),
                 connected = false,
-                messages = chat.messages.take(3) + agentMessage("m4", sage, "", "error", "xAI has no API key on the hub yet. Add one to config.json on your PC."),
+                messages = chat.messages.take(3) +
+                    agentMessage("m4", sage, "", "error", "Ollama (local) could not be reached at localhost:11434."),
             ),
-            {}, {}, {}, {}, {}, everyone = agents,
+            {}, {}, {}, {}, {},
         )
     }
     @Test fun roomEmpty() = shot("room-empty") { RoomScreen(empty, listOf(nova, mochi), RoomUiState(loaded = true, connected = true), {}, {}, {}, {}, {}) }

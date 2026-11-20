@@ -1,8 +1,5 @@
 package dev.orbit.app.ui.screens
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,17 +8,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.orbit.app.ui.AppState
+import dev.orbit.app.ui.components.Hairline
 import dev.orbit.app.ui.components.OrbitCard
 import dev.orbit.app.ui.components.Overline
 import dev.orbit.app.ui.components.ScreenBar
@@ -39,92 +35,64 @@ fun SettingsScreen(state: AppState, hubAddress: String, onUnpair: () -> Unit, on
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 12.dp, bottom = 40.dp),
+                .padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 12.dp, bottom = 48.dp),
         ) {
             val online = state.loaded && !state.offline
-            Overline("Hub")
-            Spacer(Modifier.height(10.dp))
+            Overline("Hub", Modifier.padding(bottom = OrbitDimens.labelGap))
             OrbitCard(Modifier.fillMaxWidth()) {
                 Column {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(OrbitDimens.rowPad), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(state.hub.name.ifEmpty { "Your hub" }, style = OrbitType.titleM, color = c.text)
-                            Text(
-                                hubAddress.removePrefix("http://"),
-                                Modifier.padding(top = 3.dp),
-                                style = OrbitType.mono,
-                                color = c.textSecondary,
-                            )
+                            Text(hubAddress.removePrefix("http://"), Modifier.padding(top = 3.dp), style = OrbitType.mono, color = c.textSecondary)
                         }
-                        StatusDot(if (online) c.live else c.danger, size = 7.dp)
-                        Text(
-                            if (online) "Online" else "Unreachable",
-                            Modifier.padding(start = 8.dp),
-                            style = OrbitType.label,
-                            color = if (online) c.live else c.danger,
-                        )
+                        Status(if (online) "Online" else "Unreachable", if (online) c.live else c.danger)
                     }
                     if (state.hub.version.isNotEmpty()) {
-                        Divider()
-                        Detail("Version", state.hub.version)
+                        Hairline()
+                        Row(Modifier.fillMaxWidth().padding(OrbitDimens.rowPad), verticalAlignment = Alignment.CenterVertically) {
+                            Text("Version", Modifier.weight(1f), style = OrbitType.bodyM, color = c.textSecondary)
+                            Text(state.hub.version, style = OrbitType.mono, color = c.text)
+                        }
                     }
-                    Divider()
-                    Detail("Agents", state.agents.size.toString())
-                    Divider()
-                    Detail("Rooms", state.rooms.size.toString())
                 }
             }
 
-            Spacer(Modifier.height(28.dp))
-            Overline("Model providers")
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(OrbitDimens.section))
+            Overline("Model providers", Modifier.padding(bottom = OrbitDimens.labelGap))
             OrbitCard(Modifier.fillMaxWidth()) {
                 Column {
                     state.providers.forEachIndexed { index, provider ->
-                        if (index > 0) Divider()
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (index > 0) Hairline()
+                        Row(Modifier.fillMaxWidth().padding(OrbitDimens.rowPad), verticalAlignment = Alignment.CenterVertically) {
                             Text(provider.label, Modifier.weight(1f), style = OrbitType.titleS, color = c.text)
-                            Text(
-                                if (provider.configured) "Ready" else "No key",
-                                style = OrbitType.label,
-                                color = if (provider.configured) c.text else c.textTertiary,
-                            )
+                            when {
+                                provider.id == "demo" -> Status("Built in", null)
+                                provider.configured -> Status("Ready", c.live)
+                                else -> Status("Needs a key", null)
+                            }
                         }
                     }
                 }
             }
             Text(
                 "API keys never leave your PC. Add them to config.json in the hub's data folder, then restart the hub.",
-                Modifier.padding(top = 12.dp, start = 4.dp, end = 4.dp),
+                Modifier.padding(top = OrbitDimens.labelGap),
                 style = OrbitType.bodyS,
                 color = c.textTertiary,
             )
 
-            Spacer(Modifier.height(32.dp))
-            Surface(
-                onClick = onUnpair,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = CircleShape,
-                color = c.bg,
-                contentColor = c.danger,
-                border = BorderStroke(1.dp, c.line),
-            ) {
-                Box(contentAlignment = Alignment.Center) { Text("Unpair this phone", style = OrbitType.titleS) }
-            }
+            Spacer(Modifier.height(40.dp))
+            DangerRow("Unpair this phone", onUnpair)
         }
     }
 }
 
+/** A state with its dot. Without a color it is a quiet note, not a status. */
 @Composable
-private fun Divider() {
-    Box(Modifier.fillMaxWidth().height(1.dp).background(Orbit.colors.hairline))
-}
-
-@Composable
-private fun Detail(label: String, value: String) {
-    val c = Orbit.colors
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.weight(1f), style = OrbitType.bodyM, color = c.textSecondary)
-        Text(value, style = OrbitType.mono.copy(fontSize = 13.sp), color = c.text)
+private fun Status(label: String, color: Color?) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (color != null) StatusDot(color, Modifier.padding(end = 8.dp), size = 7.dp)
+        Text(label, style = OrbitType.label, color = color ?: Orbit.colors.textTertiary)
     }
 }

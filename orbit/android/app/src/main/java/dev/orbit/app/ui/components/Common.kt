@@ -9,10 +9,10 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -27,11 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,8 +40,8 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -64,6 +60,21 @@ fun Overline(text: String, modifier: Modifier = Modifier, count: Int? = null) {
         }
     }
 }
+
+/** Names the control below it. */
+@Composable
+fun FieldLabel(text: String, modifier: Modifier = Modifier) {
+    Text(text, modifier.padding(bottom = OrbitDimens.labelGap), style = OrbitType.label, color = Orbit.colors.textSecondary)
+}
+
+@Composable
+fun Hairline(modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxWidth().height(1.dp).background(Orbit.colors.hairline))
+}
+
+/** Clickable with a ripple that follows [shape]. */
+fun Modifier.tap(shape: Shape = RoundedCornerShape(OrbitDimens.radiusS), onClick: () -> Unit): Modifier =
+    clip(shape).clickable(onClick = onClick)
 
 /** A filled surface with a hairline edge: the app's one card style. */
 @Composable
@@ -120,10 +131,10 @@ fun OrbitField(
                     .background(c.surfaceRaised)
                     .border(1.dp, if (focused) c.line else c.hairline, shape)
                     .heightIn(min = 52.dp)
-                    .padding(start = 16.dp, end = if (trailing == null) 16.dp else 6.dp, top = 13.dp, bottom = 13.dp),
+                    .padding(start = OrbitDimens.rowPad, end = if (trailing == null) OrbitDimens.rowPad else 4.dp),
                 verticalAlignment = if (singleLine) Alignment.CenterVertically else Alignment.Top,
             ) {
-                Box(Modifier.weight(1f)) {
+                Box(Modifier.weight(1f).padding(vertical = 14.dp)) {
                     if (value.isEmpty()) {
                         Text(placeholder, style = textStyle, color = c.textTertiary, maxLines = if (singleLine) 1 else 3, overflow = TextOverflow.Ellipsis)
                     }
@@ -135,6 +146,7 @@ fun OrbitField(
     )
 }
 
+/** The one filled call to action on a screen. Unavailable, it stays recognisably a button, only dimmed. */
 @Composable
 fun PrimaryButton(
     text: String,
@@ -144,20 +156,19 @@ fun PrimaryButton(
     loading: Boolean = false,
 ) {
     val c = Orbit.colors
-    val active = enabled && !loading
     Surface(
         onClick = onClick,
         modifier = modifier.fillMaxWidth().height(52.dp),
-        enabled = active,
+        enabled = enabled && !loading,
         shape = CircleShape,
-        color = if (enabled) c.primary else c.surfaceRaised,
-        contentColor = if (enabled) c.onPrimary else c.textTertiary,
+        color = if (enabled) c.primary else c.primary.copy(alpha = 0.3f),
+        contentColor = c.onPrimary,
     ) {
         Box(contentAlignment = Alignment.Center) {
             if (loading) {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = c.onPrimary)
             } else {
-                Text(text, style = OrbitType.titleS.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
+                Text(text, style = OrbitType.titleS)
             }
         }
     }
@@ -188,21 +199,29 @@ fun Pill(
         border = if (selected) null else BorderStroke(1.dp, c.hairline),
     ) {
         Row(
-            Modifier.heightIn(min = 36.dp).padding(start = if (leading == null) 14.dp else 6.dp, end = 14.dp),
+            Modifier.height(40.dp).padding(start = if (leading == null) 16.dp else 7.dp, end = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (leading != null) {
                 leading()
-                Spacer(Modifier.width(7.dp))
+                Spacer(Modifier.width(8.dp))
             }
             Text(label, style = textStyle, maxLines = 1)
         }
     }
 }
 
+/** A bare icon with a full-size touch target. */
+@Composable
+fun IconTap(icon: OrbitIcon, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, tint: Color = Orbit.colors.text) {
+    Box(modifier.size(48.dp).tap(CircleShape, onClick), contentAlignment = Alignment.Center) {
+        OrbitIcon(icon, tint = tint, description = description)
+    }
+}
+
 /** Round icon button on a raised surface. */
 @Composable
-fun IconPill(icon: ImageVector, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 40.dp) {
+fun IconPill(icon: OrbitIcon, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 44.dp) {
     Surface(
         onClick = onClick,
         modifier = modifier.size(size),
@@ -211,7 +230,7 @@ fun IconPill(icon: ImageVector, description: String, onClick: () -> Unit, modifi
         contentColor = Orbit.colors.text,
         border = BorderStroke(1.dp, Orbit.colors.hairline),
     ) {
-        Box(contentAlignment = Alignment.Center) { Icon(icon, description, Modifier.size(size * 0.46f)) }
+        Box(contentAlignment = Alignment.Center) { OrbitIcon(icon, size = 20.dp, description = description) }
     }
 }
 
@@ -257,12 +276,10 @@ fun LogoMark(modifier: Modifier = Modifier, size: Dp = 26.dp) {
 @Composable
 fun ScreenBar(title: String, onBack: () -> Unit, actions: @Composable RowScope.() -> Unit = {}) {
     Row(
-        Modifier.fillMaxWidth().statusBarsPadding().height(60.dp).padding(start = 6.dp, end = 16.dp),
+        Modifier.fillMaxWidth().statusBarsPadding().height(60.dp).padding(start = 6.dp, end = OrbitDimens.gutter),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", Modifier.size(22.dp), tint = Orbit.colors.text)
-        }
+        IconTap(OrbitIcon.Back, "Back", onBack)
         Text(
             title,
             Modifier.weight(1f).padding(start = 2.dp),
@@ -275,7 +292,7 @@ fun ScreenBar(title: String, onBack: () -> Unit, actions: @Composable RowScope.(
     }
 }
 
-/** Compact filled action for a screen bar, e.g. Save. */
+/** The filled action in a screen bar, e.g. Save. */
 @Composable
 fun BarAction(label: String, onClick: () -> Unit, enabled: Boolean = true) {
     val c = Orbit.colors
@@ -283,11 +300,11 @@ fun BarAction(label: String, onClick: () -> Unit, enabled: Boolean = true) {
         onClick = onClick,
         enabled = enabled,
         shape = CircleShape,
-        color = if (enabled) c.primary else c.surfaceRaised,
-        contentColor = if (enabled) c.onPrimary else c.textTertiary,
+        color = if (enabled) c.primary else c.primary.copy(alpha = 0.3f),
+        contentColor = c.onPrimary,
     ) {
-        Box(Modifier.height(34.dp).padding(PaddingValues(horizontal = 16.dp)), contentAlignment = Alignment.Center) {
-            Text(label, style = OrbitType.label)
+        Box(Modifier.height(40.dp).padding(horizontal = 18.dp), contentAlignment = Alignment.Center) {
+            Text(label, style = OrbitType.titleS)
         }
     }
 }

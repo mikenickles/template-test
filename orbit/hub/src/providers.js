@@ -31,7 +31,7 @@ const CATALOG = [
     envKeys: ['OPENROUTER_API_KEY'],
   },
   { id: 'ollama', label: 'Ollama (local)', kind: 'openai', baseUrl: 'http://localhost:11434/v1', keyless: true },
-  { id: 'demo', label: 'Demo (no key)', kind: 'demo', keyless: true, models: ['demo'] },
+  { id: 'demo', label: 'Demo', kind: 'demo', keyless: true, models: ['demo'] },
 ];
 
 export class ProviderError extends Error {
@@ -116,7 +116,7 @@ export class Providers {
     const def = this.defs.get(provider);
     if (!def) throw new ProviderError(`Unknown provider "${provider}"`);
     if (!this.isConfigured(provider)) {
-      throw new ProviderError(`${def.label} has no API key on the hub yet. Add one to config.json on your PC.`);
+      throw new ProviderError(`${def.label} needs an API key. Add one to config.json on your PC, then restart the hub.`);
     }
     if (def.kind === 'demo') return streamDemo({ messages, signal, onDelta, agent });
     if (def.kind === 'anthropic') {
