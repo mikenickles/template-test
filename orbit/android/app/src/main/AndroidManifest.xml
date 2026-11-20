@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Installs an update the user's own PC is holding, after they confirm. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- The hub is reached over plain HTTP on the home network or a private VPN. -->
     <application
@@ -67,6 +69,17 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/orbit_widget_info" />
         </receiver>
+
+        <!-- Lets the installer read a downloaded update. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <!-- Follows the hub while agents finish a reply in the background. -->
         <service

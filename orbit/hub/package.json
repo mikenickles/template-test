@@ -1,6 +1,6 @@
 {
   "name": "orbit-hub",
-  "version": "0.1.0",
+  "version": "0.11.0",
   "private": true,
   "description": "Always-on PC hub for the Orbit multi-agent Android app",
   "type": "module",
@@ -12,7 +12,8 @@
     "test": "node --test",
     "firewall": "node src/firewall.js",
     "autostart:on": "node src/autostart.js on",
-    "autostart:off": "node src/autostart.js off"
+    "autostart:off": "node src/autostart.js off",
+    "package": "node scripts/package.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.11.0",

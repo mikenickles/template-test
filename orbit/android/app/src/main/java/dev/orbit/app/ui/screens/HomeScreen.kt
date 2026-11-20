@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.Agent
 import dev.orbit.app.data.Room
 import dev.orbit.app.ui.AppState
+import dev.orbit.app.ui.UpdateStatus
 import dev.orbit.app.ui.SharedKeys
 import dev.orbit.app.ui.components.AgentAvatar
 import dev.orbit.app.ui.components.CrewTile
@@ -77,6 +78,7 @@ import dev.orbit.app.ui.components.SectionTitle
 import dev.orbit.app.ui.components.ShimmerText
 import dev.orbit.app.ui.components.SkeletonBlock
 import dev.orbit.app.ui.components.StatusDot
+import dev.orbit.app.ui.components.UpdateCard
 import dev.orbit.app.ui.components.lift
 import dev.orbit.app.ui.components.surfaceBorder
 import dev.orbit.app.ui.components.tap
@@ -111,6 +113,10 @@ fun HomeScreen(
     now: Long = System.currentTimeMillis(),
     onAddKey: () -> Unit = {},
     onStartIntro: () -> Unit = {},
+    /** The app version the PC is holding, if newer than this one, and how installing it is going. */
+    appUpdate: String? = null,
+    updateStatus: UpdateStatus = UpdateStatus.Idle,
+    onUpdate: () -> Unit = {},
 ) {
     val c = Orbit.colors
     val list = rememberLazyListState()
@@ -155,6 +161,14 @@ fun HomeScreen(
                     return@LazyColumn
                 }
 
+                if (appUpdate != null) {
+                    item(key = "update") {
+                        UpdateCard(
+                            appUpdate, updateStatus, onUpdate,
+                            Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 22.dp).entrance(entrances, "update", 0),
+                        )
+                    }
+                }
                 // Until the crew knows the user, the guide offers to get to know them.
                 val showIntro = state.profile.notes.isEmpty() && state.providers.isNotEmpty()
                 if (showIntro) {

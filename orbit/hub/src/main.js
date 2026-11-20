@@ -1,4 +1,6 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import readline from 'node:readline/promises';
 import * as autostart from './autostart.js';
 import { configFile, dataDir, loadConfig, saveConfig } from './config.js';
@@ -28,7 +30,22 @@ const folders = new Folders(config.folders, {
     saveConfig(config);
   },
 });
-const hub = new Hub({ store, providers, folders, prices: config.prices, name: config.name, onPairingCode: () => showPairing() });
+const hubDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+
+/**
+ * An update was just installed. Start Orbit.bat sees exit code 75, fetches anything new and starts the
+ * hub again. Started any other way, the hub does that itself.
+ */
+function restartForUpdate(version) {
+  console.log(`Orbit ${version} is installed. Restarting...`);
+  hub.close();
+  if (process.env.ORBIT_SUPERVISED) process.exit(75);
+  spawnSync('npm', ['install', '--no-audit', '--no-fund', '--loglevel=error'], { cwd: hubDir, stdio: 'inherit', shell: true });
+  spawn(process.execPath, process.argv.slice(1), { cwd: hubDir, stdio: 'inherit', detached: true }).unref();
+  process.exit(0);
+}
+
+const hub = new Hub({ store, providers, folders, prices: config.prices, name: config.name, onPairingCode: () => showPairing(), onRestart: restartForUpdate });
 const port = await hub.listen(Number(process.env.PORT) || config.port);
 hub.startDiscovery(config.discoveryPort, port);
 
@@ -74,6 +91,7 @@ console.log(`  Model keys:  ${keyed.length ? keyed.join(', ') : 'none yet. Add o
 const shared = folders.list().map((f) => f.name);
 console.log(`  Folders:     ${shared.length ? shared.join(', ') : `none shared. Share one at ${pairPage}`}`);
 console.log(`  Away:        ${away.length ? `${away.join(', ')} (Tailscale)` : 'not set up. Install Tailscale on this PC and your phone to use Orbit anywhere.'}`);
+console.log(`  Updates:     save new versions in ${hub.updates.dir}`);
 console.log(`  Desktop app: ${appPage}  (in Edge or Chrome, use "Install Orbit" to keep it as an app)`);
 console.log(`  Data:        ${dataDir}`);
 

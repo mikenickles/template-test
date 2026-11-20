@@ -39,6 +39,14 @@ data class Agent(
 @Serializable
 data class MemoryNote(val id: String = "", val text: String = "", val source: String = "you", val createdAt: Long = 0)
 
+/** A version the hub is holding for an update, and what it is running now. */
+@Serializable
+data class UpdateInfo(val current: String = "", val available: String? = null, val size: Long = 0)
+
+/** What is waiting in the hub's updates folder: a new hub for the PC, and a new app for phones. */
+@Serializable
+data class HubUpdates(val folder: String = "", val hub: UpdateInfo = UpdateInfo(), val app: UpdateInfo = UpdateInfo())
+
 /** What the whole crew knows about the user: what to call them, and notes from them or their agents. */
 @Serializable
 data class Profile(val name: String = "", val notes: List<MemoryNote> = emptyList())
@@ -231,6 +239,7 @@ data class HubState(
     val folders: List<SharedFolder> = emptyList(),
     val schedules: List<Schedule> = emptyList(),
     val profile: Profile = Profile(),
+    val updates: HubUpdates = HubUpdates(),
 )
 
 /** Whether agents are replying in a room right now, and who has the floor. */

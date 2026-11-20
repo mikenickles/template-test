@@ -17,6 +17,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.io.IOException
 import java.net.URLEncoder
+import java.io.File
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
@@ -175,6 +176,36 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
     suspend fun upload(bytes: ByteArray, name: String, type: String): Attachment {
         val raw = exchange("POST", "/api/files", bytes.toRequestBody(type.toMediaType()), mapOf("X-File-Name" to URLEncoder.encode(name, "UTF-8").replace("+", "%20")))
         return OrbitJson.decodeFromString(raw.decodeToString())
+    }
+
+    /**
+     * Downloads the phone app the PC is holding into [into], reporting percent done. Uses the same
+     * addresses and sign-in as everything else, so it works away from home too.
+     */
+    suspend fun downloadApp(into: File, onProgress: (Int) -> Unit) = withContext(Dispatchers.IO) {
+        open("/api/updates/app", AtomicReference()).use { response ->
+            if (!response.isSuccessful) throw failure(response)
+            val total = response.body.contentLength()
+            into.parentFile?.mkdirs()
+            response.body.byteStream().use { input ->
+                into.outputStream().use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    var done = 0L
+                    var last = -1
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read < 0) break
+                        output.write(buffer, 0, read)
+                        done += read
+                        if (total > 0 && (done * 100 / total).toInt() != last) {
+                            last = (done * 100 / total).toInt()
+                            onProgress(last)
+                        }
+                    }
+                    if (total > 0 && done != total) throw HubException("The download stopped early. Try again.")
+                }
+            }
+        }
     }
 
     /** An attached file's bytes. */

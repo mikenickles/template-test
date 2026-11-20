@@ -9,7 +9,10 @@ import dev.orbit.app.data.FoundHub
 import dev.orbit.app.data.HubClient
 import dev.orbit.app.data.HubException
 import dev.orbit.app.data.HubInfo
+import dev.orbit.app.data.HubUpdates
 import dev.orbit.app.data.Profile
+import dev.orbit.app.data.isNewerVersion
+import dev.orbit.app.update.ApkInstaller
 import dev.orbit.app.data.Provider
 import dev.orbit.app.data.Room
 import dev.orbit.app.data.Schedule
@@ -48,8 +51,12 @@ data class AppState(
     val folders: List<SharedFolder> = emptyList(),
     val schedules: List<Schedule> = emptyList(),
     val profile: Profile = Profile(),
+    val updates: HubUpdates = HubUpdates(),
 ) {
     fun agent(id: String?) = agents.firstOrNull { it.id == id }
+
+    /** The app version waiting on the PC, if it is newer than [installed]. */
+    fun appUpdate(installed: String): String? = updates.app.available?.takeIf { isNewerVersion(it, installed) }
 
     /** Whether the hub has a Claude key, which the getting-to-know-you chat needs. */
     val canIntro: Boolean get() = providers.any { it.abilities && it.configured }
@@ -57,6 +64,16 @@ data class AppState(
     /** The getting-to-know-you chat, if it has been started. */
     val introRoom: Room? get() = rooms.firstOrNull { it.intro }
     fun room(id: String?) = rooms.firstOrNull { it.id == id }
+}
+
+/** Where an app update stands, shown on the update card. */
+sealed interface UpdateStatus {
+    data object Idle : UpdateStatus
+    data class Downloading(val percent: Int) : UpdateStatus
+
+    /** Android's "allow installing from Orbit" screen is open; tapping Update again continues. */
+    data object NeedsPermission : UpdateStatus
+    data class Failed(val message: String) : UpdateStatus
 }
 
 data class PairState(
@@ -139,6 +156,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     folders = fresh.folders,
                     schedules = fresh.schedules,
                     profile = fresh.profile,
+                    updates = fresh.updates,
                 )
             }
         }
@@ -257,6 +275,43 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: HubException) {
                 if (e.status == 401) repo.unpair(notifyHub = false)
                 onDone(e.message ?: "The key couldn't be saved.")
+            }
+        }
+    }
+
+    /** The Orbit version installed on this phone. */
+    val installedVersion: String = ApkInstaller.installedVersion(getApplication())
+
+    private val _updateStatus = MutableStateFlow<UpdateStatus>(UpdateStatus.Idle)
+    val updateStatus: StateFlow<UpdateStatus> = _updateStatus.asStateFlow()
+
+    /** Downloads the app update from the PC and opens Android's installer. */
+    fun installUpdate() {
+        if (_updateStatus.value is UpdateStatus.Downloading) return
+        val app = getApplication<android.app.Application>()
+        if (!ApkInstaller.canInstall(app)) {
+            _updateStatus.value = UpdateStatus.NeedsPermission
+            ApkInstaller.openPermissionSettings(app)
+            return
+        }
+        viewModelScope.launch {
+            val client = repo.client ?: return@launch
+            val file = ApkInstaller.file(app)
+            _updateStatus.value = UpdateStatus.Downloading(0)
+            try {
+                client.downloadApp(file) { _updateStatus.value = UpdateStatus.Downloading(it) }
+                val problem = ApkInstaller.problem(app, file)
+                if (problem != null) {
+                    file.delete()
+                    _updateStatus.value = UpdateStatus.Failed(problem)
+                } else {
+                    _updateStatus.value = UpdateStatus.Idle
+                    ApkInstaller.install(app, file)
+                }
+            } catch (e: HubException) {
+                file.delete()
+                if (e.status == 401) repo.unpair(notifyHub = false)
+                _updateStatus.value = UpdateStatus.Failed(e.message ?: "The update couldn't be downloaded.")
             }
         }
     }

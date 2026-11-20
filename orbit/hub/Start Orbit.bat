@@ -22,7 +22,19 @@ if errorlevel 1 (
   exit /b 1
 )
 
+rem Tells the hub this script will restart it after an update.
+set ORBIT_SUPERVISED=1
+
+:run
 node src\main.js %*
+
+rem Exit code 75 means the hub just installed an update: fetch anything new and start it again.
+if errorlevel 75 (
+  echo.
+  echo Orbit was updated. Starting the new version...
+  call npm install --no-audit --no-fund --loglevel=error
+  goto run
+)
 
 echo.
 echo The Orbit hub has stopped. Press any key to close this window.

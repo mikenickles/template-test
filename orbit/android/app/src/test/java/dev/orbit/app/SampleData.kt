@@ -15,6 +15,8 @@ import dev.orbit.app.data.Agent
 import dev.orbit.app.data.Author
 import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.data.HubInfo
+import dev.orbit.app.data.HubUpdates
+import dev.orbit.app.data.UpdateInfo
 import dev.orbit.app.data.CrewMade
 import dev.orbit.app.data.MemoryNote
 import dev.orbit.app.data.ModelDownload
@@ -106,6 +108,9 @@ object SampleData {
         loaded = true, hub = HubInfo("Home PC", "0.1.0", listOf("192.168.1.20:8787"), listOf("100.101.102.103:8787")), agents = agents, rooms = listOf(launch, trip, empty), providers = providers,
         folders = folders, profile = profile,
     )
+
+    /** The PC is holding a newer app and a newer hub. */
+    val updatable = app.copy(updates = HubUpdates("C:\\Users\\you\\.orbit-hub\\updates", UpdateInfo("0.10.0", "0.11.0"), UpdateInfo("", "0.11.0", 14_200_000)))
 
     /** A hub where the user hasn't met their guide yet. */
     val newcomer = app.copy(profile = Profile(), rooms = emptyList(), agents = emptyList())

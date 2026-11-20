@@ -211,7 +211,7 @@ function LocalPanel({ provider: p, model, setModel, error, onPull, onDismiss }) 
   </div>`;
 }
 
-export function Settings({ state, notify, refresh, onClose, onIntro }) {
+export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate }) {
   const [open, setOpen] = useState(null);
   const [key, setKey] = useState('');
   const [checking, setChecking] = useState(false);
@@ -276,6 +276,22 @@ export function Settings({ state, notify, refresh, onClose, onIntro }) {
     </div>
     ${state.hub.remote?.length > 0 && html`<div class="row"><span class="muted" style="flex:1">Away from home</span><span class="mono faint">${state.hub.remote[0]}</span></div>`}
     <div class="row"><span class="muted" style="flex:1">Version</span><span class="mono">${state.hub.version}</span></div></div>
+
+    <div class="section-title">Updates</div>
+    <div class="card">
+      <div class="row"><span style="flex:1">
+        <div class="title-s">Orbit on this PC</div>
+        <div class="body-s muted">${state.updates?.hub.available ? `Version ${state.updates.hub.available} is ready to install` : `Version ${state.hub.version}, up to date`}</div></span>
+        ${state.updates?.hub.available && (onThisPC ? html`<button class="button" onClick=${onUpdate}>Update</button>` : html`<span class="label faint">Install from the PC</span>`)}</div>
+      <div class="row"><span style="flex:1">
+        <div class="title-s">Orbit on your phone</div>
+        <div class="body-s muted">${state.updates?.app.available ? `Version ${state.updates.app.available} is ready. Open Orbit on the phone, Settings, Update.` : 'Nothing new waiting'}</div></span></div>
+      <div class="row"><span style="flex:1;min-width:0">
+        <div class="title-s">Updates folder</div>
+        <div class="mono faint" style="overflow-wrap:anywhere">${state.updates?.folder}</div></span>
+        ${onThisPC && html`<button class="pill" onClick=${() => api.openUpdates().catch((e) => notify(e.message))}>Open folder</button>`}</div>
+    </div>
+    <p class="note">New versions arrive as two files: <span class="mono">orbit-hub-X.Y.Z.zip</span> for this PC and <span class="mono">orbit-X.Y.Z.apk</span> for the phone. Save them in the updates folder and an Update button appears here and in the phone app.</p>
 
     <div class="section-title">About you</div>
     <div class="card">

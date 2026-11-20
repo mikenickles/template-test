@@ -1,10 +1,14 @@
+import fs from 'node:fs';
 import http from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
 import dgram from 'node:dgram';
 import { FileError, Files, MAX_FILE_BYTES } from './files.js';
 import { FolderError, Folders } from './folders.js';
 import { MemoryError, addNote, addProfileNote, cleanName, removeNote, removeProfileNote } from './memory.js';
 import { GUIDE, INTRO_ROOM_NAME } from './intro.js';
+import { UpdateError, Updates, openFolder } from './updates.js';
 import { ScheduleError, Scheduler } from './schedules.js';
 import { ABILITIES, Orchestrator } from './orchestrator.js';
 import { ProviderError } from './errors.js';
@@ -15,7 +19,8 @@ import { Ledger } from './usage.js';
 import { APP_POLICY, webAsset } from './web.js';
 import { pairingLink, qrSvg } from './qr.js';
 
-export const VERSION = '0.1.0';
+/** The hub's version: the app and the hub are released together, so this is the app's version too. */
+export const VERSION = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 export const DISCOVERY_PROBE = 'ORBIT_DISCOVER';
 const MAX_BODY = 1024 * 1024;
 const MAX_PAIR_FAILURES = 5;
@@ -54,8 +59,15 @@ const JUST_PAIRED_MS = 60_000;
  * bearer token a phone receives when it pairs with the code shown on the PC.
  */
 export class Hub {
-  constructor({ store, providers, folders = new Folders(), prices = {}, name, onPairingCode = () => {} }) {
+  constructor({ store, providers, folders = new Folders(), prices = {}, name, onPairingCode = () => {}, updates = null, onRestart = null }) {
     this.store = store;
+    // Updates saved in the updates folder; `onRestart` is how the hub restarts itself once one is installed.
+    this.updates = updates ?? new Updates({
+      dir: path.join(store.dir, 'updates'),
+      hubDir: fileURLToPath(new URL('..', import.meta.url)),
+      current: VERSION,
+    });
+    this.onRestart = onRestart;
     this.providers = providers;
     this.folders = folders;
     this.ledger = new Ledger(store, prices);
@@ -334,6 +346,7 @@ export class Hub {
           agents: this.store.state.agents,
           rooms: this.store.state.rooms.map((r) => this.#roomView(r)),
           providers: this.providers.list(),
+          updates: this.updates.status(),
           profile: this.#profile(),
           folders: this.folders.list(),
           schedules: this.scheduler.list(),
@@ -356,6 +369,42 @@ export class Hub {
           if (err instanceof FileError) throw new HttpError(400, err.message);
           throw err;
         }
+      }
+      // Updates the user saved in the updates folder: phones fetch the app from here, and the PC installs its own.
+      case 'GET /api/updates/:id': {
+        const app = id === 'app' ? this.updates.appFile() : null;
+        if (!app) throw new HttpError(404, 'There is no app update waiting on this PC.');
+        res.writeHead(200, {
+          'content-type': 'application/vnd.android.package-archive',
+          'content-length': app.size,
+          'content-disposition': `attachment; filename="${path.basename(app.file)}"`,
+          'cache-control': 'no-store',
+        });
+        const stream = fs.createReadStream(app.file);
+        stream.on('error', () => res.destroy());
+        stream.pipe(res);
+        return undefined;
+      }
+      case 'POST /api/updates/:id': {
+        // Both only from this PC: it is where the update files were saved, and where Orbit restarts.
+        this.#localOnly(req, true);
+        if (id === 'open') {
+          openFolder(this.updates.dir);
+          return { ok: true };
+        }
+        if (id !== 'apply') throw new HttpError(404, 'Not found.');
+        if (this.restarting) throw new HttpError(409, 'Orbit is already updating.');
+        let installed;
+        try {
+          installed = this.updates.install();
+        } catch (err) {
+          if (err instanceof UpdateError) throw new HttpError(400, err.message);
+          throw err;
+        }
+        this.restarting = true;
+        // The answer reaches the page first; then the hub restarts on the new files.
+        setTimeout(() => this.onRestart?.(installed.version), 400).unref();
+        return { ok: true, version: installed.version };
       }
       case 'GET /api/files/:id': {
         const meta = this.files.meta(id);

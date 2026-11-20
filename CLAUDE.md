@@ -57,6 +57,13 @@ Two independent projects live here:
 The hub's HTTP API, the app's `HubClient`/`Models.kt`, and the desktop app's `web/js/api.js` are one contract:
 change them together.
 
+Releases: the app and hub share one version (`versionName` in `android/app/build.gradle.kts`, `version` in
+`hub/package.json` and the lock file). A release is two files: `cd orbit/hub && npm run package -- <dir>` for
+`orbit-hub-X.Y.Z.zip`, and the signed release APK renamed `orbit-X.Y.Z.apk`. The user saves them in the hub's
+updates folder (`~/.orbit-hub/updates`) and clicks Update on desktop and phone; see `hub/src/updates.js`. The
+updater only installs `src/`, `web/`, `package.json` and `package-lock.json`, and never `Start Orbit.bat`, so
+changes to the start script need a manual install. Nothing here goes through GitHub or Google Drive.
+
 Release signing: the key lives outside the repo (`orbit/android/keystore.properties` locally, or the
 `ORBIT_KEYSTORE_BASE64`/`ORBIT_KEYSTORE_PASSWORD` secrets for the GitHub workflow). Never commit a keystore
 or its passwords, and never generate a new key for an existing app: phones only accept updates signed with

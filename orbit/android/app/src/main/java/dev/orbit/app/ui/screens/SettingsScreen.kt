@@ -23,12 +23,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.UsageSummary
 import dev.orbit.app.ui.AppState
+import dev.orbit.app.ui.UpdateStatus
 import dev.orbit.app.ui.components.DangerRow
 import dev.orbit.app.ui.components.Hairline
 import dev.orbit.app.ui.components.OrbitCard
 import dev.orbit.app.ui.components.OrbitIcon
 import dev.orbit.app.ui.components.ScreenBar
 import dev.orbit.app.ui.components.SectionTitle
+import dev.orbit.app.ui.components.UpdateCard
 import dev.orbit.app.ui.components.StatusDot
 import dev.orbit.app.ui.components.tap
 import dev.orbit.app.ui.theme.Orbit
@@ -48,6 +50,9 @@ fun SettingsScreen(
     usage: UsageSummary? = null,
     onOpenUsage: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
+    installedVersion: String = "",
+    updateStatus: UpdateStatus = UpdateStatus.Idle,
+    onUpdate: () -> Unit = {},
 ) {
     val c = Orbit.colors
     val uri = LocalUriHandler.current
@@ -123,6 +128,27 @@ fun SettingsScreen(
             }
 
             Column(Modifier.entrance(entrances, "providers", 1)) {
+                SectionTitle("Updates", Modifier.padding(top = OrbitDimens.section, bottom = 8.dp))
+                val appUpdate = state.appUpdate(installedVersion)
+                if (appUpdate != null) {
+                    UpdateCard(appUpdate, updateStatus, onUpdate)
+                } else {
+                    OrbitCard(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(start = OrbitDimens.rowPad, end = OrbitDimens.rowPad, top = 14.dp, bottom = 14.dp)) {
+                            Text("Orbit on this phone", style = OrbitType.titleS, color = c.text)
+                            Text("Version $installedVersion, up to date", Modifier.padding(top = 2.dp), style = OrbitType.bodyS, color = c.textSecondary)
+                        }
+                    }
+                }
+                state.updates.hub.available?.let { version ->
+                    Text(
+                        "Orbit $version is ready for your PC. Open Orbit on the PC and tap Update.",
+                        Modifier.padding(top = OrbitDimens.labelGap),
+                        style = OrbitType.bodyS,
+                        color = c.textTertiary,
+                    )
+                }
+
                 SectionTitle("About you", Modifier.padding(top = OrbitDimens.section, bottom = 8.dp))
                 OrbitCard(Modifier.fillMaxWidth(), onClick = onOpenAbout) {
                     Row(

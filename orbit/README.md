@@ -119,7 +119,24 @@ can stop sharing one.
 Web search and code run on Anthropic's side and are billed to your Anthropic
 account like any other usage.
 
-## 5. Build the app
+## 5. Update Orbit
+
+New versions arrive as two files: `orbit-hub-X.Y.Z.zip` for the PC and `orbit-X.Y.Z.apk` for
+phones. Save both in the hub's **updates folder** (`C:\Users\<you>\.orbit-hub\updates`;
+**Settings, Updates, Open folder** opens it).
+
+- **PC:** an **Orbit X.Y.Z is ready** card appears in the desktop app. Click **Update**: the hub
+  checks the package, installs it, restarts and the page reloads. The files it replaced are kept in
+  `updates\previous`. Updating restarts the hub, so it asks first if your crew is mid-reply.
+- **Phone:** **Orbit X.Y.Z is ready** appears on Home and in Settings. Tap **Update**: the phone
+  downloads the app from your PC (at home or through Tailscale) and Android asks you to confirm.
+  The first time, Android sends you to a screen to allow Orbit to install updates.
+
+Updates only come from files you saved on your PC. The hub refuses a package that is damaged,
+isn't Orbit's, is the same or an older version, or holds anything outside its own `src`, `web` and
+`package.json`. `Start Orbit.bat` isn't updated this way; a release that changes it says so.
+
+## 6. Build the app
 
 Needs JDK 17+ and the Android SDK (platform 37.2).
 
@@ -148,8 +165,15 @@ Without either, release builds are left unsigned.
 The **Orbit Android release** GitHub workflow builds a signed APK on demand (Actions
 tab, Run workflow) and publishes a release when a tag like `orbit-v0.4.0` is pushed.
 It needs two repository secrets: `ORBIT_KEYSTORE_BASE64` (the key file, base64) and
-`ORBIT_KEYSTORE_PASSWORD`. Bump `versionCode` and `versionName` in
-`android/app/build.gradle.kts` for each release.
+`ORBIT_KEYSTORE_PASSWORD`.
+
+### Making a release
+
+1. Bump `versionCode` and `versionName` in `android/app/build.gradle.kts`, and `version` in
+   `hub/package.json` and `hub/package-lock.json` to the same `X.Y.Z`: the app and hub are released together.
+2. `cd hub && npm run package -- <folder>` writes `orbit-hub-X.Y.Z.zip`.
+3. `cd android && ./gradlew :app:assembleRelease`, then copy `app-release.apk` to `orbit-X.Y.Z.apk`.
+4. Hand over both files to be saved in the updates folder.
 
 ## Tests
 

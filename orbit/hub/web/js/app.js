@@ -15,6 +15,7 @@ function App() {
   const [roomId, setRoomId] = useState(() => decodeURIComponent(location.hash.slice(1)) || null);
   const [dialog, setDialog] = useState(null);
   const [toast, setToast] = useState(null);
+  const [updating, setUpdating] = useState(null); // { version, failed } while the hub installs an update and restarts
   const toastTimer = useRef();
 
   const notify = useCallback((text) => {
@@ -72,6 +73,25 @@ function App() {
   const openRoom = (id) => {
     location.hash = id ? encodeURIComponent(id) : '';
   };
+  // Installs the update waiting in the hub's updates folder; the hub restarts, then this page reloads.
+  const startUpdate = async () => {
+    if (state.rooms.some((r) => r.active) && !confirm('Your crew is replying right now, and an update would cut them off. Update anyway?')) return;
+    setDialog(null);
+    try {
+      const { version } = await api.applyUpdate();
+      setUpdating({ version, failed: false });
+      const until = Date.now() + 120_000;
+      const wait = async () => {
+        const info = await api.hubInfo().catch(() => null);
+        if (info?.version === version) return location.reload();
+        if (Date.now() > until) return setUpdating({ version, failed: true });
+        return setTimeout(wait, 1000);
+      };
+      setTimeout(wait, 1500);
+    } catch (e) {
+      notify(e.message);
+    }
+  };
   // The getting-to-know-you chat: started on the hub, then opened here.
   const startIntro = async () => {
     try {
@@ -104,7 +124,7 @@ function App() {
   };
 
   return html`<div class=${`shell${room ? ' in-room' : ''}`}>
-    <${Sidebar} state=${state} roomId=${room?.id} onOpen=${openRoom} onDialog=${setDialog} onIntro=${startIntro} />
+    <${Sidebar} state=${state} roomId=${room?.id} onOpen=${openRoom} onDialog=${setDialog} onIntro=${startIntro} onUpdate=${startUpdate} />
     <main>
       ${room
         ? html`<${RoomView} key=${room.id} room=${room} state=${state} onDialog=${setDialog} notify=${notify} onBack=${() => openRoom(null)}
@@ -113,7 +133,15 @@ function App() {
     </main>
     ${dialog?.type === 'agent' && html`<${AgentEditor} agent=${dialog.agent} state=${state} notify=${notify} onClose=${close} onSaved=${() => edited()} onChanged=${refresh} onAddKey=${() => setDialog({ type: 'settings' })} />`}
     ${dialog?.type === 'room' && html`<${RoomEditor} room=${dialog.room} state=${state} notify=${notify} onClose=${close} onSaved=${(id) => edited(id)} />`}
-    ${dialog?.type === 'settings' && html`<${Settings} state=${state} notify=${notify} refresh=${refresh} onClose=${close} onIntro=${() => { close(); startIntro(); }} />`}
+    ${dialog?.type === 'settings' && html`<${Settings} state=${state} notify=${notify} refresh=${refresh} onClose=${close} onIntro=${() => { close(); startIntro(); }} onUpdate=${startUpdate} />`}
+    ${updating && html`<div class="updating" role="alertdialog" aria-live="polite">
+      ${updating.failed
+        ? html`<div class="center"><${Mark} size=${40} /><h1 class="title-l">Orbit hasn't come back yet</h1>
+            <p class="muted">The update to ${updating.version} was installed, but the hub didn't answer. Look at its window on the PC. If it closed, start Orbit again.</p>
+            <button class="button" onClick=${() => location.reload()}>Try again</button></div>`
+        : html`<div class="center"><div class="spinner" style="margin:0 auto 18px"></div><h1 class="title-l">Updating Orbit</h1>
+            <p class="muted">Installing ${updating.version}. This takes a few seconds, and the page reloads by itself.</p></div>`}
+    </div>`}
     ${dialog?.type === 'schedules' && html`<${Schedules} room=${dialog.room} state=${state} notify=${notify} refresh=${refresh} onClose=${close} onRan=${() => openRoom(dialog.room.id)} />`}
     ${toast && html`<div class="toast" role="status">${toast}</div>`}
   </div>`;
@@ -148,7 +176,7 @@ function Connect({ onConnected }) {
   </form></div>`;
 }
 
-function Sidebar({ state, roomId, onOpen, onDialog, onIntro }) {
+function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate }) {
   const byId = useMemo(() => Object.fromEntries(state.agents.map((a) => [a.id, a])), [state.agents]);
   const rooms = [...state.rooms].sort((a, b) => b.updatedAt - a.updatedAt);
   const intro = !state.profile?.notes?.length;
@@ -162,6 +190,11 @@ function Sidebar({ state, roomId, onOpen, onDialog, onIntro }) {
       </button>
     </div>
     <div class="sidebar-scroll">
+      ${state.updates?.hub.available && html`<button class="card row button-row update-banner" onClick=${() => (onThisPC ? onUpdate() : onDialog({ type: 'settings' }))}>
+        <div style="flex:1"><div class="title-s">Orbit ${state.updates.hub.available} is ready</div>
+          <div class="body-s muted">${onThisPC ? 'Install it now. Orbit restarts in a few seconds.' : 'Install it from Orbit on the PC.'}</div></div>
+        ${onThisPC && html`<span class="pill selected">Update</span>`}
+      </button>`}
       ${intro && html`<button class="card row button-row intro-mini" style=${`--wash:${tint(guide.avatar)}`} onClick=${() => (canIntro(state) ? onIntro() : onDialog({ type: 'settings' }))}>
         <${Avatar} spec=${guide.avatar} size=${36} />
         <div style="flex:1"><div class="title-s">${canIntro(state) ? 'Get to know each other' : 'Meet your guide'}</div>
