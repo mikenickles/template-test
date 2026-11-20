@@ -5,10 +5,12 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.graphics.Matrix
+// Only used below Android 9, where the platform's own reader is reliable.
 import android.media.ExifInterface
 import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
+import androidx.core.graphics.scale
 import java.io.ByteArrayOutputStream
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -47,8 +49,8 @@ fun canAttach(type: String?): Boolean =
  * Reads a picked item for upload. Photos come out upright, no larger than [MAX_IMAGE_EDGE], as JPEG
  * (which also drops their location data); PDFs and text files are sent as they are.
  */
-fun prepare(resolver: ContentResolver, uri: Uri): PreparedFile {
-    val (name, type) = describe(resolver, uri)
+fun prepare(resolver: ContentResolver, uri: Uri, known: Pair<String, String>? = null): PreparedFile {
+    val (name, type) = known ?: describe(resolver, uri)
     if (!canAttach(type)) throw HubException("Orbit can attach photos, PDFs and text files.")
     if (type!!.startsWith("image/")) {
         val bitmap = decodeImage(resolver, uri, MAX_IMAGE_EDGE) ?: throw HubException("That photo couldn't be opened.")
@@ -112,7 +114,7 @@ private fun sampleSize(width: Int, height: Int, maxEdge: Int): Int {
 private fun fit(bitmap: Bitmap, maxEdge: Int): Bitmap {
     val scale = maxEdge.toFloat() / max(bitmap.width, bitmap.height)
     if (scale >= 1f) return bitmap
-    return Bitmap.createScaledBitmap(bitmap, (bitmap.width * scale).roundToInt(), (bitmap.height * scale).roundToInt(), true)
+    return bitmap.scale((bitmap.width * scale).roundToInt(), (bitmap.height * scale).roundToInt())
 }
 
 private fun rotate(bitmap: Bitmap, degrees: Int): Bitmap =

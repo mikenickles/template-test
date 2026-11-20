@@ -19,6 +19,9 @@ hub on an always-on PC.
   Long-press a message to copy it, ask the agent again, or delete it. Tap **+** to
   attach photos, PDFs or text files; Claude agents read all three, other models
   see photos where they support them.
+- **Share to Orbit** from any app's share menu: a link, some text, photos or
+  PDFs. Pick a room and it opens with them ready to send, so you can add a
+  question first.
 - **Notifications.** Leave the app while agents are replying and you get a
   ping when they finish ("Nova: Fuunji is your best bet…"); tap it to open the
   room. The app asks for permission the first time you send a message.

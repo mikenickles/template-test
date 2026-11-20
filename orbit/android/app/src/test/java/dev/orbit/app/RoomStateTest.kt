@@ -6,6 +6,10 @@ import dev.orbit.app.data.Agent
 import dev.orbit.app.data.Author
 import dev.orbit.app.data.OrbitJson
 import dev.orbit.app.data.TextReset
+import dev.orbit.app.data.SharedContent
+import dev.orbit.app.data.SharedFile
+import dev.orbit.app.data.sharedText
+import dev.orbit.app.ui.screens.describeShared
 import dev.orbit.app.data.canAttach
 import dev.orbit.app.ui.components.fileSize
 import dev.orbit.app.ui.components.ActivityLabel
@@ -207,5 +211,19 @@ class RoomStateTest {
         assertEquals("2.4 MB", fileSize(2_480_000))
         assertTrue(canAttach("image/heic") && canAttach("application/pdf") && canAttach("text/markdown"))
         assertTrue(!canAttach("application/zip") && !canAttach(null))
+    }
+
+    @Test
+    fun `shared text keeps a page's title with its link, and shares are described plainly`() {
+        assertEquals("Best ramen in Tokyo\nhttps://example.com/ramen", sharedText("https://example.com/ramen", "Best ramen in Tokyo"))
+        assertEquals("Look at this https://example.com", sharedText("Look at this https://example.com", "Example"))
+        assertEquals("Just the subject", sharedText(null, "Just the subject"))
+        assertEquals("Same", sharedText("Same", "Same"))
+        assertEquals("", sharedText(null, null))
+        val photo = SharedFile(android.net.Uri.EMPTY, "a.jpg", "image/jpeg")
+        val pdf = SharedFile(android.net.Uri.EMPTY, "b.pdf", "application/pdf")
+        assertEquals("a photo", describeShared(SharedContent("", listOf(photo))))
+        assertEquals("2 photos and a PDF", describeShared(SharedContent("", listOf(photo, photo, pdf))))
+        assertEquals("", describeShared(SharedContent("hi")))
     }
 }

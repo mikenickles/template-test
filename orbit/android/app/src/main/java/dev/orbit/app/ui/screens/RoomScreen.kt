@@ -153,9 +153,11 @@ fun RoomScreen(
     onPickPhotos: () -> Unit = {},
     onPickFiles: () -> Unit = {},
     onRemoveDraft: (DraftAttachment) -> Unit = {},
+    /** Text to start the composer with, like something shared from another app. */
+    initialDraft: String = "",
 ) {
     val c = Orbit.colors
-    var draft by rememberSaveable { mutableStateOf("") }
+    var draft by rememberSaveable { mutableStateOf(initialDraft) }
     // The message whose actions are open, after a long press.
     var acting by remember { mutableStateOf<Message?>(null) }
     var attaching by remember { mutableStateOf(false) }

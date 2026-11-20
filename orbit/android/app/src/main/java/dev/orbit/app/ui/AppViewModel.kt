@@ -12,7 +12,13 @@ import dev.orbit.app.data.HubInfo
 import dev.orbit.app.data.Provider
 import dev.orbit.app.data.Room
 import dev.orbit.app.data.SharedFolder
+import android.net.Uri
+import dev.orbit.app.data.SharedContent
 import dev.orbit.app.data.UsageSummary
+import dev.orbit.app.data.copyShared
+import dev.orbit.app.data.sharedText
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import dev.orbit.app.data.discoverHubs
 import dev.orbit.app.data.PairingLink
 import dev.orbit.app.data.parsePairingLink
@@ -153,6 +159,45 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun loadUsage(days: Int = 30) {
         viewModelScope.launch { hub(quiet = true) { it.usage(days) }?.let { _usage.value = it } }
+    }
+
+    private val _share = MutableStateFlow<SharedContent?>(null)
+
+    /** Something shared from another app, waiting for a room to go to. */
+    val share: StateFlow<SharedContent?> = _share.asStateFlow()
+    private var shareRoom: String? = null
+
+    /** Takes in a share: text, and files copied into Orbit's storage so they stay readable. */
+    fun receiveShare(text: String?, subject: String?, uris: List<Uri>) {
+        viewModelScope.launch {
+            val (files, skipped) = withContext(Dispatchers.IO) { copyShared(getApplication(), uris, MAX_DRAFTS) }
+            val content = SharedContent(sharedText(text, subject), files, skipped)
+            if (content.text.isBlank() && content.files.isEmpty()) {
+                _notices.tryEmit("Orbit can send text, photos, PDFs and text files.")
+                return@launch
+            }
+            shareRoom = null
+            _share.value = content
+        }
+    }
+
+    /** The share is going to [roomId]. */
+    fun routeShare(roomId: String) {
+        shareRoom = roomId
+    }
+
+    /** The share, if it's meant for [roomId]. Handed over once. */
+    fun claimShare(roomId: String): SharedContent? {
+        if (shareRoom != roomId) return null
+        val content = _share.value
+        _share.value = null
+        shareRoom = null
+        return content
+    }
+
+    fun dropShare() {
+        _share.value = null
+        shareRoom = null
     }
 
     /** A room to open as soon as the app is showing, from a tapped notification. */

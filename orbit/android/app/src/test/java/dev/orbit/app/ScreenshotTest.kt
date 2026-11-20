@@ -39,6 +39,7 @@ import dev.orbit.app.ui.screens.RoomEditorScreen
 import dev.orbit.app.ui.screens.RoomScreen
 import dev.orbit.app.ui.screens.SampleCrew
 import dev.orbit.app.ui.screens.SettingsScreen
+import dev.orbit.app.ui.screens.ShareScreen
 import dev.orbit.app.ui.screens.UsageScreen
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitDimens
@@ -170,6 +171,19 @@ class ScreenshotTest {
         CompositionLocalProvider(LocalHubImages provides SampleData.images) {
             RoomScreen(trip.copy(agentIds = listOf("a1")), listOf(nova), SampleData.shared.copy(drafts = emptyList()), {}, {}, {}, {}, {})
         }
+    }
+    @Test fun share() = shot("share") {
+        val files = listOf(
+            dev.orbit.app.data.SharedFile(android.net.Uri.EMPTY, "IMG_2050.jpg", "image/jpeg"),
+            dev.orbit.app.data.SharedFile(android.net.Uri.EMPTY, "IMG_2051.jpg", "image/jpeg"),
+        )
+        ShareScreen(
+            dev.orbit.app.data.SharedContent("Ichiran Shibuya - opening hours and menu\nhttps://ichiran.example/shibuya", files),
+            SampleData.app.rooms, agents, {}, {}, {},
+        )
+    }
+    @Test fun shareLight() = shot("share-light", dark = false) {
+        ShareScreen(dev.orbit.app.data.SharedContent("Is this a good deal? https://shop.example/headphones", skipped = 1), SampleData.app.rooms, agents, {}, {}, {})
     }
     @Test fun usage() = shot("usage") { UsageScreen(SampleData.usage, agents, 30, {}, {}) }
     @Test fun usageLight() = shot("usage-light", dark = false) { UsageScreen(SampleData.usage, agents, 30, {}, {}) }

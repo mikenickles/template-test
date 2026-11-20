@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import dev.orbit.app.data.canAttach
 import dev.orbit.app.data.decodeImage
 import dev.orbit.app.data.describe
+import dev.orbit.app.data.SharedFile
 import dev.orbit.app.data.prepare
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
@@ -154,7 +155,7 @@ class RoomViewModel(app: Application, private val roomId: String) : AndroidViewM
             try {
                 repo.noteSent()
                 val ids = drafts.map { draft ->
-                    val file = withContext(Dispatchers.IO) { prepare(resolver, draft.uri) }
+                    val file = withContext(Dispatchers.IO) { prepare(resolver, draft.uri, draft.name to draft.type) }
                     client.upload(file.bytes, file.name, file.type).id
                 }
                 client.send(roomId, text, ids)
@@ -186,6 +187,21 @@ class RoomViewModel(app: Application, private val roomId: String) : AndroidViewM
                 picked.any { it == null } -> _notices.tryEmit("Orbit can attach photos, PDFs and text files.")
             }
             _state.update { it.copy(drafts = it.drafts + picked.filterNotNull()) }
+        }
+    }
+
+    /** Adds files shared into Orbit from another app, already copied into the app's own storage. */
+    fun attachShared(files: List<SharedFile>) {
+        if (files.isEmpty()) return
+        viewModelScope.launch {
+            val resolver = getApplication<Application>().contentResolver
+            val drafts = withContext(Dispatchers.IO) {
+                files.take(MAX_DRAFTS).map { file ->
+                    val preview = if (file.type.startsWith("image/")) decodeImage(resolver, file.uri, 240)?.asImageBitmap() else null
+                    DraftAttachment(UUID.randomUUID().toString(), file.uri, file.name, file.type, preview)
+                }
+            }
+            _state.update { it.copy(drafts = (it.drafts + drafts).take(MAX_DRAFTS)) }
         }
     }
 

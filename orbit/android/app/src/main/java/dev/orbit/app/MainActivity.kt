@@ -64,6 +64,9 @@ import dev.orbit.app.ui.screens.RoomEditorScreen
 import dev.orbit.app.ui.screens.RoomScreen
 import dev.orbit.app.ui.screens.SettingsScreen
 import dev.orbit.app.ui.screens.UsageScreen
+import dev.orbit.app.ui.screens.ShareScreen
+import android.net.Uri
+import androidx.core.content.IntentCompat
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import dev.orbit.app.ui.theme.Orbit
@@ -95,6 +98,16 @@ class MainActivity : ComponentActivity() {
      * (a tapped reply notification) opens that room.
      */
     private fun openLink(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_SEND || intent?.action == Intent.ACTION_SEND_MULTIPLE) {
+            // Shared from another app: text, a link, photos or files.
+            val uris = if (intent.action == Intent.ACTION_SEND_MULTIPLE) {
+                IntentCompat.getParcelableArrayListExtra(intent, Intent.EXTRA_STREAM, Uri::class.java).orEmpty()
+            } else {
+                listOfNotNull(IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java))
+            }
+            vm.receiveShare(intent.getStringExtra(Intent.EXTRA_TEXT), intent.getStringExtra(Intent.EXTRA_SUBJECT), uris)
+            return
+        }
         val link = intent?.data?.takeIf { it.scheme == "orbit" } ?: return
         when (link.host) {
             "room" -> link.pathSegments.firstOrNull()?.let(vm::openRoom)
@@ -191,6 +204,11 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
         vm.roomOpened()
     }
     val askNotifications = rememberNotificationAsk()
+    // Something shared from another app: choose where it goes.
+    val share by vm.share.collectAsStateWithLifecycle()
+    LaunchedEffect(share != null) {
+        if (share != null && nav.currentDestination?.route != "share") nav.navigate("share") { launchSingleTop = true }
+    }
 
     OrbitNavHost(nav, startDestination = "home") {
         screen("home") {
@@ -223,6 +241,9 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 return@screen
             }
             val roomVm: RoomViewModel = viewModel(factory = RoomViewModel.Factory(id))
+            // Arriving with something shared: its files join the drafts and its text starts the message.
+            val shared = remember(id) { vm.claimShare(id) }
+            LaunchedEffect(shared) { shared?.let { roomVm.attachShared(it.files) } }
             val pickPhotos = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(MAX_DRAFTS)) { roomVm.attach(it) }
             val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { roomVm.attach(it) }
             val roomState by roomVm.state.collectAsStateWithLifecycle()
@@ -240,6 +261,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onPickPhotos = { pickPhotos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                 onPickFiles = { pickFiles.launch(arrayOf("application/pdf", "text/*", "application/json")) },
                 onRemoveDraft = roomVm::detach,
+                initialDraft = shared?.text.orEmpty(),
                 onStop = roomVm::stop,
                 onBack = { nav.popBackStack() },
                 onEdit = { nav.navigate("roomEdit?id=$id") },
@@ -300,6 +322,26 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 },
                 usage = usage?.takeIf { it.days == 30 },
                 onOpenUsage = { nav.navigate("usage") },
+            )
+        }
+        screen("share") {
+            val content = share ?: return@screen
+            ShareScreen(
+                content = content,
+                rooms = state.rooms,
+                agents = state.agents,
+                onPick = { room ->
+                    vm.routeShare(room.id)
+                    nav.navigate("room/${room.id}") { popUpTo("home") }
+                },
+                onNewRoom = {
+                    vm.dropShare()
+                    nav.navigate("roomEdit") { popUpTo("home") }
+                },
+                onBack = {
+                    vm.dropShare()
+                    nav.popBackStack()
+                },
             )
         }
         screen("usage") {
