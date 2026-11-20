@@ -7,13 +7,15 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -25,110 +27,99 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.AvatarSpec
+import dev.orbit.app.ui.theme.Orbit
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sign
 import kotlin.math.sin
 import kotlin.random.Random
 
-/** Body colors as (highlight, base) pairs, drawn as a soft top-to-bottom gradient. */
-val AvatarPalette: List<Pair<Color, Color>> = listOf(
-    Color(0xFFFF9A8B) to Color(0xFFFF5F52), // coral
-    Color(0xFFFFBE7A) to Color(0xFFFF8C3A), // tangerine
-    Color(0xFFFFE785) to Color(0xFFFFC42E), // sun
-    Color(0xFFCDF58C) to Color(0xFF8FDB4B), // lime
-    Color(0xFF86EFC6) to Color(0xFF2FCB8C), // mint
-    Color(0xFF8ADFFB) to Color(0xFF35B3E8), // sky
-    Color(0xFF9DBBFF) to Color(0xFF557FF0), // blue
-    Color(0xFFC2ADFF) to Color(0xFF8B66F5), // violet
-    Color(0xFFFFADDC) to Color(0xFFF765B4), // pink
-    Color(0xFFC3CBD9) to Color(0xFF7E8AA3), // slate
+/** Agent colors: ten hues at matched brightness, vivid on both black and white. */
+val AvatarPalette: List<Color> = listOf(
+    Color(0xFFFF6B57), // coral
+    Color(0xFFFF9F2E), // amber
+    Color(0xFFFFD233), // sun
+    Color(0xFFA6E63A), // lime
+    Color(0xFF2FD9A0), // mint
+    Color(0xFF38C6F4), // cyan
+    Color(0xFF5E8BFF), // blue
+    Color(0xFF9B7CFF), // violet
+    Color(0xFFFF6FB5), // pink
+    Color(0xFFA3A8B4), // graphite
 )
 
 const val SHAPE_COUNT = 5
-const val EYES_COUNT = 7
-const val MOUTH_COUNT = 6
-const val EXTRA_COUNT = 6
+const val EYES_COUNT = 8
 
-private val Ink = Color(0xFF17171F)
+private val Ink = Color(0xFF0B0B0F)
 
 fun randomAvatar(random: Random = Random): AvatarSpec = AvatarSpec(
     shape = random.nextInt(SHAPE_COUNT),
     color = random.nextInt(AvatarPalette.size),
     eyes = random.nextInt(EYES_COUNT),
-    mouth = random.nextInt(MOUTH_COUNT),
-    extra = random.nextInt(EXTRA_COUNT),
 )
 
-/** The agent's base color, for tinting its name and accents. */
-fun AvatarSpec.tint(): Color = AvatarPalette[color.mod(AvatarPalette.size)].second
+fun AvatarSpec.tint(): Color = AvatarPalette[color.mod(AvatarPalette.size)]
 
-/** The agent's lighter highlight color, readable on dark backgrounds. */
-fun AvatarSpec.highlight(): Color = AvatarPalette[color.mod(AvatarPalette.size)].first
+/** The agent's color adjusted to read as text on the current background. */
+@Composable
+fun AvatarSpec.textColor(): Color = if (Orbit.colors.isDark) tint() else lerp(tint(), Color.Black, 0.42f)
 
 /**
- * An agent's dot character. When [thinking] it bobs and glances side to side.
+ * An agent's avatar: one flat geometric shape, one color, two eyes.
+ * While [thinking] it breathes and glances side to side.
+ * [ring] draws an outline in the given color, to separate overlapping avatars.
  */
 @Composable
-fun AgentAvatar(spec: AvatarSpec, modifier: Modifier = Modifier, size: Dp = 48.dp, thinking: Boolean = false) {
-    if (thinking) {
+fun AgentAvatar(
+    spec: AvatarSpec,
+    modifier: Modifier = Modifier,
+    size: Dp = 48.dp,
+    thinking: Boolean = false,
+    ring: Color? = null,
+) {
+    val phase = if (thinking) {
         val transition = rememberInfiniteTransition(label = "thinking")
-        val phase by transition.animateFloat(
+        val value by transition.animateFloat(
             initialValue = 0f,
             targetValue = 1f,
-            animationSpec = infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart),
+            animationSpec = infiniteRepeatable(tween(1600, easing = LinearEasing), RepeatMode.Restart),
             label = "phase",
         )
-        AvatarCanvas(spec, modifier.size(size), phase)
+        value
     } else {
-        AvatarCanvas(spec, modifier.size(size), null)
+        null
+    }
+    Canvas(modifier.size(size)) {
+        val wave = phase?.let { sin(it * 2 * PI).toFloat() } ?: 0f
+        scale(1f - 0.05f * abs(wave)) { drawAvatar(spec, look = wave * 0.05f, ring = ring) }
     }
 }
 
-@Composable
-private fun AvatarCanvas(spec: AvatarSpec, modifier: Modifier, phase: Float?) {
-    Box(modifier) {
-        Canvas(Modifier.fillMaxSize()) {
-            val wave = phase?.let { sin(it * 2 * PI).toFloat() } ?: 0f
-            drawAvatar(spec, bob = -abs(wave) * 0.05f, look = wave * 0.035f)
-        }
-    }
-}
-
-// Everything below draws in units of `s`, the canvas width. The body is a
-// circle-ish shape centered a little low, leaving headroom for antennae etc.
-private fun DrawScope.drawAvatar(spec: AvatarSpec, bob: Float, look: Float) {
+// Drawn in units of `s`, the canvas width. The shape fills the canvas edge to
+// edge so avatars align optically with text and with each other.
+private fun DrawScope.drawAvatar(spec: AvatarSpec, look: Float, ring: Color?) {
     val s = size.minDimension
-    val (light, base) = AvatarPalette[spec.color.mod(AvatarPalette.size)]
-    val cx = s * 0.5f
-    val cy = s * (0.57f + bob)
-    val r = s * 0.41f
-    val body = Rect(cx - r, cy - r, cx + r, cy + r)
-
-    drawExtraBehind(spec.extra.mod(EXTRA_COUNT), s, cx, body, light, base)
-    drawPath(bodyPath(spec.shape.mod(SHAPE_COUNT), body), Brush.verticalGradient(listOf(light, base), body.top, body.bottom))
-    // Soft highlight, top left.
-    drawOval(
-        Color.White.copy(alpha = 0.28f),
-        topLeft = Offset(cx - r * 0.62f, cy - r * 0.74f),
-        size = Size(r * 0.5f, r * 0.3f),
+    val base = spec.tint()
+    val body = bodyPath(spec.shape.mod(SHAPE_COUNT), Rect(0f, 0f, s, s))
+    if (ring != null) drawPath(body, ring, style = Stroke(width = s * 0.11f))
+    drawPath(
+        body,
+        Brush.linearGradient(listOf(lerp(base, Color.White, 0.2f), base), start = Offset(s * 0.15f, 0f), end = Offset(s * 0.7f, s)),
     )
-
-    val eyeY = cy - s * 0.035f
-    val gap = s * 0.15f
-    drawEyes(spec.eyes.mod(EYES_COUNT), s, cx + look * s, eyeY, gap)
-    drawMouth(spec.mouth.mod(MOUTH_COUNT), s, cx + look * s * 0.6f, cy + s * 0.15f)
-    if (spec.extra.mod(EXTRA_COUNT) == 3) {
-        val blush = Color(0xFFFF4F7B).copy(alpha = 0.32f)
-        drawCircle(blush, s * 0.055f, Offset(cx - s * 0.25f, cy + s * 0.08f))
-        drawCircle(blush, s * 0.055f, Offset(cx + s * 0.25f, cy + s * 0.08f))
-    }
+    drawEyes(spec.eyes.mod(EYES_COUNT), s, cx = s * (0.5f + look), y = s * 0.48f, base = base)
 }
 
 private fun bodyPath(shape: Int, b: Rect): Path = Path().apply {
     val r = b.width / 2
+    val c = b.center
     fun corners(tl: Float, tr: Float, br: Float, bl: Float) = addRoundRect(
         RoundRect(
             b,
@@ -138,125 +129,113 @@ private fun bodyPath(shape: Int, b: Rect): Path = Path().apply {
             bottomLeft = CornerRadius(r * bl),
         ),
     )
+
+    /** Closed curve traced from the angle around the center. */
+    fun polar(steps: Int, point: (Double) -> Offset) {
+        for (i in 0 until steps) {
+            val p = point(2 * PI * i / steps)
+            if (i == 0) moveTo(c.x + p.x, c.y + p.y) else lineTo(c.x + p.x, c.y + p.y)
+        }
+        close()
+    }
     when (shape) {
-        0 -> addOval(b) // dot
-        1 -> corners(0.62f, 0.62f, 0.62f, 0.62f) // squircle
-        2 -> corners(1f, 0.7f, 1f, 0.56f) // pebble
-        3 -> { // egg: narrow crown, wide base
-            val cx = b.center.x
-            moveTo(cx, b.top)
-            cubicTo(cx + r * 0.78f, b.top, b.right, b.center.y - r * 0.05f, b.right, b.center.y + r * 0.3f)
-            cubicTo(b.right, b.bottom - r * 0.1f, cx + r * 0.55f, b.bottom, cx, b.bottom)
-            cubicTo(cx - r * 0.55f, b.bottom, b.left, b.bottom - r * 0.1f, b.left, b.center.y + r * 0.3f)
-            cubicTo(b.left, b.center.y - r * 0.05f, cx - r * 0.78f, b.top, cx, b.top)
-            close()
-        }
-        else -> corners(1f, 1f, 0.36f, 0.36f) // gumdrop
-    }
-}
-
-private fun DrawScope.drawExtraBehind(extra: Int, s: Float, cx: Float, body: Rect, light: Color, base: Color) {
-    val top = body.top
-    val stroke = Stroke(width = s * 0.035f, cap = StrokeCap.Round)
-    when (extra) {
-        1 -> { // antenna
-            drawLine(base, Offset(cx, top + s * 0.04f), Offset(cx, top - s * 0.06f), stroke.width, StrokeCap.Round)
-            drawCircle(light, s * 0.05f, Offset(cx, top - s * 0.09f))
-        }
-        2 -> { // twin antennae
-            for (dir in listOf(-1f, 1f)) {
-                val tip = Offset(cx + dir * s * 0.2f, top - s * 0.05f)
-                drawLine(base, Offset(cx + dir * s * 0.12f, top + s * 0.08f), tip, stroke.width, StrokeCap.Round)
-                drawCircle(light, s * 0.042f, tip)
-            }
-        }
-        4 -> { // halo
-            drawOval(
-                Color(0xFFFFD75E),
-                topLeft = Offset(cx - s * 0.17f, top - s * 0.115f),
-                size = Size(s * 0.34f, s * 0.1f),
-                style = Stroke(width = s * 0.032f),
+        0 -> addOval(b) // circle
+        1 -> polar(96) { t -> // squircle: a superellipse, so the corners have no flat-to-arc seam
+            val e = 2 / 4.4
+            Offset(
+                (r * sign(cos(t)) * abs(cos(t)).pow(e)).toFloat(),
+                (r * sign(sin(t)) * abs(sin(t)).pow(e)).toFloat(),
             )
         }
-        5 -> { // sprout
-            val green = Color(0xFF4CCB6B)
-            drawLine(green, Offset(cx, top + s * 0.03f), Offset(cx, top - s * 0.05f), stroke.width, StrokeCap.Round)
-            for (dir in listOf(-1f, 1f)) {
-                val leaf = Path().apply {
-                    moveTo(cx, top - s * 0.045f)
-                    quadraticTo(cx + dir * s * 0.05f, top - s * 0.15f, cx + dir * s * 0.15f, top - s * 0.1f)
-                    quadraticTo(cx + dir * s * 0.1f, top - s * 0.025f, cx, top - s * 0.045f)
-                    close()
-                }
-                drawPath(leaf, green)
-            }
+        2 -> corners(1f, 1f, 0.5f, 0.5f) // arch
+        3 -> corners(1f, 1f, 1f, 0.24f) // bubble
+        else -> polar(160) { t -> // scallop
+            val radius = r * (0.945 + 0.055 * cos(8 * t))
+            Offset((radius * cos(t)).toFloat(), (radius * sin(t)).toFloat())
         }
     }
 }
 
-private fun DrawScope.drawEyes(eyes: Int, s: Float, cx: Float, y: Float, gap: Float) {
-    val line = Stroke(width = s * 0.04f, cap = StrokeCap.Round)
-    fun arc(x: Float, w: Float = s * 0.11f) = drawArc(
-        Ink, startAngle = 200f, sweepAngle = 140f, useCenter = false,
-        topLeft = Offset(x - w / 2, y - w * 0.35f), size = Size(w, w), style = line,
-    )
+private fun DrawScope.drawEyes(eyes: Int, s: Float, cx: Float, y: Float, base: Color) {
+    val gap = s * 0.135f
+    val xs = listOf(cx - gap, cx + gap)
+    val stroke = Stroke(width = s * 0.062f, cap = StrokeCap.Round)
+    fun capsule(x: Float, w: Float, h: Float, color: Color = Ink) =
+        drawRoundRect(color, Offset(x - w / 2, y - h / 2), Size(w, h), CornerRadius(minOf(w, h) / 2))
+
+    fun arc(x: Float) {
+        val w = s * 0.15f
+        drawArc(Ink, 205f, 130f, false, Offset(x - w / 2, y - w * 0.3f), Size(w, w), style = stroke)
+    }
     when (eyes) {
-        0 -> for (x in listOf(cx - gap, cx + gap)) drawCircle(Ink, s * 0.05f, Offset(x, y)) // dots
-        1 -> for (x in listOf(cx - gap, cx + gap)) { // tall
-            drawRoundRect(
-                Ink, Offset(x - s * 0.04f, y - s * 0.08f), Size(s * 0.08f, s * 0.16f), CornerRadius(s * 0.04f),
-            )
-        }
-        2 -> for (x in listOf(cx - gap, cx + gap)) arc(x) // happy
+        0 -> xs.forEach { drawCircle(Ink, s * 0.066f, Offset(it, y)) } // dot
+        1 -> xs.forEach { capsule(it, s * 0.105f, s * 0.215f) } // tall
+        2 -> xs.forEach(::arc) // smiling
         3 -> { // wink
-            arc(cx - gap)
-            drawCircle(Ink, s * 0.05f, Offset(cx + gap, y))
+            arc(xs[0])
+            drawCircle(Ink, s * 0.066f, Offset(xs[1], y))
         }
-        4 -> for (x in listOf(cx - gap, cx + gap)) { // wide
-            drawCircle(Color.White, s * 0.095f, Offset(x, y))
-            drawCircle(Ink, s * 0.05f, Offset(x + s * 0.015f, y + s * 0.01f))
-            drawCircle(Color.White, s * 0.016f, Offset(x + s * 0.035f, y - s * 0.015f))
+        4 -> xs.forEach { // hooded: the lower half of a dot
+            val d = s * 0.17f
+            drawArc(Ink, 0f, 180f, true, Offset(it - d / 2, y - d * 0.62f), Size(d, d))
         }
-        5 -> { // visor
-            drawRoundRect(
-                Ink, Offset(cx - s * 0.27f, y - s * 0.075f), Size(s * 0.54f, s * 0.15f), CornerRadius(s * 0.075f),
-            )
-            for (x in listOf(cx - gap, cx + gap)) drawCircle(Color(0xFF7DF9C1), s * 0.03f, Offset(x, y))
+        5 -> xs.forEach { // bright: a larger eye with a glint
+            drawCircle(Ink, s * 0.092f, Offset(it, y))
+            drawCircle(Color.White, s * 0.03f, Offset(it + s * 0.03f, y - s * 0.032f))
         }
-        else -> for (x in listOf(cx - gap, cx + gap)) { // sleepy
-            drawLine(Ink, Offset(x - s * 0.05f, y), Offset(x + s * 0.05f, y), line.width, StrokeCap.Round)
+        6 -> { // visor
+            capsule(cx, s * 0.56f, s * 0.2f)
+            xs.forEach { drawCircle(lerp(base, Color.White, 0.25f), s * 0.042f, Offset(it, y)) }
         }
+        else -> xs.forEach { capsule(it, s * 0.15f, s * 0.062f) } // calm
     }
 }
 
-private fun DrawScope.drawMouth(mouth: Int, s: Float, cx: Float, y: Float) {
-    val line = Stroke(width = s * 0.035f, cap = StrokeCap.Round)
-    when (mouth) {
-        1 -> drawArc( // smile
-            Ink, 25f, 130f, false, Offset(cx - s * 0.085f, y - s * 0.1f), Size(s * 0.17f, s * 0.13f), style = line,
-        )
-        2 -> drawCircle(Ink, s * 0.035f, Offset(cx, y)) // "o"
-        3 -> drawLine(Ink, Offset(cx - s * 0.06f, y), Offset(cx + s * 0.06f, y), line.width, StrokeCap.Round) // flat
-        4 -> drawArc( // grin
-            Ink, 0f, 180f, true, Offset(cx - s * 0.09f, y - s * 0.085f), Size(s * 0.18f, s * 0.15f),
-        )
-        5 -> for (dir in listOf(-1f, 1f)) { // cat
-            drawArc(
-                Ink, 20f, 140f, false,
-                Offset(cx + dir * s * 0.045f - s * 0.045f, y - s * 0.06f), Size(s * 0.09f, s * 0.08f), style = line,
-            )
-        }
-    }
-}
-
-/** Overlapping row of avatars, for rooms. */
+/**
+ * A row of avatars. A positive [overlap] (a fraction of the avatar's width) tucks each one behind
+ * the next, outlined in [ring] to match the surface behind; zero or less sets them apart instead.
+ */
 @Composable
-fun AvatarStack(specs: List<AvatarSpec>, modifier: Modifier = Modifier, size: Dp = 36.dp, max: Int = 4) {
+fun AvatarStack(
+    specs: List<AvatarSpec>,
+    modifier: Modifier = Modifier,
+    size: Dp = 36.dp,
+    max: Int = 4,
+    overlap: Float = 0.2f,
+    ring: Color = Orbit.colors.bg,
+) {
     val shown = specs.take(max)
-    val step = size * 0.62f
+    val step = size * (1f - overlap)
     Box(modifier.size(width = if (shown.isEmpty()) size else step * (shown.size - 1) + size, height = size)) {
         shown.forEachIndexed { index, spec ->
-            AgentAvatar(spec, Modifier.offset(x = step * index), size)
+            AgentAvatar(spec, Modifier.offset(x = step * index), size, ring = if (index > 0 && overlap > 0f) ring else null)
+        }
+    }
+}
+
+/** A room's badge: its members arranged inside one rounded tile. */
+@Composable
+fun CrewTile(specs: List<AvatarSpec>, modifier: Modifier = Modifier, size: Dp = 52.dp) {
+    val tile = Orbit.colors.surfaceRaised
+    // (x, y, diameter) as fractions of the tile, for one to four members.
+    val layout = when (minOf(specs.size, 4)) {
+        0 -> emptyList()
+        1 -> listOf(Triple(0.2f, 0.2f, 0.6f))
+        2 -> listOf(Triple(0.12f, 0.12f, 0.48f), Triple(0.4f, 0.4f, 0.48f))
+        3 -> listOf(Triple(0.3f, 0.11f, 0.4f), Triple(0.09f, 0.48f, 0.4f), Triple(0.51f, 0.48f, 0.4f))
+        else -> listOf(
+            Triple(0.11f, 0.11f, 0.36f), Triple(0.53f, 0.11f, 0.36f),
+            Triple(0.11f, 0.53f, 0.36f), Triple(0.53f, 0.53f, 0.36f),
+        )
+    }
+    Box(modifier.size(size).clip(RoundedCornerShape(size * 0.3f)).background(tile)) {
+        layout.forEachIndexed { index, (x, y, d) ->
+            AgentAvatar(
+                specs[index],
+                Modifier.offset(size * x, size * y),
+                size * d,
+                ring = if (layout.size == 2 && index == 1) tile else null,
+            )
         }
     }
 }

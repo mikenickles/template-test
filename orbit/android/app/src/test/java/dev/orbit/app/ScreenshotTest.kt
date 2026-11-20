@@ -1,6 +1,15 @@
 package dev.orbit.app
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import dev.orbit.app.data.Agent
@@ -16,12 +25,19 @@ import dev.orbit.app.data.RunState
 import dev.orbit.app.ui.AppState
 import dev.orbit.app.ui.PairState
 import dev.orbit.app.ui.RoomUiState
+import dev.orbit.app.ui.components.AgentAvatar
+import dev.orbit.app.ui.components.AvatarStack
+import dev.orbit.app.ui.components.CrewTile
+import dev.orbit.app.ui.components.EYES_COUNT
+import dev.orbit.app.ui.components.SHAPE_COUNT
 import dev.orbit.app.ui.screens.AgentEditorScreen
 import dev.orbit.app.ui.screens.HomeScreen
 import dev.orbit.app.ui.screens.PairScreen
 import dev.orbit.app.ui.screens.RoomEditorScreen
 import dev.orbit.app.ui.screens.RoomScreen
+import dev.orbit.app.ui.screens.SampleCrew
 import dev.orbit.app.ui.screens.SettingsScreen
+import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitTheme
 import org.junit.Rule
 import org.junit.Test
@@ -37,10 +53,10 @@ class ScreenshotTest {
 
     private val now = 1_800_000_000_000L
 
-    private val nova = Agent("a1", "Nova", "the planner", "Plan things.", "anthropic", "claude-opus-5-5", AvatarSpec(0, 7, 0, 1, 1))
-    private val pixel = Agent("a2", "Pixel", "the builder", "Build things.", "openai", "gpt-large", AvatarSpec(1, 5, 4, 4, 0))
-    private val sage = Agent("a3", "Sage", "the skeptic", "Poke holes.", "ollama", "llama-local", AvatarSpec(2, 4, 2, 3, 5))
-    private val mochi = Agent("a4", "Mochi", "the writer", "", "xai", "grok-fast", AvatarSpec(4, 8, 3, 5, 3))
+    private val nova = Agent("a1", "Nova", "the planner", "Plan things.", "anthropic", "claude-opus-5-5", AvatarSpec(0, 7, 1))
+    private val pixel = Agent("a2", "Pixel", "the builder", "Build things.", "openai", "gpt-large", AvatarSpec(1, 5, 5))
+    private val sage = Agent("a3", "Sage", "the skeptic", "Poke holes.", "ollama", "llama-local", AvatarSpec(4, 2, 2))
+    private val mochi = Agent("a4", "Mochi", "the writer", "", "xai", "grok-fast", AvatarSpec(3, 8, 3))
     private val agents = listOf(nova, pixel, sage, mochi)
 
     private val launch = Room(
@@ -93,6 +109,30 @@ class ScreenshotTest {
     @Composable
     private fun Home(state: AppState = app) = HomeScreen(state, {}, {}, {}, {}, {}, {}, now = now)
 
+    /** Every shape against every eye style, across the palette. */
+    @Composable
+    private fun AvatarSheet() {
+        Column(
+            Modifier.fillMaxSize().background(Orbit.colors.bg).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            for (eyes in 0 until EYES_COUNT) {
+                Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    for (shape in 0 until SHAPE_COUNT) AgentAvatar(AvatarSpec(shape, eyes * 5 + shape, eyes), size = 56.dp)
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                for (size in listOf(20, 26, 34, 42)) AgentAvatar(AvatarSpec(size % 5, size % 7, size % 8), size = size.dp)
+                AvatarStack(SampleCrew, size = 34.dp, max = 5)
+                CrewTile(SampleCrew.take(4))
+                CrewTile(SampleCrew.take(3))
+                CrewTile(SampleCrew.take(2))
+            }
+        }
+    }
+
+    @Test fun avatars() = shot("avatars") { AvatarSheet() }
+    @Test fun avatarsLight() = shot("avatars-light", dark = false) { AvatarSheet() }
     @Test fun pair() = shot("pair") { PairScreen(PairState(found = listOf(FoundHub("Mike's PC", "192.168.1.20:8787"))), {}) { _, _ -> } }
     @Test fun pairLight() = shot("pair-light", dark = false) { PairScreen(PairState(error = "That pairing code is not right. Check the code shown on your PC."), {}) { _, _ -> } }
     @Test fun home() = shot("home") { Home() }

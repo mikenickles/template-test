@@ -79,9 +79,9 @@ export class Hub {
     const provider = real ? 'anthropic' : 'demo';
     const model = real ? 'claude-opus-5-5' : 'demo';
     const starters = [
-      ['Nova', 'the planner', 'You break problems into clear steps and keep the group on track.', { shape: 0, color: 7, eyes: 0, mouth: 1, extra: 1 }],
-      ['Pixel', 'the builder', 'You turn plans into concrete drafts, code, and examples.', { shape: 1, color: 5, eyes: 4, mouth: 4, extra: 0 }],
-      ['Sage', 'the skeptic', 'You look for gaps, risks, and simpler alternatives, and say so plainly.', { shape: 2, color: 4, eyes: 2, mouth: 3, extra: 5 }],
+      ['Nova', 'the planner', 'You break problems into clear steps and keep the group on track.', { shape: 0, color: 7, eyes: 1 }],
+      ['Pixel', 'the builder', 'You turn plans into concrete drafts, code, and examples.', { shape: 1, color: 5, eyes: 5 }],
+      ['Sage', 'the skeptic', 'You look for gaps, risks, and simpler alternatives, and say so plainly.', { shape: 4, color: 2, eyes: 2 }],
     ];
     const now = Date.now();
     const agents = starters.map(([agentName, role, instructions, avatar]) => ({

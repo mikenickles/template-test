@@ -1,13 +1,14 @@
 package dev.orbit.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -17,12 +18,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.orbit.app.ui.theme.GeistMono
+import dev.orbit.app.ui.theme.Orbit
+import dev.orbit.app.ui.theme.OrbitDimens
+import dev.orbit.app.ui.theme.OrbitType
 
 private sealed interface Block {
     data class Prose(val text: String) : Block
@@ -55,7 +59,12 @@ private fun splitBlocks(source: String): List<Block> {
     return blocks
 }
 
-private fun renderProse(text: String, mention: Color, codeBackground: Color): AnnotatedString = buildAnnotatedString {
+private fun renderProse(
+    text: String,
+    mentions: Map<String, Color>,
+    fallbackMention: Color,
+    codeBackground: Color,
+): AnnotatedString = buildAnnotatedString {
     val lines = text.lines()
     lines.forEachIndexed { index, raw ->
         val heading = Heading.find(raw)
@@ -73,10 +82,14 @@ private fun renderProse(text: String, mention: Color, codeBackground: Color): An
             when {
                 bold.isNotEmpty() -> withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(bold) }
                 code.isNotEmpty() -> withStyle(
-                    SpanStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp, background = codeBackground),
+                    SpanStyle(fontFamily = GeistMono, fontSize = 14.sp, background = codeBackground),
                 ) { append(code) }
                 italic.isNotEmpty() -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(italic) }
-                else -> withStyle(SpanStyle(color = mention, fontWeight = FontWeight.SemiBold)) { append(match.value) }
+                else -> {
+                    // A mention takes the color of the agent it names.
+                    val color = mentions[match.value.drop(1).lowercase()]
+                    withStyle(SpanStyle(color = color ?: fallbackMention, fontWeight = FontWeight.SemiBold)) { append(match.value) }
+                }
             }
             cursor = match.range.last + 1
         }
@@ -86,29 +99,37 @@ private fun renderProse(text: String, mention: Color, codeBackground: Color): An
     }
 }
 
-/** Renders the common subset of Markdown that models write in chat: emphasis, code, lists, headings. */
+/**
+ * Renders the common subset of Markdown that models write in chat: emphasis, code, lists, headings.
+ * [mentions] maps a lowercase agent handle (name without spaces) to the color its @mention is drawn in.
+ */
 @Composable
-fun MarkdownText(text: String, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.onSurface) {
-    val mention = MaterialTheme.colorScheme.secondary
-    val codeBackground = MaterialTheme.colorScheme.surfaceContainerHigh
+fun MarkdownText(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = Orbit.colors.text,
+    mentions: Map<String, Color> = emptyMap(),
+) {
+    val c = Orbit.colors
     val blocks = remember(text) { splitBlocks(text) }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         for (block in blocks) {
             when (block) {
                 is Block.Prose -> Text(
-                    remember(block.text, mention, codeBackground) { renderProse(block.text, mention, codeBackground) },
-                    style = MaterialTheme.typography.bodyLarge,
+                    remember(block.text, mentions, c) { renderProse(block.text, mentions, c.text, c.surfaceHigh) },
+                    style = OrbitType.body,
                     color = color,
                 )
                 is Block.Code -> Text(
                     block.text,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(MaterialTheme.shapes.small)
-                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                        .clip(RoundedCornerShape(OrbitDimens.radiusS))
+                        .background(c.surface)
+                        .border(1.dp, c.hairline, RoundedCornerShape(OrbitDimens.radiusS))
                         .horizontalScroll(rememberScrollState())
-                        .padding(12.dp),
-                    style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                        .padding(14.dp),
+                    style = OrbitType.mono.copy(fontSize = 13.sp, lineHeight = 20.sp),
                     color = color,
                 )
             }

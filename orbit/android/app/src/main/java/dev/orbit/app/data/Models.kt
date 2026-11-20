@@ -9,14 +9,12 @@ val OrbitJson = Json {
     encodeDefaults = true
 }
 
-/** Which parts an agent's dot character is drawn with. Indices into the option lists in Avatar.kt. */
+/** How an agent's avatar is drawn: indices into the shapes, palette and eye styles in Avatar.kt. */
 @Serializable
 data class AvatarSpec(
     val shape: Int = 0,
     val color: Int = 0,
     val eyes: Int = 0,
-    val mouth: Int = 1,
-    val extra: Int = 0,
 )
 
 @Serializable

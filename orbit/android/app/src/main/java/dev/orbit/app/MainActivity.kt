@@ -4,6 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,7 +17,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -41,6 +45,7 @@ import dev.orbit.app.ui.screens.PairScreen
 import dev.orbit.app.ui.screens.RoomEditorScreen
 import dev.orbit.app.ui.screens.RoomScreen
 import dev.orbit.app.ui.screens.SettingsScreen
+import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitTheme
 
 class MainActivity : ComponentActivity() {
@@ -59,7 +64,7 @@ private fun OrbitRoot(vm: AppViewModel = viewModel()) {
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(Unit) { vm.notices.collect { snackbar.showSnackbar(it) } }
 
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    Surface(Modifier.fillMaxSize(), color = Orbit.colors.bg) {
         Box {
             val current = session
             if (current == null) {
@@ -88,7 +93,15 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
         onPauseOrDispose {}
     }
 
-    NavHost(nav, startDestination = "home") {
+    // Screens push in from the right with a short fade; going back reverses it.
+    NavHost(
+        nav,
+        startDestination = "home",
+        enterTransition = { slideInHorizontally(tween(260)) { it / 10 } + fadeIn(tween(200)) },
+        exitTransition = { fadeOut(tween(120)) },
+        popEnterTransition = { fadeIn(tween(200)) },
+        popExitTransition = { slideOutHorizontally(tween(220)) { it / 10 } + fadeOut(tween(160)) },
+    ) {
         composable("home") {
             // Coming back from a room: pick up new previews and activity.
             LaunchedEffect(Unit) { vm.refresh() }

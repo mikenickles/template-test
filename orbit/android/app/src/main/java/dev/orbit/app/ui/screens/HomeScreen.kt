@@ -1,7 +1,9 @@
 package dev.orbit.app.ui.screens
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,29 +22,35 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.orbit.app.data.Agent
 import dev.orbit.app.data.Room
 import dev.orbit.app.ui.AppState
 import dev.orbit.app.ui.components.AgentAvatar
 import dev.orbit.app.ui.components.AvatarStack
+import dev.orbit.app.ui.components.CrewTile
+import dev.orbit.app.ui.components.LogoMark
+import dev.orbit.app.ui.components.OrbitCard
+import dev.orbit.app.ui.components.Overline
 import dev.orbit.app.ui.components.PrimaryButton
+import dev.orbit.app.ui.components.StatusDot
+import dev.orbit.app.ui.theme.Orbit
+import dev.orbit.app.ui.theme.OrbitDimens
+import dev.orbit.app.ui.theme.OrbitType
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -59,18 +67,11 @@ fun HomeScreen(
     onRefresh: () -> Unit,
     now: Long = System.currentTimeMillis(),
 ) {
+    val c = Orbit.colors
     Scaffold(
+        containerColor = c.bg,
         floatingActionButton = {
-            if (state.agents.isNotEmpty() && state.rooms.isNotEmpty()) {
-                ExtendedFloatingActionButton(
-                    onClick = onNewRoom,
-                    shape = CircleShape,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text("New room", style = MaterialTheme.typography.titleSmall) },
-                )
-            }
+            if (state.agents.isNotEmpty() && state.rooms.isNotEmpty()) NewRoomButton(onNewRoom)
         },
     ) { padding ->
         PullToRefreshBox(
@@ -78,27 +79,27 @@ fun HomeScreen(
             onRefresh = onRefresh,
             modifier = Modifier.fillMaxSize().padding(padding),
         ) {
-            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 104.dp)) {
                 item { Header(state, onSettings) }
-                if (state.offline) item { OfflineBanner(onRefresh) }
+                if (state.offline) item { OfflineNotice(onRefresh) }
 
-                item { SectionHeader("Crew", count = state.agents.size) }
+                item { Overline("Crew", Modifier.padding(start = OrbitDimens.gutter, top = 28.dp, bottom = 16.dp), count = state.agents.size) }
                 item {
                     LazyRow(
-                        contentPadding = PaddingValues(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(horizontal = OrbitDimens.gutter - 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        items(state.agents, key = { it.id }) { agent -> AgentCard(agent) { onEditAgent(agent) } }
-                        item { NewAgentCard(onNewAgent) }
+                        items(state.agents, key = { it.id }) { agent -> CrewMember(agent) { onEditAgent(agent) } }
+                        item { AddCrewMember(onNewAgent) }
                     }
                 }
 
-                item { SectionHeader("Rooms", count = state.rooms.size, Modifier.padding(top = 12.dp)) }
+                item { Overline("Rooms", Modifier.padding(start = OrbitDimens.gutter, top = 36.dp, bottom = 14.dp), count = state.rooms.size) }
                 if (state.rooms.isEmpty() && state.loaded) {
-                    item { EmptyRooms(hasAgents = state.agents.isNotEmpty(), onNewRoom = onNewRoom, onNewAgent = onNewAgent) }
+                    item { EmptyRooms(state.agents, onNewRoom = onNewRoom, onNewAgent = onNewAgent) }
                 }
                 items(state.rooms, key = { it.id }) { room ->
-                    RoomCard(room, room.agentIds.mapNotNull(state::agent), now) { onOpenRoom(room) }
+                    RoomRow(room, room.agentIds.mapNotNull(state::agent), now) { onOpenRoom(room) }
                 }
             }
         }
@@ -107,181 +108,189 @@ fun HomeScreen(
 
 @Composable
 private fun Header(state: AppState, onSettings: () -> Unit) {
+    val c = Orbit.colors
     Row(
-        Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
+        Modifier.fillMaxWidth().padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1f)) {
-            Text("Orbit", style = MaterialTheme.typography.displaySmall)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val online = state.loaded && !state.offline
-                Box(
-                    Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(if (online) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outline),
+        LogoMark(size = 28.dp)
+        Text("Orbit", Modifier.padding(start = 9.dp).weight(1f), style = OrbitType.titleL, color = c.text)
+
+        // The hub is the app's one piece of infrastructure, so its status doubles as the way into settings.
+        val online = state.loaded && !state.offline
+        Surface(
+            onClick = onSettings,
+            shape = CircleShape,
+            color = c.surface,
+            contentColor = c.text,
+            border = BorderStroke(1.dp, c.hairline),
+        ) {
+            Row(Modifier.height(36.dp).padding(horizontal = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+                StatusDot(
+                    when {
+                        online -> c.live
+                        state.offline -> c.danger
+                        else -> c.textTertiary
+                    },
+                    size = 7.dp,
                 )
                 Text(
                     when {
-                        online -> "Connected to ${state.hub.name.ifEmpty { "your hub" }}"
-                        state.offline -> "Hub unreachable"
-                        else -> "Connecting…"
+                        online -> state.hub.name.ifEmpty { "Hub" }
+                        state.offline -> "Offline"
+                        else -> "Connecting"
                     },
                     Modifier.padding(start = 8.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = OrbitType.label,
+                    maxLines = 1,
                 )
             }
         }
-        IconButton(onClick = onSettings) {
-            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
     }
 }
 
 @Composable
-private fun SectionHeader(title: String, count: Int, modifier: Modifier = Modifier) {
-    Row(
-        modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(title, style = MaterialTheme.typography.titleLarge)
-        if (count > 0) {
-            Text(
-                count.toString(),
-                Modifier.padding(start = 8.dp),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun OfflineBanner(onRetry: () -> Unit) {
-    Surface(
+private fun OfflineNotice(onRetry: () -> Unit) {
+    val c = Orbit.colors
+    OrbitCard(
+        Modifier.fillMaxWidth().padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 20.dp),
         onClick = onRetry,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.errorContainer,
-        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        color = c.dangerSurface,
+        edge = c.danger.copy(alpha = 0.25f),
+        radius = OrbitDimens.radiusM,
     ) {
-        Text(
-            "Can't reach your hub. Check that the PC is on and you're on the same network, then tap to retry.",
-            Modifier.padding(16.dp),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-    }
-}
-
-@Composable
-private fun AgentCard(agent: Agent, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.width(116.dp),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-    ) {
-        Column(Modifier.padding(horizontal = 10.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            AgentAvatar(agent.avatar, size = 60.dp)
-            Spacer(Modifier.height(10.dp))
-            Text(agent.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(
-                agent.model,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-@Composable
-private fun NewAgentCard(onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.width(116.dp),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(Modifier.padding(horizontal = 10.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                Modifier.size(60.dp).padding(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null)
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Can't reach your hub", style = OrbitType.titleS, color = c.text)
+                Text(
+                    "Check that the PC is on and on this network.",
+                    Modifier.padding(top = 2.dp),
+                    style = OrbitType.bodyS,
+                    color = c.textSecondary,
+                )
             }
-            Spacer(Modifier.height(10.dp))
-            Text("New agent", style = MaterialTheme.typography.titleSmall)
-            Text("Add to crew", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Retry", Modifier.padding(start = 12.dp), style = OrbitType.label, color = c.text)
         }
     }
 }
 
-@Composable
-private fun RoomCard(room: Room, agents: List<Agent>, now: Long, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 5.dp),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AvatarStack(agents.map { it.avatar }, size = 34.dp)
-                Spacer(Modifier.weight(1f))
-                if (room.active) {
-                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.16f)) {
-                        Text(
-                            "Working",
-                            Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.tertiary,
-                        )
-                    }
-                } else {
-                    Text(
-                        relativeTime(room.updatedAt, now),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            Text(room.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(2.dp))
-            val preview = room.preview
-            Text(
-                if (preview == null) "No messages yet" else "${preview.author}: ${preview.text}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
+private val CrewAvatar = 60.dp
 
 @Composable
-private fun EmptyRooms(hasAgents: Boolean, onNewRoom: () -> Unit, onNewAgent: () -> Unit) {
+private fun CrewMember(agent: Agent, onClick: () -> Unit) {
+    val c = Orbit.colors
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 24.dp),
+        Modifier.width(84.dp).clickable(remember { MutableInteractionSource() }, indication = null, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        HeroCluster()
-        Spacer(Modifier.height(16.dp))
+        AgentAvatar(agent.avatar, size = CrewAvatar)
         Text(
-            if (hasAgents) "Put your agents in a room and give them something to work on." else "Create your first agent to get started.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
+            agent.name,
+            Modifier.padding(top = 10.dp),
+            style = OrbitType.label,
+            color = c.text,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
-        Spacer(Modifier.height(20.dp))
-        if (hasAgents) PrimaryButton("New room", onNewRoom) else PrimaryButton("New agent", onNewAgent)
+        Text(
+            agent.model,
+            Modifier.padding(top = 2.dp),
+            style = OrbitType.mono.copy(fontSize = 10.sp),
+            color = c.textTertiary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun AddCrewMember(onClick: () -> Unit) {
+    val c = Orbit.colors
+    Column(
+        Modifier.width(84.dp).clickable(remember { MutableInteractionSource() }, indication = null, onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(Modifier.size(CrewAvatar).border(1.dp, c.line, CircleShape), contentAlignment = Alignment.Center) {
+            Icon(Icons.Default.Add, contentDescription = null, Modifier.size(22.dp), tint = c.textSecondary)
+        }
+        Text("New agent", Modifier.padding(top = 10.dp), style = OrbitType.label, color = c.textSecondary, maxLines = 1)
+    }
+}
+
+@Composable
+private fun RoomRow(room: Room, agents: List<Agent>, now: Long, onClick: () -> Unit) {
+    val c = Orbit.colors
+    OrbitCard(Modifier.fillMaxWidth().padding(horizontal = OrbitDimens.gutter, vertical = 5.dp), onClick = onClick) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            CrewTile(agents.map { it.avatar }, size = 54.dp)
+            Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        room.name,
+                        Modifier.weight(1f),
+                        style = OrbitType.titleM.copy(fontSize = 16.sp),
+                        color = c.text,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (room.active) {
+                        StatusDot(c.live, Modifier.padding(start = 10.dp), pulsing = true, size = 7.dp)
+                        Text("Working", Modifier.padding(start = 6.dp), style = OrbitType.label, color = c.live)
+                    } else {
+                        Text(relativeTime(room.updatedAt, now), Modifier.padding(start = 10.dp), style = OrbitType.mono, color = c.textTertiary)
+                    }
+                }
+                val preview = room.preview
+                Text(
+                    if (preview == null) "No messages yet" else "${preview.author}: ${preview.text}",
+                    Modifier.padding(top = 3.dp),
+                    style = OrbitType.bodyM,
+                    color = if (preview == null) c.textTertiary else c.textSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NewRoomButton(onClick: () -> Unit) {
+    val c = Orbit.colors
+    Surface(onClick = onClick, shape = CircleShape, color = c.primary, contentColor = c.onPrimary, shadowElevation = 6.dp) {
+        Row(Modifier.height(52.dp).padding(start = 16.dp, end = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Add, contentDescription = null, Modifier.size(20.dp))
+            Text("New room", Modifier.padding(start = 8.dp), style = OrbitType.titleS.copy(fontWeight = FontWeight.SemiBold))
+        }
+    }
+}
+
+@Composable
+private fun EmptyRooms(agents: List<Agent>, onNewRoom: () -> Unit, onNewAgent: () -> Unit) {
+    val c = Orbit.colors
+    OrbitCard(Modifier.fillMaxWidth().padding(horizontal = OrbitDimens.gutter), radius = OrbitDimens.radiusXL) {
+        Column(Modifier.padding(horizontal = 24.dp, vertical = 28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            AvatarStack(agents.map { it.avatar }.ifEmpty { SampleCrew }, size = 44.dp, max = 5, overlap = -0.16f)
+            Spacer(Modifier.height(20.dp))
+            Text(
+                if (agents.isEmpty()) "Build your crew" else "Start your first room",
+                style = OrbitType.titleM,
+                color = c.text,
+            )
+            Text(
+                if (agents.isEmpty()) {
+                    "Create an agent, give it a model and a job, then put it to work."
+                } else {
+                    "Put agents in a room, give them a task, and they'll work it out together."
+                },
+                Modifier.padding(top = 6.dp),
+                style = OrbitType.bodyM,
+                color = c.textSecondary,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(22.dp))
+            if (agents.isEmpty()) PrimaryButton("New agent", onNewAgent) else PrimaryButton("New room", onNewRoom)
+        }
     }
 }
 
