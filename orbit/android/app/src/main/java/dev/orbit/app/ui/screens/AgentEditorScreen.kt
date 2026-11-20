@@ -1,8 +1,16 @@
 package dev.orbit.app.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +39,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -39,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,24 +57,32 @@ import dev.orbit.app.data.Agent
 import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.data.OrbitJson
 import dev.orbit.app.data.Provider
+import dev.orbit.app.ui.SharedKeys
 import dev.orbit.app.ui.components.AgentAvatar
 import dev.orbit.app.ui.components.AvatarPalette
 import dev.orbit.app.ui.components.BarAction
+import dev.orbit.app.ui.components.DangerRow
 import dev.orbit.app.ui.components.EYES_COUNT
 import dev.orbit.app.ui.components.FieldLabel
 import dev.orbit.app.ui.components.IconPill
 import dev.orbit.app.ui.components.OrbitField
 import dev.orbit.app.ui.components.OrbitIcon
-import dev.orbit.app.ui.components.Overline
 import dev.orbit.app.ui.components.Pill
 import dev.orbit.app.ui.components.SHAPE_COUNT
 import dev.orbit.app.ui.components.ScreenBar
+import dev.orbit.app.ui.components.SectionTitle
+import dev.orbit.app.ui.components.lift
 import dev.orbit.app.ui.components.randomAvatar
+import dev.orbit.app.ui.components.surfaceBorder
 import dev.orbit.app.ui.components.tap
 import dev.orbit.app.ui.components.tint
+import dev.orbit.app.ui.shared
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitDimens
+import dev.orbit.app.ui.theme.OrbitMotion
 import dev.orbit.app.ui.theme.OrbitType
+import dev.orbit.app.ui.theme.rememberHaptics
+import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 
 private val AvatarSaver = Saver<AvatarSpec, String>(
@@ -89,6 +107,7 @@ fun AgentEditorScreen(
     onBack: () -> Unit,
 ) {
     val c = Orbit.colors
+    val haptics = rememberHaptics()
     val start = remember(initial?.id) {
         initial ?: defaultProvider(providers).let { provider ->
             Agent(provider = provider?.id.orEmpty(), model = provider?.models?.firstOrNull().orEmpty(), avatar = randomAvatar())
@@ -115,19 +134,22 @@ fun AgentEditorScreen(
             provider = providerId, model = model.trim(), avatar = avatar,
         ),
     )
+    fun pick(next: AvatarSpec) {
+        if (next != avatar) haptics.tick()
+        avatar = next
+    }
 
+    val scroll = rememberScrollState()
     Scaffold(
         containerColor = c.bg,
         topBar = {
-            ScreenBar(if (initial == null) "New agent" else "Edit agent", onBack) {
+            ScreenBar(if (initial == null) "New agent" else "Edit agent", onBack, scrolled = scroll.value > 0) {
                 BarAction(if (initial == null) "Create" else "Save", ::save, enabled = canSave)
             }
         },
     ) { padding ->
-        Column(
-            Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(bottom = 48.dp),
-        ) {
-            IdentityCard(avatar, name, role, model, onShuffle = { avatar = randomAvatar() })
+        Column(Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(scroll).padding(bottom = 48.dp)) {
+            IdentityCard(avatar, initial?.id, name, role, model, onShuffle = { avatar = randomAvatar() })
 
             Section("Look")
             Gutter {
@@ -143,30 +165,21 @@ fun AgentEditorScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     AvatarPalette.forEachIndexed { index, color ->
-                        val selected = avatar.color.mod(AvatarPalette.size) == index
-                        Box(
-                            Modifier
-                                .size(34.dp)
-                                .border(2.dp, if (selected) c.text else Color.Transparent, CircleShape)
-                                .tap(CircleShape) { avatar = avatar.copy(color = index) },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Box(Modifier.size(24.dp).clip(CircleShape).background(color.fill))
-                        }
+                        Swatch(color.fill, selected = avatar.color.mod(AvatarPalette.size) == index) { pick(avatar.copy(color = index)) }
                     }
                 }
 
                 Spacer(Modifier.height(20.dp))
                 FieldLabel("Shape")
-                PartRow(0 until SHAPE_COUNT, avatar.shape.mod(SHAPE_COUNT), { avatar.copy(shape = it) }) { avatar = it }
+                PartRow(0 until SHAPE_COUNT, avatar.shape.mod(SHAPE_COUNT), { avatar.copy(shape = it) }, ::pick)
 
                 Spacer(Modifier.height(20.dp))
                 FieldLabel("Eyes")
                 // Two rows of four, so every option is visible at once.
                 val eyes = avatar.eyes.mod(EYES_COUNT)
-                PartRow(0 until EYES_COUNT / 2, eyes, { avatar.copy(eyes = it) }) { avatar = it }
+                PartRow(0 until EYES_COUNT / 2, eyes, { avatar.copy(eyes = it) }, ::pick)
                 Spacer(Modifier.height(8.dp))
-                PartRow(EYES_COUNT / 2 until EYES_COUNT, eyes, { avatar.copy(eyes = it) }) { avatar = it }
+                PartRow(EYES_COUNT / 2 until EYES_COUNT, eyes, { avatar.copy(eyes = it) }, ::pick)
             }
 
             Section("Identity")
@@ -196,9 +209,9 @@ fun AgentEditorScreen(
                         )
                     }
                 }
-                if (provider != null && !provider.configured) {
+                AnimatedVisibility(provider != null && !provider.configured, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
                     Text(
-                        "${provider.label} needs an API key. Add one to config.json on your PC, then restart the hub.",
+                        "${provider?.label} needs an API key. Add one to config.json on your PC, then restart the hub.",
                         Modifier.padding(top = 10.dp),
                         style = OrbitType.bodyS,
                         color = c.danger,
@@ -211,13 +224,13 @@ fun AgentEditorScreen(
             val suggestions = remember(models, model) {
                 models.filter { it != model && it.contains(model.trim(), ignoreCase = true) }.ifEmpty { models.filter { it != model } }.take(24)
             }
-            if (suggestions.isNotEmpty()) {
+            AnimatedVisibility(suggestions.isNotEmpty(), enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
                 LazyRow(
                     Modifier.padding(top = 10.dp),
                     contentPadding = PaddingValues(horizontal = OrbitDimens.gutter),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    items(suggestions) { id -> Pill(id, onClick = { model = id }, textStyle = OrbitType.mono) }
+                    items(suggestions, key = { it }) { id -> Pill(id, onClick = { model = id }, Modifier.animateItem(), textStyle = OrbitType.mono) }
                 }
             }
 
@@ -240,7 +253,7 @@ fun AgentEditorScreen(
 
 @Composable
 private fun Section(title: String) {
-    Overline(title, Modifier.padding(start = OrbitDimens.gutter, top = OrbitDimens.section + 4.dp, bottom = 16.dp))
+    SectionTitle(title, Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = OrbitDimens.section + 4.dp, bottom = 8.dp))
 }
 
 @Composable
@@ -248,35 +261,41 @@ private fun Gutter(content: @Composable () -> Unit) {
     Column(Modifier.padding(horizontal = OrbitDimens.gutter)) { content() }
 }
 
-/** A destructive action as a full-width outlined row. */
+/**
+ * The agent as others will see it, updating live as it's edited: shapes morph, colors blend,
+ * eyes swap behind a blink. Shuffle rolls the dice and the avatar hops.
+ */
 @Composable
-fun DangerRow(label: String, onClick: () -> Unit) {
+private fun IdentityCard(avatar: AvatarSpec, agentId: String?, name: String, role: String, model: String, onShuffle: () -> Unit) {
     val c = Orbit.colors
-    val shape = RoundedCornerShape(OrbitDimens.radiusM)
-    Box(
-        Modifier.fillMaxWidth().height(52.dp).clip(shape).border(1.dp, c.hairline, shape).background(c.surface).clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(label, style = OrbitType.titleS, color = c.danger)
-    }
-}
-
-/** The agent as others will see it, updating live as it's edited. */
-@Composable
-private fun IdentityCard(avatar: AvatarSpec, name: String, role: String, model: String, onShuffle: () -> Unit) {
-    val c = Orbit.colors
+    val haptics = rememberHaptics()
+    val scope = rememberCoroutineScope()
     val shape = RoundedCornerShape(OrbitDimens.radiusXL)
+    val wash by animateColorAsState(avatar.tint().copy(alpha = if (c.isDark) 0.22f else 0.26f), OrbitMotion.gentle(), label = "wash")
+    val dice = remember { Animatable(0f) }
+    val hop = remember { Animatable(1f) }
     Box(
         Modifier
             .padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 4.dp)
             .fillMaxWidth()
+            .lift(shape)
             .clip(shape)
             .background(c.surface)
-            .background(Brush.verticalGradient(listOf(avatar.tint().copy(alpha = if (c.isDark) 0.2f else 0.24f), Color.Transparent)))
-            .border(1.dp, c.hairline, shape),
+            .background(Brush.verticalGradient(listOf(wash, Color.Transparent)))
+            .border(surfaceBorder(), shape),
     ) {
         Column(Modifier.fillMaxWidth().padding(top = 32.dp, bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            AgentAvatar(avatar, size = 104.dp)
+            AgentAvatar(
+                avatar,
+                Modifier
+                    .then(if (agentId != null) Modifier.shared(SharedKeys.agentAvatar(agentId)) else Modifier)
+                    .graphicsLayer {
+                        scaleX = hop.value
+                        scaleY = 2f - hop.value
+                    },
+                size = 104.dp,
+                alive = true,
+            )
             Text(
                 name.ifBlank { "New agent" },
                 Modifier.padding(top = 18.dp, start = 24.dp, end = 24.dp),
@@ -306,7 +325,43 @@ private fun IdentityCard(avatar: AvatarSpec, name: String, role: String, model: 
                 )
             }
         }
-        IconPill(OrbitIcon.Dice, "Shuffle avatar", onShuffle, Modifier.align(Alignment.TopEnd).padding(12.dp))
+        IconPill(
+            OrbitIcon.Dice,
+            "Shuffle avatar",
+            onClick = {
+                haptics.confirm()
+                onShuffle()
+                scope.launch { dice.animateTo(dice.value + 360f, OrbitMotion.bouncy()) }
+                scope.launch {
+                    // A squash and stretch: wide and low, then springing back.
+                    hop.snapTo(1.12f)
+                    hop.animateTo(1f, OrbitMotion.bouncy())
+                }
+            },
+            modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
+            iconModifier = Modifier.graphicsLayer { rotationZ = dice.value },
+        )
+    }
+}
+
+/** A color choice. The selected one gains a ring that springs out around it. */
+@Composable
+private fun Swatch(color: Color, selected: Boolean, onClick: () -> Unit) {
+    val c = Orbit.colors
+    val ring by animateFloatAsState(if (selected) 1f else 0f, OrbitMotion.bouncy(), label = "ring")
+    val dot by animateDpAsState(if (selected) 22.dp else 24.dp, OrbitMotion.snappy(), label = "dot")
+    Box(Modifier.size(34.dp).tap(CircleShape, 0.85f, onClick), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .size(34.dp)
+                .graphicsLayer {
+                    scaleX = 0.7f + 0.3f * ring
+                    scaleY = 0.7f + 0.3f * ring
+                    alpha = ring.coerceIn(0f, 1f)
+                }
+                .border(2.dp, c.text, CircleShape),
+        )
+        Box(Modifier.size(dot).clip(CircleShape).background(color))
     }
 }
 
@@ -318,14 +373,15 @@ private fun PartRow(options: IntRange, selected: Int, variant: (Int) -> AvatarSp
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         for (index in options) {
             val isSelected = index == selected
+            val edge by animateColorAsState(if (isSelected) c.text else c.hairline, OrbitMotion.snappy(), label = "edge")
+            val fill by animateColorAsState(if (isSelected) c.surfaceRaised else c.surface, OrbitMotion.snappy(), label = "fill")
             Box(
                 Modifier
                     .weight(1f)
                     .height(60.dp)
-                    .clip(shape)
-                    .background(c.surface)
-                    .border(if (isSelected) 1.5.dp else 1.dp, if (isSelected) c.text else c.hairline, shape)
-                    .clickable { onPick(variant(index)) },
+                    .tap(shape, 0.92f) { onPick(variant(index)) }
+                    .background(fill)
+                    .border(if (isSelected) 1.5.dp else 1.dp, edge, shape),
                 contentAlignment = Alignment.Center,
             ) {
                 AgentAvatar(variant(index), size = 36.dp)

@@ -164,15 +164,15 @@ class HubClient(val baseUrl: String, private val token: String? = null) {
 
         // The hub sends a keep-alive every 20s, so a longer silence means the link is dead.
         private val streaming = http.newBuilder().readTimeout(45, TimeUnit.SECONDS).build()
-
-        /** Turns what a person types ("192.168.1.20", "my-pc:8787") into a base URL. */
-        fun normalizeAddress(input: String): String {
-            var address = input.trim().trimEnd('/')
-            if (address.isEmpty()) return ""
-            if (!address.startsWith("http://") && !address.startsWith("https://")) address = "http://$address"
-            val hostPart = address.substringAfter("://")
-            if (!hostPart.contains(':') && address.startsWith("http://")) address += ":$DEFAULT_PORT"
-            return address
-        }
     }
+}
+
+/** Turns what a person types ("192.168.1.20", "my-pc:8787") into a hub base URL. */
+fun normalizeHubAddress(input: String): String {
+    var address = input.trim().trimEnd('/')
+    if (address.isEmpty()) return ""
+    if (!address.startsWith("http://") && !address.startsWith("https://")) address = "http://$address"
+    val hostPart = address.substringAfter("://")
+    if (!hostPart.contains(':') && address.startsWith("http://")) address += ":${HubClient.DEFAULT_PORT}"
+    return address
 }

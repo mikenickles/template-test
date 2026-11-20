@@ -27,7 +27,7 @@ class HubRepository(context: Context) {
     }
 
     suspend fun pair(address: String, code: String) {
-        val baseUrl = HubClient.normalizeAddress(address)
+        val baseUrl = normalizeHubAddress(address)
         if (baseUrl.isEmpty()) throw HubException("Enter your hub's address first.")
         val device = "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}".trim()
         val result = HubClient(baseUrl).pair(code, device)

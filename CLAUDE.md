@@ -15,6 +15,8 @@ Two independent projects live here:
     Design system: colors, type and spacing come only from `ui/theme/Theme.kt` (`Orbit.colors`, `OrbitType`,
     `OrbitDimens`); controls, icons and avatars from `ui/components`. The interface stays neutral so avatars are
     the only color. Don't add one-off sizes, Material icons, or new colors in a screen.
+    Motion comes from `ui/theme/Motion.kt` (`OrbitMotion` easings and springs, `pressScale`, `entrance`,
+    haptics); shared-element keys live in `ui/Shared.kt`. Entrances are off in screenshot tests.
 
 ## Development Workflow
 
@@ -35,7 +37,8 @@ Two independent projects live here:
 # Hub tests:         cd orbit/hub && npm test
 # Android build:     cd orbit/android && ./gradlew :app:assembleDebug
 # Android tests:     cd orbit/android && ./gradlew :app:testDebugUnitTest
-# Screen snapshots:  cd orbit/android && ./gradlew :app:recordPaparazziDebug   (after UI changes; review the PNGs)
+# Screen snapshots:  cd orbit/android && ./gradlew :app:recordPaparazziDebug   (after UI changes; review the PNGs,
+#                    including the animated ones in app/src/test/snapshots/videos)
 ```
 
 The hub's HTTP API and the app's `HubClient`/`Models.kt` are one contract: change them together.

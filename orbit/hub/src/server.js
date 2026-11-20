@@ -103,9 +103,11 @@ export class Hub {
 
   #roomView(room) {
     const last = this.store.messages(room.id).findLast((m) => m.text);
+    const run = this.orchestrator.runState(room.id);
     return {
       ...room,
-      active: this.orchestrator.runState(room.id).active,
+      active: run.active,
+      speaking: run.agentId,
       preview: last ? { author: last.author.name, text: last.text.replace(/\s+/g, ' ').slice(0, 140) } : null,
     };
   }

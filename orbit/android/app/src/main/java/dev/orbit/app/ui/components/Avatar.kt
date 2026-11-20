@@ -1,5 +1,7 @@
 package dev.orbit.app.ui.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -15,14 +17,17 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -30,16 +35,21 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.ui.theme.Orbit
+import dev.orbit.app.ui.theme.OrbitMotion
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.max
 import kotlin.math.pow
-import kotlin.math.sign
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
@@ -87,10 +97,102 @@ fun AvatarSpec.tint(): Color = swatch().fill
 @Composable
 fun AvatarSpec.textColor(): Color = if (Orbit.colors.isDark) swatch().fill else swatch().onLight
 
+// ---------------------------------------------------------------------------------------------
+// Shapes. Every shape is described the same way, as its distance from the center at each angle,
+// so any shape can morph smoothly into any other by blending those distances.
+// ---------------------------------------------------------------------------------------------
+
+private const val SAMPLES = 240
+
+/**
+ * How much of the canvas each shape spans. Shapes that reach into the corners carry more area,
+ * so they are drawn slightly smaller to look the same size as the circle beside them.
+ */
+private val ShapeExtent = floatArrayOf(1f, 0.9f, 1.04f, 0.95f, 1f)
+
+/** Distance from center to edge of a superellipse of exponent [n], for a unit "radius". */
+private fun superellipse(angle: Double, n: Double): Double =
+    (abs(cos(angle)).pow(n) + abs(sin(angle)).pow(n)).pow(-1 / n)
+
+/** A circle, except the lower-left corner, which is a tight round corner like a speech bubble's tail. */
+private fun bubble(angle: Double): Double {
+    val c = cos(angle)
+    val s = sin(angle)
+    if (c >= 0 || s <= 0) return 1.0
+    val k = 0.22 // corner radius
+    val ux = abs(c)
+    val uy = abs(s)
+    var t = 1 / max(ux, uy)
+    if (t * ux > 1 - k && t * uy > 1 - k) {
+        val d = (ux + uy) * (1 - k)
+        t = d + sqrt(d * d - 2 * (1 - k) * (1 - k) + k * k)
+    }
+    return t
+}
+
+private fun outline(shape: Int, angle: Double): Double = when (shape) {
+    0 -> 1.0 // circle
+    1 -> superellipse(angle, 3.8) // squircle
+    2 -> { // diamond: a softer superellipse stood on its corner, scaled back inside the box
+        val n = 2.7
+        superellipse(angle - PI / 4, n) / sqrt(2.0).pow(1 - 2 / n)
+    }
+    3 -> bubble(angle)
+    else -> 0.93 + 0.07 * cos(8 * angle) // scallop
+}
+
+/** Each shape's edge, sampled once: its radius as a fraction of the canvas half-width, per angle. */
+private val Outlines: List<FloatArray> = List(SHAPE_COUNT) { shape ->
+    FloatArray(SAMPLES) { i -> (outline(shape, 2 * PI * i / SAMPLES) * ShapeExtent[shape]).toFloat() }
+}
+
+private val Angles = FloatArray(SAMPLES) { i -> (2 * PI * i / SAMPLES).toFloat() }
+
+/** Tracks a shape change: the outline it started from, the one it's heading to, and progress. */
+private class ShapeMorph(initial: FloatArray) {
+    var from = initial
+    var to = initial
+    val progress = Animatable(1f)
+
+    fun radius(i: Int): Float {
+        val t = progress.value
+        return (from[i] + (to[i] - from[i]) * t).coerceAtLeast(0.2f)
+    }
+
+    suspend fun morphTo(target: FloatArray) {
+        if (target === to) return
+        // Start from wherever the shape is now, even mid-morph, so changes never jump.
+        from = FloatArray(SAMPLES) { radius(it) }
+        to = target
+        progress.snapTo(0f)
+        // A slight overshoot gives the change a soft, jelly-like settle.
+        progress.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.62f, stiffness = 260f))
+    }
+}
+
+private fun bodyPath(radius: (Int) -> Float, s: Float): Path = Path().apply {
+    val c = s / 2
+    for (i in 0 until SAMPLES) {
+        val r = radius(i) * c
+        val x = c + r * cos(Angles[i])
+        val y = c + r * sin(Angles[i])
+        if (i == 0) moveTo(x, y) else lineTo(x, y)
+    }
+    close()
+}
+
+// ---------------------------------------------------------------------------------------------
+// The avatar.
+// ---------------------------------------------------------------------------------------------
+
 /**
  * An agent's avatar: one flat geometric shape, one color, two eyes.
- * While [thinking], a satellite circles it and its eyes glance side to side.
- * [ring] outlines it in the given color, to separate it from an avatar it overlaps.
+ *
+ * - [alive]: it blinks now and then, glances around, and animates any change to its look
+ *   (shapes morph, colors blend, eyes swap behind a blink). For avatars someone looks at,
+ *   not for every face in a list.
+ * - [thinking]: a moon circles it, trailing light, and its eyes look side to side.
+ * - [ring]: outlines it in a color, to separate it from an avatar it overlaps.
  */
 @Composable
 fun AgentAvatar(
@@ -99,91 +201,116 @@ fun AgentAvatar(
     size: Dp = 48.dp,
     thinking: Boolean = false,
     ring: Color? = null,
+    alive: Boolean = false,
 ) {
-    val phase = if (thinking) {
-        val transition = rememberInfiniteTransition(label = "thinking")
-        val value by transition.animateFloat(
-            initialValue = 0f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(tween(2200, easing = LinearEasing), RepeatMode.Restart),
-            label = "phase",
-        )
-        value
-    } else {
-        null
-    }
     val dark = Orbit.colors.isDark
+    val shape = spec.shape.mod(SHAPE_COUNT)
+    val eyes = spec.eyes.mod(EYES_COUNT)
+
+    if (!alive) {
+        // The common case, kept cheap: no animation state unless thinking.
+        val phase = if (thinking) thinkingPhase() else null
+        Canvas(modifier.size(size)) {
+            val wave = phase?.value?.let { sin(it * 4 * PI).toFloat() } ?: 0f
+            drawAvatar({ Outlines[shape][it] }, spec.tint(), eyes, size.value, dark, look = wave * 0.045f, openness = 1f, ring = ring)
+            phase?.let { drawSatellite(spec.tint(), it.value) }
+        }
+        return
+    }
+
+    val morph = remember { ShapeMorph(Outlines[shape]) }
+    LaunchedEffect(shape) { morph.morphTo(Outlines[shape]) }
+
+    val color by animateColorAsState(spec.tint(), OrbitMotion.gentle(), label = "color")
+
+    // Eyes change behind a quick blink, so the swap is never seen.
+    val openness = remember { Animatable(1f) }
+    var shownEyes by remember { mutableIntStateOf(eyes) }
+    LaunchedEffect(eyes) {
+        if (eyes == shownEyes) return@LaunchedEffect
+        openness.animateTo(0.05f, tween(90, easing = OrbitMotion.Accelerate))
+        shownEyes = eyes
+        openness.animateTo(1f, OrbitMotion.bouncy())
+    }
+
+    // Idle life: a blink every few seconds (sometimes two), and the odd glance.
+    val glance = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        val random = Random(spec.hashCode())
+        launch {
+            while (true) {
+                delay(2400L + random.nextLong(4200))
+                repeat(if (random.nextInt(5) == 0) 2 else 1) {
+                    openness.animateTo(0.06f, tween(70, easing = OrbitMotion.Accelerate))
+                    openness.animateTo(1f, tween(150, easing = OrbitMotion.Decelerate))
+                }
+            }
+        }
+        while (true) {
+            delay(5000L + random.nextLong(6000))
+            glance.animateTo(if (random.nextBoolean()) 0.045f else -0.045f, tween(320, easing = OrbitMotion.Emphasized))
+            delay(900L + random.nextLong(900))
+            glance.animateTo(0f, tween(420, easing = OrbitMotion.Emphasized))
+        }
+    }
+
+    val phase = if (thinking) thinkingPhase() else null
     Canvas(modifier.size(size)) {
-        val look = phase?.let { sin(it * 4 * PI).toFloat() * 0.045f } ?: 0f
-        drawAvatar(spec, dp = size.value, dark = dark, look = look, ring = ring)
-        if (phase != null) drawSatellite(spec.tint(), phase)
+        val wave = phase?.value?.let { sin(it * 4 * PI).toFloat() * 0.045f } ?: 0f
+        drawAvatar(morph::radius, color, shownEyes, size.value, dark, look = wave + glance.value, openness = openness.value, ring = ring)
+        phase?.let { drawSatellite(color, it.value) }
     }
 }
 
-/** The mark of an agent at work: a small moon on a faint orbit just outside the avatar. */
+@Composable
+private fun thinkingPhase(): State<Float> {
+    val transition = rememberInfiniteTransition(label = "thinking")
+    return transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(2200, easing = LinearEasing), RepeatMode.Restart),
+        label = "phase",
+    )
+}
+
+/** The mark of an agent at work: a small moon on a faint orbit, trailing light. */
 private fun DrawScope.drawSatellite(color: Color, phase: Float) {
     val s = size.minDimension
     val orbit = s * 0.66f
-    val angle = (phase * 2 * PI - PI / 4).toFloat()
-    drawCircle(color.copy(alpha = 0.22f), orbit, center, style = Stroke(width = 1.dp.toPx()))
-    drawCircle(color, s * 0.075f, Offset(center.x + orbit * cos(angle), center.y + orbit * sin(angle)))
+    drawCircle(color.copy(alpha = 0.18f), orbit, center, style = Stroke(width = 1.dp.toPx()))
+    for (i in 7 downTo 0) {
+        val angle = ((phase - i * 0.022f) * 2 * PI - PI / 4).toFloat()
+        val fade = 1f - i / 8f
+        drawCircle(
+            color.copy(alpha = if (i == 0) 1f else 0.5f * fade * fade),
+            s * 0.075f * (if (i == 0) 1f else 0.55f + 0.45f * fade),
+            Offset(center.x + orbit * cos(angle), center.y + orbit * sin(angle)),
+        )
+    }
 }
 
-/**
- * How much of the canvas each shape spans. Shapes that reach into the corners carry more area,
- * so they are drawn slightly smaller to look the same size as the circle beside them.
- */
-private val ShapeExtent = floatArrayOf(1f, 0.9f, 1.04f, 0.95f, 1f)
-
 // Drawn in units of `s`, the canvas width.
-private fun DrawScope.drawAvatar(spec: AvatarSpec, dp: Float, dark: Boolean, look: Float, ring: Color?) {
+private fun DrawScope.drawAvatar(
+    radius: (Int) -> Float,
+    base: Color,
+    eyes: Int,
+    dp: Float,
+    dark: Boolean,
+    look: Float,
+    openness: Float,
+    ring: Color?,
+) {
     val s = size.minDimension
-    val base = spec.tint()
-    val shape = spec.shape.mod(SHAPE_COUNT)
-    val inset = s * (1f - ShapeExtent[shape]) / 2
-    val body = bodyPath(shape, Rect(inset, inset, s - inset, s - inset))
+    val body = bodyPath(radius, s)
     if (ring != null) drawPath(body, ring, style = Stroke(width = s * 0.14f))
     // A quiet top-left to bottom-right ramp. On a light page the shape is shaded rather than
     // highlighted, so yellows and greens keep their edge against white.
     val ramp = if (dark) listOf(lerp(base, Color.White, 0.2f), base) else listOf(base, lerp(base, Color.Black, 0.1f))
     drawPath(body, Brush.linearGradient(ramp, start = Offset(s * 0.15f, 0f), end = Offset(s * 0.7f, s)))
-    drawEyes(spec.eyes.mod(EYES_COUNT), s, dp, cx = s * (0.5f + look), y = s * 0.485f, base = base)
-}
-
-private fun bodyPath(shape: Int, b: Rect): Path = Path().apply {
-    val r = b.width / 2
-    val c = b.center
-
-    /** Closed curve traced from the angle around the center. */
-    fun polar(point: (Double) -> Offset) {
-        val steps = 240
-        for (i in 0 until steps) {
-            val p = point(2 * PI * i / steps)
-            if (i == 0) moveTo(c.x + p.x, c.y + p.y) else lineTo(c.x + p.x, c.y + p.y)
-        }
-        close()
-    }
-
-    /** A superellipse: rounded-square with continuous curvature, no seam where flat meets corner. */
-    fun superellipse(n: Double, radius: Float, turn: Double = 0.0) = polar { t ->
-        val x = radius * sign(cos(t)) * abs(cos(t)).pow(2 / n)
-        val y = radius * sign(sin(t)) * abs(sin(t)).pow(2 / n)
-        Offset((x * cos(turn) - y * sin(turn)).toFloat(), (x * sin(turn) + y * cos(turn)).toFloat())
-    }
-    when (shape) {
-        0 -> addOval(b) // circle
-        1 -> superellipse(3.8, r) // squircle
-        2 -> { // diamond: a softer superellipse stood on its corner, scaled back inside the box
-            val n = 2.7
-            superellipse(n, r / sqrt(2.0).pow(1 - 2 / n).toFloat(), turn = PI / 4)
-        }
-        3 -> addRoundRect( // bubble: round, with one tight corner like a speech bubble's tail
-            RoundRect(b, CornerRadius(r), CornerRadius(r), CornerRadius(r), CornerRadius(r * 0.22f)),
-        )
-        else -> polar { t -> // scallop
-            val radius = r * (0.93 + 0.07 * cos(8 * t))
-            Offset((radius * cos(t)).toFloat(), (radius * sin(t)).toFloat())
-        }
+    val cx = s * (0.5f + look)
+    val y = s * 0.485f
+    withTransform({ scale(1f, openness, pivot = Offset(cx, y)) }) {
+        drawEyes(eyes, s, dp, cx, y, base)
     }
 }
 
@@ -237,11 +364,19 @@ private fun DrawScope.drawEyes(eyes: Int, s: Float, dp: Float, cx: Float, y: Flo
     }
 }
 
-/** Avatars side by side. */
+/** Avatars side by side. [keyOf] lets each take part in a shared transition. */
 @Composable
-fun AvatarRow(specs: List<AvatarSpec>, modifier: Modifier = Modifier, size: Dp = 36.dp, max: Int = 5, gap: Dp = size * 0.16f) {
+fun AvatarRow(
+    specs: List<AvatarSpec>,
+    modifier: Modifier = Modifier,
+    size: Dp = 36.dp,
+    max: Int = 5,
+    gap: Dp = size * 0.16f,
+    alive: Boolean = false,
+    itemModifier: @Composable (index: Int) -> Modifier = { Modifier },
+) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically) {
-        for (spec in specs.take(max)) AgentAvatar(spec, size = size)
+        specs.take(max).forEachIndexed { index, spec -> AgentAvatar(spec, itemModifier(index), size = size, alive = alive) }
     }
 }
 
@@ -250,7 +385,13 @@ fun AvatarRow(specs: List<AvatarSpec>, modifier: Modifier = Modifier, size: Dp =
  * Never more than three, so each face stays large enough to read.
  */
 @Composable
-fun CrewTile(specs: List<AvatarSpec>, modifier: Modifier = Modifier, size: Dp = 56.dp, color: Color = Orbit.colors.surfaceRaised) {
+fun CrewTile(
+    specs: List<AvatarSpec>,
+    modifier: Modifier = Modifier,
+    size: Dp = 56.dp,
+    color: Color = Orbit.colors.surfaceRaised,
+    itemModifier: @Composable (index: Int) -> Modifier = { Modifier },
+) {
     // (x, y, diameter) as fractions of the tile.
     val layout = when (minOf(specs.size, 3)) {
         0 -> emptyList()
@@ -260,7 +401,12 @@ fun CrewTile(specs: List<AvatarSpec>, modifier: Modifier = Modifier, size: Dp = 
     }
     Box(modifier.size(size).clip(RoundedCornerShape(size * 0.3f)).background(color)) {
         layout.forEachIndexed { index, (x, y, d) ->
-            AgentAvatar(specs[index], Modifier.offset(size * x, size * y), size * d, ring = if (index > 0) color else null)
+            AgentAvatar(
+                specs[index],
+                Modifier.offset(size * x, size * y).then(itemModifier(index)),
+                size * d,
+                ring = if (index > 0) color else null,
+            )
         }
     }
 }

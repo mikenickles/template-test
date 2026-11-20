@@ -76,8 +76,13 @@ cd orbit/android
 ```
 cd orbit/hub && npm test                          # pairing, orchestration, event stream
 cd orbit/android && ./gradlew :app:testDebugUnitTest
-cd orbit/android && ./gradlew :app:recordPaparazziDebug   # re-render screen snapshots
+cd orbit/android && ./gradlew :app:recordPaparazziDebug   # re-render screen snapshots and motion recordings
 ```
+
+Screen snapshots land in `android/app/src/test/snapshots/images`. `MotionTest` records the app's
+animations (the orbiting hero, avatar morphing, streaming chat, shared-element navigation) as
+animated PNGs in `android/app/src/test/snapshots/videos`, so motion can be reviewed frame by frame
+without a device.
 
 `LiveHubTest` drives the real app client against a running hub when
 `ORBIT_HUB_URL` and `ORBIT_HUB_CODE` are set; otherwise it is skipped.

@@ -1,7 +1,20 @@
 package dev.orbit.app.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,11 +23,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,29 +36,56 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshState
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.Agent
 import dev.orbit.app.data.Room
 import dev.orbit.app.ui.AppState
+import dev.orbit.app.ui.SharedKeys
 import dev.orbit.app.ui.components.AgentAvatar
 import dev.orbit.app.ui.components.CrewTile
 import dev.orbit.app.ui.components.Hairline
 import dev.orbit.app.ui.components.LogoMark
 import dev.orbit.app.ui.components.OrbitCard
 import dev.orbit.app.ui.components.OrbitIcon
-import dev.orbit.app.ui.components.Overline
+import dev.orbit.app.ui.components.OrbitSpinner
+import dev.orbit.app.ui.components.OrbitSystem
 import dev.orbit.app.ui.components.Pill
 import dev.orbit.app.ui.components.PrimaryButton
+import dev.orbit.app.ui.components.SectionTitle
+import dev.orbit.app.ui.components.ShimmerText
+import dev.orbit.app.ui.components.SkeletonBlock
 import dev.orbit.app.ui.components.StatusDot
+import dev.orbit.app.ui.components.lift
+import dev.orbit.app.ui.components.orbitingLight
+import dev.orbit.app.ui.components.surfaceBorder
 import dev.orbit.app.ui.components.tap
+import dev.orbit.app.ui.components.tint
+import dev.orbit.app.ui.shared
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitDimens
+import dev.orbit.app.ui.theme.OrbitMotion
 import dev.orbit.app.ui.theme.OrbitType
+import dev.orbit.app.ui.theme.entrance
+import dev.orbit.app.ui.theme.pressScale
+import dev.orbit.app.ui.theme.rememberEntrances
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -66,25 +107,55 @@ fun HomeScreen(
     now: Long = System.currentTimeMillis(),
 ) {
     val c = Orbit.colors
+    val list = rememberLazyListState()
+    // Content staggers in once, when real data replaces the placeholders.
+    val entrances = rememberEntrances(state.loaded)
+    // The new-room button tucks its label away once the list scrolls.
+    val atTop by remember { derivedStateOf { list.firstVisibleItemIndex == 0 && list.firstVisibleItemScrollOffset < 24 } }
+
+    // Only a pull shows the refresh indicator; background refreshes stay invisible.
+    var pulled by remember { mutableStateOf(false) }
+    LaunchedEffect(state.refreshing) { if (!state.refreshing) pulled = false }
+    val pull = rememberPullToRefreshState()
+
     Scaffold(
         containerColor = c.bg,
         floatingActionButton = {
-            if (state.agents.isNotEmpty() && state.rooms.isNotEmpty()) NewRoomButton(onNewRoom)
+            if (state.agents.isNotEmpty() && state.rooms.isNotEmpty()) NewRoomButton(expanded = atTop, onClick = onNewRoom)
         },
     ) { padding ->
         PullToRefreshBox(
-            isRefreshing = state.refreshing && state.loaded,
-            onRefresh = onRefresh,
+            isRefreshing = pulled && state.refreshing,
+            onRefresh = {
+                pulled = true
+                onRefresh()
+            },
             modifier = Modifier.fillMaxSize().padding(padding),
+            state = pull,
+            indicator = { RefreshIndicator(pull, pulled && state.refreshing) },
         ) {
-            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 104.dp)) {
-                item { Header(state, onSettings) }
-                if (state.offline) item { OfflineNotice(onRefresh) }
+            LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(bottom = 112.dp)) {
+                item(key = "header") { Header(state, onSettings) }
+                item(key = "offline") {
+                    AnimatedVisibility(state.offline, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                        OfflineNotice(onRefresh)
+                    }
+                }
 
-                item {
-                    SectionHeader("Crew", state.agents.size) {
+                if (!state.loaded && !state.offline) {
+                    item(key = "skeleton") { HomeSkeleton() }
+                    return@LazyColumn
+                }
+
+                item(key = "crew-title") {
+                    SectionTitle(
+                        "Crew",
+                        Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter - 10.dp, top = OrbitDimens.section, bottom = 6.dp)
+                            .entrance(entrances, "crew-title", 0),
+                        count = state.agents.size,
+                    ) {
                         Row(
-                            Modifier.height(40.dp).tap(CircleShape, onNewAgent).padding(horizontal = 10.dp),
+                            Modifier.height(40.dp).tap(CircleShape, 0.94f, onNewAgent).padding(horizontal = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             OrbitIcon(OrbitIcon.Plus, size = 16.dp, tint = c.textSecondary)
@@ -92,21 +163,34 @@ fun HomeScreen(
                         }
                     }
                 }
-                item {
+                item(key = "crew") {
                     // Items are wider than the avatars; the row's inset keeps the first avatar on the gutter.
                     LazyRow(contentPadding = PaddingValues(horizontal = OrbitDimens.gutter - (CrewItem - CrewAvatar) / 2)) {
-                        items(state.agents, key = { it.id }) { agent -> CrewMember(agent) { onEditAgent(agent) } }
+                        itemsIndexed(state.agents, key = { _, agent -> agent.id }) { index, agent ->
+                            CrewMember(agent, Modifier.entrance(entrances, "crew:${agent.id}", 1 + index)) { onEditAgent(agent) }
+                        }
                     }
                 }
 
-                item { SectionHeader("Rooms", state.rooms.size) }
-                if (state.rooms.isEmpty() && state.loaded) {
-                    item { EmptyRooms(state.agents, onNewRoom = onNewRoom, onNewAgent = onNewAgent) }
+                item(key = "rooms-title") {
+                    SectionTitle(
+                        "Rooms",
+                        Modifier.padding(horizontal = OrbitDimens.gutter).padding(top = OrbitDimens.section, bottom = 2.dp)
+                            .entrance(entrances, "rooms-title", 2),
+                        count = state.rooms.size,
+                    )
+                }
+                if (state.rooms.isEmpty()) {
+                    item(key = "rooms-empty") {
+                        EmptyRooms(state.agents, Modifier.entrance(entrances, "rooms-empty", 3), onNewRoom = onNewRoom, onNewAgent = onNewAgent)
+                    }
                 }
                 itemsIndexed(state.rooms, key = { _, room -> room.id }) { index, room ->
-                    // The tile is the row's only container; rows are parted by a hairline inset to the text.
-                    if (index > 0) Hairline(Modifier.padding(start = OrbitDimens.gutter + RoomTile + 14.dp, end = OrbitDimens.gutter))
-                    RoomRow(room, room.agentIds.mapNotNull(state::agent), now) { onOpenRoom(room) }
+                    Column(Modifier.animateItem().entrance(entrances, "room:${room.id}", 3 + index)) {
+                        // The tile is the row's only container; rows are parted by a hairline inset to the text.
+                        if (index > 0) Hairline(Modifier.padding(start = OrbitDimens.gutter + RoomTile + 14.dp, end = OrbitDimens.gutter))
+                        RoomRow(room, room.agentIds.mapNotNull(state::agent), now) { onOpenRoom(room) }
+                    }
                 }
             }
         }
@@ -120,17 +204,20 @@ private fun Header(state: AppState, onSettings: () -> Unit) {
         Modifier.fillMaxWidth().padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        LogoMark(size = 28.dp)
+        LogoMark(size = 28.dp, spin = true)
         Text("Orbit", Modifier.padding(start = 9.dp).weight(1f), style = OrbitType.titleL, color = c.text)
 
         // The hub is the app's one piece of infrastructure, so its status is also the way into settings.
         val online = state.loaded && !state.offline
+        val interaction = remember { MutableInteractionSource() }
         Surface(
             onClick = onSettings,
+            modifier = Modifier.lift(CircleShape, 0.6f).pressScale(interaction),
             shape = CircleShape,
             color = c.surface,
             contentColor = c.text,
-            border = BorderStroke(1.dp, c.hairline),
+            border = surfaceBorder(),
+            interactionSource = interaction,
         ) {
             Row(Modifier.height(40.dp).padding(start = 14.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 StatusDot(
@@ -157,28 +244,13 @@ private fun Header(state: AppState, onSettings: () -> Unit) {
     }
 }
 
-/** An overline with an optional action on the right, spaced from the section above. */
-@Composable
-private fun SectionHeader(title: String, count: Int, action: @Composable () -> Unit = {}) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter - 10.dp, top = OrbitDimens.section - 8.dp, bottom = 4.dp)
-            .height(40.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Overline(title, Modifier.weight(1f), count = count)
-        action()
-    }
-}
-
 @Composable
 private fun OfflineNotice(onRetry: () -> Unit) {
     val c = Orbit.colors
     OrbitCard(
         Modifier.fillMaxWidth().padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 20.dp),
         color = c.dangerSurface,
-        edge = c.danger.copy(alpha = 0.25f),
+        border = BorderStroke(1.dp, c.danger.copy(alpha = 0.25f)),
     ) {
         Row(
             Modifier.padding(start = OrbitDimens.rowPad, end = 12.dp, top = 12.dp, bottom = 12.dp),
@@ -199,13 +271,13 @@ private fun OfflineNotice(onRetry: () -> Unit) {
 }
 
 @Composable
-private fun CrewMember(agent: Agent, onClick: () -> Unit) {
+private fun CrewMember(agent: Agent, modifier: Modifier, onClick: () -> Unit) {
     val c = Orbit.colors
     Column(
-        Modifier.width(CrewItem).tap(RoundedCornerShape(OrbitDimens.radiusM), onClick).padding(vertical = 8.dp),
+        modifier.width(CrewItem).tap(RoundedCornerShape(OrbitDimens.radiusM), 0.94f, onClick).padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        AgentAvatar(agent.avatar, size = CrewAvatar)
+        AgentAvatar(agent.avatar, Modifier.shared(SharedKeys.agentAvatar(agent.id)), size = CrewAvatar, alive = true)
         Text(
             agent.name,
             Modifier.padding(top = 10.dp, start = 4.dp, end = 4.dp),
@@ -230,56 +302,152 @@ private fun CrewMember(agent: Agent, onClick: () -> Unit) {
 @Composable
 private fun RoomRow(room: Room, agents: List<Agent>, now: Long, onClick: () -> Unit) {
     val c = Orbit.colors
+    val speaker = agents.firstOrNull { it.id == room.speaking }
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = OrbitDimens.gutter, vertical = 14.dp),
+        Modifier.fillMaxWidth().tap(RectangleShape, 0.985f, onClick).padding(horizontal = OrbitDimens.gutter, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CrewTile(agents.map { it.avatar }, size = RoomTile)
+        // While its agents work, a comet of the speaker's color circles the room's tile.
+        CrewTile(
+            agents.map { it.avatar },
+            Modifier.orbitingLight(room.active, speaker?.avatar?.tint() ?: c.text, RoundedCornerShape(RoomTile * 0.3f)),
+            size = RoomTile,
+            itemModifier = { index -> Modifier.shared(SharedKeys.roomMember(room.id, agents[index].id)) },
+        )
         Column(Modifier.weight(1f).padding(start = 14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(room.name, Modifier.weight(1f), style = OrbitType.titleM, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Box(Modifier.weight(1f)) {
+                    Text(
+                        room.name,
+                        Modifier.shared(SharedKeys.roomTitle(room.id)),
+                        style = OrbitType.titleM,
+                        color = c.text,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 if (room.active) {
                     StatusDot(c.live, Modifier.padding(start = 10.dp), pulsing = true, size = 7.dp)
-                    Text("Working", Modifier.padding(start = 6.dp), style = OrbitType.label, color = c.live)
                 } else {
                     Text(relativeTime(room.updatedAt, now), Modifier.padding(start = 10.dp), style = OrbitType.mono, color = c.textTertiary)
                 }
             }
             val preview = room.preview
-            Text(
-                if (preview == null) "No messages yet" else "${preview.author}: ${preview.text}",
-                Modifier.padding(top = 3.dp),
-                style = OrbitType.bodyM,
-                color = if (preview == null) c.textTertiary else c.textSecondary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            when {
+                room.active -> ShimmerText(
+                    if (speaker != null) "${speaker.name} is replying" else "Working",
+                    OrbitType.bodyM,
+                    c.textTertiary,
+                    Modifier.padding(top = 3.dp),
+                )
+                else -> Text(
+                    if (preview == null) "No messages yet" else "${preview.author}: ${preview.text}",
+                    Modifier.padding(top = 3.dp),
+                    style = OrbitType.bodyM,
+                    color = if (preview == null) c.textTertiary else c.textSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+/** "New room", which tucks into a round button once the list scrolls. */
+@Composable
+private fun NewRoomButton(expanded: Boolean, onClick: () -> Unit) {
+    val c = Orbit.colors
+    val interaction = remember { MutableInteractionSource() }
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.pressScale(interaction, 0.94f),
+        shape = CircleShape,
+        color = c.primary,
+        contentColor = c.onPrimary,
+        shadowElevation = 6.dp,
+        interactionSource = interaction,
+    ) {
+        Row(Modifier.height(54.dp).padding(horizontal = 17.dp), verticalAlignment = Alignment.CenterVertically) {
+            OrbitIcon(OrbitIcon.Plus, size = 20.dp, tint = c.onPrimary, description = "New room")
+            AnimatedVisibility(
+                expanded,
+                enter = expandHorizontally(OrbitMotion.snappy()) + fadeIn(),
+                exit = shrinkHorizontally(OrbitMotion.snappy()) + fadeOut(),
+            ) {
+                Text("New room", Modifier.padding(start = 8.dp, end = 4.dp), style = OrbitType.titleS, maxLines = 1)
+            }
+        }
+    }
+}
+
+/** Pull-to-refresh, Orbit-style: the satellite winds around as you pull, then circles while it works. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BoxScope.RefreshIndicator(state: PullToRefreshState, refreshing: Boolean) {
+    val c = Orbit.colors
+    Box(
+        Modifier
+            .align(Alignment.TopCenter)
+            .graphicsLayer {
+                val pull = state.distanceFraction
+                translationY = pull.coerceAtMost(1.3f) * 64.dp.toPx() - 44.dp.toPx()
+                alpha = pull.coerceIn(0f, 1f)
+                val scale = 0.7f + 0.3f * pull.coerceIn(0f, 1f)
+                scaleX = scale
+                scaleY = scale
+            }
+            .size(40.dp)
+            .lift(CircleShape)
+            .clip(CircleShape)
+            .background(c.surfaceRaised)
+            .border(surfaceBorder(), CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (refreshing) {
+            OrbitSpinner(c.text, size = 22.dp)
+        } else {
+            Canvas(Modifier.size(22.dp)) {
+                val s = size.minDimension
+                drawCircle(c.text, s * 0.15f)
+                rotate(state.distanceFraction * 300f) { drawCircle(c.text, s * 0.1f, Offset(center.x, center.y - s * 0.36f)) }
+            }
+        }
+    }
+}
+
+/** Placeholders shaped like the crew row and room list, while the first load is in flight. */
+@Composable
+private fun HomeSkeleton() {
+    Column(Modifier.padding(horizontal = OrbitDimens.gutter)) {
+        SkeletonBlock(90.dp, 22.dp, RoundedCornerShape(6.dp), Modifier.padding(top = OrbitDimens.section + 9.dp, bottom = 18.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            repeat(4) {
+                Column(Modifier.width(CrewAvatar), horizontalAlignment = Alignment.CenterHorizontally) {
+                    SkeletonBlock(CrewAvatar, CrewAvatar, CircleShape)
+                    SkeletonBlock(44.dp, 12.dp, RoundedCornerShape(4.dp), Modifier.padding(top = 12.dp))
+                }
+            }
+        }
+        SkeletonBlock(100.dp, 22.dp, RoundedCornerShape(6.dp), Modifier.padding(top = OrbitDimens.section + 26.dp, bottom = 12.dp))
+        repeat(3) {
+            Row(Modifier.padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                SkeletonBlock(RoomTile, RoomTile, RoundedCornerShape(RoomTile * 0.3f))
+                Column(Modifier.padding(start = 14.dp)) {
+                    SkeletonBlock(140.dp, 16.dp, RoundedCornerShape(4.dp))
+                    SkeletonBlock(220.dp, 13.dp, RoundedCornerShape(4.dp), Modifier.padding(top = 9.dp))
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun NewRoomButton(onClick: () -> Unit) {
+private fun EmptyRooms(agents: List<Agent>, modifier: Modifier, onNewRoom: () -> Unit, onNewAgent: () -> Unit) {
     val c = Orbit.colors
-    Surface(onClick = onClick, shape = CircleShape, color = c.primary, contentColor = c.onPrimary, shadowElevation = 6.dp) {
-        Row(Modifier.height(52.dp).padding(start = 18.dp, end = 22.dp), verticalAlignment = Alignment.CenterVertically) {
-            OrbitIcon(OrbitIcon.Plus, size = 18.dp, tint = c.onPrimary)
-            Text("New room", Modifier.padding(start = 8.dp), style = OrbitType.titleS)
-        }
-    }
-}
-
-@Composable
-private fun EmptyRooms(agents: List<Agent>, onNewRoom: () -> Unit, onNewAgent: () -> Unit) {
-    val c = Orbit.colors
-    OrbitCard(Modifier.fillMaxWidth().padding(horizontal = OrbitDimens.gutter)) {
-        Column(
-            Modifier.padding(horizontal = 24.dp, vertical = OrbitDimens.section),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // A room tile, waiting for its crew.
-            CrewTile(agents.map { it.avatar }.ifEmpty { SampleCrew }, size = 76.dp, color = c.surfaceHigh)
-            Spacer(Modifier.height(20.dp))
+    OrbitCard(modifier.fillMaxWidth().padding(horizontal = OrbitDimens.gutter).padding(top = 8.dp)) {
+        Column(Modifier.padding(horizontal = 24.dp).padding(bottom = OrbitDimens.section), horizontalAlignment = Alignment.CenterHorizontally) {
+            // The crew, circling the hub: rooms are where they get to work.
+            OrbitSystem(agents.map { it.avatar }.ifEmpty { SampleCrew }, Modifier.fillMaxWidth().height(170.dp), avatarSize = 38.dp)
             Text(if (agents.isEmpty()) "Build your crew" else "Start your first room", style = OrbitType.titleM, color = c.text)
             Text(
                 if (agents.isEmpty()) {

@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import dev.orbit.app.ui.theme.Orbit
 
 /** Orbit's own icon set: one stroke weight, round caps and joins, to sit with the typeface. */
-enum class OrbitIcon { Back, Up, Plus, Check, More, Dice, Chevron }
+enum class OrbitIcon { Back, Up, Down, Plus, Check, More, Dice, Chevron }
 
 @Composable
 fun OrbitIcon(
@@ -49,6 +49,10 @@ fun OrbitIcon(
             OrbitIcon.Up -> {
                 polyline(listOf(at(0.5f, 0.82f), at(0.5f, 0.2f)))
                 polyline(listOf(at(0.23f, 0.46f), at(0.5f, 0.19f), at(0.77f, 0.46f)))
+            }
+            OrbitIcon.Down -> {
+                polyline(listOf(at(0.5f, 0.18f), at(0.5f, 0.8f)))
+                polyline(listOf(at(0.23f, 0.54f), at(0.5f, 0.81f), at(0.77f, 0.54f)))
             }
             OrbitIcon.Plus -> {
                 polyline(listOf(at(0.5f, 0.2f), at(0.5f, 0.8f)))

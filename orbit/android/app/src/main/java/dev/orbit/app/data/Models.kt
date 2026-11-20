@@ -40,6 +40,8 @@ data class Room(
     val leadId: String? = null,
     val updatedAt: Long = 0,
     val active: Boolean = false,
+    /** The agent replying right now, if any. */
+    val speaking: String? = null,
     val preview: Preview? = null,
 ) {
     companion object {

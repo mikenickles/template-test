@@ -17,30 +17,43 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.orbit.app.ui.AppState
+import dev.orbit.app.ui.components.DangerRow
 import dev.orbit.app.ui.components.Hairline
 import dev.orbit.app.ui.components.OrbitCard
-import dev.orbit.app.ui.components.Overline
+import dev.orbit.app.ui.components.OrbitSystem
 import dev.orbit.app.ui.components.ScreenBar
+import dev.orbit.app.ui.components.SectionTitle
 import dev.orbit.app.ui.components.StatusDot
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitDimens
 import dev.orbit.app.ui.theme.OrbitType
+import dev.orbit.app.ui.theme.entrance
+import dev.orbit.app.ui.theme.rememberEntrances
 
 @Composable
 fun SettingsScreen(state: AppState, hubAddress: String, onUnpair: () -> Unit, onBack: () -> Unit) {
     val c = Orbit.colors
-    Scaffold(containerColor = c.bg, topBar = { ScreenBar("Settings", onBack) }) { padding ->
+    val scroll = rememberScrollState()
+    val entrances = rememberEntrances()
+    Scaffold(containerColor = c.bg, topBar = { ScreenBar("Settings", onBack, scrolled = scroll.value > 0) }) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 12.dp, bottom = 48.dp),
+                .verticalScroll(scroll)
+                .padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 4.dp, bottom = 48.dp),
         ) {
             val online = state.loaded && !state.offline
-            Overline("Hub", Modifier.padding(bottom = OrbitDimens.labelGap))
-            OrbitCard(Modifier.fillMaxWidth()) {
+            OrbitCard(Modifier.fillMaxWidth().entrance(entrances, "hub", 0)) {
                 Column {
+                    // Your actual crew, circling the hub they live on. Offline, they drift.
+                    OrbitSystem(
+                        state.agents.map { it.avatar }.ifEmpty { SampleCrew },
+                        Modifier.fillMaxWidth().height(180.dp),
+                        avatarSize = 36.dp,
+                        speed = if (online) 1f else 0.15f,
+                    )
+                    Hairline()
                     Row(Modifier.padding(OrbitDimens.rowPad), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(state.hub.name.ifEmpty { "Your hub" }, style = OrbitType.titleM, color = c.text)
@@ -58,32 +71,33 @@ fun SettingsScreen(state: AppState, hubAddress: String, onUnpair: () -> Unit, on
                 }
             }
 
-            Spacer(Modifier.height(OrbitDimens.section))
-            Overline("Model providers", Modifier.padding(bottom = OrbitDimens.labelGap))
-            OrbitCard(Modifier.fillMaxWidth()) {
-                Column {
-                    state.providers.forEachIndexed { index, provider ->
-                        if (index > 0) Hairline()
-                        Row(Modifier.fillMaxWidth().padding(OrbitDimens.rowPad), verticalAlignment = Alignment.CenterVertically) {
-                            Text(provider.label, Modifier.weight(1f), style = OrbitType.titleS, color = c.text)
-                            when {
-                                provider.id == "demo" -> Status("Built in", null)
-                                provider.configured -> Status("Ready", c.live)
-                                else -> Status("Needs a key", null)
+            Column(Modifier.entrance(entrances, "providers", 1)) {
+                SectionTitle("Model providers", Modifier.padding(top = OrbitDimens.section, bottom = 8.dp))
+                OrbitCard(Modifier.fillMaxWidth()) {
+                    Column {
+                        state.providers.forEachIndexed { index, provider ->
+                            if (index > 0) Hairline()
+                            Row(Modifier.fillMaxWidth().padding(OrbitDimens.rowPad), verticalAlignment = Alignment.CenterVertically) {
+                                Text(provider.label, Modifier.weight(1f), style = OrbitType.titleS, color = c.text)
+                                when {
+                                    provider.id == "demo" -> Status("Built in", null)
+                                    provider.configured -> Status("Ready", c.live)
+                                    else -> Status("Needs a key", null)
+                                }
                             }
                         }
                     }
                 }
-            }
-            Text(
-                "API keys never leave your PC. Add them to config.json in the hub's data folder, then restart the hub.",
-                Modifier.padding(top = OrbitDimens.labelGap),
-                style = OrbitType.bodyS,
-                color = c.textTertiary,
-            )
+                Text(
+                    "API keys never leave your PC. Add them to config.json in the hub's data folder, then restart the hub.",
+                    Modifier.padding(top = OrbitDimens.labelGap),
+                    style = OrbitType.bodyS,
+                    color = c.textTertiary,
+                )
 
-            Spacer(Modifier.height(40.dp))
-            DangerRow("Unpair this phone", onUnpair)
+                Spacer(Modifier.height(40.dp))
+                DangerRow("Unpair this phone", onUnpair)
+            }
         }
     }
 }

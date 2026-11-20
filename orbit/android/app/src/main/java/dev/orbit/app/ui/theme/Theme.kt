@@ -112,6 +112,9 @@ private fun mono(size: Int, line: Int, weight: FontWeight = FontWeight.Normal, t
 object OrbitType {
     val display = sans(30.0, 36, FontWeight.SemiBold, -0.032)
     val titleL = sans(22.0, 28, FontWeight.SemiBold, -0.024)
+
+    /** Section headings within a screen. */
+    val heading = sans(20.0, 26, FontWeight.SemiBold, -0.022)
     val titleM = sans(17.0, 22, FontWeight.SemiBold, -0.016)
 
     /** Names, buttons, row titles. */
@@ -154,7 +157,12 @@ object Orbit {
 }
 
 @Composable
-fun OrbitTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+fun OrbitTheme(
+    dark: Boolean = isSystemInDarkTheme(),
+    /** Off in screenshot tests, so screens render in their settled state. */
+    entrances: Boolean = true,
+    content: @Composable () -> Unit,
+) {
     val c = if (dark) DarkColors else LightColors
     // Material components we don't restyle by hand (menus, snackbars, pull-to-refresh) follow the same palette.
     val scheme = (if (dark) darkColorScheme() else lightColorScheme()).copy(
@@ -190,7 +198,7 @@ fun OrbitTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () ->
         labelMedium = OrbitType.label,
         labelSmall = OrbitType.label,
     )
-    CompositionLocalProvider(LocalOrbitColors provides c) {
+    CompositionLocalProvider(LocalOrbitColors provides c, LocalEntrances provides entrances) {
         MaterialTheme(colorScheme = scheme, typography = typography, content = content)
     }
 }

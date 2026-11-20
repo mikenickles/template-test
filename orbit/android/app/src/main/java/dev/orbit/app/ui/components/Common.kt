@@ -1,10 +1,19 @@
 package dev.orbit.app.ui.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -27,37 +36,61 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import dev.orbit.app.ui.theme.LocalEntrances
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitDimens
+import dev.orbit.app.ui.theme.OrbitMotion
 import dev.orbit.app.ui.theme.OrbitType
+import dev.orbit.app.ui.theme.pressScale
+import dev.orbit.app.ui.theme.rememberHaptics
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
-/** Section header in small mono capitals, with an optional count. */
+/** A section heading, with an optional count and an action on the right. */
 @Composable
-fun Overline(text: String, modifier: Modifier = Modifier, count: Int? = null) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        Text(text.uppercase(), style = OrbitType.overline, color = Orbit.colors.textSecondary)
+fun SectionTitle(
+    text: String,
+    modifier: Modifier = Modifier,
+    count: Int? = null,
+    action: (@Composable () -> Unit)? = null,
+) {
+    Row(modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(text, style = OrbitType.heading, color = Orbit.colors.text)
         if (count != null && count > 0) {
-            Text(count.toString(), Modifier.padding(start = 8.dp), style = OrbitType.overline, color = Orbit.colors.textTertiary)
+            Text(count.toString(), Modifier.padding(start = 8.dp), style = OrbitType.heading, color = Orbit.colors.textTertiary)
         }
+        Spacer(Modifier.weight(1f))
+        action?.invoke()
     }
 }
 
@@ -72,26 +105,55 @@ fun Hairline(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxWidth().height(1.dp).background(Orbit.colors.hairline))
 }
 
-/** Clickable with a ripple that follows [shape]. */
-fun Modifier.tap(shape: Shape = RoundedCornerShape(OrbitDimens.radiusS), onClick: () -> Unit): Modifier =
-    clip(shape).clickable(onClick = onClick)
+/** Clickable with a ripple that follows [shape] and a slight press-in. */
+fun Modifier.tap(
+    shape: Shape = RoundedCornerShape(OrbitDimens.radiusS),
+    pressed: Float = 0.96f,
+    onClick: () -> Unit,
+): Modifier = composed {
+    val interaction = remember { MutableInteractionSource() }
+    pressScale(interaction, pressed).clip(shape).clickable(interaction, indication = androidx.compose.material3.ripple(), onClick = onClick)
+}
 
-/** A filled surface with a hairline edge: the app's one card style. */
+/** The 1dp edge of a surface: lit from above in dark mode, a plain hairline in light mode. */
+@Composable
+fun surfaceBorder(): BorderStroke {
+    val c = Orbit.colors
+    return if (c.isDark) {
+        BorderStroke(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.13f), Color.White.copy(alpha = 0.04f))))
+    } else {
+        BorderStroke(1.dp, c.hairline)
+    }
+}
+
+/** A soft shadow under a surface in light mode. Dark mode relies on the lit edge instead. */
+@Composable
+fun Modifier.lift(shape: Shape, strength: Float = 1f): Modifier =
+    if (Orbit.colors.isDark) {
+        this
+    } else {
+        this.dropShadow(shape, Shadow(radius = 18.dp, color = Color.Black, offset = DpOffset(0.dp, 4.dp), alpha = 0.07f * strength))
+    }
+
+/** A filled surface with a lit edge: the app's one card style. */
 @Composable
 fun OrbitCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     color: Color = Orbit.colors.surface,
-    edge: Color = Orbit.colors.hairline,
+    border: BorderStroke = surfaceBorder(),
     radius: Dp = OrbitDimens.radiusL,
     content: @Composable () -> Unit,
 ) {
     val shape = RoundedCornerShape(radius)
-    val border = BorderStroke(1.dp, edge)
     if (onClick != null) {
-        Surface(onClick, modifier, shape = shape, color = color, contentColor = Orbit.colors.text, border = border, content = content)
+        val interaction = remember { MutableInteractionSource() }
+        Surface(
+            onClick, modifier.lift(shape).pressScale(interaction, 0.985f), shape = shape, color = color,
+            contentColor = Orbit.colors.text, border = border, interactionSource = interaction, content = content,
+        )
     } else {
-        Surface(modifier, shape = shape, color = color, contentColor = Orbit.colors.text, border = border, content = content)
+        Surface(modifier.lift(shape), shape = shape, color = color, contentColor = Orbit.colors.text, border = border, content = content)
     }
 }
 
@@ -112,6 +174,7 @@ fun OrbitField(
     val c = Orbit.colors
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    val edge by animateColorAsState(if (focused) c.text.copy(alpha = 0.55f) else c.hairline, tween(OrbitMotion.SHORT), label = "edge")
     val shape = RoundedCornerShape(OrbitDimens.radiusM)
     BasicTextField(
         value = value,
@@ -129,7 +192,7 @@ fun OrbitField(
                 Modifier
                     .clip(shape)
                     .background(c.surfaceRaised)
-                    .border(1.dp, if (focused) c.line else c.hairline, shape)
+                    .border(1.dp, edge, shape)
                     .heightIn(min = 52.dp)
                     .padding(start = OrbitDimens.rowPad, end = if (trailing == null) OrbitDimens.rowPad else 4.dp),
                 verticalAlignment = if (singleLine) Alignment.CenterVertically else Alignment.Top,
@@ -156,25 +219,35 @@ fun PrimaryButton(
     loading: Boolean = false,
 ) {
     val c = Orbit.colors
+    val haptics = rememberHaptics()
+    val interaction = remember { MutableInteractionSource() }
+    val fill by animateColorAsState(if (enabled) c.primary else c.primary.copy(alpha = 0.3f), tween(OrbitMotion.MEDIUM), label = "fill")
     Surface(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth().height(52.dp),
+        onClick = {
+            haptics.tick()
+            onClick()
+        },
+        modifier = modifier.fillMaxWidth().height(52.dp).pressScale(interaction, 0.97f),
         enabled = enabled && !loading,
         shape = CircleShape,
-        color = if (enabled) c.primary else c.primary.copy(alpha = 0.3f),
+        color = fill,
         contentColor = c.onPrimary,
+        interactionSource = interaction,
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            if (loading) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = c.onPrimary)
-            } else {
-                Text(text, style = OrbitType.titleS)
+        AnimatedContent(
+            loading,
+            transitionSpec = { (fadeIn(tween(180)) + scaleIn(initialScale = 0.8f)) togetherWith fadeOut(tween(120)) },
+            contentAlignment = Alignment.Center,
+            label = "loading",
+        ) { busy ->
+            Box(contentAlignment = Alignment.Center) {
+                if (busy) OrbitSpinner(c.onPrimary, size = 22.dp) else Text(text, style = OrbitType.titleS)
             }
         }
     }
 }
 
-/** Small pill for choices and quiet actions. */
+/** Small pill for choices and quiet actions. Selecting it crossfades the fill. */
 @Composable
 fun Pill(
     label: String,
@@ -186,17 +259,29 @@ fun Pill(
     leading: (@Composable () -> Unit)? = null,
 ) {
     val c = Orbit.colors
-    Surface(
-        onClick = onClick,
-        modifier = modifier,
-        shape = CircleShape,
-        color = if (selected) c.primary else c.surfaceRaised,
-        contentColor = when {
+    val haptics = rememberHaptics()
+    val interaction = remember { MutableInteractionSource() }
+    val fill by animateColorAsState(if (selected) c.primary else c.surfaceRaised, OrbitMotion.snappy(), label = "fill")
+    val ink by animateColorAsState(
+        when {
             selected -> c.onPrimary
             dimmed -> c.textTertiary
             else -> c.text
         },
-        border = if (selected) null else BorderStroke(1.dp, c.hairline),
+        OrbitMotion.snappy(),
+        label = "ink",
+    )
+    Surface(
+        onClick = {
+            haptics.tick()
+            onClick()
+        },
+        modifier = modifier.pressScale(interaction),
+        shape = CircleShape,
+        color = fill,
+        contentColor = ink,
+        border = BorderStroke(1.dp, if (selected) Color.Transparent else c.hairline),
+        interactionSource = interaction,
     ) {
         Row(
             Modifier.height(40.dp).padding(start = if (leading == null) 16.dp else 7.dp, end = 16.dp),
@@ -214,23 +299,33 @@ fun Pill(
 /** A bare icon with a full-size touch target. */
 @Composable
 fun IconTap(icon: OrbitIcon, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, tint: Color = Orbit.colors.text) {
-    Box(modifier.size(48.dp).tap(CircleShape, onClick), contentAlignment = Alignment.Center) {
+    Box(modifier.size(48.dp).tap(CircleShape, 0.88f, onClick), contentAlignment = Alignment.Center) {
         OrbitIcon(icon, tint = tint, description = description)
     }
 }
 
-/** Round icon button on a raised surface. */
+/** Round icon button on a raised surface. [iconModifier] lets a caller animate the icon itself. */
 @Composable
-fun IconPill(icon: OrbitIcon, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 44.dp) {
+fun IconPill(
+    icon: OrbitIcon,
+    description: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    size: Dp = 44.dp,
+    iconModifier: Modifier = Modifier,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val shape = CircleShape
     Surface(
         onClick = onClick,
-        modifier = modifier.size(size),
-        shape = CircleShape,
+        modifier = modifier.size(size).lift(shape, 0.6f).pressScale(interaction, 0.88f),
+        shape = shape,
         color = Orbit.colors.surfaceRaised,
         contentColor = Orbit.colors.text,
-        border = BorderStroke(1.dp, Orbit.colors.hairline),
+        border = surfaceBorder(),
+        interactionSource = interaction,
     ) {
-        Box(contentAlignment = Alignment.Center) { OrbitIcon(icon, size = 20.dp, description = description) }
+        Box(contentAlignment = Alignment.Center) { OrbitIcon(icon, iconModifier, size = 20.dp, description = description) }
     }
 }
 
@@ -251,11 +346,43 @@ fun StatusDot(color: Color, modifier: Modifier = Modifier, pulsing: Boolean = fa
     }
 }
 
-/** The Orbit mark: a dot with two eyes and a satellite, in the current text color. */
+/** Loading, Orbit-style: a moon circling a dot, with a fading trail. */
 @Composable
-fun LogoMark(modifier: Modifier = Modifier, size: Dp = 26.dp) {
+fun OrbitSpinner(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    val transition = rememberInfiniteTransition(label = "spinner")
+    val turn by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(900, easing = LinearEasing)), label = "turn")
+    Canvas(modifier.size(size)) {
+        val s = this.size.minDimension
+        val orbit = s * 0.36f
+        drawCircle(color, s * 0.15f)
+        for (i in 0 until 6) {
+            val angle = (turn - i * 0.045f) * 2 * PI.toFloat()
+            drawCircle(
+                color.copy(alpha = 1f - i / 6f),
+                s * (0.1f - i * 0.009f),
+                Offset(center.x + orbit * cos(angle), center.y + orbit * sin(angle)),
+            )
+        }
+    }
+}
+
+/**
+ * The Orbit mark: a dot with two eyes and a satellite, in the current text color.
+ * With [spin], the satellite sweeps once around the dot when the mark first appears.
+ */
+@Composable
+fun LogoMark(modifier: Modifier = Modifier, size: Dp = 26.dp, spin: Boolean = false) {
     val fill = Orbit.colors.text
     val eye = Orbit.colors.bg
+    val sweep = remember { Animatable(0f) }
+    val entrances = LocalEntrances.current
+    var spun by rememberSaveable { mutableStateOf(false) }
+    if (spin && entrances && !spun) {
+        LaunchedEffect(Unit) {
+            sweep.animateTo(360f, tween(1400, delayMillis = 250, easing = OrbitMotion.Emphasized))
+            spun = true
+        }
+    }
     Canvas(modifier.size(size)) {
         val s = this.size.minDimension
         val center = Offset(s * 0.44f, s * 0.57f)
@@ -268,27 +395,34 @@ fun LogoMark(modifier: Modifier = Modifier, size: Dp = 26.dp) {
                 cornerRadius = CornerRadius(s * 0.055f),
             )
         }
-        drawCircle(fill, s * 0.11f, Offset(s * 0.87f, s * 0.13f))
+        rotate(sweep.value, pivot = center) { drawCircle(fill, s * 0.11f, Offset(s * 0.87f, s * 0.13f)) }
     }
 }
 
-/** Top bar for secondary screens: back, title, trailing actions. */
+/**
+ * Top bar for secondary screens: back, title, trailing actions.
+ * A hairline fades in under it once content has [scrolled] beneath.
+ */
 @Composable
-fun ScreenBar(title: String, onBack: () -> Unit, actions: @Composable RowScope.() -> Unit = {}) {
-    Row(
-        Modifier.fillMaxWidth().statusBarsPadding().height(60.dp).padding(start = 6.dp, end = OrbitDimens.gutter),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconTap(OrbitIcon.Back, "Back", onBack)
-        Text(
-            title,
-            Modifier.weight(1f).padding(start = 2.dp),
-            style = OrbitType.titleM,
-            color = Orbit.colors.text,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        actions()
+fun ScreenBar(title: String, onBack: () -> Unit, scrolled: Boolean = false, actions: @Composable RowScope.() -> Unit = {}) {
+    val divider by animateColorAsState(if (scrolled) Orbit.colors.hairline else Color.Transparent, tween(OrbitMotion.MEDIUM), label = "divider")
+    Box(Modifier.fillMaxWidth().background(Orbit.colors.bg).statusBarsPadding()) {
+        Row(
+            Modifier.fillMaxWidth().height(60.dp).padding(start = 6.dp, end = OrbitDimens.gutter),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconTap(OrbitIcon.Back, "Back", onBack)
+            Text(
+                title,
+                Modifier.weight(1f).padding(start = 2.dp),
+                style = OrbitType.titleM,
+                color = Orbit.colors.text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            actions()
+        }
+        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(1.dp).background(divider))
     }
 }
 
@@ -296,15 +430,36 @@ fun ScreenBar(title: String, onBack: () -> Unit, actions: @Composable RowScope.(
 @Composable
 fun BarAction(label: String, onClick: () -> Unit, enabled: Boolean = true) {
     val c = Orbit.colors
+    val haptics = rememberHaptics()
+    val interaction = remember { MutableInteractionSource() }
+    val fill by animateColorAsState(if (enabled) c.primary else c.primary.copy(alpha = 0.3f), tween(OrbitMotion.MEDIUM), label = "fill")
     Surface(
-        onClick = onClick,
+        onClick = {
+            haptics.confirm()
+            onClick()
+        },
+        modifier = Modifier.pressScale(interaction),
         enabled = enabled,
         shape = CircleShape,
-        color = if (enabled) c.primary else c.primary.copy(alpha = 0.3f),
+        color = fill,
         contentColor = c.onPrimary,
+        interactionSource = interaction,
     ) {
         Box(Modifier.height(40.dp).padding(horizontal = 18.dp), contentAlignment = Alignment.Center) {
             Text(label, style = OrbitType.titleS)
         }
+    }
+}
+
+/** A destructive action as a full-width outlined row. */
+@Composable
+fun DangerRow(label: String, onClick: () -> Unit) {
+    val c = Orbit.colors
+    val shape = RoundedCornerShape(OrbitDimens.radiusM)
+    Box(
+        Modifier.fillMaxWidth().height(52.dp).tap(shape, 0.98f, onClick).border(1.dp, c.hairline, shape).background(c.surface),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, style = OrbitType.titleS, color = c.danger)
     }
 }

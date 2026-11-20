@@ -114,9 +114,24 @@ private fun inline(text: String, mentions: Map<String, Color>): AnnotatedString 
     append(text.substring(cursor))
 }
 
+/** Fades the last [count] characters from solid to faint, so freshly streamed text eases in. */
+private fun AnnotatedString.fadeTail(count: Int, color: Color): AnnotatedString {
+    if (count <= 0 || isEmpty()) return this
+    val n = minOf(count, length)
+    return buildAnnotatedString {
+        append(this@fadeTail)
+        for (j in 0 until n) {
+            val index = length - n + j
+            val alpha = 1f - 0.88f * (j + 1) / (n + 1)
+            addStyle(SpanStyle(color = color.copy(alpha = color.alpha * alpha)), index, index + 1)
+        }
+    }
+}
+
 /**
  * Renders the subset of Markdown that models write in chat: paragraphs, emphasis, lists, headings, code.
  * [mentions] maps a lowercase agent handle (name without spaces) to the color its @mention is drawn in.
+ * [fadeTail] fades that many trailing characters, for text that is still streaming in.
  */
 @Composable
 fun MarkdownText(
@@ -124,6 +139,7 @@ fun MarkdownText(
     modifier: Modifier = Modifier,
     color: Color = Orbit.colors.text,
     mentions: Map<String, Color> = emptyMap(),
+    fadeTail: Int = 0,
 ) {
     val c = Orbit.colors
     val blocks = remember(text) { parse(text) }
@@ -137,9 +153,10 @@ fun MarkdownText(
                 else -> 10.dp
             }
             val spaced = Modifier.padding(top = gap)
+            val fade = if (index == blocks.lastIndex) fadeTail else 0
             when (block) {
                 is Block.Paragraph -> Text(
-                    remember(block, mentions) { inline(block.text, mentions) },
+                    remember(block, mentions, fade) { inline(block.text, mentions).fadeTail(fade, color) },
                     spaced,
                     style = if (block.heading) OrbitType.body.copy(fontWeight = FontWeight.SemiBold) else OrbitType.body,
                     color = color,
@@ -147,12 +164,12 @@ fun MarkdownText(
                 // The marker sits in its own column, so wrapped lines align with the text, not the bullet.
                 is Block.Item -> Row(spaced, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(block.marker, Modifier.widthIn(min = 14.dp), style = OrbitType.body, color = c.textSecondary)
-                    Text(remember(block, mentions) { inline(block.text, mentions) }, style = OrbitType.body, color = color)
+                    Text(remember(block, mentions, fade) { inline(block.text, mentions).fadeTail(fade, color) }, style = OrbitType.body, color = color)
                 }
                 is Block.Code -> {
                     val shape = RoundedCornerShape(OrbitDimens.radiusS)
                     Text(
-                        block.text,
+                        AnnotatedString(block.text).fadeTail(fade, color),
                         modifier = spaced
                             .fillMaxWidth()
                             .clip(shape)

@@ -2,7 +2,8 @@ package dev.orbit.app
 
 import dev.orbit.app.data.Author
 import dev.orbit.app.data.Delta
-import dev.orbit.app.data.HubClient
+import dev.orbit.app.data.normalizeHubAddress
+import dev.orbit.app.ui.screens.closeOpenMarkup
 import dev.orbit.app.data.Message
 import dev.orbit.app.data.RoomEvent
 import dev.orbit.app.data.RunState
@@ -61,9 +62,20 @@ class RoomStateTest {
 
     @Test
     fun `hub addresses are normalized`() {
-        assertEquals("http://192.168.1.20:8787", HubClient.normalizeAddress(" 192.168.1.20 "))
-        assertEquals("http://my-pc:9000", HubClient.normalizeAddress("my-pc:9000/"))
-        assertEquals("https://hub.example.com", HubClient.normalizeAddress("https://hub.example.com"))
-        assertEquals("", HubClient.normalizeAddress("  "))
+        assertEquals("http://192.168.1.20:8787", normalizeHubAddress(" 192.168.1.20 "))
+        assertEquals("http://my-pc:9000", normalizeHubAddress("my-pc:9000/"))
+        assertEquals("https://hub.example.com", normalizeHubAddress("https://hub.example.com"))
+        assertEquals("", normalizeHubAddress("  "))
+    }
+
+    @Test
+    fun `streaming text never shows half-typed markup`() {
+        assertEquals("- **Email**", closeOpenMarkup("- **Email"))
+        assertEquals("- ", closeOpenMarkup("- **"))
+        assertEquals("a single `email`", closeOpenMarkup("a single `email"))
+        assertEquals("a single ", closeOpenMarkup("a single `"))
+        assertEquals("**done** and ", closeOpenMarkup("**done** and *"))
+        assertEquals("```\ncode", closeOpenMarkup("```\ncode"))
+        assertEquals("plain text", closeOpenMarkup("plain text"))
     }
 }

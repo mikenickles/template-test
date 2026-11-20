@@ -4,11 +4,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,14 +33,14 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.orbit.app.data.Session
 import dev.orbit.app.ui.AppState
 import dev.orbit.app.ui.AppViewModel
+import dev.orbit.app.ui.OrbitNavHost
 import dev.orbit.app.ui.RoomViewModel
+import dev.orbit.app.ui.screen
 import dev.orbit.app.ui.screens.AgentEditorScreen
 import dev.orbit.app.ui.screens.HomeScreen
 import dev.orbit.app.ui.screens.PairScreen
@@ -46,7 +48,9 @@ import dev.orbit.app.ui.screens.RoomEditorScreen
 import dev.orbit.app.ui.screens.RoomScreen
 import dev.orbit.app.ui.screens.SettingsScreen
 import dev.orbit.app.ui.theme.Orbit
+import dev.orbit.app.ui.theme.OrbitMotion
 import dev.orbit.app.ui.theme.OrbitTheme
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,11 +70,21 @@ private fun OrbitRoot(vm: AppViewModel = viewModel()) {
 
     Surface(Modifier.fillMaxSize(), color = Orbit.colors.bg) {
         Box {
-            val current = session
-            if (current == null) {
-                PairScreen(pairState, onFind = vm::findHubs, onConnect = vm::pair)
-            } else {
-                MainNav(vm, state, current, snackbar)
+            // Pairing hands off to the app with the pair screen falling away and home rising in.
+            AnimatedContent(
+                session,
+                contentKey = { it != null },
+                transitionSpec = {
+                    (fadeIn(tween(OrbitMotion.LONG, delayMillis = 120)) + scaleIn(tween(OrbitMotion.LONG + 80, easing = OrbitMotion.Decelerate), initialScale = 0.94f)) togetherWith
+                        (fadeOut(tween(OrbitMotion.MEDIUM)) + scaleOut(tween(OrbitMotion.MEDIUM, easing = OrbitMotion.Accelerate), targetScale = 1.04f))
+                },
+                label = "session",
+            ) { current ->
+                if (current == null) {
+                    PairScreen(pairState, onFind = vm::findHubs, onConnect = vm::pair)
+                } else {
+                    MainNav(vm, state, current, snackbar)
+                }
             }
             SnackbarHost(
                 snackbar,
@@ -93,18 +107,18 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
         onPauseOrDispose {}
     }
 
-    // Screens push in from the right with a short fade; going back reverses it.
-    NavHost(
-        nav,
-        startDestination = "home",
-        enterTransition = { slideInHorizontally(tween(260)) { it / 10 } + fadeIn(tween(200)) },
-        exitTransition = { fadeOut(tween(120)) },
-        popEnterTransition = { fadeIn(tween(200)) },
-        popExitTransition = { slideOutHorizontally(tween(220)) { it / 10 } + fadeOut(tween(160)) },
-    ) {
-        composable("home") {
-            // Coming back from a room: pick up new previews and activity.
+    OrbitNavHost(nav, startDestination = "home") {
+        screen("home") {
+            // Coming back from a room: pick up new previews and activity. While any room is
+            // working, keep checking so home shows who is replying and when they finish.
             LaunchedEffect(Unit) { vm.refresh() }
+            val working = state.rooms.any { it.active }
+            LaunchedEffect(working) {
+                while (working) {
+                    delay(2500)
+                    vm.refresh()
+                }
+            }
             HomeScreen(
                 state = state,
                 onOpenRoom = { nav.navigate("room/${it.id}") },
@@ -115,12 +129,12 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onRefresh = vm::refresh,
             )
         }
-        composable("room/{id}") { entry ->
+        screen("room/{id}") { entry ->
             val id = entry.arguments?.getString("id").orEmpty()
             val room = state.room(id)
             if (room == null) {
                 if (state.loaded) LaunchedEffect(Unit) { nav.popBackStack("home", inclusive = false) }
-                return@composable
+                return@screen
             }
             val roomVm: RoomViewModel = viewModel(factory = RoomViewModel.Factory(id))
             val roomState by roomVm.state.collectAsStateWithLifecycle()
@@ -137,7 +151,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 everyone = state.agents,
             )
         }
-        composable("agent?id={id}", arguments = OptionalId) { entry ->
+        screen("agent?id={id}", arguments = OptionalId) { entry ->
             val agent = state.agent(entry.arguments?.getString("id"))
             AgentEditorScreen(
                 initial = agent,
@@ -148,7 +162,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onBack = { nav.popBackStack() },
             )
         }
-        composable("roomEdit?id={id}", arguments = OptionalId) { entry ->
+        screen("roomEdit?id={id}", arguments = OptionalId) { entry ->
             val room = state.room(entry.arguments?.getString("id"))
             RoomEditorScreen(
                 initial = room,
@@ -166,7 +180,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onBack = { nav.popBackStack() },
             )
         }
-        composable("settings") {
+        screen("settings") {
             SettingsScreen(state, session.baseUrl, onUnpair = vm::unpair, onBack = { nav.popBackStack() })
         }
     }

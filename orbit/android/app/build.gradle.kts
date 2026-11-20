@@ -31,6 +31,13 @@ android {
     buildFeatures {
         compose = true
     }
+    testOptions {
+        unitTests.all {
+            // Paparazzi loads Android's platform classes into the test JVM, which changes how
+            // OkHttp behaves in plain JVM tests that run after it. A JVM per test class keeps them apart.
+            it.forkEvery = 1
+        }
+    }
 }
 
 dependencies {

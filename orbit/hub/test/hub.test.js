@@ -97,6 +97,9 @@ test('round table: every agent replies once and sees earlier replies', async (t)
 
   const { messages, run } = (await h.api('GET', `/api/rooms/${room.id}/messages`)).body;
   assert.deepEqual(messages.map((m) => m.author.name), ['You', 'Nova', 'Pixel']);
+  const listed = (await h.api('GET', '/api/state')).body.rooms.find((r) => r.id === room.id);
+  assert.equal(listed.active, false);
+  assert.equal(listed.speaking, null);
   assert.ok(messages.every((m) => m.status === 'done'));
   assert.equal(run.active, false);
 
