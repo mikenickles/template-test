@@ -9,6 +9,8 @@ import dev.orbit.app.data.TextReset
 import dev.orbit.app.data.Notice
 import dev.orbit.app.notify.noticeText
 import dev.orbit.app.ui.screens.describeDays
+import dev.orbit.app.ui.components.Block
+import dev.orbit.app.ui.components.parseMarkdown
 import dev.orbit.app.ui.screens.nextRunLabel
 import dev.orbit.app.data.SharedContent
 import dev.orbit.app.data.SharedFile
@@ -254,5 +256,23 @@ class RoomStateTest {
         assertNull(nextRunLabel(null, now, zone))
         assertEquals("Nova: Three things moved.", noticeText(Notice(author = "Nova", text = "Three things moved.")))
         assertEquals("Sage couldn't reply: offline", noticeText(Notice(author = "Sage", text = "couldn't reply: offline")))
+    }
+
+    @Test
+    fun `markdown blocks cover tables, code with its language, quotes, rules and nested lists`() {
+        val blocks = parseMarkdown(SampleData.RICH)
+        assertEquals(Block.Heading("Three ramen spots near the hotel", 2), blocks[0])
+        val table = blocks[1] as Block.Table
+        assertEquals(listOf("Place", "Walk", "Price", "Vegetarian"), table.header)
+        assertEquals(listOf(-1, 1, 1, 0), table.align)
+        assertEquals(listOf("T's Tantan", "4 min", "¥1,250", "Yes"), table.rows[2])
+        assertTrue(blocks[2] is Block.Quote)
+        assertEquals(listOf(0, 1, 0), blocks.filterIsInstance<Block.Item>().map { it.level })
+        assertTrue(Block.Rule in blocks)
+        assertEquals("python", (blocks.last() as Block.Code).language)
+        // A table still arriving: the header shows as text until its dashes come in.
+        assertTrue(parseMarkdown("| a | b |")[0] is Block.Paragraph)
+        assertEquals(1, (parseMarkdown("| a | b |\n|---|---|\n| 1 |")[0] as Block.Table).rows.size)
+        assertEquals(listOf(Block.Paragraph("a\n---b")), parseMarkdown("a\n---b"))
     }
 }

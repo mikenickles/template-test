@@ -190,6 +190,8 @@ class ScreenshotTest {
     @Test fun schedules() = shot("schedules") { SchedulesScreen(launch, SampleData.schedules, {}, {}, {}, {}, now = now) }
     @Test fun schedulesEmptyLight() = shot("schedules-empty-light", dark = false) { SchedulesScreen(trip, emptyList(), {}, {}, {}, {}, now = now) }
     @Test fun scheduledMessage() = shot("room-scheduled") { RoomScreen(launch, listOf(nova, pixel, sage), SampleData.briefing, {}, {}, {}, {}, {}) }
+    @Test fun formatting() = shot("room-formatting") { RoomScreen(trip.copy(agentIds = listOf("a1")), listOf(nova), SampleData.rich, {}, {}, {}, {}, {}) }
+    @Test fun formattingLight() = shot("room-formatting-light", dark = false) { RoomScreen(trip.copy(agentIds = listOf("a1")), listOf(nova), SampleData.rich, {}, {}, {}, {}, {}) }
     @Test fun usage() = shot("usage") { UsageScreen(SampleData.usage, agents, 30, {}, {}) }
     @Test fun usageLight() = shot("usage-light", dark = false) { UsageScreen(SampleData.usage, agents, 30, {}, {}) }
     @Test fun roomResearch() = shot("room-research") { RoomScreen(trip.copy(agentIds = listOf("a1")), listOf(nova), SampleData.research, {}, {}, {}, {}, {}) }

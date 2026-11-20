@@ -210,6 +210,24 @@ object SampleData {
         ),
     )
 
+    /** A reply that uses every kind of formatting agents write. */
+    const val RICH = "## Three ramen spots near the hotel\n\n" +
+        "| Place | Walk | Price | Vegetarian |\n|:--|--:|--:|:-:|\n" +
+        "| Fuunji | 6 min | ¥1,100 | No |\n| Ichiran | 9 min | ¥980 | No |\n| T's Tantan | 4 min | ¥1,250 | Yes |\n\n" +
+        "> T's Tantan is the only fully vegan one, inside Tokyo Station.\n\n" +
+        "Booking page: [tstantan.example](https://tstantan.example/book), or see https://www.ramen.example/tokyo/best\n\n" +
+        "- Go before 11\n  - weekends get busy by 11:30\n- ~~Cash only~~ cards work now\n\n---\n\n" +
+        "```python\nbudget = 3000\nper_day = budget / 7\nprint(f\"{per_day:.0f} a day\")\n```"
+
+    val rich = RoomUiState(
+        loaded = true,
+        connected = true,
+        messages = listOf(
+            userMessage("m1", "Compare the ramen places near the hotel."),
+            agentMessage("m2", nova, RICH),
+        ),
+    )
+
     val chat = RoomUiState(
         loaded = true,
         connected = true,
