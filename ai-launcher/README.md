@@ -19,7 +19,9 @@ gear icon. The key is stored in the app's private storage on the device.
 
 1. On your phone, open the repo's **Releases → AI Launcher (latest build)** and download
    `ai-launcher.apk`, then open it; allow "install unknown apps" if asked. Every build is
-   signed with the same key (see `signing/`), so new versions install over old ones.
+   signed with the same private key (see `signing/README.md`), so new versions install over
+   old ones. If you installed a build from before the signing key changed, uninstall it once
+   first; Android rejects the new APK as an update ("App not installed").
 2. Press Home and choose **AI Launcher**, or set it under
    *Settings → Apps → Default apps → Home app*.
 3. Tap the gear icon and paste your API key from <https://console.anthropic.com>.
@@ -31,6 +33,9 @@ gear icon. The key is stored in the app's private storage on the device.
 ```
 ./gradlew assembleDebug        # → app/build/outputs/apk/debug/app-debug.apk
 ```
+
+Signing needs the release key, set up as described in `signing/README.md` (a git-ignored
+`keystore.properties` locally, repository secrets in CI).
 
 The `AI Launcher APK` GitHub Actions workflow runs this on every push that touches
 `ai-launcher/` and publishes the APK to the `launcher-latest` release.

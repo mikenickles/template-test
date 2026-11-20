@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds a signed debug APK without Gradle, using only the SDK command-line tools
+# Builds a signed APK without Gradle, using only the SDK command-line tools
 # (aapt2, javac, dx, zipalign, apksigner). Output: build/ai-launcher.apk
 #
 # Needs: JDK 8+, an Android platform jar (API 23+) and build-tools. On Ubuntu/Debian:
@@ -47,10 +47,27 @@ echo "==> Dexing"
 (cd "$OUT/dex" && zip -q -u ../unsigned.apk classes.dex)
 
 echo "==> Aligning and signing"
-# Same key as the Gradle build (see signing/README.md), so updates install over each other.
-KEYSTORE=${KEYSTORE:-signing/ailauncher.keystore}
+# Same release key as the Gradle build: from keystore.properties (git-ignored, see
+# signing/README.md) or the KEYSTORE_FILE / KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD env vars.
+prop() {
+    if [ -f keystore.properties ]; then sed -n "s/^$1=//p" keystore.properties | tail -n1 | tr -d '\r'; fi
+}
+KEYSTORE=${KEYSTORE_FILE:-$(prop storeFile)}
+KS_PASS=${KEYSTORE_PASSWORD:-$(prop storePassword)}
+KEY_ALIAS=${KEY_ALIAS:-$(prop keyAlias)}
+KEY_PASS=${KEY_PASSWORD:-$(prop keyPassword)}
+if [ -z "$KEYSTORE" ] || [ -z "$KS_PASS" ]; then
+    echo "No release key configured: create keystore.properties (see signing/README.md)" >&2
+    exit 1
+fi
+if [ ! -f "$KEYSTORE" ]; then
+    echo "Release keystore not found: $KEYSTORE" >&2
+    exit 1
+fi
+export KS_PASS KEY_PASS="${KEY_PASS:-$KS_PASS}"
 "$BUILD_TOOLS/zipalign" -f 4 "$OUT/unsigned.apk" "$OUT/aligned.apk"
-"$BUILD_TOOLS/apksigner" sign --ks "$KEYSTORE" --ks-key-alias ailauncher --ks-pass pass:android --key-pass pass:android \
+"$BUILD_TOOLS/apksigner" sign --ks "$KEYSTORE" --ks-key-alias "${KEY_ALIAS:-ailauncher}" \
+    --ks-pass env:KS_PASS --key-pass env:KEY_PASS \
     --out "$OUT/ai-launcher.apk" "$OUT/aligned.apk"
 "$BUILD_TOOLS/apksigner" verify "$OUT/ai-launcher.apk"
 

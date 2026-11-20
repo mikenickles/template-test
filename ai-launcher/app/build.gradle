@@ -14,24 +14,46 @@ android {
         versionName "1.1"
     }
 
-    // One shared, intentionally public key so every build installs over the last one.
-    // See ../signing/README.md before publishing anywhere.
+    // The release key is never committed. It comes from ai-launcher/keystore.properties
+    // (git-ignored; see ../signing/README.md) or, in CI, from the KEYSTORE_FILE,
+    // KEYSTORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD environment variables. Without either,
+    // debug builds use Android's local debug key and release builds are left unsigned.
     signingConfigs {
-        sideload {
-            storeFile file("../signing/ailauncher.keystore")
-            storePassword "android"
-            keyAlias "ailauncher"
-            keyPassword "android"
+        release {
+            def props = new Properties()
+            def propsFile = rootProject.file("keystore.properties")
+            if (propsFile.exists()) {
+                propsFile.withInputStream { props.load(it) }
+            }
+            def path = props.getProperty("storeFile") ?: System.getenv("KEYSTORE_FILE")
+            if (path) {
+                def store = rootProject.file(path)
+                if (!store.exists()) {
+                    throw new GradleException("Release keystore not found: ${store}")
+                }
+                def storePass = props.getProperty("storePassword") ?: System.getenv("KEYSTORE_PASSWORD")
+                if (!storePass) {
+                    throw new GradleException("Release keystore password is not set (storePassword / KEYSTORE_PASSWORD)")
+                }
+                storeFile store
+                storePassword storePass
+                keyAlias props.getProperty("keyAlias") ?: System.getenv("KEY_ALIAS") ?: "ailauncher"
+                keyPassword props.getProperty("keyPassword") ?: System.getenv("KEY_PASSWORD") ?: storePass
+            }
         }
     }
 
     buildTypes {
         debug {
-            signingConfig signingConfigs.sideload
+            if (signingConfigs.release.storeFile) {
+                signingConfig signingConfigs.release
+            }
         }
         release {
             minifyEnabled false
-            signingConfig signingConfigs.sideload
+            if (signingConfigs.release.storeFile) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 
