@@ -2,19 +2,16 @@
 
 ## Repository Overview
 
-**Project**: template-test
-**Status**: New/empty repository — no application code has been added yet.
 **Remote**: `mikenickles/template-test`
 
-## Getting Started
+Two independent projects live here:
 
-This repository is freshly initialized. When project code is added, update this file with:
-
-- Language, framework, and runtime versions
-- Directory structure overview
-- Setup instructions (`install`, `build`, etc.)
-- How to run tests and linters
-- Key architectural decisions and conventions
+- **Blog** (repo root): Astro 5 + Tailwind. `npm run dev`, `npm run build`.
+- **Orbit** (`orbit/`): multi-agent Android app plus the PC hub it pairs with. See `orbit/README.md`.
+  - `orbit/hub/`: Node 20+ ESM server, plain JavaScript. Calls Claude through `@anthropic-ai/sdk`; other
+    providers through their OpenAI-compatible HTTP APIs. State is a JSON file in `~/.orbit-hub`.
+  - `orbit/android/`: Kotlin + Jetpack Compose (Material 3), single `app` module, package `dev.orbit.app`.
+    Screens are stateless composables in `ui/screens`; `AppViewModel` and `RoomViewModel` hold state.
 
 ## Development Workflow
 
@@ -30,14 +27,15 @@ This repository is freshly initialized. When project code is added, update this 
 
 ### Code Quality
 
-When tooling is added, document the commands here:
+```
+# Blog build:        npm run build
+# Hub tests:         cd orbit/hub && npm test
+# Android build:     cd orbit/android && ./gradlew :app:assembleDebug
+# Android tests:     cd orbit/android && ./gradlew :app:testDebugUnitTest
+# Screen snapshots:  cd orbit/android && ./gradlew :app:recordPaparazziDebug   (after UI changes; review the PNGs)
+```
 
-```
-# Build:    (e.g., npm run build)
-# Test:     (e.g., npm test)
-# Lint:     (e.g., npm run lint)
-# Format:   (e.g., npm run format)
-```
+The hub's HTTP API and the app's `HubClient`/`Models.kt` are one contract: change them together.
 
 ## Conventions for AI Assistants
 
