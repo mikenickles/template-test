@@ -1,0 +1,327 @@
+import { useEffect, useState } from "react";
+import { LIVE_PRICE_PER_MINUTE, LIVE_VOICES } from "../../../core/live";
+import { api, type AppState } from "../api";
+
+/** "$0.05" */
+const PRICE = `\u0024${LIVE_PRICE_PER_MINUTE.toFixed(2)}`;
+import { Check, Chevron } from "../icons";
+
+type KeyId = "anthropic" | "openai" | "gemini";
+interface Model {
+  id: string;
+  label: string;
+}
+
+const PROVIDERS: { id: KeyId; name: string; keyLabel: string; where: string; placeholder: string }[] = [
+  { id: "anthropic", name: "Claude", keyLabel: "Claude API key", where: "console.anthropic.com", placeholder: "sk-ant-…" },
+  { id: "openai", name: "OpenAI", keyLabel: "OpenAI API key", where: "platform.openai.com", placeholder: "sk-…" },
+  { id: "gemini", name: "Gemini", keyLabel: "Gemini API key", where: "aistudio.google.com", placeholder: "AIza…" },
+];
+const SHOWN = 6;
+
+/** Settings → AI model: a card per provider. Add its key, then pick from the models that key can use. */
+export function ModelSettings({ state, run, busy }: { state: AppState; run: (fn: () => Promise<AppState>, done: string) => Promise<void>; busy: boolean }) {
+  const current = state.choice;
+  const [open, setOpen] = useState<KeyId | null>(current.provider === "fake" ? (PROVIDERS.find((p) => state.providers.find((x) => x.id === p.id)?.ready)?.id ?? "anthropic") : (current.provider as KeyId));
+
+  return (
+    <>
+      <section className="section">
+        <h2 className="section-label">Providers</h2>
+        <div className="providers">
+          {PROVIDERS.map((p) => (
+            <ProviderCard key={p.id} p={p} state={state} run={run} busy={busy} open={open === p.id} onToggle={() => setOpen((o) => (o === p.id ? null : p.id))} />
+          ))}
+          <button
+            className={`provider-head practice${current.provider === "fake" ? " using" : ""}`}
+            disabled={busy || current.provider === "fake"}
+            onClick={() => void run(() => api.saveSettings({ provider: "fake" }), "Cove now uses Practice")}
+          >
+            <span className="body">
+              <span className="title">Practice</span>
+              <span className="sub">Canned replies, for trying the app without a key</span>
+            </span>
+            {current.provider === "fake" ? <span className="pill live">In use</span> : <span className="pill">Use</span>}
+          </button>
+        </div>
+      </section>
+
+      {current.provider !== "fake" && <BackgroundModel state={state} run={run} busy={busy} />}
+
+      <section className="section">
+        <h2 className="section-label">Live voice</h2>
+        <div className="group">
+          <label className="item" htmlFor="live-voice">
+            <span className="body">
+              <div className="title">Cove's voice</div>
+              <div className="sub">
+                {state.keys.openai
+                  ? `Talk with Cove out loud using OpenAI's GPT-Live, about ${PRICE} a minute while a call is open. Tap Talk in the message box.`
+                  : "Live voice uses OpenAI's GPT-Live. Add an OpenAI API key above to turn it on."}
+              </div>
+            </span>
+            <select id="live-voice" className="select" value={state.liveVoice} disabled={busy} onChange={(e) => void run(() => api.saveSettings({ liveVoice: e.target.value }), `Voice set to ${e.target.value}`)}>
+              {LIVE_VOICES.map((v) => (
+                <option key={v} value={v}>
+                  {v[0].toUpperCase() + v.slice(1)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section className="section">
+        <h2 className="section-label">Web</h2>
+        <div className="group">
+          <label className="item">
+            <span className="body">
+              <div className="title">Web search</div>
+              <div className="sub">Cove and its workers can look things up with your model's built-in search. Each search adds a small fee on your model bill.</div>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              className="switch"
+              checked={state.webSearch}
+              disabled={busy}
+              onChange={(e) => void run(() => api.saveSettings({ webSearch: e.target.checked }), e.target.checked ? "Web search on" : "Web search off")}
+            />
+          </label>
+        </div>
+        {current.provider === "fake" && <p className="hint">The practice model can't search. Pick Claude, OpenAI or Gemini.</p>}
+        {state.keys.openaiBaseUrl && current.provider === "openai" && <p className="hint">Your own model server doesn't support web search.</p>}
+      </section>
+    </>
+  );
+}
+
+/** Cove's own background work (mail watch, heads-ups, quiet checks) runs on a smaller model; anything it tells you is written by the main one. */
+function BackgroundModel({ state, run, busy }: { state: AppState; run: (fn: () => Promise<AppState>, done: string) => Promise<void>; busy: boolean }) {
+  const [models, setModels] = useState<Model[]>([]);
+  const [auto, setAuto] = useState<string | null>(null);
+  const provider = state.choice.provider;
+  useEffect(() => {
+    let alive = true;
+    api.models(provider).then((m) => alive && setModels(m), () => {});
+    api.quickChoice().then((c) => alive && setAuto(c.model), () => {});
+    return () => {
+      alive = false;
+    };
+  }, [provider, state.choice.model, state.backgroundModel]);
+  const label = (id: string) => models.find((m) => m.id === id)?.label ?? id;
+  const v = state.backgroundModel;
+  const same = auto === state.choice.model;
+  return (
+    <section className="section">
+      <h2 className="section-label">Background model</h2>
+      <div className="group">
+        <label className="item">
+          <span className="body">
+            <div className="title">For Cove's own checks</div>
+            <div className="sub">
+              Mail watch, heads-ups, quiet routines, tidy-ups and inbox scans run on this one. Your chats, tasks and anything Cove tells you are still written by your main model.
+              {v === "auto" && auto ? (same ? ` No smaller partner for ${label(state.choice.model)}, so it uses that.` : ` Now: ${label(auto)}.`) : ""}
+            </div>
+          </span>
+        </label>
+        <div className="item">
+          <select
+            className="select"
+            aria-label="Background model"
+            value={v}
+            disabled={busy}
+            onChange={(e) => {
+              const next = e.target.value;
+              void run(() => api.saveSettings({ backgroundModel: next }), next === "auto" ? "Background model: paired automatically" : next === "same" ? "Background work uses your main model" : `Background model: ${label(next)}`);
+            }}
+          >
+            <option value="auto">Pick for me{auto && v === "auto" && !same ? ` (${label(auto)})` : ""}</option>
+            <option value="same">Same as main</option>
+            {models.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+            {v !== "auto" && v !== "same" && !models.some((m) => m.id === v) && <option value={v}>{v}</option>}
+          </select>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ProviderCard({
+  p,
+  state,
+  run,
+  busy,
+  open,
+  onToggle,
+}: {
+  p: (typeof PROVIDERS)[number];
+  state: AppState;
+  run: (fn: () => Promise<AppState>, done: string) => Promise<void>;
+  busy: boolean;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const saved = state.keys[p.id];
+  const ready = !!state.providers.find((x) => x.id === p.id)?.ready;
+  const using = state.choice.provider === p.id;
+  const [draft, setDraft] = useState("");
+  const [baseUrl, setBaseUrl] = useState(state.keys.openaiBaseUrl);
+  const [models, setModels] = useState<Model[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [all, setAll] = useState(false);
+  const [filter, setFilter] = useState("");
+  const [manual, setManual] = useState("");
+  const [reload, setReload] = useState(0);
+
+  // the models this key can use, asked from the provider when the card opens
+  useEffect(() => {
+    if (!open || !ready) return;
+    let alive = true;
+    setModels(null);
+    setError(null);
+    api.models(p.id).then(
+      (m) => alive && setModels(m),
+      (e) => alive && setError((e as Error).message),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [open, ready, p.id, reload, state.keys.openaiBaseUrl]);
+
+  const use = (m: Model) => void run(() => api.saveSettings({ provider: p.id, model: m.id }), `Cove now uses ${m.label}`);
+  const currentLabel = using ? (models?.find((m) => m.id === state.choice.model)?.label ?? state.choice.model) : null;
+  const match = (m: Model) => !filter.trim() || `${m.label} ${m.id}`.toLowerCase().includes(filter.trim().toLowerCase());
+  const list = (models ?? []).filter(match);
+  // the one in use always shows, even when the list is folded
+  const folded = all || filter.trim() ? list : [...list.slice(0, SHOWN), ...list.slice(SHOWN).filter((m) => using && m.id === state.choice.model)];
+
+  return (
+    <div className={`provider${open ? " open" : ""}${using ? " using" : ""}`}>
+      <button className="provider-head" onClick={onToggle} aria-expanded={open}>
+        <span className="body">
+          <span className="title">{p.name}</span>
+          <span className="sub">{using ? currentLabel : ready ? "Ready. Pick a model to use it." : "Add an API key"}</span>
+        </span>
+        {using && <span className="pill live">In use</span>}
+        <Chevron className={`chev${open ? " down" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="provider-body">
+          <label className="key-head" htmlFor={`key-${p.id}`}>
+            <span>{p.keyLabel}</span>
+            {saved ? <span className="pill live">Saved</span> : <span className="key-where">{p.where}</span>}
+          </label>
+          <div className="field-row">
+            <input
+              id={`key-${p.id}`}
+              className="field"
+              type="password"
+              value={draft}
+              placeholder={saved ? "•••••••• (paste to replace)" : p.placeholder}
+              onChange={(e) => setDraft(e.target.value)}
+              autoComplete="off"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+            {draft.trim() ? (
+              <button
+                className="btn ink"
+                disabled={busy}
+                onClick={() =>
+                  void run(async () => {
+                    // using a new key straight away is almost always what you want
+                    const s = await api.saveSettings({ keys: { [p.id]: draft.trim() }, provider: p.id });
+                    setDraft("");
+                    setReload((n) => n + 1);
+                    return s;
+                  }, "Key saved")
+                }
+              >
+                Save
+              </button>
+            ) : saved ? (
+              <button className="btn quiet" disabled={busy} onClick={() => void run(() => api.saveSettings({ keys: { [p.id]: null } }), "Key removed")}>
+                Remove
+              </button>
+            ) : null}
+          </div>
+
+          {ready && (
+            <>
+              <div className="models-head">
+                <span className="key-head-text">Model</span>
+                {models && models.length > SHOWN && (
+                  <input className="field models-filter" aria-label={`Find a ${p.name} model`} placeholder="Find a model" value={filter} onChange={(e) => setFilter(e.target.value)} />
+                )}
+              </div>
+              {!models && !error && <p className="hint models-note">Loading the models your key can use…</p>}
+              {error && (
+                <p className="hint bad models-note" role="alert">
+                  {error}{" "}
+                  <button className="link" onClick={() => setReload((n) => n + 1)}>
+                    Try again
+                  </button>
+                </p>
+              )}
+              {models && (
+                <div className="models" role="radiogroup" aria-label={`${p.name} model`}>
+                  {folded.map((m) => {
+                    const on = using && m.id === state.choice.model;
+                    return (
+                      <button key={m.id} role="radio" aria-checked={on} className={`model${on ? " on" : ""}`} disabled={busy} onClick={() => !on && use(m)}>
+                        <span className="body">
+                          <span className="model-name">{m.label}</span>
+                          {m.label !== m.id && <span className="model-id">{m.id}</span>}
+                        </span>
+                        {on && <Check size={18} />}
+                      </button>
+                    );
+                  })}
+                  {models.length > 0 && list.length === 0 && <p className="hint models-note">No model matches "{filter}".</p>}
+                  {!all && !filter.trim() && list.length > SHOWN && (
+                    <button className="link models-more" onClick={() => setAll(true)}>
+                      Show all {list.length}
+                    </button>
+                  )}
+                </div>
+              )}
+              <details className="manual">
+                <summary>Type a model name instead</summary>
+                <div className="field-row">
+                  <input id={`model-${p.id}`} className="field" aria-label={`${p.name} model name`} value={manual} placeholder={state.providers.find((x) => x.id === p.id)?.defaultModel} onChange={(e) => setManual(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+                  <button className="btn ink" disabled={busy || !manual.trim()} onClick={() => use({ id: manual.trim(), label: manual.trim() })}>
+                    Use
+                  </button>
+                </div>
+              </details>
+            </>
+          )}
+
+          {p.id === "openai" && (
+            <details className="manual" open={!!state.keys.openaiBaseUrl}>
+              <summary>Use your own model server</summary>
+              <div className="field-row">
+                <input id="base-url" className="field" aria-label="Your own model server" value={baseUrl} placeholder="http://192.168.1.20:11434/v1" onChange={(e) => setBaseUrl(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} inputMode="url" />
+                {baseUrl.trim() !== state.keys.openaiBaseUrl && (
+                  <button className="btn ink" disabled={busy} onClick={() => void run(() => api.saveSettings({ openaiBaseUrl: baseUrl }), "Saved")}>
+                    Save
+                  </button>
+                )}
+              </div>
+              <p className="hint" style={{ marginLeft: 0 }}>
+                Any OpenAI-compatible server, like Ollama or LM Studio on your computer. Its models show up in the list above.
+              </p>
+            </details>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

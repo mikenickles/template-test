@@ -1,0 +1,203 @@
+import type { GenerateRequest, GenerateResult, ModelProvider, Part } from "./types.ts";
+
+/**
+ * A model stand-in with no API key, for tests and for clicking around the app offline.
+ * Give it a script of results to replay, or let it follow a few simple rules.
+ */
+export class FakeProvider implements ModelProvider {
+  readonly id = "fake";
+  readonly model = "fake";
+  readonly requests: GenerateRequest[] = [];
+
+  constructor(private script: GenerateResult[] = []) {}
+
+  async generate(req: GenerateRequest, onText: (d: string) => void): Promise<GenerateResult> {
+    this.requests.push({ ...req, tools: [...req.tools], messages: structuredClone(req.messages) });
+    // "take your time…": the practice model thinks for a couple of seconds, so you can send more meanwhile
+    const lastText = req.messages.at(-1)?.parts.map((p) => (p.type === "text" ? p.text : "")).join("\n") ?? "";
+    if (!this.script.length && /^take your time/i.test(lastText.trim())) {
+      await new Promise<void>((done, fail) => {
+        const t = setTimeout(done, 2500);
+        req.signal?.addEventListener("abort", () => (clearTimeout(t), fail(new Error("aborted"))));
+      });
+      const heard = lastText.split("\n").filter((l) => l.trim() && !/added, while you were working:$/.test(l));
+      const r: GenerateResult = { parts: [{ type: "text", text: `Got all of it: ${heard.join(" / ")}` }], stop: "end" };
+      for (const word of (r.parts[0] as { text: string }).text.split(/(?<= )/)) onText(word);
+      return r;
+    }
+    const result = this.script.length ? this.script.shift()! : this.rules(req);
+    // Practice has no real tokens: estimate at four characters each, so the Usage page has something to show.
+    if (!result.usage) {
+      const chars = (parts: Part[]) => parts.reduce((n, p) => n + (p.type === "text" ? p.text.length : JSON.stringify(p).length), 0);
+      result.usage = { input: Math.ceil((req.system.length + req.messages.reduce((n, m) => n + chars(m.parts), 0)) / 4), output: Math.ceil(chars(result.parts) / 4) };
+    }
+    for (const p of result.parts) {
+      if (p.type !== "text") continue;
+      for (const word of p.text.split(/(?<= )/)) onText(word);
+    }
+    return result;
+  }
+
+  private rules(req: GenerateRequest): GenerateResult {
+    // (0.53.1) right after loading tools with more_tools: carry on with what the user asked
+    const lastMsg = req.messages[req.messages.length - 1];
+    const loaded = lastMsg?.parts.some((p) => p.type === "tool_result" && p.name === "more_tools");
+    const last = loaded ? req.messages[req.messages.length - 3] : lastMsg;
+    const present = (name: string) => req.tools.some((t) => t.name === name);
+    const loadable = (name: string) => req.tools.some((t) => t.name === "more_tools" && new RegExp(`^- ${name}:`, "m").test(t.description));
+    const has = (name: string) => present(name) || loadable(name);
+    const say = (text: string): GenerateResult => ({ parts: [{ type: "text", text }], stop: "end" });
+    const call = (name: string, input: Record<string, unknown>): GenerateResult =>
+      // a tool that's only named in more_tools: load it first, the way a real model would
+      !present(name) && loadable(name)
+        ? { parts: [{ type: "tool_call", id: `fake_${Date.now().toString(36)}`, name: "more_tools", input: { names: [name] } } as Part], stop: "tool_use" }
+        : { parts: [{ type: "tool_call", id: `fake_${Date.now().toString(36)}`, name, input } as Part], stop: "tool_use" };
+    // (0.53) quick actions: the short reply goes out with the call, as Cove's prompt asks
+    const callSaying = (text: string, name: string, input: Record<string, unknown>): GenerateResult => {
+      const r = call(name, input);
+      return { ...r, parts: [{ type: "text", text }, ...r.parts] };
+    };
+
+    const result = last?.parts.find((p) => p.type === "tool_result");
+    if (result && result.type === "tool_result") {
+      if (result.isError) return say(`That didn't work: ${result.content.slice(0, 160)}`);
+      if (result.name === "remember") return say("Got it.");
+      if (result.name === "react") return { parts: [], stop: "end" };
+      if (result.name === "set_reminder") return say("Okay, I'll remind you.");
+      if (result.name === "suggest_replies") return say("Here are a couple of next steps.");
+      if (result.name === "forget") return say("Done, that's gone.");
+      if (result.name === "propose_email" || result.name === "propose_event") return say("It's ready for you to check.");
+      if (result.name === "write_doc" || result.name === "update_doc") return say("It's in your Artifacts.");
+      if (result.name === "make_dashboard" || result.name === "update_dashboard") return say("Your dashboard is in Artifacts (practice numbers: add an API key for real ones).");
+      // life admin scan: save the first bill-looking email found (practice data)
+      if (result.name === "gmail__search_mail" && req.tools.some((t) => t.name === "save_items")) {
+        const thread = result.content.match(/thread: ([0-9a-f]{6,32})/i)?.[1];
+        const from = result.content.match(/from: ([^<\n]+)/)?.[1]?.trim();
+        const amount = Number(result.content.match(/\$(\d+(?:\.\d{2})?)/)?.[1] ?? NaN);
+        const due = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
+        return call("save_items", { items: thread && from ? [{ kind: "bill", thread_id: thread, who: from, title: "Bill", amount: Number.isFinite(amount) ? amount : undefined, due_on: due }] : [] });
+      }
+      // "trash the bill email": after the search, a card for the first thread found (the user still taps)
+      const asked = [...req.messages].reverse().find((m) => m.role === "user" && m.parts.some((p) => p.type === "text"));
+      const tidy = asked?.parts.map((p) => (p.type === "text" ? p.text : "")).join("").match(/^(trash|archive|star) (?:the |my )?.+? e-?mails?$/i);
+      if (result.name === "gmail__search_mail" && tidy && has("propose_mail_change")) {
+        const thread = result.content.match(/thread: ([0-9a-f]{6,32})/i)?.[1];
+        if (thread) return call("propose_mail_change", { thread_ids: [thread], change: tidy[1].toLowerCase() });
+      }
+      if (result.name === "propose_mail_change" || result.name === "propose_file_change" || result.name === "propose_edit_event") return say("It's ready for you to check.");
+      if (result.name === "save_skill") return say("Learned it. I'll do it that way from now on.");
+      if (result.name === "use_skill") return say(`Doing it your way:\n\n${result.content.split("\n\n").slice(1).join("\n\n").slice(0, 400)}`);
+      if (result.name === "remind_at_place") return say("Done, I'll remind you when you get there 📍");
+      if (result.name === "show") return say("Here you go (a practice example: add an API key for the real thing).");
+      if (result.name === "show_scan") return say("Three things on it. Tap to get a reminder or add one to your list (practice items: add an API key for the real thing).");
+      if (result.name === "show_triage") return say("Here's how your inbox sorts out (practice data: add an API key for the real thing).");
+      return say(`Here's what I found.\n\n${result.content.replace(/<\/?untrusted_data[^>]*>/g, "").trim().slice(0, 400)}`);
+    }
+
+    const text = last?.parts.map((p) => (p.type === "text" ? p.text : "")).join("") ?? "";
+    const files = last?.parts.flatMap((p) => (p.type === "file" ? [p.name] : [])) ?? [];
+    // "Scan this": the practice model shows a sample card (made-up items, said so)
+    if (files.length && /^scan\b/i.test(text.trim()) && has("show_scan")) {
+      const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+      return call("show_scan", {
+        title: "Practice scan",
+        items: [
+          { kind: "deadline", text: "Permission slip and $12 due (practice)", when: day(4) },
+          { kind: "date", text: "Field trip (practice)", when: `${day(7)} 08:45` },
+          { kind: "todo", text: "Find two parent drivers (practice)" },
+        ],
+      });
+    }
+    if (files.length) return say(`Got ${files.length === 1 ? "it" : "them"}: ${files.join(", ")}.\n\nThe practice model can't look inside. Add an API key in Settings and I'll read it properly.`);
+    if (/^(thanks|thank you|thx|ty)\b/i.test(text.trim()) && has("react")) return call("react", { emoji: "❤️" });
+    // "remind me in 5 minutes to stretch": the practice model can set reminders
+    const remind = text.match(/^remind me in (\d+) min(?:ute)?s? to (.+)$/i);
+    if (remind && has("set_reminder")) {
+      const at = new Date(Date.now() + Number(remind[1]) * 60_000);
+      const p2 = (n: number) => String(n).padStart(2, "0");
+      return callSaying("Okay, I'll remind you.", "set_reminder", { text: remind[2], at: `${at.getFullYear()}-${p2(at.getMonth() + 1)}-${p2(at.getDate())} ${p2(at.getHours())}:${p2(at.getMinutes())}` });
+    }
+    // widgets: the practice model shows a sample of each kind
+    if (/^(which|pick|choose|compare)\b.*\b(plumber|option|one)/i.test(text.trim()) && has("show"))
+      return call("show", {
+        kind: "choices",
+        title: "Plumbers (practice)",
+        options: [
+          { label: "Ortiz Plumbing", detail: "Thu 8 to 10 AM · $95 visit" },
+          { label: "Bay Pipe Co", detail: "Fri 1 to 3 PM · $80 visit" },
+          { label: "Delta Rooter", detail: "Next week · $120 visit" },
+        ],
+      });
+    const pack = text.trim().match(/^(?:packing|shopping|grocery) list(?: for (.+))?$/i);
+    if (pack && has("show")) return call("show", { kind: "checklist", title: pack[1] ? `For ${pack[1]}` : "Your list", items: ["Tent and stakes", "Sleeping bags", "Headlamps", "Bug spray", "Marshmallows"] });
+    if (/^where('s| is) (.+)$/i.test(text.trim()) && has("show")) return call("show", { kind: "place", name: "Ortiz Plumbing (practice)", address: "1200 J St, Sacramento, CA", phone: "+1 916 555 0142", note: "Open until 5 PM" });
+    if (/^what('s| is) next/i.test(text) && has("suggest_replies")) return call("suggest_replies", { options: ["Add it to my tasks", "Remind me Friday"] });
+    const rem = text.match(/^remember(?: that)?[:\s]+(.+)$/i);
+    if (rem && has("remember")) return callSaying("Got it.", "remember", { section: "Open loops", text: rem[1] });
+    const forget = text.match(/^forget[:\s]+(.+)$/i);
+    if (forget && has("forget")) return callSaying("Done, that's gone.", "forget", { section: "Open loops", match: forget[1] });
+    // "go through my inbox": the practice model shows a sample triage card (made-up example mail)
+    if (/^(go through|triage|sort) my inbox/i.test(text.trim()) && has("show_triage"))
+      return call("show_triage", {
+        range: "Practice example",
+        summary: "One example email needs you; the rest can wait.",
+        needs_you: [{ thread_id: "abc123def456", from: "Example sender", subject: "Can you confirm Friday?", why: "Waiting on a yes or no" }],
+        can_wait: [{ thread_id: "abc123def457", from: "Example newsletter team", subject: "Monthly update", why: "Nothing to do" }],
+        newsletters: [{ thread_id: "abc123def458", from: "Example store", subject: "Sale this weekend" }],
+      });
+    // "save a skill called Trip planning: 1. Check flights 2. Pack": the practice model can learn a skill
+    const teach = text.match(/^save a skill called ([^:]+):\s*([\s\S]+)$/i);
+    if (teach && has("save_skill")) return call("save_skill", { name: teach[1].trim(), use_when: `you ask for ${teach[1].trim().toLowerCase()}`, steps: teach[2].trim() });
+    // "use my Trip planning skill"
+    const useIt = text.match(/^use my (.+?) skill\b/i);
+    if (useIt && has("use_skill")) return call("use_skill", { name: useIt[1] });
+    // a dashboard refresh: practice numbers, as of now
+    if (has("save_dashboard")) {
+      return call("save_dashboard", { subtitle: "New practice numbers", blocks: practiceBlocks(1 + (Date.now() % 6)) });
+    }
+    // a voice memo: the practice model shows a sample card from it
+    const memo = text.match(/^voice memo:\s*([\s\S]+)$/i);
+    if (memo && has("show_scan")) {
+      const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+      const parts = memo[1].split(/\band\b|[.,;]/i).map((p) => p.trim()).filter((p) => p.length > 3).slice(0, 3);
+      return call("show_scan", { title: "From your memo", items: (parts.length ? parts : [memo[1]]).map((p, i) => (i === 0 ? { kind: "deadline", text: p, when: day(2) } : { kind: "todo", text: p })) });
+    }
+    // "remind me to grab milk when I get to Home": the practice model can set a place reminder
+    const atPlace = text.match(/^remind me to (.+?) when I (get to|leave) (.+)$/i);
+    if (atPlace && has("remind_at_place")) return call("remind_at_place", { text: atPlace[1], place: atPlace[3], on: atPlace[2].toLowerCase() === "leave" ? "leave" : "arrive" });
+    // "make a dashboard called Spending": the practice model can make one (made-up numbers, said so)
+    const dash = text.match(/^(?:make|build) (?:me )?a dashboard (?:called|about|for|of) (.+)$/i);
+    if (dash && has("make_dashboard"))
+      return call("make_dashboard", { title: dash[1], subtitle: "Practice numbers", blocks: practiceBlocks(0), refresh: "Practice: make up new example numbers." });
+    // "show me a table": the practice model answers with one (made-up rows), to see how tables look in chat
+    if (/\btable\b/i.test(text))
+      return say("Here's a practice table (made-up rows):\n\n| Plan | Price | Notes |\n| --- | --- | --- |\n| Basic | $8 a month | One device |\n| Family | $15 a month | Up to **five** people |\n| Yearly | $80 a year | Two months free |\n\nI'd pick Family.");
+    // "make a doc called Packing list": the practice model can write a doc
+    const doc = text.match(/^(?:make|write) (?:me )?a doc(?:ument)? (?:called|about|for) (.+)$/i);
+    if (doc && has("write_doc")) return call("write_doc", { title: doc[1], body: "## To do\n- First thing\n- Second thing" });
+    // "email dana@example.com saying yes to Friday": the practice model can propose an email (the user still taps Send)
+    const mail = text.match(/^e-?mail (\S+@\S+) saying (.+)$/i);
+    if (mail && has("propose_email")) return callSaying("It's ready for you to check.", "propose_email", { to: [mail[1]], subject: "Quick note", body: mail[2] });
+    // "open https://…": the practice model reads it in the user's browser (0.56)
+    const page = text.match(/^open (https?:\/\/\S+)$/i);
+    if (page && has("browser__open_page")) return call("browser__open_page", { url: page[1] });
+    const tidy = text.match(/^(?:trash|archive|star) (?:the |my )?(.+?) e-?mails?$/i);
+    if (tidy && has("propose_mail_change") && has("gmail__search_mail")) return call("gmail__search_mail", { query: tidy[1], max_results: 1 });
+    if (/\b(e-?mail|inbox|mail)\b/i.test(text) && has("gmail__search_mail"))
+      return call("gmail__search_mail", { query: "newer_than:7d", max_results: 5 });
+    return say(
+      "I'm running on the practice model, so I can't really think yet.\n\nAdd an API key in Settings and pick a model there.",
+    );
+  }
+}
+
+/** Example blocks for the practice model's dashboards (clearly not real). */
+function practiceBlocks(shift: number) {
+  const n = (base: number, i: number) => base + ((i * 7 + shift * 2) % 9); // every shift 1-6 differs from 0
+  return [
+    { type: "stats", items: [{ label: "This week", value: `$${n(120, 1)}` }, { label: "Open tasks", value: String(n(3, 2)) }, { label: "Streak", value: `${n(4, 3)} days` }] },
+    { type: "bar", title: "By category", unit: "$", items: ["Food", "Transport", "Fun"].map((label, i) => ({ label, value: n(20, i) * 2 })) },
+    { type: "line", title: "Last 7 days", unit: "$", points: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label, i) => ({ label, value: n(10, i) })) },
+    { type: "list", title: "Next up", items: [{ text: "Example item", note: "practice" }, { text: "Another example", done: true }] },
+  ];
+}

@@ -1,0 +1,431 @@
+/**
+ * Hand-off sync: each device keeps its own full copy of Cove and works alone.
+ * When something changes, the device uploads an encrypted snapshot (the same
+ * format as a backup) to a remote: Cove's hidden folder in your Google Drive.
+ * When another device opens, it loads the newest snapshot first.
+ *
+ * Snapshots are numbered (rev). A device remembers which snapshot its data is
+ * built on (base). It never uploads over a newer snapshot it hasn't loaded:
+ *  - remote has nothing newer than base  -> upload if there are local changes
+ *  - remote is newer, no local changes   -> load it (the app then restarts)
+ *  - remote is newer AND local changes   -> conflict: the user picks a side
+ * The last few snapshots are kept, so a wrong pick can be undone.
+ *
+ * Home base: one device (a computer that's always on) can be the one that does Cove's
+ * own work: routines, heads-ups, scans. It leaves a heartbeat in the remote; while that
+ * is fresh the other devices leave the background work to it, and take it back when it
+ * goes quiet. The home base never waits on a person: it holds its work while another
+ * device is in use, and if both sides changed anyway it loads the other side (a person's
+ * changes win; its own are saved as a conflict copy and its work runs again).
+ */
+import type { Cove } from "./lyra.ts";
+import type { SecretStore } from "./lyra.ts";
+import type { TextStore } from "./memory.ts";
+
+export interface SnapshotInfo {
+  id: string;
+  rev: number;
+  device: string;
+  deviceName: string;
+  savedAt: string;
+  /** "conflict": a side the user didn't keep, saved just in case. Never loaded automatically. */
+  kind?: "snapshot" | "conflict";
+}
+
+/** The home base's heartbeat, kept in the remote next to the snapshots. */
+export interface HomeBeat {
+  device: string;
+  deviceName: string;
+  at: string;
+}
+
+/** A home base not heard from for this long is treated as away. */
+export const HOME_STALE_MS = 30 * 60_000;
+/** The home base holds its own work this long after another device last saved. */
+export const HOME_QUIET_MS = 90_000;
+/** ...and this long after another device last checked in (its app is open: someone is using Cove there). */
+export const HOME_HOLD_MS = 150_000;
+
+/** A device saying "I'm up to date as of now" (so the home base knows what it already has). */
+export interface SeenMark {
+  device: string;
+  deviceName: string;
+  at: string;
+}
+
+export interface SyncRemote {
+  /** every device's latest "up to date as of" mark */
+  seen?(): Promise<SeenMark[]>;
+  markSeen?(mark: SeenMark): Promise<void>;
+  /** the home base's heartbeat, if a device has taken that job */
+  home?(): Promise<HomeBeat | undefined>;
+  setHome?(beat: HomeBeat | null): Promise<void>;
+  list(): Promise<SnapshotInfo[]>;
+  download(id: string): Promise<Uint8Array>;
+  upload(bytes: Uint8Array, info: Omit<SnapshotInfo, "id">): Promise<SnapshotInfo>;
+  remove(id: string): Promise<void>;
+}
+
+export interface SyncState {
+  enabled: boolean;
+  device: string;
+  deviceName: string;
+  /** the snapshot this device's data is built on */
+  base?: { id: string; rev: number };
+  /** changed since base */
+  dirty: boolean;
+  lastSync?: string;
+  lastError?: string;
+  /** set when both sides changed: the other device's newest snapshot */
+  conflict?: SnapshotInfo;
+  /** set right after loading another device's snapshot (don't resume its workers) */
+  justPulled?: boolean;
+  /** this device is the home base: it does Cove's background work for every device */
+  home?: boolean;
+  /** the home base's heartbeat as last seen (another device's, or this one's) */
+  homeBeat?: HomeBeat;
+  /** home base: the copy of its own changes it set aside before loading another device's; its work is taken back in from there after the restart */
+  graftFrom?: string;
+}
+
+export type SyncResult = "off" | "up-to-date" | "pushed" | "pulled" | "conflict" | "busy";
+
+const STATE_FILE = "sync.json";
+const PASS_KEY = "sync.passphrase";
+const KEEP = 10;
+
+const newer = (a: SnapshotInfo, b: SnapshotInfo) => a.rev - b.rev || a.savedAt.localeCompare(b.savedAt) || a.id.localeCompare(b.id);
+
+export function latestSnapshot(list: SnapshotInfo[]): SnapshotInfo | undefined {
+  return list.filter((s) => s.kind !== "conflict").sort((a, b) => newer(b, a))[0];
+}
+
+export async function readSyncState(texts: TextStore, defaultName: string): Promise<SyncState> {
+  const raw = await texts.read(STATE_FILE).catch(() => null);
+  if (raw) {
+    try {
+      return JSON.parse(raw) as SyncState;
+    } catch {
+      // fall through to a fresh state
+    }
+  }
+  return { enabled: false, device: crypto.randomUUID(), deviceName: defaultName, dirty: false };
+}
+
+export class Sync {
+  private busy = false;
+  /** Every snapshot this device uploads or loads (the Windows app keeps a copy of each). */
+  onSnapshot?: (bytes: Uint8Array, info: Omit<SnapshotInfo, "id">) => void;
+  /** after loading a snapshot this engine is finished; ignore its writes */
+  private frozen = false;
+  private saving: Promise<void> = Promise.resolve();
+
+  constructor(
+    private lyra: Cove,
+    private remote: SyncRemote,
+    private texts: TextStore,
+    private secrets: SecretStore,
+    public state: SyncState,
+  ) {
+    lyra.onDataChange(() => {
+      if (!this.frozen) this.changes++;
+      if (this.state.enabled && !this.state.dirty && !this.frozen) {
+        this.state.dirty = true;
+        void this.save();
+      }
+    });
+  }
+
+  /** Saves run one after another, so the file always ends up with the latest state. */
+  private save(): Promise<void> {
+    const text = JSON.stringify(this.state);
+    this.saving = this.saving.catch(() => {}).then(() => this.texts.write(STATE_FILE, text));
+    return this.saving;
+  }
+
+  private async passphrase(): Promise<string> {
+    const p = await this.secrets.get(PASS_KEY);
+    if (!p) throw new Error("Sync needs its passphrase again. Turn sync off and on.");
+    return p;
+  }
+
+  /** Is there anything in the remote yet? (Decides between "start" and "join".) */
+  async existing(): Promise<SnapshotInfo | undefined> {
+    return latestSnapshot(await this.remote.list());
+  }
+
+  /**
+   * Turn sync on. With nothing in Drive yet, this device's data becomes the first
+   * snapshot. If there is, the passphrase must open it, and that data replaces
+   * this device's (returns "pulled": restart the app).
+   */
+  async enable(passphrase: string, deviceName: string): Promise<SyncResult> {
+    const latest = await this.existing();
+    if (latest) {
+      const bytes = await this.remote.download(latest.id);
+      // throws on a wrong passphrase before anything changes
+      this.frozen = true;
+      try {
+        await this.lyra.restore(bytes, passphrase, { keepThisDevice: true });
+      } catch (e) {
+        this.frozen = false;
+        throw e;
+      }
+      await this.secrets.set(PASS_KEY, passphrase);
+      this.state = { ...this.state, enabled: true, deviceName, base: { id: latest.id, rev: latest.rev }, dirty: false, justPulled: true, conflict: undefined, lastError: undefined, lastSync: new Date().toISOString() };
+      await this.save();
+      return "pulled";
+    }
+    await this.secrets.set(PASS_KEY, passphrase);
+    this.state = { ...this.state, enabled: true, deviceName, base: undefined, dirty: true, conflict: undefined, lastError: undefined };
+    await this.save();
+    return this.check();
+  }
+
+  async disable(): Promise<void> {
+    if (this.state.home) await this.remote.setHome?.(null).catch(() => {});
+    await this.secrets.remove(PASS_KEY);
+    this.state = { ...this.state, enabled: false, base: undefined, dirty: false, conflict: undefined, lastError: undefined, home: false, homeBeat: undefined };
+    await this.save();
+  }
+
+  /** Make this device the home base (taking over from any other), or stop being it. */
+  async setHome(on: boolean, now = new Date()): Promise<void> {
+    if (!this.state.enabled) throw new Error("Turn sync on first.");
+    if (!this.remote.setHome) throw new Error("This kind of sync can't have a home base.");
+    if (on) {
+      const beat = { device: this.state.device, deviceName: this.state.deviceName, at: now.toISOString() };
+      await this.remote.setHome(beat);
+      this.state.home = true;
+      this.state.homeBeat = beat;
+    } else {
+      if (this.state.homeBeat?.device === this.state.device) await this.remote.setHome(null);
+      this.state.home = false;
+      this.state.homeBeat = undefined;
+    }
+    await this.save();
+  }
+
+  /** The home base says it's still here. Stops being home if another device took the job. */
+  async beat(now = new Date()): Promise<void> {
+    if (!this.state.enabled || !this.state.home || !this.remote.setHome) return;
+    const there = await this.remote.home?.();
+    if (there && there.device !== this.state.device) {
+      this.state.home = false;
+      this.state.homeBeat = there;
+    } else {
+      const beat = { device: this.state.device, deviceName: this.state.deviceName, at: now.toISOString() };
+      await this.remote.setHome(beat);
+      this.state.homeBeat = beat;
+    }
+    await this.save();
+  }
+
+  /**
+   * Does this device do Cove's own work (routines, heads-ups, scans)? Without sync every
+   * device does. With it: the home base while it's been heard from, otherwise the phone.
+   */
+  runsJobs(phone: boolean, now = Date.now()): boolean {
+    if (!this.state.enabled) return true;
+    if (this.state.home) return true;
+    const beat = this.state.homeBeat;
+    if (beat && beat.device !== this.state.device && now - new Date(beat.at).getTime() < HOME_STALE_MS) return false;
+    return phone;
+  }
+
+  /** The newest snapshot seen at the last check. */
+  private seen?: SnapshotInfo;
+  /** When the other devices were last up to date (read by the home base at each check). */
+  private marks: SeenMark[] = [];
+  private markedAt = 0;
+
+  /**
+   * Has another device caught up since then? If so it already has whatever existed at that
+   * time (a reminder to schedule for itself, say). A little slack covers the upload delay.
+   */
+  caughtUpSince(iso: string | undefined, slackMs = 20_000): boolean {
+    if (!iso) return false;
+    const t = new Date(iso).getTime() + slackMs;
+    return this.marks.some((m) => m.device !== this.state.device && new Date(m.at).getTime() >= t);
+  }
+
+  /** Another device saved moments ago: someone is using it, so the home base holds its own work. */
+  othersActive(now = Date.now()): boolean {
+    const s = this.seen;
+    if (s && s.device !== this.state.device && now - new Date(s.savedAt).getTime() < HOME_QUIET_MS) return true;
+    // a phone with Cove open checks in every minute: while it does, the home base waits its turn
+    return this.marks.some((m) => m.device !== this.state.device && now - new Date(m.at).getTime() < HOME_HOLD_MS);
+  }
+
+  /**
+   * Bring this device and the remote together. `canPull` is false while loading
+   * would interrupt you (a reply being written, a worker running, a half-typed message).
+   */
+  async check(canPull = true): Promise<SyncResult> {
+    if (!this.state.enabled) return "off";
+    if (this.busy) return "busy";
+    this.busy = true;
+    try {
+      const list = await this.remote.list();
+      const latest = latestSnapshot(list);
+      this.seen = latest;
+      // who's the home base, and has it been heard from? (a failed look keeps what we knew)
+      if (this.remote.home) {
+        const beat = await this.remote.home().catch(() => this.state.homeBeat);
+        // another computer took the job: stop doing it here right away, so nothing runs twice
+        if (this.state.home && beat && beat.device !== this.state.device) this.state.home = false;
+        if (!this.state.home && JSON.stringify(beat) !== JSON.stringify(this.state.homeBeat)) {
+          this.state.homeBeat = beat;
+          await this.save();
+        }
+      }
+      if (this.state.home && this.remote.seen) this.marks = await this.remote.seen().catch(() => this.marks);
+      const ours = !latest || latest.id === this.state.base?.id;
+      let result: SyncResult;
+      if (ours) result = this.state.dirty || !latest ? await this.push(list) : "up-to-date";
+      else if (!this.state.dirty) result = canPull ? await this.pull(latest) : "busy";
+      else if (this.state.home) {
+        // nobody is at the home base to pick a side: the other device's changes win,
+        // this one's are kept as a conflict copy, and its work runs again from there
+        if (!canPull) result = "busy";
+        else {
+          // ...and after the restart, what it did on its own is copied back in from that copy
+          this.state.graftFrom = (await this.upload(list, "conflict")).id;
+          result = await this.pull(latest);
+        }
+      } else {
+        // The other side is the home base, which only works on its own: take its work in
+        // (its posts, what it has already checked) and carry on, instead of asking the user.
+        let merged = false;
+        if (latest.device === this.state.homeBeat?.device && latest.device !== this.state.device) {
+          try {
+            merged = !(await this.lyra.graft(await this.remote.download(latest.id), await this.passphrase())).human;
+          } catch (e) {
+            console.error("[lyra] sync merge", e);
+          }
+        }
+        if (merged) result = await this.push(list);
+        else {
+          this.state.conflict = latest;
+          await this.save();
+          result = "conflict";
+        }
+      }
+      if (result !== "busy" && result !== "conflict") {
+        this.state.lastSync = new Date().toISOString();
+        this.state.lastError = undefined;
+        await this.save();
+        // tell the home base this device is up to date (at most once a minute, and always after loading)
+        if (!this.state.home && this.remote.markSeen && (result === "pulled" || Date.now() - this.markedAt > 60_000)) {
+          this.markedAt = Date.now();
+          await this.remote.markSeen({ device: this.state.device, deviceName: this.state.deviceName, at: this.state.lastSync }).catch(() => {});
+        }
+      }
+      return result;
+    } catch (e) {
+      this.state.lastError = (e as Error).message;
+      await this.save().catch(() => {});
+      throw e;
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  /** Both sides changed: keep this device's version, or load the other one. The side not kept is saved as a conflict copy. */
+  async resolve(keep: "this" | "other"): Promise<SyncResult> {
+    const other = this.state.conflict;
+    if (!other) return this.check();
+    this.busy = true;
+    try {
+      const list = await this.remote.list();
+      if (keep === "this") {
+        // the other side's snapshot stays in the list (it's older than ours now)
+        const r = await this.push(list);
+        this.state.conflict = undefined;
+        await this.save();
+        return r;
+      }
+      await this.upload(list, "conflict"); // this device's changes, just in case
+      const latest = latestSnapshot(list) ?? other;
+      const r = await this.pull(latest);
+      return r;
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  private async upload(list: SnapshotInfo[], kind: "snapshot" | "conflict"): Promise<SnapshotInfo> {
+    const top = Math.max(0, ...list.map((s) => s.rev), this.state.base?.rev ?? 0);
+    const bytes = await this.lyra.backup(await this.passphrase());
+    const info = {
+      rev: kind === "conflict" ? top : top + 1,
+      device: this.state.device,
+      deviceName: this.state.deviceName,
+      savedAt: new Date().toISOString(),
+      kind,
+    };
+    const made = await this.remote.upload(bytes, info);
+    this.onSnapshot?.(bytes, info);
+    return made;
+  }
+
+  /** Counts every local change, so one made while a push or pull is in flight isn't forgotten. */
+  private changes = 0;
+
+  private async push(list: SnapshotInfo[]): Promise<SyncResult> {
+    const before = this.changes;
+    const made = await this.upload(list, "snapshot");
+    this.state.base = { id: made.id, rev: made.rev };
+    // something changed while this was uploading: still dirty, it goes up next time
+    this.state.dirty = this.changes !== before;
+    this.state.conflict = undefined;
+    await this.save();
+    // keep the newest few
+    const old = [...list, made].sort((a, b) => newer(b, a)).slice(KEEP);
+    for (const s of old) await this.remote.remove(s.id).catch(() => {});
+    return "pushed";
+  }
+
+  private async pull(latest: SnapshotInfo): Promise<SyncResult> {
+    const before = this.changes;
+    const bytes = await this.remote.download(latest.id);
+    // changed here while downloading: don't overwrite it; the next check treats it as a conflict
+    if (this.changes !== before) return "busy";
+    this.onSnapshot?.(bytes, latest);
+    const pass = await this.passphrase();
+    this.frozen = true;
+    try {
+      await this.lyra.restore(bytes, pass, { keepThisDevice: true });
+    } catch (e) {
+      this.frozen = false;
+      throw e;
+    }
+    this.state.base = { id: latest.id, rev: latest.rev };
+    this.state.dirty = false;
+    this.state.conflict = undefined;
+    this.state.justPulled = true;
+    await this.save();
+    return "pulled";
+  }
+
+  /** After the app restarts on pulled data. */
+  async started(): Promise<void> {
+    if (this.state.justPulled) {
+      // loading the snapshot itself rewrote local files: that isn't a change of ours
+      this.state.justPulled = false;
+      this.state.dirty = false;
+      await this.save();
+    }
+    // the home base loaded a person's changes over its own: bring its own work back in
+    const from = this.state.graftFrom;
+    if (from) {
+      this.state.graftFrom = undefined;
+      await this.save();
+      try {
+        await this.lyra.graft(await this.remote.download(from), await this.passphrase());
+      } catch (e) {
+        console.error("[lyra] sync merge", e);
+      }
+    }
+  }
+}

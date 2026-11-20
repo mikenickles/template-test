@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tasks (app icon shortcut): a dark disc with a light glyph -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:width="48dp" android:height="48dp">
+        <shape android:shape="oval">
+            <solid android:color="#1C1B17" />
+        </shape>
+    </item>
+    <item android:width="24dp" android:height="24dp" android:gravity="center">
+        <vector android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+            <path
+                android:fillColor="#00000000"
+                android:strokeColor="#F3F0E8"
+                android:strokeWidth="1.8"
+                android:strokeLineCap="round"
+                android:strokeLineJoin="round"
+                android:pathData="M4,7l2,2 3,-4M4,16l2,2 3,-4M13,7h7M13,16h7" />
+        </vector>
+    </item>
+</layer-list>

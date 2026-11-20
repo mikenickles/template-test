@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Cove</string>
+    <string name="title_activity_main">Cove</string>
+    <string name="package_name">app.cove.chief</string>
+    <string name="custom_url_scheme">app.cove.chief</string>
+    <string name="widget_description">What Cove is doing, what\'s ready for you, and what\'s next</string>
+    <string name="shortcut_tasks">Tasks</string>
+    <string name="shortcut_tasks_long">Your tasks</string>
+    <string name="shortcut_memo">Voice memo</string>
+    <string name="shortcut_memo_long">Record a voice memo</string>
+    <string name="shortcut_talk">Talk to Cove</string>
+    <string name="shortcut_talk_long">Talk to Cove</string>
+</resources>
