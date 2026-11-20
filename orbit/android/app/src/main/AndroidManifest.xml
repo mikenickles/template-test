@@ -2,6 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- A ping when agents finish replying while Orbit is in the background. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <!-- The hub is reached over plain HTTP on the home network or a private VPN. -->
     <application
@@ -35,5 +39,11 @@
                 <data android:scheme="orbit" android:host="pair" />
             </intent-filter>
         </activity>
+
+        <!-- Follows the hub while agents finish a reply in the background. -->
+        <service
+            android:name=".notify.ReplyWatcher"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 </manifest>

@@ -1,6 +1,8 @@
 package dev.orbit.app
 
+import dev.orbit.app.data.ActiveRuns
 import dev.orbit.app.data.Agent
+import dev.orbit.app.data.HubEvent
 import dev.orbit.app.data.HubClient
 import dev.orbit.app.data.HubException
 import dev.orbit.app.data.Message
@@ -49,6 +51,8 @@ class LiveHubTest {
         // Folders are shared on the PC; the phone sees them and can stop sharing one.
         assertEquals(client.state().folders, client.removeFolder("not-a-folder"))
         val room = client.saveRoom(Room(name = "Live test", agentIds = listOf(agent.id)))
+        // The hub-wide stream opens with what is running now: nothing yet.
+        assertEquals(HubEvent.Running(ActiveRuns()), withTimeout(5_000) { client.watch().first() })
 
         // Mirror what RoomViewModel does: subscribe, load, then fold events into state.
         var ui = RoomUiState()

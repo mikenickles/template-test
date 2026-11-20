@@ -44,6 +44,8 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.orbit.app.data.Session
+import dev.orbit.app.notify.ReplyWatcher
+import dev.orbit.app.notify.rememberNotificationAsk
 import dev.orbit.app.ui.AppState
 import dev.orbit.app.ui.AppViewModel
 import dev.orbit.app.ui.OrbitNavHost
@@ -66,18 +68,36 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent { OrbitTheme { OrbitRoot(vm) } }
-        if (savedInstanceState == null) openPairingLink(intent)
+        if (savedInstanceState == null) openLink(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        openPairingLink(intent)
+        openLink(intent)
     }
 
-    /** An orbit://pair link (from the hub's QR code, scanned by the phone's camera) pairs right away. */
-    private fun openPairingLink(intent: Intent?) {
+    /**
+     * orbit://pair (the hub's QR code, scanned by the phone's camera) pairs right away; orbit://room/<id>
+     * (a tapped reply notification) opens that room.
+     */
+    private fun openLink(intent: Intent?) {
         val link = intent?.data?.takeIf { it.scheme == "orbit" } ?: return
-        vm.pairWithLink(link.toString())
+        when (link.host) {
+            "room" -> link.pathSegments.firstOrNull()?.let(vm::openRoom)
+            else -> vm.pairWithLink(link.toString())
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Back on screen: the app shows replies itself.
+        ReplyWatcher.stop(this)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Leaving while agents are still replying: keep listening, so their reply can ping the phone.
+        if (!isChangingConfigurations && (application as OrbitApp).repository.mayBeWorking()) ReplyWatcher.start(this)
     }
 
     private val vm: AppViewModel by viewModels()
@@ -146,6 +166,17 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
         vm.refresh()
         onPauseOrDispose {}
     }
+    // A tapped notification opens its room.
+    val pendingRoom by vm.pendingRoom.collectAsStateWithLifecycle()
+    LaunchedEffect(pendingRoom) {
+        val id = pendingRoom ?: return@LaunchedEffect
+        nav.navigate("room/$id") {
+            popUpTo("home")
+            launchSingleTop = true
+        }
+        vm.roomOpened()
+    }
+    val askNotifications = rememberNotificationAsk()
 
     OrbitNavHost(nav, startDestination = "home") {
         screen("home") {
@@ -184,7 +215,10 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 room = room,
                 agents = room.agentIds.mapNotNull(state::agent),
                 state = roomState,
-                onSend = roomVm::send,
+                onSend = {
+                    askNotifications()
+                    roomVm.send(it)
+                },
                 onStop = roomVm::stop,
                 onBack = { nav.popBackStack() },
                 onEdit = { nav.navigate("roomEdit?id=$id") },

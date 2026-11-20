@@ -88,6 +88,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun reload() {
         _state.update { it.copy(refreshing = true) }
         val fresh = hub(quiet = true) { it.state() }
+        fresh?.rooms?.forEach { repo.noteRun(it.id, it.active) }
         _state.update {
             if (fresh == null) {
                 it.copy(refreshing = false, offline = true)
@@ -138,6 +139,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         _pair.update { it.copy(scanned = link) }
         pair(link.host, link.code)
+    }
+
+    /** A room to open as soon as the app is showing, from a tapped notification. */
+    private val _pendingRoom = MutableStateFlow<String?>(null)
+    val pendingRoom: StateFlow<String?> = _pendingRoom.asStateFlow()
+
+    fun openRoom(id: String) {
+        _pendingRoom.value = id
+    }
+
+    fun roomOpened() {
+        _pendingRoom.value = null
     }
 
     fun unpair() {

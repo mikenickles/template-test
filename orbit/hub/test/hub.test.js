@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { Store } from '../src/store.js';
-import { KeyCheck, Providers } from '../src/providers.js';
+import { KeyCheck, ProviderError, Providers } from '../src/providers.js';
 import { qrTerminal, pairingLink } from '../src/qr.js';
 import { encodeCommand, ruleScript, ensureFirewall } from '../src/firewall.js';
 import { launcherScript } from '../src/autostart.js';
@@ -229,6 +229,50 @@ test('buildTranscript always ends on a user turn', () => {
     { author: { type: 'agent', agentId: 'b', name: 'Pixel' }, text: '', status: 'error' },
   ]);
   assert.deepEqual(turns.map((t) => t.role), ['user', 'assistant', 'user']);
+});
+
+test('a phone following every room hears who is working and each finished reply', async (t) => {
+  const h = await startHub({ Nova: ['Fuunji is your best bet. @Sage?', 'Fuunji it is.'], Sage: [new ProviderError('Ollama could not be reached.')] });
+  t.after(h.close);
+  await h.pair();
+  const nova = await h.makeAgent('Nova');
+  const sage = await h.makeAgent('Sage');
+  const room = (await h.api('POST', '/api/rooms', { name: 'Trip', agentIds: [nova.id, sage.id], mode: 'lead', leadId: nova.id })).body;
+
+  assert.equal((await fetch(`${h.base}/api/events`)).status, 401, 'needs pairing');
+  const res = await fetch(`${h.base}/api/events`, { headers: { authorization: `Bearer ${h.tokenRef()}` } });
+  const reader = res.body.getReader();
+  const events = [];
+  let raw = '';
+  const next = async () => {
+    for (;;) {
+      const end = raw.indexOf('\n\n');
+      if (end >= 0) {
+        const block = raw.slice(0, end);
+        raw = raw.slice(end + 2);
+        const event = /^event: (.+)$/m.exec(block)?.[1];
+        if (event) return { event, data: JSON.parse(/^data: (.+)$/m.exec(block)[1]) };
+        continue;
+      }
+      const { value } = await reader.read();
+      raw += new TextDecoder().decode(value);
+    }
+  };
+  assert.deepEqual(await next(), { event: 'runs', data: { rooms: [] } });
+
+  await h.api('POST', `/api/rooms/${room.id}/messages`, { text: 'Where should we eat?' });
+  for (;;) {
+    const e = await next();
+    events.push(e);
+    if (e.event === 'run' && !e.data.active) break;
+  }
+  await reader.cancel();
+
+  const replies = events.filter((e) => e.event === 'reply').map((e) => e.data);
+  assert.deepEqual(replies.map((r) => [r.room, r.author, r.status]), [['Trip', 'Nova', 'done'], ['Trip', 'Sage', 'error'], ['Trip', 'Nova', 'done']]);
+  assert.equal(replies[1].error, 'Ollama could not be reached.');
+  assert.ok(events.some((e) => e.event === 'run' && e.data.active && e.data.agent === 'Sage' && e.data.room === 'Trip'));
+  assert.ok(!events.some((e) => e.event === 'delta' || e.event === 'message'), 'no streaming detail, just the outline');
 });
 
 test('the pairing page shows the live code and QR, then who just paired', async (t) => {

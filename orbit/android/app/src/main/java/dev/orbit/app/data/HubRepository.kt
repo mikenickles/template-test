@@ -2,6 +2,8 @@ package dev.orbit.app.data
 
 import android.content.Context
 import android.os.Build
+import android.os.SystemClock
+import java.util.concurrent.ConcurrentHashMap
 import androidx.core.content.edit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +21,23 @@ class HubRepository(context: Context) {
 
     val client: HubClient?
         get() = _session.value?.let { HubClient(it.baseUrl, it.token) }
+
+    // Rooms seen working, and when a message was last sent, so leaving the app knows whether a
+    // reply is still on its way and worth waiting for in the background.
+    private val working = ConcurrentHashMap.newKeySet<String>()
+    @Volatile private var lastSent = 0L
+
+    fun noteRun(roomId: String, active: Boolean) {
+        if (active) working.add(roomId) else working.remove(roomId)
+    }
+
+    fun noteSent() {
+        lastSent = SystemClock.elapsedRealtime()
+    }
+
+    /** Whether agents may still be replying somewhere. */
+    fun mayBeWorking(): Boolean =
+        _session.value != null && (working.isNotEmpty() || SystemClock.elapsedRealtime() - lastSent < 60_000)
 
     private fun load(): Session? {
         val url = prefs.getString("baseUrl", null) ?: return null

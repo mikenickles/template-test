@@ -81,6 +81,7 @@ class RoomViewModel(app: Application, private val roomId: String) : AndroidViewM
                 val client = repo.client ?: break
                 try {
                     client.events(roomId).collect { event ->
+                        if (event is RoomEvent.Run) repo.noteRun(roomId, event.state.active)
                         if (event == RoomEvent.Connected) {
                             load(client)
                         } else {
@@ -104,6 +105,7 @@ class RoomViewModel(app: Application, private val roomId: String) : AndroidViewM
 
     private suspend fun load(client: HubClient) {
         val snapshot = client.messages(roomId)
+        repo.noteRun(roomId, snapshot.run.active)
         _state.value = RoomUiState(loaded = true, connected = true, messages = snapshot.messages, run = snapshot.run)
     }
 
@@ -118,7 +120,10 @@ class RoomViewModel(app: Application, private val roomId: String) : AndroidViewM
         }
     }
 
-    fun send(text: String) = act { it.send(roomId, text) }
+    fun send(text: String) = act {
+        repo.noteSent()
+        it.send(roomId, text)
+    }
 
     fun stop() = act { it.stop(roomId) }
 

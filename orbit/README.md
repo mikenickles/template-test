@@ -16,6 +16,9 @@ hub on an always-on PC.
 - **Rooms** are group chats. In a *round table* every agent replies in turn; in
   a *lead* room one agent answers first, delegates, and sums up. Agents hand
   work to each other with `@Name`, and you can `@mention` to ask one directly.
+- **Notifications.** Leave the app while agents are replying and you get a
+  ping when they finish ("Nova: Fuunji is your best bet…"); tap it to open the
+  room. The app asks for permission the first time you send a message.
 - **The hub** (`hub/`) runs on your PC. It holds the API keys, calls the
   models, and keeps agents working while the phone is asleep. The app
   (`android/`) is a client for it.

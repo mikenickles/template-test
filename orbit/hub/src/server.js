@@ -41,6 +41,7 @@ export class Hub {
     this.name = name;
     this.onPairingCode = onPairingCode;
     this.subscribers = new Map(); // roomId -> Set<ServerResponse>
+    this.watchers = new Set(); // phones following every room, to notify when replies land
     this.orchestrator = new Orchestrator({ store, providers, folders, emit: (...args) => this.#emit(...args) });
     this.pairFailures = 0;
     this.pairLockedUntil = 0;
@@ -84,6 +85,7 @@ export class Hub {
   close() {
     this.discovery?.close();
     for (const set of this.subscribers.values()) for (const res of set) res.end();
+    for (const res of this.watchers) res.end();
     this.server.close();
     this.server.closeAllConnections?.();
     this.store.flush();
@@ -122,6 +124,36 @@ export class Hub {
     for (const res of this.subscribers.get(roomId) ?? []) {
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     }
+    if (!this.watchers.size) return;
+    // Watchers get the outline only: who is working where, and each finished reply.
+    if (event === 'run') {
+      this.#watch('run', this.#runView(roomId, data));
+    } else if (event === 'message' && data.author?.type === 'agent' && data.status !== 'streaming') {
+      this.#watch('reply', {
+        roomId,
+        room: this.store.room(roomId)?.name ?? '',
+        id: data.id,
+        author: data.author.name,
+        text: data.text.replace(/\s+/g, ' ').trim().slice(0, 300),
+        status: data.status,
+        error: data.error ?? null,
+      });
+    }
+  }
+
+  #watch(event, data) {
+    for (const res of this.watchers) res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  }
+
+  /** A room's run as watchers see it, with names so a notification can say who is replying where. */
+  #runView(roomId, run = this.orchestrator.runState(roomId)) {
+    return {
+      roomId,
+      room: this.store.room(roomId)?.name ?? '',
+      active: run.active,
+      agentId: run.agentId,
+      agent: this.store.agent(run.agentId)?.name ?? null,
+    };
   }
 
   #roomView(room) {
@@ -216,6 +248,8 @@ export class Hub {
           providers: this.providers.list(),
           folders: this.folders.list(),
         };
+      case 'GET /api/events':
+        return this.#follow(req, res);
       case 'DELETE /api/device': {
         this.store.state.devices = this.store.state.devices.filter((d) => d.id !== device.id);
         this.store.save();
@@ -419,6 +453,20 @@ export class Hub {
     const mode = body.mode === 'lead' ? 'lead' : 'roundtable';
     const leadId = mode === 'lead' ? (agentIds.includes(body.leadId) ? body.leadId : agentIds[0]) : null;
     return { name, agentIds, mode, leadId };
+  }
+
+  /** Every room at once, for a phone that wants to know when its crew is done. Starts with what is running now. */
+  #follow(req, res) {
+    res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache, no-transform', connection: 'keep-alive' });
+    const running = this.store.state.rooms.filter((r) => this.orchestrator.runState(r.id).active).map((r) => this.#runView(r.id));
+    res.write(`event: runs\ndata: ${JSON.stringify({ rooms: running })}\n\n`);
+    this.watchers.add(res);
+    const heartbeat = setInterval(() => res.write(': keep-alive\n\n'), 20000);
+    req.on('close', () => {
+      clearInterval(heartbeat);
+      this.watchers.delete(res);
+    });
+    return undefined;
   }
 
   #subscribe(req, res, roomId) {

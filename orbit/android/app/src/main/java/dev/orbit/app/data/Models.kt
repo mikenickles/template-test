@@ -178,3 +178,36 @@ sealed interface RoomEvent {
     data class Run(val state: RunState) : RoomEvent
     data object Cleared : RoomEvent
 }
+
+/** A room whose agents are replying, as the hub-wide stream reports it. */
+@Serializable
+data class RoomRun(
+    val roomId: String,
+    val room: String = "",
+    val active: Boolean = false,
+    val agentId: String? = null,
+    /** The name of the agent replying now. */
+    val agent: String? = null,
+)
+
+@Serializable
+data class ActiveRuns(val rooms: List<RoomRun> = emptyList())
+
+/** A reply that has finished (or failed), in short. */
+@Serializable
+data class Reply(
+    val roomId: String,
+    val room: String = "",
+    val id: String = "",
+    val author: String = "",
+    val text: String = "",
+    val status: String = Message.STATUS_DONE,
+    val error: String? = null,
+)
+
+/** What the hub-wide stream says: who is working where, and each reply as it lands. */
+sealed interface HubEvent {
+    data class Running(val runs: ActiveRuns) : HubEvent
+    data class Run(val run: RoomRun) : HubEvent
+    data class Replied(val reply: Reply) : HubEvent
+}

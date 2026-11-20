@@ -94,13 +94,39 @@ class HubClient(val baseUrl: String, private val token: String? = null) {
     }
 
     /** Live updates for a room. Completes or fails when the connection drops; the caller reconnects. */
-    fun events(roomId: String): Flow<RoomEvent> = callbackFlow {
-        val call = streaming.newCall(request("/api/rooms/$roomId/events").build())
+    fun events(roomId: String): Flow<RoomEvent> = serverEvents("/api/rooms/$roomId/events", RoomEvent.Connected) { event, data ->
+        when (event) {
+            "message" -> RoomEvent.Upsert(OrbitJson.decodeFromString<Message>(data))
+            "delta" -> RoomEvent.Chunk(OrbitJson.decodeFromString<Delta>(data))
+            "activity" -> RoomEvent.Progress(OrbitJson.decodeFromString<ActivityUpdate>(data))
+            "reset" -> RoomEvent.Reset(OrbitJson.decodeFromString<TextReset>(data))
+            "run" -> RoomEvent.Run(OrbitJson.decodeFromString<RunState>(data))
+            "cleared" -> RoomEvent.Cleared
+            else -> null
+        }
+    }
+
+    /** Every room at once: what is running now, then each change and finished reply. */
+    fun watch(): Flow<HubEvent> = serverEvents("/api/events", null) { event, data ->
+        when (event) {
+            "runs" -> HubEvent.Running(OrbitJson.decodeFromString<ActiveRuns>(data))
+            "run" -> HubEvent.Run(OrbitJson.decodeFromString<RoomRun>(data))
+            "reply" -> HubEvent.Replied(OrbitJson.decodeFromString<Reply>(data))
+            else -> null
+        }
+    }
+
+    /**
+     * A server-sent event stream, parsed with [parse] (null skips an event). Sends [connected] first,
+     * if given, once the hub has answered.
+     */
+    private fun <T : Any> serverEvents(path: String, connected: T?, parse: (event: String, data: String) -> T?): Flow<T> = callbackFlow {
+        val call = streaming.newCall(request(path).build())
         launch(Dispatchers.IO) {
             try {
                 call.execute().use { response ->
                     if (!response.isSuccessful) throw failure(response)
-                    send(RoomEvent.Connected)
+                    connected?.let { send(it) }
                     val source = response.body.source()
                     var event = ""
                     val data = StringBuilder()
@@ -108,7 +134,7 @@ class HubClient(val baseUrl: String, private val token: String? = null) {
                         val line = source.readUtf8Line() ?: break
                         when {
                             line.isEmpty() -> {
-                                parseEvent(event, data.toString())?.let { send(it) }
+                                runCatching { parse(event, data.toString()) }.getOrNull()?.let { send(it) }
                                 event = ""
                                 data.clear()
                             }
@@ -124,18 +150,6 @@ class HubClient(val baseUrl: String, private val token: String? = null) {
         }
         awaitClose { call.cancel() }
     }
-
-    private fun parseEvent(event: String, data: String): RoomEvent? = runCatching {
-        when (event) {
-            "message" -> RoomEvent.Upsert(OrbitJson.decodeFromString<Message>(data))
-            "delta" -> RoomEvent.Chunk(OrbitJson.decodeFromString<Delta>(data))
-            "activity" -> RoomEvent.Progress(OrbitJson.decodeFromString<ActivityUpdate>(data))
-            "reset" -> RoomEvent.Reset(OrbitJson.decodeFromString<TextReset>(data))
-            "run" -> RoomEvent.Run(OrbitJson.decodeFromString<RunState>(data))
-            "cleared" -> RoomEvent.Cleared
-            else -> null
-        }
-    }.getOrNull()
 
     private fun request(path: String): Request.Builder {
         val builder = Request.Builder().url(baseUrl + path)
