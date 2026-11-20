@@ -102,6 +102,41 @@ data class Attachment(val id: String = "", val name: String = "", val type: Stri
     val isImage: Boolean get() = type.startsWith("image/")
 }
 
+/** Which schedule posted a message, and how it reads: "Every day at 08:00". */
+@Serializable
+data class ScheduledBy(val id: String = "", val label: String = "")
+
+/**
+ * A message the hub posts into a room at a set time on chosen days, by the PC's clock. [days] run from
+ * 0 (Sunday) to 6 (Saturday); [time] is "HH:MM".
+ */
+@Serializable
+data class Schedule(
+    val id: String = "",
+    val roomId: String = "",
+    val text: String = "",
+    val time: String = "08:00",
+    val days: List<Int> = listOf(1, 2, 3, 4, 5),
+    val enabled: Boolean = true,
+    val lastRunAt: Long? = null,
+    val nextRunAt: Long? = null,
+)
+
+/** A scheduled run's result, kept on the hub for a phone that was asleep. */
+@Serializable
+data class Notice(
+    val id: String = "",
+    val at: Long = 0,
+    val roomId: String = "",
+    val room: String = "",
+    val author: String = "",
+    val text: String = "",
+    val replies: Int = 0,
+)
+
+@Serializable
+data class Notices(val notices: List<Notice> = emptyList(), val now: Long = 0)
+
 /** A web page a reply cites. */
 @Serializable
 data class Source(val title: String = "", val url: String = "")
@@ -118,6 +153,8 @@ data class Message(
     val activity: List<Activity> = emptyList(),
     val sources: List<Source> = emptyList(),
     val attachments: List<Attachment> = emptyList(),
+    /** Set when the hub posted this message on a schedule. */
+    val scheduled: ScheduledBy? = null,
 ) {
     val fromUser get() = author.type == "user"
 
@@ -168,6 +205,7 @@ data class HubState(
     val rooms: List<Room> = emptyList(),
     val providers: List<Provider> = emptyList(),
     val folders: List<SharedFolder> = emptyList(),
+    val schedules: List<Schedule> = emptyList(),
 )
 
 /** Whether agents are replying in a room right now, and who has the floor. */

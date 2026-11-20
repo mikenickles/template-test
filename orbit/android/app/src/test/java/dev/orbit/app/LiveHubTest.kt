@@ -7,6 +7,7 @@ import dev.orbit.app.data.HubClient
 import dev.orbit.app.data.HubException
 import dev.orbit.app.data.Message
 import dev.orbit.app.data.Room
+import dev.orbit.app.data.Schedule
 import dev.orbit.app.data.RoomEvent
 import dev.orbit.app.ui.RoomUiState
 import dev.orbit.app.ui.reduce
@@ -101,6 +102,24 @@ class LiveHubTest {
         assertTrue(latest.messages.none { it.id == reply.id })
         client.deleteMessage(room.id, latest.messages.last().id)
         assertEquals(listOf("hello from the test"), client.messages(room.id).messages.map { it.text })
+
+        // A schedule is made, run on demand, and leaves a result for the phone to collect.
+        val since = client.notices(0).now
+        val schedule = client.saveSchedule(Schedule(roomId = room.id, text = "Morning check-in", time = "07:30", days = listOf(1, 2, 3, 4, 5)))
+        assertTrue(schedule.nextRunAt != null)
+        assertEquals("07:45", client.saveSchedule(schedule.copy(time = "07:45")).time)
+        client.runSchedule(schedule.id)
+        val notice = withTimeout(20_000) {
+            var found = client.notices(since).notices
+            while (found.isEmpty()) {
+                delay(200)
+                found = client.notices(since).notices
+            }
+            found.single()
+        }
+        assertEquals(room.id, notice.roomId)
+        assertEquals("Weekdays at 07:45", client.messages(room.id).messages.first { it.scheduled != null }.scheduled!!.label)
+        client.deleteSchedule(schedule.id)
 
         client.deleteRoom(room.id)
         client.deleteAgent(agent.id)

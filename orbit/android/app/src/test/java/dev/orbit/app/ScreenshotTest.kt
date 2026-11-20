@@ -40,6 +40,8 @@ import dev.orbit.app.ui.screens.RoomScreen
 import dev.orbit.app.ui.screens.SampleCrew
 import dev.orbit.app.ui.screens.SettingsScreen
 import dev.orbit.app.ui.screens.ShareScreen
+import dev.orbit.app.ui.screens.ScheduleEditorScreen
+import dev.orbit.app.ui.screens.SchedulesScreen
 import dev.orbit.app.ui.screens.UsageScreen
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitDimens
@@ -185,6 +187,9 @@ class ScreenshotTest {
     @Test fun shareLight() = shot("share-light", dark = false) {
         ShareScreen(dev.orbit.app.data.SharedContent("Is this a good deal? https://shop.example/headphones", skipped = 1), SampleData.app.rooms, agents, {}, {}, {})
     }
+    @Test fun schedules() = shot("schedules") { SchedulesScreen(launch, SampleData.schedules, {}, {}, {}, {}, now = now) }
+    @Test fun schedulesEmptyLight() = shot("schedules-empty-light", dark = false) { SchedulesScreen(trip, emptyList(), {}, {}, {}, {}, now = now) }
+    @Test fun scheduledMessage() = shot("room-scheduled") { RoomScreen(launch, listOf(nova, pixel, sage), SampleData.briefing, {}, {}, {}, {}, {}) }
     @Test fun usage() = shot("usage") { UsageScreen(SampleData.usage, agents, 30, {}, {}) }
     @Test fun usageLight() = shot("usage-light", dark = false) { UsageScreen(SampleData.usage, agents, 30, {}, {}) }
     @Test fun roomResearch() = shot("room-research") { RoomScreen(trip.copy(agentIds = listOf("a1")), listOf(nova), SampleData.research, {}, {}, {}, {}, {}) }
@@ -210,6 +215,8 @@ class TallScreenshotTest {
     @Test fun agentEditorOtherProviderLight() = shot("agent-editor-full-light", dark = false) {
         AgentEditorScreen(SampleData.mochi.copy(abilities = listOf("web")), providers, { emptyList() }, {}, {}, {})
     }
+    @Test fun scheduleEditor() = shot("schedule-editor-full") { ScheduleEditorScreen(SampleData.launch, SampleData.schedules[0], {}, {}, {}, {}) }
+    @Test fun scheduleEditorLight() = shot("schedule-editor-full-light", dark = false) { ScheduleEditorScreen(SampleData.trip, null, {}, null, null, {}) }
     @Test fun settings() = shot("settings-full") { SettingsScreen(SampleData.app, "http://100.101.102.103:8787", {}, {}, usage = SampleData.usage) }
     @Test fun settingsNoFoldersLight() = shot("settings-full-light", dark = false) {
         SettingsScreen(SampleData.app.copy(folders = emptyList(), hub = SampleData.app.hub.copy(remote = emptyList())), "http://192.168.1.20:8787", {}, {})

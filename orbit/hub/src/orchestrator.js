@@ -236,8 +236,8 @@ export class Orchestrator {
   }
 
   /** Add a user message and make sure a run is answering it. */
-  post(roomId, text, attachments = []) {
-    const message = this.#append(roomId, { type: 'user', name: 'You' }, text, 'done', attachments.length ? { attachments } : {});
+  post(roomId, text, attachments = [], extra = {}) {
+    const message = this.#append(roomId, { type: 'user', name: 'You' }, text, 'done', { ...(attachments.length ? { attachments } : {}), ...extra });
     const run = this.runs.get(roomId);
     if (run) {
       run.restart = true; // picked up when the current speaker finishes

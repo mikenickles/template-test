@@ -6,6 +6,10 @@ import dev.orbit.app.data.Agent
 import dev.orbit.app.data.Author
 import dev.orbit.app.data.OrbitJson
 import dev.orbit.app.data.TextReset
+import dev.orbit.app.data.Notice
+import dev.orbit.app.notify.noticeText
+import dev.orbit.app.ui.screens.describeDays
+import dev.orbit.app.ui.screens.nextRunLabel
 import dev.orbit.app.data.SharedContent
 import dev.orbit.app.data.SharedFile
 import dev.orbit.app.data.sharedText
@@ -234,5 +238,21 @@ class RoomStateTest {
         assertEquals("Saved 2 notes and forgot a note", activitySummary(List(2) { Activity("remember") } + Activity("forget")))
         val agent = OrbitJson.decodeFromString<Agent>("""{"name":"Nova","memory":[{"id":"n1","text":"Lives in Leeds","source":"agent","createdAt":1}]}""")
         assertEquals("Lives in Leeds", agent.memory.single().text)
+    }
+
+    @Test
+    fun `schedules read plainly`() {
+        assertEquals("Every day", describeDays((0..6).toList()))
+        assertEquals("Weekdays", describeDays(listOf(5, 4, 3, 2, 1)))
+        assertEquals("Mon, Wed, Sun", describeDays(listOf(0, 3, 1)))
+        val zone = java.time.ZoneId.of("Europe/London")
+        val now = java.time.ZonedDateTime.of(2026, 11, 20, 9, 0, 0, 0, zone).toInstant().toEpochMilli()
+        fun at(day: Int, hour: Int, minute: Int) = java.time.ZonedDateTime.of(2026, 11, day, hour, minute, 0, 0, zone).toInstant().toEpochMilli()
+        assertEquals("Today at 18:30", nextRunLabel(at(20, 18, 30), now, zone))
+        assertEquals("Tomorrow at 08:00", nextRunLabel(at(21, 8, 0), now, zone))
+        assertTrue(nextRunLabel(at(23, 8, 0), now, zone)!!.endsWith(" at 08:00"))
+        assertNull(nextRunLabel(null, now, zone))
+        assertEquals("Nova: Three things moved.", noticeText(Notice(author = "Nova", text = "Three things moved.")))
+        assertEquals("Sage couldn't reply: offline", noticeText(Notice(author = "Sage", text = "couldn't reply: offline")))
     }
 }

@@ -44,6 +44,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.orbit.app.data.Session
+import dev.orbit.app.notify.AppVisibility
 import dev.orbit.app.notify.ReplyWatcher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -65,6 +66,8 @@ import dev.orbit.app.ui.screens.RoomScreen
 import dev.orbit.app.ui.screens.SettingsScreen
 import dev.orbit.app.ui.screens.UsageScreen
 import dev.orbit.app.ui.screens.ShareScreen
+import dev.orbit.app.ui.screens.ScheduleEditorScreen
+import dev.orbit.app.ui.screens.SchedulesScreen
 import android.net.Uri
 import androidx.core.content.IntentCompat
 import androidx.compose.runtime.mutableIntStateOf
@@ -117,12 +120,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        AppVisibility.onScreen = true
         // Back on screen: the app shows replies itself.
         ReplyWatcher.stop(this)
     }
 
     override fun onStop() {
         super.onStop()
+        AppVisibility.onScreen = false
         // Leaving while agents are still replying: keep listening, so their reply can ping the phone.
         if (!isChangingConfigurations && (application as OrbitApp).repository.mayBeWorking()) ReplyWatcher.start(this)
     }
@@ -262,6 +267,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onPickFiles = { pickFiles.launch(arrayOf("application/pdf", "text/*", "application/json")) },
                 onRemoveDraft = roomVm::detach,
                 initialDraft = shared?.text.orEmpty(),
+                onSchedules = { nav.navigate("schedules/$id") },
                 onStop = roomVm::stop,
                 onBack = { nav.popBackStack() },
                 onEdit = { nav.navigate("roomEdit?id=$id") },
@@ -324,6 +330,41 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 },
                 usage = usage?.takeIf { it.days == 30 },
                 onOpenUsage = { nav.navigate("usage") },
+            )
+        }
+        screen("schedules/{id}") { entry ->
+            val room = state.room(entry.arguments?.getString("id")) ?: return@screen
+            SchedulesScreen(
+                room = room,
+                schedules = state.schedules.filter { it.roomId == room.id },
+                onNew = { nav.navigate("schedule/${room.id}") },
+                onEdit = { nav.navigate("schedule/${room.id}?id=${it.id}") },
+                onToggle = { vm.saveSchedule(it.copy(enabled = !it.enabled)) {} },
+                onBack = { nav.popBackStack() },
+            )
+        }
+        screen("schedule/{room}?id={id}", arguments = OptionalId) { entry ->
+            val room = state.room(entry.arguments?.getString("room")) ?: return@screen
+            val schedule = state.schedules.firstOrNull { it.id == entry.arguments?.getString("id") }
+            ScheduleEditorScreen(
+                room = room,
+                initial = schedule,
+                onSave = {
+                    vm.saveSchedule(it) {
+                        haptics.confirm()
+                        nav.popBackStack()
+                    }
+                },
+                onDelete = schedule?.let { { vm.deleteSchedule(it.id) { nav.popBackStack() } } },
+                onRunNow = schedule?.let {
+                    {
+                        vm.runSchedule(it.id) {
+                            haptics.confirm()
+                            nav.navigate("room/${room.id}") { popUpTo("home") }
+                        }
+                    }
+                },
+                onBack = { nav.popBackStack() },
             )
         }
         screen("share") {

@@ -155,6 +155,7 @@ fun RoomScreen(
     onRemoveDraft: (DraftAttachment) -> Unit = {},
     /** Text to start the composer with, like something shared from another app. */
     initialDraft: String = "",
+    onSchedules: () -> Unit = {},
 ) {
     val c = Orbit.colors
     var draft by rememberSaveable { mutableStateOf(initialDraft) }
@@ -190,7 +191,7 @@ fun RoomScreen(
     Box(Modifier.fillMaxSize().background(c.bg)) {
         Scaffold(
             containerColor = Color.Transparent,
-            topBar = { RoomBar(room, agents, state, scrolledUnderBar, onBack, onEdit, onClear) },
+            topBar = { RoomBar(room, agents, state, scrolledUnderBar, onBack, onEdit, onClear, onSchedules) },
             bottomBar = {
                 Composer(
                     draft = draft,
@@ -400,6 +401,7 @@ private fun RoomBar(
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onClear: () -> Unit,
+    onSchedules: () -> Unit,
 ) {
     val c = Orbit.colors
     var menu by remember { mutableStateOf(false) }
@@ -452,6 +454,7 @@ private fun RoomBar(
                 IconTap(OrbitIcon.More, "Room options", { menu = true }, tint = c.textSecondary)
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, shape = RoundedCornerShape(OrbitDimens.radiusM)) {
                     DropdownMenuItem(text = { Text("Edit room", style = OrbitType.bodyM) }, onClick = { menu = false; onEdit() })
+                    DropdownMenuItem(text = { Text("Schedules", style = OrbitType.bodyM) }, onClick = { menu = false; onSchedules() })
                     DropdownMenuItem(text = { Text("Clear chat", style = OrbitType.bodyM) }, onClick = { menu = false; onClear() })
                 }
             }
@@ -491,6 +494,13 @@ private fun EmptyRoom(room: Room, agents: List<Agent>, modifier: Modifier) {
 private fun UserMessage(message: Message, mentionColors: Map<String, Color>, onOpenPhoto: (Attachment) -> Unit) {
     val c = Orbit.colors
     Column(Modifier.fillMaxWidth().padding(start = 56.dp), horizontalAlignment = Alignment.End) {
+        // Posted by the hub on a schedule, not typed just now.
+        message.scheduled?.let { scheduled ->
+            Row(Modifier.padding(bottom = 6.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                OrbitIcon(OrbitIcon.Clock, size = 13.dp, tint = c.textTertiary)
+                Text("Scheduled · ${scheduled.label}", Modifier.padding(start = 5.dp), style = OrbitType.caption, color = c.textTertiary)
+            }
+        }
         AttachedItems(message.attachments, onOpenPhoto, Modifier.padding(bottom = if (message.text.isNotBlank()) 6.dp else 0.dp))
         if (message.text.isNotBlank()) {
             Box(

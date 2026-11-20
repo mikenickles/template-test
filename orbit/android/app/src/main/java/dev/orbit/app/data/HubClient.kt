@@ -111,6 +111,23 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
 
     suspend fun removeMemory(agentId: String, noteId: String): Agent = call("DELETE", "/api/agents/$agentId/memory/$noteId")
 
+    suspend fun saveSchedule(schedule: Schedule): Schedule {
+        val body = OrbitJson.encodeToString(schedule)
+        return if (schedule.id.isEmpty()) call("POST", "/api/schedules", body) else call("PUT", "/api/schedules/${schedule.id}", body)
+    }
+
+    suspend fun deleteSchedule(id: String) {
+        call<Unit>("DELETE", "/api/schedules/$id")
+    }
+
+    /** Posts a schedule's message now, to try it out. */
+    suspend fun runSchedule(id: String) {
+        call<Unit>("POST", "/api/schedules/$id/run", "{}")
+    }
+
+    /** Results of scheduled runs since [since] (milliseconds), and the hub's clock now. */
+    suspend fun notices(since: Long): Notices = call("GET", "/api/notices?since=$since")
+
     suspend fun deleteAgent(id: String) {
         call<Unit>("DELETE", "/api/agents/$id")
     }

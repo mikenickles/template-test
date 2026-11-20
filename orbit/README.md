@@ -25,6 +25,10 @@ hub on an always-on PC.
 - **Memory.** Each agent keeps notes that it carries into every room. Add them
   in the agent's editor, or, for Claude agents with "Remember things" on, just
   say "remember that…" and the agent saves it itself.
+- **Scheduled tasks.** From a room's menu, have the crew run something at a set
+  time on chosen days ("Weekdays at 08:15: give me a two-line status"). The hub
+  posts it on the PC's clock; the result reaches your phone as a notification,
+  usually within 15 minutes.
 - **Notifications.** Leave the app while agents are replying and you get a
   ping when they finish ("Nova: Fuunji is your best bet…"); tap it to open the
   room. The app asks for permission the first time you send a message.

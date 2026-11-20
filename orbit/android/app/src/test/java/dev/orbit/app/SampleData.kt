@@ -16,6 +16,8 @@ import dev.orbit.app.data.Author
 import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.data.HubInfo
 import dev.orbit.app.data.MemoryNote
+import dev.orbit.app.data.Schedule
+import dev.orbit.app.data.ScheduledBy
 import dev.orbit.app.data.Message
 import dev.orbit.app.data.Preview
 import dev.orbit.app.data.Provider
@@ -186,6 +188,27 @@ object SampleData {
             DraftAttachment("d2", Uri.parse("content://docs/2"), "Hotel booking.pdf", "application/pdf"),
         ),
     ) }
+
+    /** Two schedules in the launch room, one paused. Next runs are counted from [NOW]. */
+    val schedules = listOf(
+        Schedule(
+            "s1", "r1", "Give me a two-line status: what moved yesterday, and what's blocking.", "08:15", (1..5).toList(), true,
+            nextRunAt = java.time.Instant.ofEpochMilli(NOW).atZone(java.time.ZoneId.systemDefault()).toLocalDate().plusDays(1)
+                .atTime(8, 15).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(),
+        ),
+        Schedule("s2", "r1", "Draft the Friday update for the team from this week's messages.", "16:30", listOf(5), false),
+    )
+
+    /** A morning briefing the hub posted on its own, and the reply. */
+    val briefing = RoomUiState(
+        loaded = true,
+        connected = true,
+        messages = listOf(
+            userMessage("m1", "Give me a two-line status: what moved yesterday, and what's blocking.")
+                .copy(scheduled = ScheduledBy("s1", "Weekdays at 08:15")),
+            agentMessage("m2", nova, "**Moved:** landing copy is final and signup is live on staging.\n**Blocking:** the email domain still needs warming up before invites go out."),
+        ),
+    )
 
     val chat = RoomUiState(
         loaded = true,

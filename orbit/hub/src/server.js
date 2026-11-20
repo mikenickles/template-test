@@ -4,6 +4,7 @@ import dgram from 'node:dgram';
 import { FileError, Files, MAX_FILE_BYTES } from './files.js';
 import { FolderError, Folders } from './folders.js';
 import { MemoryError, addNote, removeNote } from './memory.js';
+import { ScheduleError, Scheduler } from './schedules.js';
 import { ABILITIES, Orchestrator } from './orchestrator.js';
 import { PAIR_PAGE } from './pairpage.js';
 import { canPickFolder, pickFolder } from './picker.js';
@@ -51,6 +52,7 @@ export class Hub {
     this.orchestrator = new Orchestrator({
       store, providers, folders, ledger: this.ledger, files: this.files, emit: (...args) => this.#emit(...args),
     });
+    this.scheduler = new Scheduler({ store, orchestrator: this.orchestrator, log: (line) => console.log(line) });
     this.pairFailures = 0;
     this.pairLockedUntil = 0;
     this.pairingCode = newPairingCode();
@@ -62,6 +64,7 @@ export class Hub {
   }
 
   listen(port, host = '0.0.0.0') {
+    this.scheduler.start();
     return new Promise((resolve, reject) => {
       this.server.once('error', reject);
       this.server.listen(port, host, () => resolve(this.server.address().port));
@@ -96,6 +99,7 @@ export class Hub {
   }
 
   close() {
+    this.scheduler.stop();
     this.discovery?.close();
     for (const set of this.subscribers.values()) for (const res of set) res.end();
     for (const res of this.watchers) res.end();
@@ -137,6 +141,7 @@ export class Hub {
     for (const res of this.subscribers.get(roomId) ?? []) {
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     }
+    if (event === 'run' && !data.active) this.scheduler?.finished(roomId);
     if (!this.watchers.size) return;
     // Watchers get the outline only: who is working where, and each finished reply.
     if (event === 'run') {
@@ -267,6 +272,7 @@ export class Hub {
           rooms: this.store.state.rooms.map((r) => this.#roomView(r)),
           providers: this.providers.list(),
           folders: this.folders.list(),
+          schedules: this.scheduler.list(),
         };
       case 'GET /api/events':
         return this.#follow(req, res);
@@ -295,6 +301,19 @@ export class Hub {
         res.end(bytes);
         return undefined;
       }
+      // Scheduled messages: the hub posts them into their room at the set time, on the PC's clock.
+      case 'GET /api/schedules':
+        return { schedules: this.scheduler.list() };
+      case 'POST /api/schedules':
+        return this.#scheduling(async () => this.scheduler.create(await this.#body(req)));
+      case 'PUT /api/schedules/:id':
+        return this.#scheduling(async () => this.scheduler.update(id, await this.#body(req)));
+      case 'DELETE /api/schedules/:id':
+        this.scheduler.remove(id);
+        return { ok: true };
+      // Results of scheduled runs since a time, for a phone that was asleep.
+      case 'GET /api/notices':
+        return { notices: this.scheduler.noticesSince(Number(url.searchParams.get('since')) || 0), now: Date.now() };
       case 'GET /api/usage': {
         // Estimated spend and tokens, per agent and room, over the last N days.
         const days = Math.min(365, Math.max(1, Number(url.searchParams.get('days')) || 30));
@@ -379,6 +398,7 @@ export class Hub {
       }
       case 'DELETE /api/rooms/:id': {
         this.orchestrator.stop(id);
+        this.scheduler.forgetRoom(id);
         this.store.state.rooms = this.store.state.rooms.filter((r) => r.id !== id);
         delete this.store.state.messages[id];
         this.store.save();
@@ -393,6 +413,13 @@ export class Hub {
       removeNote(agent, parts[4]);
       this.store.save();
       return agent;
+    }
+
+    if (req.method === 'POST' && parts[0] === 'api' && parts[1] === 'schedules' && parts[3] === 'run' && parts.length === 4) {
+      return this.#scheduling(async () => {
+        this.scheduler.run(id);
+        return { ok: true };
+      });
     }
 
     // One message: delete it, or have its agent answer again.
@@ -478,6 +505,15 @@ export class Hub {
     this.store.save();
     this.#rotatePairingCode();
     return { token, hub: { name: this.name, version: VERSION } };
+  }
+
+  async #scheduling(work) {
+    try {
+      return await work();
+    } catch (err) {
+      if (err instanceof ScheduleError) throw new HttpError(400, err.message);
+      throw err;
+    }
   }
 
   #requireRoom(id) {

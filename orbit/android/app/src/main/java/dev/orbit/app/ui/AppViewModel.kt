@@ -11,6 +11,8 @@ import dev.orbit.app.data.HubException
 import dev.orbit.app.data.HubInfo
 import dev.orbit.app.data.Provider
 import dev.orbit.app.data.Room
+import dev.orbit.app.data.Schedule
+import dev.orbit.app.notify.NoticeWorker
 import dev.orbit.app.data.SharedFolder
 import android.net.Uri
 import dev.orbit.app.data.SharedContent
@@ -40,6 +42,7 @@ data class AppState(
     val rooms: List<Room> = emptyList(),
     val providers: List<Provider> = emptyList(),
     val folders: List<SharedFolder> = emptyList(),
+    val schedules: List<Schedule> = emptyList(),
 ) {
     fun agent(id: String?) = agents.firstOrNull { it.id == id }
     fun room(id: String?) = rooms.firstOrNull { it.id == id }
@@ -74,6 +77,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             repo.session.collect { session ->
                 _state.value = AppState()
+                // Scheduled results reach the phone through a periodic check, while paired.
+                if (session != null) NoticeWorker.schedule(getApplication()) else NoticeWorker.cancel(getApplication())
                 if (session != null) reload()
             }
         }
@@ -111,6 +116,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     rooms = fresh.rooms.sortedByDescending { room -> room.updatedAt },
                     providers = fresh.providers,
                     folders = fresh.folders,
+                    schedules = fresh.schedules,
                 )
             }
         }
@@ -277,6 +283,28 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun updateAgent(agent: Agent) {
         _state.update { s -> s.copy(agents = s.agents.map { if (it.id == agent.id) agent else it }) }
+    }
+
+    fun saveSchedule(schedule: Schedule, onSaved: () -> Unit) {
+        viewModelScope.launch {
+            hub { it.saveSchedule(schedule) }?.let { saved ->
+                _state.update { s -> s.copy(schedules = s.schedules.filterNot { it.id == saved.id } + saved) }
+                onSaved()
+            }
+        }
+    }
+
+    fun deleteSchedule(id: String, onDeleted: () -> Unit = {}) {
+        viewModelScope.launch {
+            if (hub { it.deleteSchedule(id) } != null) {
+                _state.update { s -> s.copy(schedules = s.schedules.filterNot { it.id == id }) }
+                onDeleted()
+            }
+        }
+    }
+
+    fun runSchedule(id: String, onStarted: () -> Unit) {
+        viewModelScope.launch { if (hub { it.runSchedule(id) } != null) onStarted() }
     }
 
     fun deleteAgent(id: String, onDeleted: () -> Unit) {
