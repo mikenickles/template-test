@@ -12,7 +12,17 @@ import dev.orbit.app.data.HubException
 import dev.orbit.app.data.Message
 import dev.orbit.app.data.RoomEvent
 import dev.orbit.app.data.RunState
+import android.net.Uri
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import dev.orbit.app.data.canAttach
+import dev.orbit.app.data.decodeImage
+import dev.orbit.app.data.describe
+import dev.orbit.app.data.prepare
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +38,19 @@ data class RoomUiState(
     val connected: Boolean = false,
     val messages: List<Message> = emptyList(),
     val run: RunState = RunState(),
+    /** Photos and files waiting in the composer. */
+    val drafts: List<DraftAttachment> = emptyList(),
+    /** True while drafts are uploading with a message. */
+    val sending: Boolean = false,
 )
+
+/** A photo or file picked for the next message. [preview] is a small picture of a photo. */
+data class DraftAttachment(val key: String, val uri: Uri, val name: String, val type: String, val preview: ImageBitmap? = null) {
+    val isImage: Boolean get() = type.startsWith("image/")
+}
+
+/** At most this many photos and files go with one message. */
+const val MAX_DRAFTS = 6
 
 /** Applies one live event from the hub to the room's state. Returns null when the state must be reloaded. */
 fun RoomUiState.reduce(event: RoomEvent): RoomUiState? = when (event) {
@@ -107,7 +129,7 @@ class RoomViewModel(app: Application, private val roomId: String) : AndroidViewM
     private suspend fun load(client: HubClient) {
         val snapshot = client.messages(roomId)
         repo.noteRun(roomId, snapshot.run.active)
-        _state.value = RoomUiState(loaded = true, connected = true, messages = snapshot.messages, run = snapshot.run)
+        _state.update { it.copy(loaded = true, connected = true, messages = snapshot.messages, run = snapshot.run) }
     }
 
     private fun act(block: suspend (HubClient) -> Unit) {
@@ -121,9 +143,54 @@ class RoomViewModel(app: Application, private val roomId: String) : AndroidViewM
         }
     }
 
-    fun send(text: String) = act {
-        repo.noteSent()
-        it.send(roomId, text)
+    /** Sends a message with the drafts attached. They stay in the composer until it has gone. */
+    fun send(text: String) {
+        val drafts = _state.value.drafts
+        if (_state.value.sending) return
+        _state.update { it.copy(sending = drafts.isNotEmpty()) }
+        viewModelScope.launch {
+            val client = repo.client ?: return@launch
+            val resolver = getApplication<Application>().contentResolver
+            try {
+                repo.noteSent()
+                val ids = drafts.map { draft ->
+                    val file = withContext(Dispatchers.IO) { prepare(resolver, draft.uri) }
+                    client.upload(file.bytes, file.name, file.type).id
+                }
+                client.send(roomId, text, ids)
+                _state.update { s -> s.copy(drafts = s.drafts.filterNot { it in drafts }) }
+            } catch (e: HubException) {
+                _notices.tryEmit(e.message ?: "That didn't send.")
+            } finally {
+                _state.update { it.copy(sending = false) }
+            }
+        }
+    }
+
+    /** Adds picked photos and files to the next message. */
+    fun attach(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        viewModelScope.launch {
+            val resolver = getApplication<Application>().contentResolver
+            val space = MAX_DRAFTS - _state.value.drafts.size
+            val picked = withContext(Dispatchers.IO) {
+                uris.take(space.coerceAtLeast(0)).map { uri ->
+                    val (name, type) = describe(resolver, uri)
+                    if (!canAttach(type)) return@map null
+                    val preview = if (type!!.startsWith("image/")) decodeImage(resolver, uri, 240)?.asImageBitmap() else null
+                    DraftAttachment(UUID.randomUUID().toString(), uri, name, type, preview)
+                }
+            }
+            when {
+                uris.size > space -> _notices.tryEmit("A message can carry up to $MAX_DRAFTS photos and files.")
+                picked.any { it == null } -> _notices.tryEmit("Orbit can attach photos, PDFs and text files.")
+            }
+            _state.update { it.copy(drafts = it.drafts + picked.filterNotNull()) }
+        }
+    }
+
+    fun detach(draft: DraftAttachment) {
+        _state.update { it.copy(drafts = it.drafts.filterNot { d -> d.key == draft.key }) }
     }
 
     fun stop() = act { it.stop(roomId) }

@@ -16,7 +16,9 @@ hub on an always-on PC.
 - **Rooms** are group chats. In a *round table* every agent replies in turn; in
   a *lead* room one agent answers first, delegates, and sums up. Agents hand
   work to each other with `@Name`, and you can `@mention` to ask one directly.
-  Long-press a message to copy it, ask the agent again, or delete it.
+  Long-press a message to copy it, ask the agent again, or delete it. Tap **+** to
+  attach photos, PDFs or text files; Claude agents read all three, other models
+  see photos where they support them.
 - **Notifications.** Leave the app while agents are replying and you get a
   ping when they finish ("Nova: Fuunji is your best bet…"); tap it to open the
   room. The app asks for permission the first time you send a message.

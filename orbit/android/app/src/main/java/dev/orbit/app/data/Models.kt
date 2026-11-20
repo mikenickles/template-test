@@ -87,6 +87,12 @@ data class Activity(
     }
 }
 
+/** A photo or file attached to a message. [type] is its media type, like "image/jpeg". */
+@Serializable
+data class Attachment(val id: String = "", val name: String = "", val type: String = "", val size: Long = 0) {
+    val isImage: Boolean get() = type.startsWith("image/")
+}
+
 /** A web page a reply cites. */
 @Serializable
 data class Source(val title: String = "", val url: String = "")
@@ -102,6 +108,7 @@ data class Message(
     val createdAt: Long = 0,
     val activity: List<Activity> = emptyList(),
     val sources: List<Source> = emptyList(),
+    val attachments: List<Attachment> = emptyList(),
 ) {
     val fromUser get() = author.type == "user"
 

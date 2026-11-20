@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -26,6 +27,7 @@ import dev.orbit.app.ui.components.ActionSheetContent
 import dev.orbit.app.ui.components.AgentAvatar
 import dev.orbit.app.ui.components.CrewTile
 import dev.orbit.app.ui.components.EYES_COUNT
+import dev.orbit.app.ui.components.LocalHubImages
 import dev.orbit.app.ui.components.OrbitIcon
 import dev.orbit.app.ui.components.SHAPE_COUNT
 import dev.orbit.app.ui.components.SheetAction
@@ -157,6 +159,16 @@ class ScreenshotTest {
                     ),
                 ) {}
             }
+        }
+    }
+    @Test fun attachments() = shot("room-attachments") {
+        CompositionLocalProvider(LocalHubImages provides SampleData.images) {
+            RoomScreen(trip.copy(agentIds = listOf("a1")), listOf(nova), SampleData.shared, {}, {}, {}, {}, {})
+        }
+    }
+    @Test fun attachmentsLight() = shot("room-attachments-light", dark = false) {
+        CompositionLocalProvider(LocalHubImages provides SampleData.images) {
+            RoomScreen(trip.copy(agentIds = listOf("a1")), listOf(nova), SampleData.shared.copy(drafts = emptyList()), {}, {}, {}, {}, {})
         }
     }
     @Test fun usage() = shot("usage") { UsageScreen(SampleData.usage, agents, 30, {}, {}) }

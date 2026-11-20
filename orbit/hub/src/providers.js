@@ -219,13 +219,13 @@ export class Providers {
     if (!this.isConfigured(provider)) {
       throw new ProviderError(`${def.label} needs an API key. Add one to config.json on your PC, then restart the hub.`);
     }
-    if (def.kind === 'demo') return streamDemo({ messages, signal, onDelta, agent });
+    if (def.kind === 'demo') return streamDemo({ messages: asText(messages), signal, onDelta, agent });
     if (def.kind === 'anthropic') {
       return streamAnthropic({
         client: this.#anthropic(def),
         model,
         system,
-        messages,
+        messages: forAnthropic(messages),
         signal,
         abilities,
         onDelta,
@@ -235,9 +235,42 @@ export class Providers {
         onUsage,
       });
     }
-    return streamOpenAICompatible({ def, model, system, messages, signal, onDelta, onUsage });
+    return streamOpenAICompatible({ def, model, system, messages: forOpenAI(messages), signal, onDelta, onUsage });
   }
 }
+
+/*
+ * A turn's content is a string, or a list of parts: { type: 'text', text }, { type: 'image', mediaType,
+ * data, name } and { type: 'pdf', data, name }, with data in base64. Each provider gets them its way.
+ */
+const mapParts = (messages, part) =>
+  messages.map((m) => (typeof m.content === 'string' ? m : { role: m.role, content: m.content.map(part) }));
+
+export function forAnthropic(messages) {
+  return mapParts(messages, (p) => {
+    if (p.type === 'image') return { type: 'image', source: { type: 'base64', media_type: p.mediaType, data: p.data } };
+    if (p.type === 'pdf') return { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: p.data }, title: p.name };
+    return { type: 'text', text: p.text };
+  });
+}
+
+/** OpenAI-compatible servers take images as data URLs; PDFs are only named, since few of them read PDFs. */
+export function forOpenAI(messages) {
+  return mapParts(messages, (p) => {
+    if (p.type === 'image') return { type: 'image_url', image_url: { url: `data:${p.mediaType};base64,${p.data}` } };
+    if (p.type === 'pdf') return { type: 'text', text: `[${p.name} is attached, but this model can't read PDFs.]` };
+    return { type: 'text', text: p.text };
+  });
+}
+
+function asText(messages) {
+  return messages.map((m) =>
+    typeof m.content === 'string' ? m : { role: m.role, content: m.content.map((p) => p.text ?? `[${p.name}]`).join('\n\n') },
+  );
+}
+
+// For estimates only: an image counts as about 1,500 tokens.
+const textLength = (content) => (typeof content === 'string' ? content.length : content.reduce((n, p) => n + (p.text?.length ?? 6000), 0));
 
 /** Providers known to accept a request for token counts at the end of a stream. */
 const REPORTS_USAGE = new Set(['openai', 'openrouter', 'xai']);
@@ -305,7 +338,7 @@ async function streamOpenAICompatible({ def, model, system, messages, signal, on
     reported
       ? { input: (reported.prompt_tokens ?? 0) - cached, output: reported.completion_tokens ?? 0, cacheRead: cached, cacheWrite: 0, searches: 0, requests: 1, estimated: false }
       : {
-          input: Math.ceil((system.length + messages.reduce((n, m) => n + String(m.content).length, 0)) / 4),
+          input: Math.ceil((system.length + messages.reduce((n, m) => n + textLength(m.content), 0)) / 4),
           output: Math.ceil(text.length / 4),
           cacheRead: 0,
           cacheWrite: 0,

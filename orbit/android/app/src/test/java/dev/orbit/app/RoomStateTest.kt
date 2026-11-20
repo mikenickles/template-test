@@ -6,6 +6,8 @@ import dev.orbit.app.data.Agent
 import dev.orbit.app.data.Author
 import dev.orbit.app.data.OrbitJson
 import dev.orbit.app.data.TextReset
+import dev.orbit.app.data.canAttach
+import dev.orbit.app.ui.components.fileSize
 import dev.orbit.app.ui.components.ActivityLabel
 import dev.orbit.app.ui.components.activityLabel
 import dev.orbit.app.ui.components.activitySummary
@@ -192,5 +194,18 @@ class RoomStateTest {
         assertEquals("182K", formatTokens(182_400))
         assertEquals("1.2M", formatTokens(1_240_000))
         assertEquals("12M", formatTokens(12_400_000))
+    }
+
+    @Test
+    fun `attachments decode, and file sizes read plainly`() {
+        val message = OrbitJson.decodeFromString<Message>(
+            """{"id":"m1","text":"","attachments":[{"id":"f1","name":"menu.jpg","type":"image/jpeg","size":412000}]}""",
+        )
+        assertTrue(message.attachments.single().isImage)
+        assertEquals("840 B", fileSize(840))
+        assertEquals("402 KB", fileSize(412_000))
+        assertEquals("2.4 MB", fileSize(2_480_000))
+        assertTrue(canAttach("image/heic") && canAttach("application/pdf") && canAttach("text/markdown"))
+        assertTrue(!canAttach("application/zip") && !canAttach(null))
     }
 }

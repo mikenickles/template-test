@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { kindOf } from './files.js';
 import { addUsage, emptyUsage } from './usage.js';
 
 /** Upper bound on agent replies per user message, so @mention chains can't loop forever. */
@@ -89,6 +90,61 @@ export function buildSystemPrompt(agent, room, agents, abilities = null) {
   return lines.join('\n');
 }
 
+/**
+ * Adds parts to a turn's content. Text-only turns stay plain strings; a turn with attachments
+ * becomes a list of parts.
+ */
+function joinContent(content, parts) {
+  if (parts.every((p) => p.type === 'text')) {
+    const text = parts.map((p) => p.text).join('\n\n');
+    if (typeof content === 'string') return content ? `${content}\n\n${text}` : text;
+    return [...content, { type: 'text', text }];
+  }
+  const before = typeof content === 'string' ? (content ? [{ type: 'text', text: content }] : []) : content;
+  return [...before, ...parts];
+}
+
+/** How many attachments, newest first, are sent in full. Older ones are mentioned by name. */
+export const MAX_ATTACHED = 8;
+/** Text files are sent up to this many characters. */
+const MAX_TEXT_FILE = 60_000;
+
+/**
+ * Turns attachment references into what models read: images and PDFs as base64, text files as text.
+ * Only the newest few are sent in full; older ones, and any that are gone, become a note.
+ */
+export function resolveAttachments(turns, files) {
+  let budget = MAX_ATTACHED;
+  for (let t = turns.length - 1; t >= 0; t--) {
+    const content = turns[t].content;
+    if (typeof content === 'string') continue;
+    for (let i = content.length - 1; i >= 0; i--) {
+      if (content[i].type === 'attachment') content[i] = resolveOne(content[i], files, budget-- > 0);
+    }
+  }
+  return turns;
+}
+
+function resolveOne(part, files, inFull) {
+  const note = (why) => ({ type: 'text', text: `[${part.name} ${why}]` });
+  if (!inFull) return note('was attached earlier');
+  const bytes = files?.read(part.id);
+  if (!bytes) return note('was attached, but is no longer on the PC');
+  switch (kindOf(part.fileType)) {
+    case 'image':
+      return { type: 'image', mediaType: part.fileType, data: bytes.toString('base64'), name: part.name };
+    case 'pdf':
+      return { type: 'pdf', data: bytes.toString('base64'), name: part.name };
+    case 'text': {
+      const text = bytes.toString('utf8');
+      const cut = text.length > MAX_TEXT_FILE ? `${text.slice(0, MAX_TEXT_FILE)}\n[…the rest of ${part.name} is cut off]` : text;
+      return { type: 'text', text: `[File ${part.name}]\n${cut}` };
+    }
+    default:
+      return note('was attached, but is not a kind of file models can read');
+  }
+}
+
 /** How much recent history is sent word for word, in characters (about four to a token). */
 export const RECENT_CHARS = 60_000;
 /** How much further history may grow before its oldest part is folded into the room's summary. */
@@ -117,13 +173,17 @@ export function buildTranscript(agent, messages, { summary = null, omitted = fal
   if (summary) turns.push({ role: 'user', content: `[Summary of this chat before the messages below]: ${summary}` });
   else if (omitted) turns.push({ role: 'user', content: '[Earlier messages in this chat are not shown.]' });
   for (const m of messages) {
-    if (!m.text?.trim() || m.status === 'error') continue;
+    const attached = m.attachments ?? [];
+    if ((!m.text?.trim() && !attached.length) || m.status === 'error') continue;
     const mine = m.author.type === 'agent' && m.author.agentId === agent.id;
     const role = mine ? 'assistant' : 'user';
-    const content = mine ? m.text : `[${m.author.type === 'user' ? 'User' : m.author.name}]: ${m.text}`;
+    const said = m.text?.trim() ? m.text : `(sent ${attached.map((a) => a.name).join(', ')})`;
+    const text = mine ? said : `[${m.author.type === 'user' ? 'User' : m.author.name}]: ${said}`;
+    // Attachments go before the words about them, which is how models read them best.
+    const parts = [...attached.map((a) => ({ type: 'attachment', id: a.id, name: a.name, fileType: a.type })), { type: 'text', text }];
     const prev = turns.at(-1);
-    if (prev?.role === role) prev.content += `\n\n${content}`;
-    else turns.push({ role, content });
+    if (prev?.role === role) prev.content = joinContent(prev.content, parts);
+    else turns.push({ role, content: joinContent('', parts) });
   }
   if (turns.at(-1)?.role === 'assistant') {
     turns.push({ role: 'user', content: '[System]: Your teammates have nothing to add. Wrap up for the user.' });
@@ -143,8 +203,9 @@ export class Orchestrator {
    * @param {{store: import('./store.js').Store, providers: any, folders?: import('./folders.js').Folders,
    *   emit: (roomId: string, event: string, data: any) => void}} deps
    */
-  constructor({ store, providers, folders = null, ledger = null, emit }) {
+  constructor({ store, providers, folders = null, ledger = null, files = null, emit }) {
     this.store = store;
+    this.files = files;
     this.providers = providers;
     this.folders = folders;
     this.ledger = ledger;
@@ -158,8 +219,8 @@ export class Orchestrator {
   }
 
   /** Add a user message and make sure a run is answering it. */
-  post(roomId, text) {
-    const message = this.#append(roomId, { type: 'user', name: 'You' }, text, 'done');
+  post(roomId, text, attachments = []) {
+    const message = this.#append(roomId, { type: 'user', name: 'You' }, text, 'done', attachments.length ? { attachments } : {});
     const run = this.runs.get(roomId);
     if (run) {
       run.restart = true; // picked up when the current speaker finishes
@@ -209,7 +270,7 @@ export class Orchestrator {
     return room.agentIds.map((id) => this.store.agent(id)).filter(Boolean);
   }
 
-  #append(roomId, author, text, status) {
+  #append(roomId, author, text, status, extra = {}) {
     const list = this.store.messages(roomId);
     const message = {
       id: crypto.randomUUID(),
@@ -219,6 +280,7 @@ export class Orchestrator {
       text,
       status,
       createdAt: Date.now(),
+      ...extra,
     };
     list.push(message);
     const room = this.store.room(roomId);
@@ -291,7 +353,8 @@ export class Orchestrator {
       }
       recent = keep;
     }
-    return buildTranscript(agent, recent, { summary: room.summary?.text ?? null, omitted: omitted || (!room.summary && recent.length < all.length) });
+    const turns = buildTranscript(agent, recent, { summary: room.summary?.text ?? null, omitted: omitted || (!room.summary && recent.length < all.length) });
+    return resolveAttachments(turns, this.files);
   }
 
   /** Folds messages into the room's running summary, written by the agent's provider. Null if it can't. */
@@ -300,8 +363,11 @@ export class Orchestrator {
     if (!kind || kind === 'demo' || !this.providers.isConfigured(agent.provider)) return null;
     const model = kind === 'anthropic' ? SUMMARY_MODEL : agent.model;
     const lines = messages
-      .filter((m) => m.text?.trim() && m.status !== 'error')
-      .map((m) => `[${m.author.type === 'user' ? 'User' : m.author.name}]: ${m.text}`)
+      .filter((m) => (m.text?.trim() || m.attachments?.length) && m.status !== 'error')
+      .map((m) => {
+        const files = m.attachments?.length ? ` [attached: ${m.attachments.map((a) => a.name).join(', ')}]` : '';
+        return `[${m.author.type === 'user' ? 'User' : m.author.name}]: ${m.text ?? ''}${files}`;
+      })
       .join('\n\n');
     const previous = room.summary?.text ? `The summary so far:\n${room.summary.text}\n\n` : '';
     try {

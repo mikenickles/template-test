@@ -91,18 +91,23 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.Agent
+import dev.orbit.app.data.Attachment
 import dev.orbit.app.data.Message
 import dev.orbit.app.data.Room
+import dev.orbit.app.ui.DraftAttachment
 import dev.orbit.app.ui.RoomUiState
 import dev.orbit.app.ui.SharedKeys
 import dev.orbit.app.ui.components.ActionSheet
 import dev.orbit.app.ui.components.ActivityTrail
 import dev.orbit.app.ui.components.AgentAvatar
+import dev.orbit.app.ui.components.AttachedItems
 import dev.orbit.app.ui.components.AvatarRow
+import dev.orbit.app.ui.components.DraftStrip
 import dev.orbit.app.ui.components.FormerAgentAvatar
 import dev.orbit.app.ui.components.IconTap
 import dev.orbit.app.ui.components.MarkdownText
 import dev.orbit.app.ui.components.OrbitIcon
+import dev.orbit.app.ui.components.PhotoViewer
 import dev.orbit.app.ui.components.Pill
 import dev.orbit.app.ui.components.SheetAction
 import dev.orbit.app.ui.components.ShimmerText
@@ -145,11 +150,16 @@ fun RoomScreen(
     everyone: List<Agent> = agents,
     onDeleteMessage: (Message) -> Unit = {},
     onRetry: (Message) -> Unit = {},
+    onPickPhotos: () -> Unit = {},
+    onPickFiles: () -> Unit = {},
+    onRemoveDraft: (DraftAttachment) -> Unit = {},
 ) {
     val c = Orbit.colors
     var draft by rememberSaveable { mutableStateOf("") }
     // The message whose actions are open, after a long press.
     var acting by remember { mutableStateOf<Message?>(null) }
+    var attaching by remember { mutableStateOf(false) }
+    var viewing by remember { mutableStateOf<Attachment?>(null) }
     val haptics = rememberHaptics()
     val clipboard = LocalClipboard.current
     val byId = remember(everyone) { everyone.associateBy { it.id } }
@@ -185,6 +195,10 @@ fun RoomScreen(
                     onDraft = { draft = it },
                     agents = agents,
                     running = state.run.active,
+                    drafts = state.drafts,
+                    sending = state.sending,
+                    onAttach = { attaching = true },
+                    onRemoveDraft = onRemoveDraft,
                     onSend = {
                         onSend(draft.trim())
                         draft = ""
@@ -247,7 +261,7 @@ fun RoomScreen(
                                         },
                                 ) {
                                     if (message.fromUser) {
-                                        UserMessage(message, mentionColors)
+                                        UserMessage(message, mentionColors) { viewing = it }
                                     } else {
                                         AgentMessage(message, byId[message.author.agentId], mentionColors, showModel = message.id in introductions)
                                     }
@@ -266,6 +280,18 @@ fun RoomScreen(
                 }
             }
         }
+        if (attaching) {
+            ActionSheet(
+                onDismiss = { attaching = false },
+                title = null,
+                preview = null,
+                actions = listOf(
+                    SheetAction("Photos", OrbitIcon.Photo, onClick = onPickPhotos),
+                    SheetAction("Files", OrbitIcon.File, onClick = onPickFiles),
+                ),
+            )
+        }
+        viewing?.let { PhotoViewer(it) { viewing = null } }
         acting?.let { message ->
             val author = if (message.fromUser) "Your message" else "${byId[message.author.agentId]?.name ?: message.author.name}'s reply"
             ActionSheet(
@@ -460,16 +486,19 @@ private fun EmptyRoom(room: Room, agents: List<Agent>, modifier: Modifier) {
 }
 
 @Composable
-private fun UserMessage(message: Message, mentionColors: Map<String, Color>) {
+private fun UserMessage(message: Message, mentionColors: Map<String, Color>, onOpenPhoto: (Attachment) -> Unit) {
     val c = Orbit.colors
-    Box(Modifier.fillMaxWidth().padding(start = 56.dp), contentAlignment = Alignment.CenterEnd) {
-        Box(
-            Modifier
-                .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp, bottomStart = 22.dp, bottomEnd = 8.dp))
-                .background(c.surfaceHigh)
-                .padding(horizontal = OrbitDimens.rowPad, vertical = 10.dp),
-        ) {
-            MarkdownText(message.text, mentions = mentionColors)
+    Column(Modifier.fillMaxWidth().padding(start = 56.dp), horizontalAlignment = Alignment.End) {
+        AttachedItems(message.attachments, onOpenPhoto, Modifier.padding(bottom = if (message.text.isNotBlank()) 6.dp else 0.dp))
+        if (message.text.isNotBlank()) {
+            Box(
+                Modifier
+                    .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp, bottomStart = 22.dp, bottomEnd = 8.dp))
+                    .background(c.surfaceHigh)
+                    .padding(horizontal = OrbitDimens.rowPad, vertical = 10.dp),
+            ) {
+                MarkdownText(message.text, mentions = mentionColors)
+            }
         }
     }
 }
@@ -589,6 +618,10 @@ private fun Composer(
     onDraft: (String) -> Unit,
     agents: List<Agent>,
     running: Boolean,
+    drafts: List<DraftAttachment>,
+    sending: Boolean,
+    onAttach: () -> Unit,
+    onRemoveDraft: (DraftAttachment) -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
 ) {
@@ -609,7 +642,9 @@ private fun Composer(
                 val mention = "@${agent.name.replace(" ", "")} "
                 onDraft(if (draft.isEmpty() || draft.endsWith(" ")) draft + mention else "$draft $mention")
             }
-            Row(Modifier.heightIn(min = 56.dp).padding(start = 18.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            DraftStrip(drafts, sending, onRemoveDraft)
+            Row(Modifier.heightIn(min = 56.dp).padding(start = 4.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconTap(OrbitIcon.Plus, "Attach a photo or file", onAttach, tint = c.textSecondary)
                 BasicTextField(
                     value = draft,
                     onValueChange = onDraft,
@@ -625,7 +660,7 @@ private fun Composer(
                     },
                 )
                 SendButton(
-                    canSend = draft.isNotBlank(),
+                    canSend = (draft.isNotBlank() || drafts.isNotEmpty()) && !sending,
                     running = running,
                     onSend = {
                         haptics.tick()

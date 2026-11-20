@@ -1,6 +1,16 @@
 package dev.orbit.app
 
+import android.net.Uri
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.LinearGradientShader
+import androidx.compose.ui.graphics.Paint
 import dev.orbit.app.data.Activity
+import dev.orbit.app.data.Attachment
+import dev.orbit.app.ui.DraftAttachment
+import dev.orbit.app.ui.components.HubImages
 import dev.orbit.app.data.Agent
 import dev.orbit.app.data.Author
 import dev.orbit.app.data.AvatarSpec
@@ -118,6 +128,56 @@ object SampleData {
             UsageTotals(roomId = "r2", name = "Weekend trip", input = 320_000, output = 46_000, cacheRead = 500_000, cost = 1.94),
         ),
     )
+
+    /** A stand-in photo: a soft diagonal gradient with a sun, drawn rather than loaded. */
+    fun photo(width: Int, height: Int, from: Color, to: Color): ImageBitmap {
+        val image = ImageBitmap(width, height)
+        val canvas = Canvas(image)
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), Paint().apply {
+            shader = LinearGradientShader(Offset.Zero, Offset(width.toFloat(), height.toFloat()), listOf(from, to))
+        })
+        canvas.drawCircle(Offset(width * 0.72f, height * 0.3f), width * 0.12f, Paint().apply { color = Color.White.copy(alpha = 0.55f) })
+        return image
+    }
+
+    val menu = Attachment("f1", "menu.jpg", "image/jpeg", 412_000)
+    val holiday = listOf(
+        Attachment("f2", "IMG_2041.jpg", "image/jpeg", 380_000),
+        Attachment("f3", "IMG_2042.jpg", "image/jpeg", 401_000),
+        Attachment("f4", "IMG_2043.jpg", "image/jpeg", 356_000),
+    )
+    val itinerary = Attachment("f5", "Kyoto itinerary.pdf", "application/pdf", 2_480_000)
+
+    /** Photos for the attachments above, ready at once so screenshots show them. */
+    val images = object : HubImages {
+        private val byId by lazy {
+            mapOf(
+            "f1" to photo(600, 800, Color(0xFFE9B872), Color(0xFF9C4A2F)),
+            "f2" to photo(400, 400, Color(0xFF8EC5E8), Color(0xFF2F5D8C)),
+            "f3" to photo(400, 400, Color(0xFFB8E0A8), Color(0xFF3F7A4A)),
+            "f4" to photo(400, 400, Color(0xFFF2C6D8), Color(0xFF8C3F6A)),
+            )
+        }
+
+        override fun cached(id: String, maxEdge: Int) = byId[id]
+
+        override suspend fun load(id: String, maxEdge: Int) = byId[id]
+    }
+
+    /** A room where photos and a PDF were shared, with more waiting in the composer. Drawn on first use. */
+    val shared by lazy { RoomUiState(
+        loaded = true,
+        connected = true,
+        messages = listOf(
+            userMessage("m1", "What should I order? I don't eat pork.").copy(attachments = listOf(menu)),
+            agentMessage("m2", nova, "Go for the **yuzu shio ramen** (chicken broth) and the gyoza are pork, so skip those. The **tamago kake gohan** is a safe side."),
+            userMessage("m3", "").copy(attachments = holiday + itinerary),
+        ),
+        drafts = listOf(
+            DraftAttachment("d1", Uri.parse("content://media/1"), "IMG_2050.jpg", "image/jpeg", photo(160, 160, Color(0xFFD9C7F2), Color(0xFF5B3F8C))),
+            DraftAttachment("d2", Uri.parse("content://docs/2"), "Hotel booking.pdf", "application/pdf"),
+        ),
+    ) }
 
     val chat = RoomUiState(
         loaded = true,

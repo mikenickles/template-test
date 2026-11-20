@@ -45,6 +45,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.orbit.app.data.Session
 import dev.orbit.app.notify.ReplyWatcher
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.CompositionLocalProvider
+import dev.orbit.app.ui.MAX_DRAFTS
+import dev.orbit.app.ui.components.LocalHubImages
 import dev.orbit.app.notify.rememberNotificationAsk
 import dev.orbit.app.ui.AppState
 import dev.orbit.app.ui.AppViewModel
@@ -70,7 +76,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContent { OrbitTheme { OrbitRoot(vm) } }
+        val images = (application as OrbitApp).images
+        setContent {
+            OrbitTheme {
+                CompositionLocalProvider(LocalHubImages provides images) { OrbitRoot(vm) }
+            }
+        }
         if (savedInstanceState == null) openLink(intent)
     }
 
@@ -212,6 +223,8 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 return@screen
             }
             val roomVm: RoomViewModel = viewModel(factory = RoomViewModel.Factory(id))
+            val pickPhotos = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(MAX_DRAFTS)) { roomVm.attach(it) }
+            val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { roomVm.attach(it) }
             val roomState by roomVm.state.collectAsStateWithLifecycle()
             LaunchedEffect(roomVm) { roomVm.notices.collect { snackbar.showSnackbar(it) } }
             RoomScreen(
@@ -224,6 +237,9 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 },
                 onDeleteMessage = roomVm::delete,
                 onRetry = roomVm::retry,
+                onPickPhotos = { pickPhotos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                onPickFiles = { pickFiles.launch(arrayOf("application/pdf", "text/*", "application/json")) },
+                onRemoveDraft = roomVm::detach,
                 onStop = roomVm::stop,
                 onBack = { nav.popBackStack() },
                 onEdit = { nav.navigate("roomEdit?id=$id") },

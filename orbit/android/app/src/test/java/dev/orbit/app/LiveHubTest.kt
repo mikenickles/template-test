@@ -73,6 +73,17 @@ class LiveHubTest {
         assertTrue(reply.text.contains("demo mode"))
         assertEquals(client.messages(room.id).messages.last().text, reply.text)
 
+        // A photo goes up, rides along with a message, and comes back byte for byte.
+        val png = java.util.Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==")
+        val photo = client.upload(png, "tiny photo.png", "image/png")
+        assertEquals("tiny photo.png", photo.name)
+        assertTrue(png.contentEquals(client.file(photo.id)))
+        val withPhoto = client.send(room.id, "", listOf(photo.id))
+        assertEquals(listOf(photo), withPhoto.attachments)
+        withTimeout(20_000) { while (client.messages(room.id).run.active || client.messages(room.id).messages.last().fromUser) delay(200) }
+        client.deleteMessage(room.id, client.messages(room.id).messages.last().id)
+        client.deleteMessage(room.id, withPhoto.id)
+
         // Ask again: the old reply goes and a new one takes its place. Then delete that one.
         client.retry(room.id, reply.id)
         var latest = client.messages(room.id)

@@ -12,9 +12,11 @@ import okhttp3.Call
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.io.IOException
+import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
@@ -61,7 +63,7 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
     private data class PairBody(val code: String, val deviceName: String)
 
     @Serializable
-    private data class TextBody(val text: String)
+    private data class TextBody(val text: String, val attachments: List<String> = emptyList())
 
     @Serializable
     private data class ModelsBody(val models: List<String> = emptyList())
@@ -118,8 +120,17 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
 
     suspend fun messages(roomId: String): RoomMessages = call("GET", "/api/rooms/$roomId/messages")
 
-    suspend fun send(roomId: String, text: String): Message =
-        call("POST", "/api/rooms/$roomId/messages", OrbitJson.encodeToString(TextBody(text)))
+    suspend fun send(roomId: String, text: String, attachments: List<String> = emptyList()): Message =
+        call("POST", "/api/rooms/$roomId/messages", OrbitJson.encodeToString(TextBody(text, attachments)))
+
+    /** Uploads a photo or file for a message. Send its id with the message to attach it. */
+    suspend fun upload(bytes: ByteArray, name: String, type: String): Attachment {
+        val raw = exchange("POST", "/api/files", bytes.toRequestBody(type.toMediaType()), mapOf("X-File-Name" to URLEncoder.encode(name, "UTF-8").replace("+", "%20")))
+        return OrbitJson.decodeFromString(raw.decodeToString())
+    }
+
+    /** An attached file's bytes. */
+    suspend fun file(id: String): ByteArray = exchange("GET", "/api/files/$id")
 
     suspend fun stop(roomId: String) {
         call<Unit>("POST", "/api/rooms/$roomId/stop", "{}")
@@ -229,14 +240,15 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
     /**
      * One request, tried at each of the hub's addresses until one answers. A request that may have
      * reached the hub is never sent twice: only reads, or failures to connect at all, move on.
+     * Returns the response body.
      */
-    private suspend inline fun <reified T> call(method: String, path: String, json: String? = null): T =
+    private suspend fun exchange(method: String, path: String, body: RequestBody? = null, headers: Map<String, String> = emptyMap()): ByteArray =
         withContext(Dispatchers.IO) {
             val urls = route.order()
             var failure: IOException? = null
             for ((index, url) in urls.withIndex()) {
                 val request = try {
-                    request(url, path).method(method, json?.toRequestBody(JSON_TYPE)).build()
+                    request(url, path).method(method, body).apply { headers.forEach { (k, v) -> header(k, v) } }.build()
                 } catch (e: IllegalArgumentException) {
                     throw HubException("That doesn't look like a valid hub address.")
                 }
@@ -244,18 +256,25 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
                     return@withContext http.newCall(request).execute().use { response ->
                         route.worked(url)
                         if (!response.isSuccessful) throw failure(response)
-                        val raw = response.body.string()
-                        if (T::class == Unit::class) Unit as T else OrbitJson.decodeFromString<T>(raw)
+                        response.body.bytes()
                     }
                 } catch (e: IOException) {
                     failure = e
                     if (index == urls.lastIndex || !(method == "GET" || neverArrived(e))) break
-                } catch (e: kotlinx.serialization.SerializationException) {
-                    throw HubException("That address answered, but it isn't an Orbit hub.")
                 }
             }
             throw HubException(describeNetworkFailure(failure!!, away = urls.size > 1))
         }
+
+    private suspend inline fun <reified T> call(method: String, path: String, json: String? = null): T {
+        val raw = exchange(method, path, json?.toRequestBody(JSON_TYPE))
+        if (T::class == Unit::class) return Unit as T
+        return try {
+            OrbitJson.decodeFromString<T>(raw.decodeToString())
+        } catch (e: kotlinx.serialization.SerializationException) {
+            throw HubException("That address answered, but it isn't an Orbit hub.")
+        }
+    }
 
     companion object {
         const val DEFAULT_PORT = 8787

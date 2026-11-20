@@ -1,6 +1,7 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
 import dgram from 'node:dgram';
+import { FileError, Files, MAX_FILE_BYTES } from './files.js';
 import { FolderError, Folders } from './folders.js';
 import { ABILITIES, Orchestrator } from './orchestrator.js';
 import { PAIR_PAGE } from './pairpage.js';
@@ -40,11 +41,15 @@ export class Hub {
     this.providers = providers;
     this.folders = folders;
     this.ledger = new Ledger(store, prices);
+    this.files = new Files(store);
+    this.files.sweep();
     this.name = name;
     this.onPairingCode = onPairingCode;
     this.subscribers = new Map(); // roomId -> Set<ServerResponse>
     this.watchers = new Set(); // phones following every room, to notify when replies land
-    this.orchestrator = new Orchestrator({ store, providers, folders, ledger: this.ledger, emit: (...args) => this.#emit(...args) });
+    this.orchestrator = new Orchestrator({
+      store, providers, folders, ledger: this.ledger, files: this.files, emit: (...args) => this.#emit(...args),
+    });
     this.pairFailures = 0;
     this.pairLockedUntil = 0;
     this.pairingCode = newPairingCode();
@@ -183,14 +188,20 @@ export class Hub {
     return device;
   }
 
-  async #body(req) {
+  async #raw(req, limit, tooLarge) {
+    if (Number(req.headers['content-length']) > limit) throw new HttpError(413, tooLarge);
     let size = 0;
     const chunks = [];
     for await (const chunk of req) {
       size += chunk.length;
-      if (size > MAX_BODY) throw new HttpError(413, 'Request is too large.');
+      if (size > limit) throw new HttpError(413, tooLarge);
       chunks.push(chunk);
     }
+    return Buffer.concat(chunks);
+  }
+
+  async #body(req) {
+    const chunks = [await this.#raw(req, MAX_BODY, 'Request is too large.')].filter((b) => b.length);
     if (!chunks.length) return {};
     try {
       const parsed = JSON.parse(Buffer.concat(chunks).toString('utf8'));
@@ -212,7 +223,8 @@ export class Hub {
       const status = err instanceof HttpError ? err.status : 500;
       if (status === 500) console.error('[orbit] request failed:', err);
       if (res.headersSent) return res.end();
-      res.writeHead(status, { 'content-type': 'application/json' });
+      // A refused upload may still be arriving; close the connection rather than read the rest of it.
+      res.writeHead(status, { 'content-type': 'application/json', ...(status === 413 ? { connection: 'close' } : {}) });
       res.end(JSON.stringify({ error: status === 500 ? 'The hub hit an internal error.' : err.message }));
     }
   }
@@ -257,6 +269,31 @@ export class Hub {
         };
       case 'GET /api/events':
         return this.#follow(req, res);
+      case 'POST /api/files': {
+        // A photo or file for a message: raw bytes, typed by Content-Type, named by X-File-Name.
+        const type = String(req.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase();
+        let name = 'file';
+        try {
+          name = decodeURIComponent(String(req.headers['x-file-name'] ?? 'file'));
+        } catch {
+          // keep the default
+        }
+        const bytes = await this.#raw(req, MAX_FILE_BYTES, 'That file is too large. Attach files up to 20 MB.');
+        try {
+          return this.files.save(bytes, name, type);
+        } catch (err) {
+          if (err instanceof FileError) throw new HttpError(400, err.message);
+          throw err;
+        }
+      }
+      case 'GET /api/files/:id': {
+        const meta = this.files.meta(id);
+        const bytes = meta && this.files.read(id);
+        if (!bytes) throw new HttpError(404, 'That file is gone.');
+        res.writeHead(200, { 'content-type': meta.type, 'content-length': bytes.length, 'cache-control': 'private, max-age=31536000, immutable' });
+        res.end(bytes);
+        return undefined;
+      }
       case 'GET /api/usage': {
         // Estimated spend and tokens, per agent and room, over the last N days.
         const days = Math.min(365, Math.max(1, Number(url.searchParams.get('days')) || 30));
@@ -331,6 +368,7 @@ export class Hub {
         this.store.state.rooms = this.store.state.rooms.filter((r) => r.id !== id);
         delete this.store.state.messages[id];
         this.store.save();
+        this.files.sweep();
         return { ok: true };
       }
     }
@@ -343,6 +381,7 @@ export class Hub {
       if (req.method === 'DELETE' && parts.length === 5) {
         if (message.status === 'streaming') throw new HttpError(409, 'Stop this reply before deleting it.');
         this.orchestrator.remove(room.id, message.id);
+        this.files.sweep();
         return { ok: true };
       }
       if (req.method === 'POST' && parts.length === 6 && parts[5] === 'retry') {
@@ -362,10 +401,14 @@ export class Hub {
         case 'GET messages':
           return { messages: this.store.messages(room.id), run: this.orchestrator.runState(room.id) };
         case 'POST messages': {
-          const body = text((await this.#body(req)).text, 20000);
-          if (!body) throw new HttpError(400, 'Message is empty.');
+          const fields = await this.#body(req);
+          const body = text(fields.text, 20000);
+          const ids = Array.isArray(fields.attachments) ? [...new Set(fields.attachments)].slice(0, 10) : [];
+          const attachments = ids.map((a) => this.files.meta(a)).filter(Boolean).map(({ id: fileId, name, type, size }) => ({ id: fileId, name, type, size }));
+          if (attachments.length < ids.length) throw new HttpError(400, 'One of the attachments is gone. Attach it again.');
+          if (!body && !attachments.length) throw new HttpError(400, 'Message is empty.');
           if (!room.agentIds.length) throw new HttpError(400, 'Add at least one agent to this room first.');
-          return this.orchestrator.post(room.id, body);
+          return this.orchestrator.post(room.id, body, attachments);
         }
         case 'DELETE messages':
           this.orchestrator.stop(room.id);
@@ -373,6 +416,7 @@ export class Hub {
           this.store.state.messages[room.id] = [];
           delete room.summary;
           this.store.save();
+          this.files.sweep();
           this.#emit(room.id, 'cleared', {});
           return { ok: true };
         case 'POST stop':
