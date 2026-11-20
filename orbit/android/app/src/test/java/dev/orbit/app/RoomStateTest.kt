@@ -1,6 +1,15 @@
 package dev.orbit.app
 
+import dev.orbit.app.data.Activity
+import dev.orbit.app.data.ActivityUpdate
+import dev.orbit.app.data.Agent
 import dev.orbit.app.data.Author
+import dev.orbit.app.data.OrbitJson
+import dev.orbit.app.data.TextReset
+import dev.orbit.app.ui.components.ActivityLabel
+import dev.orbit.app.ui.components.activityLabel
+import dev.orbit.app.ui.components.activitySummary
+import kotlinx.serialization.encodeToString
 import dev.orbit.app.data.Delta
 import dev.orbit.app.data.PairingLink
 import dev.orbit.app.data.describeNetworkFailure
@@ -107,5 +116,44 @@ class RoomStateTest {
         assertEquals("plain text", closeOpenMarkup("plain text"))
         assertEquals("Two risks:\n\n", closeOpenMarkup("Two risks:\n\n- "))
         assertEquals("Steps:\n", closeOpenMarkup("Steps:\n2. "))
+    }
+
+    @Test
+    fun `activity and text resets apply to the reply they name`() {
+        val step = Activity(Activity.KIND_SEARCH, "ramen", done = false)
+        val searching = base.reduce(RoomEvent.Progress(ActivityUpdate("m2", listOf(step))))!!
+        assertEquals(listOf(step), searching.messages.last().activity)
+        assertEquals("Hel", searching.messages.last().text)
+        assertEquals("", searching.reduce(RoomEvent.Reset(TextReset("m2", "")))!!.messages.last().text)
+        // A reply this phone hasn't seen yet means the room must reload.
+        assertNull(base.reduce(RoomEvent.Progress(ActivityUpdate("m9", emptyList()))))
+    }
+
+    @Test
+    fun `abilities, activity and sources survive the trip to and from the hub`() {
+        val agent = OrbitJson.decodeFromString<Agent>(OrbitJson.encodeToString(Agent(name = "Nova", abilities = listOf(Agent.ABILITY_WEB))))
+        assertEquals(listOf("web"), agent.abilities)
+        assertEquals(emptyList<String>(), OrbitJson.decodeFromString<Agent>("""{"name":"Old"}""").abilities)
+        val message = OrbitJson.decodeFromString<Message>(
+            """{"id":"m1","text":"Hi","activity":[{"kind":"page","detail":"https://a.example/x","done":true,"failed":false}],""" +
+                """"sources":[{"title":"A","url":"https://a.example/x"}],"later":"ignored"}""",
+        )
+        assertEquals("page", message.activity.single().kind)
+        assertEquals("https://a.example/x", message.sources.single().url)
+    }
+
+    @Test
+    fun `steps read as plain sentences`() {
+        assertEquals(ActivityLabel("Searched", "ramen tokyo"), activityLabel(Activity(Activity.KIND_SEARCH, "ramen tokyo")))
+        assertEquals(ActivityLabel("Searching", "ramen tokyo"), activityLabel(Activity(Activity.KIND_SEARCH, "ramen tokyo", done = false), live = true))
+        assertEquals(ActivityLabel("Read", "tabelog.example"), activityLabel(Activity(Activity.KIND_PAGE, "https://www.tabelog.example/tokyo?q=1")))
+        assertEquals(ActivityLabel("Couldn't open", "tabelog.example"), activityLabel(Activity(Activity.KIND_PAGE, "https://tabelog.example", failed = true)))
+        assertEquals(ActivityLabel("Read", "japan.md"), activityLabel(Activity(Activity.KIND_FILE, "Notes/trips/japan.md")))
+        assertEquals(ActivityLabel("Looked in", "your shared folders"), activityLabel(Activity(Activity.KIND_FOLDER, "")))
+        assertEquals(ActivityLabel("Ran code", ""), activityLabel(Activity(Activity.KIND_CODE)))
+        assertEquals("Searched the web 2 times, read a page and ran code", activitySummary(
+            listOf(Activity("search"), Activity("page"), Activity("search"), Activity("code")),
+        ))
+        assertEquals("Read 3 files", activitySummary(List(3) { Activity("file") }))
     }
 }

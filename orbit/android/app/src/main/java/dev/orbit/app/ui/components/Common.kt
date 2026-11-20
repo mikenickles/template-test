@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -41,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.geometry.CornerRadius
@@ -50,12 +53,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import dev.orbit.app.ui.theme.LocalReducedMotion
 import dev.orbit.app.ui.theme.Orbit
@@ -66,6 +71,7 @@ import dev.orbit.app.ui.theme.pressScale
 import dev.orbit.app.ui.theme.rememberHaptics
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /** A section heading, with an optional count and an action on the right. */
@@ -458,5 +464,33 @@ fun DangerRow(label: String, onClick: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Text(label, style = OrbitType.titleS, color = c.danger)
+    }
+}
+
+/**
+ * An on/off switch. It only draws; the row it sits in handles the tap (with `toggleable`), so the whole
+ * row is the touch target and screen readers hear one control.
+ */
+@Composable
+fun OrbitSwitch(checked: Boolean, modifier: Modifier = Modifier, enabled: Boolean = true) {
+    val c = Orbit.colors
+    val on by animateFloatAsState(if (checked) 1f else 0f, OrbitMotion.snappy(), label = "switch")
+    val track by animateColorAsState(if (checked) c.primary else c.surfaceHigh, OrbitMotion.snappy(), label = "track")
+    Box(
+        modifier
+            .size(width = 46.dp, height = 28.dp)
+            .alpha(if (enabled) 1f else 0.38f)
+            .clip(CircleShape)
+            .background(track)
+            .border(1.dp, if (checked) Color.Transparent else c.hairline, CircleShape),
+    ) {
+        Box(
+            Modifier
+                .padding(3.dp)
+                .offset { IntOffset((18.dp.toPx() * on).roundToInt(), 0) }
+                .size(22.dp)
+                .clip(CircleShape)
+                .background(lerp(c.textSecondary, c.onPrimary, on)),
+        )
     }
 }

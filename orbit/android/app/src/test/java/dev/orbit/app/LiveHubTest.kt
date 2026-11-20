@@ -42,9 +42,12 @@ class LiveHubTest {
         assertTrue(refused.status == 400 || refused.status == 502)
         assertEquals(false, client.state().providers.first { it.id == "anthropic" }.keySource == "app")
 
-        val agent = client.saveAgent(Agent(name = "Echo", role = "the tester", provider = "demo", model = "demo"))
+        val agent = client.saveAgent(Agent(name = "Echo", role = "the tester", provider = "demo", model = "demo", abilities = listOf("web", "files")))
         val renamed = client.saveAgent(agent.copy(name = "Echo Two"))
         assertEquals(agent.id, renamed.id)
+        assertEquals(listOf("web", "files"), renamed.abilities)
+        // Folders are shared on the PC; the phone sees them and can stop sharing one.
+        assertEquals(client.state().folders, client.removeFolder("not-a-folder"))
         val room = client.saveRoom(Room(name = "Live test", agentIds = listOf(agent.id)))
 
         // Mirror what RoomViewModel does: subscribe, load, then fold events into state.

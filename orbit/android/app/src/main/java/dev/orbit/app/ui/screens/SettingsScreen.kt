@@ -1,17 +1,15 @@
 package dev.orbit.app.ui.screens
 
-import dev.orbit.app.ui.components.tap
-import dev.orbit.app.ui.components.OrbitIcon
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -19,14 +17,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.orbit.app.ui.AppState
 import dev.orbit.app.ui.components.DangerRow
 import dev.orbit.app.ui.components.Hairline
 import dev.orbit.app.ui.components.OrbitCard
+import dev.orbit.app.ui.components.OrbitIcon
 import dev.orbit.app.ui.components.ScreenBar
 import dev.orbit.app.ui.components.SectionTitle
 import dev.orbit.app.ui.components.StatusDot
+import dev.orbit.app.ui.components.tap
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitDimens
 import dev.orbit.app.ui.theme.OrbitType
@@ -40,6 +42,7 @@ fun SettingsScreen(
     onUnpair: () -> Unit,
     onBack: () -> Unit,
     onOpenProvider: (providerId: String) -> Unit = {},
+    onRemoveFolder: (folderId: String) -> Unit = {},
 ) {
     val c = Orbit.colors
     val scroll = rememberScrollState()
@@ -111,12 +114,53 @@ fun SettingsScreen(
                     color = c.textTertiary,
                 )
 
+                SectionTitle("Shared folders", Modifier.padding(top = OrbitDimens.section, bottom = 8.dp))
+                OrbitCard(Modifier.fillMaxWidth()) {
+                    Column {
+                        if (state.folders.isEmpty()) {
+                            Row(Modifier.padding(OrbitDimens.rowPad), verticalAlignment = Alignment.CenterVertically) {
+                                OrbitIcon(OrbitIcon.Folder, size = 20.dp, tint = c.textTertiary)
+                                Text("No folders shared yet", Modifier.padding(start = 14.dp), style = OrbitType.bodyM, color = c.textSecondary)
+                            }
+                        }
+                        state.folders.forEachIndexed { index, folder ->
+                            if (index > 0) Hairline()
+                            Row(
+                                Modifier.fillMaxWidth().heightIn(min = 60.dp).padding(start = OrbitDimens.rowPad, end = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                OrbitIcon(OrbitIcon.Folder, size = 20.dp, tint = c.text)
+                                Column(Modifier.weight(1f).padding(start = 14.dp, end = 8.dp, top = 10.dp, bottom = 10.dp)) {
+                                    Text(folder.name, style = OrbitType.titleS, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(folder.path, style = OrbitType.mono, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.MiddleEllipsis)
+                                }
+                                Text(
+                                    "Stop sharing",
+                                    Modifier.tap(CircleShape, 0.94f) { onRemoveFolder(folder.id) }.padding(horizontal = 10.dp, vertical = 12.dp),
+                                    style = OrbitType.label,
+                                    color = c.textSecondary,
+                                )
+                            }
+                        }
+                    }
+                }
+                Text(
+                    "Agents with Read your files turned on can read these, never change them. To share a folder, open " +
+                        "localhost:${hubPort(hubAddress)} in a browser on your PC.",
+                    Modifier.padding(top = OrbitDimens.labelGap),
+                    style = OrbitType.bodyS,
+                    color = c.textTertiary,
+                )
+
                 Spacer(Modifier.height(40.dp))
                 DangerRow("Unpair this phone", onUnpair)
             }
         }
     }
 }
+
+/** The port in a hub address like "http://192.168.1.20:8787", which the PC's own page shares. */
+private fun hubPort(address: String): String = address.substringAfterLast(':', "").takeIf { p -> p.all { it.isDigit() } && p.isNotEmpty() } ?: "8787"
 
 /** A state with its dot. Without a color it is a quiet note, not a status. */
 @Composable

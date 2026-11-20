@@ -207,6 +207,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onDelete = agent?.let { { vm.deleteAgent(it.id) { nav.popBackStack() } } },
                 onBack = { nav.popBackStack() },
                 onAddKey = { nav.navigate("provider/$it") },
+                folders = state.folders,
             )
         }
         screen("roomEdit?id={id}", arguments = OptionalId) { entry ->
@@ -235,6 +236,10 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onUnpair = vm::unpair,
                 onBack = { nav.popBackStack() },
                 onOpenProvider = { nav.navigate("provider/$it") },
+                onRemoveFolder = {
+                    haptics.tick()
+                    vm.removeFolder(it)
+                },
             )
         }
         screen("provider/{id}") { entry ->

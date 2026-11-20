@@ -89,6 +89,7 @@ import dev.orbit.app.data.Message
 import dev.orbit.app.data.Room
 import dev.orbit.app.ui.RoomUiState
 import dev.orbit.app.ui.SharedKeys
+import dev.orbit.app.ui.components.ActivityTrail
 import dev.orbit.app.ui.components.AgentAvatar
 import dev.orbit.app.ui.components.AvatarRow
 import dev.orbit.app.ui.components.FormerAgentAvatar
@@ -97,6 +98,7 @@ import dev.orbit.app.ui.components.MarkdownText
 import dev.orbit.app.ui.components.OrbitIcon
 import dev.orbit.app.ui.components.Pill
 import dev.orbit.app.ui.components.ShimmerText
+import dev.orbit.app.ui.components.SourceChips
 import dev.orbit.app.ui.components.StatusDot
 import dev.orbit.app.ui.components.inkColor
 import dev.orbit.app.ui.components.lift
@@ -438,12 +440,16 @@ private fun AgentMessage(message: Message, agent: Agent?, mentionColors: Map<Str
                 }
             }
             Spacer(Modifier.height(4.dp))
+            // What the agent did on the way: searches, pages, code, files. A step in progress shimmers.
+            ActivityTrail(message.activity, streaming, Modifier.padding(bottom = if (shown > 0 || streaming) 6.dp else 0.dp))
             if (shown > 0) {
                 val visible = message.text.take(shown)
                 MarkdownText(if (catchingUp) closeOpenMarkup(visible) else visible, mentions = mentionColors, fadeTail = tail.roundToInt())
             }
             when {
-                streaming && shown == 0 -> ShimmerText("Thinking", OrbitType.body, c.textTertiary, Modifier.padding(top = 1.dp))
+                streaming && shown == 0 && message.activity.all { it.done } ->
+                    ShimmerText("Thinking", OrbitType.body, c.textTertiary, Modifier.padding(top = 1.dp))
+                !catchingUp && message.sources.isNotEmpty() -> SourceChips(message.sources, Modifier.padding(top = 10.dp))
                 message.status == Message.STATUS_ERROR -> Row(
                     Modifier
                         .padding(top = 2.dp)

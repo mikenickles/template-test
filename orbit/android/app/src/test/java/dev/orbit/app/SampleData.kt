@@ -1,5 +1,6 @@
 package dev.orbit.app
 
+import dev.orbit.app.data.Activity
 import dev.orbit.app.data.Agent
 import dev.orbit.app.data.Author
 import dev.orbit.app.data.AvatarSpec
@@ -9,6 +10,8 @@ import dev.orbit.app.data.Preview
 import dev.orbit.app.data.Provider
 import dev.orbit.app.data.Room
 import dev.orbit.app.data.RunState
+import dev.orbit.app.data.SharedFolder
+import dev.orbit.app.data.Source
 import dev.orbit.app.ui.AppState
 import dev.orbit.app.ui.RoomUiState
 
@@ -16,7 +19,7 @@ import dev.orbit.app.ui.RoomUiState
 object SampleData {
     const val NOW = 1_800_000_000_000L
 
-    val nova = Agent("a1", "Nova", "the planner", "Plan things.", "anthropic", "claude-opus-5-5", AvatarSpec(0, 7, 1))
+    val nova = Agent("a1", "Nova", "the planner", "Plan things.", "anthropic", "claude-opus-5-5", AvatarSpec(0, 7, 1), listOf("web", "files"))
     val pixel = Agent("a2", "Pixel", "the builder", "Build things.", "openai", "gpt-large", AvatarSpec(1, 5, 5))
     val sage = Agent("a3", "Sage", "the skeptic", "Poke holes.", "ollama", "llama-local", AvatarSpec(4, 2, 2))
     val mochi = Agent("a4", "Mochi", "the writer", "", "xai", "grok-fast", AvatarSpec(3, 9, 3))
@@ -34,7 +37,7 @@ object SampleData {
 
     val anthropic = Provider(
         "anthropic", "Anthropic", true, listOf("claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"),
-        takesKey = true, keyUrl = "https://console.anthropic.com/settings/keys", keySource = "app", keyHint = "…a1b2",
+        takesKey = true, keyUrl = "https://console.anthropic.com/settings/keys", keySource = "app", keyHint = "…a1b2", abilities = true,
     )
     val providers = listOf(
         anthropic,
@@ -45,8 +48,14 @@ object SampleData {
         Provider("demo", "Demo", true, listOf("demo")),
     )
 
+    val folders = listOf(
+        SharedFolder("f1", "Notes", "C:\\Users\\mike\\Documents\\Notes"),
+        SharedFolder("f2", "Trip planning", "D:\\Shared\\Family\\Trip planning"),
+    )
+
     val app = AppState(
         loaded = true, hub = HubInfo("Mike's PC", "0.1.0"), agents = agents, rooms = listOf(launch, trip, empty), providers = providers,
+        folders = folders,
     )
 
     fun userMessage(id: String, text: String) = Message(id, id.drop(1).toLong(), Author("user", name = "You"), text)
@@ -60,6 +69,37 @@ object SampleData {
         "Signup can be a single `email` field for the beta."
     const val SAGE_RISKS = "Two risks worth a look before invites go out:\n\n- **Email deliverability.** A new domain lands in spam; " +
         "warm it up this week.\n- **Signup abuse.** One field invites bots. Add a rate limit.\n\nNeither blocks the date. @Nova, want me to own both?"
+
+    const val NOVA_RAMEN = "**Fuunji** is your best bet: a 6 minute walk from the hotel, and the tsukemen gets the most praise. " +
+        "Go before 11 to skip the line.\n\nYour notes say Tuesday night is free, and that you wanted somewhere with a counter, so it fits."
+
+    /** A reply that searched, read pages and a shared file, then cited its sources. */
+    val research = RoomUiState(
+        loaded = true,
+        connected = true,
+        messages = listOf(
+            userMessage("m1", "Find a ramen place near the hotel and check it against my trip notes."),
+            agentMessage("m2", nova, NOVA_RAMEN).copy(
+                activity = listOf(
+                    Activity(Activity.KIND_SEARCH, "best ramen near Shinjuku Washington Hotel"),
+                    Activity(Activity.KIND_PAGE, "https://www.tabelog.example/tokyo/fuunji"),
+                    Activity(Activity.KIND_FILE, "Trip planning/japan/itinerary.md"),
+                ),
+                sources = listOf(
+                    Source("Fuunji - Tabelog", "https://www.tabelog.example/tokyo/fuunji"),
+                    Source("Shinjuku ramen guide", "https://timeout.example/tokyo/ramen"),
+                ),
+            ),
+            userMessage("m3", "And somewhere for dessert after?"),
+            agentMessage("m4", nova, "", status = "streaming").copy(
+                activity = listOf(
+                    Activity(Activity.KIND_SEARCH, "dessert near Shinjuku open late"),
+                    Activity(Activity.KIND_PAGE, "https://www.timeout.example/tokyo/dessert", done = false),
+                ),
+            ),
+        ),
+        run = RunState(true, "a1"),
+    )
 
     val chat = RoomUiState(
         loaded = true,

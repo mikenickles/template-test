@@ -130,4 +130,31 @@ class ScreenshotTest {
     @Test fun agentEditorLight() = shot("agent-editor-light", dark = false) { AgentEditorScreen(mochi, providers, { emptyList() }, {}, {}, {}) }
     @Test fun roomEditor() = shot("room-editor") { RoomEditorScreen(launch, agents, {}, {}, {}) }
     @Test fun settings() = shot("settings") { SettingsScreen(app, "http://192.168.1.20:8787", {}, {}) }
+    @Test fun roomResearch() = shot("room-research") { RoomScreen(trip.copy(agentIds = listOf("a1")), listOf(nova), SampleData.research, {}, {}, {}, {}, {}) }
+    @Test fun roomResearchLight() = shot("room-research-light", dark = false) {
+        RoomScreen(trip.copy(agentIds = listOf("a1")), listOf(nova), SampleData.research, {}, {}, {}, {}, {})
+    }
+}
+
+/** Screens taller than a phone, rendered whole so the lower sections can be reviewed too. */
+class TallScreenshotTest {
+    @get:Rule
+    val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_6.copy(screenHeight = 5400), useDeviceResolution = true)
+
+    private fun shot(name: String, dark: Boolean = true, content: @Composable () -> Unit) {
+        paparazzi.snapshot(name) { OrbitTheme(dark = dark, entrances = false, reducedMotion = false) { content() } }
+    }
+
+    private val providers = SampleData.providers
+
+    @Test fun agentEditor() = shot("agent-editor-full") {
+        AgentEditorScreen(SampleData.nova, providers, { emptyList() }, {}, {}, {}, folders = SampleData.folders)
+    }
+    @Test fun agentEditorOtherProviderLight() = shot("agent-editor-full-light", dark = false) {
+        AgentEditorScreen(SampleData.mochi.copy(abilities = listOf("web")), providers, { emptyList() }, {}, {}, {})
+    }
+    @Test fun settings() = shot("settings-full") { SettingsScreen(SampleData.app, "http://192.168.1.20:8787", {}, {}) }
+    @Test fun settingsNoFoldersLight() = shot("settings-full-light", dark = false) {
+        SettingsScreen(SampleData.app.copy(folders = emptyList()), "http://192.168.1.20:8787", {}, {})
+    }
 }

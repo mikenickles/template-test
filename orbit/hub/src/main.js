@@ -4,6 +4,7 @@ import readline from 'node:readline/promises';
 import * as autostart from './autostart.js';
 import { configFile, dataDir, loadConfig, saveConfig } from './config.js';
 import { ensureFirewall } from './firewall.js';
+import { Folders } from './folders.js';
 import { Providers } from './providers.js';
 import { qrTerminal } from './qr.js';
 import { Hub } from './server.js';
@@ -19,7 +20,15 @@ const providers = new Providers(config.providers, process.env, (updated) => {
   config.providers = updated;
   saveConfig(config);
 });
-const hub = new Hub({ store, providers, name: config.name, onPairingCode: () => showPairing() });
+// Folders agents may read. Shared on the PC only, from the hub's page; the hub's own data is never readable.
+const folders = new Folders(config.folders, {
+  protect: [dataDir],
+  onChange: (updated) => {
+    config.folders = updated;
+    saveConfig(config);
+  },
+});
+const hub = new Hub({ store, providers, folders, name: config.name, onPairingCode: () => showPairing() });
 const port = await hub.listen(Number(process.env.PORT) || config.port);
 hub.startDiscovery(config.discoveryPort, port);
 
@@ -35,7 +44,7 @@ const addresses = Object.entries(os.networkInterfaces())
   .map((n) => `${n.address}:${port}`);
 hub.setAddresses(addresses);
 
-const pairPage = `http://localhost:${port}/pair`;
+const pairPage = `http://localhost:${port}`;
 const address = addresses[0] ?? `localhost:${port}`;
 
 function showPairing() {
@@ -46,7 +55,7 @@ function showPairing() {
   console.log(qrTerminal(hub.pairingLink()));
   console.log('');
   console.log(`  Or type   ${address}   and the code   ${code.slice(0, 3)} ${code.slice(3)}`);
-  console.log(`  A larger QR code is at ${pairPage}`);
+  console.log(`  A larger QR code is at ${pairPage}, where you can also share folders with your agents.`);
   console.log('');
 }
 
@@ -63,6 +72,8 @@ function openInBrowser(url) {
 console.log(`Orbit hub "${config.name}" is running.`);
 const keyed = providers.list().filter((p) => p.takesKey && p.configured).map((p) => p.label);
 console.log(`  Model keys:  ${keyed.length ? keyed.join(', ') : 'none yet. Add one in the app: Settings, then Model providers.'}`);
+const shared = folders.list().map((f) => f.name);
+console.log(`  Folders:     ${shared.length ? shared.join(', ') : `none shared. Share one at ${pairPage}`}`);
 console.log(`  Data:        ${dataDir}`);
 
 await ensureFirewall({ port, discoveryPort: config.discoveryPort, dataDir, log: (line) => console.log(line) });

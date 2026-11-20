@@ -10,6 +10,9 @@ Two independent projects live here:
 - **Orbit** (`orbit/`): multi-agent Android app plus the PC hub it pairs with. See `orbit/README.md`.
   - `orbit/hub/`: Node 20+ ESM server, plain JavaScript. Calls Claude through `@anthropic-ai/sdk`; other
     providers through their OpenAI-compatible HTTP APIs. State is a JSON file in `~/.orbit-hub`.
+    Agent abilities (web search, code execution, read-only shared folders) are Claude-only: the tool loop is
+    `src/anthropic.js`, folder access is `src/folders.js`. Folders are shared only from the PC's own page
+    (`localhost`), never from a phone.
   - `orbit/android/`: Kotlin + Jetpack Compose (Material 3), single `app` module, package `dev.orbit.app`.
     Screens are stateless composables in `ui/screens`; `AppViewModel` and `RoomViewModel` hold state.
     Design system: colors, type and spacing come only from `ui/theme/Theme.kt` (`Orbit.colors`, `OrbitType`,

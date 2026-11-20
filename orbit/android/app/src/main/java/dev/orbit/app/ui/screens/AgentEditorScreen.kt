@@ -23,12 +23,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -51,6 +53,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -58,6 +61,7 @@ import dev.orbit.app.data.Agent
 import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.data.OrbitJson
 import dev.orbit.app.data.Provider
+import dev.orbit.app.data.SharedFolder
 import dev.orbit.app.ui.SharedKeys
 import dev.orbit.app.ui.components.AgentAvatar
 import dev.orbit.app.ui.components.AvatarPalette
@@ -65,9 +69,12 @@ import dev.orbit.app.ui.components.BarAction
 import dev.orbit.app.ui.components.DangerRow
 import dev.orbit.app.ui.components.EYES_COUNT
 import dev.orbit.app.ui.components.FieldLabel
+import dev.orbit.app.ui.components.Hairline
 import dev.orbit.app.ui.components.IconPill
+import dev.orbit.app.ui.components.OrbitCard
 import dev.orbit.app.ui.components.OrbitField
 import dev.orbit.app.ui.components.OrbitIcon
+import dev.orbit.app.ui.components.OrbitSwitch
 import dev.orbit.app.ui.components.Pill
 import dev.orbit.app.ui.components.SHAPE_COUNT
 import dev.orbit.app.ui.components.ScreenBar
@@ -107,6 +114,7 @@ fun AgentEditorScreen(
     onDelete: (() -> Unit)?,
     onBack: () -> Unit,
     onAddKey: (providerId: String) -> Unit = {},
+    folders: List<SharedFolder> = emptyList(),
 ) {
     val c = Orbit.colors
     val haptics = rememberHaptics()
@@ -121,6 +129,9 @@ fun AgentEditorScreen(
     var instructions by rememberSaveable { mutableStateOf(start.instructions) }
     var providerId by rememberSaveable { mutableStateOf(start.provider) }
     var model by rememberSaveable { mutableStateOf(start.model) }
+    var web by rememberSaveable { mutableStateOf(Agent.ABILITY_WEB in start.abilities) }
+    var code by rememberSaveable { mutableStateOf(Agent.ABILITY_CODE in start.abilities) }
+    var files by rememberSaveable { mutableStateOf(Agent.ABILITY_FILES in start.abilities) }
 
     val provider = providers.firstOrNull { it.id == providerId }
     var models by remember { mutableStateOf(emptyList<String>()) }
@@ -134,6 +145,11 @@ fun AgentEditorScreen(
         start.copy(
             name = name.trim(), role = role.trim(), instructions = instructions.trim(),
             provider = providerId, model = model.trim(), avatar = avatar,
+            abilities = listOfNotNull(
+                Agent.ABILITY_WEB.takeIf { web },
+                Agent.ABILITY_CODE.takeIf { code },
+                Agent.ABILITY_FILES.takeIf { files },
+            ),
         ),
     )
     fun pick(next: AvatarSpec) {
@@ -239,6 +255,39 @@ fun AgentEditorScreen(
                 }
             }
 
+            Section("Abilities")
+            Gutter {
+                // Abilities stay saved on any provider, and come back on when the agent is on Claude again.
+                val supported = provider?.abilities == true
+                AnimatedVisibility(provider != null && !supported, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                    Text(
+                        "Abilities work with Anthropic models for now. Switch this agent's provider to use them.",
+                        Modifier.padding(bottom = 12.dp),
+                        style = OrbitType.bodyS,
+                        color = c.textSecondary,
+                    )
+                }
+                OrbitCard(Modifier.fillMaxWidth()) {
+                    Column {
+                        AbilityRow(OrbitIcon.Globe, "Search the web", "Look things up and read pages, with sources.", web, supported) { web = it }
+                        Hairline()
+                        AbilityRow(OrbitIcon.Code, "Run code", "Calculate and work through data in a private sandbox.", code, supported) { code = it }
+                        Hairline()
+                        AbilityRow(
+                            OrbitIcon.Folder,
+                            "Read your files",
+                            if (folders.isEmpty()) {
+                                "Read only. Share folders from the Orbit page on your PC first."
+                            } else {
+                                "Read only, from ${folders.joinToString(", ") { it.name }}."
+                            },
+                            files,
+                            supported,
+                        ) { files = it }
+                    }
+                }
+            }
+
             Section("Instructions")
             Gutter {
                 OrbitField(
@@ -253,6 +302,31 @@ fun AgentEditorScreen(
                 }
             }
         }
+    }
+}
+
+/** One ability with its switch. The whole row toggles it. */
+@Composable
+private fun AbilityRow(icon: OrbitIcon, title: String, detail: String, checked: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
+    val c = Orbit.colors
+    val haptics = rememberHaptics()
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .toggleable(checked, enabled = enabled, role = Role.Switch) {
+                haptics.tick()
+                onChange(it)
+            }
+            .heightIn(min = 68.dp)
+            .padding(start = OrbitDimens.rowPad, end = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OrbitIcon(icon, size = 20.dp, tint = if (enabled) c.text else c.textTertiary)
+        Column(Modifier.weight(1f).padding(start = 14.dp, end = 12.dp, top = 12.dp, bottom = 12.dp)) {
+            Text(title, style = OrbitType.titleS, color = if (enabled) c.text else c.textTertiary)
+            Text(detail, Modifier.padding(top = 2.dp), style = OrbitType.bodyS, color = c.textSecondary)
+        }
+        OrbitSwitch(checked, enabled = enabled)
     }
 }
 

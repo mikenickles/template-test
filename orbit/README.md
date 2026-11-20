@@ -10,6 +10,9 @@ hub on an always-on PC.
 </p>
 
 - **Agents** each have their own avatar, model, provider, and instructions.
+  Agents on Claude models can also be given **abilities**: search the web,
+  run code, and read folders you share from your PC. Their replies show what
+  they did ("Searched …", "Read japan.md") and the pages they cite.
 - **Rooms** are group chats. In a *round table* every agent replies in turn; in
   a *lead* room one agent answers first, delegates, and sums up. Agents hand
   work to each other with `@Name`, and you can `@mention` to ask one directly.
@@ -24,7 +27,7 @@ Install [Node.js](https://nodejs.org) (the LTS version), then double-click
 
 - downloads what the hub needs (a minute),
 - asks Windows for permission, once, to let your phone through the firewall,
-- opens a pairing page in your browser with a QR code, and
+- opens the Orbit page in your browser (`http://localhost:8787`) with a QR code, and
 - offers to start the hub automatically whenever you sign in to Windows.
 
 Keep its window open while you use Orbit. On a Mac or Linux, run `npm start` in `hub/`.
@@ -55,7 +58,19 @@ Keys can also come from `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`,
 entry with a `baseUrl` is treated as an OpenAI-compatible server, e.g.
 `"my-server": { "label": "My server", "baseUrl": "http://localhost:1234/v1" }`.
 
-## 4. Build the app
+## 4. Share folders with your agents (optional)
+
+On the PC, open `http://localhost:8787` and click **Share a folder…**. Agents
+with **Read your files** turned on (in the agent's Abilities) can then list,
+read and search the files in it. Access is read only, never reaches outside the
+folders you share, and skips hidden files and the hub's own settings. Folders
+can only be shared from the PC itself; the app shows them under Settings and
+can stop sharing one.
+
+Web search and code run on Anthropic's side and are billed to your Anthropic
+account like any other usage.
+
+## 5. Build the app
 
 Needs JDK 17+ and the Android SDK (platform 37.2).
 
@@ -90,7 +105,7 @@ It needs two repository secrets: `ORBIT_KEYSTORE_BASE64` (the key file, base64) 
 ## Tests
 
 ```
-cd orbit/hub && npm test                          # pairing, keys, orchestration, event stream
+cd orbit/hub && npm test                          # pairing, keys, orchestration, abilities, event stream
 cd orbit/android && ./gradlew :app:testDebugUnitTest
 cd orbit/android && ./gradlew :app:recordPaparazziDebug   # re-render screen snapshots and motion recordings
 ```

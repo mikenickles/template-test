@@ -11,6 +11,7 @@ import dev.orbit.app.data.HubException
 import dev.orbit.app.data.HubInfo
 import dev.orbit.app.data.Provider
 import dev.orbit.app.data.Room
+import dev.orbit.app.data.SharedFolder
 import dev.orbit.app.data.discoverHubs
 import dev.orbit.app.data.PairingLink
 import dev.orbit.app.data.parsePairingLink
@@ -31,6 +32,7 @@ data class AppState(
     val agents: List<Agent> = emptyList(),
     val rooms: List<Room> = emptyList(),
     val providers: List<Provider> = emptyList(),
+    val folders: List<SharedFolder> = emptyList(),
 ) {
     fun agent(id: String?) = agents.firstOrNull { it.id == id }
     fun room(id: String?) = rooms.firstOrNull { it.id == id }
@@ -96,6 +98,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     agents = fresh.agents,
                     rooms = fresh.rooms.sortedByDescending { room -> room.updatedAt },
                     providers = fresh.providers,
+                    folders = fresh.folders,
                 )
             }
         }
@@ -164,6 +167,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 updateProvider(it)
                 onDone()
             }
+        }
+    }
+
+    /** Stops sharing a folder with agents. */
+    fun removeFolder(id: String) {
+        viewModelScope.launch {
+            hub { it.removeFolder(id) }?.let { folders -> _state.update { it.copy(folders = folders) } }
         }
     }
 

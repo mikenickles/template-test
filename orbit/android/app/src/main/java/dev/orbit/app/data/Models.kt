@@ -26,7 +26,15 @@ data class Agent(
     val provider: String = "",
     val model: String = "",
     val avatar: AvatarSpec = AvatarSpec(),
-)
+    /** What the agent can do beyond replying: [ABILITY_WEB], [ABILITY_CODE], [ABILITY_FILES]. */
+    val abilities: List<String> = emptyList(),
+) {
+    companion object {
+        const val ABILITY_WEB = "web"
+        const val ABILITY_CODE = "code"
+        const val ABILITY_FILES = "files"
+    }
+}
 
 @Serializable
 data class Preview(val author: String = "", val text: String = "")
@@ -58,6 +66,31 @@ data class Author(
     val model: String? = null,
 )
 
+/**
+ * One thing an agent did while replying. [kind] is one of the KIND_ constants; [detail] is the search,
+ * page address, or file path it used.
+ */
+@Serializable
+data class Activity(
+    val kind: String = "",
+    val detail: String = "",
+    val done: Boolean = true,
+    val failed: Boolean = false,
+) {
+    companion object {
+        const val KIND_SEARCH = "search"
+        const val KIND_PAGE = "page"
+        const val KIND_CODE = "code"
+        const val KIND_FOLDER = "folder"
+        const val KIND_FILE = "file"
+        const val KIND_FIND = "find"
+    }
+}
+
+/** A web page a reply cites. */
+@Serializable
+data class Source(val title: String = "", val url: String = "")
+
 @Serializable
 data class Message(
     val id: String,
@@ -67,6 +100,8 @@ data class Message(
     val status: String = STATUS_DONE,
     val error: String? = null,
     val createdAt: Long = 0,
+    val activity: List<Activity> = emptyList(),
+    val sources: List<Source> = emptyList(),
 ) {
     val fromUser get() = author.type == "user"
 
@@ -92,7 +127,13 @@ data class Provider(
     val keySource: String? = null,
     /** The end of the saved key, e.g. "…1a2b", so you can tell keys apart. */
     val keyHint: String? = null,
+    /** Whether agents on this provider can use abilities (web, code, files). */
+    val abilities: Boolean = false,
 )
+
+/** A folder on the PC that agents with [Agent.ABILITY_FILES] may read. Shared from the PC, never from the phone. */
+@Serializable
+data class SharedFolder(val id: String = "", val name: String = "", val path: String = "")
 
 @Serializable
 data class HubInfo(val name: String = "", val version: String = "")
@@ -103,6 +144,7 @@ data class HubState(
     val agents: List<Agent> = emptyList(),
     val rooms: List<Room> = emptyList(),
     val providers: List<Provider> = emptyList(),
+    val folders: List<SharedFolder> = emptyList(),
 )
 
 /** Whether agents are replying in a room right now, and who has the floor. */
@@ -116,6 +158,14 @@ data class RoomMessages(val messages: List<Message> = emptyList(), val run: RunS
 @Serializable
 data class Delta(val id: String, val at: Int, val text: String)
 
+/** A reply's tool use so far, sent while it streams. */
+@Serializable
+data class ActivityUpdate(val id: String, val activity: List<Activity> = emptyList())
+
+/** A reply's text replaced while it streams, when the hub had to run a step again. */
+@Serializable
+data class TextReset(val id: String, val text: String = "")
+
 @Serializable
 data class PairResult(val token: String, val hub: HubInfo = HubInfo())
 
@@ -123,6 +173,8 @@ sealed interface RoomEvent {
     data object Connected : RoomEvent
     data class Upsert(val message: Message) : RoomEvent
     data class Chunk(val delta: Delta) : RoomEvent
+    data class Progress(val update: ActivityUpdate) : RoomEvent
+    data class Reset(val reset: TextReset) : RoomEvent
     data class Run(val state: RunState) : RoomEvent
     data object Cleared : RoomEvent
 }

@@ -29,7 +29,21 @@ export function initialSpeakers(room, agents, text) {
   return [...agents];
 }
 
-export function buildSystemPrompt(agent, room, agents) {
+/** Abilities an agent can be given. "files" reads folders shared from the PC. */
+export const ABILITIES = ['web', 'code', 'files'];
+
+/**
+ * What an agent can do on this turn. Abilities only work with providers that support them; elsewhere
+ * the agent runs without them, and its prompt doesn't mention them.
+ */
+export function resolveAbilities(agent, providers, folders) {
+  if (!providers.supportsAbilities?.(agent.provider)) return null;
+  const on = new Set(agent.abilities ?? []);
+  if (!on.size) return null;
+  return { web: on.has('web'), code: on.has('code'), files: on.has('files'), folders: on.has('files') ? folders : null };
+}
+
+export function buildSystemPrompt(agent, room, agents, abilities = null) {
   const teammates = agents.filter((a) => a.id !== agent.id);
   const isLead = room.mode === 'lead' && (room.leadId === agent.id || (!room.leadId && agents[0]?.id === agent.id));
   const lines = [
@@ -50,6 +64,21 @@ export function buildSystemPrompt(agent, room, agents) {
       '- To hand work to a teammate or ask them something, mention them as @Name. A mentioned teammate replies next, so only mention someone when you need their input.',
       '- Build on what teammates have said instead of repeating it, and keep replies as short as the task allows.',
     );
+  }
+  if (abilities) {
+    lines.push('', 'What you can do here:');
+    if (abilities.web) {
+      lines.push('- Search the web and read web pages. Use them for anything recent or that you are unsure of, and say where facts came from.');
+    }
+    if (abilities.code) lines.push('- Run code in a sandbox, for calculations, working with data, and checking your work.');
+    if (abilities.files) {
+      const names = abilities.folders?.list().map((f) => f.name) ?? [];
+      lines.push(
+        names.length
+          ? `- Read files in folders the user shared from their PC: ${names.join(', ')}. This is read only: you can't change, add or delete files.`
+          : "- Read files the user shares from their PC. None are shared yet; if the user asks about their files, tell them to share a folder from the Orbit page on their PC.",
+      );
+    }
   }
   if (isLead && teammates.length) {
     lines.push(
@@ -83,10 +112,14 @@ export function buildTranscript(agent, messages) {
  * live on the hub, so they keep going while the phone is asleep.
  */
 export class Orchestrator {
-  /** @param {{store: import('./store.js').Store, providers: any, emit: (roomId: string, event: string, data: any) => void}} deps */
-  constructor({ store, providers, emit }) {
+  /**
+   * @param {{store: import('./store.js').Store, providers: any, folders?: import('./folders.js').Folders,
+   *   emit: (roomId: string, event: string, data: any) => void}} deps
+   */
+  constructor({ store, providers, folders = null, emit }) {
     this.store = store;
     this.providers = providers;
+    this.folders = folders;
     this.emit = emit;
     this.runs = new Map();
   }
@@ -197,18 +230,35 @@ export class Orchestrator {
     );
     run.speaking = agent.id;
     this.emit(room.id, 'run', this.runState(room.id));
+    const abilities = resolveAbilities(agent, this.providers, this.folders);
     try {
       const text = await this.providers.stream({
         provider: agent.provider,
         model: agent.model,
-        system: buildSystemPrompt(agent, room, agents),
+        system: buildSystemPrompt(agent, room, agents, abilities),
         messages: transcript,
         signal: run.abort.signal,
         agent,
+        abilities,
         onDelta: (chunk) => {
           this.emit(room.id, 'delta', { id: message.id, at: message.text.length, text: chunk });
           message.text += chunk;
           this.store.save();
+        },
+        // What the agent is doing between bursts of text: searching, reading, running code.
+        onActivity: (activity) => {
+          message.activity = activity;
+          this.store.save();
+          this.emit(room.id, 'activity', { id: message.id, activity });
+        },
+        onSources: (sources) => {
+          message.sources = sources;
+          this.store.save();
+        },
+        onReset: (text) => {
+          message.text = text;
+          this.store.save();
+          this.emit(room.id, 'reset', { id: message.id, text });
         },
       });
       message.text = text;

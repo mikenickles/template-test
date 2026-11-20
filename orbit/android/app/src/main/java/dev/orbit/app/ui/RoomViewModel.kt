@@ -45,6 +45,14 @@ fun RoomUiState.reduce(event: RoomEvent): RoomUiState? = when (event) {
             else -> copy(messages = messages.toMutableList().also { it[index] = incoming })
         }
     }
+    is RoomEvent.Progress -> {
+        val index = messages.indexOfFirst { it.id == event.update.id }
+        if (index < 0) null else copy(messages = messages.toMutableList().also { it[index] = it[index].copy(activity = event.update.activity) })
+    }
+    is RoomEvent.Reset -> {
+        val index = messages.indexOfFirst { it.id == event.reset.id }
+        if (index < 0) null else copy(messages = messages.toMutableList().also { it[index] = it[index].copy(text = event.reset.text) })
+    }
     is RoomEvent.Chunk -> {
         val delta = event.delta
         val index = messages.indexOfFirst { it.id == delta.id }

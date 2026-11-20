@@ -1,4 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { streamAnthropic } from './anthropic.js';
+import { ProviderError } from './errors.js';
+
+export { ProviderError };
 
 /**
  * Built-in model providers. Anything with kind "openai" speaks the
@@ -43,10 +47,6 @@ const CATALOG = [
   { id: 'ollama', label: 'Ollama (local)', kind: 'openai', baseUrl: 'http://localhost:11434/v1', keyless: true },
   { id: 'demo', label: 'Demo', kind: 'demo', keyless: true, models: ['demo'] },
 ];
-
-export class ProviderError extends Error {
-  name = 'ProviderError';
-}
 
 /** What checking a key found. `unreachable` means the provider couldn't be asked, not that the key is bad. */
 export class KeyCheck {
@@ -105,6 +105,8 @@ export class Providers {
       keyUrl: d.keyUrl ?? null,
       keySource: d.configKey ? 'app' : d.apiKey ? 'environment' : null,
       keyHint: d.configKey ? `…${d.configKey.slice(-4)}` : null,
+      // Web search, code and shared folders: only Claude models get these for now.
+      abilities: d.kind === 'anthropic',
     }));
   }
 
@@ -162,6 +164,11 @@ export class Providers {
     return this.defs.has(id);
   }
 
+  /** Whether agents on this provider can use abilities (web search, code, shared folders). */
+  supportsAbilities(id) {
+    return this.defs.get(id)?.kind === 'anthropic';
+  }
+
   isConfigured(id) {
     const d = this.defs.get(id);
     return Boolean(d && (d.keyless || d.apiKey));
@@ -169,7 +176,8 @@ export class Providers {
 
   #anthropic(def) {
     // With no key in config.json the SDK resolves credentials from the environment.
-    return def.configKey ? new Anthropic({ apiKey: def.configKey }) : new Anthropic();
+    const baseURL = def.baseUrl ? { baseURL: def.baseUrl } : {};
+    return def.configKey ? new Anthropic({ apiKey: def.configKey, ...baseURL }) : new Anthropic(baseURL);
   }
 
   /** Live model ids for a provider, falling back to the built-in suggestions. */
@@ -196,11 +204,11 @@ export class Providers {
   }
 
   /**
-   * Stream one reply. Calls onDelta with text chunks as they arrive and
-   * resolves with the final text (authoritative: it can differ from the
-   * concatenated deltas when a fallback model took over mid-stream).
+   * Stream one reply. Calls onDelta with text chunks as they arrive and resolves with the final text.
+   * Claude models also get the agent's `abilities` ({web, code, folders}) and report their tool use
+   * through onActivity, cited pages through onSources, and a re-run step through onReset.
    */
-  async stream({ provider, model, system, messages, signal, onDelta, agent }) {
+  async stream({ provider, model, system, messages, signal, onDelta, agent, abilities, onActivity, onSources, onReset }) {
     const def = this.defs.get(provider);
     if (!def) throw new ProviderError(`Unknown provider "${provider}"`);
     if (!this.isConfigured(provider)) {
@@ -208,63 +216,20 @@ export class Providers {
     }
     if (def.kind === 'demo') return streamDemo({ messages, signal, onDelta, agent });
     if (def.kind === 'anthropic') {
-      return streamAnthropic({ client: this.#anthropic(def), model, system, messages, signal, onDelta });
-    }
-    return streamOpenAICompatible({ def, model, system, messages, signal, onDelta });
-  }
-}
-
-async function streamAnthropic({ client, model, system, messages, signal, onDelta }) {
-  try {
-    // `fallbacks: "default"` lets the API retry on a substitute model if the
-    // requested one declines; models without fallback support just ignore it.
-    const stream = client.beta.messages.stream(
-      {
+      return streamAnthropic({
+        client: this.#anthropic(def),
         model,
-        max_tokens: 64000,
         system,
         messages,
-        cache_control: { type: 'ephemeral' },
-        betas: ['server-side-fallback-2026-07-01'],
-        fallbacks: 'default',
-      },
-      { signal },
-    );
-    for await (const event of stream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        onDelta(event.delta.text);
-      }
+        signal,
+        abilities,
+        onDelta,
+        onActivity,
+        onSources,
+        onReset,
+      });
     }
-    const final = await stream.finalMessage();
-    // Only text after the last fallback hand-off belongs to the model that answered.
-    const lastFallback = final.content.findLastIndex((b) => b.type === 'fallback');
-    const text = final.content
-      .slice(lastFallback + 1)
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text)
-      .join('');
-    if (final.stop_reason === 'refusal' && !text.trim()) {
-      throw new ProviderError('The model declined to answer this one.');
-    }
-    return text;
-  } catch (err) {
-    if (err instanceof ProviderError || err instanceof Anthropic.APIUserAbortError) throw err;
-    if (err instanceof Anthropic.AuthenticationError) {
-      throw new ProviderError('Anthropic rejected the API key configured on the hub.');
-    }
-    if (err instanceof Anthropic.NotFoundError) {
-      throw new ProviderError(`Anthropic doesn't recognize the model "${model}".`);
-    }
-    if (err instanceof Anthropic.RateLimitError) {
-      throw new ProviderError('Anthropic rate limit reached. Try again in a moment.');
-    }
-    if (err instanceof Anthropic.APIConnectionError) {
-      throw new ProviderError('The hub could not reach Anthropic. Check the PC’s internet connection.');
-    }
-    if (err instanceof Anthropic.APIError) {
-      throw new ProviderError(`Anthropic error${err.status ? ` ${err.status}` : ''}: ${err.message}`);
-    }
-    throw err;
+    return streamOpenAICompatible({ def, model, system, messages, signal, onDelta });
   }
 }
 

@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import dev.orbit.app.ui.theme.Orbit
 
 /** Orbit's own icon set: one stroke weight, round caps and joins, to sit with the typeface. */
-enum class OrbitIcon { Back, Up, Down, Plus, Check, More, Dice, Chevron }
+enum class OrbitIcon { Back, Up, Down, Plus, Check, More, Dice, Chevron, Search, Globe, Code, Folder, File }
 
 @Composable
 fun OrbitIcon(
@@ -34,10 +34,11 @@ fun OrbitIcon(
         val s = this.size.minDimension
         val stroke = Stroke(width = 1.75.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
         fun at(x: Float, y: Float) = Offset(s * x, s * y)
-        fun polyline(points: List<Offset>) {
+        fun polyline(points: List<Offset>, closed: Boolean = false) {
             val path = Path().apply {
                 moveTo(points[0].x, points[0].y)
                 for (p in points.drop(1)) lineTo(p.x, p.y)
+                if (closed) close()
             }
             drawPath(path, tint, style = stroke)
         }
@@ -61,6 +62,27 @@ fun OrbitIcon(
             OrbitIcon.Check -> polyline(listOf(at(0.2f, 0.53f), at(0.41f, 0.74f), at(0.8f, 0.28f)))
             OrbitIcon.Chevron -> polyline(listOf(at(0.39f, 0.26f), at(0.63f, 0.5f), at(0.39f, 0.74f)))
             OrbitIcon.More -> for (y in listOf(0.22f, 0.5f, 0.78f)) drawCircle(tint, s * 0.075f, at(0.5f, y))
+            OrbitIcon.Search -> {
+                drawCircle(tint, s * 0.255f, at(0.44f, 0.44f), style = stroke)
+                polyline(listOf(at(0.63f, 0.63f), at(0.81f, 0.81f)))
+            }
+            OrbitIcon.Globe -> {
+                drawCircle(tint, s * 0.32f, at(0.5f, 0.5f), style = stroke)
+                drawOval(tint, at(0.355f, 0.18f), Size(s * 0.29f, s * 0.64f), style = stroke)
+                polyline(listOf(at(0.19f, 0.5f), at(0.81f, 0.5f)))
+            }
+            OrbitIcon.Code -> {
+                polyline(listOf(at(0.37f, 0.29f), at(0.16f, 0.5f), at(0.37f, 0.71f)))
+                polyline(listOf(at(0.63f, 0.29f), at(0.84f, 0.5f), at(0.63f, 0.71f)))
+            }
+            OrbitIcon.Folder -> polyline(
+                listOf(at(0.15f, 0.27f), at(0.4f, 0.27f), at(0.48f, 0.36f), at(0.85f, 0.36f), at(0.85f, 0.76f), at(0.15f, 0.76f)),
+                closed = true,
+            )
+            OrbitIcon.File -> {
+                polyline(listOf(at(0.26f, 0.16f), at(0.57f, 0.16f), at(0.75f, 0.34f), at(0.75f, 0.84f), at(0.26f, 0.84f)), closed = true)
+                polyline(listOf(at(0.57f, 0.17f), at(0.57f, 0.34f), at(0.74f, 0.34f)))
+            }
             OrbitIcon.Dice -> {
                 drawRoundRect(tint, at(0.16f, 0.16f), Size(s * 0.68f, s * 0.68f), CornerRadius(s * 0.18f), style = stroke)
                 for (p in listOf(0.36f, 0.5f, 0.64f)) drawCircle(tint, s * 0.058f, at(p, p))

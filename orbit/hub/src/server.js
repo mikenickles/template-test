@@ -1,8 +1,10 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
 import dgram from 'node:dgram';
-import { Orchestrator } from './orchestrator.js';
+import { FolderError, Folders } from './folders.js';
+import { ABILITIES, Orchestrator } from './orchestrator.js';
 import { PAIR_PAGE } from './pairpage.js';
+import { canPickFolder, pickFolder } from './picker.js';
 import { pairingLink, qrSvg } from './qr.js';
 
 export const VERSION = '0.1.0';
@@ -22,6 +24,7 @@ const hashToken = (token) => crypto.createHash('sha256').update(token).digest('h
 const newPairingCode = () => String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
 const text = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
 const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 /** How long the pairing page keeps saying "Paired with …" after a phone pairs. */
 const JUST_PAIRED_MS = 60_000;
@@ -31,13 +34,14 @@ const JUST_PAIRED_MS = 60_000;
  * bearer token a phone receives when it pairs with the code shown on the PC.
  */
 export class Hub {
-  constructor({ store, providers, name, onPairingCode = () => {} }) {
+  constructor({ store, providers, folders = new Folders(), name, onPairingCode = () => {} }) {
     this.store = store;
     this.providers = providers;
+    this.folders = folders;
     this.name = name;
     this.onPairingCode = onPairingCode;
     this.subscribers = new Map(); // roomId -> Set<ServerResponse>
-    this.orchestrator = new Orchestrator({ store, providers, emit: (...args) => this.#emit(...args) });
+    this.orchestrator = new Orchestrator({ store, providers, folders, emit: (...args) => this.#emit(...args) });
     this.pairFailures = 0;
     this.pairLockedUntil = 0;
     this.pairingCode = newPairingCode();
@@ -182,12 +186,10 @@ export class Hub {
     if (key === 'GET /api/hub') return { app: 'orbit-hub', name: this.name, version: VERSION };
     if (key === 'POST /api/pair') return this.#pair(await this.#body(req));
 
-    // The pairing page shows the live code, so only the PC itself may open it.
-    if (url.pathname === '/pair' || url.pathname === '/pair.json') {
-      if (!LOOPBACK.has(req.socket.remoteAddress)) {
-        throw new HttpError(403, 'The pairing page only opens on the PC running the hub.');
-      }
-      if (url.pathname === '/pair') {
+    // The hub's own page shows the live pairing code and shares folders, so only the PC itself may use it.
+    if (url.pathname === '/' || url.pathname === '/pair' || url.pathname === '/pair.json') {
+      this.#localOnly(req);
+      if (url.pathname !== '/pair.json') {
         res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
         res.end(PAIR_PAGE);
         return undefined;
@@ -198,8 +200,11 @@ export class Hub {
         address: this.addresses[0] ?? `localhost:${this.server.address().port}`,
         svg: qrSvg(this.pairingLink()),
         justPaired: recent ? this.justPaired.name : null,
+        folders: this.folders.list(),
+        canPick: canPickFolder(),
       };
     }
+    if (parts[0] === 'local') return this.#localRoute(req, parts);
 
     const device = this.#authenticate(req);
     switch (key) {
@@ -209,6 +214,7 @@ export class Hub {
           agents: this.store.state.agents,
           rooms: this.store.state.rooms.map((r) => this.#roomView(r)),
           providers: this.providers.list(),
+          folders: this.folders.list(),
         };
       case 'DELETE /api/device': {
         this.store.state.devices = this.store.state.devices.filter((d) => d.id !== device.id);
@@ -233,6 +239,11 @@ export class Hub {
         this.providers.removeKey(id);
         return this.providers.list().find((p) => p.id === id);
 
+      // A phone can stop sharing a folder, but only the PC can share one.
+      case 'DELETE /api/folders/:id':
+        this.folders.remove(id);
+        return { folders: this.folders.list() };
+
       case 'POST /api/agents': {
         const agent = { id: crypto.randomUUID(), createdAt: Date.now(), ...this.#agentFields(await this.#body(req)) };
         this.store.state.agents.push(agent);
@@ -242,7 +253,7 @@ export class Hub {
       case 'PUT /api/agents/:id': {
         const agent = this.store.agent(id);
         if (!agent) throw new HttpError(404, 'That agent no longer exists.');
-        Object.assign(agent, this.#agentFields(await this.#body(req)));
+        Object.assign(agent, this.#agentFields(await this.#body(req), agent));
         this.store.save();
         return agent;
       }
@@ -341,7 +352,45 @@ export class Hub {
     return room;
   }
 
-  #agentFields(body) {
+  /**
+   * Requests for the hub's own page: only from this PC, addressed to localhost (so a web page that
+   * points its own domain at this PC can't read it), and, for changes, sent by the page itself.
+   */
+  #localOnly(req, change = false) {
+    const host = String(req.headers.host ?? '').replace(/:\d+$/, '').toLowerCase();
+    if (!LOOPBACK.has(req.socket.remoteAddress) || !LOCAL_HOSTS.has(host)) {
+      throw new HttpError(403, 'This page only opens on the PC running the hub, at http://localhost.');
+    }
+    if (change && req.headers['x-orbit-local'] !== '1') throw new HttpError(403, 'Use the Orbit page on this PC.');
+  }
+
+  async #localRoute(req, parts) {
+    this.#localOnly(req, req.method !== 'GET');
+    const route = `${req.method} /${parts.slice(1).join('/')}`;
+    try {
+      if (route === 'GET /folders') return { folders: this.folders.list() };
+      if (route === 'POST /folders') {
+        this.folders.add((await this.#body(req)).path);
+        return { folders: this.folders.list() };
+      }
+      if (route === 'POST /folders/pick') {
+        if (!canPickFolder()) throw new HttpError(404, 'Type the folder path instead.');
+        const chosen = await pickFolder();
+        if (chosen) this.folders.add(chosen);
+        return { folders: this.folders.list(), cancelled: !chosen };
+      }
+      if (req.method === 'DELETE' && parts[1] === 'folders' && parts.length === 3) {
+        this.folders.remove(parts[2]);
+        return { folders: this.folders.list() };
+      }
+    } catch (err) {
+      if (err instanceof FolderError) throw new HttpError(400, err.message);
+      throw err;
+    }
+    throw new HttpError(404, 'Not found.');
+  }
+
+  #agentFields(body, existing = null) {
     const name = text(body.name, 40).replace(/[@\[\]]/g, '');
     if (!name) throw new HttpError(400, 'Give the agent a name.');
     const provider = text(body.provider, 40);
@@ -355,6 +404,10 @@ export class Hub {
       provider,
       model,
       avatar: body.avatar && typeof body.avatar === 'object' ? body.avatar : {},
+      // An older app that doesn't know about abilities leaves them as they were.
+      abilities: Array.isArray(body.abilities)
+        ? ABILITIES.filter((a) => body.abilities.includes(a))
+        : (existing?.abilities ?? []),
     };
   }
 

@@ -36,6 +36,9 @@ class HubClient(val baseUrl: String, private val token: String? = null) {
     @Serializable
     private data class KeyBody(val apiKey: String)
 
+    @Serializable
+    private data class FoldersBody(val folders: List<SharedFolder> = emptyList())
+
     suspend fun info(): HubInfo = call("GET", "/api/hub")
 
     suspend fun pair(code: String, deviceName: String): PairResult =
@@ -55,6 +58,9 @@ class HubClient(val baseUrl: String, private val token: String? = null) {
         call("PUT", "/api/providers/$providerId/key", OrbitJson.encodeToString(KeyBody(apiKey)))
 
     suspend fun removeKey(providerId: String): Provider = call("DELETE", "/api/providers/$providerId/key")
+
+    /** Stops sharing a folder with agents. Sharing one happens on the PC. Returns the folders still shared. */
+    suspend fun removeFolder(id: String): List<SharedFolder> = call<FoldersBody>("DELETE", "/api/folders/$id").folders
 
     suspend fun saveAgent(agent: Agent): Agent {
         val body = OrbitJson.encodeToString(agent)
@@ -123,6 +129,8 @@ class HubClient(val baseUrl: String, private val token: String? = null) {
         when (event) {
             "message" -> RoomEvent.Upsert(OrbitJson.decodeFromString<Message>(data))
             "delta" -> RoomEvent.Chunk(OrbitJson.decodeFromString<Delta>(data))
+            "activity" -> RoomEvent.Progress(OrbitJson.decodeFromString<ActivityUpdate>(data))
+            "reset" -> RoomEvent.Reset(OrbitJson.decodeFromString<TextReset>(data))
             "run" -> RoomEvent.Run(OrbitJson.decodeFromString<RunState>(data))
             "cleared" -> RoomEvent.Cleared
             else -> null

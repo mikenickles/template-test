@@ -1,0 +1,178 @@
+package dev.orbit.app.ui.components
+
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import dev.orbit.app.data.Activity
+import dev.orbit.app.data.Source
+import dev.orbit.app.ui.theme.Orbit
+import dev.orbit.app.ui.theme.OrbitMotion
+import dev.orbit.app.ui.theme.OrbitType
+
+/** How one step reads in a reply: a verb ("Searched") and what it acted on ("best ramen in Tokyo"). */
+data class ActivityLabel(val verb: String, val detail: String)
+
+/** The site a web address belongs to, without "www.". */
+internal fun siteOf(url: String): String =
+    url.substringAfter("://").substringBefore('/').substringBefore('?').substringBefore('#').removePrefix("www.").ifEmpty { url }
+
+/** A shared file or folder by its last part: "Notes/trips/japan.md" reads as "japan.md". */
+private fun leafOf(path: String): String = path.trimEnd('/').substringAfterLast('/').ifEmpty { path }
+
+/** Words for a step, while it's happening ([live]) and once it's done or has failed. */
+fun activityLabel(activity: Activity, live: Boolean = false): ActivityLabel {
+    val failed = activity.failed && !live
+    val detail = activity.detail
+    return when (activity.kind) {
+        Activity.KIND_SEARCH -> ActivityLabel(if (live) "Searching" else if (failed) "Search failed" else "Searched", detail)
+        Activity.KIND_PAGE -> ActivityLabel(if (live) "Reading" else if (failed) "Couldn't open" else "Read", siteOf(detail))
+        Activity.KIND_CODE -> ActivityLabel(if (live) "Running code" else if (failed) "Code didn't run" else "Ran code", "")
+        Activity.KIND_FOLDER -> ActivityLabel(
+            if (live) "Looking in" else if (failed) "Couldn't open" else "Looked in",
+            if (detail.isBlank()) "your shared folders" else leafOf(detail),
+        )
+        Activity.KIND_FILE -> ActivityLabel(if (live) "Reading" else if (failed) "Couldn't read" else "Read", leafOf(detail))
+        Activity.KIND_FIND -> ActivityLabel(
+            if (live) "Searching files for" else if (failed) "File search failed for" else "Searched files for",
+            "“$detail”",
+        )
+        else -> ActivityLabel(if (live) "Working" else "Used a tool", detail)
+    }
+}
+
+/** One line for many steps: "Searched the web 3 times, read 2 pages and ran code". */
+fun activitySummary(activity: List<Activity>): String {
+    fun count(kind: String) = activity.count { it.kind == kind }
+    fun times(n: Int, one: String, many: String) = if (n == 1) one else many.replace("#", n.toString())
+    val parts = buildList {
+        count(Activity.KIND_SEARCH).takeIf { it > 0 }?.let { add(times(it, "searched the web", "searched the web # times")) }
+        count(Activity.KIND_PAGE).takeIf { it > 0 }?.let { add(times(it, "read a page", "read # pages")) }
+        if (count(Activity.KIND_CODE) > 0) add("ran code")
+        count(Activity.KIND_FOLDER).takeIf { it > 0 }?.let { add(times(it, "looked in a folder", "looked in # folders")) }
+        count(Activity.KIND_FILE).takeIf { it > 0 }?.let { add(times(it, "read a file", "read # files")) }
+        if (count(Activity.KIND_FIND) > 0) add("searched your files")
+    }.ifEmpty { listOf("used ${activity.size} tools") }
+    val joined = if (parts.size == 1) parts[0] else parts.dropLast(1).joinToString(", ") + " and " + parts.last()
+    return joined.replaceFirstChar { it.uppercase() }
+}
+
+private fun iconFor(kind: String) = when (kind) {
+    Activity.KIND_SEARCH -> OrbitIcon.Search
+    Activity.KIND_PAGE -> OrbitIcon.Globe
+    Activity.KIND_CODE -> OrbitIcon.Code
+    Activity.KIND_FOLDER -> OrbitIcon.Folder
+    Activity.KIND_FILE -> OrbitIcon.File
+    Activity.KIND_FIND -> OrbitIcon.Search
+    else -> OrbitIcon.More
+}
+
+/**
+ * What an agent did on its way to a reply, one quiet line per step. A step in progress shimmers. Once
+ * the reply has landed, a long trail folds into one summary line that opens on tap.
+ */
+@Composable
+fun ActivityTrail(activity: List<Activity>, streaming: Boolean, modifier: Modifier = Modifier) {
+    if (activity.isEmpty()) return
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val folded = !streaming && !expanded && activity.size > 3
+    Column(modifier.animateContentSize(OrbitMotion.snappy())) {
+        if (folded) {
+            val c = Orbit.colors
+            Row(
+                Modifier.tap(CircleShape, 0.97f) { expanded = true }.heightIn(min = 28.dp).padding(end = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OrbitIcon(iconFor(activity.first().kind), size = 15.dp, tint = c.textTertiary)
+                Text(
+                    activitySummary(activity),
+                    Modifier.weight(1f, fill = false).padding(start = 8.dp),
+                    style = OrbitType.bodyS,
+                    color = c.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                OrbitIcon(OrbitIcon.Chevron, Modifier.padding(start = 2.dp).graphicsLayer { rotationZ = 90f }, size = 15.dp, tint = c.textTertiary)
+            }
+        } else {
+            for (step in activity) ActivityLine(step, live = streaming && !step.done)
+        }
+    }
+}
+
+@Composable
+private fun ActivityLine(step: Activity, live: Boolean) {
+    val c = Orbit.colors
+    val label = activityLabel(step, live)
+    Row(Modifier.heightIn(min = 26.dp), verticalAlignment = Alignment.CenterVertically) {
+        OrbitIcon(iconFor(step.kind), size = 15.dp, tint = c.textTertiary)
+        val modifier = Modifier.padding(start = 8.dp)
+        if (live) {
+            ShimmerText(listOf(label.verb, label.detail).filter { it.isNotBlank() }.joinToString(" "), OrbitType.bodyS, c.textTertiary, modifier)
+        } else {
+            Text(
+                buildAnnotatedString {
+                    withStyle(SpanStyle(color = c.textTertiary)) { append(label.verb) }
+                    if (label.detail.isNotBlank()) {
+                        append(' ')
+                        withStyle(SpanStyle(color = if (step.failed) c.textTertiary else c.textSecondary)) { append(label.detail) }
+                    }
+                },
+                modifier,
+                style = OrbitType.bodyS,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/** The pages a reply cites, as small numbered chips that open the page. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun SourceChips(sources: List<Source>, modifier: Modifier = Modifier) {
+    if (sources.isEmpty()) return
+    val c = Orbit.colors
+    val uri = LocalUriHandler.current
+    FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        sources.forEachIndexed { index, source ->
+            Row(
+                Modifier
+                    .tap(CircleShape, 0.94f) { runCatching { uri.openUri(source.url) } }
+                    .background(c.surfaceRaised)
+                    .border(1.dp, c.hairline, CircleShape)
+                    .heightIn(min = 28.dp)
+                    .padding(start = 9.dp, end = 11.dp)
+                    .semantics { contentDescription = "Source ${index + 1}: ${source.title.ifBlank { siteOf(source.url) }}" },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("${index + 1}", style = OrbitType.mono, color = c.textTertiary)
+                Text(siteOf(source.url), Modifier.padding(start = 6.dp), style = OrbitType.caption, color = c.textSecondary, maxLines = 1)
+            }
+        }
+    }
+}
