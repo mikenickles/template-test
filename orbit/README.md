@@ -91,6 +91,14 @@ Keys can also come from `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`,
 entry with a `baseUrl` is treated as an OpenAI-compatible server, e.g.
 `"my-server": { "label": "My server", "baseUrl": "http://localhost:1234/v1" }`.
 
+### A free AI that runs on your PC (optional)
+
+[Ollama](https://ollama.com/download) runs small AI models on the PC itself: free, private, and no key
+needed. Install it on the PC and open it. Then in the app, open **Settings**, tap **Ollama (local)** and
+tap **Get** next to a model (Llama 3.2 is a good first pick, a 2 GB download). When it finishes, pick it
+in an agent's **Model** section. Local models are slower and less capable than Claude, and can't use
+abilities (web search, code, folders).
+
 ## 4. Share folders with your agents (optional)
 
 On the PC, open `http://localhost:8787/pair` and click **Share a folder…**. Agents

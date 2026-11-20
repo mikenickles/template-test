@@ -60,6 +60,9 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
     private data class ErrorBody(val error: String = "")
 
     @Serializable
+    private data class PullBody(val model: String)
+
+    @Serializable
     private data class PairBody(val code: String, val deviceName: String)
 
     @Serializable
@@ -93,6 +96,13 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
         call("PUT", "/api/providers/$providerId/key", OrbitJson.encodeToString(KeyBody(apiKey)))
 
     suspend fun removeKey(providerId: String): Provider = call("DELETE", "/api/providers/$providerId/key")
+
+    /** Starts downloading [model] into a local runtime on the PC (Ollama). Progress shows on the provider. */
+    suspend fun pullModel(providerId: String, model: String): Provider =
+        call("POST", "/api/providers/$providerId/pull", OrbitJson.encodeToString(PullBody(model)))
+
+    /** Clears a failed download from the provider. */
+    suspend fun clearDownload(providerId: String): Provider = call("DELETE", "/api/providers/$providerId/pull")
 
     /** Stops sharing a folder with agents. Sharing one happens on the PC. Returns the folders still shared. */
     suspend fun removeFolder(id: String): List<SharedFolder> = call<FoldersBody>("DELETE", "/api/folders/$id").folders

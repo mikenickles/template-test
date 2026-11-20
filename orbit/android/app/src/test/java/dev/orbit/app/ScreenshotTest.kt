@@ -33,6 +33,7 @@ import dev.orbit.app.ui.components.FormerAgentAvatar
 import dev.orbit.app.ui.components.SheetAction
 import dev.orbit.app.ui.screens.AgentEditorScreen
 import dev.orbit.app.ui.screens.HomeScreen
+import dev.orbit.app.ui.screens.LocalModelsScreen
 import dev.orbit.app.ui.screens.PairScreen
 import dev.orbit.app.ui.screens.ProviderKeyScreen
 import dev.orbit.app.ui.screens.RoomEditorScreen
@@ -120,6 +121,10 @@ class ScreenshotTest {
     }
     @Test fun providerKey() = shot("provider-key") { ProviderKeyScreen(SampleData.providers[2], { _, _ -> }, {}, {}) }
     @Test fun providerKeyLight() = shot("provider-key-light", dark = false) { ProviderKeyScreen(SampleData.anthropic, { _, _ -> }, {}, {}) }
+    @Test fun localModels() = shot("local-models") { LocalModelsScreen(SampleData.ollama, { _, _ -> }, {}, {}, {}) }
+    @Test fun localModelsDownloadingLight() = shot("local-models-downloading-light", dark = false) {
+        LocalModelsScreen(SampleData.ollamaDownloading, { _, _ -> }, {}, {}, {})
+    }
     @Test fun homeDemoMode() = shot("home-demo") {
         Home(SampleData.app.copy(providers = SampleData.providers.map { if (it.takesKey) it.copy(configured = false, keySource = null, keyHint = null) else it }))
     }

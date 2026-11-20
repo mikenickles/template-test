@@ -244,6 +244,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Asks the PC's local runtime to download [model]. [onDone] gets an error to show, or null. */
+    fun pullModel(providerId: String, model: String, onDone: (error: String?) -> Unit) {
+        viewModelScope.launch {
+            val client = repo.client ?: return@launch onDone("This phone isn't paired with a hub.")
+            try {
+                updateProvider(client.pullModel(providerId, model))
+                onDone(null)
+            } catch (e: HubException) {
+                if (e.status == 401) repo.unpair(notifyHub = false)
+                onDone(e.message ?: "The download couldn't start.")
+            }
+        }
+    }
+
+    fun clearDownload(providerId: String) {
+        viewModelScope.launch { hub { it.clearDownload(providerId) }?.let(::updateProvider) }
+    }
+
     fun removeKey(providerId: String, onDone: () -> Unit) {
         viewModelScope.launch {
             hub { it.removeKey(providerId) }?.let {

@@ -127,12 +127,13 @@ fun SettingsScreen(
                     Column {
                         state.providers.forEachIndexed { index, provider ->
                             if (index > 0) Hairline()
-                            // Providers that take a key open a screen to add or change it.
+                            // Providers that take a key open a screen to add or change it; local ones, to get models.
+                            val opens = provider.takesKey || provider.local
                             Row(
                                 Modifier
                                     .fillMaxWidth()
-                                    .then(if (provider.takesKey) Modifier.tap(RectangleShape, 0.985f) { onOpenProvider(provider.id) } else Modifier)
-                                    .padding(start = OrbitDimens.rowPad, end = if (provider.takesKey) 8.dp else OrbitDimens.rowPad)
+                                    .then(if (opens) Modifier.tap(RectangleShape, 0.985f) { onOpenProvider(provider.id) } else Modifier)
+                                    .padding(start = OrbitDimens.rowPad, end = if (opens) 8.dp else OrbitDimens.rowPad)
                                     .heightIn(min = 56.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
@@ -140,13 +141,16 @@ fun SettingsScreen(
                                     Text(provider.label, style = OrbitType.titleS, color = c.text)
                                     provider.keyHint?.let { Text("Key $it", style = OrbitType.mono, color = c.textTertiary) }
                                 }
+                                val download = provider.download
                                 when {
                                     provider.id == "demo" -> Status("Built in", null)
+                                    download != null && download.error == null -> Status("Downloading ${download.percent}%", null)
                                     provider.configured -> Status("Ready", c.live)
                                     provider.takesKey -> Status("Add key", null)
+                                    provider.running == true -> Status("Get a model", null)
                                     else -> Status("Not running", null)
                                 }
-                                if (provider.takesKey) {
+                                if (opens) {
                                     OrbitIcon(OrbitIcon.Chevron, Modifier.padding(start = 4.dp), size = 18.dp, tint = c.textTertiary)
                                 }
                             }
@@ -154,7 +158,7 @@ fun SettingsScreen(
                     }
                 }
                 Text(
-                    "Tap a provider to add its key. Keys are checked with the provider, then stored only on your PC.",
+                    "Tap a provider to add its key, or a local one to download models. Keys are checked with the provider, then stored only on your PC.",
                     Modifier.padding(top = OrbitDimens.labelGap),
                     style = OrbitType.bodyS,
                     color = c.textTertiary,

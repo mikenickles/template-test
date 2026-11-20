@@ -174,6 +174,43 @@ export function RoomEditor({ room, state, notify, onClose, onSaved }) {
   <//>`;
 }
 
+/** Ollama says "llama3.2:latest" for "llama3.2". */
+const sameModel = (a, b) => (a.includes(':') ? a : `${a}:latest`) === (b.includes(':') ? b : `${b}:latest`);
+
+/** A model runtime on this PC (Ollama): is it running, what it has, and small models to download. */
+function LocalPanel({ provider: p, model, setModel, error, onPull, onDismiss }) {
+  const download = p.download && !p.download.error ? p.download : null;
+  const busy = !p.running || Boolean(download);
+  const name = p.label.replace(/ \(.*\)$/, '');
+  return html`<div class="local-panel">
+    <p class="muted" style="margin:0">${!p.running
+      ? html`${name} runs AI models on this PC, free and private. ${p.installUrl && html`<a href=${p.installUrl} target="_blank" rel="noopener noreferrer">Download ${name}</a>`}, install it and open it. This page notices within a few seconds.`
+      : p.models.length ? `On this PC: ${p.models.join(', ')}. Pick a model in an agent's Model section.`
+      : 'Running, with no models yet. Download one below; it stays on this PC.'}</p>
+    ${p.suggestions.map((s) => {
+      const have = p.models.some((m) => sameModel(m, s.model));
+      const here = download && sameModel(download.model, s.model);
+      return html`<div class="suggestion">
+        <div style="flex:1"><div class="title-s">${s.label}</div><div class="body-s faint">${s.size} · ${s.note}</div>
+          ${here && html`<div class="meter"><span style=${`width:${Math.max(2, download.percent)}%`}></span></div>`}</div>
+        ${have ? html`<span class="label" style="color:var(--live)">On this PC</span>`
+          : here ? html`<span class="label">${download.percent}%</span>`
+          : html`<button class="pill" disabled=${busy} onClick=${() => onPull(s.model)}>Get</button>`}
+      </div>`;
+    })}
+    ${download && !p.suggestions.some((s) => sameModel(s.model, download.model)) && html`<div>
+      <div class="body-s faint">Downloading ${download.model} · ${download.percent}%</div>
+      <div class="meter"><span style=${`width:${Math.max(2, download.percent)}%`}></span></div></div>`}
+    <form style="display:flex;gap:8px" onSubmit=${(e) => { e.preventDefault(); onPull(model); }}>
+      <input class="field mono" style="flex:1;font-size:15px" placeholder="Any model, e.g. qwen3:4b" title="Any model name from ollama.com/library" value=${model} onInput=${(e) => setModel(e.currentTarget.value)} />
+      <button class="button" disabled=${busy || !model.trim()}>Download</button>
+    </form>
+    ${(error || p.download?.error) && html`<p class="error-text" style="margin:0">${error || p.download.error}
+      ${!error && html` <button type="button" class="label muted" onClick=${onDismiss}>Dismiss</button>`}</p>`}
+    <p class="note" style="margin:0">Local models run on this PC's processor: free and private, but slower and not as clever as online ones. They can't search the web, run code or read your folders.</p>
+  </div>`;
+}
+
 export function Settings({ state, notify, refresh, onClose }) {
   const [open, setOpen] = useState(null);
   const [key, setKey] = useState('');
@@ -182,6 +219,19 @@ export function Settings({ state, notify, refresh, onClose }) {
   const [usage, setUsage] = useState(null);
   const [canPick, setCanPick] = useState(false);
   const [path, setPath] = useState('');
+
+  // While a local runtime's panel is open, keep its status fresh: quickly during a download.
+  const local = state.providers.find((p) => p.id === open && p.local);
+  const pulling = Boolean(local?.download && !local.download.error);
+  useEffect(() => {
+    if (!local) return undefined;
+    const timer = setInterval(() => refresh(), pulling ? 1000 : 4000);
+    return () => clearInterval(timer);
+  }, [local?.id, pulling]);
+  const pull = (provider, model) => {
+    if (!model.trim()) return;
+    api.pullModel(provider.id, model.trim()).then(() => { setKey(''); return refresh(); }).catch((e) => setKeyError(e.message));
+  };
 
   useEffect(() => {
     api.usage(30).then(setUsage).catch(() => {});
@@ -224,14 +274,17 @@ export function Settings({ state, notify, refresh, onClose }) {
 
     <div class="section-title">Model providers</div>
     <div class="card">${state.providers.map((p) => html`<div>
-      <button class="row button-row" disabled=${!p.takesKey} onClick=${() => { setOpen(open === p.id ? null : p.id); setKey(''); setKeyError(null); }}>
+      <button class="row button-row" disabled=${!p.takesKey && !p.local} onClick=${() => { setOpen(open === p.id ? null : p.id); setKey(''); setKeyError(null); }}>
         <div style="flex:1"><div class="title-s">${p.label}</div>${p.keyHint && html`<div class="mono faint">Key ${p.keyHint}</div>`}</div>
         ${p.id === 'demo' ? html`<span class="label faint">Built in</span>`
+          : p.download && !p.download.error ? html`<span class="label faint">Downloading ${p.download.percent}%</span>`
           : p.configured ? html`<span class="dot live"></span><span class="label" style="color:var(--live)">Ready</span>`
-          : html`<span class="label faint">${p.takesKey ? 'Add key' : 'Not running'}</span>`}
-        ${p.takesKey && html`<${Icon} name="chevron" size=${18} />`}
+          : html`<span class="label faint">${p.takesKey ? 'Add key' : p.running ? 'Get a model' : 'Not running'}</span>`}
+        ${(p.takesKey || p.local) && html`<${Icon} name="chevron" size=${18} />`}
       </button>
-      ${open === p.id && html`<form class="row" style="flex-wrap:wrap;border-top:1px solid var(--hairline)" onSubmit=${(e) => { e.preventDefault(); saveKey(p); }}>
+      ${open === p.id && p.local && html`<${LocalPanel} provider=${p} model=${key} setModel=${(v) => { setKey(v); setKeyError(null); }} error=${keyError}
+        onPull=${(model) => pull(p, model)} onDismiss=${() => api.clearDownload(p.id).then(refresh).catch(() => {})} />`}
+      ${open === p.id && !p.local && html`<form class="row" style="flex-wrap:wrap;border-top:1px solid var(--hairline)" onSubmit=${(e) => { e.preventDefault(); saveKey(p); }}>
         <input class="field mono" style="flex:1;min-width:220px;font-size:15px" type="password" autocomplete="off" placeholder=${`Paste your ${p.label} key`} value=${key} onInput=${(e) => { setKey(e.currentTarget.value); setKeyError(null); }} autofocus />
         <button class="button" disabled=${!key.trim() || checking}>${checking ? 'Checking' : 'Save key'}</button>
         ${keyError && html`<p class="error-text" style="width:100%;margin:0">${keyError}</p>`}

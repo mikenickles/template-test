@@ -16,6 +16,8 @@ import dev.orbit.app.data.Author
 import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.data.HubInfo
 import dev.orbit.app.data.MemoryNote
+import dev.orbit.app.data.ModelDownload
+import dev.orbit.app.data.ModelSuggestion
 import dev.orbit.app.data.Schedule
 import dev.orbit.app.data.ScheduledBy
 import dev.orbit.app.data.Message
@@ -57,6 +59,20 @@ object SampleData {
     )
     val empty = Room("r3", "Reading group", listOf("a1", "a4"), updatedAt = NOW - 3 * 86_400_000)
 
+    val smallModels = listOf(
+        ModelSuggestion("llama3.2", "Llama 3.2 (3B)", "2.0 GB", "A good first pick. Runs on most PCs with 8 GB of memory."),
+        ModelSuggestion("gemma3:4b", "Gemma 3 (4B)", "3.3 GB", "A little smarter and slower. Best with 16 GB of memory."),
+        ModelSuggestion("gemma3:1b", "Gemma 3 (1B)", "0.8 GB", "Tiny and quick, for older PCs. Keep its jobs simple."),
+    )
+    val ollama = Provider(
+        "ollama", "Ollama (local)", false, local = true, running = false,
+        installUrl = "https://ollama.com/download", suggestions = smallModels,
+    )
+    val ollamaDownloading = ollama.copy(
+        running = true, configured = true, models = listOf("gemma3:1b"),
+        download = ModelDownload("llama3.2", "Downloading", 42),
+    )
+
     val anthropic = Provider(
         "anthropic", "Anthropic", true, listOf("claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"),
         takesKey = true, keyUrl = "https://console.anthropic.com/settings/keys", keySource = "app", keyHint = "…a1b2", abilities = true,
@@ -66,7 +82,7 @@ object SampleData {
         Provider("openai", "OpenAI", true, takesKey = true, keyUrl = "https://platform.openai.com/api-keys", keySource = "environment"),
         Provider("xai", "xAI", false, takesKey = true, keyUrl = "https://console.x.ai"),
         Provider("gemini", "Gemini", false, takesKey = true, keyUrl = "https://aistudio.google.com/apikey"),
-        Provider("ollama", "Ollama (local)", true),
+        ollama,
         Provider("demo", "Demo", true, listOf("demo")),
     )
 

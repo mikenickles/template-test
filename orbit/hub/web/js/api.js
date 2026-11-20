@@ -51,6 +51,8 @@ export const api = {
   models: (providerId) => request('GET', `/api/providers/${providerId}/models`),
   setKey: (providerId, apiKey) => request('PUT', `/api/providers/${providerId}/key`, { apiKey }),
   removeKey: (providerId) => request('DELETE', `/api/providers/${providerId}/key`),
+  pullModel: (providerId, model) => request('POST', `/api/providers/${providerId}/pull`, { model }),
+  clearDownload: (providerId) => request('DELETE', `/api/providers/${providerId}/pull`),
   usage: (days) => request('GET', `/api/usage?days=${days}`),
   saveSchedule: (s) => (s.id ? request('PUT', `/api/schedules/${s.id}`, s) : request('POST', '/api/schedules', s)),
   deleteSchedule: (id) => request('DELETE', `/api/schedules/${id}`),

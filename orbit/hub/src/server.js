@@ -6,6 +6,7 @@ import { FolderError, Folders } from './folders.js';
 import { MemoryError, addNote, removeNote } from './memory.js';
 import { ScheduleError, Scheduler } from './schedules.js';
 import { ABILITIES, Orchestrator } from './orchestrator.js';
+import { ProviderError } from './errors.js';
 import { PAIR_PAGE } from './pairpage.js';
 import { canPickFolder, pickFolder } from './picker.js';
 import { avatarFrom, migrateAvatars } from './characters.js';
@@ -305,6 +306,7 @@ export class Hub {
     const device = this.#authenticate(req);
     switch (key) {
       case 'GET /api/state':
+        await this.providers.checkLocal?.();
         return {
           hub: { name: this.name, version: VERSION, addresses: this.addresses, remote: this.remoteAddresses },
           agents: this.store.state.agents,
@@ -377,6 +379,21 @@ export class Hub {
         this.providers.setKey(id, apiKey);
         return this.providers.list().find((p) => p.id === id);
       }
+      case 'POST /api/providers/:id/pull': {
+        // Downloads a model into a local runtime (Ollama). Progress shows on the provider in /api/state.
+        if (!this.providers.has(id)) throw new HttpError(404, 'Unknown provider.');
+        try {
+          this.providers.pull(id, (await this.#body(req)).model);
+        } catch (err) {
+          if (err instanceof ProviderError) throw new HttpError(400, err.message);
+          throw err;
+        }
+        return this.providers.list().find((p) => p.id === id);
+      }
+      case 'DELETE /api/providers/:id/pull':
+        if (!this.providers.has(id)) throw new HttpError(404, 'Unknown provider.');
+        this.providers.clearDownload(id);
+        return this.providers.list().find((p) => p.id === id);
       case 'DELETE /api/providers/:id/key':
         if (!this.providers.takesKey(id)) throw new HttpError(404, "That provider doesn't use a key.");
         this.providers.removeKey(id);

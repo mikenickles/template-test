@@ -1,5 +1,6 @@
 package dev.orbit.app
 
+import dev.orbit.app.ui.screens.LocalModelsScreen
 import dev.orbit.app.ui.screens.ProviderKeyScreen
 import dev.orbit.app.ui.components.rememberQrScanner
 import kotlinx.coroutines.launch
@@ -395,6 +396,16 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
         }
         screen("provider/{id}") { entry ->
             val provider = state.providers.firstOrNull { it.id == entry.arguments?.getString("id") } ?: return@screen
+            if (provider.local) {
+                LocalModelsScreen(
+                    provider = provider,
+                    onDownload = { model, done -> vm.pullModel(provider.id, model, done) },
+                    onDismissError = { vm.clearDownload(provider.id) },
+                    onRefresh = vm::refresh,
+                    onBack = { nav.popBackStack() },
+                )
+                return@screen
+            }
             ProviderKeyScreen(
                 provider = provider,
                 onSave = { key, done ->

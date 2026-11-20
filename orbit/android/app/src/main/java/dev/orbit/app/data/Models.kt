@@ -178,7 +178,23 @@ data class Provider(
     val keyHint: String? = null,
     /** Whether agents on this provider can use abilities (web, code, files). */
     val abilities: Boolean = false,
+    /** A runtime on the PC itself (Ollama), with no key. Its [models] are the ones downloaded there. */
+    val local: Boolean = false,
+    /** For a local runtime: whether it answered the hub just now. */
+    val running: Boolean? = null,
+    /** Where to install the local runtime from, on the PC. */
+    val installUrl: String? = null,
+    /** Small models worth downloading, for a runtime that can fetch its own. */
+    val suggestions: List<ModelSuggestion> = emptyList(),
+    /** A model download in progress, or one that failed. */
+    val download: ModelDownload? = null,
 )
+
+@Serializable
+data class ModelSuggestion(val model: String, val label: String = model, val size: String = "", val note: String = "")
+
+@Serializable
+data class ModelDownload(val model: String, val status: String = "", val percent: Int = 0, val error: String? = null)
 
 /** A folder on the PC that agents with [Agent.ABILITY_FILES] may read. Shared from the PC, never from the phone. */
 @Serializable
