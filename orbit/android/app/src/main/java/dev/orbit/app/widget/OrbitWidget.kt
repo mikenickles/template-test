@@ -2,13 +2,8 @@ package dev.orbit.app.widget
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.RectF
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,7 +45,7 @@ import dev.orbit.app.R
 import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.data.HubState
 import dev.orbit.app.data.OrbitJson
-import dev.orbit.app.ui.components.AvatarPalette
+import dev.orbit.app.ui.components.character
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 
@@ -133,22 +128,6 @@ private val Secondary = ColorProvider(day = Color(0xFF4E5262), night = Color(0xF
 private val Tertiary = ColorProvider(day = Color(0xFF676B7C), night = Color(0xFF8B8FA0))
 private val Raised = ColorProvider(day = Color(0xFFE0E2E9), night = Color(0xFF23262F))
 
-/** An avatar's face for the widget: its color as a circle, with two eyes. */
-private fun face(spec: AvatarSpec, size: Int = 96): Bitmap {
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
-    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    paint.color = AvatarPalette[spec.color.mod(AvatarPalette.size)].fill.toArgb()
-    canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
-    paint.color = 0xFF08090D.toInt()
-    val eyeW = size * 0.11f
-    val eyeH = size * 0.24f
-    for (x in listOf(0.36f, 0.64f)) {
-        canvas.drawRoundRect(RectF(size * x - eyeW / 2, size * 0.4f, size * x + eyeW / 2, size * 0.4f + eyeH), eyeW / 2, eyeW / 2, paint)
-    }
-    return bitmap
-}
-
 class OrbitWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(setOf(DpSize(110.dp, 60.dp), DpSize(250.dp, 110.dp), DpSize(250.dp, 210.dp)))
 
@@ -205,7 +184,7 @@ private fun RoomLine(room: WidgetRoom, now: Long, onClick: androidx.glance.actio
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(GlanceModifier.size(34.dp).background(Raised).cornerRadius(17.dp), contentAlignment = Alignment.Center) {
-            Image(ImageProvider(face(room.avatar)), null, GlanceModifier.size(26.dp))
+            Image(ImageProvider(room.avatar.character().image), null, GlanceModifier.size(28.dp))
         }
         Column(GlanceModifier.defaultWeight().padding(start = 10.dp)) {
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

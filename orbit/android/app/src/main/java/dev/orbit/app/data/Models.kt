@@ -9,13 +9,9 @@ val OrbitJson = Json {
     encodeDefaults = true
 }
 
-/** How an agent's avatar is drawn: indices into the shapes, palette and eye styles in Avatar.kt. */
+/** Which character an agent looks like: 1 to 25, the order of `Characters` in Avatar.kt. */
 @Serializable
-data class AvatarSpec(
-    val shape: Int = 0,
-    val color: Int = 0,
-    val eyes: Int = 0,
-)
+data class AvatarSpec(val character: Int = 1)
 
 @Serializable
 data class Agent(

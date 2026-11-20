@@ -9,7 +9,8 @@ hub on an always-on PC.
   <img src="android/app/src/test/snapshots/images/dev.orbit.app_ScreenshotTest_agentEditor_agent-editor.png" width="240" alt="Agent editor">
 </p>
 
-- **Agents** each have their own avatar, model, provider, and instructions.
+- **Agents** each have their own character (one of 25), model, provider, and instructions. An agent's name and
+  @mentions take its character's color.
   Agents on Claude models can also be given **abilities**: search the web,
   run code, and read folders you share from your PC. Their replies show what
   they did ("Searched …", "Read japan.md") and the pages they cite.
@@ -143,7 +144,7 @@ cd orbit/android && ./gradlew :app:recordPaparazziDebug   # re-render screen sna
 ```
 
 Screen snapshots land in `android/app/src/test/snapshots/images`. `MotionTest` records the app's
-animations (the orbiting hero, avatar morphing, streaming chat, shared-element navigation) as
+animations (the orbiting hero, characters popping in, streaming chat, shared-element navigation) as
 animated PNGs in `android/app/src/test/snapshots/videos`, so motion can be reviewed frame by frame
 without a device.
 

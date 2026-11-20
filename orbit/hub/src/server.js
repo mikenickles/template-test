@@ -8,6 +8,7 @@ import { ScheduleError, Scheduler } from './schedules.js';
 import { ABILITIES, Orchestrator } from './orchestrator.js';
 import { PAIR_PAGE } from './pairpage.js';
 import { canPickFolder, pickFolder } from './picker.js';
+import { avatarFrom, migrateAvatars } from './characters.js';
 import { Ledger } from './usage.js';
 import { APP_POLICY, webAsset } from './web.js';
 import { pairingLink, qrSvg } from './qr.js';
@@ -74,6 +75,7 @@ export class Hub {
     this.justPaired = null;
     this.server = http.createServer((req, res) => this.#handle(req, res));
     this.#seed();
+    if (migrateAvatars(this.store.state.agents)) this.store.save();
   }
 
   listen(port, host = '0.0.0.0') {
@@ -134,9 +136,9 @@ export class Hub {
     const provider = real ? 'anthropic' : 'demo';
     const model = real ? 'claude-opus-5-5' : 'demo';
     const starters = [
-      ['Nova', 'the planner', 'You break problems into clear steps and keep the group on track.', { shape: 0, color: 7, eyes: 1 }],
-      ['Pixel', 'the builder', 'You turn plans into concrete drafts, code, and examples.', { shape: 1, color: 5, eyes: 5 }],
-      ['Sage', 'the skeptic', 'You look for gaps, risks, and simpler alternatives, and say so plainly.', { shape: 4, color: 2, eyes: 2 }],
+      ['Nova', 'the planner', 'You break problems into clear steps and keep the group on track.', { character: 9 }],
+      ['Pixel', 'the builder', 'You turn plans into concrete drafts, code, and examples.', { character: 7 }],
+      ['Sage', 'the skeptic', 'You look for gaps, risks, and simpler alternatives, and say so plainly.', { character: 2 }],
     ];
     const now = Date.now();
     const agents = starters.map(([agentName, role, instructions, avatar]) => ({
@@ -270,7 +272,7 @@ export class Hub {
       if (asset) {
         res.writeHead(200, {
           'content-type': asset.type,
-          'cache-control': /\.(ttf|png)$/.test(url.pathname) ? 'public, max-age=86400' : 'no-cache',
+          'cache-control': /\.(ttf|png|webp)$/.test(url.pathname) ? 'public, max-age=86400' : 'no-cache',
           'content-security-policy': APP_POLICY,
           'x-content-type-options': 'nosniff',
           'referrer-policy': 'no-referrer',
@@ -619,7 +621,7 @@ export class Hub {
       instructions: text(body.instructions, 20000),
       provider,
       model,
-      avatar: body.avatar && typeof body.avatar === 'object' ? body.avatar : {},
+      avatar: avatarFrom(body.avatar, existing?.avatar),
       // An older app that doesn't know about abilities leaves them as they were.
       abilities: Array.isArray(body.abilities)
         ? ABILITIES.filter((a) => body.abilities.includes(a))

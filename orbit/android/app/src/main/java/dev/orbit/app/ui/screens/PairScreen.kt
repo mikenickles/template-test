@@ -69,11 +69,11 @@ import dev.orbit.app.ui.theme.shake
 
 /** The sample crew shown where there are no real agents yet. */
 val SampleCrew = listOf(
-    AvatarSpec(shape = 0, color = 7, eyes = 1),
-    AvatarSpec(shape = 1, color = 5, eyes = 5),
-    AvatarSpec(shape = 4, color = 2, eyes = 2),
-    AvatarSpec(shape = 2, color = 4, eyes = 0),
-    AvatarSpec(shape = 3, color = 0, eyes = 3),
+    AvatarSpec(character = 9),
+    AvatarSpec(character = 7),
+    AvatarSpec(character = 2),
+    AvatarSpec(character = 14),
+    AvatarSpec(character = 6),
 )
 
 private const val CODE_LENGTH = 6

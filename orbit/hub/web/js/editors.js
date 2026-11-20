@@ -1,7 +1,7 @@
 // Making and changing things: agents, rooms, settings and schedules, each in a dialog.
 import { useEffect, useState } from '/vendor/hooks.mjs';
 import { api, onThisPC } from './api.js';
-import { Avatar, EYES, PALETTE, SHAPES, randomAvatar } from './avatar.js';
+import { Avatar, CHARACTERS, characterOf, randomAvatar, tint } from './avatar.js';
 import { Icon, Modal, Pill, Switch, formatCost, formatTokens, html } from './ui.js';
 
 const ABILITIES = [
@@ -73,8 +73,8 @@ export function AgentEditor({ agent, state, notify, onClose, onSaved, onChanged,
 
   return html`<${Modal} title=${fresh ? 'New agent' : 'Edit agent'} onClose=${onClose}
     actions=${html`<button class="button" style="height:36px;padding:0 18px" disabled=${!canSave} onClick=${save}>${fresh ? 'Create' : 'Save'}</button>`}>
-    <div class="identity">
-      <${Avatar} spec=${avatar} size=${96} />
+    <div class="identity" style=${`--wash:${tint(avatar)}`}>
+      <${Avatar} key=${characterOf(avatar).number} spec=${avatar} size=${96} style="animation:pop .45s cubic-bezier(.34,1.56,.64,1)" />
       <div class="title-l" style=${`margin-top:16px;${name.trim() ? '' : 'color:var(--text-3)'}`}>${name.trim() || 'New agent'}</div>
       ${role.trim() && html`<div class="muted">${role}</div>`}
       ${model && html`<div class="mono faint" style="margin-top:8px">${model}</div>`}
@@ -82,12 +82,8 @@ export function AgentEditor({ agent, state, notify, onClose, onSaved, onChanged,
     </div>
 
     <div class="section-title">Look</div>
-    <label class="field-label">Color</label>
-    <div class="swatches">${PALETTE.map(([fill], i) => html`<button class=${`swatch${avatar.color === i ? ' selected' : ''}`} aria-label=${`Color ${i + 1}`} aria-pressed=${avatar.color === i} onClick=${() => setAvatar({ ...avatar, color: i })}><span style=${`background:${fill}`}></span></button>`)}</div>
-    <label class="field-label" style="margin-top:18px">Shape</label>
-    <div class="parts">${Array.from({ length: SHAPES }, (_, i) => html`<button class=${`part${avatar.shape === i ? ' selected' : ''}`} aria-label=${`Shape ${i + 1}`} aria-pressed=${avatar.shape === i} onClick=${() => setAvatar({ ...avatar, shape: i })}><${Avatar} spec=${{ ...avatar, shape: i }} size=${34} /></button>`)}</div>
-    <label class="field-label" style="margin-top:18px">Eyes</label>
-    <div class="parts">${Array.from({ length: EYES }, (_, i) => html`<button class=${`part${avatar.eyes === i ? ' selected' : ''}`} aria-label=${`Eyes ${i + 1}`} aria-pressed=${avatar.eyes === i} onClick=${() => setAvatar({ ...avatar, eyes: i })}><${Avatar} spec=${{ ...avatar, eyes: i }} size=${34} /></button>`)}</div>
+    <label class="field-label">Character · ${characterOf(avatar).name}</label>
+    <div class="characters" role="radiogroup" aria-label="Character">${CHARACTERS.map((c) => html`<button class=${`character${characterOf(avatar).number === c.number ? ' selected' : ''}`} role="radio" aria-label=${c.name} title=${c.name} aria-checked=${characterOf(avatar).number === c.number} style=${`--wash:${c.fill}`} onClick=${() => setAvatar({ character: c.number })}><img src=${c.image} alt="" draggable="false" /></button>`)}</div>
 
     <div class="section-title">Identity</div>
     <label class="field-label" for="agent-name">Name</label>

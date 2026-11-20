@@ -21,6 +21,8 @@ Two independent projects live here:
     Design system: colors, type and spacing come only from `ui/theme/Theme.kt` (`Orbit.colors`, `OrbitType`,
     `OrbitDimens`); controls, icons and avatars from `ui/components`. The interface stays neutral so avatars are
     the only color. Don't add one-off sizes, Material icons, or new colors in a screen.
+    Avatars are 25 character pictures (`res/drawable-nodpi/avatar_NN.webp` and `hub/web/avatars/NN.webp`), in the
+    order of `Characters` in `ui/components/Avatar.kt` and `web/js/avatar.js`; the hub stores only `{ character: n }`.
     Motion comes from `ui/theme/Motion.kt` (`OrbitMotion` easings and springs, `pressScale`, `entrance`,
     haptics); shared-element keys live in `ui/Shared.kt`. Entrances are off in screenshot tests. Ambient
     motion (loops, idle life) must stop when `LocalReducedMotion` is true, i.e. system animations are off.

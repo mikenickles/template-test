@@ -35,16 +35,16 @@ object SampleData {
     const val NOW = 1_800_000_000_000L
 
     val nova = Agent(
-        "a1", "Nova", "the planner", "Plan things.", "anthropic", "claude-opus-5-5", AvatarSpec(0, 7, 1), listOf("web", "files", "memory"),
+        "a1", "Nova", "the planner", "Plan things.", "anthropic", "claude-opus-5-5", AvatarSpec(9), listOf("web", "files", "memory"),
         memory = listOf(
             MemoryNote("n1", "Prefers short answers with the decision first.", "you"),
             MemoryNote("n2", "Vegetarian; doesn't eat fish either.", "agent"),
             MemoryNote("n3", "Planning a week in Kyoto in April, budget around \$3,000.", "agent"),
         ),
     )
-    val pixel = Agent("a2", "Pixel", "the builder", "Build things.", "openai", "gpt-large", AvatarSpec(1, 5, 5))
-    val sage = Agent("a3", "Sage", "the skeptic", "Poke holes.", "ollama", "llama-local", AvatarSpec(4, 2, 2))
-    val mochi = Agent("a4", "Mochi", "the writer", "", "xai", "grok-fast", AvatarSpec(3, 9, 3))
+    val pixel = Agent("a2", "Pixel", "the builder", "Build things.", "openai", "gpt-large", AvatarSpec(7))
+    val sage = Agent("a3", "Sage", "the skeptic", "Poke holes.", "ollama", "llama-local", AvatarSpec(2))
+    val mochi = Agent("a4", "Mochi", "the writer", "", "xai", "grok-fast", AvatarSpec(14))
     val agents = listOf(nova, pixel, sage, mochi)
 
     val launch = Room(

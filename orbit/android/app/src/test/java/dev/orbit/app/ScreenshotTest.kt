@@ -26,10 +26,10 @@ import dev.orbit.app.ui.RoomUiState
 import dev.orbit.app.ui.components.ActionSheetContent
 import dev.orbit.app.ui.components.AgentAvatar
 import dev.orbit.app.ui.components.CrewTile
-import dev.orbit.app.ui.components.EYES_COUNT
+import dev.orbit.app.ui.components.Characters
 import dev.orbit.app.ui.components.LocalHubImages
 import dev.orbit.app.ui.components.OrbitIcon
-import dev.orbit.app.ui.components.SHAPE_COUNT
+import dev.orbit.app.ui.components.FormerAgentAvatar
 import dev.orbit.app.ui.components.SheetAction
 import dev.orbit.app.ui.screens.AgentEditorScreen
 import dev.orbit.app.ui.screens.HomeScreen
@@ -81,21 +81,22 @@ class ScreenshotTest {
     @Composable
     private fun Home(state: AppState = app) = HomeScreen(state, {}, {}, {}, {}, {}, {}, now = now)
 
-    /** Every shape against every eye style across the palette, then the small sizes and room tiles. */
+    /** Every character, then the small sizes, room tiles and a deleted agent. */
     @Composable
     private fun AvatarSheet() {
         Column(
             Modifier.fillMaxSize().background(Orbit.colors.bg).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            for (eyes in 0 until EYES_COUNT) {
+            for (row in Characters.chunked(5)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    for (shape in 0 until SHAPE_COUNT) AgentAvatar(AvatarSpec(shape, eyes * 5 + shape, eyes), size = 56.dp)
+                    for (character in row) AgentAvatar(AvatarSpec(character.number), size = 56.dp)
                 }
             }
-            for (size in listOf(34, 28, 24)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    for (eyes in 0 until EYES_COUNT) AgentAvatar(AvatarSpec(eyes % SHAPE_COUNT, eyes + 2, eyes), size = size.dp)
+            for (size in listOf(34, 28, 20)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    for (number in 1..9) AgentAvatar(AvatarSpec(number * 2 + size % 3), size = size.dp)
+                    AgentAvatar(FormerAgentAvatar, size = size.dp)
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {

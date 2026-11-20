@@ -66,12 +66,9 @@ class MotionTest {
         PairScreen(PairState(), {}, { _, _ -> })
     }
 
-    /** One avatar cycling through looks: shapes morph, colors blend, eyes swap behind a blink. */
+    /** One avatar trying on characters: each new one pops in, then breathes. */
     @Test fun avatarMorph() = record("avatar-morph", 3600) {
-        val looks = listOf(
-            AvatarSpec(0, 7, 1), AvatarSpec(1, 7, 1), AvatarSpec(1, 5, 5), AvatarSpec(2, 4, 5),
-            AvatarSpec(2, 4, 2), AvatarSpec(4, 2, 2), AvatarSpec(3, 0, 3),
-        )
+        val looks = listOf(9, 7, 2, 14, 6, 20, 25).map(::AvatarSpec)
         var index by remember { mutableIntStateOf(0) }
         LaunchedEffect(Unit) {
             while (index < looks.lastIndex) {

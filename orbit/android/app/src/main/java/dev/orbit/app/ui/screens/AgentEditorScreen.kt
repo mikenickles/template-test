@@ -3,8 +3,6 @@ package dev.orbit.app.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -20,6 +18,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,6 +29,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -52,8 +52,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -65,10 +68,9 @@ import dev.orbit.app.data.Provider
 import dev.orbit.app.data.SharedFolder
 import dev.orbit.app.ui.SharedKeys
 import dev.orbit.app.ui.components.AgentAvatar
-import dev.orbit.app.ui.components.AvatarPalette
 import dev.orbit.app.ui.components.BarAction
+import dev.orbit.app.ui.components.Characters
 import dev.orbit.app.ui.components.DangerRow
-import dev.orbit.app.ui.components.EYES_COUNT
 import dev.orbit.app.ui.components.FieldLabel
 import dev.orbit.app.ui.components.Hairline
 import dev.orbit.app.ui.components.IconPill
@@ -78,9 +80,9 @@ import dev.orbit.app.ui.components.OrbitField
 import dev.orbit.app.ui.components.OrbitIcon
 import dev.orbit.app.ui.components.OrbitSwitch
 import dev.orbit.app.ui.components.Pill
-import dev.orbit.app.ui.components.SHAPE_COUNT
 import dev.orbit.app.ui.components.ScreenBar
 import dev.orbit.app.ui.components.SectionTitle
+import dev.orbit.app.ui.components.character
 import dev.orbit.app.ui.components.lift
 import dev.orbit.app.ui.components.randomAvatar
 import dev.orbit.app.ui.components.surfaceBorder
@@ -181,33 +183,9 @@ fun AgentEditorScreen(
 
             Section("Look")
             Gutter {
-                FieldLabel("Color")
-                // All ten fit the width, so none hides off-screen. The row runs 5dp past the gutter on
-                // each side (the selection ring's margin) so the first dot itself sits on the gutter.
-                Row(
-                    Modifier.layout { measurable, constraints ->
-                        val width = constraints.maxWidth + 11.dp.roundToPx()
-                        val row = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
-                        layout(constraints.maxWidth, row.height) { row.place(-(5.5f).dp.roundToPx(), 0) }
-                    },
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    AvatarPalette.forEachIndexed { index, color ->
-                        Swatch(color.fill, selected = avatar.color.mod(AvatarPalette.size) == index) { pick(avatar.copy(color = index)) }
-                    }
-                }
-
-                Spacer(Modifier.height(20.dp))
-                FieldLabel("Shape")
-                PartRow(0 until SHAPE_COUNT, avatar.shape.mod(SHAPE_COUNT), { avatar.copy(shape = it) }, ::pick)
-
-                Spacer(Modifier.height(20.dp))
-                FieldLabel("Eyes")
-                // Two rows of four, so every option is visible at once.
-                val eyes = avatar.eyes.mod(EYES_COUNT)
-                PartRow(0 until EYES_COUNT / 2, eyes, { avatar.copy(eyes = it) }, ::pick)
-                Spacer(Modifier.height(8.dp))
-                PartRow(EYES_COUNT / 2 until EYES_COUNT, eyes, { avatar.copy(eyes = it) }, ::pick)
+                val chosen = avatar.character()
+                FieldLabel("Character · ${chosen.name}")
+                CharacterGrid(chosen.number) { pick(AvatarSpec(character = it)) }
             }
 
             Section("Identity")
@@ -436,8 +414,8 @@ private fun Gutter(content: @Composable () -> Unit) {
 }
 
 /**
- * The agent as others will see it, updating live as it's edited: shapes morph, colors blend,
- * eyes swap behind a blink. Shuffle rolls the dice and the avatar hops.
+ * The agent as others will see it, updating live as it's edited: a new character pops in and the
+ * wash takes its color. Shuffle rolls the dice and the character hops.
  */
 @Composable
 private fun IdentityCard(avatar: AvatarSpec, agentId: String?, name: String, role: String, model: String, onShuffle: () -> Unit) {
@@ -518,47 +496,39 @@ private fun IdentityCard(avatar: AvatarSpec, agentId: String?, name: String, rol
     }
 }
 
-/** A color choice. The selected one gains a ring that springs out around it. */
+/** Every character, five to a row, all visible at once. The chosen one is washed in its color. */
 @Composable
-private fun Swatch(color: Color, selected: Boolean, onClick: () -> Unit) {
-    val c = Orbit.colors
-    val ring by animateFloatAsState(if (selected) 1f else 0f, OrbitMotion.bouncy(), label = "ring")
-    val dot by animateDpAsState(if (selected) 24.dp else 27.dp, OrbitMotion.snappy(), label = "dot")
-    Box(Modifier.size(38.dp).tap(CircleShape, 0.85f, onClick), contentAlignment = Alignment.Center) {
-        Box(
-            Modifier
-                .size(38.dp)
-                .graphicsLayer {
-                    scaleX = 0.7f + 0.3f * ring
-                    scaleY = 0.7f + 0.3f * ring
-                    alpha = ring.coerceIn(0f, 1f)
-                }
-                .border(2.dp, c.text, CircleShape),
-        )
-        Box(Modifier.size(dot).clip(CircleShape).background(color))
-    }
-}
-
-/** Equal-width previews of one part of the avatar, one per option in [options]. */
-@Composable
-private fun PartRow(options: IntRange, selected: Int, variant: (Int) -> AvatarSpec, onPick: (AvatarSpec) -> Unit) {
+private fun CharacterGrid(selected: Int, onPick: (Int) -> Unit) {
     val c = Orbit.colors
     val shape = RoundedCornerShape(OrbitDimens.radiusM)
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        for (index in options) {
-            val isSelected = index == selected
-            val edge by animateColorAsState(if (isSelected) c.text else c.hairline, OrbitMotion.snappy(), label = "edge")
-            val fill by animateColorAsState(if (isSelected) c.surfaceRaised else c.surface, OrbitMotion.snappy(), label = "fill")
-            Box(
-                Modifier
-                    .weight(1f)
-                    .height(60.dp)
-                    .tap(shape, 0.92f) { onPick(variant(index)) }
-                    .background(fill)
-                    .border(if (isSelected) 1.5.dp else 1.dp, edge, shape),
-                contentAlignment = Alignment.Center,
-            ) {
-                AgentAvatar(variant(index), size = 36.dp)
+    Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (row in Characters.chunked(5)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (character in row) {
+                    val isSelected = character.number == selected
+                    val edge by animateColorAsState(if (isSelected) c.text else c.hairline, OrbitMotion.snappy(), label = "edge")
+                    val fill by animateColorAsState(
+                        if (isSelected) character.fill.copy(alpha = if (c.isDark) 0.24f else 0.3f) else c.surface,
+                        OrbitMotion.snappy(),
+                        label = "fill",
+                    )
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .aspectRatio(1f)
+                            .semantics {
+                                contentDescription = character.name
+                                this.selected = isSelected
+                                role = Role.RadioButton
+                            }
+                            .tap(shape, 0.9f) { onPick(character.number) }
+                            .background(fill)
+                            .border(if (isSelected) 1.5.dp else 1.dp, edge, shape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        AgentAvatar(AvatarSpec(character.number), Modifier.fillMaxSize(0.84f))
+                    }
+                }
             }
         }
     }
