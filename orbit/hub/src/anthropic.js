@@ -1,6 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { ProviderError } from './errors.js';
 import { FOLDER_ACTIVITY, FOLDER_TOOLS, runFolderTool } from './folders.js';
+import { MEMORY_ACTIVITY, MEMORY_TOOLS } from './memory.js';
+
+/** Tools the hub runs itself, and what each looks like in the chat. */
+const CLIENT_ACTIVITY = { ...FOLDER_ACTIVITY, ...MEMORY_ACTIVITY };
 
 const MAX_TOKENS = 64000;
 /** Round trips through the hub's own tools (shared folders) in one reply. */
@@ -20,7 +24,7 @@ const NO_FALLBACK = /^claude-haiku/;
  * here on the hub. With both web and code on, the basic web tools are used so the model has one code
  * sandbox rather than two.
  */
-export function anthropicTools(model, { web = false, code = false, folders = null } = {}) {
+export function anthropicTools(model, { web = false, code = false, folders = null, memory = null } = {}) {
   const tools = [];
   if (web) {
     const dynamic = DYNAMIC_WEB.test(model) && !code;
@@ -31,6 +35,7 @@ export function anthropicTools(model, { web = false, code = false, folders = nul
   }
   if (code) tools.push({ type: 'code_execution_20260521', name: 'code_execution' });
   if (folders?.list().length) tools.push(...FOLDER_TOOLS);
+  if (memory) tools.push(...MEMORY_TOOLS);
   return tools;
 }
 
@@ -146,9 +151,10 @@ export async function streamAnthropic({
     if (block.type === 'server_tool_use') {
       const entry = serverActivity(block, abilities);
       if (entry) note(block.id, entry);
-    } else if (block.type === 'tool_use' && FOLDER_ACTIVITY[block.name]) {
-      const detail = block.name === 'search_files' ? block.input?.query : block.input?.path;
-      note(block.id, { kind: FOLDER_ACTIVITY[block.name], detail: short(detail, 300) });
+    } else if (block.type === 'tool_use' && CLIENT_ACTIVITY[block.name]) {
+      const input = block.input ?? {};
+      const detail = block.name === 'search_files' ? input.query : MEMORY_ACTIVITY[block.name] ? input.note : input.path;
+      note(block.id, { kind: CLIENT_ACTIVITY[block.name], detail: short(detail, 300) });
     } else if (block.type.endsWith('_tool_result')) {
       finish(block.tool_use_id, String(block.content?.type ?? '').endsWith('_error'));
     } else if (block.type === 'text' && block.citations?.length) {
@@ -239,10 +245,9 @@ export async function streamAnthropic({
       pushAssistant(echoable(final.content));
       const results = [];
       for (const call of calls) {
-        const result =
-          abilities.folders && FOLDER_ACTIVITY[call.name]
-            ? await runFolderTool(abilities.folders, call.name, call.input)
-            : { text: `There is no tool called "${call.name}".`, isError: true };
+        let result = { text: `There is no tool called "${call.name}".`, isError: true };
+        if (abilities.folders && FOLDER_ACTIVITY[call.name]) result = await runFolderTool(abilities.folders, call.name, call.input);
+        else if (abilities.memory && MEMORY_ACTIVITY[call.name]) result = await abilities.memory.run(call.name, call.input);
         finish(call.id, result.isError);
         results.push({ type: 'tool_result', tool_use_id: call.id, content: result.text, ...(result.isError ? { is_error: true } : {}) });
       }

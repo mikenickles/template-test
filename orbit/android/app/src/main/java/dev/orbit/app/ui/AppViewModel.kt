@@ -262,6 +262,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Adds a note to an agent's memory; [onDone] hears whether it worked. */
+    fun addMemory(agentId: String, text: String, onDone: (added: Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val agent = hub { it.addMemory(agentId, text) }
+            agent?.let(::updateAgent)
+            onDone(agent != null)
+        }
+    }
+
+    fun removeMemory(agentId: String, noteId: String) {
+        viewModelScope.launch { hub { it.removeMemory(agentId, noteId) }?.let(::updateAgent) }
+    }
+
+    private fun updateAgent(agent: Agent) {
+        _state.update { s -> s.copy(agents = s.agents.map { if (it.id == agent.id) agent else it }) }
+    }
+
     fun deleteAgent(id: String, onDeleted: () -> Unit) {
         viewModelScope.launch {
             if (hub { it.deleteAgent(id) } != null) {

@@ -226,4 +226,13 @@ class RoomStateTest {
         assertEquals("2 photos and a PDF", describeShared(SharedContent("", listOf(photo, photo, pdf))))
         assertEquals("", describeShared(SharedContent("hi")))
     }
+
+    @Test
+    fun `memory steps read plainly, and notes survive the trip from the hub`() {
+        assertEquals(ActivityLabel("Remembered", "Allergic to peanuts"), activityLabel(Activity(Activity.KIND_REMEMBER, "Allergic to peanuts")))
+        assertEquals(ActivityLabel("Forgetting", "budget"), activityLabel(Activity(Activity.KIND_FORGET, "budget", done = false), live = true))
+        assertEquals("Saved 2 notes and forgot a note", activitySummary(List(2) { Activity("remember") } + Activity("forget")))
+        val agent = OrbitJson.decodeFromString<Agent>("""{"name":"Nova","memory":[{"id":"n1","text":"Lives in Leeds","source":"agent","createdAt":1}]}""")
+        assertEquals("Lives in Leeds", agent.memory.single().text)
+    }
 }

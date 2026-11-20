@@ -61,6 +61,8 @@ fun activityLabel(activity: Activity, live: Boolean = false): ActivityLabel {
             if (live) "Searching files for" else if (failed) "File search failed for" else "Searched files for",
             "“$detail”",
         )
+        Activity.KIND_REMEMBER -> ActivityLabel(if (live) "Remembering" else if (failed) "Couldn't remember" else "Remembered", detail)
+        Activity.KIND_FORGET -> ActivityLabel(if (live) "Forgetting" else if (failed) "Couldn't forget" else "Forgot", detail)
         else -> ActivityLabel(if (live) "Working" else "Used a tool", detail)
     }
 }
@@ -76,6 +78,8 @@ fun activitySummary(activity: List<Activity>): String {
         count(Activity.KIND_FOLDER).takeIf { it > 0 }?.let { add(times(it, "looked in a folder", "looked in # folders")) }
         count(Activity.KIND_FILE).takeIf { it > 0 }?.let { add(times(it, "read a file", "read # files")) }
         if (count(Activity.KIND_FIND) > 0) add("searched your files")
+        count(Activity.KIND_REMEMBER).takeIf { it > 0 }?.let { add(times(it, "saved a note", "saved # notes")) }
+        if (count(Activity.KIND_FORGET) > 0) add("forgot a note")
     }.ifEmpty { listOf("used ${activity.size} tools") }
     val joined = if (parts.size == 1) parts[0] else parts.dropLast(1).joinToString(", ") + " and " + parts.last()
     return joined.replaceFirstChar { it.uppercase() }
@@ -88,6 +92,7 @@ private fun iconFor(kind: String) = when (kind) {
     Activity.KIND_FOLDER -> OrbitIcon.Folder
     Activity.KIND_FILE -> OrbitIcon.File
     Activity.KIND_FIND -> OrbitIcon.Search
+    Activity.KIND_REMEMBER, Activity.KIND_FORGET -> OrbitIcon.Memory
     else -> OrbitIcon.More
 }
 

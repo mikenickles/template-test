@@ -107,7 +107,7 @@ test('abilities pick the right tools and tell the agent what it can do', () => {
   const providers = new Providers({}, {});
   const agent = { name: 'Nova', provider: 'anthropic', model: 'claude-opus-5-5', abilities: ['web', 'files'] };
   const abilities = resolveAbilities(agent, providers, folders);
-  assert.deepEqual({ ...abilities, folders: Boolean(abilities.folders) }, { web: true, code: false, files: true, folders: true });
+  assert.deepEqual({ ...abilities, folders: Boolean(abilities.folders) }, { web: true, code: false, files: true, folders: true, memory: null });
   const room = { name: 'Trip', mode: 'roundtable' };
   const prompt = buildSystemPrompt(agent, room, [agent], abilities);
   assert.match(prompt, /Search the web/);

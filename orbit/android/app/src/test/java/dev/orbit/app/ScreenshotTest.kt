@@ -196,7 +196,7 @@ class ScreenshotTest {
 /** Screens taller than a phone, rendered whole so the lower sections can be reviewed too. */
 class TallScreenshotTest {
     @get:Rule
-    val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_6.copy(screenHeight = 5400), useDeviceResolution = true)
+    val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_6.copy(screenHeight = 6600), useDeviceResolution = true)
 
     private fun shot(name: String, dark: Boolean = true, content: @Composable () -> Unit) {
         paparazzi.snapshot(name) { OrbitTheme(dark = dark, entrances = false, reducedMotion = false) { content() } }

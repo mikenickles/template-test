@@ -59,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.Agent
 import dev.orbit.app.data.AvatarSpec
+import dev.orbit.app.data.MemoryNote
 import dev.orbit.app.data.OrbitJson
 import dev.orbit.app.data.Provider
 import dev.orbit.app.data.SharedFolder
@@ -71,6 +72,7 @@ import dev.orbit.app.ui.components.EYES_COUNT
 import dev.orbit.app.ui.components.FieldLabel
 import dev.orbit.app.ui.components.Hairline
 import dev.orbit.app.ui.components.IconPill
+import dev.orbit.app.ui.components.IconTap
 import dev.orbit.app.ui.components.OrbitCard
 import dev.orbit.app.ui.components.OrbitField
 import dev.orbit.app.ui.components.OrbitIcon
@@ -115,12 +117,18 @@ fun AgentEditorScreen(
     onBack: () -> Unit,
     onAddKey: (providerId: String) -> Unit = {},
     folders: List<SharedFolder> = emptyList(),
+    onAddMemory: (text: String, onDone: (Boolean) -> Unit) -> Unit = { _, _ -> },
+    onRemoveMemory: (MemoryNote) -> Unit = {},
 ) {
     val c = Orbit.colors
     val haptics = rememberHaptics()
     val start = remember(initial?.id) {
         initial ?: defaultProvider(providers).let { provider ->
-            Agent(provider = provider?.id.orEmpty(), model = provider?.models?.firstOrNull().orEmpty(), avatar = randomAvatar())
+            Agent(
+                provider = provider?.id.orEmpty(), model = provider?.models?.firstOrNull().orEmpty(), avatar = randomAvatar(),
+                // New agents remember what you ask them to.
+                abilities = listOf(Agent.ABILITY_MEMORY),
+            )
         }
     }
     var avatar by rememberSaveable(stateSaver = AvatarSaver) { mutableStateOf(start.avatar) }
@@ -132,6 +140,7 @@ fun AgentEditorScreen(
     var web by rememberSaveable { mutableStateOf(Agent.ABILITY_WEB in start.abilities) }
     var code by rememberSaveable { mutableStateOf(Agent.ABILITY_CODE in start.abilities) }
     var files by rememberSaveable { mutableStateOf(Agent.ABILITY_FILES in start.abilities) }
+    var remembers by rememberSaveable { mutableStateOf(Agent.ABILITY_MEMORY in start.abilities) }
 
     val provider = providers.firstOrNull { it.id == providerId }
     var models by remember { mutableStateOf(emptyList<String>()) }
@@ -149,6 +158,7 @@ fun AgentEditorScreen(
                 Agent.ABILITY_WEB.takeIf { web },
                 Agent.ABILITY_CODE.takeIf { code },
                 Agent.ABILITY_FILES.takeIf { files },
+                Agent.ABILITY_MEMORY.takeIf { remembers },
             ),
         ),
     )
@@ -284,8 +294,22 @@ fun AgentEditorScreen(
                             files,
                             supported,
                         ) { files = it }
+                        Hairline()
+                        AbilityRow(
+                            OrbitIcon.Memory,
+                            "Remember things",
+                            "Keeps notes when you ask it to remember something, for every room.",
+                            remembers,
+                            supported,
+                        ) { remembers = it }
                     }
                 }
+            }
+
+            // Notes belong to a saved agent, so a new one starts without them.
+            if (initial != null) {
+                Section("Memory")
+                Gutter { MemoryNotes(initial.name, initial.memory, onAddMemory, onRemoveMemory) }
             }
 
             Section("Instructions")
@@ -303,6 +327,77 @@ fun AgentEditorScreen(
             }
         }
     }
+}
+
+/**
+ * What an agent remembers, and a field to add more. Notes go into every room the agent is in; any
+ * agent can have notes added here, and Claude agents with "Remember things" add their own.
+ */
+@Composable
+private fun MemoryNotes(
+    name: String,
+    notes: List<MemoryNote>,
+    onAdd: (text: String, onDone: (Boolean) -> Unit) -> Unit,
+    onRemove: (MemoryNote) -> Unit,
+) {
+    val c = Orbit.colors
+    val haptics = rememberHaptics()
+    var draft by rememberSaveable { mutableStateOf("") }
+    var adding by remember { mutableStateOf(false) }
+    fun add() {
+        if (draft.isBlank() || adding) return
+        adding = true
+        onAdd(draft.trim()) { added ->
+            adding = false
+            if (added) {
+                haptics.tick()
+                draft = ""
+            }
+        }
+    }
+    if (notes.isNotEmpty()) {
+        OrbitCard(Modifier.fillMaxWidth()) {
+            Column {
+                notes.forEachIndexed { index, note ->
+                    if (index > 0) Hairline()
+                    Row(Modifier.fillMaxWidth().padding(start = OrbitDimens.rowPad, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f).padding(vertical = 12.dp)) {
+                            Text(note.text, style = OrbitType.bodyM, color = c.text)
+                            Text(
+                                if (note.source == "agent") "Saved by $name" else "Added by you",
+                                Modifier.padding(top = 2.dp),
+                                style = OrbitType.caption,
+                                color = c.textTertiary,
+                            )
+                        }
+                        IconTap(OrbitIcon.Close, "Forget \"${note.text}\"", { onRemove(note) }, tint = c.textTertiary)
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+    } else {
+        Text(
+            "Nothing yet. Add what $name should keep in mind everywhere, like how you like answers or what you're working on.",
+            Modifier.padding(bottom = 12.dp),
+            style = OrbitType.bodyS,
+            color = c.textSecondary,
+        )
+    }
+    OrbitField(
+        draft,
+        { draft = it.take(300) },
+        "Add something to remember",
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+        trailing = {
+            Text(
+                "Add",
+                Modifier.tap(CircleShape, 0.92f, ::add).padding(horizontal = 14.dp, vertical = 12.dp),
+                style = OrbitType.label,
+                color = if (draft.isBlank()) c.textTertiary else c.text,
+            )
+        },
+    )
 }
 
 /** One ability with its switch. The whole row toggles it. */

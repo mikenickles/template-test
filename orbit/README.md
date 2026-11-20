@@ -22,6 +22,9 @@ hub on an always-on PC.
 - **Share to Orbit** from any app's share menu: a link, some text, photos or
   PDFs. Pick a room and it opens with them ready to send, so you can add a
   question first.
+- **Memory.** Each agent keeps notes that it carries into every room. Add them
+  in the agent's editor, or, for Claude agents with "Remember things" on, just
+  say "remember that…" and the agent saves it itself.
 - **Notifications.** Leave the app while agents are replying and you get a
   ping when they finish ("Nova: Fuunji is your best bet…"); tap it to open the
   room. The app asks for permission the first time you send a message.

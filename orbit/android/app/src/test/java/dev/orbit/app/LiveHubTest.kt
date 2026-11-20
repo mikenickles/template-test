@@ -49,6 +49,11 @@ class LiveHubTest {
         val renamed = client.saveAgent(agent.copy(name = "Echo Two"))
         assertEquals(agent.id, renamed.id)
         assertEquals(listOf("web", "files"), renamed.abilities)
+        // Notes are added and removed on their own; saving the agent leaves them alone.
+        val noted = client.addMemory(agent.id, "Prefers short answers")
+        assertEquals(listOf("Prefers short answers"), noted.memory.map { it.text })
+        assertEquals(1, client.saveAgent(noted.copy(memory = emptyList())).memory.size)
+        assertEquals(emptyList<Any>(), client.removeMemory(agent.id, noted.memory.single().id).memory)
         // Folders are shared on the PC; the phone sees them and can stop sharing one.
         assertEquals(client.state().folders, client.removeFolder("not-a-folder"))
         val room = client.saveRoom(Room(name = "Live test", agentIds = listOf(agent.id)))

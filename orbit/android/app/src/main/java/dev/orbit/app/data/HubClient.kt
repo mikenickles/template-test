@@ -105,6 +105,12 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
         return if (agent.id.isEmpty()) call("POST", "/api/agents", body) else call("PUT", "/api/agents/${agent.id}", body)
     }
 
+    /** Adds a note to an agent's memory. Returns the agent with it. */
+    suspend fun addMemory(agentId: String, text: String): Agent =
+        call("POST", "/api/agents/$agentId/memory", OrbitJson.encodeToString(TextBody(text)))
+
+    suspend fun removeMemory(agentId: String, noteId: String): Agent = call("DELETE", "/api/agents/$agentId/memory/$noteId")
+
     suspend fun deleteAgent(id: String) {
         call<Unit>("DELETE", "/api/agents/$id")
     }

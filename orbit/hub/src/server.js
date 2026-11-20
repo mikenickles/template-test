@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import dgram from 'node:dgram';
 import { FileError, Files, MAX_FILE_BYTES } from './files.js';
 import { FolderError, Folders } from './folders.js';
+import { MemoryError, addNote, removeNote } from './memory.js';
 import { ABILITIES, Orchestrator } from './orchestrator.js';
 import { PAIR_PAGE } from './pairpage.js';
 import { canPickFolder, pickFolder } from './picker.js';
@@ -340,6 +341,19 @@ export class Hub {
         this.store.save();
         return agent;
       }
+      // An agent's memory: notes added from the app. Agents add their own while replying.
+      case 'POST /api/agents/:id/memory': {
+        const agent = this.store.agent(id);
+        if (!agent) throw new HttpError(404, 'That agent no longer exists.');
+        try {
+          addNote(agent, (await this.#body(req)).text, 'you');
+        } catch (err) {
+          if (err instanceof MemoryError) throw new HttpError(400, err.message);
+          throw err;
+        }
+        this.store.save();
+        return agent;
+      }
       case 'DELETE /api/agents/:id': {
         this.store.state.agents = this.store.state.agents.filter((a) => a.id !== id);
         for (const room of this.store.state.rooms) {
@@ -371,6 +385,14 @@ export class Hub {
         this.files.sweep();
         return { ok: true };
       }
+    }
+
+    if (req.method === 'DELETE' && parts[0] === 'api' && parts[1] === 'agents' && parts[3] === 'memory' && parts.length === 5) {
+      const agent = this.store.agent(id);
+      if (!agent) throw new HttpError(404, 'That agent no longer exists.');
+      removeNote(agent, parts[4]);
+      this.store.save();
+      return agent;
     }
 
     // One message: delete it, or have its agent answer again.

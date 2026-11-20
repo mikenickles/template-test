@@ -26,15 +26,22 @@ data class Agent(
     val provider: String = "",
     val model: String = "",
     val avatar: AvatarSpec = AvatarSpec(),
-    /** What the agent can do beyond replying: [ABILITY_WEB], [ABILITY_CODE], [ABILITY_FILES]. */
+    /** What the agent can do beyond replying: [ABILITY_WEB], [ABILITY_CODE], [ABILITY_FILES], [ABILITY_MEMORY]. */
     val abilities: List<String> = emptyList(),
+    /** Notes the agent carries into every room. Changed through their own calls, not by saving the agent. */
+    val memory: List<MemoryNote> = emptyList(),
 ) {
     companion object {
         const val ABILITY_WEB = "web"
         const val ABILITY_CODE = "code"
         const val ABILITY_FILES = "files"
+        const val ABILITY_MEMORY = "memory"
     }
 }
+
+/** One thing an agent remembers. [source] is "you" if added in the app, "agent" if it saved it itself. */
+@Serializable
+data class MemoryNote(val id: String = "", val text: String = "", val source: String = "you", val createdAt: Long = 0)
 
 @Serializable
 data class Preview(val author: String = "", val text: String = "")
@@ -84,6 +91,8 @@ data class Activity(
         const val KIND_FOLDER = "folder"
         const val KIND_FILE = "file"
         const val KIND_FIND = "find"
+        const val KIND_REMEMBER = "remember"
+        const val KIND_FORGET = "forget"
     }
 }
 

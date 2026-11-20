@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { kindOf } from './files.js';
+import { runMemoryTool } from './memory.js';
 import { addUsage, emptyUsage } from './usage.js';
 
 /** Upper bound on agent replies per user message, so @mention chains can't loop forever. */
@@ -32,17 +33,24 @@ export function initialSpeakers(room, agents, text) {
 }
 
 /** Abilities an agent can be given. "files" reads folders shared from the PC. */
-export const ABILITIES = ['web', 'code', 'files'];
+export const ABILITIES = ['web', 'code', 'files', 'memory'];
 
 /**
  * What an agent can do on this turn. Abilities only work with providers that support them; elsewhere
  * the agent runs without them, and its prompt doesn't mention them.
  */
-export function resolveAbilities(agent, providers, folders) {
+export function resolveAbilities(agent, providers, folders, save = () => {}) {
   if (!providers.supportsAbilities?.(agent.provider)) return null;
   const on = new Set(agent.abilities ?? []);
   if (!on.size) return null;
-  return { web: on.has('web'), code: on.has('code'), files: on.has('files'), folders: on.has('files') ? folders : null };
+  return {
+    web: on.has('web'),
+    code: on.has('code'),
+    files: on.has('files'),
+    folders: on.has('files') ? folders : null,
+    // The agent keeps its own notes: "remember" and "forget".
+    memory: on.has('memory') ? { run: (name, input) => runMemoryTool(agent, name, input, save) } : null,
+  };
 }
 
 export function buildSystemPrompt(agent, room, agents, abilities = null) {
@@ -67,6 +75,15 @@ export function buildSystemPrompt(agent, room, agents, abilities = null) {
       '- Build on what teammates have said instead of repeating it, and keep replies as short as the task allows.',
     );
   }
+  if (isLead && teammates.length) {
+    lines.push(
+      '- You lead this chat. Decide what the request needs, delegate parts to teammates with @mentions, and once they have replied give the user one combined answer.',
+    );
+  }
+  if (agent.memory?.length) {
+    lines.push('', "What you remember from earlier conversations with the user (use it where it helps; don't recite it):");
+    for (const note of agent.memory) lines.push(`- ${note.text}`);
+  }
   if (abilities) {
     lines.push('', 'What you can do here:');
     if (abilities.web) {
@@ -81,11 +98,11 @@ export function buildSystemPrompt(agent, room, agents, abilities = null) {
           : "- Read files the user shares from their PC. None are shared yet; if the user asks about their files, tell them to share a folder from the Orbit page on their PC.",
       );
     }
-  }
-  if (isLead && teammates.length) {
-    lines.push(
-      '- You lead this chat. Decide what the request needs, delegate parts to teammates with @mentions, and once they have replied give the user one combined answer.',
-    );
+    if (abilities.memory) {
+      lines.push(
+        '- Keep notes for future chats with the remember tool: preferences, facts about the user, decisions, ongoing work. Save only what they would want kept, and use forget when they ask you to drop something or it stops being true.',
+      );
+    }
   }
   return lines.join('\n');
 }
@@ -407,7 +424,7 @@ export class Orchestrator {
     );
     run.speaking = agent.id;
     this.emit(room.id, 'run', this.runState(room.id));
-    const abilities = resolveAbilities(agent, this.providers, this.folders);
+    const abilities = resolveAbilities(agent, this.providers, this.folders, () => this.store.save());
     try {
       const text = await this.providers.stream({
         provider: agent.provider,

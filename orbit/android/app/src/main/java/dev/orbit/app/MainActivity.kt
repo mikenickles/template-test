@@ -285,6 +285,8 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onBack = { nav.popBackStack() },
                 onAddKey = { nav.navigate("provider/$it") },
                 folders = state.folders,
+                onAddMemory = { text, done -> agent?.let { vm.addMemory(it.id, text, done) } },
+                onRemoveMemory = { note -> agent?.let { vm.removeMemory(it.id, note.id) } },
             )
         }
         screen("roomEdit?id={id}", arguments = OptionalId) { entry ->
