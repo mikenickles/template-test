@@ -1,10 +1,10 @@
 import { spawn } from 'node:child_process';
-import os from 'node:os';
 import readline from 'node:readline/promises';
 import * as autostart from './autostart.js';
 import { configFile, dataDir, loadConfig, saveConfig } from './config.js';
 import { ensureFirewall } from './firewall.js';
 import { Folders } from './folders.js';
+import { hubAddresses } from './network.js';
 import { Providers } from './providers.js';
 import { qrTerminal } from './qr.js';
 import { Hub } from './server.js';
@@ -32,20 +32,18 @@ const hub = new Hub({ store, providers, folders, name: config.name, onPairingCod
 const port = await hub.listen(Number(process.env.PORT) || config.port);
 hub.startDiscovery(config.discoveryPort, port);
 
-// Only addresses a phone on the same network can reach: skip self-assigned (169.254.x) addresses and
-// the virtual adapters that WSL, Hyper-V, Docker and VM software create.
-const VIRTUAL = /vethernet|wsl|hyper-v|docker|virtualbox|vmware|vbox|loopback|tailscale|zerotier/i;
-const addresses = Object.entries(os.networkInterfaces())
-  .filter(([name]) => !VIRTUAL.test(name))
-  .flatMap(([, nets]) => nets ?? [])
-  .filter((n) => n.family === 'IPv4' && !n.internal && !n.address.startsWith('169.254.'))
-  // Home networks (192.168.x, 10.x) first.
-  .sort((a, b) => Number(!/^(192\.168|10)\./.test(a.address)) - Number(!/^(192\.168|10)\./.test(b.address)))
-  .map((n) => `${n.address}:${port}`);
-hub.setAddresses(addresses);
+// The home network address first, and a Tailscale address for away from home if the PC has one.
+// Checked again every minute: Tailscale often connects after the hub has started with Windows.
+let { home: addresses, away } = hubAddresses(port);
+hub.setAddresses(addresses, away);
+setInterval(() => {
+  const now = hubAddresses(port);
+  if (now.away.join() !== away.join()) console.log(`Away from home: ${now.away.join(', ') || 'Tailscale is off'}`);
+  ({ home: addresses, away } = now);
+  hub.setAddresses(addresses, away);
+}, 60_000).unref();
 
 const pairPage = `http://localhost:${port}`;
-const address = addresses[0] ?? `localhost:${port}`;
 
 function showPairing() {
   const code = hub.pairingCode;
@@ -54,7 +52,7 @@ function showPairing() {
   console.log('');
   console.log(qrTerminal(hub.pairingLink()));
   console.log('');
-  console.log(`  Or type   ${address}   and the code   ${code.slice(0, 3)} ${code.slice(3)}`);
+  console.log(`  Or type   ${addresses[0] ?? `localhost:${port}`}   and the code   ${code.slice(0, 3)} ${code.slice(3)}`);
   console.log(`  A larger QR code is at ${pairPage}, where you can also share folders with your agents.`);
   console.log('');
 }
@@ -74,6 +72,7 @@ const keyed = providers.list().filter((p) => p.takesKey && p.configured).map((p)
 console.log(`  Model keys:  ${keyed.length ? keyed.join(', ') : 'none yet. Add one in the app: Settings, then Model providers.'}`);
 const shared = folders.list().map((f) => f.name);
 console.log(`  Folders:     ${shared.length ? shared.join(', ') : `none shared. Share one at ${pairPage}`}`);
+console.log(`  Away:        ${away.length ? `${away.join(', ')} (Tailscale)` : 'not set up. Install Tailscale on this PC and your phone to use Orbit anywhere.'}`);
 console.log(`  Data:        ${dataDir}`);
 
 await ensureFirewall({ port, discoveryPort: config.discoveryPort, dataDir, log: (line) => console.log(line) });

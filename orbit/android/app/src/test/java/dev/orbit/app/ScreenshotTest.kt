@@ -181,8 +181,8 @@ class TallScreenshotTest {
     @Test fun agentEditorOtherProviderLight() = shot("agent-editor-full-light", dark = false) {
         AgentEditorScreen(SampleData.mochi.copy(abilities = listOf("web")), providers, { emptyList() }, {}, {}, {})
     }
-    @Test fun settings() = shot("settings-full") { SettingsScreen(SampleData.app, "http://192.168.1.20:8787", {}, {}) }
+    @Test fun settings() = shot("settings-full") { SettingsScreen(SampleData.app, "http://100.101.102.103:8787", {}, {}) }
     @Test fun settingsNoFoldersLight() = shot("settings-full-light", dark = false) {
-        SettingsScreen(SampleData.app.copy(folders = emptyList()), "http://192.168.1.20:8787", {}, {})
+        SettingsScreen(SampleData.app.copy(folders = emptyList(), hub = SampleData.app.hub.copy(remote = emptyList())), "http://192.168.1.20:8787", {}, {})
     }
 }

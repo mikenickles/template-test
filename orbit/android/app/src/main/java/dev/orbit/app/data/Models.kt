@@ -136,7 +136,14 @@ data class Provider(
 data class SharedFolder(val id: String = "", val name: String = "", val path: String = "")
 
 @Serializable
-data class HubInfo(val name: String = "", val version: String = "")
+data class HubInfo(
+    val name: String = "",
+    val version: String = "",
+    /** Where the hub answers on its home network. */
+    val addresses: List<String> = emptyList(),
+    /** Where it answers from anywhere, through a private VPN like Tailscale. Empty until one is set up. */
+    val remote: List<String> = emptyList(),
+)
 
 @Serializable
 data class HubState(

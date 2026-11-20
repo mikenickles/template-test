@@ -51,6 +51,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = (app as OrbitApp).repository
     val session = repo.session
 
+    /** The address the hub is being reached at: at home, or through Tailscale. */
+    val via = repo.via
+
     private val _state = MutableStateFlow(AppState())
     val state: StateFlow<AppState> = _state.asStateFlow()
 
@@ -89,6 +92,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(refreshing = true) }
         val fresh = hub(quiet = true) { it.state() }
         fresh?.rooms?.forEach { repo.noteRun(it.id, it.active) }
+        fresh?.hub?.let { repo.updateAddresses(it.addresses, it.remote) }
         _state.update {
             if (fresh == null) {
                 it.copy(refreshing = false, offline = true)

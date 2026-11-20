@@ -54,7 +54,7 @@ object SampleData {
     )
 
     val app = AppState(
-        loaded = true, hub = HubInfo("Mike's PC", "0.1.0"), agents = agents, rooms = listOf(launch, trip, empty), providers = providers,
+        loaded = true, hub = HubInfo("Mike's PC", "0.1.0", listOf("192.168.1.20:8787"), listOf("100.101.102.103:8787")), agents = agents, rooms = listOf(launch, trip, empty), providers = providers,
         folders = folders,
     )
 

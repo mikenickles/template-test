@@ -266,9 +266,10 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
             )
         }
         screen("settings") {
+            val via by vm.via.collectAsStateWithLifecycle()
             SettingsScreen(
                 state,
-                session.baseUrl,
+                via ?: session.baseUrl,
                 onUnpair = vm::unpair,
                 onBack = { nav.popBackStack() },
                 onOpenProvider = { nav.navigate("provider/$it") },

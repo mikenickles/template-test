@@ -416,3 +416,24 @@ test('the sign-in launcher starts the hub minimized in the background', () => {
   assert.match(script, /start "Orbit hub" \/min ".*Start Orbit\.bat" --background/);
   assert.ok(script.includes('\r\n'), 'Windows line endings');
 });
+
+test('the hub finds its home address and its Tailscale address, and tells the phone both', async (t) => {
+  const { hubAddresses } = await import('../src/network.js');
+  const v4 = (address, internal = false) => ({ family: 'IPv4', address, internal });
+  const found = hubAddresses(8787, {
+    'vEthernet (WSL)': [v4('172.26.160.1')],
+    'Ethernet 2': [v4('169.254.83.107')],
+    'Wi-Fi': [v4('192.168.86.49'), { family: 'IPv6', address: 'fe80::1', internal: false }],
+    Tailscale: [v4('100.101.102.103')],
+    'Loopback Pseudo-Interface 1': [v4('127.0.0.1', true)],
+    utun4: [v4('100.64.0.7')],
+  });
+  assert.deepEqual(found, { home: ['192.168.86.49:8787'], away: ['100.101.102.103:8787', '100.64.0.7:8787'] });
+
+  const h = await startHub();
+  t.after(h.close);
+  h.hub.setAddresses(['192.168.86.49:8787'], ['100.101.102.103:8787']);
+  await h.pair();
+  const { hub } = (await h.api('GET', '/api/state')).body;
+  assert.deepEqual([hub.addresses, hub.remote], [['192.168.86.49:8787'], ['100.101.102.103:8787']]);
+});

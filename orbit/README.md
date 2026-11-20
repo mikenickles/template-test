@@ -46,9 +46,12 @@ Install the app, tap **Scan QR code** and scan the code on the pairing page (or 
 the hub's window). If scanning isn't available, tap **Find** or type the address
 and six-digit code shown under the QR code. The code changes after each pairing.
 
-The phone talks to the hub over plain HTTP, so keep it on your home network.
-To reach the hub from elsewhere, put both devices on a private VPN such as
-Tailscale and use the PC's VPN address.
+The phone talks to the hub over plain HTTP, so it only works on your home
+network, or through a private VPN. To use Orbit away from home, install
+[Tailscale](https://tailscale.com/download) on the PC and the phone and sign in
+to both with the same account. The hub notices its Tailscale address within a
+minute and tells the app, which then tries your home network first and
+Tailscale when that doesn't answer. **Settings** shows which one is in use.
 
 ## 3. Add an AI key
 

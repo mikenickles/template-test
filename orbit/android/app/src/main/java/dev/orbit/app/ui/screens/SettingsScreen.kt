@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.orbit.app.ui.AppState
@@ -45,8 +46,11 @@ fun SettingsScreen(
     onRemoveFolder: (folderId: String) -> Unit = {},
 ) {
     val c = Orbit.colors
+    val uri = LocalUriHandler.current
     val scroll = rememberScrollState()
     val entrances = rememberEntrances()
+    val remote = state.hub.remote
+    val throughTailscale = remote.any { hubAddress.endsWith("//$it") }
     Scaffold(containerColor = c.bg, topBar = { ScreenBar("Settings", onBack, scrolled = scroll.value > 0) }) { padding ->
         Column(
             Modifier
@@ -62,8 +66,37 @@ fun SettingsScreen(
                         Column(Modifier.weight(1f)) {
                             Text(state.hub.name.ifEmpty { "Your hub" }, style = OrbitType.titleM, color = c.text)
                             Text(hubAddress.removePrefix("http://"), Modifier.padding(top = 3.dp), style = OrbitType.mono, color = c.textSecondary)
+                            if (online) {
+                                Text(
+                                    if (throughTailscale) "Connected through Tailscale" else "Connected on your home network",
+                                    Modifier.padding(top = 2.dp),
+                                    style = OrbitType.bodyS,
+                                    color = c.textTertiary,
+                                )
+                            }
                         }
                         Status(if (online) "Online" else "Unreachable", if (online) c.live else c.danger)
+                    }
+                    // Away from home: Tailscale on the PC and the phone lets Orbit reach the hub from anywhere.
+                    Hairline()
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .then(if (remote.isEmpty()) Modifier.tap(RectangleShape, 0.985f) { runCatching { uri.openUri(TAILSCALE_URL) } } else Modifier)
+                            .padding(start = OrbitDimens.rowPad, end = if (remote.isEmpty()) 8.dp else OrbitDimens.rowPad)
+                            .heightIn(min = 56.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
+                            Text("Away from home", style = OrbitType.bodyM, color = c.textSecondary)
+                            remote.firstOrNull()?.let { Text(it, style = OrbitType.mono, color = c.textTertiary) }
+                        }
+                        if (remote.isEmpty()) {
+                            Status("Set up", null)
+                            OrbitIcon(OrbitIcon.Chevron, Modifier.padding(start = 4.dp), size = 18.dp, tint = c.textTertiary)
+                        } else {
+                            Status("Tailscale", c.live)
+                        }
                     }
                     if (state.hub.version.isNotEmpty()) {
                         Hairline()
@@ -73,6 +106,16 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+
+            if (state.loaded && remote.isEmpty()) {
+                Text(
+                    "To use Orbit away from home, install Tailscale on your PC and this phone and sign in to both with the " +
+                        "same account. The hub picks it up within a minute.",
+                    Modifier.padding(top = OrbitDimens.labelGap),
+                    style = OrbitType.bodyS,
+                    color = c.textTertiary,
+                )
             }
 
             Column(Modifier.entrance(entrances, "providers", 1)) {
@@ -158,6 +201,8 @@ fun SettingsScreen(
         }
     }
 }
+
+private const val TAILSCALE_URL = "https://tailscale.com/download"
 
 /** The port in a hub address like "http://192.168.1.20:8787", which the PC's own page shares. */
 private fun hubPort(address: String): String = address.substringAfterLast(':', "").takeIf { p -> p.all { it.isDigit() } && p.isNotEmpty() } ?: "8787"

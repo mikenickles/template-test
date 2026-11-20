@@ -47,6 +47,7 @@ export class Hub {
     this.pairLockedUntil = 0;
     this.pairingCode = newPairingCode();
     this.addresses = [];
+    this.remoteAddresses = [];
     this.justPaired = null;
     this.server = http.createServer((req, res) => this.#handle(req, res));
     this.#seed();
@@ -59,9 +60,13 @@ export class Hub {
     });
   }
 
-  /** The LAN addresses (host:port) a phone can use to reach this hub, best first. */
-  setAddresses(addresses) {
+  /**
+   * Where a phone can reach this hub (host:port): on the home network, best first, and through a
+   * private VPN like Tailscale for when the phone is away from home.
+   */
+  setAddresses(addresses, remote = []) {
     this.addresses = addresses;
+    this.remoteAddresses = remote;
   }
 
   /** What the pairing QR code holds: the hub's address and the current code. */
@@ -242,7 +247,7 @@ export class Hub {
     switch (key) {
       case 'GET /api/state':
         return {
-          hub: { name: this.name, version: VERSION },
+          hub: { name: this.name, version: VERSION, addresses: this.addresses, remote: this.remoteAddresses },
           agents: this.store.state.agents,
           rooms: this.store.state.rooms.map((r) => this.#roomView(r)),
           providers: this.providers.list(),

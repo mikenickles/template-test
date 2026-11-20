@@ -8,6 +8,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
+import okhttp3.Call
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -15,11 +16,43 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 class HubException(message: String, val status: Int = 0) : Exception(message)
 
+/**
+ * The ways to reach one hub, best first, and the one that answered last. Away from home the home
+ * address goes quiet, so calls move on to the next one (a Tailscale address) and stay with it while it
+ * keeps answering. [onSwitch] hears when that changes, so the choice survives a restart.
+ */
+class HubRoute(
+    primary: String,
+    alternates: List<String> = emptyList(),
+    current: String? = null,
+    private val onSwitch: (String) -> Unit = {},
+) {
+    val urls: List<String> = (listOf(primary) + alternates).filter { it.isNotEmpty() }.distinct()
+
+    @Volatile
+    var current: String = current?.takeIf { it in urls } ?: primary
+        private set
+
+    /** The address that worked last, then the others in order. */
+    fun order(): List<String> = listOf(current) + urls.filter { it != current }
+
+    fun worked(url: String) {
+        if (url == current) return
+        current = url
+        onSwitch(url)
+    }
+}
+
 /** Talks to the Orbit hub running on the paired PC. */
-class HubClient(val baseUrl: String, private val token: String? = null) {
+class HubClient(private val route: HubRoute, private val token: String? = null) {
+    constructor(baseUrl: String, token: String? = null) : this(HubRoute(baseUrl), token)
+
+    /** The address in use: the one that answered last. */
+    val baseUrl: String get() = route.current
 
     @Serializable
     private data class ErrorBody(val error: String = "")
@@ -131,10 +164,10 @@ class HubClient(val baseUrl: String, private val token: String? = null) {
      * if given, once the hub has answered.
      */
     private fun <T : Any> serverEvents(path: String, connected: T?, parse: (event: String, data: String) -> T?): Flow<T> = callbackFlow {
-        val call = streaming.newCall(request(path).build())
+        val live = AtomicReference<Call?>(null)
         launch(Dispatchers.IO) {
             try {
-                call.execute().use { response ->
+                open(path, live).use { response ->
                     if (!response.isSuccessful) throw failure(response)
                     connected?.let { send(it) }
                     val source = response.body.source()
@@ -158,11 +191,28 @@ class HubClient(val baseUrl: String, private val token: String? = null) {
                 close(e)
             }
         }
-        awaitClose { call.cancel() }
+        awaitClose { live.get()?.cancel() }
     }
 
-    private fun request(path: String): Request.Builder {
-        val builder = Request.Builder().url(baseUrl + path)
+    /** Opens a stream at the first address that answers. [live] holds the call, so it can be cancelled. */
+    private fun open(path: String, live: AtomicReference<Call?>): Response {
+        val urls = route.order()
+        var failure: IOException? = null
+        for (url in urls) {
+            val call = streaming.newCall(request(url, path).build())
+            live.set(call)
+            try {
+                return call.execute().also { route.worked(url) }
+            } catch (e: IOException) {
+                if (call.isCanceled()) throw e
+                failure = e
+            }
+        }
+        throw HubException(describeNetworkFailure(failure!!, away = urls.size > 1))
+    }
+
+    private fun request(url: String, path: String): Request.Builder {
+        val builder = Request.Builder().url(url + path)
         if (token != null) builder.header("Authorization", "Bearer $token")
         return builder
     }
@@ -173,25 +223,35 @@ class HubClient(val baseUrl: String, private val token: String? = null) {
         return HubException(message.ifEmpty { "The hub answered with an error (${response.code})." }, response.code)
     }
 
+    /**
+     * One request, tried at each of the hub's addresses until one answers. A request that may have
+     * reached the hub is never sent twice: only reads, or failures to connect at all, move on.
+     */
     private suspend inline fun <reified T> call(method: String, path: String, json: String? = null): T =
         withContext(Dispatchers.IO) {
-            val body = json?.toRequestBody(JSON_TYPE)
-            val request = try {
-                request(path).method(method, body).build()
-            } catch (e: IllegalArgumentException) {
-                throw HubException("That doesn't look like a valid hub address.")
-            }
-            try {
-                http.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) throw failure(response)
-                    val raw = response.body.string()
-                    if (T::class == Unit::class) Unit as T else OrbitJson.decodeFromString<T>(raw)
+            val urls = route.order()
+            var failure: IOException? = null
+            for ((index, url) in urls.withIndex()) {
+                val request = try {
+                    request(url, path).method(method, json?.toRequestBody(JSON_TYPE)).build()
+                } catch (e: IllegalArgumentException) {
+                    throw HubException("That doesn't look like a valid hub address.")
                 }
-            } catch (e: IOException) {
-                throw HubException(describeNetworkFailure(e))
-            } catch (e: kotlinx.serialization.SerializationException) {
-                throw HubException("That address answered, but it isn't an Orbit hub.")
+                try {
+                    return@withContext http.newCall(request).execute().use { response ->
+                        route.worked(url)
+                        if (!response.isSuccessful) throw failure(response)
+                        val raw = response.body.string()
+                        if (T::class == Unit::class) Unit as T else OrbitJson.decodeFromString<T>(raw)
+                    }
+                } catch (e: IOException) {
+                    failure = e
+                    if (index == urls.lastIndex || !(method == "GET" || neverArrived(e))) break
+                } catch (e: kotlinx.serialization.SerializationException) {
+                    throw HubException("That address answered, but it isn't an Orbit hub.")
+                }
             }
+            throw HubException(describeNetworkFailure(failure!!, away = urls.size > 1))
         }
 
     companion object {
@@ -222,7 +282,21 @@ fun normalizeHubAddress(input: String): String {
  * Says why the hub couldn't be reached, in terms of what to do about it. Silence (a timeout) usually
  * means Windows Firewall or a different Wi-Fi; a refusal means nothing is running at that address.
  */
-fun describeNetworkFailure(e: IOException): String = when (e) {
+fun describeNetworkFailure(e: IOException, away: Boolean = false): String = when {
+    // With a Tailscale address to try as well, both ways in were quiet.
+    away -> "Your PC didn't answer at home or through Tailscale. Check it's on with the hub running, and that Tailscale " +
+        "is connected on this phone."
+    else -> describeHomeFailure(e)
+}
+
+/** Whether a request failed before reaching the hub at all, so sending it elsewhere can't repeat it. */
+internal fun neverArrived(e: IOException): Boolean = when (e) {
+    is java.net.ConnectException, is java.net.NoRouteToHostException, is java.net.UnknownHostException -> true
+    is java.net.SocketTimeoutException -> e.message.orEmpty().contains("connect", ignoreCase = true)
+    else -> false
+}
+
+private fun describeHomeFailure(e: IOException): String = when (e) {
     is java.net.SocketTimeoutException, is java.net.NoRouteToHostException ->
         "Your PC didn't answer. Check your phone is on the same Wi-Fi as the PC, and that Windows Firewall allows Orbit " +
             "(Start Orbit sets this up the first time)."
