@@ -57,6 +57,9 @@ import dev.orbit.app.ui.screens.PairScreen
 import dev.orbit.app.ui.screens.RoomEditorScreen
 import dev.orbit.app.ui.screens.RoomScreen
 import dev.orbit.app.ui.screens.SettingsScreen
+import dev.orbit.app.ui.screens.UsageScreen
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitMotion
 import dev.orbit.app.ui.theme.OrbitTheme
@@ -267,6 +270,8 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
         }
         screen("settings") {
             val via by vm.via.collectAsStateWithLifecycle()
+            val usage by vm.usage.collectAsStateWithLifecycle()
+            LaunchedEffect(Unit) { vm.loadUsage(30) }
             SettingsScreen(
                 state,
                 via ?: session.baseUrl,
@@ -277,7 +282,15 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                     haptics.tick()
                     vm.removeFolder(it)
                 },
+                usage = usage?.takeIf { it.days == 30 },
+                onOpenUsage = { nav.navigate("usage") },
             )
+        }
+        screen("usage") {
+            var days by rememberSaveable { mutableIntStateOf(30) }
+            val usage by vm.usage.collectAsStateWithLifecycle()
+            LaunchedEffect(days) { vm.loadUsage(days) }
+            UsageScreen(usage, state.agents, days, onDays = { days = it }, onBack = { nav.popBackStack() })
         }
         screen("provider/{id}") { entry ->
             val provider = state.providers.firstOrNull { it.id == entry.arguments?.getString("id") } ?: return@screen

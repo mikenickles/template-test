@@ -164,6 +164,11 @@ export class Providers {
     return this.defs.has(id);
   }
 
+  /** "anthropic", "openai" (any OpenAI-compatible server) or "demo". */
+  kindOf(id) {
+    return this.defs.get(id)?.kind ?? null;
+  }
+
   /** Whether agents on this provider can use abilities (web search, code, shared folders). */
   supportsAbilities(id) {
     return this.defs.get(id)?.kind === 'anthropic';
@@ -208,7 +213,7 @@ export class Providers {
    * Claude models also get the agent's `abilities` ({web, code, folders}) and report their tool use
    * through onActivity, cited pages through onSources, and a re-run step through onReset.
    */
-  async stream({ provider, model, system, messages, signal, onDelta, agent, abilities, onActivity, onSources, onReset }) {
+  async stream({ provider, model, system, messages, signal, onDelta, agent, abilities, onActivity, onSources, onReset, onUsage = () => {} }) {
     const def = this.defs.get(provider);
     if (!def) throw new ProviderError(`Unknown provider "${provider}"`);
     if (!this.isConfigured(provider)) {
@@ -227,14 +232,20 @@ export class Providers {
         onActivity,
         onSources,
         onReset,
+        onUsage,
       });
     }
-    return streamOpenAICompatible({ def, model, system, messages, signal, onDelta });
+    return streamOpenAICompatible({ def, model, system, messages, signal, onDelta, onUsage });
   }
 }
 
-async function streamOpenAICompatible({ def, model, system, messages, signal, onDelta }) {
+/** Providers known to accept a request for token counts at the end of a stream. */
+const REPORTS_USAGE = new Set(['openai', 'openrouter', 'xai']);
+
+async function streamOpenAICompatible({ def, model, system, messages, signal, onDelta, onUsage = () => {} }) {
   let res;
+  const body = { model, stream: true, messages: [{ role: 'system', content: system }, ...messages] };
+  if (REPORTS_USAGE.has(def.id)) body.stream_options = { include_usage: true };
   try {
     res = await fetch(`${def.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -242,7 +253,7 @@ async function streamOpenAICompatible({ def, model, system, messages, signal, on
         'content-type': 'application/json',
         ...(def.apiKey ? { authorization: `Bearer ${def.apiKey}` } : {}),
       },
-      body: JSON.stringify({ model, stream: true, messages: [{ role: 'system', content: system }, ...messages] }),
+      body: JSON.stringify(body),
       signal,
     });
   } catch (err) {
@@ -263,6 +274,7 @@ async function streamOpenAICompatible({ def, model, system, messages, signal, on
 
   let text = '';
   let buffer = '';
+  let reported = null;
   const decoder = new TextDecoder();
   for await (const chunk of res.body) {
     buffer += decoder.decode(chunk, { stream: true });
@@ -275,7 +287,9 @@ async function streamOpenAICompatible({ def, model, system, messages, signal, on
       if (!data || data === '[DONE]') continue;
       let piece;
       try {
-        piece = JSON.parse(data).choices?.[0]?.delta?.content;
+        const chunk = JSON.parse(data);
+        piece = chunk.choices?.[0]?.delta?.content;
+        if (chunk.usage) reported = chunk.usage;
       } catch {
         continue;
       }
@@ -285,6 +299,21 @@ async function streamOpenAICompatible({ def, model, system, messages, signal, on
       }
     }
   }
+  // Without counts from the provider, about four characters to a token.
+  const cached = reported?.prompt_tokens_details?.cached_tokens ?? 0;
+  onUsage(
+    reported
+      ? { input: (reported.prompt_tokens ?? 0) - cached, output: reported.completion_tokens ?? 0, cacheRead: cached, cacheWrite: 0, searches: 0, requests: 1, estimated: false }
+      : {
+          input: Math.ceil((system.length + messages.reduce((n, m) => n + String(m.content).length, 0)) / 4),
+          output: Math.ceil(text.length / 4),
+          cacheRead: 0,
+          cacheWrite: 0,
+          searches: 0,
+          requests: 1,
+          estimated: true,
+        },
+  );
   return text;
 }
 

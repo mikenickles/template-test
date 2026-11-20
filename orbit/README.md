@@ -20,6 +20,12 @@ hub on an always-on PC.
 - **Notifications.** Leave the app while agents are replying and you get a
   ping when they finish ("Nova: Fuunji is your best bet…"); tap it to open the
   room. The app asks for permission the first time you send a message.
+- **Usage.** Settings shows what the crew has cost over the last week, month or
+  quarter, per agent and per room, estimated from Claude's published token
+  prices. Models without a known price show tokens; add prices for them under
+  `"prices"` in `config.json`.
+- **Long rooms** stay affordable: past about 15,000 words, the oldest part of a
+  room is folded into a running summary that agents read instead.
 - **The hub** (`hub/`) runs on your PC. It holds the API keys, calls the
   models, and keeps agents working while the phone is asleep. The app
   (`android/`) is a client for it.

@@ -95,6 +95,9 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
     /** Stops sharing a folder with agents. Sharing one happens on the PC. Returns the folders still shared. */
     suspend fun removeFolder(id: String): List<SharedFolder> = call<FoldersBody>("DELETE", "/api/folders/$id").folders
 
+    /** Tokens and estimated spend over the last [days] days, overall and per agent and room. */
+    suspend fun usage(days: Int = 30): UsageSummary = call("GET", "/api/usage?days=$days")
+
     suspend fun saveAgent(agent: Agent): Agent {
         val body = OrbitJson.encodeToString(agent)
         return if (agent.id.isEmpty()) call("POST", "/api/agents", body) else call("PUT", "/api/agents/${agent.id}", body)

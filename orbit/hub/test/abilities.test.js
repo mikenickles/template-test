@@ -206,6 +206,7 @@ test('a Claude agent searches, resumes a paused turn, reads a shared folder, the
   const deltas = [];
   const activity = [];
   let sources = [];
+  const used = [];
   const text = await providers.stream({
     provider: 'anthropic',
     model: 'claude-opus-5-5',
@@ -215,9 +216,11 @@ test('a Claude agent searches, resumes a paused turn, reads a shared folder, the
     onDelta: (d) => deltas.push(d),
     onActivity: (a) => activity.push(a),
     onSources: (s) => (sources = s),
+    onUsage: (u) => used.push(u),
   });
 
   assert.equal(text, 'Let me look.\n\nIchiran is a favorite.\n\nRamen is already on your list.');
+  assert.deepEqual(used.map((u) => [u.input, u.output, u.requests]), [[5, 20, 1], [5, 20, 1], [5, 20, 1]], 'every request is counted');
   assert.equal(deltas.join(''), text, 'what streamed is what was kept');
   assert.deepEqual(activity.at(-1), [
     { kind: 'search', detail: 'best ramen tokyo', done: true, failed: false },

@@ -12,6 +12,8 @@ import dev.orbit.app.data.Room
 import dev.orbit.app.data.RunState
 import dev.orbit.app.data.SharedFolder
 import dev.orbit.app.data.Source
+import dev.orbit.app.data.UsageSummary
+import dev.orbit.app.data.UsageTotals
 import dev.orbit.app.ui.AppState
 import dev.orbit.app.ui.RoomUiState
 
@@ -99,6 +101,22 @@ object SampleData {
             ),
         ),
         run = RunState(true, "a1"),
+    )
+
+    /** A month of use: two Claude agents with prices, and one local model without. */
+    val usage = UsageSummary(
+        days = 30,
+        since = "2026-10-22",
+        total = UsageTotals(input = 1_420_000, output = 186_000, cacheRead = 2_900_000, searches = 14, requests = 212, cost = 9.86, priced = false),
+        agents = listOf(
+            UsageTotals(agentId = "a1", name = "Nova", input = 980_000, output = 121_000, cacheRead = 2_100_000, searches = 14, cost = 7.18),
+            UsageTotals(agentId = "a2", name = "Pixel", input = 300_000, output = 52_000, cacheRead = 800_000, cost = 2.68),
+            UsageTotals(agentId = "a3", name = "Sage", input = 140_000, output = 13_000, priced = false, estimated = true),
+        ),
+        rooms = listOf(
+            UsageTotals(roomId = "r1", name = "Launch plan", input = 1_100_000, output = 140_000, cacheRead = 2_400_000, cost = 7.92, priced = false),
+            UsageTotals(roomId = "r2", name = "Weekend trip", input = 320_000, output = 46_000, cacheRead = 500_000, cost = 1.94),
+        ),
     )
 
     val chat = RoomUiState(

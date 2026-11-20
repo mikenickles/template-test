@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { addUsage, emptyUsage } from './usage.js';
 
 /** Upper bound on agent replies per user message, so @mention chains can't loop forever. */
 export const MAX_TURNS = 12;
@@ -88,9 +89,33 @@ export function buildSystemPrompt(agent, room, agents, abilities = null) {
   return lines.join('\n');
 }
 
-/** The room history from one agent's point of view, as alternating chat turns. */
-export function buildTranscript(agent, messages) {
+/** How much recent history is sent word for word, in characters (about four to a token). */
+export const RECENT_CHARS = 60_000;
+/** How much further history may grow before its oldest part is folded into the room's summary. */
+export const FOLD_AFTER = 40_000;
+/** Claude model that writes summaries for agents on Anthropic: quick and inexpensive. */
+const SUMMARY_MODEL = 'claude-haiku-5-5';
+
+const sizeOf = (messages) => messages.reduce((n, m) => n + (m.text?.length ?? 0), 0);
+
+/** Splits messages into [older, recent], where recent is the newest run that fits in `budget` characters. */
+export function splitForBudget(messages, budget) {
+  let used = 0;
+  let start = messages.length;
+  while (start > 0 && used + (messages[start - 1].text?.length ?? 0) <= budget) used += messages[--start].text?.length ?? 0;
+  // The newest message is always kept, however long.
+  if (start === messages.length && start > 0) start--;
+  return [messages.slice(0, start), messages.slice(start)];
+}
+
+/**
+ * The room history from one agent's point of view, as alternating chat turns. A long room's older
+ * messages arrive as `summary`; `omitted` says some were left out without one.
+ */
+export function buildTranscript(agent, messages, { summary = null, omitted = false } = {}) {
   const turns = [];
+  if (summary) turns.push({ role: 'user', content: `[Summary of this chat before the messages below]: ${summary}` });
+  else if (omitted) turns.push({ role: 'user', content: '[Earlier messages in this chat are not shown.]' });
   for (const m of messages) {
     if (!m.text?.trim() || m.status === 'error') continue;
     const mine = m.author.type === 'agent' && m.author.agentId === agent.id;
@@ -103,6 +128,8 @@ export function buildTranscript(agent, messages) {
   if (turns.at(-1)?.role === 'assistant') {
     turns.push({ role: 'user', content: '[System]: Your teammates have nothing to add. Wrap up for the user.' });
   }
+  // Conversations must open with a user turn.
+  if (turns[0]?.role === 'assistant') turns.unshift({ role: 'user', content: '[The chat continues.]' });
   return turns;
 }
 
@@ -116,10 +143,11 @@ export class Orchestrator {
    * @param {{store: import('./store.js').Store, providers: any, folders?: import('./folders.js').Folders,
    *   emit: (roomId: string, event: string, data: any) => void}} deps
    */
-  constructor({ store, providers, folders = null, emit }) {
+  constructor({ store, providers, folders = null, ledger = null, emit }) {
     this.store = store;
     this.providers = providers;
     this.folders = folders;
+    this.ledger = ledger;
     this.emit = emit;
     this.runs = new Map();
   }
@@ -243,8 +271,68 @@ export class Orchestrator {
     }
   }
 
+  /**
+   * What an agent is shown of a room: the newest messages word for word, and a summary of the rest.
+   * Once history grows well past what is sent, its oldest part is folded into the room's summary,
+   * so long rooms stay affordable and within every model's limits.
+   */
+  async #context(room, agent, run) {
+    const all = this.store.messages(room.id);
+    let recent = all.filter((m) => m.seq > (room.summary?.through ?? 0));
+    let omitted = false;
+    if (sizeOf(recent) > RECENT_CHARS + FOLD_AFTER) {
+      const [fold, keep] = splitForBudget(recent, RECENT_CHARS);
+      const text = await this.#summarize(room, agent, fold, run.abort.signal);
+      if (text) {
+        room.summary = { text, through: fold.at(-1).seq, updatedAt: Date.now() };
+        this.store.save();
+      } else {
+        omitted = true;
+      }
+      recent = keep;
+    }
+    return buildTranscript(agent, recent, { summary: room.summary?.text ?? null, omitted: omitted || (!room.summary && recent.length < all.length) });
+  }
+
+  /** Folds messages into the room's running summary, written by the agent's provider. Null if it can't. */
+  async #summarize(room, agent, messages, signal) {
+    const kind = this.providers.kindOf?.(agent.provider);
+    if (!kind || kind === 'demo' || !this.providers.isConfigured(agent.provider)) return null;
+    const model = kind === 'anthropic' ? SUMMARY_MODEL : agent.model;
+    const lines = messages
+      .filter((m) => m.text?.trim() && m.status !== 'error')
+      .map((m) => `[${m.author.type === 'user' ? 'User' : m.author.name}]: ${m.text}`)
+      .join('\n\n');
+    const previous = room.summary?.text ? `The summary so far:\n${room.summary.text}\n\n` : '';
+    try {
+      const text = await this.providers.stream({
+        provider: agent.provider,
+        model,
+        system:
+          `You keep the running summary of "${room.name}", a group chat between a user and several AI agents. ` +
+          'Keep decisions, facts, figures, names, open questions, who is doing what, and anything the user asked to remember. ' +
+          "Leave out small talk. Never add anything that wasn't said. Write plain sentences or short bullets, under 400 words.",
+        messages: [{ role: 'user', content: `${previous}Messages to add:\n\n${lines}\n\nWrite the updated summary.` }],
+        signal,
+        agent,
+        onDelta: () => {},
+        onUsage: (usage) => this.ledger?.record({ agentId: agent.id, roomId: room.id, model, usage }),
+      });
+      return text.trim().slice(0, 8000) || null;
+    } catch (err) {
+      if (signal.aborted) throw err;
+      console.warn(`[orbit] couldn't summarize "${room.name}": ${err?.message}`);
+      return null;
+    }
+  }
+
   async #speak(room, agent, agents, run) {
-    const transcript = buildTranscript(agent, this.store.messages(room.id));
+    let transcript;
+    try {
+      transcript = await this.#context(room, agent, run);
+    } catch {
+      return null; // stopped while summarizing
+    }
     const message = this.#append(
       room.id,
       { type: 'agent', agentId: agent.id, name: agent.name, model: agent.model },
@@ -282,6 +370,11 @@ export class Orchestrator {
           message.text = text;
           this.store.save();
           this.emit(room.id, 'reset', { id: message.id, text });
+        },
+        // Tokens for each request, kept on the reply and in the hub's usage ledger.
+        onUsage: (usage) => {
+          message.usage = addUsage(message.usage ?? emptyUsage(), usage);
+          this.ledger?.record({ agentId: agent.id, roomId: room.id, model: agent.model, usage });
         },
       });
       message.text = text;

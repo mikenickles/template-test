@@ -20,6 +20,8 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import dev.orbit.app.ui.screens.canRetry
 import dev.orbit.app.ui.screens.closeOpenMarkup
+import dev.orbit.app.ui.screens.formatCost
+import dev.orbit.app.ui.screens.formatTokens
 import dev.orbit.app.ui.screens.messageActions
 import dev.orbit.app.data.Message
 import dev.orbit.app.data.RoomEvent
@@ -176,5 +178,19 @@ class RoomStateTest {
         assertEquals(listOf("Copy text", "Ask again", "Delete"), labels(last, true))
         assertEquals(listOf("Delete"), labels(reply("", Message.STATUS_ERROR), false))
         assertEquals("a reply still streaming can only be copied", listOf("Copy text"), labels(reply("Hel"), false))
+    }
+
+    @Test
+    fun `money and token counts read the way people say them`() {
+        assertEquals("$0.00", formatCost(0.0))
+        assertEquals("<$0.01", formatCost(0.004))
+        assertEquals("$3.42", formatCost(3.4199))
+        assertEquals("$1,240", formatCost(1240.4))
+        assertEquals("842", formatTokens(842))
+        assertEquals("1.3K", formatTokens(1_284))
+        assertEquals("2K", formatTokens(2_000))
+        assertEquals("182K", formatTokens(182_400))
+        assertEquals("1.2M", formatTokens(1_240_000))
+        assertEquals("12M", formatTokens(12_400_000))
     }
 }

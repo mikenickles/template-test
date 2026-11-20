@@ -61,6 +61,19 @@ function serverActivity(block, abilities) {
   }
 }
 
+/** A response's usage in the hub's terms. Searches are counted, not priced. */
+export function usageOf(usage = {}) {
+  return {
+    input: usage.input_tokens ?? 0,
+    output: usage.output_tokens ?? 0,
+    cacheRead: usage.cache_read_input_tokens ?? 0,
+    cacheWrite: usage.cache_creation_input_tokens ?? 0,
+    searches: (usage.server_tool_use?.web_search_requests ?? 0) + (usage.server_tool_use?.web_fetch_requests ?? 0),
+    requests: 1,
+    estimated: false,
+  };
+}
+
 /**
  * The parts of a response that can be sent back in the next request. After a mid-output fallback, the
  * declined model's thinking, client tool calls, and unanswered server tool calls before the last
@@ -95,6 +108,7 @@ export async function streamAnthropic({
   onActivity = () => {},
   onSources = () => {},
   onReset = () => {},
+  onUsage = () => {},
 }) {
   const tools = anthropicTools(model, abilities);
   const conversation = [...messages];
@@ -201,6 +215,7 @@ export async function streamAnthropic({
         continue;
       }
 
+      onUsage(usageOf(final.usage));
       const stop = final.stop_reason;
       if (stop === 'refusal') {
         // A refusal can cut a tool call off mid-input, so this step's tools never run.

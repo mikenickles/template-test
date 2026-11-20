@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.orbit.app.data.UsageSummary
 import dev.orbit.app.ui.AppState
 import dev.orbit.app.ui.components.DangerRow
 import dev.orbit.app.ui.components.Hairline
@@ -44,6 +45,8 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onOpenProvider: (providerId: String) -> Unit = {},
     onRemoveFolder: (folderId: String) -> Unit = {},
+    usage: UsageSummary? = null,
+    onOpenUsage: () -> Unit = {},
 ) {
     val c = Orbit.colors
     val uri = LocalUriHandler.current
@@ -156,6 +159,24 @@ fun SettingsScreen(
                     style = OrbitType.bodyS,
                     color = c.textTertiary,
                 )
+
+                SectionTitle("Usage", Modifier.padding(top = OrbitDimens.section, bottom = 8.dp))
+                OrbitCard(Modifier.fillMaxWidth(), onClick = onOpenUsage) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = OrbitDimens.rowPad, end = 8.dp).heightIn(min = 56.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Last ${usage?.days ?: 30} days", Modifier.weight(1f), style = OrbitType.bodyM, color = c.textSecondary)
+                        usage?.total?.let { total ->
+                            Text(
+                                if (total.cost > 0) formatCost(total.cost) else "${formatTokens(total.tokens)} tokens",
+                                style = OrbitType.titleS,
+                                color = c.text,
+                            )
+                        }
+                        OrbitIcon(OrbitIcon.Chevron, Modifier.padding(start = 4.dp), size = 18.dp, tint = c.textTertiary)
+                    }
+                }
 
                 SectionTitle("Shared folders", Modifier.padding(top = OrbitDimens.section, bottom = 8.dp))
                 OrbitCard(Modifier.fillMaxWidth()) {

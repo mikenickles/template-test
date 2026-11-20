@@ -112,6 +112,8 @@ private fun mono(size: Int, line: Int, weight: FontWeight = FontWeight.Normal, t
  * Mono is reserved for what a machine reads: model ids, addresses, codes, times.
  */
 object OrbitType {
+    /** The one headline number a screen leads with, like a month's spend. */
+    val hero = sans(48.0, 54, FontWeight.SemiBold, -0.04)
     val display = sans(30.0, 36, FontWeight.SemiBold, -0.032)
     val titleL = sans(22.0, 28, FontWeight.SemiBold, -0.024)
 

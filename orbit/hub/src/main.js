@@ -28,7 +28,7 @@ const folders = new Folders(config.folders, {
     saveConfig(config);
   },
 });
-const hub = new Hub({ store, providers, folders, name: config.name, onPairingCode: () => showPairing() });
+const hub = new Hub({ store, providers, folders, prices: config.prices, name: config.name, onPairingCode: () => showPairing() });
 const port = await hub.listen(Number(process.env.PORT) || config.port);
 hub.startDiscovery(config.discoveryPort, port);
 

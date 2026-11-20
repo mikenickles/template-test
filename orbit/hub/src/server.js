@@ -5,6 +5,7 @@ import { FolderError, Folders } from './folders.js';
 import { ABILITIES, Orchestrator } from './orchestrator.js';
 import { PAIR_PAGE } from './pairpage.js';
 import { canPickFolder, pickFolder } from './picker.js';
+import { Ledger } from './usage.js';
 import { pairingLink, qrSvg } from './qr.js';
 
 export const VERSION = '0.1.0';
@@ -34,15 +35,16 @@ const JUST_PAIRED_MS = 60_000;
  * bearer token a phone receives when it pairs with the code shown on the PC.
  */
 export class Hub {
-  constructor({ store, providers, folders = new Folders(), name, onPairingCode = () => {} }) {
+  constructor({ store, providers, folders = new Folders(), prices = {}, name, onPairingCode = () => {} }) {
     this.store = store;
     this.providers = providers;
     this.folders = folders;
+    this.ledger = new Ledger(store, prices);
     this.name = name;
     this.onPairingCode = onPairingCode;
     this.subscribers = new Map(); // roomId -> Set<ServerResponse>
     this.watchers = new Set(); // phones following every room, to notify when replies land
-    this.orchestrator = new Orchestrator({ store, providers, folders, emit: (...args) => this.#emit(...args) });
+    this.orchestrator = new Orchestrator({ store, providers, folders, ledger: this.ledger, emit: (...args) => this.#emit(...args) });
     this.pairFailures = 0;
     this.pairLockedUntil = 0;
     this.pairingCode = newPairingCode();
@@ -255,6 +257,11 @@ export class Hub {
         };
       case 'GET /api/events':
         return this.#follow(req, res);
+      case 'GET /api/usage': {
+        // Estimated spend and tokens, per agent and room, over the last N days.
+        const days = Math.min(365, Math.max(1, Number(url.searchParams.get('days')) || 30));
+        return this.ledger.summary(days);
+      }
       case 'DELETE /api/device': {
         this.store.state.devices = this.store.state.devices.filter((d) => d.id !== device.id);
         this.store.save();
@@ -364,6 +371,7 @@ export class Hub {
           this.orchestrator.stop(room.id);
           await this.orchestrator.idle(room.id);
           this.store.state.messages[room.id] = [];
+          delete room.summary;
           this.store.save();
           this.#emit(room.id, 'cleared', {});
           return { ok: true };

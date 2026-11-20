@@ -12,6 +12,7 @@ import dev.orbit.app.data.HubInfo
 import dev.orbit.app.data.Provider
 import dev.orbit.app.data.Room
 import dev.orbit.app.data.SharedFolder
+import dev.orbit.app.data.UsageSummary
 import dev.orbit.app.data.discoverHubs
 import dev.orbit.app.data.PairingLink
 import dev.orbit.app.data.parsePairingLink
@@ -143,6 +144,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         _pair.update { it.copy(scanned = link) }
         pair(link.host, link.code)
+    }
+
+    private val _usage = MutableStateFlow<UsageSummary?>(null)
+
+    /** Spend and tokens for the period last asked for; null until loaded. */
+    val usage: StateFlow<UsageSummary?> = _usage.asStateFlow()
+
+    fun loadUsage(days: Int = 30) {
+        viewModelScope.launch { hub(quiet = true) { it.usage(days) }?.let { _usage.value = it } }
     }
 
     /** A room to open as soon as the app is showing, from a tapped notification. */

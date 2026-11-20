@@ -222,3 +222,34 @@ sealed interface HubEvent {
     data class Run(val run: RoomRun) : HubEvent
     data class Replied(val reply: Reply) : HubEvent
 }
+
+/** Tokens and estimated cost for one agent, one room, or everything. */
+@Serializable
+data class UsageTotals(
+    val agentId: String? = null,
+    val roomId: String? = null,
+    val name: String = "",
+    val input: Long = 0,
+    val output: Long = 0,
+    val cacheRead: Long = 0,
+    val cacheWrite: Long = 0,
+    val searches: Int = 0,
+    val requests: Int = 0,
+    /** Dollars, estimated from published token prices. Covers only what has a known price. */
+    val cost: Double = 0.0,
+    /** False when some of it ran on a model without a known price, so [cost] leaves that part out. */
+    val priced: Boolean = true,
+    /** True when some token counts were estimated because the provider didn't report them. */
+    val estimated: Boolean = false,
+) {
+    val tokens: Long get() = input + output + cacheRead + cacheWrite
+}
+
+@Serializable
+data class UsageSummary(
+    val days: Int = 30,
+    val since: String = "",
+    val total: UsageTotals = UsageTotals(),
+    val agents: List<UsageTotals> = emptyList(),
+    val rooms: List<UsageTotals> = emptyList(),
+)
