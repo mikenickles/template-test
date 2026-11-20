@@ -231,6 +231,47 @@ test('buildTranscript always ends on a user turn', () => {
   assert.deepEqual(turns.map((t) => t.role), ['user', 'assistant', 'user']);
 });
 
+test('a reply can be deleted or asked again, but not while the crew is busy', async (t) => {
+  const h = await startHub({ Nova: ['First try.', 'Second try.'] });
+  t.after(h.close);
+  await h.pair();
+  const nova = await h.makeAgent('Nova');
+  const room = (await h.api('POST', '/api/rooms', { name: 'R', agentIds: [nova.id], mode: 'roundtable' })).body;
+  const mine = (await h.api('POST', `/api/rooms/${room.id}/messages`, { text: 'hi' })).body;
+  await h.hub.orchestrator.idle(room.id);
+  const messages = async () => (await h.api('GET', `/api/rooms/${room.id}/messages`)).body.messages;
+  const reply = (await messages()).at(-1);
+  assert.equal(reply.text, 'First try.');
+
+  assert.equal((await h.api('POST', `/api/rooms/${room.id}/messages/${mine.id}/retry`)).status, 400, 'only replies');
+  assert.equal((await h.api('POST', `/api/rooms/${room.id}/messages/${reply.id}/retry`)).status, 200);
+  await h.hub.orchestrator.idle(room.id);
+  assert.deepEqual((await messages()).map((m) => m.text), ['hi', 'Second try.']);
+  assert.equal(h.providers.calls.at(-1).messages.at(-1).content, '[User]: hi', 'the retry sees the conversation without the old reply');
+
+  // While a reply is streaming it can't be deleted or retried.
+  h.providers.script.Nova = ['Third.'];
+  const slow = h.providers.stream.bind(h.providers);
+  let release;
+  h.providers.stream = async (args) => {
+    await new Promise((r) => (release = r));
+    return slow(args);
+  };
+  await h.api('POST', `/api/rooms/${room.id}/messages`, { text: 'again' });
+  await new Promise((r) => setTimeout(r, 50));
+  const streaming = (await messages()).at(-1);
+  assert.equal(streaming.status, 'streaming');
+  assert.equal((await h.api('DELETE', `/api/rooms/${room.id}/messages/${streaming.id}`)).status, 409);
+  const earlier = (await messages()).find((m) => m.text === 'Second try.');
+  assert.equal((await h.api('POST', `/api/rooms/${room.id}/messages/${earlier.id}/retry`)).status, 409);
+  release();
+  await h.hub.orchestrator.idle(room.id);
+
+  assert.equal((await h.api('DELETE', `/api/rooms/${room.id}/messages/${mine.id}`)).status, 200);
+  assert.equal((await h.api('DELETE', `/api/rooms/${room.id}/messages/${mine.id}`)).status, 404);
+  assert.deepEqual((await messages()).map((m) => m.text), ['Second try.', 'again', 'Third.']);
+});
+
 test('a phone following every room hears who is working and each finished reply', async (t) => {
   const h = await startHub({ Nova: ['Fuunji is your best bet. @Sage?', 'Fuunji it is.'], Sage: [new ProviderError('Ollama could not be reached.')] });
   t.after(h.close);

@@ -136,14 +136,36 @@ export class Orchestrator {
     if (run) {
       run.restart = true; // picked up when the current speaker finishes
     } else {
-      const fresh = { abort: new AbortController(), speaking: null, restart: false };
-      this.runs.set(roomId, fresh);
-      fresh.done = this.#run(roomId, fresh, text).finally(() => {
-        this.runs.delete(roomId);
-        this.emit(roomId, 'run', this.runState(roomId));
-      });
+      this.#start(roomId, (room, agents) => initialSpeakers(room, agents, text));
     }
     return message;
+  }
+
+  /** Has one agent answer again, as the next to speak. False if the room is busy. */
+  retry(roomId, agentId) {
+    if (this.runs.has(roomId)) return false;
+    this.#start(roomId, (room, agents) => agents.filter((a) => a.id === agentId));
+    return true;
+  }
+
+  /** Removes a finished message from a room. */
+  remove(roomId, messageId) {
+    const list = this.store.messages(roomId);
+    const index = list.findIndex((m) => m.id === messageId);
+    if (index < 0) return false;
+    list.splice(index, 1);
+    this.store.save();
+    this.emit(roomId, 'removed', { id: messageId });
+    return true;
+  }
+
+  #start(roomId, firstSpeakers) {
+    const run = { abort: new AbortController(), speaking: null, restart: false };
+    this.runs.set(roomId, run);
+    run.done = this.#run(roomId, run, firstSpeakers).finally(() => {
+      this.runs.delete(roomId);
+      this.emit(roomId, 'run', this.runState(roomId));
+    });
   }
 
   stop(roomId) {
@@ -178,8 +200,9 @@ export class Orchestrator {
     return message;
   }
 
-  async #run(roomId, run, firstText) {
-    let queue = initialSpeakers(this.store.room(roomId), this.#roomAgents(this.store.room(roomId)), firstText);
+  async #run(roomId, run, firstSpeakers) {
+    const first = this.store.room(roomId);
+    let queue = first ? firstSpeakers(first, this.#roomAgents(first)) : [];
     let turns = 0;
     let wrapped = false;
 

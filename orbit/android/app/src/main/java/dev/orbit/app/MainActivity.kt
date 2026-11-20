@@ -219,6 +219,8 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                     askNotifications()
                     roomVm.send(it)
                 },
+                onDeleteMessage = roomVm::delete,
+                onRetry = roomVm::retry,
                 onStop = roomVm::stop,
                 onBack = { nav.popBackStack() },
                 onEdit = { nav.navigate("roomEdit?id=$id") },

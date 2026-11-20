@@ -10,6 +10,7 @@ import dev.orbit.app.data.Room
 import dev.orbit.app.data.RoomEvent
 import dev.orbit.app.ui.RoomUiState
 import dev.orbit.app.ui.reduce
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
@@ -71,6 +72,19 @@ class LiveHubTest {
         assertEquals("Echo Two", reply.author.name)
         assertTrue(reply.text.contains("demo mode"))
         assertEquals(client.messages(room.id).messages.last().text, reply.text)
+
+        // Ask again: the old reply goes and a new one takes its place. Then delete that one.
+        client.retry(room.id, reply.id)
+        var latest = client.messages(room.id)
+        withTimeout(20_000) {
+            while (latest.run.active || latest.messages.last().let { it.id == reply.id || it.status != Message.STATUS_DONE }) {
+                delay(200)
+                latest = client.messages(room.id)
+            }
+        }
+        assertTrue(latest.messages.none { it.id == reply.id })
+        client.deleteMessage(room.id, latest.messages.last().id)
+        assertEquals(listOf("hello from the test"), client.messages(room.id).messages.map { it.text })
 
         client.deleteRoom(room.id)
         client.deleteAgent(agent.id)

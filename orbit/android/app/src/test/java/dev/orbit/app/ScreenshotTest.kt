@@ -2,10 +2,13 @@ package dev.orbit.app
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,19 +22,23 @@ import dev.orbit.app.data.RunState
 import dev.orbit.app.ui.AppState
 import dev.orbit.app.ui.PairState
 import dev.orbit.app.ui.RoomUiState
+import dev.orbit.app.ui.components.ActionSheetContent
 import dev.orbit.app.ui.components.AgentAvatar
 import dev.orbit.app.ui.components.CrewTile
 import dev.orbit.app.ui.components.EYES_COUNT
+import dev.orbit.app.ui.components.OrbitIcon
 import dev.orbit.app.ui.components.SHAPE_COUNT
+import dev.orbit.app.ui.components.SheetAction
 import dev.orbit.app.ui.screens.AgentEditorScreen
 import dev.orbit.app.ui.screens.HomeScreen
 import dev.orbit.app.ui.screens.PairScreen
+import dev.orbit.app.ui.screens.ProviderKeyScreen
 import dev.orbit.app.ui.screens.RoomEditorScreen
 import dev.orbit.app.ui.screens.RoomScreen
 import dev.orbit.app.ui.screens.SampleCrew
-import dev.orbit.app.ui.screens.ProviderKeyScreen
 import dev.orbit.app.ui.screens.SettingsScreen
 import dev.orbit.app.ui.theme.Orbit
+import dev.orbit.app.ui.theme.OrbitDimens
 import dev.orbit.app.ui.theme.OrbitTheme
 import org.junit.Rule
 import org.junit.Test
@@ -130,6 +137,27 @@ class ScreenshotTest {
     @Test fun agentEditorLight() = shot("agent-editor-light", dark = false) { AgentEditorScreen(mochi, providers, { emptyList() }, {}, {}, {}) }
     @Test fun roomEditor() = shot("room-editor") { RoomEditorScreen(launch, agents, {}, {}, {}) }
     @Test fun settings() = shot("settings") { SettingsScreen(app, "http://192.168.1.20:8787", {}, {}) }
+    @Test fun messageActions() = shot("message-actions") {
+        Box(Modifier.fillMaxSize()) {
+            RoomScreen(launch, listOf(nova, pixel, sage), chat.copy(run = RunState(), messages = chat.messages.take(3)), {}, {}, {}, {}, {})
+            Box(Modifier.fillMaxSize().background(Orbit.colors.bg.copy(alpha = 0.6f)))
+            Surface(
+                Modifier.align(Alignment.BottomCenter),
+                shape = RoundedCornerShape(topStart = OrbitDimens.radiusXL, topEnd = OrbitDimens.radiusXL),
+                color = Orbit.colors.surface,
+            ) {
+                ActionSheetContent(
+                    "Pixel's reply",
+                    SampleData.PIXEL_DRAFT,
+                    listOf(
+                        SheetAction("Copy text", OrbitIcon.Copy) {},
+                        SheetAction("Ask again", OrbitIcon.Retry) {},
+                        SheetAction("Delete", OrbitIcon.Trash, danger = true) {},
+                    ),
+                ) {}
+            }
+        }
+    }
     @Test fun roomResearch() = shot("room-research") { RoomScreen(trip.copy(agentIds = listOf("a1")), listOf(nova), SampleData.research, {}, {}, {}, {}, {}) }
     @Test fun roomResearchLight() = shot("room-research-light", dark = false) {
         RoomScreen(trip.copy(agentIds = listOf("a1")), listOf(nova), SampleData.research, {}, {}, {}, {}, {})

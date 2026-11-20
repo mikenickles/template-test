@@ -18,7 +18,9 @@ import dev.orbit.app.data.parsePairingLink
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import dev.orbit.app.ui.screens.canRetry
 import dev.orbit.app.ui.screens.closeOpenMarkup
+import dev.orbit.app.ui.screens.messageActions
 import dev.orbit.app.data.Message
 import dev.orbit.app.data.RoomEvent
 import dev.orbit.app.data.RunState
@@ -155,5 +157,24 @@ class RoomStateTest {
             listOf(Activity("search"), Activity("page"), Activity("search"), Activity("code")),
         ))
         assertEquals("Read 3 files", activitySummary(List(3) { Activity("file") }))
+    }
+
+    @Test
+    fun `a removed message disappears, and retry is offered only where it makes sense`() {
+        assertEquals(listOf("m1"), base.reduce(RoomEvent.Removed("m2"))!!.messages.map { it.id })
+        val nova = Agent(id = "a1", name = "Nova")
+        val done = base.copy(messages = listOf(Message("m1", 1, Author("user"), "hi"), reply("Hello", Message.STATUS_DONE)))
+        val last = done.messages.last()
+        assertTrue(canRetry(last, done, listOf(nova)))
+        assertTrue("not while the crew is busy", !canRetry(last, done.copy(run = RunState(active = true)), listOf(nova)))
+        assertTrue("not once the agent has left the room", !canRetry(last, done, emptyList()))
+        assertTrue("your own messages aren't retried", !canRetry(done.messages.first(), done, listOf(nova)))
+        val failedEarlier = done.copy(messages = listOf(reply("", Message.STATUS_ERROR), Message("m3", 3, Author("user"), "and?")))
+        assertTrue("a failed reply can be retried anywhere", canRetry(failedEarlier.messages.first(), failedEarlier, listOf(nova)))
+
+        val labels = { m: Message, retry: Boolean -> messageActions(m, retry, {}, {}, {}).map { it.label } }
+        assertEquals(listOf("Copy text", "Ask again", "Delete"), labels(last, true))
+        assertEquals(listOf("Delete"), labels(reply("", Message.STATUS_ERROR), false))
+        assertEquals("a reply still streaming can only be copied", listOf("Copy text"), labels(reply("Hel"), false))
     }
 }

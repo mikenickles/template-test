@@ -89,6 +89,15 @@ class HubClient(val baseUrl: String, private val token: String? = null) {
         call<Unit>("POST", "/api/rooms/$roomId/stop", "{}")
     }
 
+    suspend fun deleteMessage(roomId: String, messageId: String) {
+        call<Unit>("DELETE", "/api/rooms/$roomId/messages/$messageId")
+    }
+
+    /** Has the agent behind a reply answer again, in place of that reply. */
+    suspend fun retry(roomId: String, messageId: String) {
+        call<Unit>("POST", "/api/rooms/$roomId/messages/$messageId/retry", "{}")
+    }
+
     suspend fun clear(roomId: String) {
         call<Unit>("DELETE", "/api/rooms/$roomId/messages")
     }
@@ -101,6 +110,7 @@ class HubClient(val baseUrl: String, private val token: String? = null) {
             "activity" -> RoomEvent.Progress(OrbitJson.decodeFromString<ActivityUpdate>(data))
             "reset" -> RoomEvent.Reset(OrbitJson.decodeFromString<TextReset>(data))
             "run" -> RoomEvent.Run(OrbitJson.decodeFromString<RunState>(data))
+            "removed" -> RoomEvent.Removed(OrbitJson.decodeFromString<Removed>(data).id)
             "cleared" -> RoomEvent.Cleared
             else -> null
         }

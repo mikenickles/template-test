@@ -34,6 +34,7 @@ data class RoomUiState(
 fun RoomUiState.reduce(event: RoomEvent): RoomUiState? = when (event) {
     RoomEvent.Connected -> this
     RoomEvent.Cleared -> copy(messages = emptyList())
+    is RoomEvent.Removed -> copy(messages = messages.filterNot { it.id == event.id })
     is RoomEvent.Run -> copy(run = event.state)
     is RoomEvent.Upsert -> {
         val incoming = event.message
@@ -126,6 +127,21 @@ class RoomViewModel(app: Application, private val roomId: String) : AndroidViewM
     }
 
     fun stop() = act { it.stop(roomId) }
+
+    fun delete(message: Message) {
+        // Gone at once; the hub's "removed" event confirms it, and a failure reloads the room.
+        _state.update { it.copy(messages = it.messages.filterNot { m -> m.id == message.id }) }
+        act { client ->
+            try {
+                client.deleteMessage(roomId, message.id)
+            } catch (e: HubException) {
+                load(client)
+                throw e
+            }
+        }
+    }
+
+    fun retry(message: Message) = act { it.retry(roomId, message.id) }
 
     fun clear() = act { it.clear(roomId) }
 

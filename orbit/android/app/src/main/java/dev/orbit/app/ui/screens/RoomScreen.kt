@@ -1,5 +1,6 @@
 package dev.orbit.app.ui.screens
 
+import android.content.ClipData
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -21,6 +22,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -76,8 +78,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -89,6 +95,7 @@ import dev.orbit.app.data.Message
 import dev.orbit.app.data.Room
 import dev.orbit.app.ui.RoomUiState
 import dev.orbit.app.ui.SharedKeys
+import dev.orbit.app.ui.components.ActionSheet
 import dev.orbit.app.ui.components.ActivityTrail
 import dev.orbit.app.ui.components.AgentAvatar
 import dev.orbit.app.ui.components.AvatarRow
@@ -97,6 +104,7 @@ import dev.orbit.app.ui.components.IconTap
 import dev.orbit.app.ui.components.MarkdownText
 import dev.orbit.app.ui.components.OrbitIcon
 import dev.orbit.app.ui.components.Pill
+import dev.orbit.app.ui.components.SheetAction
 import dev.orbit.app.ui.components.ShimmerText
 import dev.orbit.app.ui.components.SourceChips
 import dev.orbit.app.ui.components.StatusDot
@@ -135,9 +143,15 @@ fun RoomScreen(
     onClear: () -> Unit,
     /** Every agent on the hub, so messages from agents no longer in the room keep their face. */
     everyone: List<Agent> = agents,
+    onDeleteMessage: (Message) -> Unit = {},
+    onRetry: (Message) -> Unit = {},
 ) {
     val c = Orbit.colors
     var draft by rememberSaveable { mutableStateOf("") }
+    // The message whose actions are open, after a long press.
+    var acting by remember { mutableStateOf<Message?>(null) }
+    val haptics = rememberHaptics()
+    val clipboard = LocalClipboard.current
     val byId = remember(everyone) { everyone.associateBy { it.id } }
     // "@nova" is drawn in Nova's color wherever it appears.
     val dark = c.isDark
@@ -216,7 +230,21 @@ fun RoomScreen(
                                                 spring(dampingRatio = 0.9f, stiffness = 380f, visibilityThreshold = IntOffset.VisibilityThreshold)
                                             },
                                         )
-                                        .arrival(play, message.fromUser),
+                                        .arrival(play, message.fromUser)
+                                        .pointerInput(message.id) {
+                                            detectTapGestures(
+                                                onLongPress = {
+                                                    haptics.tick()
+                                                    acting = message
+                                                },
+                                            )
+                                        }
+                                        .semantics {
+                                            onLongClick("Message options") {
+                                                acting = message
+                                                true
+                                            }
+                                        },
                                 ) {
                                     if (message.fromUser) {
                                         UserMessage(message, mentionColors)
@@ -238,7 +266,47 @@ fun RoomScreen(
                 }
             }
         }
+        acting?.let { message ->
+            val author = if (message.fromUser) "Your message" else "${byId[message.author.agentId]?.name ?: message.author.name}'s reply"
+            ActionSheet(
+                onDismiss = { acting = null },
+                title = author,
+                preview = message.text.ifBlank { message.error },
+                actions = messageActions(
+                    message,
+                    canRetry = canRetry(message, state, agents),
+                    onCopy = {
+                        scope.launch { clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Orbit message", message.text))) }
+                    },
+                    onRetry = { onRetry(message) },
+                    onDelete = { onDeleteMessage(message) },
+                ),
+            )
+        }
     }
+}
+
+/**
+ * Whether a reply can be asked again: not while the crew is busy, only if its agent is still in the
+ * room, and only for the newest message or one that failed or was stopped.
+ */
+internal fun canRetry(message: Message, state: RoomUiState, agents: List<Agent>): Boolean =
+    !message.fromUser &&
+        !state.run.active &&
+        agents.any { it.id == message.author.agentId } &&
+        (message.status == Message.STATUS_ERROR || message.status == Message.STATUS_STOPPED || state.messages.lastOrNull()?.id == message.id)
+
+/** What a long press on a message offers. */
+internal fun messageActions(
+    message: Message,
+    canRetry: Boolean,
+    onCopy: () -> Unit,
+    onRetry: () -> Unit,
+    onDelete: () -> Unit,
+): List<SheetAction> = buildList {
+    if (message.text.isNotBlank()) add(SheetAction("Copy text", OrbitIcon.Copy, onClick = onCopy))
+    if (canRetry) add(SheetAction("Ask again", OrbitIcon.Retry, onClick = onRetry))
+    if (message.status != Message.STATUS_STREAMING) add(SheetAction("Delete", OrbitIcon.Trash, danger = true, onClick = onDelete))
 }
 
 /** Plays a message's arrival: agents' replies rise into place; your own message springs up from the composer. */

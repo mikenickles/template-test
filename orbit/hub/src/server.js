@@ -323,6 +323,27 @@ export class Hub {
       }
     }
 
+    // One message: delete it, or have its agent answer again.
+    if (parts[0] === 'api' && parts[1] === 'rooms' && parts[3] === 'messages' && parts.length >= 5) {
+      const room = this.#requireRoom(id);
+      const message = this.store.messages(room.id).find((m) => m.id === parts[4]);
+      if (!message) throw new HttpError(404, 'That message is already gone.');
+      if (req.method === 'DELETE' && parts.length === 5) {
+        if (message.status === 'streaming') throw new HttpError(409, 'Stop this reply before deleting it.');
+        this.orchestrator.remove(room.id, message.id);
+        return { ok: true };
+      }
+      if (req.method === 'POST' && parts.length === 6 && parts[5] === 'retry') {
+        if (message.author.type !== 'agent') throw new HttpError(400, 'Only replies can be retried.');
+        if (this.orchestrator.runState(room.id).active) throw new HttpError(409, 'Wait for the crew to finish, or stop them first.');
+        const agent = this.store.agent(message.author.agentId);
+        if (!agent || !room.agentIds.includes(agent.id)) throw new HttpError(400, `${message.author.name} isn't in this room anymore.`);
+        this.orchestrator.remove(room.id, message.id);
+        this.orchestrator.retry(room.id, agent.id);
+        return { ok: true };
+      }
+    }
+
     if (parts[0] === 'api' && parts[1] === 'rooms' && parts.length === 4) {
       const room = this.#requireRoom(id);
       switch (`${req.method} ${parts[3]}`) {

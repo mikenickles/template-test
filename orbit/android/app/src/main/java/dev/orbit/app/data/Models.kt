@@ -162,6 +162,9 @@ data class Delta(val id: String, val at: Int, val text: String)
 @Serializable
 data class ActivityUpdate(val id: String, val activity: List<Activity> = emptyList())
 
+@Serializable
+data class Removed(val id: String)
+
 /** A reply's text replaced while it streams, when the hub had to run a step again. */
 @Serializable
 data class TextReset(val id: String, val text: String = "")
@@ -175,6 +178,7 @@ sealed interface RoomEvent {
     data class Chunk(val delta: Delta) : RoomEvent
     data class Progress(val update: ActivityUpdate) : RoomEvent
     data class Reset(val reset: TextReset) : RoomEvent
+    data class Removed(val id: String) : RoomEvent
     data class Run(val state: RunState) : RoomEvent
     data object Cleared : RoomEvent
 }

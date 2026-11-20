@@ -17,9 +17,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.orbit.app.ui.theme.Orbit
+import kotlin.math.cos
+import kotlin.math.sin
 
 /** Orbit's own icon set: one stroke weight, round caps and joins, to sit with the typeface. */
-enum class OrbitIcon { Back, Up, Down, Plus, Check, More, Dice, Chevron, Search, Globe, Code, Folder, File }
+enum class OrbitIcon { Back, Up, Down, Plus, Check, More, Dice, Chevron, Search, Globe, Code, Folder, File, Copy, Retry, Trash }
 
 @Composable
 fun OrbitIcon(
@@ -82,6 +84,34 @@ fun OrbitIcon(
             OrbitIcon.File -> {
                 polyline(listOf(at(0.26f, 0.16f), at(0.57f, 0.16f), at(0.75f, 0.34f), at(0.75f, 0.84f), at(0.26f, 0.84f)), closed = true)
                 polyline(listOf(at(0.57f, 0.17f), at(0.57f, 0.34f), at(0.74f, 0.34f)))
+            }
+            OrbitIcon.Copy -> {
+                drawRoundRect(tint, at(0.37f, 0.37f), Size(s * 0.45f, s * 0.45f), CornerRadius(s * 0.1f), style = stroke)
+                val back = Path().apply {
+                    moveTo(s * 0.21f, s * 0.62f)
+                    lineTo(s * 0.21f, s * 0.3f)
+                    quadraticTo(s * 0.21f, s * 0.21f, s * 0.3f, s * 0.21f)
+                    lineTo(s * 0.62f, s * 0.21f)
+                }
+                drawPath(back, tint, style = stroke)
+            }
+            OrbitIcon.Retry -> {
+                // An open circle running clockwise, its arrowhead at the top.
+                val r = 0.29f
+                val start = -60f
+                val sweep = 290f
+                drawArc(tint, start, sweep, false, at(0.5f - r, 0.53f - r), Size(s * 2 * r, s * 2 * r), style = stroke)
+                val end = Math.toRadians((start + sweep).toDouble())
+                val tip = at(0.5f + r * cos(end).toFloat(), 0.53f + r * sin(end).toFloat())
+                val dir = Offset(-sin(end).toFloat(), cos(end).toFloat())
+                val side = Offset(-dir.y, dir.x)
+                val len = s * 0.15f
+                polyline(listOf(tip - dir * len + side * len * 0.85f, tip, tip - dir * len - side * len * 0.85f))
+            }
+            OrbitIcon.Trash -> {
+                polyline(listOf(at(0.2f, 0.28f), at(0.8f, 0.28f)))
+                polyline(listOf(at(0.4f, 0.27f), at(0.4f, 0.18f), at(0.6f, 0.18f), at(0.6f, 0.27f)))
+                polyline(listOf(at(0.27f, 0.29f), at(0.31f, 0.82f), at(0.69f, 0.82f), at(0.73f, 0.29f)))
             }
             OrbitIcon.Dice -> {
                 drawRoundRect(tint, at(0.16f, 0.16f), Size(s * 0.68f, s * 0.68f), CornerRadius(s * 0.18f), style = stroke)
