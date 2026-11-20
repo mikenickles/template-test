@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
@@ -160,6 +161,7 @@ fun OrbitField(
     maxLines: Int = if (singleLine) 1 else 12,
     textStyle: TextStyle = OrbitType.body,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val c = Orbit.colors
@@ -177,6 +179,7 @@ fun OrbitField(
         minLines = minLines,
         maxLines = maxLines,
         keyboardOptions = keyboardOptions,
+        visualTransformation = visualTransformation,
         interactionSource = interaction,
         decorationBox = { inner ->
             Row(
@@ -237,6 +240,26 @@ fun PrimaryButton(
                 if (busy) OrbitSpinner(ink, size = 22.dp) else Text(text, style = OrbitType.titleS)
             }
         }
+    }
+}
+
+/** The quieter partner to [PrimaryButton]: outlined, for the second choice on a screen. */
+@Composable
+fun SecondaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+    val c = Orbit.colors
+    val interaction = remember { MutableInteractionSource() }
+    val ink by animateColorAsState(if (enabled) c.text else c.textTertiary, tween(OrbitMotion.MEDIUM), label = "ink")
+    Surface(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth().height(52.dp).pressScale(interaction, 0.97f),
+        enabled = enabled,
+        shape = CircleShape,
+        color = c.surface,
+        contentColor = ink,
+        border = BorderStroke(1.dp, if (enabled) c.line else c.hairline),
+        interactionSource = interaction,
+    ) {
+        Box(contentAlignment = Alignment.Center) { Text(text, style = OrbitType.titleS) }
     }
 }
 

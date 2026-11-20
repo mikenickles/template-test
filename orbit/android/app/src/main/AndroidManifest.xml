@@ -13,13 +13,26 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Orbit"
         android:usesCleartextTraffic="true">
+        <!-- Fetch the QR scanner with the app, so the first scan doesn't wait on a download. -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="barcode_ui" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- orbit://pair?host=…&code=…, the link in the hub's pairing QR code. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="orbit" android:host="pair" />
             </intent-filter>
         </activity>
     </application>

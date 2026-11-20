@@ -106,6 +106,7 @@ fun AgentEditorScreen(
     onSave: (Agent) -> Unit,
     onDelete: (() -> Unit)?,
     onBack: () -> Unit,
+    onAddKey: (providerId: String) -> Unit = {},
 ) {
     val c = Orbit.colors
     val haptics = rememberHaptics()
@@ -211,12 +212,15 @@ fun AgentEditorScreen(
                     }
                 }
                 AnimatedVisibility(provider != null && !provider.configured, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-                    Text(
-                        "${provider?.label} needs an API key. Add one to config.json on your PC, then restart the hub.",
-                        Modifier.padding(top = 10.dp),
-                        style = OrbitType.bodyS,
-                        color = c.danger,
-                    )
+                    Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "${provider?.label} needs an API key before this agent can reply.",
+                            Modifier.weight(1f).padding(end = 12.dp),
+                            style = OrbitType.bodyS,
+                            color = c.textSecondary,
+                        )
+                        if (provider?.takesKey == true) Pill("Add key", onClick = { onAddKey(provider.id) })
+                    }
                 }
                 Spacer(Modifier.height(20.dp))
                 FieldLabel("Model id")

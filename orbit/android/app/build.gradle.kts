@@ -1,9 +1,23 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.paparazzi)
 }
+
+/**
+ * Release signing. The key comes from keystore.properties next to settings.gradle.kts (on your own
+ * machine; never committed) or from environment variables (on CI). Every release must be signed with
+ * the same key, or phones refuse to install it as an update.
+ */
+val signingProps = Properties().apply {
+    rootProject.file("keystore.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+
+fun signingValue(property: String, env: String): String? =
+    signingProps.getProperty(property)?.takeIf { it.isNotBlank() } ?: System.getenv(env)?.takeIf { it.isNotBlank() }
 
 android {
     namespace = "dev.orbit.app"
@@ -15,13 +29,26 @@ android {
         applicationId = "dev.orbit.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.4.0"
+    }
+
+    signingConfigs {
+        create("release") {
+            signingValue("storeFile", "ORBIT_KEYSTORE_FILE")?.let { path ->
+                storeFile = rootProject.file(path)
+                storePassword = signingValue("storePassword", "ORBIT_KEYSTORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "ORBIT_KEY_ALIAS") ?: "orbit"
+                keyPassword = signingValue("keyPassword", "ORBIT_KEY_PASSWORD") ?: storePassword
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            // Without a key configured, release builds are left unsigned rather than failing.
+            signingConfig = signingConfigs.getByName("release").takeIf { it.storeFile != null }
         }
     }
     compileOptions {
@@ -53,6 +80,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.okhttp)
+    implementation(libs.code.scanner)
     debugImplementation(libs.compose.ui.tooling)
 
     testImplementation(libs.junit)

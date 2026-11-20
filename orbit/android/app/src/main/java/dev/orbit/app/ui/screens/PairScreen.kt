@@ -48,12 +48,14 @@ import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.ui.PairState
 import dev.orbit.app.ui.components.FieldLabel
+import dev.orbit.app.ui.components.Hairline
 import dev.orbit.app.ui.components.LogoMark
 import dev.orbit.app.ui.components.OrbitField
 import dev.orbit.app.ui.components.OrbitSpinner
 import dev.orbit.app.ui.components.OrbitSystem
 import dev.orbit.app.ui.components.Pill
 import dev.orbit.app.ui.components.PrimaryButton
+import dev.orbit.app.ui.components.SecondaryButton
 import dev.orbit.app.ui.components.tap
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitDimens
@@ -77,7 +79,12 @@ val SampleCrew = listOf(
 private const val CODE_LENGTH = 6
 
 @Composable
-fun PairScreen(state: PairState, onFind: () -> Unit, onConnect: (address: String, code: String) -> Unit) {
+fun PairScreen(
+    state: PairState,
+    onFind: () -> Unit,
+    onConnect: (address: String, code: String) -> Unit,
+    onScan: () -> Unit = {},
+) {
     val c = Orbit.colors
     val haptics = rememberHaptics()
     val entrances = rememberEntrances()
@@ -91,6 +98,13 @@ fun PairScreen(state: PairState, onFind: () -> Unit, onConnect: (address: String
         if (address.isBlank() && only != null) {
             address = only.address
             haptics.tick()
+        }
+    }
+    // A scanned code fills the fields, so it's clear what's being tried.
+    LaunchedEffect(state.scanned) {
+        state.scanned?.let {
+            address = it.host
+            code = it.code
         }
     }
     // A wrong code shakes the boxes, then clears them for another try.
@@ -120,7 +134,7 @@ fun PairScreen(state: PairState, onFind: () -> Unit, onConnect: (address: String
             // The crew drifting around the hub. While connecting, they quicken a little.
             OrbitSystem(
                 SampleCrew,
-                Modifier.fillMaxWidth().height(230.dp).entrance(entrances, "hero", 0),
+                Modifier.fillMaxWidth().height(210.dp).entrance(entrances, "hero", 0),
                 avatarSize = 46.dp,
                 speed = if (state.busy) 1.6f else 1f,
             )
@@ -128,14 +142,27 @@ fun PairScreen(state: PairState, onFind: () -> Unit, onConnect: (address: String
             Text("Pair with your hub", Modifier.entrance(entrances, "title", 1), style = OrbitType.display, color = c.text)
             Spacer(Modifier.height(10.dp))
             Text(
-                "Your agents run on your always-on PC. Start the hub there, then enter the address and code it shows.",
+                "Double-click Start Orbit on your PC. It shows a QR code: scan it here, and you're in.",
                 Modifier.entrance(entrances, "body", 2),
                 style = OrbitType.body,
                 color = c.textSecondary,
             )
 
-            Column(Modifier.entrance(entrances, "form", 3)) {
-                Spacer(Modifier.height(32.dp))
+            Column(Modifier.entrance(entrances, "scan", 3)) {
+                Spacer(Modifier.height(28.dp))
+                PrimaryButton("Scan QR code", onScan, loading = state.busy)
+                AnimatedVisibility(state.error != null, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                    Text(state.error.orEmpty(), Modifier.padding(top = 12.dp), style = OrbitType.bodyS, color = c.danger)
+                }
+            }
+
+            Column(Modifier.entrance(entrances, "form", 4)) {
+                // Typing it in is the fallback, a step down from scanning.
+                Row(Modifier.padding(top = OrbitDimens.section, bottom = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Hairline(Modifier.weight(1f))
+                    Text("or enter it yourself", Modifier.padding(horizontal = 12.dp), style = OrbitType.caption, color = c.textTertiary)
+                    Hairline(Modifier.weight(1f))
+                }
                 FieldLabel("Hub address")
                 OrbitField(
                     value = address,
@@ -179,16 +206,12 @@ fun PairScreen(state: PairState, onFind: () -> Unit, onConnect: (address: String
                     // The sixth digit is the commit: no need to reach for the button.
                     if (completed && address.isNotBlank() && !state.busy) onConnect(address, entered)
                 }
-                AnimatedVisibility(state.error != null, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-                    Text(state.error.orEmpty(), Modifier.padding(top = 12.dp), style = OrbitType.bodyS, color = c.danger)
-                }
 
-                Spacer(Modifier.height(OrbitDimens.section))
-                PrimaryButton(
+                Spacer(Modifier.height(24.dp))
+                SecondaryButton(
                     text = "Connect",
                     onClick = { onConnect(address, code) },
-                    enabled = address.isNotBlank() && code.length == CODE_LENGTH,
-                    loading = state.busy,
+                    enabled = address.isNotBlank() && code.length == CODE_LENGTH && !state.busy,
                 )
                 Spacer(Modifier.height(24.dp))
             }

@@ -84,6 +84,14 @@ data class Provider(
     val label: String = id,
     val configured: Boolean = false,
     val models: List<String> = emptyList(),
+    /** Whether this provider needs an API key (local and demo providers don't). */
+    val takesKey: Boolean = false,
+    /** Where to get a key. */
+    val keyUrl: String? = null,
+    /** "app" if the key was added from a phone, "environment" if it comes from the PC's settings. */
+    val keySource: String? = null,
+    /** The end of the saved key, e.g. "…1a2b", so you can tell keys apart. */
+    val keyHint: String? = null,
 )
 
 @Serializable

@@ -1,5 +1,11 @@
 package dev.orbit.app
 
+import dev.orbit.app.ui.screens.ProviderKeyScreen
+import dev.orbit.app.ui.components.rememberQrScanner
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.activity.viewModels
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -59,17 +65,38 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContent { OrbitTheme { OrbitRoot() } }
+        setContent { OrbitTheme { OrbitRoot(vm) } }
+        if (savedInstanceState == null) openPairingLink(intent)
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        openPairingLink(intent)
+    }
+
+    /** An orbit://pair link (from the hub's QR code, scanned by the phone's camera) pairs right away. */
+    private fun openPairingLink(intent: Intent?) {
+        val link = intent?.data?.takeIf { it.scheme == "orbit" } ?: return
+        vm.pairWithLink(link.toString())
+    }
+
+    private val vm: AppViewModel by viewModels()
 }
 
 @Composable
-private fun OrbitRoot(vm: AppViewModel = viewModel()) {
+private fun OrbitRoot(vm: AppViewModel) {
     val session by vm.session.collectAsStateWithLifecycle()
     val state by vm.state.collectAsStateWithLifecycle()
     val pairState by vm.pairState.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { vm.notices.collect { snackbar.showSnackbar(it) } }
+    val scanQr = rememberQrScanner(
+        onCode = vm::pairWithLink,
+        onUnavailable = {
+            scope.launch { snackbar.showSnackbar("Scanning isn't available on this phone. Type the address and code instead.") }
+        },
+    )
 
     // A confirming tap the moment pairing succeeds.
     val haptics = rememberHaptics()
@@ -92,7 +119,7 @@ private fun OrbitRoot(vm: AppViewModel = viewModel()) {
                 label = "session",
             ) { current ->
                 if (current == null) {
-                    PairScreen(pairState, onFind = vm::findHubs, onConnect = vm::pair)
+                    PairScreen(pairState, onFind = vm::findHubs, onConnect = vm::pair, onScan = scanQr)
                 } else {
                     MainNav(vm, state, current, snackbar)
                 }
@@ -114,6 +141,7 @@ private val OptionalId = listOf(navArgument("id") { type = NavType.StringType; n
 private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackbar: SnackbarHostState) {
     val nav = rememberNavController()
     val haptics = rememberHaptics()
+    val scope = rememberCoroutineScope()
     LifecycleResumeEffect(Unit) {
         vm.refresh()
         onPauseOrDispose {}
@@ -139,6 +167,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onEditAgent = { nav.navigate("agent?id=${it.id}") },
                 onSettings = { nav.navigate("settings") },
                 onRefresh = vm::refresh,
+                onAddKey = { nav.navigate("settings") },
             )
         }
         screen("room/{id}") { entry ->
@@ -177,6 +206,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 },
                 onDelete = agent?.let { { vm.deleteAgent(it.id) { nav.popBackStack() } } },
                 onBack = { nav.popBackStack() },
+                onAddKey = { nav.navigate("provider/$it") },
             )
         }
         screen("roomEdit?id={id}", arguments = OptionalId) { entry ->
@@ -199,7 +229,31 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
             )
         }
         screen("settings") {
-            SettingsScreen(state, session.baseUrl, onUnpair = vm::unpair, onBack = { nav.popBackStack() })
+            SettingsScreen(
+                state,
+                session.baseUrl,
+                onUnpair = vm::unpair,
+                onBack = { nav.popBackStack() },
+                onOpenProvider = { nav.navigate("provider/$it") },
+            )
+        }
+        screen("provider/{id}") { entry ->
+            val provider = state.providers.firstOrNull { it.id == entry.arguments?.getString("id") } ?: return@screen
+            ProviderKeyScreen(
+                provider = provider,
+                onSave = { key, done ->
+                    vm.setKey(provider.id, key) { error ->
+                        done(error)
+                        if (error == null) {
+                            haptics.confirm()
+                            nav.popBackStack()
+                            scope.launch { snackbar.showSnackbar("${provider.label} key saved. Agents on ${provider.label} are ready.") }
+                        }
+                    }
+                },
+                onRemove = { vm.removeKey(provider.id) { nav.popBackStack() } },
+                onBack = { nav.popBackStack() },
+            )
         }
     }
 }

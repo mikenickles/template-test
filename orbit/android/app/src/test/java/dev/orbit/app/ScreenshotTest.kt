@@ -29,6 +29,7 @@ import dev.orbit.app.ui.screens.PairScreen
 import dev.orbit.app.ui.screens.RoomEditorScreen
 import dev.orbit.app.ui.screens.RoomScreen
 import dev.orbit.app.ui.screens.SampleCrew
+import dev.orbit.app.ui.screens.ProviderKeyScreen
 import dev.orbit.app.ui.screens.SettingsScreen
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitTheme
@@ -96,10 +97,18 @@ class ScreenshotTest {
 
     @Test fun avatars() = shot("avatars") { AvatarSheet() }
     @Test fun avatarsLight() = shot("avatars-light", dark = false) { AvatarSheet() }
-    @Test fun pair() = shot("pair") { PairScreen(PairState(found = listOf(FoundHub("Mike's PC", "192.168.1.20:8787"))), {}) { _, _ -> } }
-    @Test fun pairLight() = shot("pair-light", dark = false) { PairScreen(PairState(error = "That code didn't match. Check the one shown on your PC."), {}) { _, _ -> } }
+    @Test fun pair() = shot("pair") { PairScreen(PairState(found = listOf(FoundHub("Mike's PC", "192.168.1.20:8787"))), {}, { _, _ -> }) }
+    @Test fun pairLight() = shot("pair-light", dark = false) { PairScreen(PairState(error = "That code didn't match. Check the one shown on your PC."), {}, { _, _ -> }) }
     @Test fun home() = shot("home") { Home() }
     @Test fun homeLight() = shot("home-light", dark = false) { Home() }
+    @Test fun pairScanning() = shot("pair-scanned") {
+        PairScreen(PairState(busy = true, scanned = dev.orbit.app.data.PairingLink("192.168.86.49:8787", "309407", "BOOK")), {}, { _, _ -> })
+    }
+    @Test fun providerKey() = shot("provider-key") { ProviderKeyScreen(SampleData.providers[2], { _, _ -> }, {}, {}) }
+    @Test fun providerKeyLight() = shot("provider-key-light", dark = false) { ProviderKeyScreen(SampleData.anthropic, { _, _ -> }, {}, {}) }
+    @Test fun homeDemoMode() = shot("home-demo") {
+        Home(SampleData.app.copy(providers = SampleData.providers.map { if (it.takesKey) it.copy(configured = false, keySource = null, keyHint = null) else it }))
+    }
     @Test fun homeLoadingLight() = shot("home-loading-light", dark = false) { Home(SampleData.app.copy(loaded = false, agents = emptyList(), rooms = emptyList())) }
     @Test fun homeLoading() = shot("home-loading") { Home(SampleData.app.copy(loaded = false, agents = emptyList(), rooms = emptyList())) }
     @Test fun homeEmpty() = shot("home-empty") { Home(app.copy(rooms = emptyList(), offline = true)) }

@@ -35,6 +35,13 @@ class LiveHubTest {
         assertTrue(state.providers.any { it.id == "demo" && it.configured })
         assertEquals(listOf("demo"), client.models("demo"))
 
+        // A made-up key is checked with the provider and refused, so it's never saved.
+        val anthropic = state.providers.first { it.id == "anthropic" }
+        assertTrue(anthropic.takesKey && anthropic.keyUrl != null)
+        val refused = runCatching { client.setKey("anthropic", "sk-ant-not-a-real-key") }.exceptionOrNull() as HubException
+        assertTrue(refused.status == 400 || refused.status == 502)
+        assertEquals(false, client.state().providers.first { it.id == "anthropic" }.keySource == "app")
+
         val agent = client.saveAgent(Agent(name = "Echo", role = "the tester", provider = "demo", model = "demo"))
         val renamed = client.saveAgent(agent.copy(name = "Echo Two"))
         assertEquals(agent.id, renamed.id)

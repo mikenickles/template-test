@@ -2,7 +2,13 @@ package dev.orbit.app
 
 import dev.orbit.app.data.Author
 import dev.orbit.app.data.Delta
+import dev.orbit.app.data.PairingLink
+import dev.orbit.app.data.describeNetworkFailure
 import dev.orbit.app.data.normalizeHubAddress
+import dev.orbit.app.data.parsePairingLink
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import dev.orbit.app.ui.screens.closeOpenMarkup
 import dev.orbit.app.data.Message
 import dev.orbit.app.data.RoomEvent
@@ -11,6 +17,7 @@ import dev.orbit.app.ui.RoomUiState
 import dev.orbit.app.ui.reduce
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertSame
 import org.junit.Test
 
@@ -66,6 +73,27 @@ class RoomStateTest {
         assertEquals("http://my-pc:9000", normalizeHubAddress("my-pc:9000/"))
         assertEquals("https://hub.example.com", normalizeHubAddress("https://hub.example.com"))
         assertEquals("", normalizeHubAddress("  "))
+    }
+
+    @Test
+    fun `pairing links from the hub's QR code are read, and anything else is ignored`() {
+        assertEquals(
+            PairingLink("192.168.86.49:8787", "309407", "BOOK-75OVAKFGO1"),
+            parsePairingLink("orbit://pair?host=192.168.86.49%3A8787&code=309407&name=BOOK-75OVAKFGO1"),
+        )
+        assertEquals(PairingLink("my-pc:8787", "000123", null), parsePairingLink(" orbit://pair?code=000123&host=my-pc:8787 "))
+        assertNull("not an Orbit link", parsePairingLink("https://example.com/?host=1.2.3.4&code=123456"))
+        assertNull("code too short", parsePairingLink("orbit://pair?host=1.2.3.4:8787&code=12345"))
+        assertNull("host with a path", parsePairingLink("orbit://pair?host=evil.com/steal@x&code=123456"))
+        assertNull("host with a scheme", parsePairingLink("orbit://pair?host=http://1.2.3.4&code=123456"))
+        assertNull(parsePairingLink("not a link at all"))
+    }
+
+    @Test
+    fun `connection failures say what to check`() {
+        assertTrue(describeNetworkFailure(SocketTimeoutException()).contains("Firewall"))
+        assertTrue(describeNetworkFailure(ConnectException()).contains("hub is running"))
+        assertTrue(describeNetworkFailure(UnknownHostException()).contains("can't be found"))
     }
 
     @Test

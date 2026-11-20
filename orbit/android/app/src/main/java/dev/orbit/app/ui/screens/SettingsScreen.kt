@@ -1,5 +1,9 @@
 package dev.orbit.app.ui.screens
 
+import dev.orbit.app.ui.components.tap
+import dev.orbit.app.ui.components.OrbitIcon
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,7 +34,13 @@ import dev.orbit.app.ui.theme.entrance
 import dev.orbit.app.ui.theme.rememberEntrances
 
 @Composable
-fun SettingsScreen(state: AppState, hubAddress: String, onUnpair: () -> Unit, onBack: () -> Unit) {
+fun SettingsScreen(
+    state: AppState,
+    hubAddress: String,
+    onUnpair: () -> Unit,
+    onBack: () -> Unit,
+    onOpenProvider: (providerId: String) -> Unit = {},
+) {
     val c = Orbit.colors
     val scroll = rememberScrollState()
     val entrances = rememberEntrances()
@@ -68,19 +78,34 @@ fun SettingsScreen(state: AppState, hubAddress: String, onUnpair: () -> Unit, on
                     Column {
                         state.providers.forEachIndexed { index, provider ->
                             if (index > 0) Hairline()
-                            Row(Modifier.fillMaxWidth().padding(OrbitDimens.rowPad), verticalAlignment = Alignment.CenterVertically) {
-                                Text(provider.label, Modifier.weight(1f), style = OrbitType.titleS, color = c.text)
+                            // Providers that take a key open a screen to add or change it.
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .then(if (provider.takesKey) Modifier.tap(RectangleShape, 0.985f) { onOpenProvider(provider.id) } else Modifier)
+                                    .padding(start = OrbitDimens.rowPad, end = if (provider.takesKey) 8.dp else OrbitDimens.rowPad)
+                                    .heightIn(min = 56.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(provider.label, style = OrbitType.titleS, color = c.text)
+                                    provider.keyHint?.let { Text("Key $it", style = OrbitType.mono, color = c.textTertiary) }
+                                }
                                 when {
                                     provider.id == "demo" -> Status("Built in", null)
                                     provider.configured -> Status("Ready", c.live)
-                                    else -> Status("Needs a key", null)
+                                    provider.takesKey -> Status("Add key", null)
+                                    else -> Status("Not running", null)
+                                }
+                                if (provider.takesKey) {
+                                    OrbitIcon(OrbitIcon.Chevron, Modifier.padding(start = 4.dp), size = 18.dp, tint = c.textTertiary)
                                 }
                             }
                         }
                     }
                 }
                 Text(
-                    "API keys never leave your PC. Add them to config.json in the hub's data folder, then restart the hub.",
+                    "Tap a provider to add its key. Keys are checked with the provider, then stored only on your PC.",
                     Modifier.padding(top = OrbitDimens.labelGap),
                     style = OrbitType.bodyS,
                     color = c.textTertiary,

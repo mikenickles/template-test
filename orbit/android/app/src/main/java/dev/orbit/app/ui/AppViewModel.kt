@@ -12,6 +12,8 @@ import dev.orbit.app.data.HubInfo
 import dev.orbit.app.data.Provider
 import dev.orbit.app.data.Room
 import dev.orbit.app.data.discoverHubs
+import dev.orbit.app.data.PairingLink
+import dev.orbit.app.data.parsePairingLink
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +41,8 @@ data class PairState(
     val error: String? = null,
     val finding: Boolean = false,
     val found: List<FoundHub>? = null,
+    /** The address and code from a scanned QR code, shown in the fields while pairing. */
+    val scanned: PairingLink? = null,
 )
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
@@ -117,8 +121,54 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Pairs from a scanned QR code or an orbit:// link opened from elsewhere. */
+    fun pairWithLink(text: String) {
+        val link = parsePairingLink(text)
+        if (link == null) {
+            _pair.update { it.copy(error = "That isn't an Orbit pairing code. Scan the QR code your hub shows.") }
+            return
+        }
+        val current = session.value
+        if (current != null) {
+            _notices.tryEmit("Already paired with ${current.hubName.ifEmpty { "a hub" }}. Unpair in Settings to switch hubs.")
+            return
+        }
+        _pair.update { it.copy(scanned = link) }
+        pair(link.host, link.code)
+    }
+
     fun unpair() {
         viewModelScope.launch { repo.unpair() }
+    }
+
+    /**
+     * Sends a key to the hub, which checks it with the provider before saving it.
+     * Calls back with null once it's saved, or with what went wrong.
+     */
+    fun setKey(providerId: String, apiKey: String, onDone: (error: String?) -> Unit) {
+        viewModelScope.launch {
+            val client = repo.client ?: return@launch onDone("This phone isn't paired with a hub.")
+            try {
+                updateProvider(client.setKey(providerId, apiKey))
+                onDone(null)
+            } catch (e: HubException) {
+                if (e.status == 401) repo.unpair(notifyHub = false)
+                onDone(e.message ?: "The key couldn't be saved.")
+            }
+        }
+    }
+
+    fun removeKey(providerId: String, onDone: () -> Unit) {
+        viewModelScope.launch {
+            hub { it.removeKey(providerId) }?.let {
+                updateProvider(it)
+                onDone()
+            }
+        }
+    }
+
+    private fun updateProvider(provider: Provider) {
+        _state.update { s -> s.copy(providers = s.providers.map { if (it.id == provider.id) provider else it }) }
     }
 
     fun saveAgent(agent: Agent, onSaved: () -> Unit) {

@@ -37,12 +37,18 @@ Two independent projects live here:
 # Blog build:        npm run build
 # Hub tests:         cd orbit/hub && npm test
 # Android build:     cd orbit/android && ./gradlew :app:assembleDebug
+# Android release:   cd orbit/android && ./gradlew :app:assembleRelease   (signed only if a release key is configured)
 # Android tests:     cd orbit/android && ./gradlew :app:testDebugUnitTest
 # Screen snapshots:  cd orbit/android && ./gradlew :app:recordPaparazziDebug   (after UI changes; review the PNGs,
 #                    including the animated ones in app/src/test/snapshots/videos)
 ```
 
 The hub's HTTP API and the app's `HubClient`/`Models.kt` are one contract: change them together.
+
+Release signing: the key lives outside the repo (`orbit/android/keystore.properties` locally, or the
+`ORBIT_KEYSTORE_BASE64`/`ORBIT_KEYSTORE_PASSWORD` secrets for the GitHub workflow). Never commit a keystore
+or its passwords, and never generate a new key for an existing app: phones only accept updates signed with
+the same key. Bump `versionCode` for every APK handed out.
 
 ## Conventions for AI Assistants
 

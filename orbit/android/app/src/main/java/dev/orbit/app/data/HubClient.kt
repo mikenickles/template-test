@@ -33,6 +33,9 @@ class HubClient(val baseUrl: String, private val token: String? = null) {
     @Serializable
     private data class ModelsBody(val models: List<String> = emptyList())
 
+    @Serializable
+    private data class KeyBody(val apiKey: String)
+
     suspend fun info(): HubInfo = call("GET", "/api/hub")
 
     suspend fun pair(code: String, deviceName: String): PairResult =
@@ -46,6 +49,12 @@ class HubClient(val baseUrl: String, private val token: String? = null) {
 
     suspend fun models(providerId: String): List<String> =
         call<ModelsBody>("GET", "/api/providers/$providerId/models").models
+
+    /** Checks a key with the provider (on the PC) and saves it if it works. */
+    suspend fun setKey(providerId: String, apiKey: String): Provider =
+        call("PUT", "/api/providers/$providerId/key", OrbitJson.encodeToString(KeyBody(apiKey)))
+
+    suspend fun removeKey(providerId: String): Provider = call("DELETE", "/api/providers/$providerId/key")
 
     suspend fun saveAgent(agent: Agent): Agent {
         val body = OrbitJson.encodeToString(agent)
@@ -147,7 +156,7 @@ class HubClient(val baseUrl: String, private val token: String? = null) {
                     if (T::class == Unit::class) Unit as T else OrbitJson.decodeFromString<T>(raw)
                 }
             } catch (e: IOException) {
-                throw HubException("Can't reach the hub. Check that your PC is on and you're on the same network.")
+                throw HubException(describeNetworkFailure(e))
             } catch (e: kotlinx.serialization.SerializationException) {
                 throw HubException("That address answered, but it isn't an Orbit hub.")
             }
@@ -176,3 +185,19 @@ fun normalizeHubAddress(input: String): String {
     if (!hostPart.contains(':') && address.startsWith("http://")) address += ":${HubClient.DEFAULT_PORT}"
     return address
 }
+
+/**
+ * Says why the hub couldn't be reached, in terms of what to do about it. Silence (a timeout) usually
+ * means Windows Firewall or a different Wi-Fi; a refusal means nothing is running at that address.
+ */
+fun describeNetworkFailure(e: IOException): String = when (e) {
+    is java.net.SocketTimeoutException, is java.net.NoRouteToHostException ->
+        "Your PC didn't answer. Check your phone is on the same Wi-Fi as the PC, and that Windows Firewall allows Orbit " +
+            "(Start Orbit sets this up the first time)."
+    is java.net.ConnectException ->
+        "Nothing answered at that address. Check the hub is running on your PC and the address matches the one it shows."
+    is java.net.UnknownHostException ->
+        "That address can't be found. Type it exactly as the hub shows it, like 192.168.1.20:8787."
+    else -> "Can't reach the hub. Check that your PC is on and you're on the same network."
+}
+

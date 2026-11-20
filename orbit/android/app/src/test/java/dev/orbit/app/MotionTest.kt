@@ -63,7 +63,7 @@ class MotionTest {
 
     /** The pairing hero: the crew orbiting the hub, blinking. */
     @Test fun pairOrbit() = record("pair-orbit", 3000, fps = 12) {
-        PairScreen(PairState(), {}) { _, _ -> }
+        PairScreen(PairState(), {}, { _, _ -> })
     }
 
     /** One avatar cycling through looks: shapes morph, colors blend, eyes swap behind a blink. */

@@ -1,0 +1,71 @@
+name: Orbit Android release
+
+# Builds the Orbit app as a signed release APK. Run it from the Actions tab ("Run workflow"), or push
+# a tag like orbit-v0.4.0 to also publish the APK as a GitHub release you can download on your phone.
+#
+# Needs two repository secrets (Settings > Secrets and variables > Actions):
+#   ORBIT_KEYSTORE_BASE64    the release key file, base64-encoded
+#   ORBIT_KEYSTORE_PASSWORD  its password
+# Every release must be signed with this same key, or phones refuse to install it as an update.
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['orbit-v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: orbit/android
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install the Android platform the app builds against
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses > /dev/null
+          "$SDKMANAGER" "platforms;android-37.2" "build-tools;37.0.0" > /dev/null
+
+      - name: Unpack the signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ORBIT_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Add the ORBIT_KEYSTORE_BASE64 and ORBIT_KEYSTORE_PASSWORD secrets first (see orbit/README.md)."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/orbit-release.jks"
+
+      - name: Build the signed release APK
+        env:
+          ORBIT_KEYSTORE_FILE: ${{ runner.temp }}/orbit-release.jks
+          ORBIT_KEYSTORE_PASSWORD: ${{ secrets.ORBIT_KEYSTORE_PASSWORD }}
+        run: ./gradlew :app:assembleRelease --no-daemon
+
+      - name: Name the APK after its version
+        id: apk
+        run: |
+          VERSION=$(grep -o 'versionName = "[^"]*"' app/build.gradle.kts | cut -d'"' -f2)
+          cp app/build/outputs/apk/release/app-release.apk "orbit-$VERSION.apk"
+          echo "file=orbit-$VERSION.apk" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: orbit-apk
+          path: orbit/android/${{ steps.apk.outputs.file }}
+
+      - name: Publish a release for tags
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "${{ steps.apk.outputs.file }}" --title "Orbit ${GITHUB_REF_NAME#orbit-v}" --generate-notes

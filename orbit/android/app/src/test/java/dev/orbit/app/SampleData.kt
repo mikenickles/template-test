@@ -32,11 +32,15 @@ object SampleData {
     )
     val empty = Room("r3", "Reading group", listOf("a1", "a4"), updatedAt = NOW - 3 * 86_400_000)
 
+    val anthropic = Provider(
+        "anthropic", "Anthropic", true, listOf("claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"),
+        takesKey = true, keyUrl = "https://console.anthropic.com/settings/keys", keySource = "app", keyHint = "…a1b2",
+    )
     val providers = listOf(
-        Provider("anthropic", "Anthropic", true, listOf("claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5")),
-        Provider("openai", "OpenAI", true),
-        Provider("xai", "xAI", false),
-        Provider("gemini", "Gemini", false),
+        anthropic,
+        Provider("openai", "OpenAI", true, takesKey = true, keyUrl = "https://platform.openai.com/api-keys", keySource = "environment"),
+        Provider("xai", "xAI", false, takesKey = true, keyUrl = "https://console.x.ai"),
+        Provider("gemini", "Gemini", false, takesKey = true, keyUrl = "https://aistudio.google.com/apikey"),
         Provider("ollama", "Ollama (local)", true),
         Provider("demo", "Demo", true, listOf("demo")),
     )

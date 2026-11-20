@@ -105,6 +105,7 @@ fun HomeScreen(
     onSettings: () -> Unit,
     onRefresh: () -> Unit,
     now: Long = System.currentTimeMillis(),
+    onAddKey: () -> Unit = {},
 ) {
     val c = Orbit.colors
     val list = rememberLazyListState()
@@ -146,6 +147,12 @@ fun HomeScreen(
                     // The placeholders fade out as the real content fades in.
                     item(key = "skeleton") { HomeSkeleton(Modifier.animateItem(fadeInSpec = null, placementSpec = null, fadeOutSpec = tween(150))) }
                     return@LazyColumn
+                }
+
+                // Until a provider has a key, agents can only give demo replies; say so once, gently.
+                val needsKey = state.providers.none { it.takesKey && it.configured }
+                if (needsKey && state.providers.isNotEmpty()) {
+                    item(key = "add-key") { AddKeyNotice(onAddKey, Modifier.entrance(entrances, "add-key", 0)) }
                 }
 
                 item(key = "crew-title") {
@@ -268,6 +275,25 @@ private fun OfflineNotice(onRetry: () -> Unit) {
                 )
             }
             Pill("Retry", onRetry, Modifier.padding(start = 12.dp))
+        }
+    }
+}
+
+@Composable
+private fun AddKeyNotice(onAddKey: () -> Unit, modifier: Modifier) {
+    val c = Orbit.colors
+    OrbitCard(modifier.fillMaxWidth().padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 20.dp)) {
+        Row(Modifier.padding(start = OrbitDimens.rowPad, end = 12.dp, top = 14.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Your crew is in demo mode", style = OrbitType.titleS, color = c.text)
+                Text(
+                    "Add an AI provider's key and they'll give real answers.",
+                    Modifier.padding(top = 2.dp),
+                    style = OrbitType.bodyS,
+                    color = c.textSecondary,
+                )
+            }
+            Pill("Add key", onAddKey, Modifier.padding(start = 12.dp), selected = true)
         }
     }
 }

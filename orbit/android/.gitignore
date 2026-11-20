@@ -4,3 +4,8 @@ local.properties
 .kotlin/
 *.iml
 .idea/
+
+# Release signing key and its passwords. Never commit these.
+keystore.properties
+*.jks
+*.keystore

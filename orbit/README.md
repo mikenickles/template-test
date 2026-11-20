@@ -17,64 +17,80 @@ hub on an always-on PC.
   models, and keeps agents working while the phone is asleep. The app
   (`android/`) is a client for it.
 
-## 1. Run the hub on your PC
+## 1. Start the hub on your PC
 
-Needs Node 20 or newer.
+Install [Node.js](https://nodejs.org) (the LTS version), then double-click
+**`hub/Start Orbit.bat`**. The first time it:
 
-```
-cd orbit/hub
-npm install
-npm start
-```
+- downloads what the hub needs (a minute),
+- asks Windows for permission, once, to let your phone through the firewall,
+- opens a pairing page in your browser with a QR code, and
+- offers to start the hub automatically whenever you sign in to Windows.
 
-It prints the address and a six-digit pairing code. On first run it creates
-`~/.orbit-hub/config.json`; add API keys there and restart:
+Keep its window open while you use Orbit. On a Mac or Linux, run `npm start` in `hub/`.
 
-```json
-{
-  "providers": {
-    "anthropic": { "apiKey": "..." },
-    "openai": { "apiKey": "..." },
-    "xai": { "apiKey": "..." },
-    "gemini": { "apiKey": "..." },
-    "openrouter": { "apiKey": "..." },
-    "ollama": { "baseUrl": "http://localhost:11434/v1" },
-    "my-server": { "label": "My server", "baseUrl": "http://localhost:1234/v1" }
-  }
-}
-```
+If you skipped a step, you can redo it from the `hub` folder:
+`npm run firewall` (allow phones through Windows Firewall), `npm run autostart:on`
+or `npm run autostart:off`.
 
-Keys can also come from `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`,
-`GEMINI_API_KEY`, and `OPENROUTER_API_KEY`. Any extra entry with a `baseUrl` is
-treated as an OpenAI-compatible server. With no keys, the starter crew runs on a
-built-in demo provider so you can try the app first.
+## 2. Pair your phone
 
-To keep it always on, start it at login (Task Scheduler on Windows, a systemd
-user service on Linux, or `pm2`). The first run may trigger a firewall prompt:
-allow Node on private networks (TCP 8787, UDP 8788).
-
-## 2. Pair the phone
-
-Install the app, tap **Find** (or type the address the hub printed), enter the
-pairing code, and connect. The code changes after each pairing.
+Install the app, tap **Scan QR code** and scan the code on the pairing page (or in
+the hub's window). If scanning isn't available, tap **Find** or type the address
+and six-digit code shown under the QR code. The code changes after each pairing.
 
 The phone talks to the hub over plain HTTP, so keep it on your home network.
 To reach the hub from elsewhere, put both devices on a private VPN such as
 Tailscale and use the PC's VPN address.
 
-## 3. Build the app
+## 3. Add an AI key
+
+In the app, open **Settings** (tap your PC's name on the home screen), tap a
+provider and paste its key. The hub checks the key with the provider, then stores
+it only on your PC, in `~/.orbit-hub/config.json`. Until a key is added, agents
+run on a built-in demo provider.
+
+Keys can also come from `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`,
+`GEMINI_API_KEY` and `OPENROUTER_API_KEY`. In `config.json`, any extra provider
+entry with a `baseUrl` is treated as an OpenAI-compatible server, e.g.
+`"my-server": { "label": "My server", "baseUrl": "http://localhost:1234/v1" }`.
+
+## 4. Build the app
 
 Needs JDK 17+ and the Android SDK (platform 37.2).
 
 ```
 cd orbit/android
 ./gradlew :app:assembleDebug        # app/build/outputs/apk/debug/app-debug.apk
+./gradlew :app:assembleRelease      # signed, if a release key is set up (below)
 ```
+
+### Release signing
+
+Releases are signed with one key, kept out of the repository, so each new version
+installs over the last. Builds read it from `android/keystore.properties`
+(ignored by git):
+
+```
+storeFile=/path/to/orbit-release.jks
+storePassword=...
+keyAlias=orbit
+keyPassword=...
+```
+
+or from the environment variables `ORBIT_KEYSTORE_FILE` and `ORBIT_KEYSTORE_PASSWORD`.
+Without either, release builds are left unsigned.
+
+The **Orbit Android release** GitHub workflow builds a signed APK on demand (Actions
+tab, Run workflow) and publishes a release when a tag like `orbit-v0.4.0` is pushed.
+It needs two repository secrets: `ORBIT_KEYSTORE_BASE64` (the key file, base64) and
+`ORBIT_KEYSTORE_PASSWORD`. Bump `versionCode` and `versionName` in
+`android/app/build.gradle.kts` for each release.
 
 ## Tests
 
 ```
-cd orbit/hub && npm test                          # pairing, orchestration, event stream
+cd orbit/hub && npm test                          # pairing, keys, orchestration, event stream
 cd orbit/android && ./gradlew :app:testDebugUnitTest
 cd orbit/android && ./gradlew :app:recordPaparazziDebug   # re-render screen snapshots and motion recordings
 ```
