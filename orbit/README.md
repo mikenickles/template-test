@@ -41,6 +41,10 @@ hub on an always-on PC.
   `"prices"` in `config.json`.
 - **Long rooms** stay affordable: past about 15,000 words, the oldest part of a
   room is folded into a running summary that agents read instead.
+- **Desktop app.** The hub also serves Orbit for the PC: open
+  `http://localhost:8787` in Edge or Chrome and choose **Install Orbit** to keep
+  it as an app with its own window. On the PC it signs in by itself; another
+  computer on your network can open the hub's address and pair with the code.
 - **The hub** (`hub/`) runs on your PC. It holds the API keys, calls the
   models, and keeps agents working while the phone is asleep. The app
   (`android/`) is a client for it.

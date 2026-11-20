@@ -25,6 +25,8 @@ export const PAIR_PAGE = `<!doctype html>
   .row span:first-child { color: var(--faint); font-size: 14px; }
   .mono { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 17px; }
   .code { font-size: 24px; letter-spacing: .12em; }
+  .app { margin: 22px 0 0; font-size: 14px; }
+  .app a { color: var(--text); }
   .done { display: none; margin-top: 28px; color: var(--live); font-weight: 600; }
   .paired .done { display: block; }
   .paired .qr { opacity: .25; }
@@ -61,6 +63,7 @@ export const PAIR_PAGE = `<!doctype html>
   <p>Open Orbit on your phone, tap <b>Scan QR code</b>, and point it at this.</p>
   <div class="qr" id="qr"></div>
   <div class="done" id="done"></div>
+  <p class="app">Use Orbit on this PC: <a href="/">open the desktop app</a>.</p>
   <div class="manual">
     <div class="row"><span>Or type the address</span><span class="mono" id="address">…</span></div>
     <div class="row"><span>and the code</span><span class="mono code" id="code">…</span></div>

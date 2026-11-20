@@ -326,7 +326,7 @@ test('agents keep their abilities, and only the PC can share a folder', async (t
 
   // The phone can stop sharing.
   assert.deepEqual((await h.call('DELETE', `/api/folders/${shared[0].id}`)).body.folders, []);
-  const page = await fetch(`http://localhost:${h.port}/`);
+  const page = await fetch(`http://localhost:${h.port}/pair`);
   assert.equal(page.status, 200);
   assert.match(await page.text(), /Folders your agents can read/);
 });

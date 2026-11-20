@@ -437,3 +437,46 @@ test('the hub finds its home address and its Tailscale address, and tells the ph
   const { hub } = (await h.api('GET', '/api/state')).body;
   assert.deepEqual([hub.addresses, hub.remote], [['192.168.86.49:8787'], ['100.101.102.103:8787']]);
 });
+
+test('the desktop app is served to any browser, but using it takes this PC or a pairing code', async (t) => {
+  const h = await startHub({ Nova: ['**Bold** answer with `code`'] });
+  t.after(h.close);
+  const port = h.hub.server.address().port;
+
+  const page = await fetch(`${h.base}/`);
+  assert.equal(page.status, 200);
+  assert.match(await page.text(), /<script type="module" src="\/js\/app.js">/);
+  assert.match(page.headers.get('content-security-policy'), /script-src 'self'/);
+  const hooks = await (await fetch(`${h.base}/vendor/hooks.mjs`)).text();
+  assert.match(hooks, /from"\/vendor\/preact.mjs"/, 'hooks point at the local Preact');
+  for (const outside of ['/src/config.js', '/package.json', '/web/index.html', '/node_modules/preact/package.json']) {
+    assert.notEqual((await fetch(h.base + outside)).status, 200, `${outside} is not served`);
+  }
+  assert.equal((await fetch(`${h.base}/api/state`)).status, 401);
+
+  // On this PC, the page signs in without a code, with a cookie scripts can't read.
+  const local = await fetch(`http://localhost:${port}/local/token`, { method: 'POST', headers: { 'x-orbit-local': '1' } });
+  const cookie = local.headers.get('set-cookie');
+  assert.match(cookie, /^orbit_token=[^;]+; HttpOnly; SameSite=Strict/);
+  const jar = { cookie: cookie.split(';')[0] };
+  assert.equal((await fetch(`${h.base}/api/state`, { headers: jar })).status, 200);
+  assert.equal((await fetch(`http://localhost:${port}/local/token`, { method: 'POST' })).status, 403, 'only the page itself may ask');
+
+  // Another computer pairs with the code and gets the cookie, never the token itself.
+  const paired = await fetch(`${h.base}/api/pair`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: h.hub.pairingCode, web: true }) });
+  assert.equal((await paired.json()).token, undefined);
+  const theirs = { cookie: paired.headers.get('set-cookie').split(';')[0] };
+  assert.equal((await fetch(`${h.base}/api/state`, { headers: theirs })).status, 200);
+  const gone = await fetch(`${h.base}/api/device`, { method: 'DELETE', headers: theirs });
+  assert.match(gone.headers.get('set-cookie'), /Max-Age=0/);
+  assert.equal((await fetch(`${h.base}/api/state`, { headers: theirs })).status, 401);
+
+  // Room previews are plain words.
+  await h.pair();
+  const nova = await h.makeAgent('Nova');
+  const room = (await h.api('POST', '/api/rooms', { name: 'R', agentIds: [nova.id] })).body;
+  await h.api('POST', `/api/rooms/${room.id}/messages`, { text: 'hi' });
+  await h.hub.orchestrator.idle(room.id);
+  const preview = (await h.api('GET', '/api/state')).body.rooms.find((r) => r.id === room.id).preview;
+  assert.equal(preview.text, 'Bold answer with code');
+});

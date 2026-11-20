@@ -1,0 +1,551 @@
+// Orbit for the desktop: the same rooms and crew as the phone, in a window on the PC.
+import { render } from '/vendor/preact.mjs';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from '/vendor/hooks.mjs';
+import { ATTACHABLE, api, canAttach, hubEvents, onThisPC, prepare, roomEvents } from './api.js';
+import { Avatar, CrewTile, inkColor } from './avatar.js';
+import { AgentEditor, RoomEditor, Schedules, Settings } from './editors.js';
+import { closeOpenMarkup, markdown } from './markdown.js';
+import { Icon, Mark, Pill, ago, fileSize, html } from './ui.js';
+
+// ---------- The app ----------
+
+function App() {
+  const [phase, setPhase] = useState('loading'); // loading, connect, offline, ready
+  const [state, setState] = useState(null);
+  const [roomId, setRoomId] = useState(() => decodeURIComponent(location.hash.slice(1)) || null);
+  const [dialog, setDialog] = useState(null);
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef();
+
+  const notify = useCallback((text) => {
+    setToast(text);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 4000);
+  }, []);
+
+  const refresh = useCallback(async () => {
+    try {
+      const fresh = await api.state();
+      setState(fresh);
+      setPhase('ready');
+      return fresh;
+    } catch (e) {
+      if (e.status === 401) {
+        // On the PC itself there's no code to type: the hub signs this browser in.
+        if (onThisPC) {
+          try {
+            await api.connectHere();
+            const fresh = await api.state();
+            setState(fresh);
+            setPhase('ready');
+            return fresh;
+          } catch {
+            // fall through to the code screen
+          }
+        }
+        setPhase('connect');
+      } else {
+        setPhase((p) => (p === 'ready' ? p : 'offline'));
+      }
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, []);
+  // Rooms start and finish replies elsewhere too; the hub says when, and a slow poll catches the rest.
+  useEffect(() => {
+    if (phase !== 'ready') return undefined;
+    const stop = hubEvents(refresh);
+    const timer = setInterval(refresh, 30000);
+    return () => {
+      stop();
+      clearInterval(timer);
+    };
+  }, [phase]);
+  useEffect(() => {
+    const onHash = () => setRoomId(decodeURIComponent(location.hash.slice(1)) || null);
+    addEventListener('hashchange', onHash);
+    return () => removeEventListener('hashchange', onHash);
+  }, []);
+  const openRoom = (id) => {
+    location.hash = id ? encodeURIComponent(id) : '';
+  };
+
+  if (phase === 'loading') return html`<div class="connect"><div class="spinner"></div></div>`;
+  if (phase === 'connect') return html`<${Connect} onConnected=${refresh} />`;
+  if (phase === 'offline') {
+    return html`<div class="connect"><div class="center">
+      <${Mark} size=${40} />
+      <h1 class="title-l">Can't reach the hub</h1>
+      <p class="muted">Check that Orbit is running on the PC, then try again.</p>
+      <button class="button" onClick=${refresh}>Try again</button>
+    </div></div>`;
+  }
+
+  const room = state.rooms.find((r) => r.id === roomId) ?? null;
+  const close = () => setDialog(null);
+  const edited = async (goTo) => {
+    await refresh();
+    if (goTo !== undefined) openRoom(goTo);
+    close();
+  };
+
+  return html`<div class=${`shell${room ? ' in-room' : ''}`}>
+    <${Sidebar} state=${state} roomId=${room?.id} onOpen=${openRoom} onDialog=${setDialog} />
+    <main>
+      ${room
+        ? html`<${RoomView} key=${room.id} room=${room} state=${state} onDialog=${setDialog} notify=${notify} onBack=${() => openRoom(null)} />`
+        : html`<${Welcome} state=${state} onDialog=${setDialog} />`}
+    </main>
+    ${dialog?.type === 'agent' && html`<${AgentEditor} agent=${dialog.agent} state=${state} notify=${notify} onClose=${close} onSaved=${() => edited()} onChanged=${refresh} onAddKey=${() => setDialog({ type: 'settings' })} />`}
+    ${dialog?.type === 'room' && html`<${RoomEditor} room=${dialog.room} state=${state} notify=${notify} onClose=${close} onSaved=${(id) => edited(id)} />`}
+    ${dialog?.type === 'settings' && html`<${Settings} state=${state} notify=${notify} refresh=${refresh} onClose=${close} />`}
+    ${dialog?.type === 'schedules' && html`<${Schedules} room=${dialog.room} state=${state} notify=${notify} refresh=${refresh} onClose=${close} onRan=${() => openRoom(dialog.room.id)} />`}
+    ${toast && html`<div class="toast" role="status">${toast}</div>`}
+  </div>`;
+}
+
+/** A browser on another computer pairs with the code shown on the PC, like a phone. */
+function Connect({ onConnected }) {
+  const [code, setCode] = useState('');
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await api.pair(code.replace(/\D/g, ''));
+      await onConnected();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return html`<div class="connect"><form class="card" onSubmit=${submit}>
+    <div class="wordmark"><${Mark} size=${26} /> Orbit</div>
+    <h1 class="title-l" style="margin:24px 0 6px">Connect to your hub</h1>
+    <p class="muted" style="margin:0 0 22px">Type the six-digit code your PC shows. On the PC, it's at <span class="mono">localhost:8787/pair</span>.</p>
+    <input class="field code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000 000" value=${code}
+      onInput=${(e) => setCode(e.currentTarget.value)} aria-label="Pairing code" autofocus />
+    ${error && html`<p class="error-text">${error}</p>`}
+    <button class="button wide" style="margin-top:18px" disabled=${busy || code.replace(/\D/g, '').length !== 6}>${busy ? 'Connecting' : 'Connect'}</button>
+  </form></div>`;
+}
+
+function Sidebar({ state, roomId, onOpen, onDialog }) {
+  const byId = useMemo(() => Object.fromEntries(state.agents.map((a) => [a.id, a])), [state.agents]);
+  const rooms = [...state.rooms].sort((a, b) => b.updatedAt - a.updatedAt);
+  const demo = !state.providers.some((p) => p.takesKey && p.configured);
+  return html`<aside class="sidebar">
+    <div class="sidebar-head">
+      <button class="hub-button" onClick=${() => onDialog({ type: 'settings' })}>
+        <${Mark} size=${26} />
+        <div class="names"><div class="title-s">${state.hub.name || 'Orbit'}</div><div class="caption faint">Settings, keys and usage</div></div>
+      </button>
+    </div>
+    <div class="sidebar-scroll">
+      ${demo && html`<button class="card row button-row" style="margin:6px 4px 4px;width:calc(100% - 8px)" onClick=${() => onDialog({ type: 'settings' })}>
+        <div style="flex:1"><div class="title-s">Your crew is in demo mode</div><div class="body-s muted">Add an AI key to get real answers.</div></div>
+        <${Icon} name="chevron" size=${18} />
+      </button>`}
+      <div class="sidebar-title">
+        <span class="overline">Rooms</span>
+        <button class="icon-button" aria-label="New room" title="New room" onClick=${() => onDialog({ type: 'room' })}><${Icon} name="plus" /></button>
+      </div>
+      ${rooms.map((room) => {
+        const crew = room.agentIds.map((id) => byId[id]).filter(Boolean);
+        const speaker = byId[room.speaking];
+        return html`<button class=${`room-item${room.id === roomId ? ' current' : ''}`} onClick=${() => onOpen(room.id)} aria-current=${room.id === roomId ? 'page' : null}>
+          <${CrewTile} specs=${crew.map((a) => a.avatar)} size=${44} />
+          <div class="text">
+            <div class="top">
+              <span class="name">${room.name}</span>
+              ${room.active
+                ? html`<span class="dot" style=${`background:${speaker ? inkColor(speaker.avatar) : 'var(--text-2)'}`}></span>`
+                : html`<span class="caption faint">${ago(room.updatedAt)}</span>`}
+            </div>
+            ${room.active
+              ? html`<div class="preview shimmer">${speaker ? `${speaker.name} is replying` : 'Working'}</div>`
+              : html`<div class="preview">${room.preview ? `${room.preview.author}: ${room.preview.text}` : 'No messages yet'}</div>`}
+          </div>
+        </button>`;
+      })}
+      ${!rooms.length && html`<p class="note" style="padding:0 10px">No rooms yet. Make one to start talking to your crew.</p>`}
+      <div class="sidebar-title">
+        <span class="overline">Crew</span>
+        <button class="icon-button" aria-label="New agent" title="New agent" onClick=${() => onDialog({ type: 'agent' })}><${Icon} name="plus" /></button>
+      </div>
+      <div class="crew-list">
+        ${state.agents.map((agent) => html`<button class="agent-chip" onClick=${() => onDialog({ type: 'agent', agent })} title=${agent.role || agent.name}>
+          <${Avatar} spec=${agent.avatar} size=${26} />${agent.name}
+        </button>`)}
+      </div>
+    </div>
+  </aside>`;
+}
+
+function Welcome({ state, onDialog }) {
+  const noAgents = !state.agents.length;
+  return html`<div class="center">
+    <div style="color:var(--text)"><${Mark} size=${44} /></div>
+    <h1 class="title-l" style="margin:20px 0 8px">${noAgents ? 'Start with an agent' : 'Pick a room'}</h1>
+    <p class="muted" style="margin:0 0 24px">${noAgents ? 'Give it a name, a model and a way of thinking, then put it in a room.' : 'Choose a room on the left, or start a new one.'}</p>
+    <button class="button" onClick=${() => onDialog({ type: noAgents ? 'agent' : 'room' })}>${noAgents ? 'New agent' : 'New room'}</button>
+  </div>`;
+}
+
+// ---------- A room ----------
+
+/** Folds one live event into the message list. Returns null when the list must be reloaded. */
+function upsert(list, message) {
+  const index = list.findIndex((m) => m.id === message.id);
+  if (index < 0) return [...list, message].sort((a, b) => a.seq - b.seq);
+  // An older "still streaming" snapshot must not undo text already here.
+  if (message.status === 'streaming' && message.text.length < list[index].text.length) return list;
+  const next = list.slice();
+  next[index] = message;
+  return next;
+}
+
+function RoomView({ room, state, onDialog, notify, onBack }) {
+  const [messages, setMessages] = useState([]);
+  const [run, setRun] = useState({ active: false, agentId: null });
+  const [loaded, setLoaded] = useState(false);
+  const [connected, setConnected] = useState(true);
+  const [menu, setMenu] = useState(false);
+  const [viewing, setViewing] = useState(null);
+  const [nearBottom, setNearBottom] = useState(true);
+  const list = useRef([]);
+  const scroller = useRef();
+  const stick = useRef(true);
+
+  const apply = (next) => {
+    list.current = next;
+    setMessages(next);
+  };
+  const load = async () => {
+    const snapshot = await api.messages(room.id);
+    apply(snapshot.messages);
+    setRun(snapshot.run);
+    setLoaded(true);
+  };
+
+  useEffect(() => {
+    apply([]);
+    setLoaded(false);
+    stick.current = true;
+    const stop = roomEvents(room.id, {
+      open: () => {
+        setConnected(true);
+        load().catch(() => setConnected(false));
+      },
+      message: (m) => apply(upsert(list.current, m)),
+      delta: (d) => {
+        const index = list.current.findIndex((m) => m.id === d.id);
+        const current = list.current[index];
+        if (!current || d.at > current.text.length) return void load(); // missed something
+        if (d.at < current.text.length) return undefined; // already have it
+        const next = list.current.slice();
+        next[index] = { ...current, text: current.text + d.text };
+        apply(next);
+        return undefined;
+      },
+      activity: (a) => apply(list.current.map((m) => (m.id === a.id ? { ...m, activity: a.activity } : m))),
+      reset: (r) => apply(list.current.map((m) => (m.id === r.id ? { ...m, text: r.text } : m))),
+      run: setRun,
+      cleared: () => apply([]),
+      removed: (r) => apply(list.current.filter((m) => m.id !== r.id)),
+    });
+    return stop;
+  }, [room.id]);
+
+  // Stay pinned to the newest line while replies stream in, unless you've scrolled up to read.
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (el && stick.current) el.scrollTop = el.scrollHeight;
+  }, [messages]);
+  const onScroll = () => {
+    const el = scroller.current;
+    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    stick.current = near;
+    setNearBottom(near);
+  };
+
+  const agents = room.agentIds.map((id) => state.agents.find((a) => a.id === id)).filter(Boolean);
+  const byId = Object.fromEntries(state.agents.map((a) => [a.id, a]));
+  const mentions = Object.fromEntries(agents.map((a) => [a.name.replace(/\s/g, '').toLowerCase(), inkColor(a.avatar)]));
+  const lead = agents.find((a) => a.id === room.leadId);
+  const speaker = byId[run.agentId];
+  const introduced = new Set();
+  const firstReplies = new Set(
+    messages.filter((m) => m.author.type === 'agent' && !introduced.has(m.author.agentId) && introduced.add(m.author.agentId)).map((m) => m.id),
+  );
+  const canRetry = (m) =>
+    m.author.type === 'agent' && !run.active && agents.some((a) => a.id === m.author.agentId) &&
+    (m.status === 'error' || m.status === 'stopped' || messages.at(-1)?.id === m.id);
+
+  const act = (work) => work().catch((e) => notify(e.message));
+  const onCopyCode = (e) => {
+    const button = e.target.closest('[data-copy]');
+    if (!button) return;
+    navigator.clipboard.writeText(button.closest('.code-block').querySelector('code').textContent);
+    button.querySelector('span').textContent = 'Copied';
+    setTimeout(() => (button.querySelector('span').textContent = 'Copy'), 1600);
+  };
+
+  return html`
+    <header class=${`room-bar${nearBottom ? '' : ' scrolled'}`}>
+      <button class="icon-button narrow-only" onClick=${onBack} aria-label="Back to rooms"><${Icon} name="back" /></button>
+      <div class="titles">
+        <div class="title-m">${room.name}</div>
+        <div class="status">
+          ${!connected
+            ? html`<span class="dot"></span>Reconnecting to your hub`
+            : run.active
+              ? html`<span class="dot" style=${`background:${speaker ? inkColor(speaker.avatar) : 'var(--text-2)'}`}></span><span class="shimmer">${speaker ? `${speaker.name} is replying` : 'Working'}</span>`
+              : room.mode === 'lead' && lead ? `Led by ${lead.name}` : 'Round table'}
+        </div>
+      </div>
+      <div class="avatar-row">${agents.slice(0, 5).map((a) => html`<${Avatar} spec=${a.avatar} size=${30} thinking=${run.active && run.agentId === a.id} />`)}</div>
+      <button class="icon-button" aria-label="Room options" aria-expanded=${menu} onClick=${() => setMenu(!menu)}><${Icon} name="more" /></button>
+      ${menu && html`<div class="menu" onMouseLeave=${() => setMenu(false)}>
+        <button onClick=${() => { setMenu(false); onDialog({ type: 'room', room }); }}>Edit room</button>
+        <button onClick=${() => { setMenu(false); onDialog({ type: 'schedules', room }); }}>Schedules</button>
+        <button onClick=${() => { setMenu(false); if (confirm(`Clear every message in ${room.name}?`)) act(() => api.clear(room.id)); }}>Clear chat</button>
+      </div>`}
+    </header>
+    <div class="messages" ref=${scroller} onScroll=${onScroll} onClick=${onCopyCode}>
+      ${loaded && !messages.length
+        ? html`<div class="empty-room">
+            <div class="avatar-row">${agents.map((a) => html`<${Avatar} spec=${a.avatar} size=${44} />`)}</div>
+            <div class="title-m">${agents.map((a) => a.name).join(', ')}</div>
+            <p class="muted">${room.mode === 'lead' && lead ? `${lead.name} answers first and brings in the others.` : 'Everyone answers in turn.'} Mention someone with @ to ask them directly.</p>
+          </div>`
+        : html`<div class="messages-inner">
+            ${messages.map((m) => html`<div class=${`message${m.author.type === 'user' ? ' mine' : ''}`} key=${m.id}>
+              ${m.author.type === 'user'
+                ? html`<${UserMessage} message=${m} mentions=${mentions} onPhoto=${setViewing} />`
+                : html`<${AgentMessage} message=${m} agent=${byId[m.author.agentId]} showModel=${firstReplies.has(m.id)} mentions=${mentions} />`}
+              <div class="message-actions">
+                ${m.text && html`<button onClick=${() => { navigator.clipboard.writeText(m.text); notify('Copied'); }}><${Icon} name="copy" />Copy</button>`}
+                ${canRetry(m) && html`<button onClick=${() => act(() => api.retry(room.id, m.id))}><${Icon} name="retry" />Ask again</button>`}
+                ${m.status !== 'streaming' && html`<button class="danger" onClick=${() => act(() => api.deleteMessage(room.id, m.id))}><${Icon} name="trash" />Delete</button>`}
+              </div>
+            </div>`)}
+          </div>`}
+      ${!nearBottom && html`<div class="latest"><button class="pill" onClick=${() => { scroller.current.scrollTop = scroller.current.scrollHeight; }}><${Icon} name="up" size=${16} />Latest</button></div>`}
+    </div>
+    <${Composer} room=${room} agents=${agents} running=${run.active} notify=${notify} onSent=${() => { stick.current = true; }} />
+    ${viewing && html`<div class="viewer" onClick=${() => setViewing(null)} role="dialog" aria-label=${viewing.name}><img src=${`/api/files/${viewing.id}`} alt=${viewing.name} /></div>`}
+  `;
+}
+
+function UserMessage({ message, mentions, onPhoto }) {
+  const photos = (message.attachments ?? []).filter((a) => a.type.startsWith('image/'));
+  const files = (message.attachments ?? []).filter((a) => !a.type.startsWith('image/'));
+  return html`
+    ${message.scheduled && html`<div class="scheduled caption faint"><${Icon} name="clock" />Scheduled · ${message.scheduled.label}</div>`}
+    ${photos.length + files.length > 0 && html`<div class="attached">
+      ${photos.length === 1
+        ? html`<img class="photo-single" src=${`/api/files/${photos[0].id}`} alt=${photos[0].name} onClick=${() => onPhoto(photos[0])} />`
+        : photos.length > 1 && html`<div class="photos">${photos.map((p) => html`<img src=${`/api/files/${p.id}`} alt=${p.name} onClick=${() => onPhoto(p)} />`)}</div>`}
+      ${files.map((f) => html`<a class="file-chip" href=${`/api/files/${f.id}`} target="_blank" rel="noopener">
+        <${Icon} name="file" /><div style="min-width:0"><div class="name">${f.name}</div><div class="caption faint">${fileSize(f.size)}</div></div>
+      </a>`)}
+    </div>`}
+    ${message.text && html`<div class="bubble"><div class="md" dangerouslySetInnerHTML=${{ __html: markdown(message.text, mentions) }}></div></div>`}
+  `;
+}
+
+// What each kind of step reads as, while it happens and once it's done or has failed.
+const STEPS = {
+  search: ['Searching', 'Searched', 'Search failed', 'search'],
+  page: ['Reading', 'Read', "Couldn't open", 'globe'],
+  code: ['Running code', 'Ran code', "Code didn't run", 'code'],
+  folder: ['Looking in', 'Looked in', "Couldn't open", 'folder'],
+  file: ['Reading', 'Read', "Couldn't read", 'file'],
+  find: ['Searching files for', 'Searched files for', 'File search failed for', 'search'],
+  remember: ['Remembering', 'Remembered', "Couldn't remember", 'memory'],
+  forget: ['Forgetting', 'Forgot', "Couldn't forget", 'memory'],
+};
+const site = (url) => url.replace(/^https?:\/\/(www\.)?/, '').split(/[/?#]/)[0];
+const leaf = (path) => path.replace(/\/$/, '').split('/').pop() || path;
+function stepDetail(step) {
+  switch (step.kind) {
+    case 'page': return site(step.detail);
+    case 'folder': return step.detail ? leaf(step.detail) : 'your shared folders';
+    case 'file': return leaf(step.detail);
+    case 'find': return `“${step.detail}”`;
+    case 'code': return '';
+    default: return step.detail;
+  }
+}
+function summary(activity) {
+  const count = (k) => activity.filter((a) => a.kind === k).length;
+  const times = (n, one, many) => (n === 1 ? one : many.replace('#', n));
+  const parts = [
+    count('search') && times(count('search'), 'searched the web', 'searched the web # times'),
+    count('page') && times(count('page'), 'read a page', 'read # pages'),
+    count('code') && 'ran code',
+    count('folder') && times(count('folder'), 'looked in a folder', 'looked in # folders'),
+    count('file') && times(count('file'), 'read a file', 'read # files'),
+    count('find') && 'searched your files',
+    count('remember') && times(count('remember'), 'saved a note', 'saved # notes'),
+    count('forget') && 'forgot a note',
+  ].filter(Boolean);
+  const text = parts.length <= 1 ? parts[0] ?? `used ${activity.length} tools` : `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`;
+  return text[0].toUpperCase() + text.slice(1);
+}
+
+function Trail({ activity, streaming }) {
+  const [open, setOpen] = useState(false);
+  if (!activity?.length) return null;
+  if (!streaming && !open && activity.length > 3) {
+    return html`<button class="trail-summary" onClick=${() => setOpen(true)}><${Icon} name=${STEPS[activity[0].kind]?.[3] ?? 'more'} />${summary(activity)}<${Icon} name="chevron" size=${15} /></button>`;
+  }
+  return html`<div class="trail">${activity.map((step) => {
+    const [live, done, failed, icon] = STEPS[step.kind] ?? ['Working', 'Used a tool', 'Used a tool', 'more'];
+    const isLive = streaming && !step.done;
+    const verb = isLive ? live : step.failed ? failed : done;
+    const detail = stepDetail(step);
+    return html`<div class="trail-line"><${Icon} name=${icon} />${isLive
+      ? html`<span class="shimmer">${verb} ${detail}</span>`
+      : html`<span>${verb}</span>${detail && html`<span class="detail">${detail}</span>`}`}</div>`;
+  })}</div>`;
+}
+
+function AgentMessage({ message, agent, showModel, mentions }) {
+  const streaming = message.status === 'streaming';
+  const text = streaming ? closeOpenMarkup(message.text) : message.text;
+  const rendered = useMemo(() => markdown(text, mentions), [text]);
+  return html`<div class="agent-message">
+    <${Avatar} spec=${agent?.avatar} size=${34} thinking=${streaming} />
+    <div class="body">
+      <div class="agent-head">
+        <span class="name" style=${`color:${inkColor(agent?.avatar)}`}>${agent?.name ?? message.author.name}</span>
+        ${showModel && message.author.model && html`<span class="mono faint">${message.author.model}</span>`}
+      </div>
+      <${Trail} activity=${message.activity} streaming=${streaming} />
+      ${message.text && html`<div class="md" dangerouslySetInnerHTML=${{ __html: rendered }}></div>`}
+      ${streaming && !message.text && (message.activity ?? []).every((a) => a.done) && html`<div class="shimmer">Thinking</div>`}
+      ${message.status === 'error' && html`<div class="failure"><span class="dot"></span><div>${message.error || "This agent couldn't reply."}</div></div>`}
+      ${message.status === 'stopped' && html`<div class="caption faint" style="margin-top:6px">Stopped</div>`}
+      ${!streaming && message.sources?.length > 0 && html`<div class="sources">${message.sources.map((s, i) => html`<a class="source" href=${s.url} target="_blank" rel="noopener noreferrer" title=${s.title}>
+        <span class="n">${i + 1}</span>${site(s.url)}
+      </a>`)}</div>`}
+    </div>
+  </div>`;
+}
+
+// ---------- Writing a message ----------
+
+function Composer({ room, agents, running, notify, onSent }) {
+  const [draft, setDraft] = useState('');
+  const [files, setFiles] = useState([]);
+  const [sending, setSending] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [mention, setMention] = useState(null);
+  const box = useRef();
+  const picker = useRef();
+
+  useEffect(() => {
+    setDraft('');
+    setFiles([]);
+  }, [room.id]);
+  // The box grows with what's typed, up to a limit.
+  useLayoutEffect(() => {
+    const el = box.current;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 220)}px`;
+  }, [draft]);
+
+  const add = (list) => {
+    const usable = [...list].filter(canAttach);
+    if (usable.length < list.length) notify('Orbit can attach photos, PDFs and text files.');
+    setFiles((current) => {
+      const next = [...current, ...usable.map((file) => ({ file, key: crypto.randomUUID(), url: file.type.startsWith('image/') ? URL.createObjectURL(file) : null }))];
+      if (next.length > 6) notify('A message can carry up to six photos and files.');
+      return next.slice(0, 6);
+    });
+  };
+
+  const send = async () => {
+    const text = draft.trim();
+    if (sending || (!text && !files.length)) return;
+    setSending(true);
+    try {
+      const ids = [];
+      for (const { file } of files) {
+        const { blob, name } = await prepare(file);
+        ids.push((await api.upload(blob, name)).id);
+      }
+      await api.send(room.id, text, ids);
+      setDraft('');
+      setFiles([]);
+      onSent();
+    } catch (e) {
+      notify(e.message);
+    } finally {
+      setSending(false);
+      box.current?.focus();
+    }
+  };
+
+  const onInput = (e) => {
+    const value = e.currentTarget.value;
+    setDraft(value);
+    const before = value.slice(0, e.currentTarget.selectionStart);
+    const match = /(^|\s)@([\p{L}\p{N}_]*)$/u.exec(before);
+    setMention(match ? match[2].toLowerCase() : null);
+  };
+  const insertMention = (agent) => {
+    const el = box.current;
+    const before = draft.slice(0, el.selectionStart).replace(/@[\p{L}\p{N}_]*$/u, '');
+    const after = draft.slice(el.selectionStart);
+    setDraft(`${before}@${agent.name.replace(/\s/g, '')} ${after}`);
+    setMention(null);
+    el.focus();
+  };
+  // Suggestions while a mention is part-typed; once it's whole, Enter sends.
+  const handle = (a) => a.name.replace(/\s/g, '').toLowerCase();
+  const matches = mention === null ? [] : agents.filter((a) => handle(a).startsWith(mention) && handle(a) !== mention);
+  const canSend = (draft.trim() || files.length) && !sending;
+
+  return html`<div class="composer-wrap">
+    <div class=${`composer${dragging ? ' dragging' : ''}`}
+      onDragOver=${(e) => { e.preventDefault(); setDragging(true); }}
+      onDragLeave=${() => setDragging(false)}
+      onDrop=${(e) => { e.preventDefault(); setDragging(false); add(e.dataTransfer.files); }}>
+      ${matches.length > 0 && html`<div class="mention-chips">${matches.map((a) => html`<${Pill} label=${a.name} small onClick=${() => insertMention(a)}><${Avatar} spec=${a.avatar} size=${20} /><//>`)}</div>`}
+      ${files.length > 0 && html`<div class="drafts">${files.map((f) => html`<div class=${`draft${sending ? ' sending' : ''}`} key=${f.key}>
+        ${f.url ? html`<img src=${f.url} alt=${f.file.name} />` : html`<div class="file"><${Icon} name="file" size=${18} /><span>${f.file.name}</span></div>`}
+        ${!sending && html`<button class="remove" aria-label=${`Remove ${f.file.name}`} onClick=${() => setFiles(files.filter((x) => x.key !== f.key))}><${Icon} name="close" /></button>`}
+      </div>`)}</div>`}
+      <div class="composer-row">
+        <button class="icon-button" aria-label="Attach photos or files" title="Attach photos or files" onClick=${() => picker.current.click()}><${Icon} name="plus" /></button>
+        <input type="file" multiple accept=${ATTACHABLE} hidden ref=${picker} onChange=${(e) => { add(e.currentTarget.files); e.currentTarget.value = ''; }} />
+        <textarea ref=${box} rows="1" placeholder="Message the crew" value=${draft} onInput=${onInput}
+          onPaste=${(e) => e.clipboardData.files.length && (e.preventDefault(), add(e.clipboardData.files))}
+          onKeyDown=${(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+              e.preventDefault();
+              if (matches.length) insertMention(matches[0]);
+              else send();
+            }
+          }} aria-label="Message"></textarea>
+        ${!canSend && running
+          ? html`<button class="send" aria-label="Stop" title="Stop" onClick=${() => api.stop(room.id).catch((e) => notify(e.message))}><span class="stop"></span></button>`
+          : html`<button class="send" aria-label="Send" disabled=${!canSend} onClick=${send}>${sending ? html`<span class="spinner"></span>` : html`<${Icon} name="up" size=${19} />`}</button>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+render(html`<${App} />`, document.getElementById('app'));
+
+// Installable as a desktop app; the service worker only has to exist.
+if ('serviceWorker' in navigator && isSecureContext) navigator.serviceWorker.register('/sw.js').catch(() => {});

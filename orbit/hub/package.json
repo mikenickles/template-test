@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.11.0",
+    "htm": "3.1.1",
+    "preact": "10.29.8",
     "qrcode-generator": "^2.0.4"
   }
 }

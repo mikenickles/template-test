@@ -43,7 +43,8 @@ setInterval(() => {
   hub.setAddresses(addresses, away);
 }, 60_000).unref();
 
-const pairPage = `http://localhost:${port}`;
+const pairPage = `http://localhost:${port}/pair`;
+const appPage = `http://localhost:${port}`;
 
 function showPairing() {
   const code = hub.pairingCode;
@@ -73,6 +74,7 @@ console.log(`  Model keys:  ${keyed.length ? keyed.join(', ') : 'none yet. Add o
 const shared = folders.list().map((f) => f.name);
 console.log(`  Folders:     ${shared.length ? shared.join(', ') : `none shared. Share one at ${pairPage}`}`);
 console.log(`  Away:        ${away.length ? `${away.join(', ')} (Tailscale)` : 'not set up. Install Tailscale on this PC and your phone to use Orbit anywhere.'}`);
+console.log(`  Desktop app: ${appPage}  (in Edge or Chrome, use "Install Orbit" to keep it as an app)`);
 console.log(`  Data:        ${dataDir}`);
 
 await ensureFirewall({ port, discoveryPort: config.discoveryPort, dataDir, log: (line) => console.log(line) });

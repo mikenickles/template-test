@@ -10,6 +10,9 @@ Two independent projects live here:
 - **Orbit** (`orbit/`): multi-agent Android app plus the PC hub it pairs with. See `orbit/README.md`.
   - `orbit/hub/`: Node 20+ ESM server, plain JavaScript. Calls Claude through `@anthropic-ai/sdk`; other
     providers through their OpenAI-compatible HTTP APIs. State is a JSON file in `~/.orbit-hub`.
+    The desktop app is `orbit/hub/web/`: plain ES modules with Preact and htm served from the hub's own
+    `node_modules` (no build step, nothing from a CDN), styled to match the phone's design system. It signs in
+    with an HttpOnly SameSite=Strict cookie; on the PC itself through `/local/token`, elsewhere with the code.
     Agent abilities (web search, code execution, read-only shared folders) are Claude-only: the tool loop is
     `src/anthropic.js`, folder access is `src/folders.js`. Folders are shared only from the PC's own page
     (`localhost`), never from a phone.
@@ -46,7 +49,8 @@ Two independent projects live here:
 #                    including the animated ones in app/src/test/snapshots/videos)
 ```
 
-The hub's HTTP API and the app's `HubClient`/`Models.kt` are one contract: change them together.
+The hub's HTTP API, the app's `HubClient`/`Models.kt`, and the desktop app's `web/js/api.js` are one contract:
+change them together.
 
 Release signing: the key lives outside the repo (`orbit/android/keystore.properties` locally, or the
 `ORBIT_KEYSTORE_BASE64`/`ORBIT_KEYSTORE_PASSWORD` secrets for the GitHub workflow). Never commit a keystore

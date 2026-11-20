@@ -9,6 +9,7 @@ import { ABILITIES, Orchestrator } from './orchestrator.js';
 import { PAIR_PAGE } from './pairpage.js';
 import { canPickFolder, pickFolder } from './picker.js';
 import { Ledger } from './usage.js';
+import { APP_POLICY, webAsset } from './web.js';
 import { pairingLink, qrSvg } from './qr.js';
 
 export const VERSION = '0.1.0';
@@ -25,6 +26,18 @@ class HttpError extends Error {
 }
 
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+
+/**
+ * The desktop app signs in with a cookie, since browsers can't attach a header to live updates or
+ * pictures. HttpOnly keeps it from scripts; SameSite=Strict keeps other sites from sending it.
+ */
+const COOKIE = 'orbit_token';
+const signInCookie = (token) => `${COOKIE}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=315360000`;
+const cookieToken = (req) =>
+  String(req.headers.cookie ?? '')
+    .split(';')
+    .map((part) => part.trim().split('='))
+    .find(([name]) => name === COOKIE)?.[1] ?? '';
 const newPairingCode = () => String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
 const text = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
 const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
@@ -181,13 +194,14 @@ export class Hub {
       ...room,
       active: run.active,
       speaking: run.agentId,
-      preview: last ? { author: last.author.name, text: last.text.replace(/\s+/g, ' ').slice(0, 140) } : null,
+      // Plain words for a one-line preview: no Markdown marks.
+      preview: last ? { author: last.author.name, text: last.text.replace(/\*\*|~~|`+|^#+\s|^>\s?/gm, '').replace(/\s+/g, ' ').trim().slice(0, 140) } : null,
     };
   }
 
   #authenticate(req) {
     const header = req.headers.authorization ?? '';
-    const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+    const token = header.startsWith('Bearer ') ? header.slice(7) : cookieToken(req);
     const device = token && this.store.state.devices.find((d) => d.tokenHash === hashToken(token));
     if (!device) throw new HttpError(401, 'This phone is not paired with the hub.');
     device.lastSeenAt = Date.now();
@@ -241,10 +255,33 @@ export class Hub {
     const id = parts[2];
 
     if (key === 'GET /api/hub') return { app: 'orbit-hub', name: this.name, version: VERSION };
-    if (key === 'POST /api/pair') return this.#pair(await this.#body(req));
+    if (key === 'POST /api/pair') {
+      const fields = await this.#body(req);
+      const paired = this.#pair(fields);
+      // The desktop app on another computer signs in with a cookie rather than keeping the token.
+      if (fields.web) res.setHeader('set-cookie', signInCookie(paired.token));
+      return fields.web ? { hub: paired.hub } : paired;
+    }
+
+    // The desktop app itself: a fixed set of files, open to any browser that can reach the hub.
+    // Using it still needs this PC (localhost) or a pairing code.
+    if (req.method === 'GET' && url.pathname !== '/pair') {
+      const asset = webAsset(url.pathname);
+      if (asset) {
+        res.writeHead(200, {
+          'content-type': asset.type,
+          'cache-control': /\.(ttf|png)$/.test(url.pathname) ? 'public, max-age=86400' : 'no-cache',
+          'content-security-policy': APP_POLICY,
+          'x-content-type-options': 'nosniff',
+          'referrer-policy': 'no-referrer',
+        });
+        res.end(asset.body);
+        return undefined;
+      }
+    }
 
     // The hub's own page shows the live pairing code and shares folders, so only the PC itself may use it.
-    if (url.pathname === '/' || url.pathname === '/pair' || url.pathname === '/pair.json') {
+    if (url.pathname === '/pair' || url.pathname === '/pair.json') {
       this.#localOnly(req);
       if (url.pathname !== '/pair.json') {
         res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
@@ -261,7 +298,7 @@ export class Hub {
         canPick: canPickFolder(),
       };
     }
-    if (parts[0] === 'local') return this.#localRoute(req, parts);
+    if (parts[0] === 'local') return this.#localRoute(req, res, parts);
 
     const device = this.#authenticate(req);
     switch (key) {
@@ -322,6 +359,7 @@ export class Hub {
       case 'DELETE /api/device': {
         this.store.state.devices = this.store.state.devices.filter((d) => d.id !== device.id);
         this.store.save();
+        res.setHeader('set-cookie', `${COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0`);
         return { ok: true };
       }
       case 'GET /api/providers/:id/models':
@@ -534,10 +572,18 @@ export class Hub {
     if (change && req.headers['x-orbit-local'] !== '1') throw new HttpError(403, 'Use the Orbit page on this PC.');
   }
 
-  async #localRoute(req, parts) {
+  async #localRoute(req, res, parts) {
     this.#localOnly(req, req.method !== 'GET');
     const route = `${req.method} /${parts.slice(1).join('/')}`;
     try {
+      // The desktop app on this PC signs in without a code: whoever can use this PC already can.
+      if (route === 'POST /token') {
+        const token = crypto.randomBytes(32).toString('base64url');
+        this.store.state.devices.push({ id: crypto.randomUUID(), name: 'This PC', local: true, tokenHash: hashToken(token), createdAt: Date.now() });
+        this.store.save();
+        res.setHeader('set-cookie', signInCookie(token));
+        return { hub: { name: this.name, version: VERSION } };
+      }
       if (route === 'GET /folders') return { folders: this.folders.list() };
       if (route === 'POST /folders') {
         this.folders.add((await this.#body(req)).path);
