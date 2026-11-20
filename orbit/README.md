@@ -57,7 +57,7 @@ Install [Node.js](https://nodejs.org) (the LTS version), then double-click
 
 - downloads what the hub needs (a minute),
 - asks Windows for permission, once, to let your phone through the firewall,
-- opens the Orbit page in your browser (`http://localhost:8787`) with a QR code, and
+- opens the pairing page in your browser (`http://localhost:8787/pair`) with a QR code, and
 - offers to start the hub automatically whenever you sign in to Windows.
 
 Keep its window open while you use Orbit. On a Mac or Linux, run `npm start` in `hub/`.
@@ -93,7 +93,7 @@ entry with a `baseUrl` is treated as an OpenAI-compatible server, e.g.
 
 ## 4. Share folders with your agents (optional)
 
-On the PC, open `http://localhost:8787` and click **Share a folder…**. Agents
+On the PC, open `http://localhost:8787/pair` and click **Share a folder…**. Agents
 with **Read your files** turned on (in the agent's Abilities) can then list,
 read and search the files in it. Access is read only, never reaches outside the
 folders you share, and skips hidden files and the hub's own settings. Folders
