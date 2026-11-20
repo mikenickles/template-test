@@ -2,6 +2,8 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 import dgram from 'node:dgram';
 import { Orchestrator } from './orchestrator.js';
+import { PAIR_PAGE } from './pairpage.js';
+import { pairingLink, qrSvg } from './qr.js';
 
 export const VERSION = '0.1.0';
 export const DISCOVERY_PROBE = 'ORBIT_DISCOVER';
@@ -19,6 +21,10 @@ class HttpError extends Error {
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 const newPairingCode = () => String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
 const text = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
+const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
+/** How long the pairing page keeps saying "Paired with …" after a phone pairs. */
+const JUST_PAIRED_MS = 60_000;
 
 /**
  * The hub's HTTP API. Everything except /api/hub and /api/pair needs the
@@ -35,6 +41,8 @@ export class Hub {
     this.pairFailures = 0;
     this.pairLockedUntil = 0;
     this.pairingCode = newPairingCode();
+    this.addresses = [];
+    this.justPaired = null;
     this.server = http.createServer((req, res) => this.#handle(req, res));
     this.#seed();
   }
@@ -44,6 +52,17 @@ export class Hub {
       this.server.once('error', reject);
       this.server.listen(port, host, () => resolve(this.server.address().port));
     });
+  }
+
+  /** The LAN addresses (host:port) a phone can use to reach this hub, best first. */
+  setAddresses(addresses) {
+    this.addresses = addresses;
+  }
+
+  /** What the pairing QR code holds: the hub's address and the current code. */
+  pairingLink() {
+    const host = this.addresses[0] ?? `localhost:${this.server.address()?.port ?? ''}`;
+    return pairingLink({ host, code: this.pairingCode, name: this.name });
   }
 
   /** Answer LAN broadcasts from the app's "Find my hub" button. */
@@ -163,6 +182,25 @@ export class Hub {
     if (key === 'GET /api/hub') return { app: 'orbit-hub', name: this.name, version: VERSION };
     if (key === 'POST /api/pair') return this.#pair(await this.#body(req));
 
+    // The pairing page shows the live code, so only the PC itself may open it.
+    if (url.pathname === '/pair' || url.pathname === '/pair.json') {
+      if (!LOOPBACK.has(req.socket.remoteAddress)) {
+        throw new HttpError(403, 'The pairing page only opens on the PC running the hub.');
+      }
+      if (url.pathname === '/pair') {
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+        res.end(PAIR_PAGE);
+        return undefined;
+      }
+      const recent = this.justPaired && Date.now() - this.justPaired.at < JUST_PAIRED_MS;
+      return {
+        code: this.pairingCode,
+        address: this.addresses[0] ?? `localhost:${this.server.address().port}`,
+        svg: qrSvg(this.pairingLink()),
+        justPaired: recent ? this.justPaired.name : null,
+      };
+    }
+
     const device = this.#authenticate(req);
     switch (key) {
       case 'GET /api/state':
@@ -180,6 +218,20 @@ export class Hub {
       case 'GET /api/providers/:id/models':
         if (!this.providers.has(id)) throw new HttpError(404, 'Unknown provider.');
         return { models: await this.providers.models(id) };
+      case 'PUT /api/providers/:id/key': {
+        // Keys are checked with the provider before they're saved, so a typo never replaces a working key.
+        if (!this.providers.takesKey(id)) throw new HttpError(404, "That provider doesn't use a key.");
+        const apiKey = text((await this.#body(req)).apiKey, 500);
+        if (!apiKey) throw new HttpError(400, 'Paste a key first.');
+        const check = await this.providers.checkKey(id, apiKey);
+        if (!check.ok) throw new HttpError(check.unreachable ? 502 : 400, check.message);
+        this.providers.setKey(id, apiKey);
+        return this.providers.list().find((p) => p.id === id);
+      }
+      case 'DELETE /api/providers/:id/key':
+        if (!this.providers.takesKey(id)) throw new HttpError(404, "That provider doesn't use a key.");
+        this.providers.removeKey(id);
+        return this.providers.list().find((p) => p.id === id);
 
       case 'POST /api/agents': {
         const agent = { id: crypto.randomUUID(), createdAt: Date.now(), ...this.#agentFields(await this.#body(req)) };
@@ -270,12 +322,14 @@ export class Hub {
       throw new HttpError(403, "That code didn't match. Check the one shown on your PC.");
     }
     const token = crypto.randomBytes(32).toString('base64url');
+    const deviceName = text(body.deviceName, 60) || 'Android phone';
     this.store.state.devices.push({
       id: crypto.randomUUID(),
-      name: text(body.deviceName, 60) || 'Android phone',
+      name: deviceName,
       tokenHash: hashToken(token),
       createdAt: Date.now(),
     });
+    this.justPaired = { name: deviceName, at: Date.now() };
     this.store.save();
     this.#rotatePairingCode();
     return { token, hub: { name: this.name, version: VERSION } };

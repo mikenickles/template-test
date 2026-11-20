@@ -4,16 +4,25 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { Store } from '../src/store.js';
-import { Providers } from '../src/providers.js';
+import { KeyCheck, Providers } from '../src/providers.js';
+import { qrTerminal, pairingLink } from '../src/qr.js';
+import { encodeCommand, ruleScript, ensureFirewall } from '../src/firewall.js';
+import { launcherScript } from '../src/autostart.js';
 import { Hub } from '../src/server.js';
 import { buildTranscript, findMentions } from '../src/orchestrator.js';
 
 /** Scripted stand-in for real models: replies come from `script[agent.name]`. */
 class FakeProviders extends Providers {
   constructor(script) {
-    super({}, {});
+    super({}, {}, (config) => this.saved.push(structuredClone(config)));
     this.script = script;
     this.calls = [];
+    this.saved = [];
+    /** What the provider says about a key: { ok, message, unreachable }. */
+    this.keyVerdict = { ok: true };
+  }
+  async checkKey() {
+    return new KeyCheck(this.keyVerdict.ok, this.keyVerdict.message, this.keyVerdict.unreachable);
   }
   async stream({ agent, messages, system, onDelta }) {
     this.calls.push({ agent: agent.name, messages, system });
@@ -25,13 +34,14 @@ class FakeProviders extends Providers {
   }
 }
 
-async function startHub(script = {}) {
+async function startHub(script = {}, host = '127.0.0.1') {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-hub-'));
   const store = new Store(dir);
   store.isNew = false; // skip the starter crew
   const providers = new FakeProviders(script);
   const hub = new Hub({ store, providers, name: 'Test PC' });
-  const port = await hub.listen(0, '127.0.0.1');
+  const port = await hub.listen(0, host);
+  hub.setAddresses([`192.168.1.20:${port}`]);
   const base = `http://127.0.0.1:${port}`;
   let token = '';
   const api = async (method, route, body) => {
@@ -219,4 +229,105 @@ test('buildTranscript always ends on a user turn', () => {
     { author: { type: 'agent', agentId: 'b', name: 'Pixel' }, text: '', status: 'error' },
   ]);
   assert.deepEqual(turns.map((t) => t.role), ['user', 'assistant', 'user']);
+});
+
+test('the pairing page shows the live code and QR, then who just paired', async (t) => {
+  const h = await startHub();
+  t.after(h.close);
+
+  const page = await fetch(`${h.base}/pair`);
+  assert.equal(page.status, 200);
+  assert.match(page.headers.get('content-type'), /text\/html/);
+  assert.match(await page.text(), /Pair your phone/);
+
+  const before = await (await fetch(`${h.base}/pair.json`)).json();
+  assert.equal(before.code, h.hub.pairingCode);
+  assert.match(before.address, /^192\.168\.1\.20:/);
+  assert.match(before.svg, /^<svg/);
+  assert.equal(before.justPaired, null);
+  assert.equal(h.hub.pairingLink(), pairingLink({ host: before.address, code: before.code, name: 'Test PC' }));
+
+  await h.pair();
+  const after = await (await fetch(`${h.base}/pair.json`)).json();
+  assert.notEqual(after.code, before.code, 'a used code is replaced');
+  assert.equal(after.justPaired, 'Pixel');
+});
+
+test('the pairing page refuses anyone but the PC itself', async (t) => {
+  const external = Object.values(os.networkInterfaces()).flat().find((n) => n?.family === 'IPv4' && !n.internal);
+  if (!external) return t.skip('no non-loopback address to test from');
+  const h = await startHub({}, '0.0.0.0');
+  t.after(h.close);
+  const port = h.hub.server.address().port;
+  for (const route of ['/pair', '/pair.json']) {
+    const res = await fetch(`http://${external.address}:${port}${route}`);
+    assert.equal(res.status, 403, route);
+    assert.doesNotMatch(await res.text(), new RegExp(h.hub.pairingCode));
+  }
+});
+
+test('keys can be added, checked, replaced and removed from a paired phone', async (t) => {
+  const h = await startHub();
+  t.after(h.close);
+  assert.equal((await h.api('PUT', '/api/providers/anthropic/key', { apiKey: 'sk-x' })).status, 401, 'needs pairing');
+  await h.pair();
+
+  const listed = (await h.api('GET', '/api/state')).body.providers.find((p) => p.id === 'anthropic');
+  assert.equal(listed.configured, false);
+  assert.equal(listed.takesKey, true);
+  assert.match(listed.keyUrl, /^https:\/\//);
+
+  h.providers.keyVerdict = { ok: false, message: "Anthropic didn't accept that key." };
+  const bad = await h.api('PUT', '/api/providers/anthropic/key', { apiKey: 'sk-wrong' });
+  assert.equal(bad.status, 400);
+  assert.equal(bad.body.error, "Anthropic didn't accept that key.");
+  assert.equal(h.providers.saved.length, 0, 'a rejected key is never saved');
+
+  h.providers.keyVerdict = { ok: false, message: "Your PC couldn't reach Anthropic.", unreachable: true };
+  assert.equal((await h.api('PUT', '/api/providers/anthropic/key', { apiKey: 'sk-later' })).status, 502);
+
+  h.providers.keyVerdict = { ok: true };
+  const good = await h.api('PUT', '/api/providers/anthropic/key', { apiKey: '  sk-ant-secret-1234  ' });
+  assert.equal(good.status, 200);
+  assert.equal(good.body.configured, true);
+  assert.equal(good.body.keySource, 'app');
+  assert.equal(good.body.keyHint, '…1234');
+  assert.equal(h.providers.saved.at(-1).anthropic.apiKey, 'sk-ant-secret-1234');
+  assert.ok(h.providers.isConfigured('anthropic'), 'usable immediately, no restart');
+
+  const state = JSON.stringify((await h.api('GET', '/api/state')).body);
+  assert.ok(!state.includes('sk-ant-secret'), 'keys never leave the hub');
+
+  assert.equal((await h.api('PUT', '/api/providers/demo/key', { apiKey: 'x' })).status, 404);
+  assert.equal((await h.api('PUT', '/api/providers/anthropic/key', { apiKey: '   ' })).status, 400);
+
+  const removed = await h.api('DELETE', '/api/providers/anthropic/key');
+  assert.equal(removed.body.configured, false);
+  assert.equal(h.providers.saved.at(-1).anthropic.apiKey, '');
+});
+
+test('the pairing link and QR carry the address and code', () => {
+  const link = pairingLink({ host: '192.168.86.49:8787', code: '309407', name: 'My PC' });
+  const url = new URL(link);
+  assert.equal(url.protocol, 'orbit:');
+  assert.equal(url.searchParams.get('host'), '192.168.86.49:8787');
+  assert.equal(url.searchParams.get('code'), '309407');
+  const lines = qrTerminal(link, '').split('\n');
+  assert.ok(lines.length > 10 && lines.every((l) => l.length === lines[0].length), 'a square block of characters');
+});
+
+test('the firewall script decodes to the two rules, and is skipped off Windows', async () => {
+  const script = ruleScript(8787, 8788);
+  assert.equal(Buffer.from(encodeCommand(script), 'base64').toString('utf16le'), script);
+  assert.match(script, /-Protocol TCP -LocalPort 8787/);
+  assert.match(script, /-Protocol UDP -LocalPort 8788/);
+  if (process.platform !== 'win32') {
+    assert.equal(await ensureFirewall({ port: 8787, discoveryPort: 8788, dataDir: os.tmpdir(), log: () => {} }), 'not-windows');
+  }
+});
+
+test('the sign-in launcher starts the hub minimized in the background', () => {
+  const script = launcherScript('C:\\Users\\me\\orbit\\hub');
+  assert.match(script, /start "Orbit hub" \/min ".*Start Orbit\.bat" --background/);
+  assert.ok(script.includes('\r\n'), 'Windows line endings');
 });

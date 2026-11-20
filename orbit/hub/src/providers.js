@@ -12,16 +12,25 @@ const CATALOG = [
     label: 'Anthropic',
     kind: 'anthropic',
     envKeys: ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN'],
+    keyUrl: 'https://console.anthropic.com/settings/keys',
     models: ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-fable-5-2'],
   },
-  { id: 'openai', label: 'OpenAI', kind: 'openai', baseUrl: 'https://api.openai.com/v1', envKeys: ['OPENAI_API_KEY'] },
-  { id: 'xai', label: 'xAI', kind: 'openai', baseUrl: 'https://api.x.ai/v1', envKeys: ['XAI_API_KEY'] },
+  {
+    id: 'openai',
+    label: 'OpenAI',
+    kind: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    envKeys: ['OPENAI_API_KEY'],
+    keyUrl: 'https://platform.openai.com/api-keys',
+  },
+  { id: 'xai', label: 'xAI', kind: 'openai', baseUrl: 'https://api.x.ai/v1', envKeys: ['XAI_API_KEY'], keyUrl: 'https://console.x.ai' },
   {
     id: 'gemini',
     label: 'Gemini',
     kind: 'openai',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
     envKeys: ['GEMINI_API_KEY'],
+    keyUrl: 'https://aistudio.google.com/apikey',
   },
   {
     id: 'openrouter',
@@ -29,6 +38,7 @@ const CATALOG = [
     kind: 'openai',
     baseUrl: 'https://openrouter.ai/api/v1',
     envKeys: ['OPENROUTER_API_KEY'],
+    keyUrl: 'https://openrouter.ai/keys',
   },
   { id: 'ollama', label: 'Ollama (local)', kind: 'openai', baseUrl: 'http://localhost:11434/v1', keyless: true },
   { id: 'demo', label: 'Demo', kind: 'demo', keyless: true, models: ['demo'] },
@@ -38,14 +48,30 @@ export class ProviderError extends Error {
   name = 'ProviderError';
 }
 
+/** What checking a key found. `unreachable` means the provider couldn't be asked, not that the key is bad. */
+export class KeyCheck {
+  constructor(ok, message = '', unreachable = false) {
+    this.ok = ok;
+    this.message = message;
+    this.unreachable = unreachable;
+  }
+}
+
 export class Providers {
-  /** @param {Record<string, {apiKey?: string, baseUrl?: string, label?: string}>} config */
-  constructor(config = {}, env = process.env) {
+  /**
+   * @param {Record<string, {apiKey?: string, baseUrl?: string, label?: string}>} config  The `providers`
+   *   section of config.json. Keys set from the app are written back into it.
+   * @param {(config: object) => void} onChange  Called after a key changes, to persist the config.
+   */
+  constructor(config = {}, env = process.env, onChange = () => {}) {
+    this.config = config;
+    this.env = env;
+    this.onChange = onChange;
     this.defs = new Map();
     for (const def of CATALOG) {
       const own = config[def.id] ?? {};
-      const apiKey = own.apiKey || def.envKeys?.map((k) => env[k]).find(Boolean) || '';
-      this.defs.set(def.id, { ...def, baseUrl: own.baseUrl || def.baseUrl, apiKey, configKey: own.apiKey || '' });
+      this.defs.set(def.id, { ...def, baseUrl: own.baseUrl || def.baseUrl, configKey: own.apiKey || '' });
+      this.#resolveKey(def.id);
     }
     for (const [id, own] of Object.entries(config)) {
       if (this.defs.has(id) || !own?.baseUrl) continue;
@@ -55,19 +81,81 @@ export class Providers {
         kind: 'openai',
         baseUrl: own.baseUrl,
         apiKey: own.apiKey || '',
+        configKey: own.apiKey || '',
         keyless: !own.apiKey,
       });
     }
   }
 
-  /** Public description of each provider. Never includes keys. */
+  /** A key saved in config.json wins; otherwise one from the environment. */
+  #resolveKey(id) {
+    const d = this.defs.get(id);
+    d.apiKey = d.configKey || d.envKeys?.map((k) => this.env[k]).find(Boolean) || '';
+  }
+
+  /** Public description of each provider. Never includes keys, only where a key came from. */
   list() {
     return [...this.defs.values()].map((d) => ({
       id: d.id,
       label: d.label,
       configured: Boolean(d.keyless || d.apiKey),
       models: d.models ?? [],
+      // Whether a key can be added from the app, where to get one, and where the current one came from.
+      takesKey: !d.keyless && d.kind !== 'demo',
+      keyUrl: d.keyUrl ?? null,
+      keySource: d.configKey ? 'app' : d.apiKey ? 'environment' : null,
+      keyHint: d.configKey ? `…${d.configKey.slice(-4)}` : null,
     }));
+  }
+
+  takesKey(id) {
+    const d = this.defs.get(id);
+    return Boolean(d && !d.keyless && d.kind !== 'demo');
+  }
+
+  /** Asks the provider whether [apiKey] works, without saving it. */
+  async checkKey(id, apiKey) {
+    const def = this.defs.get(id);
+    if (!def) return new KeyCheck(false, `Unknown provider "${id}".`);
+    try {
+      if (def.kind === 'anthropic') {
+        await new Anthropic({ apiKey, maxRetries: 0, timeout: 10_000 }).models.list({ limit: 1 });
+        return new KeyCheck(true);
+      }
+      const res = await fetch(`${def.baseUrl}/models`, {
+        headers: { authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (res.ok) return new KeyCheck(true);
+      if (res.status === 401 || res.status === 403) return new KeyCheck(false, `${def.label} didn't accept that key.`);
+      return new KeyCheck(false, `${def.label} answered with an error (${res.status}). Try again in a moment.`, true);
+    } catch (err) {
+      if (err instanceof Anthropic.AuthenticationError || err instanceof Anthropic.PermissionDeniedError) {
+        return new KeyCheck(false, `${def.label} didn't accept that key.`);
+      }
+      if (err instanceof Anthropic.APIError && err.status) {
+        return new KeyCheck(false, `${def.label} answered with an error (${err.status}). Try again in a moment.`, true);
+      }
+      return new KeyCheck(false, `Your PC couldn't reach ${def.label} to check the key. Check its internet connection.`, true);
+    }
+  }
+
+  /** Saves a key for a provider and starts using it immediately. */
+  setKey(id, apiKey) {
+    const d = this.defs.get(id);
+    d.configKey = apiKey;
+    this.config[id] = { ...(this.config[id] ?? {}), apiKey };
+    this.#resolveKey(id);
+    this.onChange(this.config);
+  }
+
+  /** Forgets a key saved from the app. A key from the environment, if any, takes over again. */
+  removeKey(id) {
+    const d = this.defs.get(id);
+    d.configKey = '';
+    if (this.config[id]) this.config[id] = { ...this.config[id], apiKey: '' };
+    this.#resolveKey(id);
+    this.onChange(this.config);
   }
 
   has(id) {
