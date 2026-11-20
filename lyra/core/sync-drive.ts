@@ -55,7 +55,8 @@ export class DriveSyncRemote implements SyncRemote {
     });
     const r = (await (await this.call(`${API}?${q}`)).json()) as { files: DriveFile[] };
     return r.files
-      .filter((f) => f.appProperties?.rev)
+      // (0.57.1) a file tagged with another app (Cove, a copy of Lyra that can share this folder) isn't Lyra's
+      .filter((f) => f.appProperties?.rev && !f.appProperties.app)
       .map((f) => ({
         id: f.id,
         rev: Number(f.appProperties!.rev),
@@ -74,7 +75,7 @@ export class DriveSyncRemote implements SyncRemote {
       pageSize: "20",
       q: `trashed = false and appProperties has { key='${key}' and value='1' }`,
     });
-    return ((await (await this.call(`${API}?${q}`)).json()) as { files: DriveFile[] }).files;
+    return ((await (await this.call(`${API}?${q}`)).json()) as { files: DriveFile[] }).files.filter((f) => !f.appProperties?.app);
   }
 
   private async homeFile(): Promise<DriveFile | undefined> {
