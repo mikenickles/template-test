@@ -211,7 +211,7 @@ function LocalPanel({ provider: p, model, setModel, error, onPull, onDismiss }) 
   </div>`;
 }
 
-export function Settings({ state, notify, refresh, onClose }) {
+export function Settings({ state, notify, refresh, onClose, onIntro }) {
   const [open, setOpen] = useState(null);
   const [key, setKey] = useState('');
   const [checking, setChecking] = useState(false);
@@ -219,6 +219,11 @@ export function Settings({ state, notify, refresh, onClose }) {
   const [usage, setUsage] = useState(null);
   const [canPick, setCanPick] = useState(false);
   const [path, setPath] = useState('');
+  const profile = state.profile ?? { name: '', notes: [] };
+  const [name, setName] = useState(profile.name);
+  const [fact, setFact] = useState('');
+  const byName = Object.fromEntries(state.agents.map((a) => [a.name, a]));
+  const aboutYou = (work) => work().then(refresh).catch((e) => notify(e.message));
 
   // While a local runtime's panel is open, keep its status fresh: quickly during a download.
   const local = state.providers.find((p) => p.id === open && p.local);
@@ -271,6 +276,25 @@ export function Settings({ state, notify, refresh, onClose }) {
     </div>
     ${state.hub.remote?.length > 0 && html`<div class="row"><span class="muted" style="flex:1">Away from home</span><span class="mono faint">${state.hub.remote[0]}</span></div>`}
     <div class="row"><span class="muted" style="flex:1">Version</span><span class="mono">${state.hub.version}</span></div></div>
+
+    <div class="section-title">About you</div>
+    <div class="card">
+      <form class="row" onSubmit=${(e) => { e.preventDefault(); aboutYou(() => api.setProfileName(name.trim())); }}>
+        <input class="field" style="flex:1" placeholder="What should your crew call you?" maxlength="40" value=${name} onInput=${(e) => setName(e.currentTarget.value)} aria-label="Your name" />
+        ${name.trim() !== profile.name && html`<button class="button">Save</button>`}
+      </form>
+      ${profile.notes.map((n) => html`<div class="about-note">
+        <div style="flex:1"><div>${n.text}</div>
+          <div class="who caption faint">${byName[n.source] && html`<${Avatar} spec=${byName[n.source].avatar} size=${16} />`}${n.source === 'you' ? 'Added by you' : `Learned by ${n.source}`}</div></div>
+        <button class="icon-button" aria-label=${`Forget "${n.text}"`} title="Forget" onClick=${() => aboutYou(() => api.removeProfileNote(n.id))}><${Icon} name="close" /></button>
+      </div>`)}
+      <form class="row" style="border-top:1px solid var(--hairline)" onSubmit=${(e) => { e.preventDefault(); if (fact.trim()) aboutYou(async () => { await api.addProfileNote(fact.trim()); setFact(''); }); }}>
+        <input class="field" style="flex:1" placeholder="Add something about you" maxlength="300" value=${fact} onInput=${(e) => setFact(e.currentTarget.value)} />
+        <button class="button" disabled=${!fact.trim()}>Add</button>
+      </form>
+    </div>
+    <p class="note">Every agent in your crew knows this, in every room, and they add to it as they learn about you.
+      ${state.providers.some((p) => p.abilities && p.configured) && html` <button class="label" onClick=${onIntro}>Chat with your guide</button>`}</p>
 
     <div class="section-title">Model providers</div>
     <div class="card">${state.providers.map((p) => html`<div>

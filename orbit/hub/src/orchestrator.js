@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { kindOf } from './files.js';
 import { runMemoryTool } from './memory.js';
+import { CrewError, createCrew, introPrompt } from './intro.js';
 import { addUsage, emptyUsage } from './usage.js';
 
 /** Upper bound on agent replies per user message, so @mention chains can't loop forever. */
@@ -39,25 +40,27 @@ export const ABILITIES = ['web', 'code', 'files', 'memory'];
  * What an agent can do on this turn. Abilities only work with providers that support them; elsewhere
  * the agent runs without them, and its prompt doesn't mention them.
  */
-export function resolveAbilities(agent, providers, folders, save = () => {}) {
+export function resolveAbilities(agent, providers, folders, save = () => {}, { profile = null, force = [] } = {}) {
   if (!providers.supportsAbilities?.(agent.provider)) return null;
-  const on = new Set(agent.abilities ?? []);
+  const on = new Set([...(agent.abilities ?? []), ...force]);
   if (!on.size) return null;
   return {
     web: on.has('web'),
     code: on.has('code'),
     files: on.has('files'),
     folders: on.has('files') ? folders : null,
-    // The agent keeps its own notes: "remember" and "forget".
-    memory: on.has('memory') ? { run: (name, input) => runMemoryTool(agent, name, input, save) } : null,
+    // Notes about the user that the whole crew shares, and the agent's own: "remember", "forget" and friends.
+    memory: on.has('memory') ? { run: (name, input) => runMemoryTool(agent, name, input, save, profile) } : null,
   };
 }
 
-export function buildSystemPrompt(agent, room, agents, abilities = null) {
+export function buildSystemPrompt(agent, room, agents, abilities = null, profile = null) {
   const teammates = agents.filter((a) => a.id !== agent.id);
   const isLead = room.mode === 'lead' && (room.leadId === agent.id || (!room.leadId && agents[0]?.id === agent.id));
   const lines = [
-    `You are ${agent.name}${agent.role ? `, ${agent.role}` : ''}. You are one of several AI agents working with a user in a group chat called "${room.name}".`,
+    teammates.length || !room.intro
+      ? `You are ${agent.name}${agent.role ? `, ${agent.role}` : ''}. You are one of several AI agents working with a user in a group chat called "${room.name}".`
+      : `You are ${agent.name}${agent.role ? `, ${agent.role}` : ''}, one of the user's AI agents in Orbit.`,
   ];
   if (agent.instructions?.trim()) lines.push('', agent.instructions.trim());
   if (teammates.length) {
@@ -80,8 +83,13 @@ export function buildSystemPrompt(agent, room, agents, abilities = null) {
       '- You lead this chat. Decide what the request needs, delegate parts to teammates with @mentions, and once they have replied give the user one combined answer.',
     );
   }
+  if (profile?.name || profile?.notes?.length) {
+    lines.push('', "About the user, as your whole crew knows them (use it where it helps; don't recite it):");
+    if (profile.name) lines.push(`- They like to be called ${profile.name}.`);
+    for (const note of profile.notes ?? []) lines.push(`- ${note.text}`);
+  }
   if (agent.memory?.length) {
-    lines.push('', "What you remember from earlier conversations with the user (use it where it helps; don't recite it):");
+    lines.push('', "Your own notes from earlier conversations (use them where they help; don't recite them):");
     for (const note of agent.memory) lines.push(`- ${note.text}`);
   }
   if (abilities) {
@@ -100,10 +108,11 @@ export function buildSystemPrompt(agent, room, agents, abilities = null) {
     }
     if (abilities.memory) {
       lines.push(
-        '- Keep notes for future chats with the remember tool: preferences, facts about the user, decisions, ongoing work. Save only what they would want kept, and use forget when they ask you to drop something or it stops being true.',
+        '- Remember things for future chats. Facts about the user (who they are, what they like, their plans) go in remember_about_user, which the whole crew shares. Notes about your own work with them (decisions, ongoing projects) go in remember. Save only what they would want kept, and forget things when they ask or they stop being true.',
       );
     }
   }
+  if (room.intro && !teammates.length) lines.push(introPrompt(profile));
   return lines.join('\n');
 }
 
@@ -207,6 +216,8 @@ export function buildTranscript(agent, messages, { summary = null, omitted = fal
   }
   // Conversations must open with a user turn.
   if (turns[0]?.role === 'assistant') turns.unshift({ role: 'user', content: '[The chat continues.]' });
+  // An agent opening a chat nobody has written in yet, like the intro, starts from this.
+  if (!turns.length) turns.push({ role: 'user', content: '[System]: The user just opened this chat. Say hello.' });
   return turns;
 }
 
@@ -245,6 +256,11 @@ export class Orchestrator {
       this.#start(roomId, (room, agents) => initialSpeakers(room, agents, text));
     }
     return message;
+  }
+
+  /** Has one agent open a room, speaking first. False if the room is busy. */
+  greet(roomId, agentId) {
+    return this.retry(roomId, agentId);
   }
 
   /** Has one agent answer again, as the next to speak. False if the room is busy. */
@@ -424,12 +440,30 @@ export class Orchestrator {
     );
     run.speaking = agent.id;
     this.emit(room.id, 'run', this.runState(room.id));
-    const abilities = resolveAbilities(agent, this.providers, this.folders, () => this.store.save());
+    const profile = this.store.state.profile;
+    // In the intro, the guide always gets the shared memory, and can create the crew it suggests.
+    const intro = room.intro && agents.length === 1;
+    const abilities = resolveAbilities(agent, this.providers, this.folders, () => this.store.save(), { profile, force: intro ? ['memory'] : [] });
+    if (abilities && intro) {
+      abilities.crew = {
+        run: (input) => {
+          try {
+            const { room: made, agents: crew } = createCrew(this.store, agent, input);
+            message.crew = { roomId: made.id, name: made.name, agentIds: made.agentIds };
+            this.store.save();
+            return { text: `Created the room "${made.name}" with ${crew.map((a) => a.name).join(', ')} and you.`, isError: false };
+          } catch (err) {
+            if (err instanceof CrewError) return { text: err.message, isError: true };
+            throw err;
+          }
+        },
+      };
+    }
     try {
       const text = await this.providers.stream({
         provider: agent.provider,
         model: agent.model,
-        system: buildSystemPrompt(agent, room, agents, abilities),
+        system: buildSystemPrompt(agent, room, agents, abilities, profile),
         messages: transcript,
         signal: run.abort.signal,
         agent,

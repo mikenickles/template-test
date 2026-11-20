@@ -375,3 +375,47 @@ main { min-width: 0; min-height: 0; display: flex; flex-direction: column; backg
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .shimmer { color: var(--text-3); background: none; }
 }
+
+/* ---------- Home and the intro ---------- */
+.home { width: 100%; max-width: 760px; margin: 0 auto; padding: 56px 32px 48px; overflow-y: auto; }
+.home .display { font-size: 34px; line-height: 40px; font-weight: 600; letter-spacing: -0.03em; margin: 0; }
+.home-sub { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; }
+.intro-card { position: relative; margin-top: 28px; padding: 24px; border-radius: var(--r-xl); border: var(--edge); background: var(--surface); overflow: hidden; }
+.intro-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, color-mix(in srgb, var(--wash) 28%, transparent), transparent 70%); pointer-events: none; }
+.intro-card > * { position: relative; }
+.intro-head { display: flex; align-items: center; gap: 16px; }
+.intro-card p { margin: 16px 0 20px; }
+.intro-mini { margin: 6px 4px 4px; width: calc(100% - 8px); gap: 12px; position: relative; overflow: hidden; }
+.intro-mini::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, color-mix(in srgb, var(--wash) 24%, transparent), transparent); pointer-events: none; }
+.intro-mini > * { position: relative; }
+.stage-title { display: flex; align-items: center; justify-content: space-between; margin: 40px 0 8px; }
+.stage { display: flex; flex-wrap: wrap; gap: 6px; }
+.stage-member { width: 112px; padding: 12px 6px; border-radius: var(--r-m); display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; transition: background 0.15s, transform 0.12s; }
+.stage-member:hover { background: var(--raised); }
+.stage-member:active { transform: scale(0.96); }
+.stage-member .avatar { margin-bottom: 8px; transition: transform 0.25s cubic-bezier(.34,1.56,.64,1); }
+.stage-member:hover .avatar { transform: translateY(-4px); }
+.stage-member .pool { position: absolute; top: 74px; left: 50%; width: 72px; height: 14px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--pool) 55%, transparent), transparent); }
+.stage-member .caption { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stage-member.add .plus { width: 72px; height: 72px; margin-bottom: 8px; border-radius: 50%; border: 1.5px dashed var(--line); display: grid; place-items: center; color: var(--text-2); }
+.room-wash { position: absolute; left: 0; right: 0; top: 0; height: 280px; pointer-events: none; background: var(--wash); opacity: 0.16; -webkit-mask-image: linear-gradient(#000, transparent); mask-image: linear-gradient(#000, transparent); }
+main { position: relative; }
+main > header, main > .messages, main > .composer-wrap { position: relative; }
+.crew-ready { display: flex; align-items: center; gap: 14px; width: calc(100% - 48px); margin: 14px 0 0 48px; padding: 14px; text-align: left; border-radius: var(--r-l); border: var(--edge); background: var(--surface); position: relative; overflow: hidden; transition: transform 0.12s; animation: pop 0.45s cubic-bezier(.34,1.56,.64,1); }
+.crew-ready::before { content: ''; position: absolute; inset: 0; background: var(--wash); opacity: 0.26; pointer-events: none; }
+.crew-ready > * { position: relative; }
+.crew-ready:active { transform: scale(0.98); }
+.crew-ready .text { flex: 1; min-width: 0; }
+.about-note { display: flex; align-items: center; gap: 10px; padding: 12px 8px 12px 18px; border-top: 1px solid var(--hairline); }
+.about-note:first-child { border-top: 0; }
+.about-note .who { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+@media (prefers-color-scheme: light) { .room-wash { opacity: 0.2; } }
+
+.room-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.room-card { display: flex; align-items: center; gap: 14px; padding: 14px; text-align: left; border-radius: var(--r-l); border: var(--edge); background: var(--surface); position: relative; overflow: hidden; transition: transform 0.12s, border-color 0.15s; }
+.room-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, color-mix(in srgb, var(--wash) 18%, transparent), transparent 60%); pointer-events: none; }
+.room-card > * { position: relative; }
+.room-card:hover { border-color: var(--line); }
+.room-card:active { transform: scale(0.98); }
+.room-card .text { min-width: 0; flex: 1; }
+.room-card .body-s { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }

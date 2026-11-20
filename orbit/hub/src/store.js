@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const EMPTY = { agents: [], rooms: [], messages: {}, devices: [] };
+const EMPTY = { agents: [], rooms: [], messages: {}, devices: [], profile: { name: '', notes: [] } };
 
 /** JSON-file persistence for the hub. One file, written atomically, debounced. */
 export class Store {

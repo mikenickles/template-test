@@ -23,9 +23,17 @@ hub on an always-on PC.
 - **Share to Orbit** from any app's share menu: a link, some text, photos or
   PDFs. Pick a room and it opens with them ready to send, so you can add a
   question first.
-- **Memory.** Each agent keeps notes that it carries into every room. Add them
-  in the agent's editor, or, for Claude agents with "Remember things" on, just
-  say "remember that…" and the agent saves it itself.
+- **Getting to know you.** Orbit starts with one agent, your guide, in a chat
+  of its own. It asks a few questions about you, then suggests a crew of two or
+  three agents shaped around what you need and, once you agree, creates them and
+  a room to work in. (Needs an Anthropic key; you can reopen the chat from
+  **Settings, About you**.)
+- **Memory.** What your crew knows about you (your name, what you do, how you
+  like answers) is shared: every agent sees it in every room, and Claude agents
+  add to it as they learn. See and edit it in **Settings, About you**. Each agent
+  also keeps its own notes about its work with you. Add them in the agent's
+  editor, or, for Claude agents with "Remember things" on, just say "remember
+  that…" and the agent saves it itself.
 - **Scheduled tasks.** From a room's menu, have the crew run something at a set
   time on chosen days ("Weekdays at 08:15: give me a two-line status"). The hub
   posts it on the PC's clock; the result reaches your phone as a notification,

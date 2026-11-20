@@ -23,7 +23,7 @@ class HubRouteTest {
         createContext("/") { exchange ->
             hits += "${exchange.requestMethod} ${exchange.requestURI.path}"
             val body = when (exchange.requestURI.path) {
-                "/api/hub" -> """{"app":"orbit-hub","name":"Mike's PC","version":"0.1.0"}"""
+                "/api/hub" -> """{"app":"orbit-hub","name":"Home PC","version":"0.1.0"}"""
                 "/api/rooms/r1/messages" -> """{"id":"m1","text":"hello"}"""
                 else -> "{}"
             }.toByteArray()
@@ -45,7 +45,7 @@ class HubRouteTest {
         val switched = mutableListOf<String>()
         val route = HubRoute(dead, listOf(live)) { switched += it }
         val client = HubClient(route, "token")
-        assertEquals("Mike's PC", client.info().name)
+        assertEquals("Home PC", client.info().name)
         assertEquals(live, route.current)
         assertEquals(listOf(live), switched)
         assertEquals(listOf(live, dead), route.order())

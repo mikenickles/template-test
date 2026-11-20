@@ -9,6 +9,7 @@ import dev.orbit.app.data.FoundHub
 import dev.orbit.app.data.HubClient
 import dev.orbit.app.data.HubException
 import dev.orbit.app.data.HubInfo
+import dev.orbit.app.data.Profile
 import dev.orbit.app.data.Provider
 import dev.orbit.app.data.Room
 import dev.orbit.app.data.Schedule
@@ -46,8 +47,15 @@ data class AppState(
     val providers: List<Provider> = emptyList(),
     val folders: List<SharedFolder> = emptyList(),
     val schedules: List<Schedule> = emptyList(),
+    val profile: Profile = Profile(),
 ) {
     fun agent(id: String?) = agents.firstOrNull { it.id == id }
+
+    /** Whether the hub has a Claude key, which the getting-to-know-you chat needs. */
+    val canIntro: Boolean get() = providers.any { it.abilities && it.configured }
+
+    /** The getting-to-know-you chat, if it has been started. */
+    val introRoom: Room? get() = rooms.firstOrNull { it.intro }
     fun room(id: String?) = rooms.firstOrNull { it.id == id }
 }
 
@@ -104,6 +112,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { reload() }
     }
 
+    /** Reloads from the hub, then runs [onDone], e.g. to open a room the hub just created. */
+    fun refreshThen(onDone: () -> Unit) {
+        viewModelScope.launch {
+            reload()
+            onDone()
+        }
+    }
+
     private suspend fun reload() {
         _state.update { it.copy(refreshing = true) }
         val fresh = hub(quiet = true) { it.state() }
@@ -122,6 +138,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     providers = fresh.providers,
                     folders = fresh.folders,
                     schedules = fresh.schedules,
+                    profile = fresh.profile,
                 )
             }
         }
@@ -242,6 +259,37 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 onDone(e.message ?: "The key couldn't be saved.")
             }
         }
+    }
+
+    /** Opens the getting-to-know-you chat, starting it if needed. [onReady] gets its room id, or null. */
+    fun startIntro(onReady: (roomId: String?, error: String?) -> Unit) {
+        viewModelScope.launch {
+            val client = repo.client ?: return@launch onReady(null, "This phone isn't paired with a hub.")
+            try {
+                val room = client.startIntro()
+                _state.update { s -> s.copy(rooms = listOf(room) + s.rooms.filterNot { it.id == room.id }) }
+                onReady(room.id, null)
+            } catch (e: HubException) {
+                if (e.status == 401) repo.unpair(notifyHub = false)
+                onReady(null, e.message ?: "The chat couldn't start.")
+            }
+        }
+    }
+
+    fun addProfileNote(text: String, onDone: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val profile = hub { it.addProfileNote(text) }
+            profile?.let { p -> _state.update { it.copy(profile = p) } }
+            onDone(profile != null)
+        }
+    }
+
+    fun removeProfileNote(id: String) {
+        viewModelScope.launch { hub { it.removeProfileNote(id) }?.let { p -> _state.update { it.copy(profile = p) } } }
+    }
+
+    fun setProfileName(name: String) {
+        viewModelScope.launch { hub { it.setProfileName(name) }?.let { p -> _state.update { it.copy(profile = p) } } }
     }
 
     /** Asks the PC's local runtime to download [model]. [onDone] gets an error to show, or null. */

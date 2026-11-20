@@ -50,7 +50,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
@@ -78,6 +81,7 @@ import dev.orbit.app.ui.components.lift
 import dev.orbit.app.ui.components.surfaceBorder
 import dev.orbit.app.ui.components.tap
 import dev.orbit.app.ui.components.textColor
+import dev.orbit.app.ui.components.tint
 import dev.orbit.app.ui.shared
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitDimens
@@ -91,8 +95,8 @@ import java.util.Date
 import java.util.Locale
 
 private val RoomTile = 56.dp
-private val CrewItem = 76.dp
-private val CrewAvatar = 60.dp
+private val CrewItem = 80.dp
+private val CrewAvatar = 64.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,6 +110,7 @@ fun HomeScreen(
     onRefresh: () -> Unit,
     now: Long = System.currentTimeMillis(),
     onAddKey: () -> Unit = {},
+    onStartIntro: () -> Unit = {},
 ) {
     val c = Orbit.colors
     val list = rememberLazyListState()
@@ -137,6 +142,7 @@ fun HomeScreen(
         ) {
             LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(bottom = 112.dp)) {
                 item(key = "header") { Header(state, onSettings) }
+                item(key = "greeting") { Greeting(state, now, Modifier.entrance(entrances, "greeting", 0)) }
                 item(key = "offline") {
                     AnimatedVisibility(state.offline, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
                         OfflineNotice(onRefresh)
@@ -149,13 +155,18 @@ fun HomeScreen(
                     return@LazyColumn
                 }
 
+                // Until the crew knows the user, the guide offers to get to know them.
+                val showIntro = state.profile.notes.isEmpty() && state.providers.isNotEmpty()
+                if (showIntro) {
+                    item(key = "intro") { IntroCard(state, onStartIntro, onAddKey, Modifier.entrance(entrances, "intro", 0)) }
+                }
                 // Until a provider has a key, agents can only give demo replies; say so once, gently.
                 val needsKey = state.providers.none { it.takesKey && it.configured }
-                if (needsKey && state.providers.isNotEmpty()) {
+                if (needsKey && state.providers.isNotEmpty() && !showIntro) {
                     item(key = "add-key") { AddKeyNotice(onAddKey, Modifier.entrance(entrances, "add-key", 0)) }
                 }
 
-                item(key = "crew-title") {
+                if (state.agents.isNotEmpty() || !showIntro) item(key = "crew-title") {
                     SectionTitle(
                         "Crew",
                         Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter - 10.dp, top = OrbitDimens.section, bottom = 6.dp)
@@ -171,7 +182,7 @@ fun HomeScreen(
                         }
                     }
                 }
-                item(key = "crew") {
+                if (state.agents.isNotEmpty()) item(key = "crew") {
                     // Items are wider than the avatars; the row's inset keeps the first avatar on the gutter.
                     LazyRow(
                         Modifier.entrance(entrances, "crew", 1),
@@ -181,7 +192,7 @@ fun HomeScreen(
                     }
                 }
 
-                item(key = "rooms-title") {
+                if (state.rooms.isNotEmpty() || !showIntro) item(key = "rooms-title") {
                     SectionTitle(
                         "Rooms",
                         Modifier.padding(horizontal = OrbitDimens.gutter).padding(top = OrbitDimens.section, bottom = 2.dp)
@@ -189,7 +200,7 @@ fun HomeScreen(
                         count = state.rooms.size,
                     )
                 }
-                if (state.rooms.isEmpty()) {
+                if (state.rooms.isEmpty() && !showIntro) {
                     item(key = "rooms-empty") {
                         EmptyRooms(state.agents, Modifier.entrance(entrances, "rooms-empty", 3), onNewRoom = onNewRoom, onNewAgent = onNewAgent)
                     }
@@ -253,6 +264,116 @@ private fun Header(state: AppState, onSettings: () -> Unit) {
     }
 }
 
+/** "Good evening, Mike", and what the crew is up to. */
+@Composable
+private fun Greeting(state: AppState, now: Long, modifier: Modifier) {
+    val c = Orbit.colors
+    val hour = java.util.Calendar.getInstance().apply { timeInMillis = now }.get(java.util.Calendar.HOUR_OF_DAY)
+    val part = when (hour) {
+        in 5..11 -> "Good morning"
+        in 12..17 -> "Good afternoon"
+        else -> "Good evening"
+    }
+    val busy = state.rooms.firstOrNull { it.active }
+    val speaker = state.agent(busy?.speaking)
+    Column(modifier.fillMaxWidth().padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 26.dp)) {
+        Text(
+            if (state.profile.name.isNotBlank()) "$part, ${state.profile.name}" else part,
+            style = OrbitType.display,
+            color = c.text,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (busy != null) {
+                StatusDot(speaker?.avatar?.textColor() ?: c.live, Modifier.padding(end = 8.dp), size = 7.dp)
+                ShimmerText(
+                    if (speaker != null) "${speaker.name} is replying in ${busy.name}" else "Your crew is working in ${busy.name}",
+                    OrbitType.bodyM,
+                    c.textSecondary,
+                )
+            } else {
+                Text(
+                    when {
+                        !state.loaded -> "Checking in with your hub"
+                        state.agents.isEmpty() -> "Let's set up your crew"
+                        state.agents.size == 1 -> "${state.agents[0].name} is here when you need them"
+                        else -> "Your crew of ${state.agents.size} is ready"
+                    },
+                    style = OrbitType.bodyM,
+                    color = c.textSecondary,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The guide's invitation to get to know each other, washed in the guide's color. Without a Claude
+ * key it asks for one first.
+ */
+@Composable
+private fun IntroCard(state: AppState, onStart: () -> Unit, onAddKey: () -> Unit, modifier: Modifier) {
+    val c = Orbit.colors
+    val room = state.introRoom
+    val guide = state.agent(room?.agentIds?.firstOrNull())
+        ?: state.agents.firstOrNull { agent -> state.providers.any { it.id == agent.provider && it.abilities && it.configured } }
+    val look = guide?.avatar ?: dev.orbit.app.data.AvatarSpec(9)
+    val name = guide?.name ?: "Nova"
+    val shape = RoundedCornerShape(OrbitDimens.radiusXL)
+    val wash = look.tint().copy(alpha = if (c.isDark) 0.26f else 0.3f)
+    Box(
+        modifier
+            .padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 22.dp)
+            .fillMaxWidth()
+            .lift(shape)
+            .clip(shape)
+            .background(c.surface)
+            .background(Brush.linearGradient(listOf(wash, Color.Transparent), start = Offset.Zero, end = Offset(900f, 700f)))
+            .border(surfaceBorder(), shape),
+    ) {
+        Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AgentAvatar(look, size = 76.dp, alive = true)
+                Column(Modifier.padding(start = 14.dp).weight(1f)) {
+                    Text(
+                        when {
+                            !state.canIntro -> "Meet your guide"
+                            room != null -> "Pick up where you left off"
+                            else -> "Hi! I'm $name"
+                        },
+                        style = OrbitType.titleL,
+                        color = c.text,
+                    )
+                    Text(
+                        if (state.canIntro) "Let's get to know each other" else "Your crew starts here",
+                        Modifier.padding(top = 2.dp),
+                        style = OrbitType.bodyM,
+                        color = look.textColor(),
+                    )
+                }
+            }
+            Text(
+                if (state.canIntro) {
+                    "A quick chat about you, what you're into and what you'd like help with. Everything I learn, your " +
+                        "whole crew will know, and then I'll build a crew just for you."
+                } else {
+                    "Add an Anthropic key and your guide will get to know you, then build a crew around what you need."
+                },
+                Modifier.padding(top = 16.dp),
+                style = OrbitType.bodyM,
+                color = c.textSecondary,
+            )
+            Spacer(Modifier.height(18.dp))
+            if (state.canIntro) {
+                PrimaryButton(if (room != null) "Continue the chat" else "Say hello", onStart)
+            } else {
+                PrimaryButton("Add a key", onAddKey)
+            }
+        }
+    }
+}
+
 @Composable
 private fun OfflineNotice(onRetry: () -> Unit) {
     val c = Orbit.colors
@@ -305,7 +426,17 @@ private fun CrewMember(agent: Agent, onClick: () -> Unit) {
         Modifier.width(CrewItem).tap(RoundedCornerShape(OrbitDimens.radiusM), 0.94f, onClick).padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        AgentAvatar(agent.avatar, Modifier.shared(SharedKeys.agentAvatar(agent.id)), size = CrewAvatar, alive = true)
+        Box(contentAlignment = Alignment.BottomCenter) {
+            // Each character stands on a soft pool of its own color.
+            val floor = agent.avatar.tint()
+            Box(
+                Modifier
+                    .size(width = CrewAvatar, height = 18.dp)
+                    .graphicsLayer { scaleY = 0.55f }
+                    .background(Brush.radialGradient(listOf(floor.copy(alpha = if (c.isDark) 0.55f else 0.5f), floor.copy(alpha = 0f))), CircleShape),
+            )
+            AgentAvatar(agent.avatar, Modifier.padding(bottom = 5.dp).shared(SharedKeys.agentAvatar(agent.id)), size = CrewAvatar, alive = true)
+        }
         Text(
             agent.name,
             Modifier.padding(top = 10.dp, start = 4.dp, end = 4.dp),
@@ -338,6 +469,8 @@ private fun RoomRow(room: Room, agents: List<Agent>, now: Long, onClick: () -> U
         CrewTile(
             agents.map { it.avatar },
             size = RoomTile,
+            // The tile takes a hint of its first member's color.
+            color = agents.firstOrNull()?.avatar?.tint()?.copy(alpha = if (c.isDark) 0.2f else 0.24f)?.compositeOver(c.surfaceRaised) ?: c.surfaceRaised,
             itemModifier = { index -> Modifier.shared(SharedKeys.roomMember(room.id, agents[index].id)) },
         )
         Column(Modifier.weight(1f).padding(start = 14.dp)) {

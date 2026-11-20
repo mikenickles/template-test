@@ -32,6 +32,7 @@ import dev.orbit.app.ui.components.OrbitIcon
 import dev.orbit.app.ui.components.FormerAgentAvatar
 import dev.orbit.app.ui.components.SheetAction
 import dev.orbit.app.ui.screens.AgentEditorScreen
+import dev.orbit.app.ui.screens.AboutYouScreen
 import dev.orbit.app.ui.screens.HomeScreen
 import dev.orbit.app.ui.screens.LocalModelsScreen
 import dev.orbit.app.ui.screens.PairScreen
@@ -112,10 +113,24 @@ class ScreenshotTest {
 
     @Test fun avatars() = shot("avatars") { AvatarSheet() }
     @Test fun avatarsLight() = shot("avatars-light", dark = false) { AvatarSheet() }
-    @Test fun pair() = shot("pair") { PairScreen(PairState(found = listOf(FoundHub("Mike's PC", "192.168.1.20:8787"))), {}, { _, _ -> }) }
+    @Test fun pair() = shot("pair") { PairScreen(PairState(found = listOf(FoundHub("Home PC", "192.168.1.20:8787"))), {}, { _, _ -> }) }
     @Test fun pairLight() = shot("pair-light", dark = false) { PairScreen(PairState(error = "That code didn't match. Check the one shown on your PC."), {}, { _, _ -> }) }
     @Test fun home() = shot("home") { Home() }
     @Test fun homeLight() = shot("home-light", dark = false) { Home() }
+    @Test fun homeIntro() = shot("home-intro") { Home(SampleData.newcomer) }
+    @Test fun homeIntroLight() = shot("home-intro-light", dark = false) { Home(SampleData.newcomer) }
+    @Test fun homeIntroNoKey() = shot("home-intro-no-key") {
+        Home(SampleData.newcomer.copy(providers = SampleData.providers.map { if (it.takesKey) it.copy(configured = false, keySource = null, keyHint = null) else it }))
+    }
+    @Test fun introChat() = shot("intro-chat") {
+        RoomScreen(SampleData.introRoom, listOf(nova), SampleData.intro, {}, {}, {}, {}, {}, everyone = agents)
+    }
+    @Test fun introChatLight() = shot("intro-chat-light", dark = false) {
+        RoomScreen(SampleData.introRoom, listOf(nova), SampleData.intro, {}, {}, {}, {}, {}, everyone = agents)
+    }
+    @Test fun aboutYou() = shot("about-you") {
+        AboutYouScreen(SampleData.profile, agents, canIntro = true, {}, { _, _ -> }, {}, {}, {})
+    }
     @Test fun pairScanning() = shot("pair-scanned") {
         PairScreen(PairState(busy = true, scanned = dev.orbit.app.data.PairingLink("192.168.86.49:8787", "309407", "BOOK")), {}, { _, _ -> })
     }

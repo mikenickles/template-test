@@ -49,9 +49,11 @@ export function Avatar({ spec, size = 40, thinking = false, style = '' }) {
 }
 
 /** A room's badge: up to three members standing together inside one rounded tile. Later ones stand in front. */
-export function CrewTile({ specs, size = 48 }) {
+export function CrewTile({ specs, size = 48, tint: hint = null }) {
   const layout = [[], [[0.12, 0.12, 0.76]], [[0.02, 0.06, 0.62], [0.36, 0.34, 0.62]], [[0.24, 0.02, 0.52], [0, 0.44, 0.52], [0.48, 0.44, 0.52]]][Math.min(specs.length, 3)];
-  return html`<div class="crew-tile" style=${`width:${size}px;height:${size}px`}>
+  // A hint of the first member's color, when asked for.
+  const wash = hint ? `;background:color-mix(in srgb, ${hint} 22%, var(--raised))` : '';
+  return html`<div class="crew-tile" style=${`width:${size}px;height:${size}px${wash}`}>
     ${layout.map(([x, y, d], i) => html`<${Avatar} spec=${specs[i]} size=${size * d} style=${`left:${size * x}px;top:${size * y}px`} />`)}
   </div>`;
 }

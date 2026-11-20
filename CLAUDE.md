@@ -13,6 +13,9 @@ Two independent projects live here:
     The desktop app is `orbit/hub/web/`: plain ES modules with Preact and htm served from the hub's own
     `node_modules` (no build step, nothing from a CDN), styled to match the phone's design system. It signs in
     with an HttpOnly SameSite=Strict cookie; on the PC itself through `/local/token`, elsewhere with the code.
+    The user's profile (`state.profile`: name and notes) goes into every agent's prompt; Claude agents add to it with
+    `remember_about_user`. The intro room (`room.intro`) is one guide getting to know the user, ending in
+    `create_crew` (`src/intro.js`).
     Agent abilities (web search, code execution, read-only shared folders) are Claude-only: the tool loop is
     `src/anthropic.js`, folder access is `src/folders.js`. Folders are shared only from the PC's own page
     (`localhost`), never from a phone.
@@ -20,7 +23,7 @@ Two independent projects live here:
     Screens are stateless composables in `ui/screens`; `AppViewModel` and `RoomViewModel` hold state.
     Design system: colors, type and spacing come only from `ui/theme/Theme.kt` (`Orbit.colors`, `OrbitType`,
     `OrbitDimens`); controls, icons and avatars from `ui/components`. The interface stays neutral so avatars are
-    the only color. Don't add one-off sizes, Material icons, or new colors in a screen.
+    the only color: washes and tints in a screen come from the agents' `tint()` colors, never new ones. Don't add one-off sizes, Material icons, or new colors in a screen.
     Avatars are 25 character pictures (`res/drawable-nodpi/avatar_NN.webp` and `hub/web/avatars/NN.webp`), in the
     order of `Characters` in `ui/components/Avatar.kt` and `web/js/avatar.js`; the hub stores only `{ character: n }`.
     Motion comes from `ui/theme/Motion.kt` (`OrbitMotion` easings and springs, `pressScale`, `entrance`,

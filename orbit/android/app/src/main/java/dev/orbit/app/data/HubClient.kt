@@ -63,6 +63,12 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
     private data class PullBody(val model: String)
 
     @Serializable
+    private data class TextOnly(val text: String)
+
+    @Serializable
+    private data class NameBody(val name: String)
+
+    @Serializable
     private data class PairBody(val code: String, val deviceName: String)
 
     @Serializable
@@ -96,6 +102,15 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
         call("PUT", "/api/providers/$providerId/key", OrbitJson.encodeToString(KeyBody(apiKey)))
 
     suspend fun removeKey(providerId: String): Provider = call("DELETE", "/api/providers/$providerId/key")
+
+    /** Starts (or reopens) the getting-to-know-you chat. Returns its room. */
+    suspend fun startIntro(): Room = call("POST", "/api/intro", "{}")
+
+    suspend fun addProfileNote(text: String): Profile = call("POST", "/api/profile/notes", OrbitJson.encodeToString(TextOnly(text)))
+
+    suspend fun removeProfileNote(id: String): Profile = call("DELETE", "/api/profile/notes/$id")
+
+    suspend fun setProfileName(name: String): Profile = call("PUT", "/api/profile", OrbitJson.encodeToString(NameBody(name)))
 
     /** Starts downloading [model] into a local runtime on the PC (Ollama). Progress shows on the provider. */
     suspend fun pullModel(providerId: String, model: String): Provider =

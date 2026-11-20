@@ -44,13 +44,13 @@ test("every agent's notes go in its prompt; Claude agents with the ability also 
   const providers = new Providers({}, {});
   const room = { name: 'Trip', mode: 'roundtable' };
   const sage = { id: 'a3', name: 'Sage', provider: 'ollama', model: 'llama', memory: [{ id: 'n1', text: 'Prefers short answers' }] };
-  assert.match(buildSystemPrompt(sage, room, [sage], null), /What you remember from earlier conversations[^\n]*\n- Prefers short answers/);
+  assert.match(buildSystemPrompt(sage, room, [sage], null), /Your own notes from earlier conversations[^\n]*\n- Prefers short answers/);
   assert.equal(resolveAbilities({ ...sage, abilities: ['memory'] }, providers, null), null, 'only Claude agents save notes themselves');
 
   const nova = { id: 'a1', name: 'Nova', provider: 'anthropic', model: 'claude-opus-5-5', abilities: ['memory'] };
   const abilities = resolveAbilities(nova, providers, null);
-  assert.deepEqual(anthropicTools(nova.model, abilities).map((t) => t.name), ['remember', 'forget']);
-  assert.match(buildSystemPrompt(nova, room, [nova], abilities), /Keep notes for future chats with the remember tool/);
+  assert.deepEqual(anthropicTools(nova.model, abilities).map((t) => t.name), ['remember_about_user', 'forget_about_user', 'remember', 'forget']);
+  assert.match(buildSystemPrompt(nova, room, [nova], abilities), /Facts about the user [^\n]*go in remember_about_user, which the whole crew shares/);
 });
 
 test('notes are added and removed from the app, and an agent saves its own while replying', async (t) => {

@@ -15,6 +15,7 @@ import dev.orbit.app.data.Agent
 import dev.orbit.app.data.Author
 import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.data.HubInfo
+import dev.orbit.app.data.CrewMade
 import dev.orbit.app.data.MemoryNote
 import dev.orbit.app.data.ModelDownload
 import dev.orbit.app.data.ModelSuggestion
@@ -22,6 +23,7 @@ import dev.orbit.app.data.Schedule
 import dev.orbit.app.data.ScheduledBy
 import dev.orbit.app.data.Message
 import dev.orbit.app.data.Preview
+import dev.orbit.app.data.Profile
 import dev.orbit.app.data.Provider
 import dev.orbit.app.data.Room
 import dev.orbit.app.data.RunState
@@ -87,13 +89,47 @@ object SampleData {
     )
 
     val folders = listOf(
-        SharedFolder("f1", "Notes", "C:\\Users\\mike\\Documents\\Notes"),
+        SharedFolder("f1", "Notes", "C:\\Users\\you\\Documents\\Notes"),
         SharedFolder("f2", "Trip planning", "D:\\Shared\\Family\\Trip planning"),
     )
 
+    val profile = Profile(
+        "Alex",
+        listOf(
+            MemoryNote("p1", "Works as a product designer at a small startup.", "Nova"),
+            MemoryNote("p2", "Likes short answers with the decision first.", "you"),
+            MemoryNote("p3", "Training for a half marathon in the spring.", "Nova"),
+        ),
+    )
+
     val app = AppState(
-        loaded = true, hub = HubInfo("Mike's PC", "0.1.0", listOf("192.168.1.20:8787"), listOf("100.101.102.103:8787")), agents = agents, rooms = listOf(launch, trip, empty), providers = providers,
-        folders = folders,
+        loaded = true, hub = HubInfo("Home PC", "0.1.0", listOf("192.168.1.20:8787"), listOf("100.101.102.103:8787")), agents = agents, rooms = listOf(launch, trip, empty), providers = providers,
+        folders = folders, profile = profile,
+    )
+
+    /** A hub where the user hasn't met their guide yet. */
+    val newcomer = app.copy(profile = Profile(), rooms = emptyList(), agents = emptyList())
+
+    val introRoom = Room("r9", "Getting to know you", listOf("a1"), intro = true, updatedAt = NOW - 60_000)
+
+    /** The guide getting to know the user, ending with the crew it built. */
+    val intro = RoomUiState(
+        loaded = true,
+        connected = true,
+        messages = listOf(
+            agentMessage("m1", nova, "Hi! I'm **Nova**, your guide in Orbit. Let's get to know each other so your whole crew can help you well. What should I call you?"),
+            userMessage("m2", "Alex! I'm a product designer, and I'm training for a half marathon."),
+            agentMessage("m3", nova, "Love that, Alex. Here's a crew I'd suggest:\n\n- **Pixel**, the builder, for prototypes and side projects\n- **Mochi**, the coach, for your training plan\n\nWant me to set them up?").copy(
+                activity = listOf(
+                    Activity(Activity.KIND_REMEMBER, "Works as a product designer at a small startup."),
+                    Activity(Activity.KIND_REMEMBER, "Training for a half marathon in the spring."),
+                ),
+            ),
+            userMessage("m4", "Yes please!"),
+            agentMessage("m5", nova, "Done! Your crew is ready, and they already know what you told me. Come back here anytime.").copy(
+                crew = CrewMade("r1", "Launch plan", listOf("a1", "a2", "a4")),
+            ),
+        ),
     )
 
     fun userMessage(id: String, text: String) = Message(id, id.drop(1).toLong(), Author("user", name = "You"), text)

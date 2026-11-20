@@ -59,6 +59,7 @@ import dev.orbit.app.ui.AppViewModel
 import dev.orbit.app.ui.OrbitNavHost
 import dev.orbit.app.ui.RoomViewModel
 import dev.orbit.app.ui.screen
+import dev.orbit.app.ui.screens.AboutYouScreen
 import dev.orbit.app.ui.screens.AgentEditorScreen
 import dev.orbit.app.ui.screens.HomeScreen
 import dev.orbit.app.ui.screens.PairScreen
@@ -237,6 +238,12 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onSettings = { nav.navigate("settings") },
                 onRefresh = vm::refresh,
                 onAddKey = { nav.navigate("settings") },
+                onStartIntro = {
+                    vm.startIntro { id, error ->
+                        if (id != null) nav.navigate("room/$id")
+                        else scope.launch { snackbar.showSnackbar(error ?: "The chat couldn't start.") }
+                    }
+                },
             )
         }
         screen("room/{id}") { entry ->
@@ -274,6 +281,8 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onEdit = { nav.navigate("roomEdit?id=$id") },
                 onClear = roomVm::clear,
                 everyone = state.agents,
+                onOpenRoom = { other -> vm.refreshThen { nav.navigate("room/$other") } },
+                onStale = vm::refresh,
             )
         }
         screen("agent?id={id}", arguments = OptionalId) { entry ->
@@ -331,6 +340,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 },
                 usage = usage?.takeIf { it.days == 30 },
                 onOpenUsage = { nav.navigate("usage") },
+                onOpenAbout = { nav.navigate("about") },
             )
         }
         screen("schedules/{id}") { entry ->
@@ -386,6 +396,23 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                     vm.dropShare()
                     nav.popBackStack()
                 },
+            )
+        }
+        screen("about") {
+            AboutYouScreen(
+                profile = state.profile,
+                agents = state.agents,
+                canIntro = state.canIntro,
+                onSetName = vm::setProfileName,
+                onAdd = vm::addProfileNote,
+                onRemove = { vm.removeProfileNote(it.id) },
+                onIntro = {
+                    vm.startIntro { id, error ->
+                        if (id != null) nav.navigate("room/$id")
+                        else scope.launch { snackbar.showSnackbar(error ?: "The chat couldn't start.") }
+                    }
+                },
+                onBack = { nav.popBackStack() },
             )
         }
         screen("usage") {

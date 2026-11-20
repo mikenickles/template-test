@@ -47,6 +47,7 @@ fun SettingsScreen(
     onRemoveFolder: (folderId: String) -> Unit = {},
     usage: UsageSummary? = null,
     onOpenUsage: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
 ) {
     val c = Orbit.colors
     val uri = LocalUriHandler.current
@@ -122,6 +123,29 @@ fun SettingsScreen(
             }
 
             Column(Modifier.entrance(entrances, "providers", 1)) {
+                SectionTitle("About you", Modifier.padding(top = OrbitDimens.section, bottom = 8.dp))
+                OrbitCard(Modifier.fillMaxWidth(), onClick = onOpenAbout) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = OrbitDimens.rowPad, end = 8.dp).heightIn(min = 56.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f).padding(vertical = 12.dp)) {
+                            Text(state.profile.name.ifBlank { "What your crew knows" }, style = OrbitType.titleS, color = c.text)
+                            Text(
+                                when (val n = state.profile.notes.size) {
+                                    0 -> "Nothing yet. Your crew is still getting to know you."
+                                    1 -> "1 thing every agent knows about you"
+                                    else -> "$n things every agent knows about you"
+                                },
+                                Modifier.padding(top = 2.dp),
+                                style = OrbitType.bodyS,
+                                color = c.textSecondary,
+                            )
+                        }
+                        OrbitIcon(OrbitIcon.Chevron, Modifier.padding(start = 4.dp), size = 18.dp, tint = c.textTertiary)
+                    }
+                }
+
                 SectionTitle("Model providers", Modifier.padding(top = OrbitDimens.section, bottom = 8.dp))
                 OrbitCard(Modifier.fillMaxWidth()) {
                     Column {

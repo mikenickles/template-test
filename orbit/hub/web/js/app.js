@@ -2,7 +2,7 @@
 import { render } from '/vendor/preact.mjs';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from '/vendor/hooks.mjs';
 import { ATTACHABLE, api, canAttach, hubEvents, onThisPC, prepare, roomEvents } from './api.js';
-import { Avatar, CrewTile, inkColor } from './avatar.js';
+import { Avatar, CrewTile, characterOf, inkColor, tint } from './avatar.js';
 import { AgentEditor, RoomEditor, Schedules, Settings } from './editors.js';
 import { closeOpenMarkup, markdown } from './markdown.js';
 import { Icon, Mark, Pill, ago, fileSize, html } from './ui.js';
@@ -72,6 +72,17 @@ function App() {
   const openRoom = (id) => {
     location.hash = id ? encodeURIComponent(id) : '';
   };
+  // The getting-to-know-you chat: started on the hub, then opened here.
+  const startIntro = async () => {
+    try {
+      const intro = await api.startIntro();
+      await refresh();
+      openRoom(intro.id);
+    } catch (e) {
+      notify(e.message);
+      if (/key/i.test(e.message)) setDialog({ type: 'settings' });
+    }
+  };
 
   if (phase === 'loading') return html`<div class="connect"><div class="spinner"></div></div>`;
   if (phase === 'connect') return html`<${Connect} onConnected=${refresh} />`;
@@ -93,15 +104,16 @@ function App() {
   };
 
   return html`<div class=${`shell${room ? ' in-room' : ''}`}>
-    <${Sidebar} state=${state} roomId=${room?.id} onOpen=${openRoom} onDialog=${setDialog} />
+    <${Sidebar} state=${state} roomId=${room?.id} onOpen=${openRoom} onDialog=${setDialog} onIntro=${startIntro} />
     <main>
       ${room
-        ? html`<${RoomView} key=${room.id} room=${room} state=${state} onDialog=${setDialog} notify=${notify} onBack=${() => openRoom(null)} />`
-        : html`<${Welcome} state=${state} onDialog=${setDialog} />`}
+        ? html`<${RoomView} key=${room.id} room=${room} state=${state} onDialog=${setDialog} notify=${notify} onBack=${() => openRoom(null)}
+            onOpenRoom=${(id) => refresh().then(() => openRoom(id))} onStale=${refresh} />`
+        : html`<${Welcome} state=${state} onDialog=${setDialog} onIntro=${startIntro} onOpen=${openRoom} />`}
     </main>
     ${dialog?.type === 'agent' && html`<${AgentEditor} agent=${dialog.agent} state=${state} notify=${notify} onClose=${close} onSaved=${() => edited()} onChanged=${refresh} onAddKey=${() => setDialog({ type: 'settings' })} />`}
     ${dialog?.type === 'room' && html`<${RoomEditor} room=${dialog.room} state=${state} notify=${notify} onClose=${close} onSaved=${(id) => edited(id)} />`}
-    ${dialog?.type === 'settings' && html`<${Settings} state=${state} notify=${notify} refresh=${refresh} onClose=${close} />`}
+    ${dialog?.type === 'settings' && html`<${Settings} state=${state} notify=${notify} refresh=${refresh} onClose=${close} onIntro=${() => { close(); startIntro(); }} />`}
     ${dialog?.type === 'schedules' && html`<${Schedules} room=${dialog.room} state=${state} notify=${notify} refresh=${refresh} onClose=${close} onRan=${() => openRoom(dialog.room.id)} />`}
     ${toast && html`<div class="toast" role="status">${toast}</div>`}
   </div>`;
@@ -136,10 +148,12 @@ function Connect({ onConnected }) {
   </form></div>`;
 }
 
-function Sidebar({ state, roomId, onOpen, onDialog }) {
+function Sidebar({ state, roomId, onOpen, onDialog, onIntro }) {
   const byId = useMemo(() => Object.fromEntries(state.agents.map((a) => [a.id, a])), [state.agents]);
   const rooms = [...state.rooms].sort((a, b) => b.updatedAt - a.updatedAt);
-  const demo = !state.providers.some((p) => p.takesKey && p.configured);
+  const intro = !state.profile?.notes?.length;
+  const demo = !intro && !state.providers.some((p) => p.takesKey && p.configured);
+  const guide = guideOf(state);
   return html`<aside class="sidebar">
     <div class="sidebar-head">
       <button class="hub-button" onClick=${() => onDialog({ type: 'settings' })}>
@@ -148,6 +162,12 @@ function Sidebar({ state, roomId, onOpen, onDialog }) {
       </button>
     </div>
     <div class="sidebar-scroll">
+      ${intro && html`<button class="card row button-row intro-mini" style=${`--wash:${tint(guide.avatar)}`} onClick=${() => (canIntro(state) ? onIntro() : onDialog({ type: 'settings' }))}>
+        <${Avatar} spec=${guide.avatar} size=${36} />
+        <div style="flex:1"><div class="title-s">${canIntro(state) ? 'Get to know each other' : 'Meet your guide'}</div>
+          <div class="body-s muted">${canIntro(state) ? `A quick chat with ${guide.name}, so your whole crew knows you.` : 'Add an Anthropic key to start.'}</div></div>
+        <${Icon} name="chevron" size=${18} />
+      </button>`}
       ${demo && html`<button class="card row button-row" style="margin:6px 4px 4px;width:calc(100% - 8px)" onClick=${() => onDialog({ type: 'settings' })}>
         <div style="flex:1"><div class="title-s">Your crew is in demo mode</div><div class="body-s muted">Add an AI key to get real answers.</div></div>
         <${Icon} name="chevron" size=${18} />
@@ -160,7 +180,7 @@ function Sidebar({ state, roomId, onOpen, onDialog }) {
         const crew = room.agentIds.map((id) => byId[id]).filter(Boolean);
         const speaker = byId[room.speaking];
         return html`<button class=${`room-item${room.id === roomId ? ' current' : ''}`} onClick=${() => onOpen(room.id)} aria-current=${room.id === roomId ? 'page' : null}>
-          <${CrewTile} specs=${crew.map((a) => a.avatar)} size=${44} />
+          <${CrewTile} specs=${crew.map((a) => a.avatar)} size=${44} tint=${crew[0] ? tint(crew[0].avatar) : null} />
           <div class="text">
             <div class="top">
               <span class="name">${room.name}</span>
@@ -188,13 +208,65 @@ function Sidebar({ state, roomId, onOpen, onDialog }) {
   </aside>`;
 }
 
-function Welcome({ state, onDialog }) {
-  const noAgents = !state.agents.length;
-  return html`<div class="center">
-    <div style="color:var(--text)"><${Mark} size=${44} /></div>
-    <h1 class="title-l" style="margin:20px 0 8px">${noAgents ? 'Start with an agent' : 'Pick a room'}</h1>
-    <p class="muted" style="margin:0 0 24px">${noAgents ? 'Give it a name, a model and a way of thinking, then put it in a room.' : 'Choose a room on the left, or start a new one.'}</p>
-    <button class="button" onClick=${() => onDialog({ type: noAgents ? 'agent' : 'room' })}>${noAgents ? 'New agent' : 'New room'}</button>
+/** The agent who runs the intro: its room's, else the first on Claude, else the guide a new hub would get. */
+function guideOf(state) {
+  const room = state.rooms.find((r) => r.intro);
+  const claude = new Set(state.providers.filter((p) => p.abilities && p.configured).map((p) => p.id));
+  return state.agents.find((a) => a.id === room?.agentIds[0]) ?? state.agents.find((a) => claude.has(a.provider)) ?? { name: 'Nova', avatar: { character: 9 } };
+}
+
+const canIntro = (state) => state.providers.some((p) => p.abilities && p.configured);
+
+function greeting() {
+  const hour = new Date().getHours();
+  return hour >= 5 && hour < 12 ? 'Good morning' : hour >= 12 && hour < 18 ? 'Good afternoon' : 'Good evening';
+}
+
+/** Home, when no room is open: a hello, the guide's invitation until the crew knows you, and the crew. */
+function Welcome({ state, onDialog, onIntro, onOpen }) {
+  const name = state.profile?.name;
+  const busy = state.rooms.find((r) => r.active);
+  const speaker = state.agents.find((a) => a.id === busy?.speaking);
+  const intro = !state.profile?.notes?.length;
+  const guide = guideOf(state);
+  const introRoom = state.rooms.find((r) => r.intro);
+  return html`<div class="home">
+    <h1 class="display">${name ? `${greeting()}, ${name}` : greeting()}</h1>
+    <p class="muted home-sub">${busy
+      ? html`<span class="dot" style=${`background:${speaker ? inkColor(speaker.avatar) : 'var(--live)'}`}></span><span class="shimmer">${speaker ? `${speaker.name} is replying in ${busy.name}` : `Your crew is working in ${busy.name}`}</span>`
+      : !state.agents.length ? "Let's set up your crew"
+      : state.agents.length === 1 ? `${state.agents[0].name} is here when you need them`
+      : `Your crew of ${state.agents.length} is ready`}</p>
+    ${intro && html`<div class="intro-card" style=${`--wash:${tint(guide.avatar)}`}>
+      <div class="intro-head">
+        <${Avatar} spec=${guide.avatar} size=${84} />
+        <div><div class="title-l">${!canIntro(state) ? 'Meet your guide' : introRoom ? 'Pick up where you left off' : `Hi! I'm ${guide.name}`}</div>
+          <div class="body" style=${`color:${inkColor(guide.avatar)}`}>${canIntro(state) ? "Let's get to know each other" : 'Your crew starts here'}</div></div>
+      </div>
+      <p class="muted">${canIntro(state)
+        ? "A quick chat about you, what you're into and what you'd like help with. Everything I learn, your whole crew will know, and then I'll build a crew just for you."
+        : 'Add an Anthropic key and your guide will get to know you, then build a crew around what you need.'}</p>
+      ${canIntro(state)
+        ? html`<button class="button" onClick=${onIntro}>${introRoom ? 'Continue the chat' : 'Say hello'}</button>`
+        : html`<button class="button" onClick=${() => onDialog({ type: 'settings' })}>Add a key</button>`}
+    </div>`}
+    ${state.agents.length > 0 && html`<div class="stage-title"><span class="overline">Your crew</span>
+      <button class="label muted" onClick=${() => onDialog({ type: 'room' })}>New room</button></div>
+    <div class="stage">${state.agents.map((agent) => html`<button class="stage-member" style=${`--pool:${tint(agent.avatar)}`} title=${`Edit ${agent.name}`} onClick=${() => onDialog({ type: 'agent', agent })}>
+      <span class="pool"></span><${Avatar} spec=${agent.avatar} size=${72} />
+      <span class="title-s">${agent.name}</span>${agent.role && html`<span class="caption faint">${agent.role}</span>`}
+    </button>`)}
+      <button class="stage-member add" onClick=${() => onDialog({ type: 'agent' })}><span class="plus"><${Icon} name="plus" /></span><span class="title-s">New agent</span></button>
+    </div>`}
+    ${state.rooms.length > 0 && html`<div class="stage-title"><span class="overline">Recent rooms</span></div>
+    <div class="room-cards">${[...state.rooms].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4).map((room) => {
+      const crew = room.agentIds.map((id) => state.agents.find((a) => a.id === id)).filter(Boolean);
+      return html`<button class="room-card" style=${`--wash:${crew[0] ? tint(crew[0].avatar) : 'transparent'}`} onClick=${() => onOpen(room.id)}>
+        <${CrewTile} specs=${crew.map((a) => a.avatar)} size=${48} />
+        <div class="text"><div class="title-s">${room.name}</div>
+          <div class="body-s muted">${room.active ? 'Working now' : room.preview ? `${room.preview.author}: ${room.preview.text}` : 'No messages yet'}</div></div>
+      </button>`;
+    })}</div>`}
   </div>`;
 }
 
@@ -211,7 +283,7 @@ function upsert(list, message) {
   return next;
 }
 
-function RoomView({ room, state, onDialog, notify, onBack }) {
+function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale }) {
   const [messages, setMessages] = useState([]);
   const [run, setRun] = useState({ active: false, agentId: null });
   const [loaded, setLoaded] = useState(false);
@@ -277,6 +349,12 @@ function RoomView({ room, state, onDialog, notify, onBack }) {
 
   const agents = room.agentIds.map((id) => state.agents.find((a) => a.id === id)).filter(Boolean);
   const byId = Object.fromEntries(state.agents.map((a) => [a.id, a]));
+  // The intro just built a crew this window doesn't know yet: fetch it.
+  const unknown = messages.some((m) => m.crew?.agentIds.some((id) => !byId[id]));
+  useEffect(() => {
+    if (unknown) onStale();
+  }, [unknown]);
+  const washes = agents.slice(0, 3).map((a) => tint(a.avatar));
   const mentions = Object.fromEntries(agents.map((a) => [a.name.replace(/\s/g, '').toLowerCase(), inkColor(a.avatar)]));
   const lead = agents.find((a) => a.id === room.leadId);
   const speaker = byId[run.agentId];
@@ -298,6 +376,7 @@ function RoomView({ room, state, onDialog, notify, onBack }) {
   };
 
   return html`
+    ${washes.length > 0 && html`<div class="room-wash" aria-hidden="true" style=${`--wash:linear-gradient(90deg, ${(washes.length > 1 ? washes : [washes[0], washes[0]]).join(', ')})`}></div>`}
     <header class=${`room-bar${nearBottom ? '' : ' scrolled'}`}>
       <button class="icon-button narrow-only" onClick=${onBack} aria-label="Back to rooms"><${Icon} name="back" /></button>
       <div class="titles">
@@ -307,7 +386,7 @@ function RoomView({ room, state, onDialog, notify, onBack }) {
             ? html`<span class="dot"></span>Reconnecting to your hub`
             : run.active
               ? html`<span class="dot" style=${`background:${speaker ? inkColor(speaker.avatar) : 'var(--text-2)'}`}></span><span class="shimmer">${speaker ? `${speaker.name} is replying` : 'Working'}</span>`
-              : room.mode === 'lead' && lead ? `Led by ${lead.name}` : 'Round table'}
+              : agents.length === 1 ? `Just you and ${agents[0].name}` : room.mode === 'lead' && lead ? `Led by ${lead.name}` : 'Round table'}
         </div>
       </div>
       <div class="avatar-row">${agents.slice(0, 5).map((a) => html`<${Avatar} spec=${a.avatar} size=${30} thinking=${run.active && run.agentId === a.id} />`)}</div>
@@ -329,7 +408,8 @@ function RoomView({ room, state, onDialog, notify, onBack }) {
             ${messages.map((m) => html`<div class=${`message${m.author.type === 'user' ? ' mine' : ''}`} key=${m.id}>
               ${m.author.type === 'user'
                 ? html`<${UserMessage} message=${m} mentions=${mentions} onPhoto=${setViewing} />`
-                : html`<${AgentMessage} message=${m} agent=${byId[m.author.agentId]} showModel=${firstReplies.has(m.id)} mentions=${mentions} />`}
+                : html`<${AgentMessage} message=${m} agent=${byId[m.author.agentId]} showModel=${firstReplies.has(m.id)} mentions=${mentions} />
+                  ${m.crew && html`<${CrewReady} made=${m.crew} crew=${m.crew.agentIds.map((id) => byId[id]).filter(Boolean)} onOpen=${() => onOpenRoom(m.crew.roomId)} />`}`}
               <div class="message-actions">
                 ${m.text && html`<button onClick=${() => { navigator.clipboard.writeText(m.text); notify('Copied'); }}><${Icon} name="copy" />Copy</button>`}
                 ${canRetry(m) && html`<button onClick=${() => act(() => api.retry(room.id, m.id))}><${Icon} name="retry" />Ask again</button>`}
@@ -441,6 +521,16 @@ function AgentMessage({ message, agent, showModel, mentions }) {
   </div>`;
 }
 
+/** The intro's payoff: the crew it just built, and the way into their room. */
+function CrewReady({ made, crew, onOpen }) {
+  const tints = (crew.length > 1 ? crew.slice(1) : crew).map((a) => tint(a.avatar));
+  return html`<button class="crew-ready" onClick=${onOpen} style=${`--wash:linear-gradient(90deg, ${(tints.length > 1 ? tints : [tints[0] ?? 'transparent', 'transparent']).join(', ')})`}>
+    <${CrewTile} specs=${crew.map((a) => a.avatar)} size=${56} />
+    <div class="text"><div class="title-s">Your crew is ready</div><div class="body-s muted">${made.name} · ${crew.map((a) => a.name).join(', ')}</div></div>
+    <span class="pill selected">Open</span>
+  </button>`;
+}
+
 // ---------- Writing a message ----------
 
 function Composer({ room, agents, running, notify, onSent }) {
@@ -528,7 +618,7 @@ function Composer({ room, agents, running, notify, onSent }) {
       <div class="composer-row">
         <button class="icon-button" aria-label="Attach photos or files" title="Attach photos or files" onClick=${() => picker.current.click()}><${Icon} name="plus" /></button>
         <input type="file" multiple accept=${ATTACHABLE} hidden ref=${picker} onChange=${(e) => { add(e.currentTarget.files); e.currentTarget.value = ''; }} />
-        <textarea ref=${box} rows="1" placeholder="Message the crew" value=${draft} onInput=${onInput}
+        <textarea ref=${box} rows="1" placeholder=${agents.length === 1 ? `Message ${agents[0].name}` : 'Message the crew'} value=${draft} onInput=${onInput}
           onPaste=${(e) => e.clipboardData.files.length && (e.preventDefault(), add(e.clipboardData.files))}
           onKeyDown=${(e) => {
             if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {

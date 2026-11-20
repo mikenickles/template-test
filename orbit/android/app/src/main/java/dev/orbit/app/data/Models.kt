@@ -39,6 +39,14 @@ data class Agent(
 @Serializable
 data class MemoryNote(val id: String = "", val text: String = "", val source: String = "you", val createdAt: Long = 0)
 
+/** What the whole crew knows about the user: what to call them, and notes from them or their agents. */
+@Serializable
+data class Profile(val name: String = "", val notes: List<MemoryNote> = emptyList())
+
+/** The room the intro created, and who is in it. */
+@Serializable
+data class CrewMade(val roomId: String = "", val name: String = "", val agentIds: List<String> = emptyList())
+
 @Serializable
 data class Preview(val author: String = "", val text: String = "")
 
@@ -54,6 +62,8 @@ data class Room(
     /** The agent replying right now, if any. */
     val speaking: String? = null,
     val preview: Preview? = null,
+    /** The getting-to-know-you chat, where one agent learns about the user and builds their crew. */
+    val intro: Boolean = false,
 ) {
     companion object {
         const val MODE_ROUNDTABLE = "roundtable"
@@ -151,6 +161,8 @@ data class Message(
     val attachments: List<Attachment> = emptyList(),
     /** Set when the hub posted this message on a schedule. */
     val scheduled: ScheduledBy? = null,
+    /** Set on the intro reply that created the user's crew: the room it made. */
+    val crew: CrewMade? = null,
 ) {
     val fromUser get() = author.type == "user"
 
@@ -218,6 +230,7 @@ data class HubState(
     val providers: List<Provider> = emptyList(),
     val folders: List<SharedFolder> = emptyList(),
     val schedules: List<Schedule> = emptyList(),
+    val profile: Profile = Profile(),
 )
 
 /** Whether agents are replying in a room right now, and who has the floor. */

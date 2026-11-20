@@ -132,6 +132,12 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import dev.orbit.app.data.CrewMade
+import dev.orbit.app.ui.components.CrewTile
+import dev.orbit.app.ui.components.tap
+import dev.orbit.app.ui.components.tint
 
 /** How many trailing characters of a reply fade in as it streams. */
 private const val FADE_TAIL = 16
@@ -156,6 +162,10 @@ fun RoomScreen(
     /** Text to start the composer with, like something shared from another app. */
     initialDraft: String = "",
     onSchedules: () -> Unit = {},
+    /** Opens another room, like the one the intro just created. */
+    onOpenRoom: (roomId: String) -> Unit = {},
+    /** Asks for fresh hub state, e.g. when the intro has created agents this screen doesn't know yet. */
+    onStale: () -> Unit = {},
 ) {
     val c = Orbit.colors
     var draft by rememberSaveable { mutableStateOf(initialDraft) }
@@ -166,6 +176,8 @@ fun RoomScreen(
     val haptics = rememberHaptics()
     val clipboard = LocalClipboard.current
     val byId = remember(everyone) { everyone.associateBy { it.id } }
+    val unknown = state.messages.mapNotNull { it.crew }.flatMap { it.agentIds }.any { it !in byId }
+    LaunchedEffect(unknown) { if (unknown) onStale() }
     // "@nova" is drawn in Nova's color wherever it appears.
     val dark = c.isDark
     val mentionColors = remember(agents, dark) { agents.associate { it.name.replace(" ", "").lowercase() to it.avatar.inkColor(dark) } }
@@ -189,6 +201,18 @@ fun RoomScreen(
     val scrolledUnderBar by remember { derivedStateOf { list.canScrollForward } }
 
     Box(Modifier.fillMaxSize().background(c.bg)) {
+        // The room is lit softly from the top in its members' colors.
+        val tints = agents.take(3).map { it.avatar.tint() }
+        val washAlpha = if (c.isDark) 0.16f else 0.2f
+        if (tints.isNotEmpty()) {
+            Box(
+                Modifier.fillMaxWidth().height(300.dp).drawBehind {
+                    val band = if (tints.size == 1) listOf(tints[0], tints[0]) else tints
+                    drawRect(Brush.horizontalGradient(band.map { it.copy(alpha = washAlpha) }))
+                    drawRect(Brush.verticalGradient(listOf(Color.Transparent, c.bg)))
+                },
+            )
+        }
         Scaffold(
             containerColor = Color.Transparent,
             topBar = { RoomBar(room, agents, state, scrolledUnderBar, onBack, onEdit, onClear, onSchedules) },
@@ -266,7 +290,14 @@ fun RoomScreen(
                                     if (message.fromUser) {
                                         UserMessage(message, mentionColors) { viewing = it }
                                     } else {
-                                        AgentMessage(message, byId[message.author.agentId], mentionColors, showModel = message.id in introductions)
+                                        Column {
+                                            AgentMessage(message, byId[message.author.agentId], mentionColors, showModel = message.id in introductions)
+                                            message.crew?.let { made ->
+                                                CrewReady(made, made.agentIds.mapNotNull(byId::get), Modifier.padding(start = 48.dp, top = 14.dp)) {
+                                                    onOpenRoom(made.roomId)
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -423,6 +454,7 @@ private fun RoomBar(
                     targetState = when {
                         speaker != null -> RoomStatus("${speaker.name} is replying", speaker.avatar.inkColor(c.isDark))
                         state.run.active -> RoomStatus("Working", c.textTertiary)
+                        agents.size == 1 -> RoomStatus("Just you and ${agents[0].name}", null)
                         room.mode == Room.MODE_LEAD -> RoomStatus("Led by ${agents.firstOrNull { it.id == room.leadId }?.name ?: "the first agent"}", null)
                         else -> RoomStatus("Round table", null)
                     },
@@ -512,6 +544,39 @@ private fun UserMessage(message: Message, mentionColors: Map<String, Color>, onO
                 MarkdownText(message.text, mentions = mentionColors)
             }
         }
+    }
+}
+
+/** The intro's payoff: the crew it just built, and the way into their room. */
+@Composable
+private fun CrewReady(made: CrewMade, crew: List<Agent>, modifier: Modifier, onOpen: () -> Unit) {
+    val c = Orbit.colors
+    val shape = RoundedCornerShape(OrbitDimens.radiusL)
+    val tints = crew.drop(1).ifEmpty { crew }.map { it.avatar.tint().copy(alpha = if (c.isDark) 0.24f else 0.28f) }
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(c.surface)
+            .background(Brush.horizontalGradient(if (tints.size > 1) tints else listOf(tints.firstOrNull() ?: Color.Transparent, Color.Transparent)))
+            .border(surfaceBorder(), shape)
+            .tap(shape, 0.97f, onOpen)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CrewTile(crew.map { it.avatar }, size = 56.dp, color = c.surface.copy(alpha = 0.7f))
+        Column(Modifier.weight(1f).padding(start = 14.dp, end = 10.dp)) {
+            Text("Your crew is ready", style = OrbitType.titleS, color = c.text)
+            Text(
+                "${made.name} · ${crew.joinToString(", ") { it.name }}",
+                Modifier.padding(top = 2.dp),
+                style = OrbitType.bodyS,
+                color = c.textSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Pill("Open", onOpen, selected = true)
     }
 }
 
@@ -667,7 +732,7 @@ private fun Composer(
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     interactionSource = interaction,
                     decorationBox = { inner ->
-                        if (draft.isEmpty()) Text("Message the crew", style = OrbitType.body, color = c.textTertiary)
+                        if (draft.isEmpty()) Text(if (agents.size == 1) "Message ${agents[0].name}" else "Message the crew", style = OrbitType.body, color = c.textTertiary)
                         inner()
                     },
                 )

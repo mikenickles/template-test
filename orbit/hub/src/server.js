@@ -3,7 +3,8 @@ import crypto from 'node:crypto';
 import dgram from 'node:dgram';
 import { FileError, Files, MAX_FILE_BYTES } from './files.js';
 import { FolderError, Folders } from './folders.js';
-import { MemoryError, addNote, removeNote } from './memory.js';
+import { MemoryError, addNote, addProfileNote, cleanName, removeNote, removeProfileNote } from './memory.js';
+import { GUIDE, INTRO_ROOM_NAME } from './intro.js';
 import { ScheduleError, Scheduler } from './schedules.js';
 import { ABILITIES, Orchestrator } from './orchestrator.js';
 import { ProviderError } from './errors.js';
@@ -130,27 +131,48 @@ export class Hub {
     this.onPairingCode(this.pairingCode);
   }
 
-  /** First run: a small starter crew so the app isn't empty. */
+  /**
+   * First run: with a Claude key, the guide opens a getting-to-know-you chat. Without one, the app asks
+   * for a key first, and the intro starts once it has one.
+   */
   #seed() {
     if (!this.store.isNew || this.store.state.agents.length) return;
-    const real = this.providers.isConfigured('anthropic');
-    const provider = real ? 'anthropic' : 'demo';
-    const model = real ? 'claude-opus-5-5' : 'demo';
-    const starters = [
-      ['Nova', 'the planner', 'You break problems into clear steps and keep the group on track.', { character: 9 }],
-      ['Pixel', 'the builder', 'You turn plans into concrete drafts, code, and examples.', { character: 7 }],
-      ['Sage', 'the skeptic', 'You look for gaps, risks, and simpler alternatives, and say so plainly.', { character: 2 }],
-    ];
+    if (this.providers.isConfigured('anthropic') && this.providers.supportsAbilities?.('anthropic')) this.#startIntro();
+  }
+
+  /**
+   * The getting-to-know-you chat: the agent asked for, else the first one on Claude, else a new guide.
+   * Reuses the agent's intro room if it has one. Returns the room.
+   */
+  #startIntro(agentId = null) {
+    const capable = (a) => a && this.providers.supportsAbilities(a.provider) && this.providers.isConfigured(a.provider);
+    let guide = capable(this.store.agent(agentId)) ? this.store.agent(agentId) : this.store.state.agents.find(capable);
+    if (!guide) {
+      if (!this.providers.isConfigured('anthropic')) {
+        throw new HttpError(400, 'Getting to know you needs Claude. Add an Anthropic key in Settings, under Model providers.');
+      }
+      guide = {
+        id: crypto.randomUUID(), name: GUIDE.name, role: GUIDE.role, instructions: GUIDE.instructions,
+        provider: 'anthropic', model: this.providers.list().find((p) => p.id === 'anthropic')?.models?.[0] ?? 'claude-opus-5-5',
+        avatar: { character: GUIDE.character }, abilities: ['web', 'memory'], createdAt: Date.now(),
+      };
+      // A guide named like an existing agent would confuse @mentions.
+      if (this.store.state.agents.some((a) => a.name.toLowerCase() === guide.name.toLowerCase())) guide.name = 'Orbi';
+      this.store.state.agents.push(guide);
+    }
+    const existing = this.store.state.rooms.find((r) => r.intro && r.agentIds.length === 1 && r.agentIds[0] === guide.id);
+    if (existing) return existing;
     const now = Date.now();
-    const agents = starters.map(([agentName, role, instructions, avatar]) => ({
-      id: crypto.randomUUID(), name: agentName, role, instructions, provider, model, avatar, createdAt: now,
-    }));
-    this.store.state.agents.push(...agents);
-    this.store.state.rooms.push({
-      id: crypto.randomUUID(), name: 'First huddle', agentIds: agents.map((a) => a.id),
-      mode: real ? 'lead' : 'roundtable', leadId: real ? agents[0].id : null, createdAt: now, updatedAt: now,
-    });
+    const room = { id: crypto.randomUUID(), name: INTRO_ROOM_NAME, agentIds: [guide.id], mode: 'roundtable', leadId: null, intro: true, createdAt: now, updatedAt: now };
+    this.store.state.rooms.push(room);
     this.store.save();
+    this.orchestrator.greet(room.id, guide.id);
+    return room;
+  }
+
+  /** What the whole crew knows about the user. */
+  #profile() {
+    return (this.store.state.profile ??= { name: '', notes: [] });
   }
 
   #emit(roomId, event, data) {
@@ -312,6 +334,7 @@ export class Hub {
           agents: this.store.state.agents,
           rooms: this.store.state.rooms.map((r) => this.#roomView(r)),
           providers: this.providers.list(),
+          profile: this.#profile(),
           folders: this.folders.list(),
           schedules: this.scheduler.list(),
         };
@@ -440,6 +463,18 @@ export class Hub {
         return { ok: true };
       }
 
+      // The getting-to-know-you chat, started from the app.
+      case 'POST /api/intro':
+        return this.#roomView(this.#startIntro((await this.#body(req)).agentId ?? null));
+
+      // What the whole crew knows about the user: their name, and notes added here or by agents.
+      case 'PUT /api/profile': {
+        const profile = this.#profile();
+        profile.name = cleanName((await this.#body(req)).name);
+        this.store.save();
+        return profile;
+      }
+
       case 'POST /api/rooms': {
         const now = Date.now();
         const room = { id: crypto.randomUUID(), createdAt: now, updatedAt: now, ...this.#roomFields(await this.#body(req)) };
@@ -461,6 +496,25 @@ export class Hub {
         this.store.save();
         this.files.sweep();
         return { ok: true };
+      }
+    }
+
+    if (parts[0] === 'api' && parts[1] === 'profile' && parts[2] === 'notes') {
+      const profile = this.#profile();
+      if (req.method === 'POST' && parts.length === 3) {
+        try {
+          addProfileNote(profile, (await this.#body(req)).text, 'you');
+        } catch (err) {
+          if (err instanceof MemoryError) throw new HttpError(400, err.message);
+          throw err;
+        }
+        this.store.save();
+        return profile;
+      }
+      if (req.method === 'DELETE' && parts.length === 4) {
+        removeProfileNote(profile, parts[3]);
+        this.store.save();
+        return profile;
       }
     }
 
