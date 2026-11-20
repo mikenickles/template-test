@@ -81,6 +81,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.okhttp)
     implementation(libs.androidx.work.runtime)
+    implementation(libs.androidx.glance.appwidget)
     implementation(libs.code.scanner)
     debugImplementation(libs.compose.ui.tooling)
 

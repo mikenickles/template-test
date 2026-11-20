@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Orbit</string>
+    <string name="widget_description">Your latest rooms and what your crew said last</string>
 </resources>

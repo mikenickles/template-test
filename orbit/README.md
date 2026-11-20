@@ -29,6 +29,9 @@ hub on an always-on PC.
   time on chosen days ("Weekdays at 08:15: give me a two-line status"). The hub
   posts it on the PC's clock; the result reaches your phone as a notification,
   usually within 15 minutes.
+- **Home-screen widget.** Your newest rooms and the last thing said in each;
+  tap one to open it. It stays current through the same background check as
+  scheduled results.
 - **Notifications.** Leave the app while agents are replying and you get a
   ping when they finish ("Nova: Fuunji is your best bet…"); tap it to open the
   room. The app asks for permission the first time you send a message.

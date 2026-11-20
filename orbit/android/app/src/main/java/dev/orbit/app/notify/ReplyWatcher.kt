@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
 import dev.orbit.app.MainActivity
 import dev.orbit.app.OrbitApp
 import dev.orbit.app.R
+import dev.orbit.app.widget.WidgetStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -81,6 +82,8 @@ class ReplyWatcher : Service() {
                 }
             }
         }
+        // The widget shows the reply that just landed.
+        WidgetStore.refresh(this)
         stopSelf()
     }
 

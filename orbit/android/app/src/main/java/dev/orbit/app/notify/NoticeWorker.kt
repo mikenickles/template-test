@@ -12,6 +12,7 @@ import androidx.work.WorkerParameters
 import dev.orbit.app.OrbitApp
 import dev.orbit.app.data.HubException
 import dev.orbit.app.data.Notice
+import dev.orbit.app.widget.WidgetStore
 import java.util.concurrent.TimeUnit
 
 /** How a scheduled result reads in a notification. */
@@ -43,6 +44,8 @@ class NoticeWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             }
         }
         prefs.edit { putLong(SEEN, fresh.notices.maxOfOrNull { it.at }?.coerceAtLeast(fresh.now) ?: fresh.now.coerceAtLeast(seen)) }
+        // The same check keeps the home-screen widget current.
+        WidgetStore.refresh(applicationContext)
         return Result.success()
     }
 

@@ -13,6 +13,9 @@ import dev.orbit.app.data.Provider
 import dev.orbit.app.data.Room
 import dev.orbit.app.data.Schedule
 import dev.orbit.app.notify.NoticeWorker
+import dev.orbit.app.widget.WidgetSnapshot
+import dev.orbit.app.widget.WidgetStore
+import dev.orbit.app.widget.widgetSnapshot
 import dev.orbit.app.data.SharedFolder
 import android.net.Uri
 import dev.orbit.app.data.SharedContent
@@ -79,6 +82,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 _state.value = AppState()
                 // Scheduled results reach the phone through a periodic check, while paired.
                 if (session != null) NoticeWorker.schedule(getApplication()) else NoticeWorker.cancel(getApplication())
+                if (session == null) WidgetStore.save(getApplication(), WidgetSnapshot())
                 if (session != null) reload()
             }
         }
@@ -105,6 +109,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val fresh = hub(quiet = true) { it.state() }
         fresh?.rooms?.forEach { repo.noteRun(it.id, it.active) }
         fresh?.hub?.let { repo.updateAddresses(it.addresses, it.remote) }
+        fresh?.let { WidgetStore.save(getApplication(), widgetSnapshot(it)) }
         _state.update {
             if (fresh == null) {
                 it.copy(refreshing = false, offline = true)
