@@ -35,9 +35,13 @@ const hub = new Hub({ store: new Store(dataDir), providers, name: config.name, o
 const port = await hub.listen(Number(process.env.PORT) || config.port);
 hub.startDiscovery(config.discoveryPort, port);
 
-const addresses = Object.values(os.networkInterfaces())
-  .flat()
-  .filter((n) => n && n.family === 'IPv4' && !n.internal)
+// Only addresses a phone on the same network can reach: skip self-assigned (169.254.x) addresses and
+// the virtual adapters that WSL, Hyper-V, Docker and VM software create.
+const VIRTUAL = /vethernet|wsl|hyper-v|docker|virtualbox|vmware|vbox|loopback|tailscale|zerotier/i;
+const addresses = Object.entries(os.networkInterfaces())
+  .filter(([name]) => !VIRTUAL.test(name))
+  .flatMap(([, nets]) => nets ?? [])
+  .filter((n) => n.family === 'IPv4' && !n.internal && !n.address.startsWith('169.254.'))
   .map((n) => `${n.address}:${port}`);
 
 console.log(`Orbit hub "${config.name}" is running.`);
