@@ -1,6 +1,7 @@
 package dev.orbit.app.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -12,7 +13,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -74,10 +75,9 @@ import dev.orbit.app.ui.components.ShimmerText
 import dev.orbit.app.ui.components.SkeletonBlock
 import dev.orbit.app.ui.components.StatusDot
 import dev.orbit.app.ui.components.lift
-import dev.orbit.app.ui.components.orbitingLight
 import dev.orbit.app.ui.components.surfaceBorder
 import dev.orbit.app.ui.components.tap
-import dev.orbit.app.ui.components.tint
+import dev.orbit.app.ui.components.textColor
 import dev.orbit.app.ui.shared
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitDimens
@@ -143,7 +143,8 @@ fun HomeScreen(
                 }
 
                 if (!state.loaded && !state.offline) {
-                    item(key = "skeleton") { HomeSkeleton() }
+                    // The placeholders fade out as the real content fades in.
+                    item(key = "skeleton") { HomeSkeleton(Modifier.animateItem(fadeInSpec = null, placementSpec = null, fadeOutSpec = tween(150))) }
                     return@LazyColumn
                 }
 
@@ -165,10 +166,11 @@ fun HomeScreen(
                 }
                 item(key = "crew") {
                     // Items are wider than the avatars; the row's inset keeps the first avatar on the gutter.
-                    LazyRow(contentPadding = PaddingValues(horizontal = OrbitDimens.gutter - (CrewItem - CrewAvatar) / 2)) {
-                        itemsIndexed(state.agents, key = { _, agent -> agent.id }) { index, agent ->
-                            CrewMember(agent, Modifier.entrance(entrances, "crew:${agent.id}", 1 + index)) { onEditAgent(agent) }
-                        }
+                    LazyRow(
+                        Modifier.entrance(entrances, "crew", 1),
+                        contentPadding = PaddingValues(horizontal = OrbitDimens.gutter - (CrewItem - CrewAvatar) / 2),
+                    ) {
+                        items(state.agents, key = { it.id }) { agent -> CrewMember(agent) { onEditAgent(agent) } }
                     }
                 }
 
@@ -204,7 +206,7 @@ private fun Header(state: AppState, onSettings: () -> Unit) {
         Modifier.fillMaxWidth().padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        LogoMark(size = 28.dp, spin = true)
+        LogoMark(size = 28.dp)
         Text("Orbit", Modifier.padding(start = 9.dp).weight(1f), style = OrbitType.titleL, color = c.text)
 
         // The hub is the app's one piece of infrastructure, so its status is also the way into settings.
@@ -271,10 +273,10 @@ private fun OfflineNotice(onRetry: () -> Unit) {
 }
 
 @Composable
-private fun CrewMember(agent: Agent, modifier: Modifier, onClick: () -> Unit) {
+private fun CrewMember(agent: Agent, onClick: () -> Unit) {
     val c = Orbit.colors
     Column(
-        modifier.width(CrewItem).tap(RoundedCornerShape(OrbitDimens.radiusM), 0.94f, onClick).padding(vertical = 8.dp),
+        Modifier.width(CrewItem).tap(RoundedCornerShape(OrbitDimens.radiusM), 0.94f, onClick).padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         AgentAvatar(agent.avatar, Modifier.shared(SharedKeys.agentAvatar(agent.id)), size = CrewAvatar, alive = true)
@@ -307,29 +309,19 @@ private fun RoomRow(room: Room, agents: List<Agent>, now: Long, onClick: () -> U
         Modifier.fillMaxWidth().tap(RectangleShape, 0.985f, onClick).padding(horizontal = OrbitDimens.gutter, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // While its agents work, a comet of the speaker's color circles the room's tile.
         CrewTile(
             agents.map { it.avatar },
-            Modifier.orbitingLight(room.active, speaker?.avatar?.tint() ?: c.text, RoundedCornerShape(RoomTile * 0.3f)),
             size = RoomTile,
             itemModifier = { index -> Modifier.shared(SharedKeys.roomMember(room.id, agents[index].id)) },
         )
         Column(Modifier.weight(1f).padding(start = 14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f)) {
-                    Text(
-                        room.name,
-                        Modifier.shared(SharedKeys.roomTitle(room.id)),
-                        style = OrbitType.titleM,
-                        color = c.text,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                Text(room.name, Modifier.weight(1f), style = OrbitType.titleM, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                // One quiet signal that a room is working: the speaker's dot and a shimmering line below.
                 if (room.active) {
-                    StatusDot(c.live, Modifier.padding(start = 10.dp), pulsing = true, size = 7.dp)
+                    StatusDot(speaker?.avatar?.textColor() ?: c.textSecondary, Modifier.padding(start = 10.dp), size = 7.dp)
                 } else {
-                    Text(relativeTime(room.updatedAt, now), Modifier.padding(start = 10.dp), style = OrbitType.mono, color = c.textTertiary)
+                    Text(relativeTime(room.updatedAt, now), Modifier.padding(start = 10.dp), style = OrbitType.caption, color = c.textTertiary)
                 }
             }
             val preview = room.preview
@@ -415,26 +407,34 @@ private fun BoxScope.RefreshIndicator(state: PullToRefreshState, refreshing: Boo
     }
 }
 
-/** Placeholders shaped like the crew row and room list, while the first load is in flight. */
+/** Placeholders laid out exactly like the crew row and room list, so nothing jumps when data lands. */
 @Composable
-private fun HomeSkeleton() {
-    Column(Modifier.padding(horizontal = OrbitDimens.gutter)) {
-        SkeletonBlock(90.dp, 22.dp, RoundedCornerShape(6.dp), Modifier.padding(top = OrbitDimens.section + 9.dp, bottom = 18.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+private fun HomeSkeleton(modifier: Modifier = Modifier) {
+    val text = RoundedCornerShape(4.dp)
+    Column(modifier) {
+        Box(
+            Modifier.padding(start = OrbitDimens.gutter, top = OrbitDimens.section, bottom = 6.dp).height(40.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) { SkeletonBlock(64.dp, 16.dp, text) }
+        Row(Modifier.padding(start = OrbitDimens.gutter - (CrewItem - CrewAvatar) / 2)) {
             repeat(4) {
-                Column(Modifier.width(CrewAvatar), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(Modifier.width(CrewItem).padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     SkeletonBlock(CrewAvatar, CrewAvatar, CircleShape)
-                    SkeletonBlock(44.dp, 12.dp, RoundedCornerShape(4.dp), Modifier.padding(top = 12.dp))
+                    SkeletonBlock(40.dp, 12.dp, text, Modifier.padding(top = 12.dp))
+                    SkeletonBlock(52.dp, 10.dp, text, Modifier.padding(top = 6.dp))
                 }
             }
         }
-        SkeletonBlock(100.dp, 22.dp, RoundedCornerShape(6.dp), Modifier.padding(top = OrbitDimens.section + 26.dp, bottom = 12.dp))
+        Box(
+            Modifier.padding(start = OrbitDimens.gutter, top = OrbitDimens.section, bottom = 2.dp).height(40.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) { SkeletonBlock(72.dp, 16.dp, text) }
         repeat(3) {
-            Row(Modifier.padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.padding(horizontal = OrbitDimens.gutter, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 SkeletonBlock(RoomTile, RoomTile, RoundedCornerShape(RoomTile * 0.3f))
                 Column(Modifier.padding(start = 14.dp)) {
-                    SkeletonBlock(140.dp, 16.dp, RoundedCornerShape(4.dp))
-                    SkeletonBlock(220.dp, 13.dp, RoundedCornerShape(4.dp), Modifier.padding(top = 9.dp))
+                    SkeletonBlock(140.dp, 15.dp, text)
+                    SkeletonBlock(220.dp, 12.dp, text, Modifier.padding(top = 10.dp))
                 }
             }
         }

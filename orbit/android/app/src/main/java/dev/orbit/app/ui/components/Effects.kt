@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -31,19 +30,20 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.ShaderBrush
-import androidx.compose.ui.graphics.SweepGradientShader
-import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.AvatarSpec
+import dev.orbit.app.ui.theme.LocalReducedMotion
 import dev.orbit.app.ui.theme.Orbit
 import kotlin.math.PI
 import kotlin.math.cos
@@ -62,6 +62,10 @@ fun ShimmerText(
     modifier: Modifier = Modifier,
     highlight: Color = Orbit.colors.text,
 ) {
+    if (LocalReducedMotion.current) {
+        Text(text, modifier, style = style, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        return
+    }
     val transition = rememberInfiniteTransition(label = "shimmer")
     val sweep = transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1700, easing = LinearEasing)), label = "sweep")
     Text(
@@ -84,48 +88,31 @@ fun ShimmerText(
     )
 }
 
-/** A placeholder block for content that's still loading, with a slow sheen passing over it. */
+/**
+ * A placeholder block for content that's still loading. One slow sheen crosses the whole screen,
+ * passing over every block in turn, rather than each block flickering on its own.
+ */
 fun Modifier.skeleton(shape: Shape): Modifier = composed {
     val c = Orbit.colors
-    val transition = rememberInfiniteTransition(label = "skeleton")
-    val sweep = transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1500, easing = LinearEasing)), label = "sweep")
-    val sheen = if (c.isDark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.7f)
-    clip(shape).background(c.surfaceRaised).drawBehind {
-        val band = size.width * 0.6f
-        val x = -band + (size.width + 2 * band) * sweep.value
-        drawRect(Brush.horizontalGradient(listOf(Color.Transparent, sheen, Color.Transparent), startX = x - band / 2, endX = x + band / 2))
+    val sweep = if (LocalReducedMotion.current) {
+        null
+    } else {
+        rememberInfiniteTransition(label = "skeleton").animateFloat(0f, 1f, infiniteRepeatable(tween(1600, easing = LinearEasing)), label = "sweep")
     }
-}
-
-/**
- * While [active], a comet of [color] light circles the edge of [shape]: a room whose agents
- * are at work. Fades in and out rather than switching.
- */
-fun Modifier.orbitingLight(active: Boolean, color: Color, shape: Shape, width: Dp = 2.dp): Modifier = composed {
-    val presence by animateFloatAsState(if (active) 1f else 0f, tween(600), label = "presence")
-    if (presence == 0f) return@composed Modifier
-    val transition = rememberInfiniteTransition(label = "orbit")
-    val turn = transition.animateFloat(0f, 360f, infiniteRepeatable(tween(2600, easing = LinearEasing)), label = "turn")
-    drawWithCache {
-        val outline = shape.createOutline(size, layoutDirection, this)
-        val mid = Offset(size.width / 2, size.height / 2)
-        val comet = SweepGradientShader(
-            mid,
-            listOf(Color.Transparent, Color.Transparent, color.copy(alpha = 0.55f), color, Color.Transparent),
-            listOf(0f, 0.55f, 0.88f, 0.97f, 1f),
-        )
-        val matrix = android.graphics.Matrix()
-        val brush = ShaderBrush(comet)
-        val stroke = Stroke(width.toPx())
-        val glow = Stroke(width.toPx() * 4)
-        onDrawWithContent {
-            drawContent()
-            matrix.setRotate(turn.value, mid.x, mid.y)
-            comet.setLocalMatrix(matrix)
-            drawOutline(outline, brush, alpha = presence * 0.22f, style = glow)
-            drawOutline(outline, brush, alpha = presence, style = stroke)
+    val screen = LocalWindowInfo.current.containerSize.width.toFloat()
+    var left by remember { mutableFloatStateOf(0f) }
+    val block = if (c.isDark) c.surfaceRaised else c.surfaceHigh
+    val sheen = if (c.isDark) Color.White.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.6f)
+    onGloballyPositioned { left = it.positionInWindow().x }
+        .clip(shape)
+        .background(block)
+        .drawBehind {
+            val progress = sweep?.value ?: return@drawBehind
+            val width = if (screen > 0f) screen else size.width
+            val band = width * 0.5f
+            val x = -band + (width + 2 * band) * progress - left
+            drawRect(Brush.horizontalGradient(listOf(Color.Transparent, sheen, Color.Transparent), startX = x - band / 2, endX = x + band / 2))
         }
-    }
 }
 
 /**
@@ -143,12 +130,14 @@ fun OrbitSystem(
     val c = Orbit.colors
     val pace by animateFloatAsState(speed, tween(900), label = "pace")
     var clock by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(Unit) {
-        var last = 0L
-        while (true) {
-            withFrameNanos { now ->
-                if (last != 0L) clock += (now - last) / 1e9f * pace
-                last = now
+    if (!LocalReducedMotion.current) {
+        LaunchedEffect(Unit) {
+            var last = 0L
+            while (true) {
+                withFrameNanos { now ->
+                    if (last != 0L) clock += (now - last) / 1e9f * pace
+                    last = now
+                }
             }
         }
     }
@@ -188,14 +177,17 @@ fun OrbitSystem(
             val cy = height / 2f
             core.place((cx - core.width / 2f).roundToInt(), (cy - core.height / 2f).roundToInt(), zIndex = 0f)
             val tiltRad = tilt * PI.toFloat() / 180f
+            // A small crew shares the outer orbit, evenly spaced; a larger one splits across both.
+            val split = shown.size > 3
+            val inner = if (split) shown.size / 2 else 0
             placeables.forEachIndexed { index, placeable ->
-                val ring = index % 2
+                val ring = if (index < inner) 0 else 1
                 val (rx, ry) = Orbits[ring]
-                val perRing = (shown.size + 1 - ring) / 2
-                val slot = index / 2
-                // Inner orbit turns faster than the outer, like real orbits.
-                val rate = if (ring == 0) 0.16f else 0.1f
-                val angle = 2 * PI.toFloat() * (slot.toFloat() / perRing + ring * 0.13f + clock * rate)
+                val perRing = if (ring == 0) inner else shown.size - inner
+                val slot = if (ring == 0) index else index - inner
+                // A slow drift (about 20dp a second); the inner orbit turns a little faster, like real orbits.
+                val rate = if (ring == 0) 0.04f else 0.025f
+                val angle = 2 * PI.toFloat() * (slot.toFloat() / perRing + ring * 0.13f + 0.08f + clock * rate)
                 val ex = width * rx * cos(angle)
                 val ey = width * ry * sin(angle)
                 val x = cx + ex * cos(tiltRad) - ey * sin(tiltRad)

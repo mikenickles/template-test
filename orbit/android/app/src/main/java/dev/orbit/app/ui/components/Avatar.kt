@@ -8,11 +8,11 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -41,10 +42,9 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.AvatarSpec
+import dev.orbit.app.ui.theme.LocalReducedMotion
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitMotion
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -53,6 +53,8 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** One agent color: the fill, and a deeper version of it that reads as text on a light page. */
 class AvatarColor(val fill: Color, val onLight: Color)
@@ -93,9 +95,12 @@ private fun AvatarSpec.swatch(): AvatarColor = if (color == GRAPHITE) Graphite e
 
 fun AvatarSpec.tint(): Color = swatch().fill
 
+/** The agent's color as text and accents on a dark or light background. */
+fun AvatarSpec.inkColor(dark: Boolean): Color = if (dark) swatch().fill else swatch().onLight
+
 /** The agent's color as text on the current background. */
 @Composable
-fun AvatarSpec.textColor(): Color = if (Orbit.colors.isDark) swatch().fill else swatch().onLight
+fun AvatarSpec.textColor(): Color = inkColor(Orbit.colors.isDark)
 
 // ---------------------------------------------------------------------------------------------
 // Shapes. Every shape is described the same way, as its distance from the center at each angle,
@@ -146,7 +151,9 @@ private val Outlines: List<FloatArray> = List(SHAPE_COUNT) { shape ->
     FloatArray(SAMPLES) { i -> (outline(shape, 2 * PI * i / SAMPLES) * ShapeExtent[shape]).toFloat() }
 }
 
-private val Angles = FloatArray(SAMPLES) { i -> (2 * PI * i / SAMPLES).toFloat() }
+/** Unit direction at each sample angle, computed once. */
+private val Cos = FloatArray(SAMPLES) { i -> cos(2 * PI * i / SAMPLES).toFloat() }
+private val Sin = FloatArray(SAMPLES) { i -> sin(2 * PI * i / SAMPLES).toFloat() }
 
 /** Tracks a shape change: the outline it started from, the one it's heading to, and progress. */
 private class ShapeMorph(initial: FloatArray) {
@@ -159,14 +166,14 @@ private class ShapeMorph(initial: FloatArray) {
         return (from[i] + (to[i] - from[i]) * t).coerceAtLeast(0.2f)
     }
 
-    suspend fun morphTo(target: FloatArray) {
+    suspend fun morphTo(target: FloatArray, animate: Boolean) {
         if (target === to) return
         // Start from wherever the shape is now, even mid-morph, so changes never jump.
         from = FloatArray(SAMPLES) { radius(it) }
         to = target
-        progress.snapTo(0f)
+        progress.snapTo(if (animate) 0f else 1f)
         // A slight overshoot gives the change a soft, jelly-like settle.
-        progress.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.62f, stiffness = 260f))
+        if (animate) progress.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.62f, stiffness = 260f))
     }
 }
 
@@ -174,8 +181,8 @@ private fun bodyPath(radius: (Int) -> Float, s: Float): Path = Path().apply {
     val c = s / 2
     for (i in 0 until SAMPLES) {
         val r = radius(i) * c
-        val x = c + r * cos(Angles[i])
-        val y = c + r * sin(Angles[i])
+        val x = c + r * Cos[i]
+        val y = c + r * Sin[i]
         if (i == 0) moveTo(x, y) else lineTo(x, y)
     }
     close()
@@ -193,6 +200,9 @@ private fun bodyPath(radius: (Int) -> Float, s: Float): Path = Path().apply {
  *   not for every face in a list.
  * - [thinking]: a moon circles it, trailing light, and its eyes look side to side.
  * - [ring]: outlines it in a color, to separate it from an avatar it overlaps.
+ *
+ * The outline and fill are cached per size and look, so a still avatar costs one path draw.
+ * With system animations off, avatars hold still and changes apply at once.
  */
 @Composable
 fun AgentAvatar(
@@ -204,62 +214,81 @@ fun AgentAvatar(
     alive: Boolean = false,
 ) {
     val dark = Orbit.colors.isDark
+    val reduced = LocalReducedMotion.current
     val shape = spec.shape.mod(SHAPE_COUNT)
     val eyes = spec.eyes.mod(EYES_COUNT)
+    val phase = if (thinking && !reduced) thinkingPhase() else null
 
     if (!alive) {
         // The common case, kept cheap: no animation state unless thinking.
-        val phase = if (thinking) thinkingPhase() else null
-        Canvas(modifier.size(size)) {
-            val wave = phase?.value?.let { sin(it * 4 * PI).toFloat() } ?: 0f
-            drawAvatar({ Outlines[shape][it] }, spec.tint(), eyes, size.value, dark, look = wave * 0.045f, openness = 1f, ring = ring)
-            phase?.let { drawSatellite(spec.tint(), it.value) }
-        }
+        val base = spec.tint()
+        Spacer(
+            modifier.size(size).drawWithCache {
+                val s = this.size.minDimension
+                val body = bodyPath({ Outlines[shape][it] }, s)
+                val fill = bodyFill(base, dark, s)
+                onDrawBehind {
+                    val wave = phase?.let { sin(it.value * 4 * PI).toFloat() * 0.045f } ?: 0f
+                    drawAvatar(body, fill, ring, eyes, size.value, base, look = wave, openness = 1f)
+                    if (thinking) drawSatellite(base, phase?.value ?: 0.125f)
+                }
+            },
+        )
         return
     }
 
     val morph = remember { ShapeMorph(Outlines[shape]) }
-    LaunchedEffect(shape) { morph.morphTo(Outlines[shape]) }
+    LaunchedEffect(shape) { morph.morphTo(Outlines[shape], animate = !reduced) }
 
-    val color by animateColorAsState(spec.tint(), OrbitMotion.gentle(), label = "color")
+    val blended by animateColorAsState(spec.tint(), OrbitMotion.gentle(), label = "color")
+    val color = if (reduced) spec.tint() else blended
 
     // Eyes change behind a quick blink, so the swap is never seen.
     val openness = remember { Animatable(1f) }
     var shownEyes by remember { mutableIntStateOf(eyes) }
     LaunchedEffect(eyes) {
         if (eyes == shownEyes) return@LaunchedEffect
-        openness.animateTo(0.05f, tween(90, easing = OrbitMotion.Accelerate))
+        if (!reduced) openness.animateTo(0.05f, tween(90, easing = OrbitMotion.Accelerate))
         shownEyes = eyes
-        openness.animateTo(1f, OrbitMotion.bouncy())
+        if (!reduced) openness.animateTo(1f, OrbitMotion.bouncy())
     }
 
     // Idle life: a blink every few seconds (sometimes two), and the odd glance.
     val glance = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        val random = Random(spec.hashCode())
-        launch {
-            while (true) {
-                delay(2400L + random.nextLong(4200))
-                repeat(if (random.nextInt(5) == 0) 2 else 1) {
-                    openness.animateTo(0.06f, tween(70, easing = OrbitMotion.Accelerate))
-                    openness.animateTo(1f, tween(150, easing = OrbitMotion.Decelerate))
+    if (!reduced) {
+        LaunchedEffect(Unit) {
+            val random = Random(spec.hashCode())
+            launch {
+                while (true) {
+                    delay(2400L + random.nextLong(4200))
+                    repeat(if (random.nextInt(5) == 0) 2 else 1) {
+                        openness.animateTo(0.06f, tween(70, easing = OrbitMotion.Accelerate))
+                        openness.animateTo(1f, tween(150, easing = OrbitMotion.Decelerate))
+                    }
                 }
             }
-        }
-        while (true) {
-            delay(5000L + random.nextLong(6000))
-            glance.animateTo(if (random.nextBoolean()) 0.045f else -0.045f, tween(320, easing = OrbitMotion.Emphasized))
-            delay(900L + random.nextLong(900))
-            glance.animateTo(0f, tween(420, easing = OrbitMotion.Emphasized))
+            while (true) {
+                delay(5000L + random.nextLong(6000))
+                glance.animateTo(if (random.nextBoolean()) 0.045f else -0.045f, tween(320, easing = OrbitMotion.Emphasized))
+                delay(900L + random.nextLong(900))
+                glance.animateTo(0f, tween(420, easing = OrbitMotion.Emphasized))
+            }
         }
     }
 
-    val phase = if (thinking) thinkingPhase() else null
-    Canvas(modifier.size(size)) {
-        val wave = phase?.value?.let { sin(it * 4 * PI).toFloat() * 0.045f } ?: 0f
-        drawAvatar(morph::radius, color, shownEyes, size.value, dark, look = wave + glance.value, openness = openness.value, ring = ring)
-        phase?.let { drawSatellite(color, it.value) }
-    }
+    Spacer(
+        modifier.size(size).drawWithCache {
+            val s = this.size.minDimension
+            // Reading the morph and color here rebuilds the cache only while they are changing.
+            val body = bodyPath(morph::radius, s)
+            val fill = bodyFill(color, dark, s)
+            onDrawBehind {
+                val wave = phase?.let { sin(it.value * 4 * PI).toFloat() * 0.045f } ?: 0f
+                drawAvatar(body, fill, ring, shownEyes, size.value, color, look = wave + glance.value, openness = openness.value)
+                if (thinking) drawSatellite(color, phase?.value ?: 0.125f)
+            }
+        },
+    )
 }
 
 @Composable
@@ -289,24 +318,29 @@ private fun DrawScope.drawSatellite(color: Color, phase: Float) {
     }
 }
 
+/**
+ * A quiet top-left to bottom-right ramp. On a light page the shape is shaded rather than
+ * highlighted, so yellows and greens keep their edge against white.
+ */
+private fun bodyFill(base: Color, dark: Boolean, s: Float): Brush {
+    val ramp = if (dark) listOf(lerp(base, Color.White, 0.2f), base) else listOf(base, lerp(base, Color.Black, 0.1f))
+    return Brush.linearGradient(ramp, start = Offset(s * 0.15f, 0f), end = Offset(s * 0.7f, s))
+}
+
 // Drawn in units of `s`, the canvas width.
 private fun DrawScope.drawAvatar(
-    radius: (Int) -> Float,
-    base: Color,
+    body: Path,
+    fill: Brush,
+    ring: Color?,
     eyes: Int,
     dp: Float,
-    dark: Boolean,
+    base: Color,
     look: Float,
     openness: Float,
-    ring: Color?,
 ) {
     val s = size.minDimension
-    val body = bodyPath(radius, s)
     if (ring != null) drawPath(body, ring, style = Stroke(width = s * 0.14f))
-    // A quiet top-left to bottom-right ramp. On a light page the shape is shaded rather than
-    // highlighted, so yellows and greens keep their edge against white.
-    val ramp = if (dark) listOf(lerp(base, Color.White, 0.2f), base) else listOf(base, lerp(base, Color.Black, 0.1f))
-    drawPath(body, Brush.linearGradient(ramp, start = Offset(s * 0.15f, 0f), end = Offset(s * 0.7f, s)))
+    drawPath(body, fill)
     val cx = s * (0.5f + look)
     val y = s * 0.485f
     withTransform({ scale(1f, openness, pivot = Offset(cx, y)) }) {

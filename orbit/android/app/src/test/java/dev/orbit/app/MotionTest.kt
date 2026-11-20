@@ -58,7 +58,7 @@ class MotionTest {
     val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_6)
 
     private fun record(name: String, end: Long, fps: Int = 20, dark: Boolean = true, content: @Composable () -> Unit) {
-        paparazzi.gif(name, start = 0, end = end, fps = fps) { OrbitTheme(dark = dark) { Hosted(content) } }
+        paparazzi.gif(name, start = 0, end = end, fps = fps) { OrbitTheme(dark = dark, reducedMotion = false) { Hosted(content) } }
     }
 
     /** The pairing hero: the crew orbiting the hub, blinking. */

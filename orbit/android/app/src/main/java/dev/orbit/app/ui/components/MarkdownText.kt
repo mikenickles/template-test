@@ -142,7 +142,12 @@ fun MarkdownText(
     fadeTail: Int = 0,
 ) {
     val c = Orbit.colors
-    val blocks = remember(text) { parse(text) }
+    // Everything before the last paragraph break is settled, so a streaming reply re-parses only its tail.
+    val cut = text.lastIndexOf("\n\n")
+    val settled = if (cut > 0 && text.substring(0, cut).split("```").size % 2 == 1) text.substring(0, cut) else ""
+    val head = remember(settled) { parse(settled) }
+    val tail = remember(text) { parse(text.substring(settled.length)) }
+    val blocks = head + tail
     Column(modifier) {
         blocks.forEachIndexed { index, block ->
             // List items sit closer to each other than paragraphs do.

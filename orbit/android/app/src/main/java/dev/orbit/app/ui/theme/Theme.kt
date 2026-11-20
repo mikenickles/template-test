@@ -1,5 +1,6 @@
 package dev.orbit.app.ui.theme
 
+import android.animation.ValueAnimator
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
@@ -50,41 +51,42 @@ data class OrbitColors(
     val dangerSurface: Color,
 )
 
+// Neutrals carry a faint blue-violet cast, like a night sky, rather than flat grey.
 private val DarkColors = OrbitColors(
     isDark = true,
-    bg = Color(0xFF09090B),
-    surface = Color(0xFF121214),
-    surfaceRaised = Color(0xFF1A1A1D),
-    surfaceHigh = Color(0xFF26262B),
-    hairline = Color(0x14FFFFFF),
-    line = Color(0x33FFFFFF),
-    text = Color(0xFFFAFAFA),
-    textSecondary = Color(0xFFA1A1AA),
-    textTertiary = Color(0xFF8A8A93),
-    primary = Color(0xFFFAFAFA),
-    onPrimary = Color(0xFF09090B),
-    live = Color(0xFF34D399),
-    danger = Color(0xFFF87171),
-    dangerSurface = Color(0x1FF87171),
+    bg = Color(0xFF08090D),
+    surface = Color(0xFF111318),
+    surfaceRaised = Color(0xFF181A21),
+    surfaceHigh = Color(0xFF23262F),
+    hairline = Color(0x14E8ECFF),
+    line = Color(0x33E8ECFF),
+    text = Color(0xFFF4F5F8),
+    textSecondary = Color(0xFFA3A7B6),
+    textTertiary = Color(0xFF8B8FA0),
+    primary = Color(0xFFF4F5F8),
+    onPrimary = Color(0xFF08090D),
+    live = Color(0xFF46E3A6),
+    danger = Color(0xFFFF7B72),
+    dangerSurface = Color(0x1FFF7B72),
 )
 
 // Light is its own design, not an inversion: a faintly tinted page with white surfaces on it.
 private val LightColors = OrbitColors(
     isDark = false,
-    bg = Color(0xFFF4F4F5),
+    bg = Color(0xFFF3F4F7),
     surface = Color(0xFFFFFFFF),
     surfaceRaised = Color(0xFFFFFFFF),
-    surfaceHigh = Color(0xFFE2E2E6),
-    hairline = Color(0x14000000),
-    line = Color(0x38000000),
-    text = Color(0xFF09090B),
-    textSecondary = Color(0xFF52525B),
-    textTertiary = Color(0xFF6B6B74),
-    primary = Color(0xFF09090B),
+    surfaceHigh = Color(0xFFE0E2E9),
+    hairline = Color(0x140A0F2E),
+    line = Color(0x380A0F2E),
+    text = Color(0xFF0A0B10),
+    textSecondary = Color(0xFF4E5262),
+    textTertiary = Color(0xFF676B7C),
+    primary = Color(0xFF0A0B10),
     onPrimary = Color(0xFFFFFFFF),
-    live = Color(0xFF047857),
-    danger = Color(0xFFDC2626),
-    dangerSurface = Color(0x14DC2626),
+    live = Color(0xFF0A7A55),
+    danger = Color(0xFFC42F22),
+    dangerSurface = Color(0x14C42F22),
 )
 
 private fun variable(resource: Int, weight: FontWeight) = Font(
@@ -113,8 +115,8 @@ object OrbitType {
     val display = sans(30.0, 36, FontWeight.SemiBold, -0.032)
     val titleL = sans(22.0, 28, FontWeight.SemiBold, -0.024)
 
-    /** Section headings within a screen. */
-    val heading = sans(20.0, 26, FontWeight.SemiBold, -0.022)
+    /** Section headings within a screen: clear, but quieter than the wordmark. */
+    val heading = sans(17.0, 22, FontWeight.SemiBold, -0.016)
     val titleM = sans(17.0, 22, FontWeight.SemiBold, -0.016)
 
     /** Names, buttons, row titles. */
@@ -161,6 +163,8 @@ fun OrbitTheme(
     dark: Boolean = isSystemInDarkTheme(),
     /** Off in screenshot tests, so screens render in their settled state. */
     entrances: Boolean = true,
+    /** Follows the system's "remove animations" setting unless a test says otherwise. */
+    reducedMotion: Boolean = !ValueAnimator.areAnimatorsEnabled(),
     content: @Composable () -> Unit,
 ) {
     val c = if (dark) DarkColors else LightColors
@@ -198,7 +202,11 @@ fun OrbitTheme(
         labelMedium = OrbitType.label,
         labelSmall = OrbitType.label,
     )
-    CompositionLocalProvider(LocalOrbitColors provides c, LocalEntrances provides entrances) {
+    CompositionLocalProvider(
+        LocalOrbitColors provides c,
+        LocalEntrances provides (entrances && !reducedMotion),
+        LocalReducedMotion provides reducedMotion,
+    ) {
         MaterialTheme(colorScheme = scheme, typography = typography, content = content)
     }
 }

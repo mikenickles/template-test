@@ -16,7 +16,8 @@ Two independent projects live here:
     `OrbitDimens`); controls, icons and avatars from `ui/components`. The interface stays neutral so avatars are
     the only color. Don't add one-off sizes, Material icons, or new colors in a screen.
     Motion comes from `ui/theme/Motion.kt` (`OrbitMotion` easings and springs, `pressScale`, `entrance`,
-    haptics); shared-element keys live in `ui/Shared.kt`. Entrances are off in screenshot tests.
+    haptics); shared-element keys live in `ui/Shared.kt`. Entrances are off in screenshot tests. Ambient
+    motion (loops, idle life) must stop when `LocalReducedMotion` is true, i.e. system animations are off.
 
 ## Development Workflow
 

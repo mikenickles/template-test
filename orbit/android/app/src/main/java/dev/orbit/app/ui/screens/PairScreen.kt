@@ -113,16 +113,16 @@ fun PairScreen(state: PairState, onFind: () -> Unit, onConnect: (address: String
         ) {
             Spacer(Modifier.height(20.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                LogoMark(size = 24.dp, spin = true)
+                LogoMark(size = 24.dp)
                 Text("Orbit", Modifier.padding(start = 8.dp), style = OrbitType.titleM, color = c.text)
             }
 
-            // The crew circling the hub. While connecting, they pick up speed.
+            // The crew drifting around the hub. While connecting, they quicken a little.
             OrbitSystem(
                 SampleCrew,
                 Modifier.fillMaxWidth().height(230.dp).entrance(entrances, "hero", 0),
                 avatarSize = 46.dp,
-                speed = if (state.busy) 5f else 1f,
+                speed = if (state.busy) 1.6f else 1f,
             )
 
             Text("Pair with your hub", Modifier.entrance(entrances, "title", 1), style = OrbitType.display, color = c.text)
@@ -172,7 +172,8 @@ fun PairScreen(state: PairState, onFind: () -> Unit, onConnect: (address: String
 
                 Spacer(Modifier.height(24.dp))
                 FieldLabel("Pairing code")
-                CodeField(code, failed = state.error != null, modifier = Modifier.shake(shake)) { entered ->
+                // The boxes stay red after a wrong code only until you start typing the next one.
+                CodeField(code, failed = state.error != null && code.isEmpty(), modifier = Modifier.shake(shake)) { entered ->
                     val completed = entered.length == CODE_LENGTH && code.length < CODE_LENGTH
                     code = entered
                     // The sixth digit is the commit: no need to reach for the button.
@@ -199,17 +200,12 @@ fun PairScreen(state: PairState, onFind: () -> Unit, onConnect: (address: String
 @Composable
 private fun CodeField(code: String, failed: Boolean, modifier: Modifier = Modifier, onChange: (String) -> Unit) {
     val c = Orbit.colors
-    val haptics = rememberHaptics()
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val shape = RoundedCornerShape(OrbitDimens.radiusS)
     BasicTextField(
         value = code,
-        onValueChange = { input ->
-            val digits = input.filter(Char::isDigit).take(CODE_LENGTH)
-            if (digits.length > code.length) haptics.tick()
-            onChange(digits)
-        },
+        onValueChange = { input -> onChange(input.filter(Char::isDigit).take(CODE_LENGTH)) },
         modifier = modifier,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
         interactionSource = interaction,

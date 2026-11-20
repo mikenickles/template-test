@@ -5,6 +5,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -158,9 +159,9 @@ fun AgentEditorScreen(
                 // each side (the selection ring's margin) so the first dot itself sits on the gutter.
                 Row(
                     Modifier.layout { measurable, constraints ->
-                        val width = constraints.maxWidth + 10.dp.roundToPx()
+                        val width = constraints.maxWidth + 11.dp.roundToPx()
                         val row = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
-                        layout(constraints.maxWidth, row.height) { row.place(-5.dp.roundToPx(), 0) }
+                        layout(constraints.maxWidth, row.height) { row.place(-(5.5f).dp.roundToPx(), 0) }
                     },
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
@@ -329,12 +330,12 @@ private fun IdentityCard(avatar: AvatarSpec, agentId: String?, name: String, rol
             OrbitIcon.Dice,
             "Shuffle avatar",
             onClick = {
-                haptics.confirm()
+                haptics.tick()
                 onShuffle()
                 scope.launch { dice.animateTo(dice.value + 360f, OrbitMotion.bouncy()) }
                 scope.launch {
-                    // A squash and stretch: wide and low, then springing back.
-                    hop.snapTo(1.12f)
+                    // A squash and stretch: it settles wide and low, then springs back.
+                    hop.animateTo(1.12f, tween(80, easing = OrbitMotion.Decelerate))
                     hop.animateTo(1f, OrbitMotion.bouncy())
                 }
             },
@@ -349,11 +350,11 @@ private fun IdentityCard(avatar: AvatarSpec, agentId: String?, name: String, rol
 private fun Swatch(color: Color, selected: Boolean, onClick: () -> Unit) {
     val c = Orbit.colors
     val ring by animateFloatAsState(if (selected) 1f else 0f, OrbitMotion.bouncy(), label = "ring")
-    val dot by animateDpAsState(if (selected) 22.dp else 24.dp, OrbitMotion.snappy(), label = "dot")
-    Box(Modifier.size(34.dp).tap(CircleShape, 0.85f, onClick), contentAlignment = Alignment.Center) {
+    val dot by animateDpAsState(if (selected) 24.dp else 27.dp, OrbitMotion.snappy(), label = "dot")
+    Box(Modifier.size(38.dp).tap(CircleShape, 0.85f, onClick), contentAlignment = Alignment.Center) {
         Box(
             Modifier
-                .size(34.dp)
+                .size(38.dp)
                 .graphicsLayer {
                     scaleX = 0.7f + 0.3f * ring
                     scaleY = 0.7f + 0.3f * ring

@@ -55,6 +55,12 @@ object OrbitMotion {
 }
 
 /**
+ * True when the person has turned animations off in system settings. Ambient motion (orbits, blinks,
+ * shimmer) stops, and anything that would animate settles at once.
+ */
+val LocalReducedMotion = staticCompositionLocalOf { false }
+
+/**
  * Whether one-off entrance animations play. Screenshot tests turn them off so the
  * first rendered frame is the finished layout.
  */
@@ -82,7 +88,7 @@ class Entrances internal constructor(private val enabled: Boolean) {
         enabled && played.add(key) && (System.nanoTime() - born) / 1_000_000 < WINDOW_MS
 
     internal companion object {
-        const val WINDOW_MS = 900
+        const val WINDOW_MS = 700
     }
 }
 
@@ -110,10 +116,10 @@ fun Modifier.entrance(entrances: Entrances, key: Any, order: Int = 0): Modifier 
     if (!play) return@composed Modifier
     val progress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
-        delay(order.coerceAtMost(8) * 45L)
-        progress.animateTo(1f, tween(560, easing = OrbitMotion.Decelerate))
+        delay(order.coerceAtMost(6) * 30L)
+        progress.animateTo(1f, tween(360, easing = OrbitMotion.Decelerate))
     }
-    val lift = with(LocalDensity.current) { 18.dp.toPx() }
+    val lift = with(LocalDensity.current) { 12.dp.toPx() }
     graphicsLayer {
         alpha = progress.value
         translationY = (1f - progress.value) * lift

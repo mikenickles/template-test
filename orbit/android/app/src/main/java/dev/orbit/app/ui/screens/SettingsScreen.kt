@@ -20,7 +20,6 @@ import dev.orbit.app.ui.AppState
 import dev.orbit.app.ui.components.DangerRow
 import dev.orbit.app.ui.components.Hairline
 import dev.orbit.app.ui.components.OrbitCard
-import dev.orbit.app.ui.components.OrbitSystem
 import dev.orbit.app.ui.components.ScreenBar
 import dev.orbit.app.ui.components.SectionTitle
 import dev.orbit.app.ui.components.StatusDot
@@ -41,19 +40,11 @@ fun SettingsScreen(state: AppState, hubAddress: String, onUnpair: () -> Unit, on
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(scroll)
-                .padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 4.dp, bottom = 48.dp),
+                .padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 12.dp, bottom = 48.dp),
         ) {
             val online = state.loaded && !state.offline
             OrbitCard(Modifier.fillMaxWidth().entrance(entrances, "hub", 0)) {
                 Column {
-                    // Your actual crew, circling the hub they live on. Offline, they drift.
-                    OrbitSystem(
-                        state.agents.map { it.avatar }.ifEmpty { SampleCrew },
-                        Modifier.fillMaxWidth().height(180.dp),
-                        avatarSize = 36.dp,
-                        speed = if (online) 1f else 0.15f,
-                    )
-                    Hairline()
                     Row(Modifier.padding(OrbitDimens.rowPad), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(state.hub.name.ifEmpty { "Your hub" }, style = OrbitType.titleM, color = c.text)

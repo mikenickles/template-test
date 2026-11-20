@@ -15,8 +15,6 @@ import app.cash.paparazzi.Paparazzi
 import dev.orbit.app.data.Agent
 import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.data.FoundHub
-import dev.orbit.app.data.Message
-import dev.orbit.app.data.Room
 import dev.orbit.app.data.RunState
 import dev.orbit.app.ui.AppState
 import dev.orbit.app.ui.PairState
@@ -63,7 +61,7 @@ class ScreenshotTest {
         SampleData.agentMessage(id, agent, text, status, error)
 
     private fun shot(name: String, dark: Boolean = true, content: @Composable () -> Unit) {
-        paparazzi.snapshot(name) { OrbitTheme(dark = dark, entrances = false) { content() } }
+        paparazzi.snapshot(name) { OrbitTheme(dark = dark, entrances = false, reducedMotion = false) { content() } }
     }
 
     @Composable
@@ -102,6 +100,7 @@ class ScreenshotTest {
     @Test fun pairLight() = shot("pair-light", dark = false) { PairScreen(PairState(error = "That code didn't match. Check the one shown on your PC."), {}) { _, _ -> } }
     @Test fun home() = shot("home") { Home() }
     @Test fun homeLight() = shot("home-light", dark = false) { Home() }
+    @Test fun homeLoadingLight() = shot("home-loading-light", dark = false) { Home(SampleData.app.copy(loaded = false, agents = emptyList(), rooms = emptyList())) }
     @Test fun homeLoading() = shot("home-loading") { Home(SampleData.app.copy(loaded = false, agents = emptyList(), rooms = emptyList())) }
     @Test fun homeEmpty() = shot("home-empty") { Home(app.copy(rooms = emptyList(), offline = true)) }
     @Test fun room() = shot("room") { RoomScreen(launch, listOf(nova, pixel, sage), chat, {}, {}, {}, {}, {}) }

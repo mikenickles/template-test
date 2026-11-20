@@ -71,11 +71,13 @@ class RoomStateTest {
     @Test
     fun `streaming text never shows half-typed markup`() {
         assertEquals("- **Email**", closeOpenMarkup("- **Email"))
-        assertEquals("- ", closeOpenMarkup("- **"))
+        assertEquals("", closeOpenMarkup("- **"))
         assertEquals("a single `email`", closeOpenMarkup("a single `email"))
         assertEquals("a single ", closeOpenMarkup("a single `"))
         assertEquals("**done** and ", closeOpenMarkup("**done** and *"))
         assertEquals("```\ncode", closeOpenMarkup("```\ncode"))
         assertEquals("plain text", closeOpenMarkup("plain text"))
+        assertEquals("Two risks:\n\n", closeOpenMarkup("Two risks:\n\n- "))
+        assertEquals("Steps:\n", closeOpenMarkup("Steps:\n2. "))
     }
 }

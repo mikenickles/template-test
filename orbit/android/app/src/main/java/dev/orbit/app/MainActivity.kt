@@ -25,7 +25,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -50,6 +52,7 @@ import dev.orbit.app.ui.screens.SettingsScreen
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitMotion
 import dev.orbit.app.ui.theme.OrbitTheme
+import dev.orbit.app.ui.theme.rememberHaptics
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -67,6 +70,14 @@ private fun OrbitRoot(vm: AppViewModel = viewModel()) {
     val pairState by vm.pairState.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(Unit) { vm.notices.collect { snackbar.showSnackbar(it) } }
+
+    // A confirming tap the moment pairing succeeds.
+    val haptics = rememberHaptics()
+    var paired by remember { mutableStateOf(session != null) }
+    LaunchedEffect(session) {
+        if (session != null && !paired) haptics.confirm()
+        paired = session != null
+    }
 
     Surface(Modifier.fillMaxSize(), color = Orbit.colors.bg) {
         Box {
@@ -102,6 +113,7 @@ private val OptionalId = listOf(navArgument("id") { type = NavType.StringType; n
 @Composable
 private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackbar: SnackbarHostState) {
     val nav = rememberNavController()
+    val haptics = rememberHaptics()
     LifecycleResumeEffect(Unit) {
         vm.refresh()
         onPauseOrDispose {}
@@ -157,7 +169,12 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 initial = agent,
                 providers = state.providers,
                 loadModels = vm::models,
-                onSave = { vm.saveAgent(it) { nav.popBackStack() } },
+                onSave = {
+                    vm.saveAgent(it) {
+                        haptics.confirm()
+                        nav.popBackStack()
+                    }
+                },
                 onDelete = agent?.let { { vm.deleteAgent(it.id) { nav.popBackStack() } } },
                 onBack = { nav.popBackStack() },
             )
@@ -169,6 +186,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 agents = state.agents,
                 onSave = { edited ->
                     vm.saveRoom(edited) { saved ->
+                        haptics.confirm()
                         if (room == null) {
                             nav.navigate("room/${saved.id}") { popUpTo("home") }
                         } else {

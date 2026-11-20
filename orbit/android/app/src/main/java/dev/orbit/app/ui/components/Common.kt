@@ -2,9 +2,7 @@ package dev.orbit.app.ui.components
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -12,7 +10,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -39,12 +36,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -57,15 +50,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import dev.orbit.app.ui.theme.LocalEntrances
+import dev.orbit.app.ui.theme.LocalReducedMotion
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitDimens
 import dev.orbit.app.ui.theme.OrbitMotion
@@ -209,7 +200,7 @@ fun OrbitField(
     )
 }
 
-/** The one filled call to action on a screen. Unavailable, it stays recognisably a button, only dimmed. */
+/** The one filled call to action on a screen. Unavailable, it steps back to an outlined, quiet button. */
 @Composable
 fun PrimaryButton(
     text: String,
@@ -221,7 +212,8 @@ fun PrimaryButton(
     val c = Orbit.colors
     val haptics = rememberHaptics()
     val interaction = remember { MutableInteractionSource() }
-    val fill by animateColorAsState(if (enabled) c.primary else c.primary.copy(alpha = 0.3f), tween(OrbitMotion.MEDIUM), label = "fill")
+    val fill by animateColorAsState(if (enabled) c.primary else c.surfaceRaised, tween(OrbitMotion.MEDIUM), label = "fill")
+    val ink by animateColorAsState(if (enabled) c.onPrimary else c.textTertiary, tween(OrbitMotion.MEDIUM), label = "ink")
     Surface(
         onClick = {
             haptics.tick()
@@ -231,7 +223,8 @@ fun PrimaryButton(
         enabled = enabled && !loading,
         shape = CircleShape,
         color = fill,
-        contentColor = c.onPrimary,
+        contentColor = ink,
+        border = BorderStroke(1.dp, if (enabled) Color.Transparent else c.hairline),
         interactionSource = interaction,
     ) {
         AnimatedContent(
@@ -241,7 +234,7 @@ fun PrimaryButton(
             label = "loading",
         ) { busy ->
             Box(contentAlignment = Alignment.Center) {
-                if (busy) OrbitSpinner(c.onPrimary, size = 22.dp) else Text(text, style = OrbitType.titleS)
+                if (busy) OrbitSpinner(ink, size = 22.dp) else Text(text, style = OrbitType.titleS)
             }
         }
     }
@@ -311,7 +304,7 @@ fun IconPill(
     description: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    size: Dp = 44.dp,
+    size: Dp = 48.dp,
     iconModifier: Modifier = Modifier,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -329,29 +322,20 @@ fun IconPill(
     }
 }
 
-/** Status dot. When [pulsing] a soft halo breathes around it. */
+/** A small status dot. */
 @Composable
-fun StatusDot(color: Color, modifier: Modifier = Modifier, pulsing: Boolean = false, size: Dp = 8.dp) {
-    val halo = if (pulsing) {
-        val transition = rememberInfiniteTransition(label = "status")
-        val value by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1400), RepeatMode.Restart), label = "halo")
-        value
-    } else {
-        null
-    }
-    Canvas(modifier.size(size)) {
-        val r = this.size.minDimension / 2
-        if (halo != null) drawCircle(color.copy(alpha = 0.35f * (1f - halo)), r * (1f + 1.4f * halo))
-        drawCircle(color, r)
-    }
+fun StatusDot(color: Color, modifier: Modifier = Modifier, size: Dp = 8.dp) {
+    Canvas(modifier.size(size)) { drawCircle(color) }
 }
 
 /** Loading, Orbit-style: a moon circling a dot, with a fading trail. */
 @Composable
 fun OrbitSpinner(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
     val transition = rememberInfiniteTransition(label = "spinner")
-    val turn by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(900, easing = LinearEasing)), label = "turn")
+    val spin = transition.animateFloat(0f, 1f, infiniteRepeatable(tween(900, easing = LinearEasing)), label = "turn")
+    val still = LocalReducedMotion.current
     Canvas(modifier.size(size)) {
+        val turn = if (still) 0.125f else spin.value
         val s = this.size.minDimension
         val orbit = s * 0.36f
         drawCircle(color, s * 0.15f)
@@ -366,23 +350,11 @@ fun OrbitSpinner(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) 
     }
 }
 
-/**
- * The Orbit mark: a dot with two eyes and a satellite, in the current text color.
- * With [spin], the satellite sweeps once around the dot when the mark first appears.
- */
+/** The Orbit mark: a dot with two eyes and a satellite, in the current text color. */
 @Composable
-fun LogoMark(modifier: Modifier = Modifier, size: Dp = 26.dp, spin: Boolean = false) {
+fun LogoMark(modifier: Modifier = Modifier, size: Dp = 26.dp) {
     val fill = Orbit.colors.text
     val eye = Orbit.colors.bg
-    val sweep = remember { Animatable(0f) }
-    val entrances = LocalEntrances.current
-    var spun by rememberSaveable { mutableStateOf(false) }
-    if (spin && entrances && !spun) {
-        LaunchedEffect(Unit) {
-            sweep.animateTo(360f, tween(1400, delayMillis = 250, easing = OrbitMotion.Emphasized))
-            spun = true
-        }
-    }
     Canvas(modifier.size(size)) {
         val s = this.size.minDimension
         val center = Offset(s * 0.44f, s * 0.57f)
@@ -395,7 +367,7 @@ fun LogoMark(modifier: Modifier = Modifier, size: Dp = 26.dp, spin: Boolean = fa
                 cornerRadius = CornerRadius(s * 0.055f),
             )
         }
-        rotate(sweep.value, pivot = center) { drawCircle(fill, s * 0.11f, Offset(s * 0.87f, s * 0.13f)) }
+        drawCircle(fill, s * 0.11f, Offset(s * 0.87f, s * 0.13f))
     }
 }
 
@@ -432,17 +404,19 @@ fun BarAction(label: String, onClick: () -> Unit, enabled: Boolean = true) {
     val c = Orbit.colors
     val haptics = rememberHaptics()
     val interaction = remember { MutableInteractionSource() }
-    val fill by animateColorAsState(if (enabled) c.primary else c.primary.copy(alpha = 0.3f), tween(OrbitMotion.MEDIUM), label = "fill")
+    val fill by animateColorAsState(if (enabled) c.primary else c.surfaceRaised, tween(OrbitMotion.MEDIUM), label = "fill")
+    val ink by animateColorAsState(if (enabled) c.onPrimary else c.textTertiary, tween(OrbitMotion.MEDIUM), label = "ink")
     Surface(
         onClick = {
-            haptics.confirm()
+            haptics.tick()
             onClick()
         },
         modifier = Modifier.pressScale(interaction),
         enabled = enabled,
         shape = CircleShape,
         color = fill,
-        contentColor = c.onPrimary,
+        contentColor = ink,
+        border = BorderStroke(1.dp, if (enabled) Color.Transparent else c.hairline),
         interactionSource = interaction,
     ) {
         Box(Modifier.height(40.dp).padding(horizontal = 18.dp), contentAlignment = Alignment.Center) {

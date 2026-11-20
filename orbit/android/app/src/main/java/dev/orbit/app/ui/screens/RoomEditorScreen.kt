@@ -136,14 +136,14 @@ fun RoomEditorScreen(
             }
 
             Spacer(Modifier.height(OrbitDimens.section))
-            FieldLabel(if (selected.isEmpty()) "Crew" else "Crew · ${selected.size}")
+            FieldLabel("Crew")
             // One grouped list, rows parted by hairlines.
             val shape = RoundedCornerShape(OrbitDimens.radiusL)
             Column(Modifier.lift(shape).clip(shape).background(c.surface).border(surfaceBorder(), shape)) {
                 agents.forEachIndexed { index, agent ->
                     if (index > 0) Hairline(Modifier.padding(start = OrbitDimens.rowPad + 42.dp + 14.dp))
                     val isIn = agent.id in selected
-                    AgentRow(agent, selected = isIn, isLead = leading && agent.id == lead) {
+                    AgentRow(agent, selected = isIn) {
                         haptics.toggle(!isIn)
                         selected = if (isIn) selected - agent.id else selected + agent.id
                     }
@@ -230,7 +230,7 @@ private fun ModeGlyph(lead: Boolean, color: Color, spread: Float) {
 }
 
 @Composable
-private fun AgentRow(agent: Agent, selected: Boolean, isLead: Boolean, onToggle: () -> Unit) {
+private fun AgentRow(agent: Agent, selected: Boolean, onToggle: () -> Unit) {
     val c = Orbit.colors
     Row(
         Modifier.fillMaxWidth().tap(RectangleShape, 0.985f, onToggle).padding(horizontal = OrbitDimens.rowPad, vertical = 12.dp),
@@ -238,17 +238,7 @@ private fun AgentRow(agent: Agent, selected: Boolean, isLead: Boolean, onToggle:
     ) {
         AgentAvatar(agent.avatar, size = 42.dp)
         Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(agent.name, Modifier.weight(1f, fill = false), style = OrbitType.titleS, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                AnimatedVisibility(isLead, enter = scaleIn(OrbitMotion.bouncy()) + fadeIn(), exit = scaleOut() + fadeOut()) {
-                    Text(
-                        "Lead",
-                        Modifier.padding(start = 8.dp).clip(CircleShape).background(c.surfaceHigh).padding(horizontal = 8.dp, vertical = 2.dp),
-                        style = OrbitType.caption,
-                        color = c.text,
-                    )
-                }
-            }
+            Text(agent.name, style = OrbitType.titleS, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (agent.role.isNotBlank()) {
                 Text(
                     agent.role,

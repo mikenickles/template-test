@@ -3,21 +3,25 @@ package dev.orbit.app.ui.screens
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +34,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -40,6 +45,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -49,7 +55,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -67,13 +72,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -90,15 +95,16 @@ import dev.orbit.app.ui.components.FormerAgentAvatar
 import dev.orbit.app.ui.components.IconTap
 import dev.orbit.app.ui.components.MarkdownText
 import dev.orbit.app.ui.components.OrbitIcon
-import dev.orbit.app.ui.components.OrbitSystem
+import dev.orbit.app.ui.components.Pill
 import dev.orbit.app.ui.components.ShimmerText
 import dev.orbit.app.ui.components.StatusDot
+import dev.orbit.app.ui.components.inkColor
 import dev.orbit.app.ui.components.lift
 import dev.orbit.app.ui.components.surfaceBorder
 import dev.orbit.app.ui.components.textColor
-import dev.orbit.app.ui.components.tint
 import dev.orbit.app.ui.shared
 import dev.orbit.app.ui.theme.LocalEntrances
+import dev.orbit.app.ui.theme.LocalReducedMotion
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitDimens
 import dev.orbit.app.ui.theme.OrbitMotion
@@ -107,10 +113,10 @@ import dev.orbit.app.ui.theme.entrance
 import dev.orbit.app.ui.theme.pressScale
 import dev.orbit.app.ui.theme.rememberEntrances
 import dev.orbit.app.ui.theme.rememberHaptics
-import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 /** How many trailing characters of a reply fade in as it streams. */
 private const val FADE_TAIL = 16
@@ -132,7 +138,8 @@ fun RoomScreen(
     var draft by rememberSaveable { mutableStateOf("") }
     val byId = remember(everyone) { everyone.associateBy { it.id } }
     // "@nova" is drawn in Nova's color wherever it appears.
-    val mentionColors = agents.associate { it.name.replace(" ", "").lowercase() to it.avatar.textColor() }
+    val dark = c.isDark
+    val mentionColors = remember(agents, dark) { agents.associate { it.name.replace(" ", "").lowercase() to it.avatar.inkColor(dark) } }
     // An agent's model is named on its first reply only; after that the face is enough.
     val introductions = remember(state.messages) {
         state.messages.filterNot { it.fromUser }.distinctBy { it.author.agentId ?: it.author.name }.map { it.id }.toSet()
@@ -149,33 +156,10 @@ fun RoomScreen(
     val lastFromUser = state.messages.lastOrNull { it.fromUser }?.id
     LaunchedEffect(lastFromUser) { if (lastFromUser != null && lastFromUser !in history) list.animateScrollToItem(0) }
 
-    // A soft light in the speaker's color washes down from the top while they reply.
-    val speaker = agents.firstOrNull { it.id == state.run.agentId }
-    var lastTint by remember { mutableStateOf(c.text) }
-    speaker?.let { lastTint = it.avatar.tint() }
-    val glowTint by animateColorAsState(lastTint, OrbitMotion.gentle(), label = "glowTint")
-    val glow by animateFloatAsState(if (speaker != null) 1f else 0f, tween(900), label = "glow")
-    val glowStrength = if (c.isDark) 0.17f else 0.13f
-
     val showLatest by remember { derivedStateOf { list.firstVisibleItemIndex > 0 || list.firstVisibleItemScrollOffset > 600 } }
     val scrolledUnderBar by remember { derivedStateOf { list.canScrollForward } }
 
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(c.bg)
-            .drawBehind {
-                if (glow > 0f) {
-                    val center = Offset(size.width / 2, -size.width * 0.3f)
-                    val radius = size.width * 1.05f
-                    drawCircle(
-                        Brush.radialGradient(listOf(glowTint.copy(alpha = glowStrength * glow), Color.Transparent), center, radius),
-                        radius,
-                        center,
-                    )
-                }
-            },
-    ) {
+    Box(Modifier.fillMaxSize().background(c.bg)) {
         Scaffold(
             containerColor = Color.Transparent,
             topBar = { RoomBar(room, agents, state, scrolledUnderBar, onBack, onEdit, onClear) },
@@ -201,7 +185,7 @@ fun RoomScreen(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            StatusDot(c.textTertiary, size = 6.dp, pulsing = true)
+                            StatusDot(c.textTertiary, size = 6.dp)
                             Text("Reconnecting to your hub", Modifier.padding(start = 8.dp), style = OrbitType.label, color = c.textSecondary)
                         }
                     }
@@ -222,7 +206,13 @@ fun RoomScreen(
                                     Modifier
                                         .animateItem(
                                             fadeInSpec = null,
-                                            placementSpec = spring(dampingRatio = 0.9f, stiffness = 380f, visibilityThreshold = IntOffset.VisibilityThreshold),
+                                            // While a reply grows, the rows above move with it in lockstep; placement
+                                            // only animates between runs, when messages are added or cleared.
+                                            placementSpec = if (state.run.active) {
+                                                null
+                                            } else {
+                                                spring(dampingRatio = 0.9f, stiffness = 380f, visibilityThreshold = IntOffset.VisibilityThreshold)
+                                            },
                                         )
                                         .arrival(play, message.fromUser),
                                 ) {
@@ -239,8 +229,8 @@ fun RoomScreen(
                 AnimatedVisibility(
                     showLatest,
                     Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
-                    enter = fadeIn(tween(OrbitMotion.SHORT)) + scaleIn(OrbitMotion.bouncy(), initialScale = 0.7f) + slideInVertically { it },
-                    exit = fadeOut(tween(OrbitMotion.SHORT)) + scaleOut(targetScale = 0.8f),
+                    enter = fadeIn(tween(OrbitMotion.SHORT)) + slideInVertically(OrbitMotion.snappy()) { it / 2 },
+                    exit = fadeOut(tween(OrbitMotion.SHORT)) + slideOutVertically(tween(OrbitMotion.SHORT)) { it / 2 },
                 ) {
                     LatestButton { scope.launch { list.animateScrollToItem(0) } }
                 }
@@ -276,6 +266,7 @@ private fun Modifier.arrival(play: Boolean, fromUser: Boolean): Modifier = compo
  */
 @Composable
 private fun rememberReveal(text: String): Int {
+    if (LocalReducedMotion.current) return text.length
     var shown by remember { mutableIntStateOf(text.length) }
     val target = rememberUpdatedState(text.length)
     LaunchedEffect(Unit) {
@@ -322,7 +313,6 @@ private fun RoomBar(
             Column(Modifier.weight(1f).padding(start = 2.dp, end = 12.dp)) {
                 Text(
                     room.name,
-                    Modifier.shared(SharedKeys.roomTitle(room.id)),
                     style = OrbitType.titleM,
                     color = c.text,
                     maxLines = 1,
@@ -331,10 +321,10 @@ private fun RoomBar(
                 // The status line crossfades as the floor passes between agents.
                 AnimatedContent(
                     targetState = when {
-                        speaker != null -> "${speaker.name} is replying"
-                        state.run.active -> "Working"
-                        room.mode == Room.MODE_LEAD -> "Led by ${agents.firstOrNull { it.id == room.leadId }?.name ?: "the first agent"}"
-                        else -> "Round table"
+                        speaker != null -> RoomStatus("${speaker.name} is replying", speaker.avatar.inkColor(c.isDark))
+                        state.run.active -> RoomStatus("Working", c.textTertiary)
+                        room.mode == Room.MODE_LEAD -> RoomStatus("Led by ${agents.firstOrNull { it.id == room.leadId }?.name ?: "the first agent"}", null)
+                        else -> RoomStatus("Round table", null)
                     },
                     transitionSpec = {
                         (fadeIn(tween(220, delayMillis = 60)) + slideInVertically { it / 2 }) togetherWith
@@ -342,15 +332,10 @@ private fun RoomBar(
                     },
                     label = "status",
                 ) { status ->
+                    // Text and dot travel with their own state, so the outgoing line keeps its look.
                     Row(Modifier.padding(top = 1.dp), verticalAlignment = Alignment.CenterVertically) {
-                        if (state.run.active) StatusDot(c.live, Modifier.padding(end = 6.dp), pulsing = true, size = 6.dp)
-                        Text(
-                            status,
-                            style = OrbitType.bodyS,
-                            color = if (state.run.active) c.live else c.textSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        status.dot?.let { StatusDot(it, Modifier.padding(end = 6.dp), size = 6.dp) }
+                        Text(status.text, style = OrbitType.bodyS, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
@@ -386,8 +371,9 @@ private fun EmptyRoom(room: Room, agents: List<Agent>, modifier: Modifier) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        OrbitSystem(agents.map { it.avatar }, Modifier.fillMaxWidth().height(200.dp).entrance(entrances, "orbit", 0), avatarSize = 44.dp)
-        Spacer(Modifier.height(8.dp))
+        // The crew, still and waiting. (The orbit is kept for pairing and the empty home.)
+        AvatarRow(agents.map { it.avatar }, Modifier.entrance(entrances, "crew", 0), size = 52.dp, alive = true)
+        Spacer(Modifier.height(24.dp))
         Text("The crew is ready", Modifier.entrance(entrances, "title", 1), style = OrbitType.titleL, color = c.text)
         Text(
             if (room.mode == Room.MODE_LEAD) {
@@ -429,7 +415,14 @@ private fun AgentMessage(message: Message, agent: Agent?, mentionColors: Map<Str
     val tail by animateFloatAsState(if (catchingUp) FADE_TAIL.toFloat() else 0f, tween(500), label = "tail")
     Row(Modifier.fillMaxWidth()) {
         AgentAvatar(avatar, Modifier.padding(top = 1.dp), size = 34.dp, thinking = streaming)
-        Column(Modifier.weight(1f).padding(start = 14.dp)) {
+        // New lines glide in rather than jump, and screen readers hear replies as they land.
+        Column(
+            Modifier
+                .weight(1f)
+                .padding(start = 14.dp)
+                .animateContentSize(spring(stiffness = 800f))
+                .semantics { liveRegion = LiveRegionMode.Polite },
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(agent?.name ?: message.author.name, style = OrbitType.titleS, color = avatar.textColor())
                 val model = message.author.model
@@ -450,7 +443,7 @@ private fun AgentMessage(message: Message, agent: Agent?, mentionColors: Map<Str
                 MarkdownText(if (catchingUp) closeOpenMarkup(visible) else visible, mentions = mentionColors, fadeTail = tail.roundToInt())
             }
             when {
-                streaming && message.text.isEmpty() -> ShimmerText("Thinking", OrbitType.body, c.textTertiary, Modifier.padding(top = 1.dp))
+                streaming && shown == 0 -> ShimmerText("Thinking", OrbitType.body, c.textTertiary, Modifier.padding(top = 1.dp))
                 message.status == Message.STATUS_ERROR -> Row(
                     Modifier
                         .padding(top = 2.dp)
@@ -483,7 +476,8 @@ private fun AgentMessage(message: Message, agent: Agent?, mentionColors: Map<Str
  */
 internal fun closeOpenMarkup(text: String): String {
     if (Regex("```").findAll(text).count() % 2 == 1) return text // inside a code block; the parser copes
-    var out = text.trimEnd('*')
+    // A list item that has only its marker so far ("- ", "2. ") waits until its words arrive.
+    var out = text.trimEnd('*').replace(Regex("""(^|\n)[ \t]*(?:[-*•]|\d{1,3}[.)])[ \t]*$"""), "$1")
     if (out.count { it == '`' } % 2 == 1) out = if (out.endsWith('`')) out.dropLast(1) else "$out`"
     if (Regex("""\*\*""").findAll(out).count() % 2 == 1) out += "**"
     return out
@@ -511,7 +505,10 @@ private fun LatestButton(onClick: () -> Unit) {
     }
 }
 
-/** One container holds the draft, the crew to mention, and the send button. */
+/**
+ * One line at rest: the draft and the send button. While you're typing, the crew appears as
+ * chips above the line, so you can mention someone with a tap.
+ */
 @Composable
 private fun Composer(
     draft: String,
@@ -534,40 +531,30 @@ private fun Composer(
             .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp),
     ) {
         Column(Modifier.fillMaxWidth().lift(shape).clip(shape).background(c.surface).border(1.dp, edge, shape)) {
-            BasicTextField(
-                value = draft,
-                onValueChange = onDraft,
-                modifier = Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 16.dp),
-                textStyle = OrbitType.body.copy(color = c.text),
-                cursorBrush = SolidColor(c.text),
-                maxLines = 6,
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                interactionSource = interaction,
-                decorationBox = { inner ->
-                    if (draft.isEmpty()) Text("Message the crew", style = OrbitType.body, color = c.textTertiary)
-                    inner()
-                },
-            )
-            Row(Modifier.padding(start = 10.dp, end = 8.dp, top = 6.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Tap a face to mention that agent.
-                if (agents.size > 1) {
-                    for (agent in agents.take(5)) {
-                        MentionFace(agent) {
-                            haptics.tick()
-                            val mention = "@${agent.name.replace(" ", "")} "
-                            onDraft(if (draft.isEmpty() || draft.endsWith(" ")) draft + mention else "$draft $mention")
-                        }
-                    }
-                    AnimatedVisibility(draft.isEmpty(), enter = fadeIn(), exit = fadeOut()) {
-                        Text("Tap to mention", Modifier.padding(start = 6.dp), style = OrbitType.caption, color = c.textTertiary, maxLines = 1)
-                    }
-                }
-                Spacer(Modifier.weight(1f))
+            MentionChips(focused && agents.size > 1, agents) { agent ->
+                val mention = "@${agent.name.replace(" ", "")} "
+                onDraft(if (draft.isEmpty() || draft.endsWith(" ")) draft + mention else "$draft $mention")
+            }
+            Row(Modifier.heightIn(min = 56.dp).padding(start = 18.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                BasicTextField(
+                    value = draft,
+                    onValueChange = onDraft,
+                    modifier = Modifier.weight(1f).padding(vertical = 14.dp),
+                    textStyle = OrbitType.body.copy(color = c.text),
+                    cursorBrush = SolidColor(c.text),
+                    maxLines = 6,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    interactionSource = interaction,
+                    decorationBox = { inner ->
+                        if (draft.isEmpty()) Text("Message the crew", style = OrbitType.body, color = c.textTertiary)
+                        inner()
+                    },
+                )
                 SendButton(
                     canSend = draft.isNotBlank(),
                     running = running,
                     onSend = {
-                        haptics.confirm()
+                        haptics.tick()
                         onSend()
                     },
                     onStop = {
@@ -580,33 +567,22 @@ private fun Composer(
     }
 }
 
-/** An agent's face in the composer. Tapping it gives a little hop. */
+/** The crew as chips, sliding open above the draft while you type. */
 @Composable
-private fun MentionFace(agent: Agent, onClick: () -> Unit) {
-    val scope = rememberCoroutineScope()
-    val hop = remember { Animatable(1f) }
-    val interaction = remember { MutableInteractionSource() }
-    Box(
-        Modifier
-            .size(44.dp)
-            .pressScale(interaction, 0.85f)
-            .clickable(interaction, ripple(bounded = false, radius = 22.dp)) {
-                scope.launch {
-                    hop.snapTo(1.18f)
-                    hop.animateTo(1f, OrbitMotion.bouncy())
-                }
-                onClick()
-            },
-        contentAlignment = Alignment.Center,
+private fun MentionChips(visible: Boolean, agents: List<Agent>, onMention: (Agent) -> Unit) {
+    AnimatedVisibility(
+        visible,
+        enter = expandVertically(OrbitMotion.snappy()) + fadeIn(tween(OrbitMotion.SHORT, delayMillis = 60)),
+        exit = shrinkVertically(OrbitMotion.snappy()) + fadeOut(tween(OrbitMotion.SHORT)),
     ) {
-        AgentAvatar(
-            agent.avatar,
-            Modifier.graphicsLayer {
-                scaleX = hop.value
-                scaleY = hop.value
-            },
-            size = 30.dp,
-        )
+        Row(
+            Modifier.horizontalScroll(rememberScrollState()).padding(start = 10.dp, end = 10.dp, top = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            for (agent in agents) {
+                Pill(agent.name, onClick = { onMention(agent) }, leading = { AgentAvatar(agent.avatar, size = 24.dp) })
+            }
+        }
     }
 }
 
@@ -622,32 +598,41 @@ private fun SendButton(canSend: Boolean, running: Boolean, onSend: () -> Unit, o
         else -> SendMode.Idle
     }
     val interaction = remember { MutableInteractionSource() }
-    val fill by animateColorAsState(if (mode == SendMode.Idle) c.primary.copy(alpha = 0.3f) else c.primary, tween(OrbitMotion.MEDIUM), label = "fill")
-    Surface(
-        onClick = { if (mode == SendMode.Stop) onStop() else onSend() },
-        enabled = mode != SendMode.Idle,
-        modifier = Modifier.size(44.dp).pressScale(interaction, 0.86f),
-        shape = CircleShape,
-        color = fill,
-        contentColor = c.onPrimary,
-        interactionSource = interaction,
-    ) {
-        AnimatedContent(
-            mode == SendMode.Stop,
-            transitionSpec = {
-                (scaleIn(OrbitMotion.bouncy(), initialScale = 0.4f) + fadeIn(tween(120))) togetherWith
-                    (scaleOut(tween(120), targetScale = 0.4f) + fadeOut(tween(100)))
-            },
-            contentAlignment = Alignment.Center,
-            label = "send",
-        ) { stop ->
-            Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
-                if (stop) {
-                    Box(Modifier.size(13.dp).clip(RoundedCornerShape(3.dp)).background(c.onPrimary))
-                } else {
-                    OrbitIcon(OrbitIcon.Up, size = 20.dp, tint = c.onPrimary, description = "Send")
+    val idle = mode == SendMode.Idle
+    val fill by animateColorAsState(if (idle) c.surfaceRaised else c.primary, tween(OrbitMotion.MEDIUM), label = "fill")
+    val ink by animateColorAsState(if (idle) c.textTertiary else c.onPrimary, tween(OrbitMotion.MEDIUM), label = "ink")
+    // A 40dp button in a 48dp touch target. The morph uses a settled spring: runs often end on their own.
+    Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+        Surface(
+            onClick = { if (mode == SendMode.Stop) onStop() else onSend() },
+            enabled = !idle,
+            modifier = Modifier.size(40.dp).pressScale(interaction, 0.86f),
+            shape = CircleShape,
+            color = fill,
+            contentColor = ink,
+            border = BorderStroke(1.dp, if (idle) c.hairline else Color.Transparent),
+            interactionSource = interaction,
+        ) {
+            AnimatedContent(
+                mode == SendMode.Stop,
+                transitionSpec = {
+                    (scaleIn(OrbitMotion.snappy(), initialScale = 0.5f) + fadeIn(tween(120))) togetherWith
+                        (scaleOut(tween(120), targetScale = 0.5f) + fadeOut(tween(100)))
+                },
+                contentAlignment = Alignment.Center,
+                label = "send",
+            ) { stop ->
+                Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                    if (stop) {
+                        Box(Modifier.size(12.dp).clip(RoundedCornerShape(3.dp)).background(ink))
+                    } else {
+                        OrbitIcon(OrbitIcon.Up, size = 19.dp, tint = ink, description = "Send")
+                    }
                 }
             }
         }
     }
 }
+
+/** The room's status line: what it says, and the colored dot (if any) that goes with it. */
+private data class RoomStatus(val text: String, val dot: Color?)
