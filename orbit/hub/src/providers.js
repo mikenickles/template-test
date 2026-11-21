@@ -346,7 +346,7 @@ export class Providers {
    * Claude models also get the agent's `abilities` ({web, code, folders}) and report their tool use
    * through onActivity, cited pages through onSources, and a re-run step through onReset.
    */
-  async stream({ provider, model, system, plainSystem, messages, signal, onDelta, agent, abilities, onActivity, onSources, onReset, onUsage = () => {} }) {
+  async stream({ provider, model, system, plainSystem, messages, signal, onDelta, agent, abilities, onActivity, onSources, onReset, onUsage = () => {}, onCard = () => {} }) {
     const def = this.defs.get(provider);
     if (!def) throw new ProviderError(`Unknown provider "${provider}"`);
     if (this.#isLocal(def)) {
@@ -377,9 +377,10 @@ export class Providers {
         onSources,
         onReset,
         onUsage,
+        onCard,
       });
     }
-    return streamOpenAI({ def, model, system, plainSystem, messages: forOpenAI(messages), signal, abilities, onDelta, onActivity, onSources, onUsage });
+    return streamOpenAI({ def, model, system, plainSystem, messages: forOpenAI(messages), signal, abilities, onDelta, onActivity, onSources, onUsage, onCard });
   }
 }
 

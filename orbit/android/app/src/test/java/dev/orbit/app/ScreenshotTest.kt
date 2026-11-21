@@ -59,6 +59,17 @@ import dev.orbit.app.ui.screens.ShareScreen
 import dev.orbit.app.ui.screens.ScheduleEditorScreen
 import dev.orbit.app.ui.screens.SchedulesScreen
 import dev.orbit.app.ui.screens.UsageScreen
+import dev.orbit.app.data.Activity
+import dev.orbit.app.data.Card
+import dev.orbit.app.data.CardEmail
+import dev.orbit.app.data.CardEvent
+import dev.orbit.app.data.CardFile
+import dev.orbit.app.ui.components.LocalZone
+import dev.orbit.app.ui.components.ToolCard
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import java.time.ZoneOffset
 import dev.orbit.app.ui.screens.RoomTokensScreen
 import dev.orbit.app.data.RoomContext
 import dev.orbit.app.data.ContextTokens
@@ -390,6 +401,29 @@ class ScreenshotTest {
         RoomTokensScreen("Launch", tokens.copy(size = RoomContext.SIZE_SMALL, photos = false), {}, {}, {}, false, "Summarizing needs an agent in this room on a model with a key.", {})
     }
     @Test fun roomTokenChip() = shot("room-token-chip") { RoomScreen(launch, listOf(nova, pixel, sage), chat.copy(run = RunState()), {}, {}, {}, {}, {}, contextTokens = 12_400) }
+    @Test fun roomCalendarCard() = shot("room-card-calendar", dark = false) {
+        CompositionLocalProvider(LocalZone provides ZoneOffset.UTC) {
+            RoomScreen(cardRoom, listOf(nova), cardChat(calendarReply), {}, {}, {}, {}, {}, now = now)
+        }
+    }
+    @Test fun roomEmailCards() = shot("room-card-email") {
+        CompositionLocalProvider(LocalZone provides ZoneOffset.UTC) {
+            RoomScreen(cardRoom.copy(name = "Inbox helper"), listOf(nova), cardChat(emailReply), {}, {}, {}, {}, {}, now = now)
+        }
+    }
+    @Test fun toolCards() = shot("tool-cards", dark = false) {
+        CompositionLocalProvider(LocalZone provides ZoneOffset.UTC) {
+            Column(
+                Modifier.fillMaxSize().background(Orbit.colors.bg).verticalScroll(rememberScrollState()).padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                ToolCard(Card(type = Card.EVENT_ADDED, event = CardEvent("Dentist", "2027-01-19T09:30:00Z", "2027-01-19T10:15:00Z", location = "Main St")), nova.avatar, "Nova", now)
+                ToolCard(Card(type = Card.FILES, files = listOf(CardFile("Holiday budget", "Google Sheet", now - 86_400_000L), CardFile("Trip plan", "Google Doc", now - 5 * 86_400_000L))), pixel.avatar, "Pixel", now)
+                ToolCard(Card(type = Card.FOLLOWUP, ref = "f1", time = now + 86_400_000L + 3_600_000L, note = "Ask how the first chapter is going, and offer to read it."), mochi.avatar, "Mochi", now)
+                ToolCard(Card(type = Card.WATCH, ref = "w1", what = "Flights to Lisbon in March", condition = "a fare under $500"), sage.avatar, "Sage", now, live = false)
+            }
+        }
+    }
     @Test fun usage() = shot("usage") { UsageScreen(SampleData.usage, agents, 30, {}, {}) }
     @Test fun usageLight() = shot("usage-light", dark = false) { UsageScreen(SampleData.usage, agents, 30, {}, {}) }
     @Test fun roomResearch() = shot("room-research") { RoomScreen(trip.copy(agentIds = listOf("a1")), listOf(nova), SampleData.research, {}, {}, {}, {}, {}) }
@@ -436,4 +470,50 @@ private val tokens = RoomContext(
     tokens = ContextTokens(instructions = 2_150, summary = 640, recent = 8_900, photos = 1_500, total = 13_190),
     messages = ContextMessages(recent = 24, summarized = 61, leftOut = 0, total = 85),
     usage = ContextUsage(input = 182_000, output = 41_300, cacheRead = 512_000, cacheWrite = 64_000, requests = 57, cost = 1.84, priced = true),
+)
+
+private val cardRoom = SampleData.launch.copy(id = "r7", name = "Morning brief", agentIds = listOf("a1"), active = false, speaking = null)
+
+private fun cardChat(reply: List<dev.orbit.app.data.Message>) = SampleData.chat.copy(run = dev.orbit.app.data.RunState(), messages = reply)
+
+private const val CALENDAR_BEFORE = "Two things today, with four hours free in between."
+
+private val calendarReply = listOf(
+    SampleData.userMessage("m1", "What's on my agenda today?").copy(createdAt = SampleData.NOW - 60_000),
+    SampleData.agentMessage("m2", SampleData.nova, "$CALENDAR_BEFORE\n\nWant a reminder to leave for the party at 3:40?").copy(
+        createdAt = SampleData.NOW - 50_000,
+        activity = listOf(Activity("calendar", "", done = true)),
+        cards = listOf(
+            Card(
+                id = "c1", type = Card.EVENTS, at = CALENDAR_BEFORE.length,
+                from = SampleData.NOW, to = SampleData.NOW + 86_400_000L,
+                events = listOf(
+                    CardEvent("Farmers market", "2027-01-15T11:00:00Z", "2027-01-15T12:00:00Z", location = "Main Street"),
+                    CardEvent("Birthday party", "2027-01-15T16:00:00Z", "2027-01-15T18:00:00Z", location = "Maple Park"),
+                ),
+            ),
+        ),
+    ),
+)
+
+private const val EMAIL_BEFORE = "Three need a reply from you."
+private const val EMAIL_MIDDLE = "\n\nI drafted a reply to Dana. It's saved in Gmail, not sent."
+
+private val emailReply = listOf(
+    SampleData.userMessage("m1", "Anything I need to answer?").copy(createdAt = SampleData.NOW - 60_000),
+    SampleData.agentMessage("m2", SampleData.nova, EMAIL_BEFORE + EMAIL_MIDDLE).copy(
+        createdAt = SampleData.NOW - 50_000,
+        activity = listOf(Activity("mail_search", "is:unread", done = true), Activity("mail_draft", "dana@example.com", done = true)),
+        cards = listOf(
+            Card(
+                id = "c1", type = Card.EMAILS, at = EMAIL_BEFORE.length,
+                emails = listOf(
+                    CardEmail("Dana Park", "Saturday plans", "Are we still on for 4?", SampleData.NOW - 80 * 60_000L, unread = true),
+                    CardEmail("Lee R.", "Lease renewal", "Can you confirm by Friday?", SampleData.NOW - 86_400_000L),
+                    CardEmail("Mia Ortiz", "Photos from the trip", "Which ones should I print?", SampleData.NOW - 3 * 86_400_000L),
+                ),
+            ),
+            Card(id = "c2", type = Card.DRAFT, at = (EMAIL_BEFORE + EMAIL_MIDDLE).length, recipient = "Dana Park", subject = "Re: Saturday plans", body = "Hi Dana, yes, still on! I'll be at Maple Park by 4. Want me to bring anything?"),
+        ),
+    ),
 )

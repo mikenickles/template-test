@@ -52,6 +52,13 @@ reply to one, attach photos, PDFs and text files, stop a reply, and clear a room
 automatically so they stay affordable. Rooms can have scheduled messages (Schedules, in the room's menu): a
 message posted at a set time on chosen days, which the crew then answers.
 
+Cards: when an agent uses Google or sets a follow-up, what it found or did shows as a card in its reply, in
+its own colors, right where it happened in the text. A look at the calendar is a day card (times, the next
+event highlighted with how soon it is, and the free time between events); an event it added, emails it found
+(tap one to open it in Gmail), a draft it saved (Open in Gmail, where the user sends it), Drive files (tap to
+open), and a follow-up or watch it set (with Cancel or Stop watching). Agents don't need to repeat what a card
+shows; a short sentence around it is enough.
+
 Token counts: a small chip at the top of a room (like "12K") is about how many tokens each reply there sends.
 Tapping it, or Tokens in the room's menu, opens the room's Tokens page: what that number is made of (the agent's
 instructions and what it knows about the user, the summary of older messages, recent messages word for word,

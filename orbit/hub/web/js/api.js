@@ -109,7 +109,7 @@ function deviceName() {
 export function roomEvents(roomId, handlers) {
   const source = new EventSource(`/api/rooms/${roomId}/events`);
   source.onopen = () => handlers.open?.();
-  for (const name of ['message', 'delta', 'activity', 'reset', 'run', 'cleared', 'removed']) {
+  for (const name of ['message', 'delta', 'activity', 'cards', 'reset', 'run', 'cleared', 'removed']) {
     source.addEventListener(name, (e) => handlers[name]?.(JSON.parse(e.data)));
   }
   return () => source.close();

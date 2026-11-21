@@ -116,6 +116,7 @@ export async function streamOpenAI({
   onActivity = () => {},
   onSources = () => {},
   onUsage = () => {},
+  onCard = () => {},
 }) {
   const key = `${def.id}:${model}`;
   const tools = abilities && !withoutTools.has(key) ? clientTools(abilities) : [];
@@ -199,6 +200,7 @@ export async function streamOpenAI({
         entry.failed = Boolean(result.isError);
         report();
       }
+      if (result.card && !result.isError) onCard({ ...result.card, at: text.length });
       if (result.sources?.length) {
         const before = sources.size;
         for (const s of result.sources) if (!sources.has(s.url) && sources.size < MAX_SOURCES) sources.set(s.url, s);

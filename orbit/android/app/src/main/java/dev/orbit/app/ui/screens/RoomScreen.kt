@@ -113,6 +113,8 @@ import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.Agent
 import dev.orbit.app.data.Attachment
 import dev.orbit.app.data.Message
+import dev.orbit.app.data.Card
+import dev.orbit.app.ui.components.ToolCard
 import dev.orbit.app.data.ProactiveMark
 import dev.orbit.app.data.Room
 import dev.orbit.app.ui.DraftAttachment
@@ -218,6 +220,10 @@ fun RoomScreen(
     contextTokens: Int? = null,
     /** Opens the room's Tokens page. */
     onTokens: () -> Unit = {},
+    /** Follow-ups and watches still set, so their cards can say when they're gone; null when unknown. */
+    liveRefs: Set<String>? = null,
+    /** Cancels the follow-up or stops the watch a card stands for. */
+    onCancelCard: (Card) -> Unit = {},
 ) {
     val c = Orbit.colors
     var draft by rememberSaveable { mutableStateOf(initialDraft) }
@@ -370,7 +376,16 @@ fun RoomScreen(
                                     UserMessage(message, mentionColors, onOpenPhoto = { viewing = it }, replyColors = replyColors)
                                 } else {
                                     Column {
-                                        AgentMessage(message, byId[message.author.agentId], mentionColors, showModel = message.id in introductions, continued = runsOn)
+                                        AgentMessage(
+                                            message,
+                                            byId[message.author.agentId],
+                                            mentionColors,
+                                            showModel = message.id in introductions,
+                                            continued = runsOn,
+                                            now = now,
+                                            liveRefs = liveRefs,
+                                            onCancelCard = onCancelCard,
+                                        )
                                         message.created.mapNotNull { byId[it.agentId] }.forEach { hired ->
                                             NewMember(hired, Modifier.padding(start = 48.dp, top = 14.dp)) { onOpenAgent(hired.id) }
                                         }
@@ -891,7 +906,16 @@ private fun CrewReady(made: CrewMade, crew: List<Agent>, modifier: Modifier, onO
 }
 
 @Composable
-private fun AgentMessage(message: Message, agent: Agent?, mentionColors: Map<String, Color>, showModel: Boolean, continued: Boolean = false) {
+private fun AgentMessage(
+    message: Message,
+    agent: Agent?,
+    mentionColors: Map<String, Color>,
+    showModel: Boolean,
+    continued: Boolean = false,
+    now: Long = System.currentTimeMillis(),
+    liveRefs: Set<String>? = null,
+    onCancelCard: (Card) -> Unit = {},
+) {
     val c = Orbit.colors
     val avatar = agent?.avatar ?: FormerAgentAvatar
     val streaming = message.status == Message.STATUS_STREAMING
@@ -949,9 +973,42 @@ private fun AgentMessage(message: Message, agent: Agent?, mentionColors: Map<Str
             if (!continued) Spacer(Modifier.height(4.dp))
             // What the agent did on the way: searches, pages, code, files. A step in progress shimmers.
             ActivityTrail(message.activity, streaming, Modifier.padding(bottom = if (shown > 0 || streaming) 6.dp else 0.dp))
-            if (shown > 0) {
-                val visible = message.text.take(shown)
-                MarkdownText(if (catchingUp) closeOpenMarkup(visible) else visible, mentions = mentionColors, fadeTail = tail.roundToInt())
+            if (message.cards.isEmpty()) {
+                if (shown > 0) {
+                    val visible = message.text.take(shown)
+                    MarkdownText(if (catchingUp) closeOpenMarkup(visible) else visible, mentions = mentionColors, fadeTail = tail.roundToInt())
+                }
+            } else {
+                // Cards sit where the agent's tools ran: text before, the card, then what it wrote after.
+                val text = message.text
+                val piece: @Composable (Int, Int) -> Unit = { from, to ->
+                    val upTo = minOf(to, shown)
+                    val part = if (upTo > from) text.substring(from, upTo).trim() else ""
+                    if (part.isNotEmpty()) {
+                        val revealing = catchingUp && shown < to
+                        MarkdownText(if (revealing) closeOpenMarkup(part) else part, mentions = mentionColors, fadeTail = if (revealing) tail.roundToInt() else 0)
+                    }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    var start = 0
+                    for (card in message.cards.sortedBy { it.at }) {
+                        val end = card.at.coerceIn(start, text.length)
+                        piece(start, end)
+                        if (shown >= end) {
+                            ToolCard(
+                                card,
+                                avatar,
+                                agent?.name ?: message.author.name,
+                                now,
+                                // Just set, the app may not have heard of it yet: it's live until a refresh says otherwise.
+                                live = card.ref.isBlank() || liveRefs == null || card.ref in liveRefs || streaming || now - message.createdAt < 120_000,
+                                onCancel = onCancelCard,
+                            )
+                        }
+                        start = end
+                    }
+                    piece(start, text.length)
+                }
             }
             when {
                 streaming && shown == 0 && message.activity.all { it.done } -> ThinkingDots(avatar, Modifier.padding(top = 2.dp))

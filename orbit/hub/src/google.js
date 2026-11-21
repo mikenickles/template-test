@@ -215,17 +215,28 @@ export class Google {
 
   // ---------- Gmail ----------
 
-  async searchMail({ query = '', max = 8 } = {}) {
+  async searchMail({ query = '', max = 8 } = {}, out = {}) {
     const n = Math.min(Math.max(Number(max) || 8, 1), 15);
     const list = await this.#api('GET', `${GMAIL}/messages?${new URLSearchParams({ q: clean(query, 500), maxResults: String(n) })}`);
     const ids = (list.messages ?? []).map((m) => m.id);
     if (!ids.length) return 'No emails matched.';
     const found = [];
+    const emails = [];
     for (const id of ids) {
       const m = await this.#api('GET', `${GMAIL}/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`);
       const h = headers(m);
-      found.push(`- id ${id} | ${h.date ?? ''} | from ${h.from ?? '?'} | ${h.subject ?? '(no subject)'}${(m.labelIds ?? []).includes('UNREAD') ? ' | unread' : ''}\n  ${decodeEntities(m.snippet ?? '')}`);
+      const unread = (m.labelIds ?? []).includes('UNREAD');
+      found.push(`- id ${id} | ${h.date ?? ''} | from ${h.from ?? '?'} | ${h.subject ?? '(no subject)'}${unread ? ' | unread' : ''}\n  ${decodeEntities(m.snippet ?? '')}`);
+      emails.push({
+        from: senderName(h.from),
+        subject: clean(h.subject ?? '', 200) || '(no subject)',
+        snippet: clean(decodeEntities(m.snippet ?? ''), 200),
+        at: Date.parse(h.date ?? '') || null,
+        unread,
+        link: `https://mail.google.com/mail/u/0/#all/${encodeURIComponent(id)}`,
+      });
     }
+    out.card = { type: 'emails', emails: emails.slice(0, MAX_CARD_ITEMS) };
     return found.join('\n');
   }
 
@@ -247,7 +258,7 @@ export class Google {
   }
 
   /** Saves a draft in Gmail. Treehouse never sends mail; the user reviews and sends drafts themselves. */
-  async draftMail({ to, subject = '', body = '', reply_to_id: replyToId = null }) {
+  async draftMail({ to, subject = '', body = '', reply_to_id: replyToId = null }, out = {}) {
     const recipients = clean(to, 1000);
     if (!recipients) throw new GoogleError('Say who the email is to.');
     let thread = null;
@@ -273,12 +284,19 @@ export class Google {
     const draft = await this.#api('POST', `${GMAIL}/drafts`, {
       message: { raw: b64url(lines.join('\r\n')), ...(thread ? { threadId: thread } : {}) },
     });
+    out.card = {
+      type: 'draft',
+      recipient: recipients.slice(0, 200),
+      subject: subjectLine,
+      body: String(body).slice(0, 600),
+      link: 'https://mail.google.com/mail/u/0/#drafts',
+    };
     return `Saved a draft to ${recipients} ("${subjectLine}") in Gmail's Drafts, for the user to review and send. Draft id ${draft.id}.`;
   }
 
   // ---------- Calendar ----------
 
-  async listEvents({ from = null, to = null, query = '' } = {}) {
+  async listEvents({ from = null, to = null, query = '' } = {}, out = {}) {
     const start = parseTime(from) ?? new Date(this.now());
     const end = parseTime(to) ?? new Date(start.getTime() + 7 * 24 * 3600 * 1000);
     const params = new URLSearchParams({
@@ -291,6 +309,7 @@ export class Google {
     if (clean(query, 200)) params.set('q', clean(query, 200));
     const list = await this.#api('GET', `${CALENDAR}/events?${params}`);
     const events = list.items ?? [];
+    out.card = { type: 'events', from: start.getTime(), to: end.getTime(), events: events.slice(0, MAX_CARD_ITEMS).map(eventOf) };
     if (!events.length) return `Nothing on the calendar between ${start.toLocaleString()} and ${end.toLocaleString()}.`;
     return events.map((e) => {
       const when = e.start?.dateTime ? `${new Date(e.start.dateTime).toLocaleString()} to ${new Date(e.end?.dateTime ?? e.start.dateTime).toLocaleTimeString()}` : `${e.start?.date} (all day)`;
@@ -298,7 +317,7 @@ export class Google {
     }).join('\n');
   }
 
-  async createEvent({ title, start, end = null, description = '', location = '', all_day: allDay = false }) {
+  async createEvent({ title, start, end = null, description = '', location = '', all_day: allDay = false }, out = {}) {
     const summary = clean(title, 300);
     if (!summary) throw new GoogleError('Give the event a title.');
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -319,12 +338,13 @@ export class Google {
     if (clean(description, 5000)) event.description = clean(description, 5000);
     if (clean(location, 300)) event.location = clean(location, 300);
     const made = await this.#api('POST', `${CALENDAR}/events`, event);
+    out.card = { type: 'event_added', event: eventOf({ ...event, ...made }) };
     return `Added "${summary}" to the calendar${made.htmlLink ? ` (${made.htmlLink})` : ''}.`;
   }
 
   // ---------- Drive ----------
 
-  async searchDrive({ query, max = 10 }) {
+  async searchDrive({ query, max = 10 }, out = {}) {
     const words = clean(query, 300).replace(/['\\]/g, ' ');
     if (!words) throw new GoogleError('Say what to look for.');
     const params = new URLSearchParams({
@@ -336,12 +356,13 @@ export class Google {
     const list = await this.#api('GET', `${DRIVE}/files?${params}`);
     const files = list.files ?? [];
     if (!files.length) return 'No Drive files matched.';
+    out.card = { type: 'files', files: files.slice(0, MAX_CARD_ITEMS).map(fileOf) };
     return files.map((f) => `- id ${f.id} | ${f.name} | ${kindName(f.mimeType)} | modified ${f.modifiedTime?.slice(0, 10) ?? '?'}`).join('\n');
   }
 
-  async readDrive({ id }) {
+  async readDrive({ id }, out = {}) {
     const fileId = encodeURIComponent(clean(id, 200));
-    const meta = await this.#api('GET', `${DRIVE}/files/${fileId}?fields=id,name,mimeType,size`);
+    const meta = await this.#api('GET', `${DRIVE}/files/${fileId}?fields=id,name,mimeType,size,modifiedTime,webViewLink`);
     const exportAs = {
       'application/vnd.google-apps.document': 'text/plain',
       'application/vnd.google-apps.spreadsheet': 'text/csv',
@@ -356,8 +377,40 @@ export class Google {
     } else {
       throw new GoogleError(`${meta.name} is a ${kindName(meta.mimeType)}, which agents can't read. Google Docs, Sheets, Slides and text files work.`);
     }
+    out.card = { type: 'files', files: [fileOf(meta)] };
     return `${meta.name}\n\n${cut(text)}`;
   }
+}
+
+/** At most this many emails, events or files in one card. */
+const MAX_CARD_ITEMS = 8;
+
+/** "Dana Park" from `"Dana Park" <dana@example.com>`, or the address when there's no name. */
+export function senderName(from = '') {
+  const named = /^\s*"?([^"<]+?)"?\s*<[^>]+>\s*$/.exec(from);
+  return clean(named ? named[1] : from.replace(/[<>]/g, ''), 120) || 'Unknown sender';
+}
+
+/** An event as a card shows it: times as ISO strings, or dates for all-day events. */
+function eventOf(e) {
+  const allDay = Boolean(e.start?.date && !e.start?.dateTime);
+  return {
+    title: clean(e.summary ?? '', 200) || '(no title)',
+    start: allDay ? e.start.date : (e.start?.dateTime ?? null),
+    end: allDay ? (e.end?.date ?? null) : (e.end?.dateTime ?? null),
+    allDay,
+    location: clean(e.location ?? '', 200),
+    link: typeof e.htmlLink === 'string' && e.htmlLink.startsWith('https://') ? e.htmlLink : 'https://calendar.google.com/calendar/r',
+  };
+}
+
+function fileOf(f) {
+  return {
+    name: clean(f.name ?? '', 200) || 'Untitled',
+    kind: kindName(f.mimeType),
+    modified: Date.parse(f.modifiedTime ?? '') || null,
+    link: typeof f.webViewLink === 'string' && f.webViewLink.startsWith('https://') ? f.webViewLink : `https://drive.google.com/file/d/${encodeURIComponent(f.id ?? '')}/view`,
+  };
 }
 
 const cut = (text) => (text.length > MAX_TEXT ? `${text.slice(0, MAX_TEXT)}\n[…the rest is cut off]` : text);
@@ -525,17 +578,20 @@ export function googleDetail(name, input = {}) {
 /** Runs a Google tool. Errors come back as text the agent can pass on, never as a crash. */
 export async function runGoogleTool(google, name, input = {}) {
   try {
+    // What the result looks like as a card in the chat, set by the tool alongside its text.
+    const out = {};
     const run = {
-      gmail_search: () => google.searchMail(input),
+      gmail_search: () => google.searchMail(input, out),
       gmail_read: () => google.readMail(input),
-      gmail_draft: () => google.draftMail(input),
-      calendar_events: () => google.listEvents(input),
-      calendar_add: () => google.createEvent(input),
-      drive_search: () => google.searchDrive(input),
-      drive_read: () => google.readDrive(input),
+      gmail_draft: () => google.draftMail(input, out),
+      calendar_events: () => google.listEvents(input, out),
+      calendar_add: () => google.createEvent(input, out),
+      drive_search: () => google.searchDrive(input, out),
+      drive_read: () => google.readDrive(input, out),
     }[name];
     if (!run) return { text: `There is no tool called "${name}".`, isError: true };
-    return { text: await run(), isError: false };
+    const text = await run();
+    return { text, isError: false, ...(out.card ? { card: out.card } : {}) };
   } catch (err) {
     if (err instanceof GoogleError) return { text: err.message, isError: true };
     throw err;

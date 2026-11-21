@@ -223,3 +223,48 @@ test('Google is connected only from the PC, and the callback finishes the sign-i
   const off = await (await fetch(`http://127.0.0.1:${port}/api/google`, { method: 'DELETE', headers: auth })).json();
   assert.equal(off.connected, false);
 });
+
+test('Google results come with a card for the chat', async () => {
+  const { google } = await connected([
+    ['GET', /users\/me\/messages$/, () => [200, { messages: [{ id: 'm1' }] }]],
+    ['GET', /users\/me\/messages\/m1$/, () => [200, { id: 'm1', threadId: 't1', snippet: 'Are we still on &amp; at 4?', labelIds: ['UNREAD'], payload: { headers: [
+      { name: 'From', value: '"Dana Park" <dana@x.com>' }, { name: 'Subject', value: 'Saturday plans' }, { name: 'Date', value: 'Sat, 21 Nov 2026 06:40:00 +0000' },
+    ] } }]],
+    ['POST', /users\/me\/drafts$/, () => [200, { id: 'd1' }]],
+    ['GET', /calendars\/primary\/events$/, () => [200, { items: [
+      { summary: 'Farmers market', start: { dateTime: '2026-11-21T11:00:00Z' }, end: { dateTime: '2026-11-21T12:00:00Z' }, location: 'Main St', htmlLink: 'https://calendar.google.com/e1' },
+      { summary: 'Trip', start: { date: '2026-11-24' }, end: { date: '2026-11-25' } },
+    ] }]],
+    ['POST', /calendars\/primary\/events$/, (u, body) => [200, { id: 'e2', htmlLink: 'https://calendar.google.com/e2', ...body }]],
+    ['GET', /drive\/v3\/files$/, () => [200, { files: [{ id: 'f1', name: 'Budget', mimeType: 'application/vnd.google-apps.spreadsheet', modifiedTime: '2026-11-20T00:00:00Z', webViewLink: 'https://docs.google.com/f1' }] }]],
+  ]);
+
+  const mail = await runGoogleTool(google, 'gmail_search', { query: 'is:unread' });
+  assert.deepEqual(mail.card, { type: 'emails', emails: [{
+    from: 'Dana Park', subject: 'Saturday plans', snippet: 'Are we still on & at 4?', at: Date.parse('2026-11-21T06:40:00Z'), unread: true,
+    link: 'https://mail.google.com/mail/u/0/#all/m1',
+  }] });
+
+  const draft = await runGoogleTool(google, 'gmail_draft', { to: 'dana@x.com', subject: 'Re: Saturday plans', body: 'Still on!' });
+  assert.deepEqual(draft.card, { type: 'draft', recipient: 'dana@x.com', subject: 'Re: Saturday plans', body: 'Still on!', link: 'https://mail.google.com/mail/u/0/#drafts' });
+
+  const day = await runGoogleTool(google, 'calendar_events', { from: '2026-11-21T00:00', to: '2026-11-28T00:00' });
+  assert.equal(day.card.type, 'events');
+  assert.deepEqual(day.card.events, [
+    { title: 'Farmers market', start: '2026-11-21T11:00:00Z', end: '2026-11-21T12:00:00Z', allDay: false, location: 'Main St', link: 'https://calendar.google.com/e1' },
+    { title: 'Trip', start: '2026-11-24', end: '2026-11-25', allDay: true, location: '', link: 'https://calendar.google.com/calendar/r' },
+  ]);
+  assert.ok(day.card.from < day.card.to);
+
+  const added = await runGoogleTool(google, 'calendar_add', { title: 'Dentist', start: '2026-11-24T09:30', end: '2026-11-24T10:15', location: 'Main St' });
+  assert.equal(added.card.type, 'event_added');
+  assert.equal(added.card.event.title, 'Dentist');
+  assert.equal(added.card.event.link, 'https://calendar.google.com/e2');
+
+  const files = await runGoogleTool(google, 'drive_search', { query: 'budget' });
+  assert.deepEqual(files.card, { type: 'files', files: [{ name: 'Budget', kind: 'Google Sheet', modified: Date.parse('2026-11-20T00:00:00Z'), link: 'https://docs.google.com/f1' }] });
+
+  const failed = await runGoogleTool(google, 'calendar_add', { title: '' });
+  assert.equal(failed.isError, true);
+  assert.equal(failed.card, undefined, 'no card when the tool failed');
+});

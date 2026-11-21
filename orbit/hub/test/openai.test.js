@@ -238,3 +238,27 @@ test('if tools fail even with reasoning off, the model answers without them', as
   assert.equal(openai.requests[2].reasoning_effort, undefined);
 });
 
+
+test('a follow-up an agent books shows as a card where it happened in the reply', async (t) => {
+  withoutTools.clear();
+  const ollama = await fakeOllama(t, [
+    [{ content: 'Sure.' }, { tool_calls: [{ index: 0, id: 'c1', type: 'function', function: { name: 'follow_up', arguments: JSON.stringify({ note: 'Ask how the dentist went', in_minutes: 600 }) } }] }],
+    [{ content: 'I will check in then.' }],
+  ]);
+  const h = await start(t, { ollama: { baseUrl: ollama.baseUrl } });
+  const lfm = (await h.api('POST', '/api/agents', { name: 'Lumi', provider: 'ollama', model: 'lfm3:latest', abilities: [], proactive: 'gentle' })).body;
+  const room = (await h.api('POST', '/api/rooms', { name: 'Local', agentIds: [lfm.id] })).body;
+  await h.api('POST', `/api/rooms/${room.id}/messages`, { text: 'Check on me tomorrow' });
+  await h.hub.orchestrator.idle(room.id);
+
+  const reply = h.store.messages(room.id).at(-1);
+  assert.equal(reply.text, 'Sure.\n\nI will check in then.');
+  assert.equal(reply.cards.length, 1);
+  const [card] = reply.cards;
+  assert.equal(card.type, 'followup');
+  assert.equal(card.note, 'Ask how the dentist went');
+  assert.equal(card.at, 'Sure.'.length, 'placed after the text written before the tool ran');
+  assert.equal(card.ref, h.store.state.followups[0].id, 'carries the follow-up id, so it can be cancelled');
+  assert.ok(card.id && card.id !== card.ref, 'and an id of its own');
+  assert.ok(card.time > Date.now());
+});

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { ATTACHABLE, api, canAttach, hubEvents, onThisPC, prepare, roomEvents } from './api.js';
 import { Avatar, CrewTile, characterOf, inkColor, tint } from './avatar.js';
 import { AgentEditor, RoomEditor, Schedules, Settings } from './editors.js';
+import { ToolCard, splitAtCards } from './cards.js';
 import { closeOpenMarkup, markdown } from './markdown.js';
 import { Treehouse } from './treehouse.js';
 import { Icon, Mark, Modal, Pill, Switch, ago, fileSize, formatCost, formatTokens, html } from './ui.js';
@@ -572,6 +573,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
         return undefined;
       },
       activity: (a) => apply(list.current.map((m) => (m.id === a.id ? { ...m, activity: a.activity } : m))),
+      cards: (c) => apply(list.current.map((m) => (m.id === c.id ? { ...m, cards: c.cards } : m))),
       reset: (r) => apply(list.current.map((m) => (m.id === r.id ? { ...m, text: r.text } : m))),
       run: setRun,
       cleared: () => apply([]),
@@ -680,7 +682,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
             <div class=${`message${m.author.type === 'user' ? ' mine' : ''}${runsOn ? ' run' : ''}`} key=${m.id}>
               ${m.author.type === 'user'
                 ? html`<${UserMessage} message=${m} mentions=${mentions} onPhoto=${setViewing} byId=${byId} />`
-                : html`<${AgentMessage} message=${m} agent=${byId[m.author.agentId]} showModel=${firstReplies.has(m.id)} mentions=${mentions} continued=${runsOn} />
+                : html`<${AgentMessage} message=${m} agent=${byId[m.author.agentId]} showModel=${firstReplies.has(m.id)} mentions=${mentions} continued=${runsOn} notify=${notify} />
                   ${(m.created ?? []).map((c) => byId[c.agentId]).filter(Boolean).map((hired) => html`<${NewMember} agent=${hired} onOpen=${() => onDialog({ type: 'agent', agent: hired })} />`)}
                   ${m.crew && html`<${CrewReady} made=${m.crew} crew=${m.crew.agentIds.map((id) => byId[id]).filter(Boolean)} onOpen=${() => onOpenRoom(m.crew.roomId)} />`}`}
               <div class="message-actions">
@@ -865,10 +867,17 @@ function dayLabel(at) {
 }
 const clock = (at) => new Date(at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }).replace('AM', 'am').replace('PM', 'pm');
 
-function AgentMessage({ message, agent, showModel, mentions, continued = false }) {
+function AgentMessage({ message, agent, showModel, mentions, continued = false, notify }) {
   const streaming = message.status === 'streaming';
   const text = streaming ? closeOpenMarkup(message.text) : message.text;
-  const rendered = useMemo(() => markdown(text, mentions), [text]);
+  const rendered = useMemo(() => (message.cards?.length ? '' : markdown(text, mentions)), [text, message.cards]);
+  // With cards, the text is cut where each card goes; only the last piece can still be arriving.
+  const pieces = useMemo(() => {
+    if (!message.cards?.length) return null;
+    const parts = splitAtCards(message.text, message.cards);
+    const last = parts.findLastIndex((p) => p.text);
+    return parts.map((p, i) => (p.text ? { html: markdown(streaming && i === last ? closeOpenMarkup(p.text) : p.text, mentions) } : p));
+  }, [message.text, message.cards, streaming]);
   return html`<div class="agent-message">
     ${continued ? html`<span class="disc-space"></span>` : html`<${Disc} spec=${agent?.avatar} size=${34} thinking=${streaming && Boolean(message.text)} />`}
     <div class="body">
@@ -879,7 +888,11 @@ function AgentMessage({ message, agent, showModel, mentions, continued = false }
         ${message.createdAt > 0 && !streaming && html`<span class="caption faint">${clock(message.createdAt)}</span>`}
       </div>`}
       <${Trail} activity=${message.activity} streaming=${streaming} />
-      ${message.text && html`<div class="md" dangerouslySetInnerHTML=${{ __html: rendered }}></div>`}
+      ${pieces
+        ? html`<div class="pieces">${pieces.map((p) => (p.card
+          ? html`<${ToolCard} key=${p.card.id} card=${p.card} agent=${agent} notify=${notify} />`
+          : html`<div class="md" dangerouslySetInnerHTML=${{ __html: p.html }}></div>`))}</div>`
+        : message.text && html`<div class="md" dangerouslySetInnerHTML=${{ __html: rendered }}></div>`}
       ${streaming && !message.text && (message.activity ?? []).every((a) => a.done) && html`<div class="thinking-dots" style=${`--wash:${tint(agent?.avatar)};--ink:${inkColor(agent?.avatar)}`} aria-label="Thinking"><i></i><i></i><i></i></div>`}
       ${message.status === 'error' && html`<div class="failure"><span class="dot"></span><div>${message.error || "This agent couldn't reply."}</div></div>`}
       ${message.status === 'stopped' && html`<div class="caption faint" style="margin-top:6px">Stopped</div>`}

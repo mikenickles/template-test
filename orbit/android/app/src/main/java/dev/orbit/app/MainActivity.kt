@@ -73,6 +73,7 @@ import dev.orbit.app.ui.screens.HomeScreen
 import dev.orbit.app.ui.screens.PairScreen
 import dev.orbit.app.ui.screens.RoomEditorScreen
 import dev.orbit.app.data.RoomContext
+import dev.orbit.app.data.Card
 import dev.orbit.app.ui.screens.RoomScreen
 import dev.orbit.app.ui.screens.RoomTokensScreen
 import dev.orbit.app.ui.screens.SettingsScreen
@@ -324,6 +325,10 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onAddMember = { agentId -> vm.saveRoom(room.copy(agentIds = room.agentIds + agentId)) {} },
                 contextTokens = contextTokens,
                 onTokens = { nav.navigate("tokens/$id") },
+                liveRefs = (state.followUps.map { it.id } + state.watches.map { it.id }).toSet(),
+                onCancelCard = { card ->
+                    if (card.type == Card.FOLLOWUP) vm.deleteFollowUp(card.ref) else vm.deleteWatch(card.ref)
+                },
                 onStop = roomVm::stop,
                 onBack = { nav.popBackStack() },
                 onEdit = { nav.navigate("roomEdit?id=$id") },

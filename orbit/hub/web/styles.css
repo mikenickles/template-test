@@ -575,3 +575,44 @@ main > header, main > .messages, main > .messages-frame, main > .composer-wrap {
 .reached { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; font-size: 12px; color: var(--text-3); }
 .reached svg { width: 13px; height: 13px; }
 
+
+/* Cards for what an agent's tools found or did, in that agent's colors (--wash, --ink). */
+.pieces { display: flex; flex-direction: column; gap: 10px; }
+.tool-card-wrap { --card-wash: color-mix(in srgb, var(--wash) var(--wash-mix), var(--surface)); max-width: 520px; }
+.tool-card { background: var(--surface); border: var(--edge); border-radius: 20px; box-shadow: var(--lift); overflow: hidden; }
+.tool-card-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+.tool-card-foot { display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 0 12px; border-top: 1px solid var(--hairline); }
+.tool-card .clip { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tool-card .ink { color: var(--ink); }
+.date-badge { width: 38px; height: 38px; flex: none; border-radius: 11px; background: var(--card-wash); display: grid; place-content: center; text-align: center; font-weight: 600; font-size: 15px; line-height: 17px; }
+.date-badge span { display: block; font-family: var(--mono); font-size: 9px; line-height: 11px; letter-spacing: 0.08em; color: var(--ink); }
+.events { display: flex; flex-direction: column; gap: 6px; padding: 12px 12px 12px 16px; border-top: 1px solid var(--hairline); }
+.event-day { margin: 8px 0 2px; }
+.event-day:first-child { margin-top: 0; }
+.event-row { display: flex; gap: 0; }
+.event-time { width: 76px; flex: none; padding-top: 9px; font-size: 12px; line-height: 16px; display: flex; flex-direction: column; }
+.event-block { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 12px; background: var(--bg); }
+.event-block.next { background: var(--card-wash); }
+.event-block.solo { margin: 0 12px 12px; }
+.event-title { display: flex; align-items: center; gap: 8px; }
+.event-title .title-s { flex: 1; }
+.event-title .tag { font-size: 12px; font-weight: 500; color: var(--ink); }
+.free-gap { display: flex; align-items: center; gap: 8px; height: 26px; padding-left: 76px; font-size: 12px; color: var(--text-3); }
+.free-gap span { flex: 1; border-top: 1px dashed var(--line); }
+.free-gap span:last-child { flex: none; width: 16px; }
+.check-badge { width: 28px; height: 28px; border-radius: 50%; background: var(--card-wash); color: var(--ink); display: grid; place-items: center; }
+.mail-row, .file-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; color: inherit; text-decoration: none; transition: background 0.15s var(--ease); }
+.mail-row + .mail-row, .file-row + .file-row { border-top: 1px solid var(--hairline); }
+.mail-row:hover, .file-row:hover { background: color-mix(in srgb, var(--high) 45%, transparent); }
+.mail-row .text, .file-row .text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.mail-row .line { display: flex; align-items: center; gap: 6px; }
+.mail-row .line .title-s { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mail-row .unread { width: 7px; height: 7px; border-radius: 50%; background: var(--ink); flex: none; }
+.initials { width: 34px; height: 34px; flex: none; border-radius: 50%; background: var(--high); color: var(--text-2); display: grid; place-items: center; font-size: 13px; font-weight: 500; }
+.file-badge { width: 40px; height: 40px; flex: none; border-radius: 12px; background: var(--card-wash); color: var(--ink); display: grid; place-items: center; }
+.file-row > .icon { color: var(--text-3); }
+.draft-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px 8px; }
+.draft-tag { flex: none; padding: 2px 7px; border-radius: 6px; background: var(--card-wash); color: var(--ink); text-transform: uppercase; }
+.draft-body { margin: 0; padding: 0 14px 12px; white-space: pre-line; }
+.plan-detail { margin: -4px 16px 12px; }
+.tool-card a.pill { display: inline-flex; align-items: center; text-decoration: none; color: var(--text); }

@@ -255,8 +255,16 @@ export class Proactive {
       prompt: lines.join('\n'),
       run: (name, input) => {
         try {
-          if (name === 'follow_up') return { text: this.#addFollowup(agent, room, input ?? {}), isError: false };
-          if (name === 'watch') return { text: this.#addWatch(agent, room, input ?? {}), isError: false };
+          if (name === 'follow_up') {
+            const text = this.#addFollowup(agent, room, input ?? {});
+            const made = this.store.state.followups.at(-1);
+            return { text, isError: false, card: { type: 'followup', ref: made.id, time: made.at, note: made.note } };
+          }
+          if (name === 'watch') {
+            const text = this.#addWatch(agent, room, input ?? {});
+            const made = this.store.state.watches.at(-1);
+            return { text, isError: false, card: { type: 'watch', ref: made.id, what: made.what, condition: made.condition ?? '', every: made.every ?? null } };
+          }
           if (name === 'stop_watching') return { text: this.#stopWatch(agent, input ?? {}), isError: false };
           return { text: `There is no tool called "${name}".`, isError: true };
         } catch (err) {

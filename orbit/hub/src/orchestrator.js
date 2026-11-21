@@ -9,6 +9,8 @@ import { APP_SUMMARY, GUIDE, SELF_PROMPT, modelOf, selfTools } from './self.js';
 
 /** Upper bound on agent replies per user message, so @mention chains can't loop forever. */
 export const MAX_TURNS = 12;
+/** Cards (events, emails, files, follow-ups) one reply can show. */
+const MAX_CARDS = 6;
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -794,8 +796,16 @@ export class Orchestrator {
           message.sources = sources;
           this.store.save();
         },
+        // A card for what a tool found or did (events, emails, a draft, files, a follow-up), placed where the text was then.
+        onCard: (card) => {
+          if ((message.cards ?? []).length >= MAX_CARDS) return;
+          message.cards = [...(message.cards ?? []), { id: crypto.randomUUID(), ...card }];
+          this.store.save();
+          this.emit(room.id, 'cards', { id: message.id, cards: message.cards });
+        },
         onReset: (text) => {
           message.text = text;
+          if (message.cards) message.cards = message.cards.map((c) => ({ ...c, at: Math.min(c.at, text.length) }));
           this.store.save();
           this.emit(room.id, 'reset', { id: message.id, text });
         },

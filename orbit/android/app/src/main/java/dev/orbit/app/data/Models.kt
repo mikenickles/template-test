@@ -300,6 +300,8 @@ data class Message(
     val replyTo: ReplyRef? = null,
     /** Set when the agent wrote this on its own, unasked. */
     val proactive: ProactiveMark? = null,
+    /** What the agent's tools found or did, shown as cards: events, emails, a draft, files, a follow-up. */
+    val cards: List<Card> = emptyList(),
 ) {
     val fromUser get() = author.type == "user"
 
@@ -394,6 +396,76 @@ data class Delta(val id: String, val at: Int, val text: String)
 data class ActivityUpdate(val id: String, val activity: List<Activity> = emptyList())
 
 @Serializable
+data class CardsUpdate(val id: String, val cards: List<Card> = emptyList())
+
+/**
+ * A card for what an agent's tool found or did, shown in the reply at [at] characters into its text.
+ * One shape for every [type]; each uses only its own fields.
+ */
+@Serializable
+data class Card(
+    val id: String = "",
+    val type: String = "",
+    val at: Int = 0,
+    // events: a stretch of the calendar, from and to in epoch millis.
+    val events: List<CardEvent> = emptyList(),
+    val from: Long? = null,
+    val to: Long? = null,
+    // event_added
+    val event: CardEvent? = null,
+    // emails
+    val emails: List<CardEmail> = emptyList(),
+    // draft
+    val recipient: String = "",
+    val subject: String = "",
+    val body: String = "",
+    val link: String = "",
+    // files
+    val files: List<CardFile> = emptyList(),
+    // followup and watch: the follow-up or watch it stands for, to cancel it.
+    val ref: String = "",
+    val time: Long? = null,
+    val note: String = "",
+    val what: String = "",
+    val condition: String = "",
+    val every: String? = null,
+) {
+    companion object {
+        const val EVENTS = "events"
+        const val EVENT_ADDED = "event_added"
+        const val EMAILS = "emails"
+        const val DRAFT = "draft"
+        const val FILES = "files"
+        const val FOLLOWUP = "followup"
+        const val WATCH = "watch"
+    }
+}
+
+/** A calendar event: [start] and [end] are ISO date-times, or dates for all-day events. */
+@Serializable
+data class CardEvent(
+    val title: String = "",
+    val start: String? = null,
+    val end: String? = null,
+    val allDay: Boolean = false,
+    val location: String = "",
+    val link: String = "",
+)
+
+@Serializable
+data class CardEmail(
+    val from: String = "",
+    val subject: String = "",
+    val snippet: String = "",
+    val at: Long? = null,
+    val unread: Boolean = false,
+    val link: String = "",
+)
+
+@Serializable
+data class CardFile(val name: String = "", val kind: String = "", val modified: Long? = null, val link: String = "")
+
+@Serializable
 data class Removed(val id: String)
 
 /** A reply's text replaced while it streams, when the hub had to run a step again. */
@@ -408,6 +480,7 @@ sealed interface RoomEvent {
     data class Upsert(val message: Message) : RoomEvent
     data class Chunk(val delta: Delta) : RoomEvent
     data class Progress(val update: ActivityUpdate) : RoomEvent
+    data class Cards(val update: CardsUpdate) : RoomEvent
     data class Reset(val reset: TextReset) : RoomEvent
     data class Removed(val id: String) : RoomEvent
     data class Run(val state: RunState) : RoomEvent

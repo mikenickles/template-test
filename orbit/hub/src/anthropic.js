@@ -111,6 +111,7 @@ export async function streamAnthropic({
   onSources = () => {},
   onReset = () => {},
   onUsage = () => {},
+  onCard = () => {},
 }) {
   const tools = anthropicTools(model, abilities);
   const conversation = [...messages];
@@ -242,6 +243,7 @@ export async function streamAnthropic({
       for (const call of calls) {
         const result = await runClientTool({ ...abilities, hubWeb: null }, call.name, call.input);
         finish(call.id, result.isError);
+        if (result.card && !result.isError) onCard({ ...result.card, at: text.length });
         results.push({ type: 'tool_result', tool_use_id: call.id, content: result.text, ...(result.isError ? { is_error: true } : {}) });
       }
       // Every result for the step goes back in one message.
