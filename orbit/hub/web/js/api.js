@@ -86,6 +86,12 @@ export const api = {
   // Connecting Google happens only on the PC: the client and the sign-in stay on this machine.
   setGoogleClient: (clientId, clientSecret) => request('PUT', '/local/google/client', { clientId, clientSecret }, local),
   connectGoogle: () => request('POST', '/local/google/connect', {}, local),
+  /** The Treehouse browser on this PC: opened here so the user can sign into their sites, or cleared. */
+  openBrowser: (url = null) => request('POST', '/local/browser/open', { url }, local),
+  closeBrowser: () => request('POST', '/local/browser/close', {}, local),
+  forgetBrowser: () => request('DELETE', '/local/browser', undefined, local),
+  /** Allows or denies a big action an agent wants to take in the Treehouse browser. */
+  decide: (id, allow) => request('POST', `/api/approvals/${id}`, { allow }),
   // Sharing a folder is for the PC itself only.
   pairInfo: () => request('GET', '/pair.json'),
   shareFolder: (path) => request('POST', '/local/folders', { path }, local),

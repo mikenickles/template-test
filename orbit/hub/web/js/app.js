@@ -753,6 +753,10 @@ const STEPS = {
   guide: ['Reading the Treehouse guide', 'Read the Treehouse guide', "Couldn't read the guide", 'file'],
   self: ['Updating its', 'Updated its', "Couldn't update its", 'check'],
   settings: ['Changing', 'Changed', "Couldn't change", 'check'],
+  browse: ['Opening', 'Opened', "Couldn't open", 'globe'],
+  browse_read: ['Reading the page', 'Read the page', "Couldn't read the page", 'globe'],
+  browse_click: ['Clicking', 'Clicked', "Didn't click", 'globe'],
+  browse_type: ['Typing', 'Typed', "Couldn't type", 'globe'],
 };
 /** Why an agent wrote on its own, beside its name. */
 const REACHED = { checkin: 'Checking in', followup: 'Following up', watch: 'Watching', brief: 'Morning brief' };
@@ -760,7 +764,11 @@ const site = (url) => url.replace(/^https?:\/\/(www\.)?/, '').split(/[/?#]/)[0];
 const leaf = (path) => path.replace(/\/$/, '').split('/').pop() || path;
 function stepDetail(step) {
   switch (step.kind) {
-    case 'page': return site(step.detail);
+    case 'page':
+    case 'browse': return site(step.detail);
+    case 'browse_read': return '';
+    case 'browse_click': return 'on the page';
+    case 'browse_type': return step.detail ? `“${step.detail}”` : 'on the page';
     case 'folder': return step.detail ? leaf(step.detail) : 'your shared folders';
     case 'file': return leaf(step.detail);
     case 'find': return `“${step.detail}”`;
@@ -801,6 +809,7 @@ function summary(activity) {
     count('guide') && 'read the Treehouse guide',
     count('self') && 'updated itself',
     count('settings') && 'changed settings',
+    count('browse') + count('browse_click') + count('browse_type') && 'used the browser',
   ].filter(Boolean);
   const text = parts.length <= 1 ? parts[0] ?? `used ${activity.length} tools` : `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`;
   return text[0].toUpperCase() + text.slice(1);

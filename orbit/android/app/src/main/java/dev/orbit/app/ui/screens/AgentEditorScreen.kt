@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.Agent
 import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.data.GoogleStatus
+import dev.orbit.app.data.BrowserStatus
 import dev.orbit.app.data.MemoryNote
 import dev.orbit.app.data.OrbitJson
 import dev.orbit.app.data.Provider
@@ -129,6 +130,7 @@ fun AgentEditorScreen(
     onRemoveMemory: (MemoryNote) -> Unit = {},
     /** Whether the user's Google account is connected on the PC, and as whom. */
     google: GoogleStatus = GoogleStatus(),
+    browser: BrowserStatus = BrowserStatus(),
 ) {
     val c = Orbit.colors
     val haptics = rememberHaptics()
@@ -153,6 +155,7 @@ fun AgentEditorScreen(
     var remembers by rememberSaveable { mutableStateOf(Agent.ABILITY_MEMORY in start.abilities) }
     var hires by rememberSaveable { mutableStateOf(Agent.ABILITY_CREW in start.abilities) }
     var usesGoogle by rememberSaveable { mutableStateOf(Agent.ABILITY_GOOGLE in start.abilities) }
+    var browses by rememberSaveable { mutableStateOf(Agent.ABILITY_BROWSER in start.abilities) }
     var proactive by rememberSaveable { mutableStateOf(start.proactive) }
 
     val provider = providers.firstOrNull { it.id == providerId }
@@ -174,6 +177,7 @@ fun AgentEditorScreen(
                 Agent.ABILITY_MEMORY.takeIf { remembers },
                 Agent.ABILITY_CREW.takeIf { hires },
                 Agent.ABILITY_GOOGLE.takeIf { usesGoogle },
+                Agent.ABILITY_BROWSER.takeIf { browses },
             ),
             proactive = proactive,
         ),
@@ -340,6 +344,14 @@ fun AgentEditorScreen(
                             usesGoogle,
                             supported,
                         ) { usesGoogle = it }
+                        AbilityDivider()
+                        AbilityRow(
+                            OrbitIcon.Globe,
+                            "Use your websites",
+                            if (browser.available) "In the Treehouse browser on your PC · asks before buying or sending" else "Needs Chrome or Edge on your PC",
+                            browses,
+                            supported,
+                        ) { browses = it }
                     }
                 }
             }

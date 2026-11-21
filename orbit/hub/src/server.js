@@ -14,6 +14,7 @@ import { Feed } from './feed.js';
 import { ScheduleError, Scheduler } from './schedules.js';
 import { LEVELS, Proactive, ProactiveError } from './proactive.js';
 import { Google, GoogleError } from './google.js';
+import { Browser, BrowserError } from './browser.js';
 import { SelfError, planRoom } from './self.js';
 import { ABILITIES, Orchestrator } from './orchestrator.js';
 import { ProviderError } from './errors.js';
@@ -70,7 +71,7 @@ const JUST_PAIRED_MS = 60_000;
  * bearer token a phone receives when it pairs with the code shown on the PC.
  */
 export class Hub {
-  constructor({ store, providers, folders = new Folders(), prices = {}, name, onPairingCode = () => {}, updates = null, onRestart = null, feedUrl = null, google = new Google(), log = () => {} }) {
+  constructor({ store, providers, folders = new Folders(), prices = {}, name, onPairingCode = () => {}, updates = null, onRestart = null, feedUrl = null, google = new Google(), browser = null, log = () => {} }) {
     this.store = store;
     // Updates saved in the updates folder; `onRestart` is how the hub restarts itself once one is installed.
     this.updates = updates ?? new Updates({
@@ -92,8 +93,10 @@ export class Hub {
     this.watchers = new Set(); // phones following every room, to notify when replies land
     // The user's Google account, connected from the PC, for agents with the "google" ability.
     this.google = google;
+    // The Treehouse browser: Chrome or Edge on this PC with its own profile, for agents with the "browser" ability.
+    this.browser = browser ?? new Browser({ dataDir: store.dir });
     this.orchestrator = new Orchestrator({
-      store, providers, folders, ledger: this.ledger, files: this.files, google, emit: (...args) => this.#emit(...args),
+      store, providers, folders, ledger: this.ledger, files: this.files, google, browser: this.browser, emit: (...args) => this.#emit(...args),
     });
     this.scheduler = new Scheduler({ store, orchestrator: this.orchestrator, log: (line) => console.log(line) });
     // Agents that speak first: check-ins, follow-ups, watches and the morning brief.
@@ -407,6 +410,7 @@ export class Hub {
           watches: this.proactive.watches(),
           nudges: this.proactive.nudges(),
           google: this.google.status(),
+          browser: this.browser.status(),
         };
       case 'GET /api/events':
         return this.#follow(req, res);
@@ -494,6 +498,14 @@ export class Hub {
           throw err;
         }
       // Follow-ups and watches agents set, which the user can cancel; and Home's "From your crew" cards.
+      // The user's Allow or Deny for a big action an agent wants to take in the Treehouse browser.
+      case 'POST /api/approvals/:id': {
+        const body = await this.#body(req);
+        if (!this.orchestrator.decide(id, body.allow === true)) throw new HttpError(404, "That isn't waiting for an answer any more.");
+        return { ok: true };
+      }
+      case 'GET /api/browser':
+        return this.browser.status();
       case 'DELETE /api/followups/:id':
         this.proactive.removeFollowup(id);
         return { followups: this.proactive.followups() };
@@ -851,6 +863,14 @@ export class Hub {
         this.folders.remove(parts[2]);
         return { folders: this.folders.list() };
       }
+      // The Treehouse browser is opened and cleared only from the PC, where the user signs into their sites.
+      if (route === 'GET /browser') return this.browser.status();
+      if (route === 'POST /browser/open') return await this.browser.show((await this.#body(req)).url || null);
+      if (route === 'POST /browser/close') {
+        await this.browser.close();
+        return this.browser.status();
+      }
+      if (route === 'DELETE /browser') return await this.browser.forget();
       // Google is connected only from the PC: the client secret and the sign-in stay on this machine.
       if (route === 'GET /google') return this.google.status();
       if (route === 'PUT /google/client') {
@@ -860,7 +880,7 @@ export class Hub {
       if (route === 'POST /google/connect') return { url: this.google.authUrl(this.#googleRedirect()) };
       if (route === 'DELETE /google') return this.google.disconnect();
     } catch (err) {
-      if (err instanceof FolderError || err instanceof GoogleError) throw new HttpError(400, err.message);
+      if (err instanceof FolderError || err instanceof GoogleError || err instanceof BrowserError) throw new HttpError(400, err.message);
       throw err;
     }
     throw new HttpError(404, 'Not found.');

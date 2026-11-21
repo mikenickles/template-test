@@ -59,6 +59,8 @@ import dev.orbit.app.ui.screens.ShareScreen
 import dev.orbit.app.ui.screens.ScheduleEditorScreen
 import dev.orbit.app.ui.screens.SchedulesScreen
 import dev.orbit.app.ui.screens.UsageScreen
+import dev.orbit.app.ui.screens.BrowserScreen
+import dev.orbit.app.data.BrowserStatus
 import dev.orbit.app.data.Activity
 import dev.orbit.app.data.Card
 import dev.orbit.app.data.CardEmail
@@ -423,6 +425,18 @@ class ScreenshotTest {
                 ToolCard(Card(type = Card.WATCH, ref = "w1", what = "Flights to Lisbon in March", condition = "a fare under $500"), sage.avatar, "Sage", now, live = false)
             }
         }
+    }
+    @Test fun approvalCards() = shot("approval-cards") {
+        CompositionLocalProvider(LocalZone provides ZoneOffset.UTC) {
+            Column(Modifier.fillMaxSize().background(Orbit.colors.bg).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                ToolCard(Card(type = Card.APPROVAL, ref = "a1", action = "Click “Place order”", site = "cornershop.com", status = Card.PENDING), nova.avatar, "Nova", now)
+                ToolCard(Card(type = Card.APPROVAL, ref = "a2", action = "Send “Running 10 minutes late”", site = "messages.google.com", status = Card.ALLOWED), pixel.avatar, "Pixel", now)
+                ToolCard(Card(type = Card.APPROVAL, ref = "a3", action = "Click “Delete account”", site = "example.com", status = Card.DENIED), sage.avatar, "Sage", now)
+            }
+        }
+    }
+    @Test fun browserSettings() = shot("settings-browser-light", dark = false) {
+        BrowserScreen(SampleData.app.copy(browser = BrowserStatus(available = true, name = "Google Chrome", running = true, signedIn = true)), "http://192.168.1.20:8787", {})
     }
     @Test fun usage() = shot("usage") { UsageScreen(SampleData.usage, agents, 30, {}, {}) }
     @Test fun usageLight() = shot("usage-light", dark = false) { UsageScreen(SampleData.usage, agents, 30, {}, {}) }

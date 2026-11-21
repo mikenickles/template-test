@@ -173,6 +173,30 @@ function PlanCard({ card, agent, now, notify }) {
   <//>`;
 }
 
+/** A big action an agent wants to take in the Treehouse browser, with Allow and Deny until it's answered. */
+function ApprovalCard({ card, agent, notify }) {
+  const [answered, setAnswered] = useState(false);
+  const pending = card.status === 'pending';
+  const decide = async (allow) => {
+    setAnswered(true);
+    try {
+      await api.decide(card.ref, allow);
+    } catch (e) {
+      notify(e.message);
+    }
+  };
+  const ended = { allowed: 'You allowed this', denied: 'You said no', expired: "No answer in time, so it wasn't done" }[card.status] ?? "The reply stopped, so it wasn't done";
+  return html`<${Frame} footer=${pending
+    ? html`<button class="pill" disabled=${answered} onClick=${() => decide(false)}>Deny</button><button class="pill selected" disabled=${answered} onClick=${() => decide(true)}>Allow</button><span class="caption ink" style="margin-left:auto">Waiting for you</span>`
+    : html`<span class="caption faint">${ended}</span>`}>
+    <div class="tool-card-head">
+      <span class="file-badge" style="border-radius:50%"><${Icon} name="globe" size=${20} /></span>
+      <div><div class="caption faint">${agent?.name ?? 'Your agent'} ${pending ? 'asks first' : 'asked first'}</div><div class="title-s">${card.action}</div>
+        ${card.site && html`<div class="body-s muted">on ${card.site}, in the Treehouse browser</div>`}</div>
+    </div>
+  <//>`;
+}
+
 /** One card, in its agent's colors. */
 export function ToolCard({ card, agent, notify = () => {}, now = Date.now() }) {
   const style = `--wash:${tint(agent?.avatar)};--ink:${inkColor(agent?.avatar)}`;
@@ -184,6 +208,7 @@ export function ToolCard({ card, agent, notify = () => {}, now = Date.now() }) {
     files: () => html`<${FilesCard} card=${card} now=${now} />`,
     followup: () => html`<${PlanCard} card=${card} agent=${agent} now=${now} notify=${notify} />`,
     watch: () => html`<${PlanCard} card=${card} agent=${agent} now=${now} notify=${notify} />`,
+    approval: () => html`<${ApprovalCard} card=${card} agent=${agent} notify=${notify} />`,
   }[card.type];
   return body ? html`<div class="tool-card-wrap" style=${style}>${body()}</div>` : null;
 }

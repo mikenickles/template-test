@@ -11,6 +11,7 @@ const ABILITIES = [
   ['memory', 'memory', 'Remember things', 'Keeps notes when you ask it to remember something, for every room.'],
   ['crew', 'hire', 'Build your crew', 'Hires new agents when you ask: writes their instructions, asks which model to use, picks a free look.'],
   ['google', 'mail', 'Use your Google account', null],
+  ['browser', 'globe', 'Use your websites', null],
 ];
 
 const LEVELS = [['off', 'Off'], ['gentle', 'Gentle'], ['active', 'Active']];
@@ -81,6 +82,11 @@ export function AgentEditor({ agent, state, notify, onClose, onSaved, onChanged,
     if (key === 'code' && chosen?.abilities && !chosen?.runsCode) return "Claude models only: it runs in Anthropic's private sandbox.";
     if (key === 'web' && chosen?.abilities && !chosen?.runsCode && !claudeReady) return 'Reads pages. Searching needs an Anthropic key on the hub.';
     if (detail) return detail;
+    if (key === 'browser') {
+      return state.browser?.available
+        ? 'In the Treehouse browser on this PC, signed in as you. Asks before buying, sending, posting or deleting.'
+        : 'Needs Google Chrome or Microsoft Edge on this PC.';
+    }
     if (key === 'google') {
       return google.connected
         ? `Gmail, Calendar and Drive for ${google.email || 'your account'}. Reads mail and saves drafts, never sends.`
@@ -279,6 +285,7 @@ const PAGES = {
   proactive: 'Reaching out',
   models: 'AI models',
   google: 'Google',
+  browser: 'Browser',
   folders: 'Shared folders',
   usage: 'Usage',
 };
@@ -368,10 +375,11 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate, p
     proactive: `${reaching.length ? `${reaching.length} ${reaching.length === 1 ? 'agent reaches' : 'agents reach'} out` : 'No agent reaches out yet'}${state.proactive?.brief?.enabled ? ` · brief at ${state.proactive.brief.time}` : ''}`,
     models: ready.length ? `${joinNames(ready)} ready` : 'Add a key to get real answers',
     google: state.google?.connected ? state.google.email || 'Connected' : 'Not connected',
+    browser: !state.browser?.available ? 'Needs Chrome or Edge' : state.browser.running ? `${state.browser.name} is open` : state.browser.name,
     folders: state.folders.length ? `${state.folders.length} ${state.folders.length === 1 ? 'folder' : 'folders'}` : 'None shared yet',
     usage: !total ? 'Spend and tokens, per agent' : total.cost > 0 ? `${formatCost(total.cost)} in the last 30 days` : total.requests ? `${formatTokens(total.input + total.output + total.cacheRead + total.cacheWrite)} tokens in 30 days` : 'Nothing in the last 30 days',
   };
-  const icons = { about: 'person', proactive: 'bell', models: 'spark', google: 'mail', folders: 'folder', usage: 'chart' };
+  const icons = { about: 'person', proactive: 'bell', models: 'spark', google: 'mail', browser: 'globe', folders: 'folder', usage: 'chart' };
   const row = (id) => html`<button class=${`settings-row${page === id ? ' current' : ''}`} aria-current=${page === id ? 'page' : null} onClick=${() => setPage(id)}>
     <${Icon} name=${icons[id]} /><span class="text"><span class="title-s">${PAGES[id]}</span><span class=${`body-s ${id === 'models' && !ready.length ? '' : 'muted'}`}>${summaries[id]}</span></span>
     <${Icon} name="chevron" size=${16} /></button>`;
@@ -386,7 +394,7 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate, p
         <div class="overline">You</div>
         <div class="card">${row('about')}${row('proactive')}</div>
         <div class="overline">Connections</div>
-        <div class="card">${row('models')}${row('google')}${row('folders')}</div>
+        <div class="card">${row('models')}${row('google')}${row('browser')}${row('folders')}</div>
         <div class="overline">Hub</div>
         <div class="card">${row('usage')}</div>
         <p class="note">You can also ask your crew to change things for you, like quiet hours, the morning brief or a room's members.</p>
@@ -443,6 +451,7 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate, p
 `}
         ${page === 'proactive' && html`<${ProactiveSettings} state=${state} notify=${notify} refresh=${refresh} />`}
         ${page === 'google' && html`<${GoogleSettings} state=${state} notify=${notify} refresh=${refresh} />`}
+        ${page === 'browser' && html`<${BrowserSettings} state=${state} notify=${notify} refresh=${refresh} />`}
         ${page === 'models' && html`    <div class="card">${state.providers.filter((p) => p.id !== 'demo' || state.agents.some((a) => a.provider === 'demo')).map((p) => html`<div class="provider">
       <button class="row button-row" disabled=${!p.takesKey && !p.local} onClick=${() => { setOpen(open === p.id ? null : p.id); setKey(''); setKeyError(null); }}>
         <div style="flex:1"><div class="title-s">${p.label}</div>${p.keyHint && html`<div class="mono faint">Key ${p.keyHint}</div>`}</div>
@@ -620,6 +629,42 @@ function GoogleSettings({ state, notify, refresh }) {
       : onThisPC
         ? html`When you connect, Google shows a warning that it hasn't verified the app: that's expected for an app only you use. Choose Advanced, then Go to Treehouse, and allow everything.${google.configured && !editing ? html` <button class="label" onClick=${() => setEditing(true)}>Change client</button>` : ''}`
         : 'Connect Google from Treehouse on your PC, in Settings there.'}</p>`;
+}
+
+/** The Treehouse browser: a Chrome or Edge window on this PC that the user signs into, which agents use. */
+function BrowserSettings({ state, notify, refresh }) {
+  const browser = state.browser ?? {};
+  const [busy, setBusy] = useState(false);
+  const act = async (work, done = null) => {
+    setBusy(true);
+    try {
+      await work();
+      await refresh();
+      if (done) notify(done);
+    } catch (err) {
+      notify(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const forget = () => {
+    if (confirm('Sign out of every site in the Treehouse browser? It closes, and agents can only use sites you sign into again.')) act(api.forgetBrowser, 'Signed out of everything');
+  };
+  return html`
+    <div class="card">
+      <div class="row"><${Icon} name="globe" /><div style="flex:1;min-width:0">
+        <div class="title-s">${!browser.available ? 'No Chrome or Edge on this PC' : browser.running ? `${browser.name} is open` : browser.name}</div>
+        <div class="body-s muted">The Treehouse browser, with its own sign-ins</div></div>
+        ${onThisPC && browser.available && html`<button class="button" disabled=${busy} onClick=${() => act(() => api.openBrowser())}>${browser.running ? 'Show it' : 'Open the browser'}</button>`}
+      </div>
+      ${onThisPC && browser.running && html`<button class="row button-row" disabled=${busy} onClick=${() => act(api.closeBrowser)}><div style="flex:1" class="title-s">Close the browser</div></button>`}
+      ${onThisPC && browser.signedIn && html`<button class="row button-row danger-row" disabled=${busy} onClick=${forget}><div style="flex:1"><div class="title-s" style="color:var(--danger)">Sign out of everything</div><div class="body-s muted">Closes it and deletes its sign-ins and history.</div></div></button>`}
+    </div>
+    <p class="note">${!browser.available
+      ? 'Install Google Chrome or Microsoft Edge on this PC, then come back. Treehouse opens a window of its own.'
+      : onThisPC
+        ? "Open the browser and sign into the sites you want your agents to use; it remembers them. Agents use those sign-ins but never see or type your passwords, and they can open public websites only, never this PC or your home network. Before they buy, pay, send, post, book or delete anything, they ask you in the chat. Give an agent the browser in its Abilities."
+        : 'Open the Treehouse browser and sign into your sites from Treehouse on your PC, in Settings there.'}</p>`;
 }
 
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];

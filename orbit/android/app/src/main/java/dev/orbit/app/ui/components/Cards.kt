@@ -17,6 +17,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,8 +67,10 @@ fun ToolCard(
     modifier: Modifier = Modifier,
     live: Boolean = true,
     onCancel: (Card) -> Unit = {},
+    onDecide: (Card, Boolean) -> Unit = { _, _ -> },
 ) {
     when (card.type) {
+        Card.APPROVAL -> ApprovalCard(card, avatar, agentName, modifier) { allow -> onDecide(card, allow) }
         Card.EVENTS -> EventsCard(card, avatar, now, modifier)
         Card.EVENT_ADDED -> card.event?.let { EventAddedCard(it, avatar, modifier) }
         Card.EMAILS -> EmailsCard(card, avatar, now, modifier)
@@ -350,6 +356,51 @@ private fun PlanCard(card: Card, avatar: AvatarSpec, agentName: String, now: Lon
         }
         val detail = if (followUp) card.note else listOf(card.what, card.condition.ifBlank { null }?.let { "for when $it" }).filterNotNull().joinToString(", ")
         if (detail.isNotBlank()) Text(detail, Modifier.padding(start = OrbitDimens.rowPad, end = OrbitDimens.rowPad, bottom = 12.dp), style = OrbitType.bodyS, color = c.textSecondary)
+    }
+}
+
+// ---------- Asking first ----------
+
+/** A big action an agent wants to take in the Treehouse browser, with Allow and Deny until it's answered. */
+@Composable
+private fun ApprovalCard(card: Card, avatar: AvatarSpec, agentName: String, modifier: Modifier, onDecide: (Boolean) -> Unit) {
+    val c = Orbit.colors
+    // Answered here, before the hub's update arrives: the buttons go quiet so it isn't sent twice.
+    var answered by remember(card.ref) { mutableStateOf(false) }
+    val pending = card.status == Card.PENDING
+    CardFrame(
+        modifier,
+        footer = {
+            if (pending) {
+                Pill("Deny", { if (!answered) { answered = true; onDecide(false) } }, dimmed = answered)
+                Spacer(Modifier.width(8.dp))
+                Pill("Allow", { if (!answered) { answered = true; onDecide(true) } }, selected = !answered, dimmed = answered)
+                Spacer(Modifier.weight(1f))
+                Text("Waiting for you", style = OrbitType.caption, color = avatar.textColor())
+            } else {
+                Text(
+                    when (card.status) {
+                        Card.ALLOWED -> "You allowed this"
+                        Card.DENIED -> "You said no"
+                        "expired" -> "No answer in time, so it wasn't done"
+                        else -> "The reply stopped, so it wasn't done"
+                    },
+                    style = OrbitType.caption,
+                    color = c.textTertiary,
+                )
+            }
+        },
+    ) {
+        Row(Modifier.padding(OrbitDimens.rowPad), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clip(CircleShape).background(avatar.wash()), contentAlignment = Alignment.Center) {
+                OrbitIcon(OrbitIcon.Globe, size = 20.dp, tint = avatar.textColor())
+            }
+            Column(Modifier.padding(start = 12.dp)) {
+                Text(if (pending) "$agentName asks first" else "$agentName asked first", style = OrbitType.caption, color = c.textTertiary)
+                Text(card.action, style = OrbitType.titleS, color = c.text)
+                if (card.site.isNotBlank()) Text("on ${card.site}, in the Treehouse browser", style = OrbitType.bodyS, color = c.textSecondary)
+            }
+        }
     }
 }
 

@@ -40,6 +40,9 @@ data class Agent(
 
         /** The user's Gmail, Calendar and Drive, once Google is connected on the PC. */
         const val ABILITY_GOOGLE = "google"
+
+        /** Websites, in the Treehouse browser on the PC that the user signs into. */
+        const val ABILITY_BROWSER = "browser"
         const val ABILITY_WEB = "web"
         const val ABILITY_CODE = "code"
         const val ABILITY_FILES = "files"
@@ -166,6 +169,12 @@ data class Activity(
         const val KIND_WATCH = "watch"
         const val KIND_WATCH_STOP = "watch_stop"
         const val KIND_GUIDE = "guide"
+
+        // The Treehouse browser on the PC.
+        const val KIND_BROWSE = "browse"
+        const val KIND_BROWSE_READ = "browse_read"
+        const val KIND_BROWSE_CLICK = "browse_click"
+        const val KIND_BROWSE_TYPE = "browse_type"
         const val KIND_SELF = "self"
         const val KIND_SETTINGS = "settings"
         const val KIND_ROOM = "room"
@@ -228,6 +237,10 @@ data class Nudge(
 /** Whether the user's Google account is connected on the PC, and as whom. */
 @Serializable
 data class GoogleStatus(val configured: Boolean = false, val connected: Boolean = false, val email: String = "")
+
+/** The Treehouse browser on the PC: whether it has Chrome or Edge, and whether it's open. */
+@Serializable
+data class BrowserStatus(val available: Boolean = false, val name: String? = null, val running: Boolean = false, val signedIn: Boolean = false)
 
 /** A photo or file attached to a message. [type] is its media type, like "image/jpeg". */
 @Serializable
@@ -378,6 +391,7 @@ data class HubState(
     val watches: List<Watch> = emptyList(),
     val nudges: List<Nudge> = emptyList(),
     val google: GoogleStatus = GoogleStatus(),
+    val browser: BrowserStatus = BrowserStatus(),
 )
 
 /** Whether agents are replying in a room right now, and who has the floor. */
@@ -429,6 +443,10 @@ data class Card(
     val what: String = "",
     val condition: String = "",
     val every: String? = null,
+    // approval: a big browser action waiting for the user's Allow or Deny, by [ref].
+    val action: String = "",
+    val site: String = "",
+    val status: String = "",
 ) {
     companion object {
         const val EVENTS = "events"
@@ -438,6 +456,10 @@ data class Card(
         const val FILES = "files"
         const val FOLLOWUP = "followup"
         const val WATCH = "watch"
+        const val APPROVAL = "approval"
+        const val PENDING = "pending"
+        const val ALLOWED = "allowed"
+        const val DENIED = "denied"
     }
 }
 

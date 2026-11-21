@@ -65,6 +65,9 @@ hub on an always-on PC.
   `"prices"` in `config.json`.
 - **Long rooms** stay affordable: past about 15,000 words, the oldest part of a
   room is folded into a running summary that agents read instead.
+- **Your websites.** Agents with the browser ability use a Chrome or Edge window on your PC that you've signed
+  into your sites with (Settings, Browser, on the PC). They never see your passwords, open public websites only,
+  and ask you (Allow / Deny in the chat) before anything that buys, pays, sends, posts, books or deletes.
 - **Token counts.** Each room shows about how many tokens a reply sends; its Tokens page breaks that down,
   shows the last 30 days, and lets you pick a smaller or larger context, stop resending older photos, or
   summarize now.

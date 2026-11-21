@@ -80,6 +80,10 @@ fun activityLabel(activity: Activity, live: Boolean = false): ActivityLabel {
         Activity.KIND_WATCH -> ActivityLabel(if (live) "Setting up a watch" else if (failed) "Couldn't watch" else "Watching", detail)
         Activity.KIND_WATCH_STOP -> ActivityLabel(if (live) "Stopping a watch" else if (failed) "Couldn't stop a watch" else "Stopped watching", detail)
         Activity.KIND_GUIDE -> ActivityLabel(if (live) "Reading the Treehouse guide" else if (failed) "Couldn't read the guide" else "Read the Treehouse guide", "")
+        Activity.KIND_BROWSE -> ActivityLabel(if (live) "Opening" else if (failed) "Couldn't open" else "Opened", siteOf(detail))
+        Activity.KIND_BROWSE_READ -> ActivityLabel(if (live) "Reading the page" else if (failed) "Couldn't read the page" else "Read the page", "")
+        Activity.KIND_BROWSE_CLICK -> ActivityLabel(if (live) "Clicking" else if (failed) "Didn't click" else "Clicked", "on the page")
+        Activity.KIND_BROWSE_TYPE -> ActivityLabel(if (live) "Typing" else if (failed) "Couldn't type" else "Typed", if (detail.isBlank()) "on the page" else "“$detail”")
         Activity.KIND_SELF -> ActivityLabel(if (live) "Updating its" else if (failed) "Couldn't update its" else "Updated its", detail.ifBlank { "settings" })
         Activity.KIND_ROOM -> ActivityLabel(if (live) "Making a room" else if (failed) "Couldn't make a room" else "Made a room", detail)
         Activity.KIND_SETTINGS -> ActivityLabel(if (live) "Changing" else if (failed) "Couldn't change" else "Changed", detail.ifBlank { "settings" })
@@ -111,6 +115,7 @@ fun activitySummary(activity: List<Activity>): String {
         if (count(Activity.KIND_WATCH) > 0) add("started watching")
         if (count(Activity.KIND_WATCH_STOP) > 0) add("stopped a watch")
         if (count(Activity.KIND_GUIDE) > 0) add("read the Treehouse guide")
+        if (count(Activity.KIND_BROWSE) + count(Activity.KIND_BROWSE_CLICK) + count(Activity.KIND_BROWSE_TYPE) > 0) add("used the browser")
         if (count(Activity.KIND_SELF) > 0) add("updated itself")
         if (count(Activity.KIND_SETTINGS) > 0) add("changed settings")
         count(Activity.KIND_ROOM).takeIf { it > 0 }?.let { add(times(it, "made a room", "made # rooms")) }
@@ -134,6 +139,7 @@ private fun iconFor(kind: String) = when (kind) {
     Activity.KIND_FOLLOW_UP -> OrbitIcon.Clock
     Activity.KIND_WATCH, Activity.KIND_WATCH_STOP -> OrbitIcon.Bell
     Activity.KIND_GUIDE -> OrbitIcon.File
+    Activity.KIND_BROWSE, Activity.KIND_BROWSE_READ, Activity.KIND_BROWSE_CLICK, Activity.KIND_BROWSE_TYPE -> OrbitIcon.Globe
     Activity.KIND_SELF, Activity.KIND_SETTINGS -> OrbitIcon.Check
     Activity.KIND_ROOM -> OrbitIcon.Plus
     else -> OrbitIcon.More

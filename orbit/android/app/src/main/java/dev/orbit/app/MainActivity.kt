@@ -6,6 +6,7 @@ import android.speech.RecognizerIntent
 import dev.orbit.app.ui.screens.AwayScreen
 import dev.orbit.app.ui.screens.FoldersScreen
 import dev.orbit.app.ui.screens.GoogleScreen
+import dev.orbit.app.ui.screens.BrowserScreen
 import dev.orbit.app.ui.screens.LocalModelsScreen
 import dev.orbit.app.ui.screens.ModelsScreen
 import dev.orbit.app.ui.screens.ProviderKeyScreen
@@ -329,6 +330,10 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onCancelCard = { card ->
                     if (card.type == Card.FOLLOWUP) vm.deleteFollowUp(card.ref) else vm.deleteWatch(card.ref)
                 },
+                onDecide = { card, allow ->
+                    haptics.confirm()
+                    vm.decide(card.ref, allow) { ok -> if (!ok) scope.launch { snackbar.showSnackbar("That isn't waiting for an answer any more.") } }
+                },
                 onStop = roomVm::stop,
                 onBack = { nav.popBackStack() },
                 onEdit = { nav.navigate("roomEdit?id=$id") },
@@ -373,6 +378,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onAddMemory = { text, done -> agent?.let { vm.addMemory(it.id, text, done) } },
                 onRemoveMemory = { note -> agent?.let { vm.removeMemory(it.id, note.id) } },
                 google = state.google,
+                browser = state.browser,
             )
         }
         screen("roomEdit?id={id}", arguments = OptionalId) { entry ->
@@ -424,6 +430,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onOpenProactive = { nav.navigate("proactive") },
                 onOpenModels = { nav.navigate("settings/models") },
                 onOpenGoogle = { nav.navigate("settings/google") },
+                onOpenBrowser = { nav.navigate("settings/browser") },
                 onOpenFolders = { nav.navigate("settings/folders") },
                 onOpenAway = { nav.navigate("settings/away") },
             )
@@ -458,6 +465,10 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
         }
         screen("settings/models") {
             ModelsScreen(state, onOpenProvider = { nav.navigate("provider/$it") }, onBack = { nav.popBackStack() })
+        }
+        screen("settings/browser") {
+            val via by vm.via.collectAsStateWithLifecycle()
+            BrowserScreen(state, via ?: session.baseUrl, onBack = { nav.popBackStack() })
         }
         screen("settings/google") {
             val via by vm.via.collectAsStateWithLifecycle()

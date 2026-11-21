@@ -176,6 +176,11 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
     suspend fun saveProactive(settings: ProactiveSettings): ProactiveSettings =
         call("PUT", "/api/proactive", OrbitJson.encodeToString(settings))
 
+    /** Allows or denies a big action an agent wants to take in the Treehouse browser. */
+    suspend fun decide(approvalId: String, allow: Boolean) {
+        call<Unit>("POST", "/api/approvals/$approvalId", if (allow) "{\"allow\":true}" else "{\"allow\":false}")
+    }
+
     /** Cancels a follow-up an agent booked. */
     suspend fun deleteFollowUp(id: String) {
         call<Unit>("DELETE", "/api/followups/$id")

@@ -68,10 +68,10 @@ async function fakeOllama(t, steps) {
   return { requests, baseUrl: `http://127.0.0.1:${server.address().port}/v1` };
 }
 
-async function start(t, providersConfig) {
+async function start(t, providersConfig, extra = {}) {
   const store = new Store(fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-hub-')));
   store.isNew = false;
-  const hub = new Hub({ store, providers: new Providers(providersConfig, {}), name: 'Test PC' });
+  const hub = new Hub({ store, providers: new Providers(providersConfig, {}), name: 'Test PC', ...extra });
   t.after(() => hub.close());
   const base = `http://127.0.0.1:${await hub.listen(0, '127.0.0.1')}`;
   const { token } = await (await fetch(`${base}/api/pair`, { method: 'POST', body: JSON.stringify({ code: hub.pairingCode }) })).json();
@@ -261,4 +261,54 @@ test('a follow-up an agent books shows as a card where it happened in the reply'
   assert.equal(card.ref, h.store.state.followups[0].id, 'carries the follow-up id, so it can be cancelled');
   assert.ok(card.id && card.id !== card.ref, 'and an id of its own');
   assert.ok(card.time > Date.now());
+});
+
+test('a big browser action waits for the user to allow it, from a card in the reply', async (t) => {
+  withoutTools.clear();
+  const ollama = await fakeOllama(t, [
+    [{ tool_calls: [{ index: 0, id: 'c1', type: 'function', function: { name: 'browser_click', arguments: '{"ref":6}' } }] }],
+    [{ content: 'Your order is placed.' }],
+    [{ tool_calls: [{ index: 0, id: 'c2', type: 'function', function: { name: 'browser_click', arguments: '{"ref":6}' } }] }],
+    [{ content: 'Okay, I left it.' }],
+  ]);
+  // A stand-in for the Chrome window: every click is a big one.
+  const browser = {
+    find: () => '/chrome',
+    status: () => ({ available: true, name: 'Google Chrome', running: true, signedIn: true }),
+    tools: (ask) => ({ run: async () => ((await ask({ action: 'Click “Place order”', site: 'shop.example' })) ? { text: 'Thanks for your order!', isError: false } : { text: 'Not allowed.', isError: true }) }),
+  };
+  const h = await start(t, { ollama: { baseUrl: ollama.baseUrl } }, { browser });
+  const lfm = (await h.api('POST', '/api/agents', { name: 'Lumi', provider: 'ollama', model: 'lfm3:latest', abilities: ['browser'] })).body;
+  assert.deepEqual(lfm.abilities, ['browser']);
+  assert.ok(ollama.requests.length === 0);
+  const room = (await h.api('POST', '/api/rooms', { name: 'Shop', agentIds: [lfm.id] })).body;
+  assert.equal((await h.api('GET', '/api/state')).body.browser.available, true);
+
+  const waitForCard = async (status) => {
+    for (let i = 0; i < 100; i++) {
+      const card = h.store.messages(room.id).at(-1)?.cards?.find((c) => c.type === 'approval' && c.status === status);
+      if (card) return card;
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    throw new Error('no card');
+  };
+
+  await h.api('POST', `/api/rooms/${room.id}/messages`, { text: 'Order my usual bread' });
+  const pending = await waitForCard('pending');
+  assert.equal(pending.action, 'Click “Place order”');
+  assert.equal(pending.site, 'shop.example');
+  assert.ok(ollama.requests[0].tools.some((tool) => tool.function.name === 'browser_open'), 'the agent has the browser tools');
+  assert.equal((await h.api('POST', '/api/approvals/nope', { allow: true })).status, 404);
+  assert.equal((await h.api('POST', `/api/approvals/${pending.ref}`, { allow: true })).status, 200);
+  await h.hub.orchestrator.idle(room.id);
+  assert.equal(ollama.requests[1].messages.at(-1).content, 'Thanks for your order!');
+  assert.equal(h.store.messages(room.id).at(-1).cards[0].status, 'allowed');
+  assert.equal((await h.api('POST', `/api/approvals/${pending.ref}`, { allow: true })).status, 404, 'answered once');
+
+  await h.api('POST', `/api/rooms/${room.id}/messages`, { text: 'Order another' });
+  const second = await waitForCard('pending');
+  await h.api('POST', `/api/approvals/${second.ref}`, { allow: false });
+  await h.hub.orchestrator.idle(room.id);
+  assert.equal(ollama.requests[3].messages.at(-1).content, 'Not allowed.');
+  assert.equal(h.store.messages(room.id).at(-1).cards[0].status, 'denied');
 });

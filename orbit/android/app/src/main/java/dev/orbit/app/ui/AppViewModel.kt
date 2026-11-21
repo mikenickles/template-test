@@ -16,6 +16,7 @@ import dev.orbit.app.data.FollowUp
 import dev.orbit.app.data.Watch
 import dev.orbit.app.data.Nudge
 import dev.orbit.app.data.GoogleStatus
+import dev.orbit.app.data.BrowserStatus
 import dev.orbit.app.data.isNewerVersion
 import dev.orbit.app.update.ApkInstaller
 import dev.orbit.app.data.Provider
@@ -66,6 +67,7 @@ data class AppState(
     /** What agents brought up on their own, newest last: Home's "From your crew". */
     val nudges: List<Nudge> = emptyList(),
     val google: GoogleStatus = GoogleStatus(),
+    val browser: BrowserStatus = BrowserStatus(),
 ) {
     fun agent(id: String?) = agents.firstOrNull { it.id == id }
 
@@ -180,6 +182,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     watches = fresh.watches,
                     nudges = fresh.nudges,
                     google = fresh.google,
+                    browser = fresh.browser,
                 )
             }
         }
@@ -519,6 +522,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val saved = hub { it.saveProactive(settings) }
             _state.update { it.copy(proactive = saved ?: before) }
         }
+    }
+
+    /** The user's answer to a big browser action; [onDone] hears whether the hub took it. */
+    fun decide(approvalId: String, allow: Boolean, onDone: (Boolean) -> Unit = {}) {
+        viewModelScope.launch { onDone(hub { it.decide(approvalId, allow) } != null) }
     }
 
     fun deleteFollowUp(id: String) {

@@ -5,12 +5,15 @@ import { CrewError, createCrew, introPrompt } from './intro.js';
 import { RecruitError, createAgent, recruitPrompt } from './recruit.js';
 import { addUsage, emptyUsage } from './usage.js';
 import { GOOGLE_PROMPT, runGoogleTool } from './google.js';
+import { BROWSER_PROMPT } from './browser.js';
 import { APP_SUMMARY, GUIDE, SELF_PROMPT, modelOf, selfTools } from './self.js';
 
 /** Upper bound on agent replies per user message, so @mention chains can't loop forever. */
 export const MAX_TURNS = 12;
 /** Cards (events, emails, files, follow-ups) one reply can show. */
 const MAX_CARDS = 6;
+/** How long a big browser action waits for the user's Allow or Deny. */
+const APPROVAL_WAIT_MS = 10 * 60_000;
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -57,13 +60,13 @@ export function namedAgents(answer, agents) {
  * Abilities an agent can be given. "files" reads folders shared from the PC; "crew" hires new agents;
  * "google" uses the user's Gmail, Calendar and Drive once Google is connected on the PC.
  */
-export const ABILITIES = ['web', 'code', 'files', 'memory', 'crew', 'google'];
+export const ABILITIES = ['web', 'code', 'files', 'memory', 'crew', 'google', 'browser'];
 
 /**
  * What an agent can do on this turn. Abilities only work with providers that support them; elsewhere
  * the agent runs without them, and its prompt doesn't mention them.
  */
-export function resolveAbilities(agent, providers, folders, save = () => {}, { profile = null, force = [], google = null } = {}) {
+export function resolveAbilities(agent, providers, folders, save = () => {}, { profile = null, force = [], google = null, browser = null } = {}) {
   if (!providers.supportsAbilities?.(agent.provider)) return null;
   const on = new Set([...(agent.abilities ?? []), ...force]);
   // A proactive agent can book follow-ups and watch things; Orchestrator#speak fills in the tools. Every agent
@@ -82,6 +85,9 @@ export function resolveAbilities(agent, providers, folders, save = () => {}, { p
     hire: on.has('crew'),
     google: on.has('google') && google?.connected ? { run: (name, input) => runGoogleTool(google, name, input) } : null,
     wantsGoogle: on.has('google'),
+    // The Treehouse browser on the PC; Orchestrator#speak turns it into tools that ask before big actions.
+    browser: on.has('browser') && browser?.find() ? browser : null,
+    wantsBrowser: on.has('browser'),
     proactiveOn: proactive,
   };
 }
@@ -156,6 +162,10 @@ export function buildSystemPrompt(agent, room, agents, abilities = null, profile
     if (abilities.google) lines.push(GOOGLE_PROMPT);
     else if (abilities.wantsGoogle) {
       lines.push("- You could use the user's Gmail, Calendar and Drive, but Google isn't connected yet. If they ask about their email or calendar, tell them to connect Google in Treehouse on their PC, under Settings.");
+    }
+    if (abilities.browser) lines.push(BROWSER_PROMPT);
+    else if (abilities.wantsBrowser) {
+      lines.push("- You could use the Treehouse browser, but the PC has no Chrome or Edge. If the user asks you to use a website, tell them to install Chrome or Edge on their PC.");
     }
     if (abilities.proactive) lines.push(abilities.proactive.prompt);
     if (abilities.memory) {
@@ -315,9 +325,12 @@ export class Orchestrator {
    * @param {{store: import('./store.js').Store, providers: any, folders?: import('./folders.js').Folders,
    *   emit: (roomId: string, event: string, data: any) => void}} deps
    */
-  constructor({ store, providers, folders = null, ledger = null, files = null, google = null, emit }) {
+  constructor({ store, providers, folders = null, ledger = null, files = null, google = null, browser = null, emit }) {
     this.store = store;
     this.google = google;
+    this.browser = browser;
+    /** Big browser actions waiting for the user's Allow or Deny: approval id -> what to do with the answer. */
+    this.approvals = new Map();
     /** Set by the hub once it's made: follow-ups and watches for proactive agents. */
     this.proactive = null;
     /** Set by the hub: its name and addresses, for the Treehouse guide's live summary. */
@@ -513,7 +526,7 @@ export class Orchestrator {
     let instructions = 0;
     if (agent) {
       const profile = this.store.state.profile;
-      const abilities = resolveAbilities(agent, this.providers, this.folders, () => {}, { profile, google: this.google });
+      const abilities = resolveAbilities(agent, this.providers, this.folders, () => {}, { profile, google: this.google, browser: this.browser });
       instructions = tokensOf(buildSystemPrompt(agent, room, agents, abilities, profile).length);
     }
     const tokens = {
@@ -530,6 +543,42 @@ export class Orchestrator {
       messages: { recent: recent.length, summarized: all.length - pending.length, leftOut: left.length, total: all.length },
       summaryUpdatedAt: room.summary?.updatedAt ?? null,
     };
+  }
+
+  /**
+   * Asks the user to allow a big browser action, as a card in the reply with Allow and Deny. Resolves true or
+   * false; no answer in ten minutes, or the reply stopped, counts as no.
+   */
+  #ask(room, message, run, { action, site }) {
+    const id = crypto.randomUUID();
+    const card = { id: crypto.randomUUID(), type: 'approval', ref: id, at: message.text.length, action, site, status: 'pending' };
+    message.cards = [...(message.cards ?? []), card];
+    this.store.save();
+    this.emit(room.id, 'cards', { id: message.id, cards: message.cards });
+    return new Promise((resolve) => {
+      const finish = (status) => {
+        if (!this.approvals.has(id)) return;
+        this.approvals.delete(id);
+        clearTimeout(timer);
+        run.abort.signal.removeEventListener('abort', stopped);
+        message.cards = (message.cards ?? []).map((c) => (c.ref === id ? { ...c, status } : c));
+        this.store.save();
+        this.emit(room.id, 'cards', { id: message.id, cards: message.cards });
+        resolve(status === 'allowed');
+      };
+      const timer = setTimeout(() => finish('expired'), APPROVAL_WAIT_MS);
+      const stopped = () => finish('stopped');
+      run.abort.signal.addEventListener('abort', stopped, { once: true });
+      this.approvals.set(id, finish);
+    });
+  }
+
+  /** The user's answer to a big browser action. False when it isn't waiting any more. */
+  decide(id, allow) {
+    const finish = this.approvals.get(id);
+    if (!finish) return false;
+    finish(allow ? 'allowed' : 'denied');
+    return true;
   }
 
   /** Folds all but the newest few messages into the room's summary now. Throws when it can't. */
@@ -720,9 +769,10 @@ export class Orchestrator {
     // In the intro, the guide always gets the shared memory, and can create the crew it suggests.
     const intro = room.intro && agents.length === 1;
     const abilities = resolveAbilities(agent, this.providers, this.folders, () => this.store.save(), {
-      profile, force: intro ? ['memory'] : [], google: this.google,
+      profile, force: intro ? ['memory'] : [], google: this.google, browser: this.browser,
     });
     if (abilities?.proactiveOn && this.proactive) abilities.proactive = this.proactive.toolsFor(agent, room);
+    if (abilities?.browser) abilities.browser = abilities.browser.tools((request) => this.#ask(room, message, run, request));
     // Models other than Claude search through the hub: a quick Claude search when there's a key, and pages
     // fetched by the hub itself.
     const claude = this.providers.kindOf?.(agent.provider) === 'anthropic';

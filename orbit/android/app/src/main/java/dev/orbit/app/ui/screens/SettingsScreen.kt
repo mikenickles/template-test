@@ -64,6 +64,7 @@ fun SettingsScreen(
     onOpenProactive: () -> Unit = {},
     onOpenModels: () -> Unit = {},
     onOpenGoogle: () -> Unit = {},
+    onOpenBrowser: () -> Unit = {},
     onOpenFolders: () -> Unit = {},
     onOpenAway: () -> Unit = {},
 ) {
@@ -121,6 +122,17 @@ fun SettingsScreen(
                         "Google",
                         if (state.google.connected) state.google.email.ifBlank { "Connected" } else "Not connected",
                         onOpenGoogle,
+                    )
+                    RowDivider()
+                    SettingsRow(
+                        OrbitIcon.Globe,
+                        "Browser",
+                        when {
+                            !state.browser.available -> "Needs Chrome or Edge on the PC"
+                            state.browser.running -> "${state.browser.name ?: "The browser"} is open on the PC"
+                            else -> "${state.browser.name ?: "Chrome"} on the PC"
+                        },
+                        onOpenBrowser,
                     )
                     RowDivider()
                     SettingsRow(
@@ -411,6 +423,44 @@ fun GoogleScreen(state: AppState, hubAddress: String, onDisconnect: () -> Unit, 
             } else {
                 "Connect it on your PC: open localhost:${hubPort(hubAddress)} in a browser there, then Settings, then Google. " +
                     "It stays on your PC; nothing about your account is stored on this phone."
+            },
+        )
+    }
+}
+
+/** The Treehouse browser: a Chrome or Edge window on the PC that the user signs into, which agents use. */
+@Composable
+fun BrowserScreen(state: AppState, hubAddress: String, onBack: () -> Unit) {
+    val c = Orbit.colors
+    val browser = state.browser
+    SettingsPage("Browser", onBack) {
+        OrbitCard(Modifier.fillMaxWidth()) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = OrbitDimens.rowPad).heightIn(min = 60.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OrbitIcon(OrbitIcon.Globe, size = RowIcon, tint = c.text)
+                Column(Modifier.weight(1f).padding(start = RowIconGap, top = 12.dp, bottom = 12.dp)) {
+                    Text(
+                        when {
+                            !browser.available -> "No Chrome or Edge on the PC"
+                            browser.running -> "${browser.name ?: "The browser"} is open"
+                            else -> browser.name ?: "Ready"
+                        },
+                        style = OrbitType.titleS,
+                        color = c.text,
+                    )
+                    Text("The Treehouse browser, on your PC", Modifier.padding(top = 2.dp), style = OrbitType.bodyS, color = c.textSecondary)
+                }
+            }
+        }
+        Note(
+            if (!browser.available) {
+                "Install Google Chrome or Microsoft Edge on your PC, then come back. Treehouse opens its own window of it."
+            } else {
+                "Sign in on your PC: open localhost:${hubPort(hubAddress)} in a browser there, then Settings, then Browser, and Open the browser. " +
+                    "Sign into your sites in that window; it remembers them. Agents use those sign-ins, never your passwords, and only public " +
+                    "websites, never your PC or home network. Before they buy, pay, send, post, book or delete anything, they ask you in the chat."
             },
         )
     }

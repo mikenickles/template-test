@@ -1,6 +1,6 @@
 {
   "name": "orbit-hub",
-  "version": "0.33.0",
+  "version": "0.34.0",
   "private": true,
   "description": "Always-on PC hub for the Orbit multi-agent Android app",
   "type": "module",

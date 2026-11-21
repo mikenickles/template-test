@@ -225,6 +225,8 @@ fun RoomScreen(
     liveRefs: Set<String>? = null,
     /** Cancels the follow-up or stops the watch a card stands for. */
     onCancelCard: (Card) -> Unit = {},
+    /** Allows or denies a big action an agent wants to take in the Treehouse browser. */
+    onDecide: (Card, Boolean) -> Unit = { _, _ -> },
 ) {
     val c = Orbit.colors
     var draft by rememberSaveable { mutableStateOf(initialDraft) }
@@ -376,6 +378,7 @@ fun RoomScreen(
                                             now = now,
                                             liveRefs = liveRefs,
                                             onCancelCard = onCancelCard,
+                                            onDecide = onDecide,
                                         )
                                         message.created.mapNotNull { byId[it.agentId] }.forEach { hired ->
                                             NewMember(hired, Modifier.padding(start = 48.dp, top = 14.dp)) { onOpenAgent(hired.id) }
@@ -918,6 +921,7 @@ private fun AgentMessage(
     now: Long = System.currentTimeMillis(),
     liveRefs: Set<String>? = null,
     onCancelCard: (Card) -> Unit = {},
+    onDecide: (Card, Boolean) -> Unit = { _, _ -> },
 ) {
     val c = Orbit.colors
     val avatar = agent?.avatar ?: FormerAgentAvatar
@@ -1006,6 +1010,7 @@ private fun AgentMessage(
                                 // Just set, the app may not have heard of it yet: it's live until a refresh says otherwise.
                                 live = card.ref.isBlank() || liveRefs == null || card.ref in liveRefs || streaming || now - message.createdAt < 120_000,
                                 onCancel = onCancelCard,
+                                onDecide = onDecide,
                             )
                         }
                         start = end

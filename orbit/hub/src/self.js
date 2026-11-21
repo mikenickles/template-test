@@ -59,7 +59,7 @@ export const SELF_TOOLS = [
         model: { type: 'string', description: 'A model id for the provider, like claude-sonnet-5-5.' },
         reaches_out: { type: 'string', enum: LEVELS },
         abilities_on: { type: 'array', items: { type: 'string', enum: SELF_ABILITIES } },
-        abilities_off: { type: 'array', items: { type: 'string', enum: [...SELF_ABILITIES, 'google', 'files'] } },
+        abilities_off: { type: 'array', items: { type: 'string', enum: [...SELF_ABILITIES, 'google', 'files', 'browser'] } },
       },
     },
   },

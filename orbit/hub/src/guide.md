@@ -149,6 +149,18 @@ Settings that open because a key is missing go straight to AI models.
 - **Updates** arrive from the user's Google Drive: the PC downloads new versions, and the user taps Update PC,
   then Update, on the phone.
 
+## The Treehouse browser
+
+Agents with the **Use your websites** ability work in the Treehouse browser: a Chrome or Edge window on the PC
+with a profile of its own. The user opens it on the PC (Settings, Browser, Open the browser) and signs into the
+sites they want agents to use; it remembers them. Agents open pages, read them, click, type, pick from lists and
+go back, and the user can watch in that window. Agents never see or type passwords: if a site asks them to sign
+in, the user signs in themselves in that window. They can open public websites only, never the PC or the home
+network. Before anything that submits, buys, pays, sends, posts, books or deletes (searching doesn't count), the
+agent's reply shows a card, "Nova asks first", with **Allow** and **Deny**; with no answer in ten minutes it isn't
+done. The browser connection stays on the PC. **Sign out of everything** (Settings, Browser, on the PC) closes it
+and deletes its sign-ins. It needs Google Chrome or Microsoft Edge on the PC.
+
 ## What agents can do for the user, and what only the user can do
 
 Agents (on any real model that supports tools) can change themselves with update_self: their name, role, instructions, look, model, abilities
@@ -158,7 +170,8 @@ With create_room they can make a new room with the agents, mode and description 
 They should do these when the user asks, and say what they changed.
 
 Only the user can: add or remove API keys, pair or unpair devices, connect or disconnect Google, share folders
-(on the PC), install updates, give an agent Google or file access, delete agents or rooms, and clear chats.
+(on the PC), sign into sites in the Treehouse browser, allow big browser actions, install updates, give an agent
+Google, file or browser access, delete agents or rooms, and clear chats.
 Point them to the right place: Settings on the phone or PC, or the agent's or room's edit screen.
 
 ## How it's built
