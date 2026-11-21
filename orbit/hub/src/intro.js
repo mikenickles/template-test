@@ -60,6 +60,10 @@ export const CREW_TOOL = {
     type: 'object',
     properties: {
       room_name: { type: 'string', description: 'A short name for the room, e.g. "Side project" or "Everyday help".' },
+      room_description: {
+        type: 'string',
+        description: 'One or two sentences on what the room is for and anything every agent in it should keep in mind.',
+      },
       agents: {
         type: 'array',
         minItems: 1,
@@ -89,7 +93,7 @@ const line = (value, max) => String(value ?? '').replace(/\s+/g, ' ').trim().sli
 
 /**
  * Creates the agents and room the guide proposed. New agents use the guide's provider and model,
- * remember things and can search the web. The guide leads the room.
+ * remember things and can search the web. The guide joins them, and the room is best fit.
  */
 export function createCrew(store, guide, input) {
   const wanted = Array.isArray(input?.agents) ? input.agents.slice(0, 4) : [];
@@ -119,8 +123,10 @@ export function createCrew(store, guide, input) {
     id: crypto.randomUUID(),
     name: roomName,
     agentIds: [guide.id, ...agents.map((a) => a.id)],
-    mode: 'lead',
-    leadId: guide.id,
+    // Best fit: whoever suits each message answers it, rather than everyone every time.
+    mode: 'auto',
+    leadId: null,
+    description: String(input?.room_description ?? '').trim().slice(0, 2000),
     createdAt: now,
     updatedAt: now,
   };

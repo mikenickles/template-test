@@ -419,7 +419,9 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale }
             ? html`<span class="dot"></span>Reconnecting to your hub`
             : run.active
               ? html`<span class="dot" style=${`background:${speaker ? inkColor(speaker.avatar) : 'var(--text-2)'}`}></span><span class="shimmer">${speaker ? `${speaker.name} is replying` : 'Working'}</span>`
-              : agents.length === 1 ? `Just you and ${agents[0].name}` : room.mode === 'lead' && lead ? `Led by ${lead.name}` : 'Round table'}
+              : agents.length === 1 ? `Just you and ${agents[0].name}`
+              : room.mode === 'auto' ? 'Best fit: whoever suits each message answers'
+              : room.mode === 'lead' && lead ? `Led by ${lead.name}` : 'Round table'}
         </div>
       </div>
       <div class="avatar-row">${agents.slice(0, 5).map((a) => html`<${Avatar} spec=${a.avatar} size=${30} thinking=${run.active && run.agentId === a.id} />`)}</div>
@@ -435,7 +437,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale }
         ? html`<div class="empty-room">
             <div class="avatar-row">${agents.map((a) => html`<${Avatar} spec=${a.avatar} size=${44} />`)}</div>
             <div class="title-m">${agents.map((a) => a.name).join(', ')}</div>
-            <p class="muted">${room.mode === 'lead' && lead ? `${lead.name} answers first and brings in the others.` : 'Everyone answers in turn.'} Mention someone with @ to ask them directly.</p>
+            <p class="muted">${room.mode === 'auto' ? 'Ask anything. Whoever it suits best answers.' : room.mode === 'lead' && lead ? `${lead.name} answers first and brings in the others.` : 'Everyone answers in turn.'} Mention someone with @ to ask them directly.</p>
           </div>`
         : html`<div class="messages-inner">
             ${messages.map((m) => html`<div class=${`message${m.author.type === 'user' ? ' mine' : ''}`} key=${m.id}>

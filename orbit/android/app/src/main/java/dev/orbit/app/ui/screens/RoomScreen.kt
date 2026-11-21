@@ -455,6 +455,7 @@ private fun RoomBar(
                         speaker != null -> RoomStatus("${speaker.name} is replying", speaker.avatar.inkColor(c.isDark))
                         state.run.active -> RoomStatus("Working", c.textTertiary)
                         agents.size == 1 -> RoomStatus("Just you and ${agents[0].name}", null)
+                        room.mode == Room.MODE_AUTO -> RoomStatus("Best fit: whoever suits each message answers", null)
                         room.mode == Room.MODE_LEAD -> RoomStatus("Led by ${agents.firstOrNull { it.id == room.leadId }?.name ?: "the first agent"}", null)
                         else -> RoomStatus("Round table", null)
                     },
@@ -509,7 +510,9 @@ private fun EmptyRoom(room: Room, agents: List<Agent>, modifier: Modifier) {
         Spacer(Modifier.height(24.dp))
         Text("The crew is ready", Modifier.entrance(entrances, "title", 1), style = OrbitType.titleL, color = c.text)
         Text(
-            if (room.mode == Room.MODE_LEAD) {
+            if (room.mode == Room.MODE_AUTO) {
+                "Ask anything. Whoever it suits best answers. Mention an agent to ask them directly."
+            } else if (room.mode == Room.MODE_LEAD) {
                 "Give them a task. The lead answers first and brings in the others."
             } else {
                 "Give them a task and everyone weighs in. Mention an agent to ask just them."

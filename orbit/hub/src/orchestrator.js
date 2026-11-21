@@ -22,7 +22,10 @@ export function findMentions(text, candidates) {
   return hits.sort((a, b) => a.index - b.index).map((h) => h.agent);
 }
 
-/** Who answers a fresh user message. */
+/**
+ * Who answers a fresh user message. @mentions always win. In a "best fit" room this returns null
+ * when the choice needs a model (see Orchestrator#pick).
+ */
 export function initialSpeakers(room, agents, text) {
   const mentioned = findMentions(text, agents);
   if (mentioned.length) return mentioned;
@@ -30,7 +33,19 @@ export function initialSpeakers(room, agents, text) {
     const lead = agents.find((a) => a.id === room.leadId) ?? agents[0];
     return lead ? [lead] : [];
   }
+  if (room.mode === 'auto' && agents.length > 1) return null;
   return [...agents];
+}
+
+/** The agents a picker's answer names, in the order it named them. */
+export function namedAgents(answer, agents) {
+  const hits = [];
+  for (const agent of agents) {
+    const pattern = agent.name.trim().split(/\s+/).map(escapeRegex).join('\\s?');
+    const match = new RegExp(`(?<![\\p{L}\\p{N}_])${pattern}(?![\\p{L}\\p{N}_])`, 'iu').exec(answer);
+    if (match) hits.push({ agent, index: match.index });
+  }
+  return hits.sort((a, b) => a.index - b.index).map((h) => h.agent);
 }
 
 /** Abilities an agent can be given. "files" reads folders shared from the PC. */
@@ -82,6 +97,14 @@ export function buildSystemPrompt(agent, room, agents, abilities = null, profile
     lines.push(
       '- You lead this chat. Decide what the request needs, delegate parts to teammates with @mentions, and once they have replied give the user one combined answer.',
     );
+  }
+  if (room.mode === 'auto' && teammates.length) {
+    lines.push(
+      '- Only the agents best suited to each message answer it, and you were picked for this one. Answer it yourself; bring in a teammate with @Name only when they would clearly add something.',
+    );
+  }
+  if (room.description?.trim()) {
+    lines.push('', 'About this room, from the user (keep to it):', room.description.trim());
   }
   if (profile?.name || profile?.notes?.length) {
     lines.push('', "About the user, as your whole crew knows them (use it where it helps; don't recite it):");
@@ -253,7 +276,7 @@ export class Orchestrator {
     if (run) {
       run.restart = true; // picked up when the current speaker finishes
     } else {
-      this.#start(roomId, (room, agents) => initialSpeakers(room, agents, text));
+      this.#start(roomId, (room, agents, run) => this.#firstSpeakers(room, agents, text, run.abort.signal));
     }
     return message;
   }
@@ -325,7 +348,7 @@ export class Orchestrator {
 
   async #run(roomId, run, firstSpeakers) {
     const first = this.store.room(roomId);
-    let queue = first ? firstSpeakers(first, this.#roomAgents(first)) : [];
+    let queue = first ? await firstSpeakers(first, this.#roomAgents(first), run) : [];
     let turns = 0;
     let wrapped = false;
 
@@ -344,7 +367,7 @@ export class Orchestrator {
         // The user said something new while this agent was talking.
         run.restart = false;
         const latest = this.store.messages(roomId).findLast((m) => m.author.type === 'user');
-        queue = initialSpeakers(room, agents, latest?.text ?? '');
+        queue = await this.#firstSpeakers(room, agents, latest?.text ?? '', run.abort.signal);
         turns = 0;
         wrapped = false;
         continue;
@@ -388,6 +411,72 @@ export class Orchestrator {
     }
     const turns = buildTranscript(agent, recent, { summary: room.summary?.text ?? null, omitted: omitted || (!room.summary && recent.length < all.length) });
     return resolveAttachments(turns, this.files);
+  }
+
+  async #firstSpeakers(room, agents, text, signal) {
+    return initialSpeakers(room, agents, text) ?? (await this.#pick(room, agents, text, signal));
+  }
+
+  /**
+   * Best fit: a quick, cheap model call picks who answers, usually one agent, sometimes two or three.
+   * Uses Claude Haiku when the hub has a Claude key, otherwise the first agent's own model. If it can't
+   * decide, the agent the user was talking to answers, or else the first agent.
+   */
+  async #pick(room, agents, text, signal) {
+    const lastSpeaker = this.store.messages(room.id).findLast((m) => m.author.type === 'agent' && m.status === 'done');
+    const fallback = [agents.find((a) => a.id === lastSpeaker?.author.agentId) ?? agents[0]];
+    const usable = (id) => this.providers.isConfigured(id) && !['demo', null, undefined].includes(this.providers.kindOf?.(id));
+    const choice = usable('anthropic') && this.providers.kindOf('anthropic') === 'anthropic'
+      ? { provider: 'anthropic', model: SUMMARY_MODEL }
+      : agents.filter((a) => usable(a.provider)).map((a) => ({ provider: a.provider, model: a.model }))[0];
+    if (!choice) return fallback;
+
+    const recent = this.store.messages(room.id)
+      .filter((m) => m.text?.trim() && m.status !== 'error')
+      .slice(-9, -1)
+      .map((m) => `[${m.author.type === 'user' ? 'User' : m.author.name}]: ${m.text.replace(/\s+/g, ' ').slice(0, 500)}`);
+    const roster = agents.map((a) => `- ${a.name}${a.role ? `: ${a.role}` : ''}${a.instructions?.trim() ? `. ${a.instructions.replace(/\s+/g, ' ').slice(0, 200)}` : ''}`);
+    const prompt = [
+      `Room: ${room.name}`,
+      room.description?.trim() ? `About this room: ${room.description.trim().slice(0, 1000)}` : null,
+      '',
+      'Agents:',
+      ...roster,
+      '',
+      recent.length ? `Recent messages:\n${recent.join('\n')}\n` : null,
+      `The user's newest message:\n"${text.slice(0, 2000)}"`,
+      '',
+      'Who should answer it?',
+      '- Usually one agent: the one whose role fits it best. If the user is in a conversation with one agent and this continues it, choose that agent.',
+      '- Two or three only when it clearly needs different skills, or the user asks for several views.',
+      '- Everyone only when the user speaks to the whole group, like "everyone" or "what do you all think".',
+    ].filter((line) => line !== null).join('\n');
+
+    let usage = null;
+    try {
+      const answer = await this.providers.stream({
+        provider: choice.provider,
+        model: choice.model,
+        system: 'You choose which AI agents in a group chat answer the user\'s newest message. Reply with only their names, separated by commas, and nothing else.',
+        messages: [{ role: 'user', content: prompt }],
+        signal: AbortSignal.any([signal, AbortSignal.timeout(20_000)]),
+        agent: agents[0],
+        onDelta: () => {},
+        onUsage: (u) => {
+          usage = addUsage(usage ?? emptyUsage(), u);
+        },
+      });
+      const named = namedAgents(answer, agents);
+      const picked = named.length === agents.length ? named : named.slice(0, 3);
+      const speakers = picked.length ? picked : fallback;
+      // The pick is part of answering, so its few tokens count toward the first agent who answers.
+      if (usage) this.ledger?.record({ agentId: speakers[0].id, roomId: room.id, model: choice.model, usage });
+      return speakers;
+    } catch (err) {
+      if (signal.aborted) return [];
+      console.warn(`[orbit] couldn't pick who answers in "${room.name}": ${err?.message}`);
+      return fallback;
+    }
   }
 
   /** Folds messages into the room's running summary, written by the agent's provider. Null if it can't. */

@@ -57,7 +57,7 @@ test('the guide greets first, learns about the user for the whole crew, and crea
     [{ type: 'text', text: "Hi! I'm Nova. What should I call you?" }],
     [{ type: 'tool_use', id: 't1', name: 'remember_about_user', input: { note: 'Builds Android apps for fun.', name: 'Mike' } }],
     [{ type: 'text', text: 'Nice to meet you, Mike! Want a crew for your apps?' }],
-    [{ type: 'tool_use', id: 't2', name: 'create_crew', input: { room_name: 'App studio', agents: [
+    [{ type: 'tool_use', id: 't2', name: 'create_crew', input: { room_name: 'App studio', room_description: "Prototypes and testing for Mike's apps.", agents: [
       { name: 'Pixel', role: 'the designer', instructions: 'Sketch screens.', character: 7 },
       { name: '@Sage', role: 'the tester', instructions: 'Find bugs.', character: 99 },
     ] } }],
@@ -94,8 +94,8 @@ test('the guide greets first, learns about the user for the whole crew, and crea
   state = (await call('GET', '/api/state')).body;
   const studio = state.rooms.find((r) => r.id === done.crew.roomId);
   assert.equal(studio.name, 'App studio');
-  assert.equal(studio.mode, 'lead');
-  assert.equal(studio.leadId, guide.id);
+  assert.equal(studio.mode, 'auto');
+  assert.equal(studio.description, 'Prototypes and testing for Mike\'s apps.');
   const crew = studio.agentIds.slice(1).map((id) => state.agents.find((a) => a.id === id));
   assert.deepEqual(crew.map((a) => [a.name, a.role, a.provider]), [['Pixel', 'the designer', 'anthropic'], ['Sage', 'the tester', 'anthropic']]);
   assert.equal(crew[0].avatar.character, 7);

@@ -14,9 +14,13 @@ hub on an always-on PC.
   Agents on Claude models can also be given **abilities**: search the web,
   run code, and read folders you share from your PC. Their replies show what
   they did ("Searched …", "Read japan.md") and the pages they cite.
-- **Rooms** are group chats. In a *round table* every agent replies in turn; in
-  a *lead* room one agent answers first, delegates, and sums up. Agents hand
-  work to each other with `@Name`, and you can `@mention` to ask one directly.
+- **Rooms** are group chats, with a description every agent in them follows ("We're
+  planning a trip to Japan in April. Keep replies short."). In a *best fit* room (the
+  default) only the agent or two suited to each message answer it, chosen by a quick,
+  cheap model call; speak to the whole group and everyone joins in. In a *round table*
+  every agent replies in turn; in a *lead* room one agent answers first, delegates, and
+  sums up. Agents hand work to each other with `@Name`, and you can `@mention` to ask
+  one directly.
   Long-press a message to copy it, ask the agent again, or delete it. Tap **+** to
   attach photos, PDFs or text files; Claude agents read all three, other models
   see photos where they support them.

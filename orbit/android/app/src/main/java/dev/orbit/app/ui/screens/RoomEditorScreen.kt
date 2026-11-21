@@ -84,14 +84,18 @@ fun RoomEditorScreen(
     val haptics = rememberHaptics()
     var name by rememberSaveable { mutableStateOf(initial?.name.orEmpty()) }
     var selected by rememberSaveable { mutableStateOf(initial?.agentIds ?: emptyList()) }
-    var mode by rememberSaveable { mutableStateOf(initial?.mode ?: Room.MODE_ROUNDTABLE) }
+    var description by rememberSaveable { mutableStateOf(initial?.description.orEmpty()) }
+    // New rooms start as best fit: calmer and cheaper than everyone answering every message.
+    var mode by rememberSaveable { mutableStateOf(initial?.mode ?: Room.MODE_AUTO) }
     var leadId by rememberSaveable { mutableStateOf(initial?.leadId) }
 
     val lead = leadId?.takeIf { it in selected } ?: selected.firstOrNull()
     val leading = mode == Room.MODE_LEAD
     val canSave = name.isNotBlank() && selected.isNotEmpty()
     fun save() = onSave(
-        (initial ?: Room()).copy(name = name.trim(), agentIds = selected, mode = mode, leadId = if (leading) lead else null),
+        (initial ?: Room()).copy(
+            name = name.trim(), agentIds = selected, mode = mode, leadId = if (leading) lead else null, description = description.trim(),
+        ),
     )
     fun choose(next: String) {
         if (next != mode) haptics.tick()
@@ -122,17 +126,36 @@ fun RoomEditorScreen(
             )
 
             Spacer(Modifier.height(OrbitDimens.section))
-            FieldLabel("How they work")
-            // Both cards take the height of the taller one.
-            Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            FieldLabel("Description")
+            OrbitField(
+                description, { description = it.take(2000) },
+                "What this room is for, and rules for everyone in it. For example: We're planning a trip to Japan in April. Keep replies short.",
+                singleLine = false, minLines = 3,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            )
+            Text(
+                "Every agent in this room reads it before answering.",
+                Modifier.padding(top = 8.dp),
+                style = OrbitType.caption,
+                color = c.textTertiary,
+            )
+
+            Spacer(Modifier.height(OrbitDimens.section))
+            FieldLabel("Who answers")
+            // The cards take the height of the tallest one.
+            Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ModeCard(
-                    lead = false, title = "Round table", body = "Everyone replies in turn.",
-                    selected = !leading, modifier = Modifier.weight(1f).fillMaxHeight(),
-                ) { choose(Room.MODE_ROUNDTABLE) }
+                    Room.MODE_AUTO, title = "Best fit", body = "Only who fits each message replies.",
+                    selected = mode == Room.MODE_AUTO, modifier = Modifier.weight(1f).fillMaxHeight(),
+                ) { choose(Room.MODE_AUTO) }
                 ModeCard(
-                    lead = true, title = "Lead", body = "One agent answers first, delegates, then sums up.",
+                    Room.MODE_LEAD, title = "Lead", body = "One answers, delegates, sums up.",
                     selected = leading, modifier = Modifier.weight(1f).fillMaxHeight(),
                 ) { choose(Room.MODE_LEAD) }
+                ModeCard(
+                    Room.MODE_ROUNDTABLE, title = "Round table", body = "Everyone replies in turn.",
+                    selected = mode == Room.MODE_ROUNDTABLE, modifier = Modifier.weight(1f).fillMaxHeight(),
+                ) { choose(Room.MODE_ROUNDTABLE) }
             }
 
             Spacer(Modifier.height(OrbitDimens.section))
@@ -177,7 +200,7 @@ fun RoomEditorScreen(
 }
 
 @Composable
-private fun ModeCard(lead: Boolean, title: String, body: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+private fun ModeCard(kind: String, title: String, body: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val c = Orbit.colors
     val shape = RoundedCornerShape(OrbitDimens.radiusL)
     val edge by animateColorAsState(if (selected) c.text else c.hairline, OrbitMotion.snappy(), label = "edge")
@@ -190,25 +213,34 @@ private fun ModeCard(lead: Boolean, title: String, body: String, selected: Boole
             .tap(shape, 0.97f, onClick)
             .background(c.surface)
             .border(width, edge, shape)
-            .padding(OrbitDimens.rowPad),
+            .padding(start = 14.dp, end = 12.dp, top = 14.dp, bottom = 14.dp),
     ) {
-        ModeGlyph(lead, ink, spread)
+        ModeGlyph(kind, ink, spread)
         Spacer(Modifier.height(14.dp))
         Text(title, style = OrbitType.titleS, color = c.text)
         Text(body, Modifier.padding(top = 4.dp), style = OrbitType.bodyS, color = c.textSecondary)
     }
 }
 
-/** A tiny diagram of the mode: peers around a table, or one node feeding two. Selecting it opens it out. */
+/**
+ * A tiny diagram of the mode: one of three stepping forward, one node feeding two, or peers around a
+ * table. Selecting it opens it out.
+ */
 @Composable
-private fun ModeGlyph(lead: Boolean, color: Color, spread: Float) {
+private fun ModeGlyph(kind: String, color: Color, spread: Float) {
     Canvas(Modifier.size(width = 36.dp, height = 28.dp)) {
         val w = size.width
         val h = size.height
         val dot = h * 0.17f
         val line = Stroke(width = 1.75.dp.toPx(), cap = StrokeCap.Round)
         val faint = color.copy(alpha = 0.4f)
-        if (lead) {
+        if (kind == Room.MODE_AUTO) {
+            // Three in a row; the one that fits rises and grows.
+            val y = h - dot * 1.4f
+            drawCircle(faint, dot, Offset(w * 0.18f, y))
+            drawCircle(faint, dot, Offset(w * 0.82f, y))
+            drawCircle(color, dot * (1f + 0.35f * spread), Offset(w * 0.5f, y - (h * 0.42f) * spread))
+        } else if (kind == Room.MODE_LEAD) {
             val top = Offset(w * 0.5f, dot * 1.25f)
             val left = Offset(w * (0.5f - 0.32f * spread), h - dot)
             val right = Offset(w * (0.5f + 0.32f * spread), h - dot)

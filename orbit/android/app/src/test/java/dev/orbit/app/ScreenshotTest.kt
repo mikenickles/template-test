@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import dev.orbit.app.data.Agent
+import dev.orbit.app.data.Room
 import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.data.FoundHub
 import dev.orbit.app.data.RunState
@@ -173,6 +174,12 @@ class ScreenshotTest {
     @Test fun agentEditor() = shot("agent-editor") { AgentEditorScreen(nova, providers, { emptyList() }, {}, {}, {}) }
     @Test fun agentEditorLight() = shot("agent-editor-light", dark = false) { AgentEditorScreen(mochi, providers, { emptyList() }, {}, {}, {}) }
     @Test fun roomEditor() = shot("room-editor") { RoomEditorScreen(launch, agents, {}, {}, {}) }
+    @Test fun roomEditorBestFit() = shot("room-editor-best-fit", dark = false) {
+        RoomEditorScreen(
+            launch.copy(mode = Room.MODE_AUTO, leadId = null, description = "We launch the beta on May 1. Keep answers short, decision first."),
+            agents, {}, {}, {},
+        )
+    }
     @Test fun settings() = shot("settings") { SettingsScreen(app, "http://192.168.1.20:8787", {}, {}) }
     @Test fun messageActions() = shot("message-actions") {
         Box(Modifier.fillMaxSize()) {

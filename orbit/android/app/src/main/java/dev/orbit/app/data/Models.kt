@@ -72,8 +72,12 @@ data class Room(
     val preview: Preview? = null,
     /** The getting-to-know-you chat, where one agent learns about the user and builds their crew. */
     val intro: Boolean = false,
+    /** What the room is for, and rules every agent in it follows. */
+    val description: String = "",
 ) {
     companion object {
+        /** Best fit: only the agents suited to each message answer it. */
+        const val MODE_AUTO = "auto"
         const val MODE_ROUNDTABLE = "roundtable"
         const val MODE_LEAD = "lead"
     }

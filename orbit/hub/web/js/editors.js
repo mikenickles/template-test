@@ -133,13 +133,15 @@ export function RoomEditor({ room, state, notify, onClose, onSaved }) {
   const fresh = !room;
   const [name, setName] = useState(room?.name ?? '');
   const [members, setMembers] = useState(room?.agentIds ?? []);
-  const [mode, setMode] = useState(room?.mode ?? 'roundtable');
+  // New rooms start as best fit: only the agents suited to each message answer it.
+  const [mode, setMode] = useState(room?.mode ?? 'auto');
+  const [description, setDescription] = useState(room?.description ?? '');
   const [leadId, setLeadId] = useState(room?.leadId ?? null);
   const toggle = (id) => setMembers(members.includes(id) ? members.filter((m) => m !== id) : [...members, id]);
   const lead = members.includes(leadId) ? leadId : members[0];
   const save = async () => {
     try {
-      const saved = await api.saveRoom({ ...(room ?? {}), name: name.trim(), agentIds: members, mode, leadId: mode === 'lead' ? lead : null });
+      const saved = await api.saveRoom({ ...(room ?? {}), name: name.trim(), agentIds: members, mode, leadId: mode === 'lead' ? lead : null, description: description.trim() });
       onSaved(saved.id);
     } catch (e) {
       notify(e.message);
@@ -158,16 +160,23 @@ export function RoomEditor({ room, state, notify, onClose, onSaved }) {
     actions=${html`<button class="button" style="height:36px;padding:0 18px" disabled=${!name.trim() || !members.length} onClick=${save}>${fresh ? 'Create' : 'Save'}</button>`}>
     <label class="field-label" for="room-name">Name</label>
     <input id="room-name" class="field" placeholder="Launch plan" maxlength="60" value=${name} onInput=${(e) => setName(e.currentTarget.value)} />
+    <label class="field-label" for="room-description" style="margin-top:18px">Description</label>
+    <textarea id="room-description" class="field" rows="3" maxlength="2000" value=${description} onInput=${(e) => setDescription(e.currentTarget.value)}
+      placeholder="What this room is for, and rules for everyone in it. For example: We're planning a trip to Japan in April. Keep replies short."></textarea>
+    <p class="note" style="margin-top:6px">Every agent in this room reads it before answering.</p>
     <div class="section-title">Crew</div>
     ${state.agents.length
       ? html`<div style="display:flex;flex-wrap:wrap;gap:8px">${state.agents.map((a) => html`<${Pill} label=${a.name} selected=${members.includes(a.id)} onClick=${() => toggle(a.id)}><${Avatar} spec=${a.avatar} size=${24} /><//>`)}</div>`
       : html`<p class="muted">Make an agent first, then put it in a room.</p>`}
-    <div class="section-title">How they reply</div>
-    <div style="display:flex;gap:8px">
-      <${Pill} label="Round table" selected=${mode === 'roundtable'} onClick=${() => setMode('roundtable')} />
+    <div class="section-title">Who answers</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <${Pill} label="Best fit" selected=${mode === 'auto'} onClick=${() => setMode('auto')} />
       <${Pill} label="One leads" selected=${mode === 'lead'} onClick=${() => setMode('lead')} />
+      <${Pill} label="Round table" selected=${mode === 'roundtable'} onClick=${() => setMode('roundtable')} />
     </div>
-    <p class="note">${mode === 'lead' ? 'The lead answers first, brings in the others with @mentions, then sums up.' : 'Everyone answers in turn.'} Mention someone with @ to ask them directly.</p>
+    <p class="note">${mode === 'auto'
+      ? 'Only the agent or two best suited to each message answer it. Talk to the whole group ("what do you all think?") and everyone joins in.'
+      : mode === 'lead' ? 'The lead answers first, brings in the others with @mentions, then sums up.' : 'Everyone answers in turn.'} Mention someone with @ to ask them directly.</p>
     ${mode === 'lead' && members.length > 1 && html`<label class="field-label" style="margin-top:18px">Lead</label>
       <div style="display:flex;flex-wrap:wrap;gap:8px">${members.map((id) => state.agents.find((a) => a.id === id)).filter(Boolean).map((a) => html`<${Pill} label=${a.name} selected=${a.id === lead} onClick=${() => setLeadId(a.id)}><${Avatar} spec=${a.avatar} size=${24} /><//>`)}</div>`}
     ${!fresh && html`<button class="button danger" style="margin-top:32px" onClick=${remove}>Delete room</button>`}

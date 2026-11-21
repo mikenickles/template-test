@@ -533,7 +533,7 @@ export class Hub {
       }
       case 'PUT /api/rooms/:id': {
         const room = this.#requireRoom(id);
-        Object.assign(room, this.#roomFields(await this.#body(req)));
+        Object.assign(room, this.#roomFields(await this.#body(req), room));
         this.store.save();
         return this.#roomView(room);
       }
@@ -749,14 +749,17 @@ export class Hub {
     };
   }
 
-  #roomFields(body) {
+  #roomFields(body, existing = null) {
     const name = text(body.name, 60);
     if (!name) throw new HttpError(400, 'Give the room a name.');
     const agentIds = [...new Set(Array.isArray(body.agentIds) ? body.agentIds : [])].filter((a) => this.store.agent(a));
     if (!agentIds.length) throw new HttpError(400, 'Pick at least one agent.');
-    const mode = body.mode === 'lead' ? 'lead' : 'roundtable';
+    // "auto" is best fit: only the agents suited to each message answer it.
+    const mode = ['lead', 'auto'].includes(body.mode) ? body.mode : 'roundtable';
     const leadId = mode === 'lead' ? (agentIds.includes(body.leadId) ? body.leadId : agentIds[0]) : null;
-    return { name, agentIds, mode, leadId };
+    // What the room is for and rules for every agent in it. An older app that doesn't send it leaves it as it was.
+    const description = typeof body.description === 'string' ? text(body.description, 2000) : (existing?.description ?? '');
+    return { name, agentIds, mode, leadId, description };
   }
 
   /** Every room at once, for a phone that wants to know when its crew is done. Starts with what is running now. */
