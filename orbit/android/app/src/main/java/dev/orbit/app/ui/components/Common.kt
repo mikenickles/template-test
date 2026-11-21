@@ -17,6 +17,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
@@ -112,6 +113,18 @@ fun Modifier.tap(
 ): Modifier = composed {
     val interaction = remember { MutableInteractionSource() }
     pressScale(interaction, pressed).clip(shape).clickable(interaction, indication = androidx.compose.material3.ripple(), onClick = onClick)
+}
+
+/** [tap], with a long press as well. */
+fun Modifier.tap(
+    shape: Shape,
+    pressed: Float,
+    onLongClick: () -> Unit,
+    onClick: () -> Unit,
+): Modifier = composed {
+    val interaction = remember { MutableInteractionSource() }
+    pressScale(interaction, pressed).clip(shape)
+        .combinedClickable(interaction, indication = androidx.compose.material3.ripple(), onLongClick = onLongClick, onClick = onClick)
 }
 
 /** The 1dp edge of a surface: lit from above in dark mode, a plain hairline in light mode. */

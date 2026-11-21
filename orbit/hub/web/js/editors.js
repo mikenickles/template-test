@@ -168,8 +168,21 @@ export function RoomEditor({ room, state, notify, onClose, onSaved }) {
   const [mode, setMode] = useState(room?.mode ?? 'auto');
   const [description, setDescription] = useState(room?.description ?? '');
   const [leadId, setLeadId] = useState(room?.leadId ?? null);
+  // "Describe it": the user's own words, which the hub turns into a room.
+  const [idea, setIdea] = useState('');
+  const [planning, setPlanning] = useState(false);
   const toggle = (id) => setMembers(members.includes(id) ? members.filter((m) => m !== id) : [...members, id]);
   const lead = members.includes(leadId) ? leadId : members[0];
+  const plan = async () => {
+    setPlanning(true);
+    try {
+      const made = await api.planRoom(idea.trim());
+      onSaved(made.id);
+    } catch (e) {
+      notify(e.message);
+      setPlanning(false);
+    }
+  };
   const save = async () => {
     try {
       const saved = await api.saveRoom({ ...(room ?? {}), name: name.trim(), agentIds: members, mode, leadId: mode === 'lead' ? lead : null, description: description.trim() });
@@ -189,6 +202,14 @@ export function RoomEditor({ room, state, notify, onClose, onSaved }) {
   };
   return html`<${Modal} title=${fresh ? 'New room' : 'Edit room'} onClose=${onClose}
     actions=${html`<button class="button" style="height:36px;padding:0 18px" disabled=${!name.trim() || !members.length} onClick=${save}>${fresh ? 'Create' : 'Save'}</button>`}>
+ ${fresh && state.agents.length > 0 && html`<div class="card describe-room">
+      <div class="title-s">Describe it</div>
+      <p class="body-s muted" style="margin:4px 0 12px">Say what the room is for and who should be in it, and Treehouse sets it up.</p>
+      <textarea class="field" rows="3" maxlength="2000" value=${idea} onInput=${(e) => setIdea(e.currentTarget.value)} disabled=${planning}
+        placeholder="A room with Nova and Atlas for planning my trip to Japan. Keep it practical."></textarea>
+      <button class="button" style="margin-top:12px;width:100%" disabled=${!idea.trim() || planning} onClick=${plan}>${planning ? 'Setting it up…' : 'Set it up'}</button>
+    </div>
+    <p class="overline faint" style="margin:24px 0 10px">Or set it up yourself</p>`}
     <label class="field-label" for="room-name">Name</label>
     <input id="room-name" class="field" placeholder="Launch plan" maxlength="60" value=${name} onInput=${(e) => setName(e.currentTarget.value)} />
     <label class="field-label" for="room-description" style="margin-top:18px">Description</label>

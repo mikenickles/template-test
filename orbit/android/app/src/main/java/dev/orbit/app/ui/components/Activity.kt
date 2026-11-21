@@ -81,6 +81,7 @@ fun activityLabel(activity: Activity, live: Boolean = false): ActivityLabel {
         Activity.KIND_WATCH_STOP -> ActivityLabel(if (live) "Stopping a watch" else if (failed) "Couldn't stop a watch" else "Stopped watching", detail)
         Activity.KIND_GUIDE -> ActivityLabel(if (live) "Reading the Treehouse guide" else if (failed) "Couldn't read the guide" else "Read the Treehouse guide", "")
         Activity.KIND_SELF -> ActivityLabel(if (live) "Updating its" else if (failed) "Couldn't update its" else "Updated its", detail.ifBlank { "settings" })
+        Activity.KIND_ROOM -> ActivityLabel(if (live) "Making a room" else if (failed) "Couldn't make a room" else "Made a room", detail)
         Activity.KIND_SETTINGS -> ActivityLabel(if (live) "Changing" else if (failed) "Couldn't change" else "Changed", detail.ifBlank { "settings" })
         else -> ActivityLabel(if (live) "Working" else "Used a tool", detail)
     }
@@ -112,6 +113,7 @@ fun activitySummary(activity: List<Activity>): String {
         if (count(Activity.KIND_GUIDE) > 0) add("read the Treehouse guide")
         if (count(Activity.KIND_SELF) > 0) add("updated itself")
         if (count(Activity.KIND_SETTINGS) > 0) add("changed settings")
+        count(Activity.KIND_ROOM).takeIf { it > 0 }?.let { add(times(it, "made a room", "made # rooms")) }
     }.ifEmpty { listOf("used ${activity.size} tools") }
     val joined = if (parts.size == 1) parts[0] else parts.dropLast(1).joinToString(", ") + " and " + parts.last()
     return joined.replaceFirstChar { it.uppercase() }
@@ -133,6 +135,7 @@ private fun iconFor(kind: String) = when (kind) {
     Activity.KIND_WATCH, Activity.KIND_WATCH_STOP -> OrbitIcon.Bell
     Activity.KIND_GUIDE -> OrbitIcon.File
     Activity.KIND_SELF, Activity.KIND_SETTINGS -> OrbitIcon.Check
+    Activity.KIND_ROOM -> OrbitIcon.Plus
     else -> OrbitIcon.More
 }
 

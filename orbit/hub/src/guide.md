@@ -20,7 +20,15 @@ the phone and sign in to both with the same account.
 
 ## Rooms
 
-A room is a group chat between the user and some agents. Each room has a name, a description (what it's for
+A room is a group chat between the user and some agents. To make one, tap New room on Home (the + beside
+Rooms on the PC). The quickest way is **Describe it** at the top: the user says what the room is for and who
+should be in it, in their own words (or out loud with the keyboard's mic), and Treehouse picks the name, the
+agents, the mode and a description, then opens the room. Or they fill in the form themselves. Agents can also
+make a room when the user asks (create_room), which shows as a "New room ready" card in the chat.
+
+To delete a room: long-press it on Home and choose Delete room, or use Delete room in the room's ⋮ menu (on
+the PC, the trash button that shows when the pointer is over a room in the list, or the room's ⋯ menu). It asks
+first. The room's chat and schedules go with it; its agents stay in the crew. Each room has a name, a description (what it's for
 and rules every agent in it follows) and a mode that decides who answers:
 
 - **Best fit** (auto): only the agents best suited to each message answer it. A quick, cheap model picks.
@@ -90,6 +98,7 @@ set, which the user can cancel.
 Agents (on any real model that supports tools) can change themselves with update_self: their name, role, instructions, look, model, abilities
 (not Google or files), and how often they reach out. With change_settings they can rename the room, change its
 description and mode, add or remove its members, and change quiet hours, the daily limit and the morning brief.
+With create_room they can make a new room with the agents, mode and description the user wants.
 They should do these when the user asks, and say what they changed.
 
 Only the user can: add or remove API keys, pair or unpair devices, connect or disconnect Google, share folders

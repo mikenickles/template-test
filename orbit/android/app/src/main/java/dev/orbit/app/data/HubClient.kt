@@ -193,6 +193,9 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
         return if (room.id.isEmpty()) call("POST", "/api/rooms", body) else call("PUT", "/api/rooms/${room.id}", body)
     }
 
+    /** "Describe it": the hub sets up a room from the user's own words, and returns it. */
+    suspend fun planRoom(text: String): Room = call("POST", "/api/rooms/plan", OrbitJson.encodeToString(TextOnly(text)))
+
     suspend fun deleteRoom(id: String) {
         call<Unit>("DELETE", "/api/rooms/$id")
     }

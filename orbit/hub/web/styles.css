@@ -183,6 +183,12 @@ textarea.field { resize: vertical; min-height: 96px; line-height: 1.5; }
 .room-item { width: 100%; display: flex; gap: 12px; align-items: center; padding: 9px 10px; border-radius: var(--r-m); text-align: left; transition: background 0.15s var(--ease); }
 .room-item:hover { background: color-mix(in srgb, var(--high) 55%, transparent); }
 .room-item.current { background: var(--high); }
+.room-entry { position: relative; }
+.describe-room { padding: 16px; }
+.room-entry .room-delete { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); opacity: 0; color: var(--text-2); background: var(--raised); transition: opacity 0.15s var(--ease); }
+.room-entry:hover .room-delete, .room-entry .room-delete:focus-visible { opacity: 1; }
+.room-entry .room-delete:hover { color: var(--danger); }
+.room-entry:hover .room-item .top .caption { visibility: hidden; }
 .room-item .text { min-width: 0; flex: 1; }
 .room-item .top { display: flex; align-items: center; gap: 8px; }
 .room-item .name { font-weight: 600; font-size: 14px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -321,6 +327,7 @@ main { min-width: 0; min-height: 0; display: flex; flex-direction: column; backg
 .menu { position: absolute; right: 16px; top: 54px; background: var(--raised); border: var(--edge); border-radius: var(--r-m); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2); padding: 6px; z-index: 5; min-width: 180px; animation: pop 0.18s var(--decelerate); }
 .menu button { display: block; width: 100%; text-align: left; padding: 9px 12px; border-radius: 10px; font-size: 14px; }
 .menu button:hover { background: var(--high); }
+.menu button.danger { color: var(--danger); }
 .viewer { position: fixed; inset: 0; background: #000; z-index: 20; display: grid; place-items: center; cursor: zoom-out; animation: fade 0.2s; }
 .viewer img { max-width: 100vw; max-height: 100vh; object-fit: contain; }
 

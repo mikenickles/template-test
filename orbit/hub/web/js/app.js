@@ -118,6 +118,19 @@ function App() {
 
   const room = state.rooms.find((r) => r.id === roomId) ?? null;
   const close = () => setDialog(null);
+  /** Deletes a room once the user confirms, from the sidebar or the room's menu. */
+  const deleteRoom = async (target) => {
+    if (!confirm(`Delete ${target.name}? Its chat and schedules go too. The agents stay in your crew.`)) return;
+    try {
+      await api.deleteRoom(target.id);
+      if (target.id === room?.id) openRoom(null);
+      await refresh();
+      notify(`Deleted ${target.name}`);
+    } catch (e) {
+      notify(e.message);
+    }
+  };
+
   const edited = async (goTo) => {
     await refresh();
     if (goTo !== undefined) openRoom(goTo);
@@ -125,10 +138,10 @@ function App() {
   };
 
   return html`<div class=${`shell${room ? ' in-room' : ''}`}>
-    <${Sidebar} state=${state} roomId=${room?.id} onOpen=${openRoom} onDialog=${setDialog} onIntro=${startIntro} onUpdate=${startUpdate} />
+    <${Sidebar} state=${state} roomId=${room?.id} onOpen=${openRoom} onDialog=${setDialog} onIntro=${startIntro} onUpdate=${startUpdate} onDelete=${deleteRoom} />
     <main>
       ${room
-        ? html`<${RoomView} key=${room.id} room=${room} state=${state} onDialog=${setDialog} notify=${notify} onBack=${() => openRoom(null)}
+        ? html`<${RoomView} key=${room.id} room=${room} state=${state} onDialog=${setDialog} notify=${notify} onBack=${() => openRoom(null)} onDelete=${() => deleteRoom(room)}
             onOpenRoom=${(id) => refresh().then(() => openRoom(id))} onStale=${refresh} />`
         : html`<${Welcome} state=${state} onDialog=${setDialog} onIntro=${startIntro} onOpen=${openRoom}
             onDismiss=${(id) => api.dismissNudge(id).then(refresh).catch((e) => notify(e.message))} />`}
@@ -178,7 +191,7 @@ function Connect({ onConnected }) {
   </form></div>`;
 }
 
-function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate }) {
+function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate, onDelete }) {
   const byId = useMemo(() => Object.fromEntries(state.agents.map((a) => [a.id, a])), [state.agents]);
   const rooms = [...state.rooms].sort((a, b) => b.updatedAt - a.updatedAt);
   const intro = !state.profile?.notes?.length;
@@ -214,7 +227,7 @@ function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate }) {
       ${rooms.map((room) => {
         const crew = room.agentIds.map((id) => byId[id]).filter(Boolean);
         const speaker = byId[room.speaking];
-        return html`<button class=${`room-item${room.id === roomId ? ' current' : ''}`} onClick=${() => onOpen(room.id)} aria-current=${room.id === roomId ? 'page' : null}>
+        return html`<div class="room-entry" key=${room.id}><button class=${`room-item${room.id === roomId ? ' current' : ''}`} onClick=${() => onOpen(room.id)} aria-current=${room.id === roomId ? 'page' : null}>
           <${CrewTile} specs=${crew.map((a) => a.avatar)} size=${44} tint=${crew[0] ? tint(crew[0].avatar) : null} />
           <div class="text">
             <div class="top">
@@ -227,7 +240,8 @@ function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate }) {
               ? html`<div class="preview shimmer">${speaker ? `${speaker.name} is replying` : 'Working'}</div>`
               : html`<div class="preview">${room.preview ? `${room.preview.author}: ${room.preview.text}` : 'No messages yet'}</div>`}
           </div>
-        </button>`;
+        </button>
+        <button class="icon-button room-delete" aria-label=${`Delete ${room.name}`} title="Delete room" onClick=${() => onDelete(room)}><${Icon} name="trash" size=${18} /></button></div>`;
       })}
       ${!rooms.length && html`<p class="note" style="padding:0 10px">No rooms yet. Make one to start talking to your crew.</p>`}
       <div class="sidebar-title">
@@ -340,7 +354,7 @@ function upsert(list, message) {
   return next;
 }
 
-function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale }) {
+function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, onDelete }) {
   const [messages, setMessages] = useState([]);
   const [run, setRun] = useState({ active: false, agentId: null });
   const [loaded, setLoaded] = useState(false);
@@ -455,6 +469,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale }
         <button onClick=${() => { setMenu(false); onDialog({ type: 'room', room }); }}>Edit room</button>
         <button onClick=${() => { setMenu(false); onDialog({ type: 'schedules', room }); }}>Schedules</button>
         <button onClick=${() => { setMenu(false); if (confirm(`Clear every message in ${room.name}?`)) act(() => api.clear(room.id)); }}>Clear chat</button>
+        <button class="danger" onClick=${() => { setMenu(false); onDelete(); }}>Delete room</button>
       </div>`}
     </header>
     <div class="messages" ref=${scroller} onScroll=${onScroll} onClick=${onCopyCode}>
@@ -527,6 +542,7 @@ const STEPS = {
   followup: ['Setting a follow-up', 'Will follow up', "Couldn't set a follow-up", 'clock'],
   watch: ['Setting up a watch', 'Watching', "Couldn't watch", 'bell'],
   watch_stop: ['Stopping a watch', 'Stopped watching', "Couldn't stop a watch", 'bell'],
+  room: ['Making a room', 'Made a room', "Couldn't make a room", 'plus'],
   guide: ['Reading the Treehouse guide', 'Read the Treehouse guide', "Couldn't read the guide", 'file'],
   self: ['Updating its', 'Updated its', "Couldn't update its", 'check'],
   settings: ['Changing', 'Changed', "Couldn't change", 'check'],
@@ -638,7 +654,7 @@ function CrewReady({ made, crew, onOpen }) {
   const tints = (crew.length > 1 ? crew.slice(1) : crew).map((a) => tint(a.avatar));
   return html`<button class="crew-ready" onClick=${onOpen} style=${`--wash:linear-gradient(90deg, ${(tints.length > 1 ? tints : [tints[0] ?? 'transparent', 'transparent']).join(', ')})`}>
     <${CrewTile} specs=${crew.map((a) => a.avatar)} size=${56} />
-    <div class="text"><div class="title-s">Your crew is ready</div><div class="body-s muted">${made.name} · ${crew.map((a) => a.name).join(', ')}</div></div>
+    <div class="text"><div class="title-s">${made.label || 'Your crew is ready'}</div><div class="body-s muted">${made.name} · ${crew.map((a) => a.name).join(', ')}</div></div>
     <span class="pill selected">Open</span>
   </button>`;
 }

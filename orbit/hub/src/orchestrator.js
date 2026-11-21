@@ -659,6 +659,11 @@ export class Orchestrator {
     if (abilities) {
       abilities.self = selfTools(agent, room, {
         store: this.store, providers: this.providers, google: this.google, folders: this.folders, proactive: this.proactive, hub: this.hubInfo?.() ?? {},
+        // A room made from the chat shows as a card under the reply, like the intro's crew.
+        onRoomCreated: (made) => {
+          message.crew = { roomId: made.id, name: made.name, agentIds: made.agentIds, label: 'New room ready' };
+          this.store.save();
+        },
       });
     }
     if (abilities && intro) {

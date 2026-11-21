@@ -174,6 +174,8 @@ fun RoomScreen(
     /** Text to start the composer with, like something shared from another app. */
     initialDraft: String = "",
     onSchedules: () -> Unit = {},
+    /** Deletes this room, after the user has confirmed. */
+    onDeleteRoom: () -> Unit = {},
     /** Opens another room, like the one the intro just created. */
     onOpenRoom: (roomId: String) -> Unit = {},
     /** Asks for fresh hub state, e.g. when the intro has created agents this screen doesn't know yet. */
@@ -192,6 +194,7 @@ fun RoomScreen(
     // The message the next send answers, chosen with Reply.
     var replyingTo by remember { mutableStateOf(startReplyTo) }
     var attaching by remember { mutableStateOf(false) }
+    var confirmingDelete by remember { mutableStateOf(false) }
     var viewing by remember { mutableStateOf<Attachment?>(null) }
     val haptics = rememberHaptics()
     val clipboard = LocalClipboard.current
@@ -235,7 +238,7 @@ fun RoomScreen(
         }
         Scaffold(
             containerColor = Color.Transparent,
-            topBar = { RoomBar(room, agents, state, onBack, onEdit, onClear, onSchedules) },
+            topBar = { RoomBar(room, agents, state, onBack, onEdit, onClear, onSchedules) { confirmingDelete = true } },
             bottomBar = {
                 Composer(
                     draft = draft,
@@ -366,6 +369,14 @@ fun RoomScreen(
             )
         }
         viewing?.let { PhotoViewer(it) { viewing = null } }
+        if (confirmingDelete) {
+            ActionSheet(
+                onDismiss = { confirmingDelete = false },
+                title = "Delete ${room.name}?",
+                preview = "Its chat and schedules go too. The agents stay in your crew.",
+                actions = listOf(SheetAction("Delete room", OrbitIcon.Trash, danger = true, onClick = onDeleteRoom)),
+            )
+        }
         acting?.let { message ->
             val author = if (message.fromUser) "Your message" else "${byId[message.author.agentId]?.name ?: message.author.name}'s reply"
             ActionSheet(
@@ -507,6 +518,7 @@ private fun RoomBar(
     onEdit: () -> Unit,
     onClear: () -> Unit,
     onSchedules: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val c = Orbit.colors
     var menu by remember { mutableStateOf(false) }
@@ -562,6 +574,7 @@ private fun RoomBar(
                     DropdownMenuItem(text = { Text("Edit room", style = OrbitType.bodyM) }, onClick = { menu = false; onEdit() })
                     DropdownMenuItem(text = { Text("Schedules", style = OrbitType.bodyM) }, onClick = { menu = false; onSchedules() })
                     DropdownMenuItem(text = { Text("Clear chat", style = OrbitType.bodyM) }, onClick = { menu = false; onClear() })
+                    DropdownMenuItem(text = { Text("Delete room", style = OrbitType.bodyM, color = c.danger) }, onClick = { menu = false; onDelete() })
                 }
             }
         }
@@ -696,7 +709,7 @@ private fun CrewReady(made: CrewMade, crew: List<Agent>, modifier: Modifier, onO
     ) {
         CrewTile(crew.map { it.avatar }, size = 56.dp, color = c.surface.copy(alpha = 0.7f))
         Column(Modifier.weight(1f).padding(start = 14.dp, end = 10.dp)) {
-            Text("Your crew is ready", style = OrbitType.titleS, color = c.text)
+            Text(made.label.ifBlank { "Your crew is ready" }, style = OrbitType.titleS, color = c.text)
             Text(
                 "${made.name} · ${crew.joinToString(", ") { it.name }}",
                 Modifier.padding(top = 2.dp),

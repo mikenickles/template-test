@@ -544,6 +544,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Sets up a room from a description. [onDone] gets the room, or an error to show. */
+    fun planRoom(text: String, onDone: (room: Room?, error: String?) -> Unit) {
+        viewModelScope.launch {
+            val client = repo.client ?: return@launch onDone(null, "This phone isn't paired with a hub.")
+            try {
+                val room = client.planRoom(text)
+                reload()
+                onDone(room, null)
+            } catch (e: HubException) {
+                if (e.status == 401) repo.unpair(notifyHub = false)
+                onDone(null, e.message ?: "The room couldn't be set up.")
+            }
+        }
+    }
+
     fun deleteRoom(id: String, onDeleted: () -> Unit) {
         viewModelScope.launch {
             if (hub { it.deleteRoom(id) } != null) {

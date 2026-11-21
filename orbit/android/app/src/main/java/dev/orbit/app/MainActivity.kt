@@ -251,6 +251,13 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                     nav.navigate("room/${nudge.roomId}")
                 },
                 onDismissNudge = { vm.dismissNudge(it.id) },
+                onEditRoom = { nav.navigate("roomEdit?id=${it.id}") },
+                onDeleteRoom = { room ->
+                    vm.deleteRoom(room.id) {
+                        haptics.confirm()
+                        scope.launch { snackbar.showSnackbar("Deleted ${room.name}") }
+                    }
+                },
                 onStartIntro = {
                     vm.startIntro { id, error ->
                         if (id != null) nav.navigate("room/$id")
@@ -295,6 +302,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onBack = { nav.popBackStack() },
                 onEdit = { nav.navigate("roomEdit?id=$id") },
                 onClear = roomVm::clear,
+                onDeleteRoom = { vm.deleteRoom(id) { nav.popBackStack("home", inclusive = false) } },
                 everyone = state.agents,
                 onOpenRoom = { other -> vm.refreshThen { nav.navigate("room/$other") } },
                 onStale = vm::refresh,
@@ -343,6 +351,15 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 },
                 onDelete = room?.let { { vm.deleteRoom(it.id) { nav.popBackStack("home", inclusive = false) } } },
                 onBack = { nav.popBackStack() },
+                onPlan = { text, done ->
+                    vm.planRoom(text) { made, error ->
+                        done(error)
+                        if (made != null) {
+                            haptics.confirm()
+                            nav.navigate("room/${made.id}") { popUpTo("home") }
+                        }
+                    }
+                },
             )
         }
         screen("settings") {

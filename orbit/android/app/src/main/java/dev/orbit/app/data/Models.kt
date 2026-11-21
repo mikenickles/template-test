@@ -91,7 +91,13 @@ data class CreatedAgent(val agentId: String = "", val name: String = "")
 
 /** The room the intro created, and who is in it. */
 @Serializable
-data class CrewMade(val roomId: String = "", val name: String = "", val agentIds: List<String> = emptyList())
+data class CrewMade(
+    val roomId: String = "",
+    val name: String = "",
+    val agentIds: List<String> = emptyList(),
+    /** What the card says: empty for the intro's crew, "New room ready" for a room an agent made. */
+    val label: String = "",
+)
 
 @Serializable
 data class Preview(val author: String = "", val text: String = "")
@@ -162,6 +168,7 @@ data class Activity(
         const val KIND_GUIDE = "guide"
         const val KIND_SELF = "self"
         const val KIND_SETTINGS = "settings"
+        const val KIND_ROOM = "room"
     }
 }
 

@@ -71,7 +71,9 @@ import dev.orbit.app.ui.components.CrewTile
 import dev.orbit.app.ui.components.Hairline
 import dev.orbit.app.ui.components.LogoMark
 import dev.orbit.app.ui.components.OrbitCard
+import dev.orbit.app.ui.components.ActionSheet
 import dev.orbit.app.ui.components.OrbitIcon
+import dev.orbit.app.ui.components.SheetAction
 import dev.orbit.app.ui.components.OrbitSpinner
 import dev.orbit.app.ui.components.TreehouseScene
 import dev.orbit.app.ui.components.Pill
@@ -90,6 +92,7 @@ import dev.orbit.app.ui.components.textColor
 import dev.orbit.app.ui.components.tint
 import dev.orbit.app.ui.shared
 import dev.orbit.app.ui.theme.Orbit
+import dev.orbit.app.ui.theme.rememberHaptics
 import dev.orbit.app.ui.theme.OrbitDimens
 import dev.orbit.app.ui.theme.OrbitMotion
 import dev.orbit.app.ui.theme.OrbitType
@@ -127,8 +130,14 @@ fun HomeScreen(
     /** Opens what an agent brought up on its own, in its room. */
     onOpenNudge: (Nudge) -> Unit = {},
     onDismissNudge: (Nudge) -> Unit = {},
+    onEditRoom: (Room) -> Unit = {},
+    onDeleteRoom: (Room) -> Unit = {},
 ) {
     val c = Orbit.colors
+    val haptics = rememberHaptics()
+    // A room held down for its actions, and one waiting for the user to confirm its deletion.
+    var acting by remember { mutableStateOf<Room?>(null) }
+    var deleting by remember { mutableStateOf<Room?>(null) }
     val list = rememberLazyListState()
     // Content staggers in once, when real data replaces the placeholders.
     val entrances = rememberEntrances(state.loaded)
@@ -260,11 +269,38 @@ fun HomeScreen(
                     Column(Modifier.animateItem().entrance(entrances, "room:${room.id}", 3 + index)) {
                         // The tile is the row's only container; rows are parted by a hairline inset to the text.
                         if (index > 0) Hairline(Modifier.padding(start = OrbitDimens.gutter + RoomTile + 14.dp, end = OrbitDimens.gutter))
-                        RoomRow(room, room.agentIds.mapNotNull(state::agent), now) { onOpenRoom(room) }
+                        RoomRow(
+                            room,
+                            room.agentIds.mapNotNull(state::agent),
+                            now,
+                            onLongClick = {
+                                haptics.tick()
+                                acting = room
+                            },
+                        ) { onOpenRoom(room) }
                     }
                 }
             }
         }
+    }
+    acting?.let { room ->
+        ActionSheet(
+            onDismiss = { acting = null },
+            title = room.name,
+            preview = room.description.ifBlank { null },
+            actions = listOf(
+                SheetAction("Edit room", OrbitIcon.Edit) { onEditRoom(room) },
+                SheetAction("Delete room", OrbitIcon.Trash, danger = true) { deleting = room },
+            ),
+        )
+    }
+    deleting?.let { room ->
+        ActionSheet(
+            onDismiss = { deleting = null },
+            title = "Delete ${room.name}?",
+            preview = "Its chat and schedules go too. The agents stay in your crew.",
+            actions = listOf(SheetAction("Delete room", OrbitIcon.Trash, danger = true) { onDeleteRoom(room) }),
+        )
     }
 }
 
@@ -558,11 +594,11 @@ private fun CrewMember(agent: Agent, onClick: () -> Unit) {
 }
 
 @Composable
-private fun RoomRow(room: Room, agents: List<Agent>, now: Long, onClick: () -> Unit) {
+private fun RoomRow(room: Room, agents: List<Agent>, now: Long, onLongClick: () -> Unit = {}, onClick: () -> Unit) {
     val c = Orbit.colors
     val speaker = agents.firstOrNull { it.id == room.speaking }
     Row(
-        Modifier.fillMaxWidth().tap(RectangleShape, 0.985f, onClick).padding(horizontal = OrbitDimens.gutter, vertical = 14.dp),
+        Modifier.fillMaxWidth().tap(RectangleShape, 0.985f, onLongClick = onLongClick, onClick = onClick).padding(horizontal = OrbitDimens.gutter, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CrewTile(

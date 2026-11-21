@@ -21,7 +21,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /** Orbit's own icon set: one stroke weight, round caps and joins, to sit with the typeface. */
-enum class OrbitIcon { Back, Up, Down, Plus, Check, More, Dice, Chevron, Search, Globe, Code, Folder, File, Copy, Retry, Trash, Photo, Close, Memory, Clock, Hire, Reply, Mail, Calendar, Bell }
+enum class OrbitIcon { Back, Up, Down, Plus, Check, More, Dice, Chevron, Search, Globe, Code, Folder, File, Copy, Retry, Trash, Photo, Close, Memory, Clock, Hire, Reply, Mail, Calendar, Bell, Edit }
 
 @Composable
 fun OrbitIcon(
@@ -112,6 +112,11 @@ fun OrbitIcon(
                 polyline(listOf(at(0.2f, 0.28f), at(0.8f, 0.28f)))
                 polyline(listOf(at(0.4f, 0.27f), at(0.4f, 0.18f), at(0.6f, 0.18f), at(0.6f, 0.27f)))
                 polyline(listOf(at(0.27f, 0.29f), at(0.31f, 0.82f), at(0.69f, 0.82f), at(0.73f, 0.29f)))
+            }
+            OrbitIcon.Edit -> {
+                // A pencil, tip down to the left.
+                polyline(listOf(at(0.62f, 0.2f), at(0.8f, 0.38f), at(0.36f, 0.82f), at(0.18f, 0.82f), at(0.18f, 0.64f)), closed = true)
+                polyline(listOf(at(0.53f, 0.29f), at(0.71f, 0.47f)))
             }
             OrbitIcon.Photo -> {
                 drawRoundRect(tint, at(0.16f, 0.2f), Size(s * 0.68f, s * 0.6f), CornerRadius(s * 0.12f), style = stroke)

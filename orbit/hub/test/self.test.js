@@ -8,7 +8,7 @@ import { Store } from '../src/store.js';
 import { Providers } from '../src/providers.js';
 import { Hub } from '../src/server.js';
 import { Proactive } from '../src/proactive.js';
-import { APP_SUMMARY, GUIDE, changeSettings, snapshot, updateSelf } from '../src/self.js';
+import { APP_SUMMARY, GUIDE, changeSettings, createRoom, planRoom, snapshot, updateSelf } from '../src/self.js';
 import { buildSystemPrompt, resolveAbilities } from '../src/orchestrator.js';
 import { anthropicTools } from '../src/anthropic.js';
 
@@ -73,7 +73,7 @@ test('every agent knows it lives in Treehouse; agents without tools get the whol
   assert.match(GUIDE, /How it's built/);
 
   const names = anthropicTools(nova.model, { self: {} }).map((t) => t.name);
-  assert.deepEqual(names, ['treehouse_guide', 'update_self', 'change_settings']);
+  assert.deepEqual(names, ['treehouse_guide', 'update_self', 'change_settings', 'create_room']);
 });
 
 test('the live summary describes the setup, without any keys', () => {
@@ -161,3 +161,31 @@ test('in a chat, an agent reads the guide and renames itself when asked', async 
   assert.deepEqual(reply.activity.map((a) => a.kind), ['guide', 'self']);
   assert.equal(reply.activity[1].detail, 'name, instructions');
 });
+
+test('agents and the room planner make rooms from the crew', async () => {
+  const { store, providers, nova } = crew();
+  const made = createRoom(store, { name: 'Kyoto trip', members: ['sage'], mode: 'lead', lead: 'Sage', description: 'Plan April.' }, { creator: nova });
+  assert.deepEqual(made.agentIds, ['a1', 'a3'], 'the agent joins, with who it named');
+  assert.equal(made.mode, 'lead');
+  assert.equal(made.leadId, 'a3');
+  assert.throws(() => createRoom(store, { name: 'X', members: ['Zed'] }), /no agent called Zed/);
+  assert.throws(() => createRoom(store, { name: 'X', members: [] }), /which agents/);
+  assert.equal(createRoom(store, { name: 'Trio', members: ['Nova', 'Pixel', 'Sage'] }).mode, 'auto', 'three or more default to best fit');
+
+  const asked = [];
+  const planner = { ...providers, isConfigured: (id) => providers.isConfigured(id), kindOf: (id) => providers.kindOf(id),
+    stream: async ({ model, messages }) => {
+      asked.push({ model, prompt: messages[0].content });
+      return 'Here: {"name": "Half marathon", "members": ["Sage", "Ghost"], "mode": "round table", "description": "Training for the spring race."}';
+    } };
+  const planned = await planRoom({ store, providers: planner }, 'A room to train for my half marathon with Sage');
+  assert.equal(asked[0].model, 'claude-haiku-5-5');
+  assert.match(asked[0].prompt, /- Nova \(the planner\)|- Nova: the planner/);
+  assert.match(asked[0].prompt, /train for my half marathon/);
+  assert.equal(planned.name, 'Half marathon');
+  assert.deepEqual(planned.agentIds, ['a3'], 'names that are not in the crew are dropped');
+  assert.equal(planned.mode, 'roundtable');
+  assert.equal(planned.description, 'Training for the spring race.');
+  await assert.rejects(planRoom({ store, providers: planner }, '  '), /what the room is for/);
+});
+

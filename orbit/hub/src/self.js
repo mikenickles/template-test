@@ -1,4 +1,6 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
+import { addUsage, emptyUsage } from './usage.js';
 import { CHARACTER_COUNT } from './characters.js';
 import { ProactiveError } from './proactive.js';
 
@@ -83,14 +85,31 @@ export const SELF_TOOLS = [
       },
     },
   },
+  {
+    name: 'create_room',
+    description:
+      'Make a new room (group chat) for the user, when they ask: give it a name, which agents are in it, a mode, and a description of what it is for and rules for everyone in it. You join it unless include_me is false. Use existing agents\' names; hire new ones first if they ask for agents that don\'t exist yet.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Short, like "Kyoto trip".' },
+        members: { type: 'array', items: { type: 'string' }, description: 'Names of the agents in it.' },
+        include_me: { type: 'boolean', description: 'Whether you join it. Default true.' },
+        mode: { type: 'string', enum: ['best fit', 'lead', 'round table'] },
+        lead: { type: 'string', description: 'Who leads, in lead mode.' },
+        description: { type: 'string', description: 'What the room is for, and rules every agent in it follows.' },
+      },
+      required: ['name'],
+    },
+  },
 ].map((tool) => ({ ...tool, eager_input_streaming: true }));
 
-export const SELF_ACTIVITY = { treehouse_guide: 'guide', update_self: 'self', change_settings: 'settings' };
+export const SELF_ACTIVITY = { treehouse_guide: 'guide', update_self: 'self', change_settings: 'settings', create_room: 'room' };
 
 /** What agents with tools are told. */
 export const SELF_PROMPT =
   "- Treehouse questions: for anything about Treehouse itself (a feature, a setting, how it's built, what's set up), call treehouse_guide and answer from it. Never guess, and don't say you don't know before checking.\n" +
-  '- Doing things for the user: change your own name, role, instructions, look, model, abilities or how often you reach out with update_self, and this room or the proactive settings with change_settings, when they ask. Say what you changed. For what only the user can do (keys, Google, folders, updates), tell them where in the app to do it.';
+  '- Doing things for the user: change your own name, role, instructions, look, model, abilities or how often you reach out with update_self, this room or the proactive settings with change_settings, and make new rooms with create_room, when they ask. Say what you changed. For what only the user can do (keys, Google, folders, updates, deleting rooms), tell them where in the app to do it.';
 
 export class SelfError extends Error {
   name = 'SelfError';
@@ -270,6 +289,96 @@ export function changeSettings(room, input, { store, proactive }) {
   return `Changed ${changed.join('; ')}.`;
 }
 
+/**
+ * Makes a room from what an agent or the room planner chose: members by name (unknown names are refused,
+ * with the crew's names), a mode, a lead and a description. `creator` joins unless input.include_me is false.
+ */
+export function createRoom(store, input, { creator = null } = {}) {
+  const agents = store.state.agents;
+  const name = clean(input.name, 60);
+  if (!name) throw new SelfError('Give the room a name.');
+  const ids = [];
+  if (creator && input.include_me !== false) ids.push(creator.id);
+  for (const wanted of Array.isArray(input.members) ? input.members : []) {
+    const agent = byName(agents, wanted);
+    if (!agent) throw new SelfError(`There's no agent called ${wanted}. The crew is ${agents.map((a) => a.name).join(', ')}.`);
+    if (!ids.includes(agent.id)) ids.push(agent.id);
+  }
+  if (!ids.length) throw new SelfError('Say which agents are in the room.');
+  const mode = MODES[clean(input.mode ?? '', 20).toLowerCase()] ?? (ids.length > 2 ? 'auto' : 'roundtable');
+  const lead = input.lead ? byName(agents, input.lead) : null;
+  const now = Date.now();
+  const room = {
+    id: crypto.randomUUID(),
+    name,
+    agentIds: ids,
+    mode,
+    leadId: mode === 'lead' ? (lead && ids.includes(lead.id) ? lead.id : ids[0]) : null,
+    description: String(input.description ?? '').trim().slice(0, 2000),
+    createdAt: now,
+    updatedAt: now,
+  };
+  store.state.rooms.push(room);
+  store.save();
+  return room;
+}
+
+const PLAN_MODEL = 'claude-haiku-5-5';
+
+/**
+ * "Describe it": turns the user's words about a room into one, with a quick model call that picks the name,
+ * members, mode and description from the crew. Claude Haiku when the hub has a Claude key, otherwise the
+ * first agent on a model that's ready.
+ */
+export async function planRoom({ store, providers, ledger = null }, text) {
+  const words = String(text ?? '').trim().slice(0, 2000);
+  if (!words) throw new SelfError('Say what the room is for.');
+  const agents = store.state.agents;
+  if (!agents.length) throw new SelfError('Make an agent first, so the room has someone in it.');
+  const ready = (id) => providers.isConfigured(id) && !['demo', null, undefined].includes(providers.kindOf?.(id));
+  const choice = ready('anthropic') && providers.kindOf('anthropic') === 'anthropic'
+    ? { provider: 'anthropic', model: PLAN_MODEL, agent: agents[0] }
+    : agents.filter((a) => ready(a.provider)).map((a) => ({ provider: a.provider, model: a.model, agent: a }))[0];
+  if (!choice) throw new SelfError('Setting up a room needs a model with a key. Add one in Settings, under Model providers.');
+  const roster = agents.map((a) => `- ${a.name}${a.role ? `: ${a.role}` : ''}${a.instructions?.trim() ? `. ${clean(a.instructions, 200)}` : ''}`).join('\n');
+  let usage = null;
+  const answer = await providers.stream({
+    provider: choice.provider,
+    model: choice.model,
+    system: 'You set up group chats ("rooms") between a user and their AI agents. Reply with only a JSON object.',
+    messages: [{
+      role: 'user',
+      content: [
+        `The user's agents:\n${roster}`,
+        '',
+        `What the user wants the new room for:\n"${words}"`,
+        '',
+        'Reply with {"name": "a short room name", "members": ["agent names from the list"], "mode": "best fit" | "lead" | "round table", "lead": "a member, only for lead mode", "description": "one or two sentences: what the room is for, and any rules the user gave"}.',
+        '- Pick the agents whose roles fit; everyone the user names. If none fits, pick the most general one.',
+        "- Best fit for three or more members, unless the user wants everyone's view (round table) or one agent in charge (lead).",
+      ].join('\n'),
+    }],
+    agent: choice.agent,
+    signal: AbortSignal.timeout(60_000),
+    onDelta: () => {},
+    onUsage: (u) => {
+      usage = addUsage(usage ?? emptyUsage(), u);
+    },
+  });
+  let plan = null;
+  try {
+    plan = JSON.parse(answer.slice(answer.indexOf('{'), answer.lastIndexOf('}') + 1));
+  } catch {
+    throw new SelfError("Couldn't work out a room from that. Try saying who should be in it, or set it up yourself.");
+  }
+  // Names the model got wrong are dropped rather than failing the whole room.
+  const members = (Array.isArray(plan.members) ? plan.members : []).filter((n) => byName(agents, n));
+  const room = createRoom(store, { ...plan, name: clean(plan.name, 60) || clean(words, 40), members: members.length ? members : [agents[0].name] });
+  // Setting the room up is part of it, so its few tokens count toward the room.
+  if (usage) ledger?.record({ agentId: choice.agent.id, roomId: room.id, model: choice.model, usage });
+  return room;
+}
+
 /** The tools for one agent in one room. */
 export function selfTools(agent, room, deps) {
   return {
@@ -278,6 +387,12 @@ export function selfTools(agent, room, deps) {
         if (name === 'treehouse_guide') return { text: `${GUIDE}\n\n${snapshot(deps)}`, isError: false };
         if (name === 'update_self') return { text: updateSelf(agent, input, deps), isError: false };
         if (name === 'change_settings') return { text: changeSettings(room, input, deps), isError: false };
+        if (name === 'create_room') {
+          const made = createRoom(deps.store, input, { creator: agent });
+          deps.onRoomCreated?.(made);
+          const names = made.agentIds.map((id) => deps.store.agent(id)?.name).filter(Boolean).join(', ');
+          return { text: `Made the room "${made.name}" with ${names}, in ${MODE_NAMES[made.mode]} mode. It's on the user's Home screen, and they can open it from the card under this message.`, isError: false };
+        }
         return { text: `There is no tool called "${name}".`, isError: true };
       } catch (err) {
         if (err instanceof SelfError) return { text: err.message, isError: true };
@@ -294,6 +409,7 @@ export function selfDetail(name, input = {}) {
       add_to_instructions: 'instructions', abilities_on: 'abilities', abilities_off: 'abilities', reaches_out: 'reaching out', character: 'look',
     })[k] ?? k).filter((v, i, all) => all.indexOf(v) === i).join(', ');
   }
+  if (name === 'create_room') return input.name ?? '';
   if (name === 'change_settings') {
     return Object.keys(input).filter((k) => input[k] !== undefined).map((k) => (k.startsWith('room_') ? 'room' : k.startsWith('brief') ? 'morning brief' : k.includes('member') ? 'members' : k.startsWith('quiet') ? 'quiet hours' : 'daily limit'))
       .filter((v, i, all) => all.indexOf(v) === i).join(', ');

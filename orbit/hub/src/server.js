@@ -13,6 +13,7 @@ import { Feed } from './feed.js';
 import { ScheduleError, Scheduler } from './schedules.js';
 import { LEVELS, Proactive, ProactiveError } from './proactive.js';
 import { Google, GoogleError } from './google.js';
+import { SelfError, planRoom } from './self.js';
 import { ABILITIES, Orchestrator } from './orchestrator.js';
 import { ProviderError } from './errors.js';
 import { PAIR_PAGE } from './pairpage.js';
@@ -594,6 +595,16 @@ export class Hub {
         return profile;
       }
 
+      // "Describe it" (/api/rooms/plan): a room set up from the user's own words.
+      case 'POST /api/rooms/:id':
+        if (id !== 'plan') throw new HttpError(404, 'Not found.');
+        try {
+          return this.#roomView(await planRoom({ store: this.store, providers: this.providers, ledger: this.ledger }, (await this.#body(req)).text));
+        } catch (err) {
+          if (err instanceof SelfError) throw new HttpError(400, err.message);
+          if (err?.name === 'ProviderError' || err?.name === 'TimeoutError') throw new HttpError(502, `The model couldn't set up the room: ${err.message}`);
+          throw err;
+        }
       case 'POST /api/rooms': {
         const now = Date.now();
         const room = { id: crypto.randomUUID(), createdAt: now, updatedAt: now, ...this.#roomFields(await this.#body(req)) };

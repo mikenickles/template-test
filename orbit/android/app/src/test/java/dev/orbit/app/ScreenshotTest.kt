@@ -221,6 +221,27 @@ class ScreenshotTest {
             agents, {}, {}, {},
         )
     }
+    @Test fun roomEditorNew() = shot("room-editor-new") { RoomEditorScreen(null, agents, {}, null, {}, onPlan = { _, _ -> }) }
+    @Test fun roomActions() = shot("room-actions") {
+        Box(Modifier.fillMaxSize()) {
+            Home()
+            Box(Modifier.fillMaxSize().background(Orbit.colors.bg.copy(alpha = 0.6f)))
+            Surface(
+                Modifier.align(Alignment.BottomCenter),
+                shape = RoundedCornerShape(topStart = OrbitDimens.radiusXL, topEnd = OrbitDimens.radiusXL),
+                color = Orbit.colors.surface,
+            ) {
+                ActionSheetContent(
+                    launch.name,
+                    launch.description.ifBlank { null },
+                    listOf(
+                        SheetAction("Edit room", OrbitIcon.Edit) {},
+                        SheetAction("Delete room", OrbitIcon.Trash, danger = true) {},
+                    ),
+                ) {}
+            }
+        }
+    }
     @Test fun settings() = shot("settings") { SettingsScreen(app, "http://192.168.1.20:8787", {}, {}) }
     @Test fun messageActions() = shot("message-actions") {
         Box(Modifier.fillMaxSize()) {

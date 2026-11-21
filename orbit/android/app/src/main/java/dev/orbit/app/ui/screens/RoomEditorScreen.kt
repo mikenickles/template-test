@@ -58,6 +58,8 @@ import dev.orbit.app.ui.components.DangerRow
 import dev.orbit.app.ui.components.FieldLabel
 import dev.orbit.app.ui.components.Hairline
 import dev.orbit.app.ui.components.OrbitField
+import dev.orbit.app.ui.components.PrimaryButton
+import dev.orbit.app.ui.components.OrbitCard
 import dev.orbit.app.ui.components.OrbitIcon
 import dev.orbit.app.ui.components.Pill
 import dev.orbit.app.ui.components.ScreenBar
@@ -79,6 +81,11 @@ fun RoomEditorScreen(
     onSave: (Room) -> Unit,
     onDelete: (() -> Unit)?,
     onBack: () -> Unit,
+    /**
+     * Sets a new room up from the user's description ("Describe it"), then opens it. Calls back with an error
+     * to show, or null once it's done.
+     */
+    onPlan: ((text: String, onDone: (error: String?) -> Unit) -> Unit)? = null,
 ) {
     val c = Orbit.colors
     val haptics = rememberHaptics()
@@ -119,6 +126,15 @@ fun RoomEditorScreen(
                 .verticalScroll(scroll)
                 .padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 12.dp, bottom = 48.dp),
         ) {
+            if (initial == null && onPlan != null && agents.isNotEmpty()) {
+                DescribeRoom(onPlan)
+                Text(
+                    "Or set it up yourself",
+                    Modifier.padding(top = OrbitDimens.section, bottom = 10.dp),
+                    style = OrbitType.label,
+                    color = c.textTertiary,
+                )
+            }
             FieldLabel("Name")
             OrbitField(
                 name, { name = it.take(60) }, "Launch plan",
@@ -298,6 +314,47 @@ private fun CheckCircle(checked: Boolean) {
     ) {
         AnimatedVisibility(checked, enter = scaleIn(OrbitMotion.bouncy(), initialScale = 0.3f) + fadeIn(), exit = scaleOut(targetScale = 0.3f) + fadeOut()) {
             OrbitIcon(OrbitIcon.Check, size = 14.dp, tint = c.onPrimary, description = "In this room")
+        }
+    }
+}
+
+/** "Describe it": the user says what the room is for, in their own words, and the hub sets it up. */
+@Composable
+private fun DescribeRoom(onPlan: (text: String, onDone: (error: String?) -> Unit) -> Unit) {
+    val c = Orbit.colors
+    var text by rememberSaveable { mutableStateOf("") }
+    var planning by rememberSaveable { mutableStateOf(false) }
+    var error by rememberSaveable { mutableStateOf<String?>(null) }
+    OrbitCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(OrbitDimens.rowPad)) {
+            Text("Describe it", style = OrbitType.titleS, color = c.text)
+            Text(
+                "Say what the room is for and who should be in it, and Treehouse sets it up. Tap the mic on your keyboard to say it out loud.",
+                Modifier.padding(top = 4.dp, bottom = 12.dp),
+                style = OrbitType.bodyM,
+                color = c.textSecondary,
+            )
+            OrbitField(
+                text, { text = it.take(2000); error = null },
+                "A room with Nova and Atlas for planning my trip to Japan. Keep it practical.",
+                singleLine = false, minLines = 3,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            )
+            error?.let { Text(it, Modifier.padding(top = 8.dp), style = OrbitType.caption, color = c.danger) }
+            PrimaryButton(
+                if (planning) "Setting it up" else "Set it up",
+                {
+                    planning = true
+                    error = null
+                    onPlan(text.trim()) { problem ->
+                        planning = false
+                        error = problem
+                    }
+                },
+                Modifier.fillMaxWidth().padding(top = 12.dp),
+                enabled = text.isNotBlank() && !planning,
+                loading = planning,
+            )
         }
     }
 }
