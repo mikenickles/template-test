@@ -75,6 +75,7 @@ import dev.orbit.app.ui.screens.PairScreen
 import dev.orbit.app.ui.screens.RoomEditorScreen
 import dev.orbit.app.data.RoomContext
 import dev.orbit.app.data.Card
+import dev.orbit.app.ui.components.tint
 import dev.orbit.app.ui.screens.RoomScreen
 import dev.orbit.app.ui.screens.RoomTokensScreen
 import dev.orbit.app.ui.screens.SettingsScreen
@@ -531,6 +532,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 compacting = compacting,
                 error = error,
                 onBack = { nav.popBackStack() },
+                tints = room.agentIds.mapNotNull(state::agent).take(4).map { it.avatar.tint() },
             )
         }
         screen("schedules/{id}") { entry ->

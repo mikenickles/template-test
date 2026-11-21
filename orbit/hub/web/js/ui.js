@@ -1,6 +1,6 @@
 // Shared pieces: Treehouse's icon set (one stroke weight, round caps), and small controls.
 import { h } from '/vendor/preact.mjs';
-import { useEffect } from '/vendor/hooks.mjs';
+import { useEffect, useState } from '/vendor/hooks.mjs';
 import htm from '/vendor/htm.mjs';
 
 export const html = htm.bind(h);
@@ -59,24 +59,32 @@ export function Pill({ label, selected = false, dimmed = false, onClick, small =
   </button>`;
 }
 
-/** A dialog over the app. Escape or a click outside closes it. */
+/** A dialog over the app. Escape or a click outside closes it, with a short fade and drop rather than a cut. */
 export function Modal({ title, onClose, actions = null, children, wide = false }) {
+  const [leaving, setLeaving] = useState(false);
+  const close = () => {
+    if (leaving) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return onClose();
+    setLeaving(true);
+    setTimeout(onClose, LEAVE_MS);
+  };
   useEffect(() => {
-    const key = (e) => e.key === 'Escape' && onClose();
+    const key = (e) => e.key === 'Escape' && close();
     addEventListener('keydown', key);
     return () => removeEventListener('keydown', key);
-  }, [onClose]);
-  return html`<div class="scrim" onMouseDown=${(e) => e.target === e.currentTarget && onClose()}>
+  }, [onClose, leaving]);
+  return html`<div class=${`scrim${leaving ? ' leaving' : ''}`} onMouseDown=${(e) => e.target === e.currentTarget && close()}>
     <div class="dialog" role="dialog" aria-modal="true" aria-label=${title} style=${wide ? `width:min(${wide === true ? 720 : wide}px,100%)` : ''}>
       <div class="dialog-head">
         <h2>${title}</h2>
         ${actions}
-        <button class="icon-button" onClick=${onClose} aria-label="Close"><${Icon} name="close" /></button>
+        <button class="icon-button" onClick=${close} aria-label="Close"><${Icon} name="close" /></button>
       </div>
       <div class="dialog-body">${children}</div>
     </div>
   </div>`;
 }
+const LEAVE_MS = 170;
 
 /** "now", "5m", "3h", "Mon", "12 Nov". */
 export function ago(then, now = Date.now()) {

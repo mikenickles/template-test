@@ -1,5 +1,6 @@
 package dev.orbit.app.ui.components
 
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
@@ -415,10 +416,26 @@ fun LogoMark(modifier: Modifier = Modifier, size: Dp = 26.dp) {
  */
 @Composable
 fun ScreenBar(title: String, onBack: () -> Unit, scrolled: Boolean = false, actions: @Composable RowScope.() -> Unit = {}) {
-    val divider by animateColorAsState(if (scrolled) Orbit.colors.hairline else Color.Transparent, tween(OrbitMotion.MEDIUM), label = "divider")
-    Box(Modifier.fillMaxWidth().background(Orbit.colors.bg).statusBarsPadding()) {
+    val c = Orbit.colors
+    // The same frosted pill as Home's header and the room bar. It lifts a little once the page scrolls under it.
+    val lift by animateFloatAsState(if (scrolled) 1f else 0f, tween(OrbitMotion.MEDIUM), label = "lift")
+    val pill = RoundedCornerShape(22.dp)
+    Box(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 4.dp)) {
         Row(
-            Modifier.fillMaxWidth().height(60.dp).padding(start = 6.dp, end = OrbitDimens.gutter),
+            Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    shadowElevation = 10.dp.toPx() * lift
+                    shape = pill
+                    clip = false
+                    ambientShadowColor = Color.Black.copy(alpha = 0.25f)
+                    spotShadowColor = Color.Black.copy(alpha = 0.25f)
+                }
+                .clip(pill)
+                .background(c.glass)
+                .border(1.dp, c.hairline, pill)
+                .height(56.dp)
+                .padding(start = 2.dp, end = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconTap(OrbitIcon.Back, "Back", onBack)
@@ -426,13 +443,12 @@ fun ScreenBar(title: String, onBack: () -> Unit, scrolled: Boolean = false, acti
                 title,
                 Modifier.weight(1f).padding(start = 2.dp),
                 style = OrbitType.titleM,
-                color = Orbit.colors.text,
+                color = c.text,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             actions()
         }
-        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(1.dp).background(divider))
     }
 }
 

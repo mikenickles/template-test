@@ -1,5 +1,6 @@
 package dev.orbit.app.ui.screens
 
+import dev.orbit.app.ui.components.CrewWash
 import dev.orbit.app.ui.components.Segmented
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.graphics.SolidColor
@@ -188,8 +189,11 @@ fun AgentEditorScreen(
     }
 
     val scroll = rememberScrollState()
+    // The agent's own color glows softly behind the page, and changes with its look.
+    Box(Modifier.fillMaxSize().background(c.bg)) {
+    CrewWash(listOf(avatar.tint()), Modifier.fillMaxSize(), strength = 0.7f)
     Scaffold(
-        containerColor = c.bg,
+        containerColor = Color.Transparent,
         topBar = {
             ScreenBar(if (initial == null) "New agent" else "Edit agent", onBack, scrolled = scroll.value > 0) {
                 BarAction(if (initial == null) "Create" else "Save", ::save, enabled = canSave)
@@ -403,6 +407,7 @@ fun AgentEditorScreen(
                 }
             }
         }
+    }
     }
 }
 

@@ -624,3 +624,10 @@ main > header, main > .messages, main > .messages-frame, main > .composer-wrap {
   radial-gradient(circle at 100% 60%, color-mix(in srgb, var(--c3) var(--wash-glow), transparent), transparent 55%),
   radial-gradient(circle at 0% 95%, color-mix(in srgb, var(--c4) var(--wash-glow), transparent), transparent 55%); }
 main > .home { position: relative; }
+/* Dialogs leave the way they came: a quick fade, the window dropping slightly. */
+.scrim.leaving { animation: fade-away 0.17s var(--ease) forwards; }
+.scrim.leaving .dialog { animation: drop-away 0.17s var(--ease) forwards; }
+@keyframes fade-away { to { opacity: 0; } }
+@keyframes drop-away { to { opacity: 0; transform: translateY(10px) scale(0.98); } }
+/* Opening another room fades its conversation in rather than cutting. */
+.messages-frame { animation: fade 0.22s var(--ease); }

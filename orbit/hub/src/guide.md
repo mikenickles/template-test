@@ -81,6 +81,9 @@ messages** finds any room by name or description, and any message with all the w
 Home and each room glow softly in the crew's own colors (each agent's color from a corner, so a room looks like
 the agents in it); the header is a frosted bar with the hub's name and status, and each room on Home is its own
 card.
+Every page on the phone has the same frosted bar at the top. Swiping back slides the page away to the right with
+the finger, and the page behind is already there underneath; letting go halfway finishes it, and swiping back
+the other way calls it off. An agent's edit page glows in its own color, and a room's Tokens page in the crew's.
 
 ## Agents
 

@@ -26,6 +26,8 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.compose.rememberNavController
 import androidx.navigationevent.NavigationEventDispatcher
+import androidx.navigationevent.DirectNavigationEventInput
+import androidx.navigationevent.NavigationEvent
 import androidx.navigationevent.NavigationEventDispatcherOwner
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import app.cash.paparazzi.DeviceConfig
@@ -144,6 +146,45 @@ class MotionTest {
                 )
             }
             screen("agent") { AgentEditorScreen(SampleData.nova, SampleData.providers, { emptyList() }, {}, {}, {}) }
+        }
+    }
+}
+
+/** A back swipe from the room to Home: the room follows the finger to the right, Home settles in under it. */
+class BackSwipeTest {
+    @get:Rule
+    val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_6)
+
+    @Test fun backSwipe() = paparazzi.gif("back-swipe", start = 0, end = 2600, fps = 20) {
+        OrbitTheme(dark = true, reducedMotion = false) {
+            Hosted {
+                val nav = rememberNavController()
+                val swipe = remember { DirectNavigationEventInput() }
+                val dispatcher = LocalNavigationEventDispatcherOwner.current!!.navigationEventDispatcher
+                LaunchedEffect(Unit) {
+                    dispatcher.addInput(swipe)
+                    nav.navigate("room")
+                    delay(700)
+                    val edge = NavigationEvent.EDGE_LEFT
+                    swipe.backStarted(NavigationEvent(touchX = 0f, touchY = 900f, progress = 0f, swipeEdge = edge, frameTimeMillis = 0L))
+                    // The finger drags across to the middle, holds a moment, then lets go.
+                    for (step in 1..12) {
+                        delay(50)
+                        swipe.backProgressed(NavigationEvent(touchX = step * 45f, touchY = 900f, progress = step / 24f, swipeEdge = edge, frameTimeMillis = step * 50L))
+                    }
+                    delay(500)
+                    swipe.backCompleted()
+                }
+                OrbitNavHost(nav, startDestination = "home") {
+                    screen("home") { HomeScreen(SampleData.app.copy(rooms = SampleData.app.rooms.map { it.copy(active = false) }), {}, {}, {}, {}, {}, {}, now = SampleData.NOW) }
+                    screen("room") {
+                        RoomScreen(
+                            SampleData.launch.copy(active = false), listOf(SampleData.nova, SampleData.pixel, SampleData.sage),
+                            SampleData.chat.copy(messages = SampleData.chat.messages.take(3), run = RunState()), {}, {}, {}, {}, {},
+                        )
+                    }
+                }
+            }
         }
     }
 }

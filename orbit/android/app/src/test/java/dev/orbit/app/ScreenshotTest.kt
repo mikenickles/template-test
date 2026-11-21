@@ -68,6 +68,7 @@ import dev.orbit.app.data.CardEvent
 import dev.orbit.app.data.CardFile
 import dev.orbit.app.ui.components.LocalZone
 import dev.orbit.app.ui.components.ToolCard
+import dev.orbit.app.ui.components.tint
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -398,7 +399,7 @@ class ScreenshotTest {
     @Test fun scheduledMessage() = shot("room-scheduled") { RoomScreen(launch, listOf(nova, pixel, sage), SampleData.briefing, {}, {}, {}, {}, {}) }
     @Test fun formatting() = shot("room-formatting") { RoomScreen(trip.copy(agentIds = listOf("a1")), listOf(nova), SampleData.rich, {}, {}, {}, {}, {}) }
     @Test fun formattingLight() = shot("room-formatting-light", dark = false) { RoomScreen(trip.copy(agentIds = listOf("a1")), listOf(nova), SampleData.rich, {}, {}, {}, {}, {}) }
-    @Test fun roomTokens() = shot("room-tokens") { RoomTokensScreen("Launch", tokens, {}, {}, {}, false, null, {}) }
+    @Test fun roomTokens() = shot("room-tokens") { RoomTokensScreen("Launch", tokens, {}, {}, {}, false, null, {}, tints = listOf(nova, pixel, sage).map { it.avatar.tint() }) }
     @Test fun roomTokensSmallLight() = shot("room-tokens-small-light", dark = false) {
         RoomTokensScreen("Launch", tokens.copy(size = RoomContext.SIZE_SMALL, photos = false), {}, {}, {}, false, "Summarizing needs an agent in this room on a model with a key.", {})
     }
