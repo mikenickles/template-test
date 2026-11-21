@@ -1,5 +1,9 @@
 package dev.orbit.app.ui.screens
 
+import dev.orbit.app.ui.components.OrbitSheet
+import dev.orbit.app.ui.components.Hairline
+import androidx.compose.ui.semantics.heading
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.GraphicsLayerScope
@@ -203,6 +207,13 @@ fun RoomScreen(
     startReplyTo: Message? = null,
     /** Listens for speech and hands back the words, for the mic button. */
     onVoice: ((text: String) -> Unit) -> Unit = {},
+    /** The time "Today" is measured from; screenshot tests fix it. */
+    now: Long = System.currentTimeMillis(),
+    /** How many of the room's schedules are on, for the menu. */
+    scheduleCount: Int = 0,
+    onSearchRoom: () -> Unit = {},
+    /** Puts one of the crew in this room. */
+    onAddMember: (agentId: String) -> Unit = {},
 ) {
     val c = Orbit.colors
     var draft by rememberSaveable { mutableStateOf(initialDraft) }
@@ -212,6 +223,8 @@ fun RoomScreen(
     var replyingTo by remember { mutableStateOf(startReplyTo) }
     var attaching by remember { mutableStateOf(false) }
     var confirmingDelete by remember { mutableStateOf(false) }
+    var showingMenu by remember { mutableStateOf(false) }
+    var showingMembers by remember { mutableStateOf(false) }
     var viewing by remember { mutableStateOf<Attachment?>(null) }
     val haptics = rememberHaptics()
     val clipboard = LocalClipboard.current
@@ -239,6 +252,12 @@ fun RoomScreen(
     LaunchedEffect(lastFromUser) { if (lastFromUser != null && lastFromUser !in history) list.animateScrollToItem(0) }
 
     val showLatest by remember { derivedStateOf { list.firstVisibleItemIndex > 0 || list.firstVisibleItemScrollOffset > 600 } }
+    // Replies that landed while you were scrolled back, counted on the Latest button.
+    val replies = state.messages.count { !it.fromUser }
+    var seenReplies by remember { mutableIntStateOf(0) }
+    LaunchedEffect(showLatest, replies) { if (!showLatest) seenReplies = replies }
+    // Each message's predecessor, to group runs from one agent and to mark where a new day starts.
+    val previous = remember(state.messages) { state.messages.zipWithNext().associate { (before, after) -> after.id to before } }
 
     Box(Modifier.fillMaxSize().background(c.bg)) {
         // The room is lit softly from the top in its members' colors.
@@ -255,7 +274,7 @@ fun RoomScreen(
         }
         Scaffold(
             containerColor = Color.Transparent,
-            topBar = { RoomBar(room, agents, state, onBack, onEdit, onClear, onSchedules) { confirmingDelete = true } },
+            topBar = { RoomBar(room, agents, state, onBack, onMenu = { showingMenu = true }, onMembers = { showingMembers = true }) },
             bottomBar = {
                 Composer(
                     draft = draft,
@@ -304,13 +323,16 @@ fun RoomScreen(
                             top = top + 36.dp,
                             bottom = bottom + 28.dp,
                         ),
-                        verticalArrangement = Arrangement.spacedBy(OrbitDimens.section),
                     ) {
                         items(state.messages.asReversed(), key = { it.id }) { message ->
                             val play = remember(message.id) { entrancesOn && message.id !in history && arrived.add(message.id) }
-                            Box(
-                                Modifier
-                                    .animateItem(
+                            val before = previous[message.id]
+                            val newDay = message.createdAt > 0 && (before == null || !sameDay(before.createdAt, message.createdAt))
+                            val runsOn = !newDay && continuesRun(before, message)
+                          Column(
+                              Modifier
+                                  .padding(top = if (before == null) 0.dp else if (runsOn) 8.dp else OrbitDimens.section)
+                                  .animateItem(
                                         fadeInSpec = null,
                                         // While a reply grows, the rows above move with it in lockstep; placement
                                         // only animates between runs, when messages are added or cleared.
@@ -319,7 +341,11 @@ fun RoomScreen(
                                         } else {
                                             spring(dampingRatio = 0.9f, stiffness = 380f, visibilityThreshold = IntOffset.VisibilityThreshold)
                                         },
-                                    )
+                                    ),
+                          ) {
+                            if (newDay) DayDivider(message.createdAt, now, Modifier.padding(bottom = 18.dp))
+                            Box(
+                                Modifier
                                     .arrival(play, message.fromUser)
                                     .pointerInput(message.id) {
                                         detectTapGestures(
@@ -340,7 +366,7 @@ fun RoomScreen(
                                     UserMessage(message, mentionColors, onOpenPhoto = { viewing = it }, replyColors = replyColors)
                                 } else {
                                     Column {
-                                        AgentMessage(message, byId[message.author.agentId], mentionColors, showModel = message.id in introductions)
+                                        AgentMessage(message, byId[message.author.agentId], mentionColors, showModel = message.id in introductions, continued = runsOn)
                                         message.created.mapNotNull { byId[it.agentId] }.forEach { hired ->
                                             NewMember(hired, Modifier.padding(start = 48.dp, top = 14.dp)) { onOpenAgent(hired.id) }
                                         }
@@ -352,6 +378,7 @@ fun RoomScreen(
                                     }
                                 }
                             }
+                          }
                         }
                     }
                 }
@@ -376,7 +403,7 @@ fun RoomScreen(
                     enter = fadeIn(tween(OrbitMotion.SHORT)) + slideInVertically(OrbitMotion.snappy()) { it / 2 },
                     exit = fadeOut(tween(OrbitMotion.SHORT)) + slideOutVertically(tween(OrbitMotion.SHORT)) { it / 2 },
                 ) {
-                    LatestButton { scope.launch { list.animateScrollToItem(0) } }
+                    LatestButton((replies - seenReplies).coerceAtLeast(0)) { scope.launch { list.animateScrollToItem(0) } }
                 }
             }
         }
@@ -392,6 +419,39 @@ fun RoomScreen(
             )
         }
         viewing?.let { PhotoViewer(it) { viewing = null } }
+        if (showingMenu) {
+            ActionSheet(
+                onDismiss = { showingMenu = false },
+                title = room.name,
+                preview = listOf(
+                    if (agents.size == 1) "1 agent" else "${agents.size} agents",
+                    when (scheduleCount) { 0 -> null; 1 -> "1 schedule"; else -> "$scheduleCount schedules" },
+                    state.messages.size.takeIf { it > 0 }?.let { if (it == 1) "1 message" else "$it messages" },
+                ).filterNotNull().joinToString(" · "),
+                leading = { CrewTile(agents.map { it.avatar }, size = 44.dp, color = agents.firstOrNull()?.avatar?.wash() ?: c.surfaceRaised) },
+                actions = listOf(
+                    SheetAction("Edit room", OrbitIcon.Edit, hint = "Name, mode, description", onClick = onEdit),
+                    SheetAction("Members", OrbitIcon.Person, hint = if (agents.size == 1) "1 agent" else "${agents.size} agents") { showingMembers = true },
+                    SheetAction("Schedules", OrbitIcon.Clock, hint = if (scheduleCount == 0) "" else "$scheduleCount on", onClick = onSchedules),
+                    SheetAction("Search this room", OrbitIcon.Search, onClick = onSearchRoom),
+                    SheetAction("Clear chat", OrbitIcon.Retry, onClick = onClear),
+                    SheetAction("Delete room", OrbitIcon.Trash, danger = true) { confirmingDelete = true },
+                ),
+            )
+        }
+        if (showingMembers) {
+            OrbitSheet(onDismiss = { showingMembers = false }) {
+                MembersSheet(
+                    room, agents, everyone, state, now,
+                    onMessage = { agent ->
+                        val handle = "@${agent.name.replace(" ", "")} "
+                        draft = if (draft.isBlank()) handle else "${draft.trimEnd()} $handle"
+                        showingMembers = false
+                    },
+                    onAdd = onAddMember,
+                )
+            }
+        }
         if (confirmingDelete) {
             ActionSheet(
                 onDismiss = { confirmingDelete = false },
@@ -606,13 +666,10 @@ private fun RoomBar(
     agents: List<Agent>,
     state: RoomUiState,
     onBack: () -> Unit,
-    onEdit: () -> Unit,
-    onClear: () -> Unit,
-    onSchedules: () -> Unit,
-    onDelete: () -> Unit,
+    onMenu: () -> Unit,
+    onMembers: () -> Unit,
 ) {
     val c = Orbit.colors
-    var menu by remember { mutableStateOf(false) }
     val speaker = agents.firstOrNull { it.id == state.run.agentId }
     Column(Modifier.fillMaxWidth().statusBarsPadding()) {
         Row(Modifier.height(64.dp).padding(start = 6.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -649,7 +706,10 @@ private fun RoomBar(
                 }
             }
             // Who's here, large enough to recognise. They fly in from the room's tile on the home screen.
-            Row(horizontalArrangement = Arrangement.spacedBy((-10).dp)) {
+            Row(
+                Modifier.tap(CircleShape, 0.94f, onMembers).semantics { contentDescription = "Who's in this room" }.padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy((-10).dp),
+            ) {
                 agents.take(3).forEach { agent ->
                     AvatarDisc(
                         agent.avatar,
@@ -662,15 +722,7 @@ private fun RoomBar(
             if (agents.size > 3) {
                 Text("+${agents.size - 3}", Modifier.padding(start = 6.dp), style = OrbitType.mono, color = c.textSecondary)
             }
-            Box {
-                IconTap(OrbitIcon.More, "Room options", { menu = true }, tint = c.textSecondary)
-                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, shape = RoundedCornerShape(OrbitDimens.radiusM)) {
-                    DropdownMenuItem(text = { Text("Edit room", style = OrbitType.bodyM) }, onClick = { menu = false; onEdit() })
-                    DropdownMenuItem(text = { Text("Schedules", style = OrbitType.bodyM) }, onClick = { menu = false; onSchedules() })
-                    DropdownMenuItem(text = { Text("Clear chat", style = OrbitType.bodyM) }, onClick = { menu = false; onClear() })
-                    DropdownMenuItem(text = { Text("Delete room", style = OrbitType.bodyM, color = c.danger) }, onClick = { menu = false; onDelete() })
-                }
-            }
+            IconTap(OrbitIcon.More, "Room options", onMenu, tint = c.textSecondary)
         }
     }
 }
@@ -818,7 +870,7 @@ private fun CrewReady(made: CrewMade, crew: List<Agent>, modifier: Modifier, onO
 }
 
 @Composable
-private fun AgentMessage(message: Message, agent: Agent?, mentionColors: Map<String, Color>, showModel: Boolean) {
+private fun AgentMessage(message: Message, agent: Agent?, mentionColors: Map<String, Color>, showModel: Boolean, continued: Boolean = false) {
     val c = Orbit.colors
     val avatar = agent?.avatar ?: FormerAgentAvatar
     val streaming = message.status == Message.STATUS_STREAMING
@@ -827,7 +879,8 @@ private fun AgentMessage(message: Message, agent: Agent?, mentionColors: Map<Str
     val catchingUp = streaming || shown < message.text.length
     val tail by animateFloatAsState(if (catchingUp) FADE_TAIL.toFloat() else 0f, tween(500), label = "tail")
     Row(Modifier.fillMaxWidth()) {
-        AvatarDisc(avatar, Modifier.padding(top = 1.dp), size = 34.dp, thinking = streaming && shown > 0)
+        // A run from one agent shows its face and name once, at the top.
+        if (continued) Spacer(Modifier.width(34.dp)) else AvatarDisc(avatar, Modifier.padding(top = 1.dp), size = 34.dp, thinking = streaming && shown > 0)
         // New lines glide in rather than jump, and screen readers hear replies as they land.
         Column(
             Modifier
@@ -836,7 +889,7 @@ private fun AgentMessage(message: Message, agent: Agent?, mentionColors: Map<Str
                 .animateContentSize(spring(stiffness = 800f))
                 .semantics { liveRegion = LiveRegionMode.Polite },
         ) {
-            Row(Modifier.heightIn(min = 22.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (!continued) Row(Modifier.heightIn(min = 22.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(agent?.name ?: message.author.name, style = OrbitType.titleS, color = avatar.textColor())
                 // Written on its own, unasked: say why, quietly.
                 message.proactive?.let { mark ->
@@ -868,8 +921,11 @@ private fun AgentMessage(message: Message, agent: Agent?, mentionColors: Map<Str
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+                if (message.createdAt > 0 && !streaming) {
+                    Text(clockTime(message.createdAt), Modifier.padding(start = 8.dp), style = OrbitType.caption, color = c.textTertiary, maxLines = 1)
+                }
             }
-            Spacer(Modifier.height(4.dp))
+            if (!continued) Spacer(Modifier.height(4.dp))
             // What the agent did on the way: searches, pages, code, files. A step in progress shimmers.
             ActivityTrail(message.activity, streaming, Modifier.padding(bottom = if (shown > 0 || streaming) 6.dp else 0.dp))
             if (shown > 0) {
@@ -920,7 +976,7 @@ internal fun closeOpenMarkup(text: String): String {
 
 /** Floats above the composer when you've scrolled back through the conversation. */
 @Composable
-private fun LatestButton(onClick: () -> Unit) {
+private fun LatestButton(newReplies: Int, onClick: () -> Unit) {
     val c = Orbit.colors
     val interaction = remember { MutableInteractionSource() }
     Surface(
@@ -935,7 +991,7 @@ private fun LatestButton(onClick: () -> Unit) {
     ) {
         Row(Modifier.height(38.dp).padding(start = 12.dp, end = 15.dp), verticalAlignment = Alignment.CenterVertically) {
             OrbitIcon(OrbitIcon.Down, size = 16.dp)
-            Text("Latest", Modifier.padding(start = 6.dp), style = OrbitType.label)
+            Text(if (newReplies > 0) "$newReplies new" else "Latest", Modifier.padding(start = 6.dp), style = OrbitType.label)
         }
     }
 }
@@ -1171,3 +1227,125 @@ private fun SendButton(canSend: Boolean, running: Boolean, onSend: () -> Unit, o
 
 /** The room's status line: what it says, and the colored dot (if any) that goes with it. */
 private data class RoomStatus(val text: String, val dot: Color?)
+
+
+/** Whether [message] carries on a run from the same agent: close in time, nothing else in between. */
+internal fun continuesRun(before: Message?, message: Message): Boolean =
+    before != null && !before.fromUser && !message.fromUser &&
+        before.author.agentId != null && before.author.agentId == message.author.agentId &&
+        message.proactive == null && before.crew == null && before.created.isEmpty() &&
+        message.createdAt - before.createdAt in 0..RUN_GAP_MS
+
+private const val RUN_GAP_MS = 10 * 60_000L
+
+private fun dayOf(at: Long): java.util.Calendar = java.util.Calendar.getInstance().apply { timeInMillis = at }
+
+internal fun sameDay(a: Long, b: Long): Boolean {
+    val x = dayOf(a)
+    val y = dayOf(b)
+    return x.get(java.util.Calendar.YEAR) == y.get(java.util.Calendar.YEAR) && x.get(java.util.Calendar.DAY_OF_YEAR) == y.get(java.util.Calendar.DAY_OF_YEAR)
+}
+
+/** "Today", "Yesterday", "Tue, Nov 18", or with the year once it's not this year. */
+internal fun dayLabel(at: Long, now: Long = System.currentTimeMillis()): String = when {
+    sameDay(at, now) -> "Today"
+    sameDay(at, now - 86_400_000L) -> "Yesterday"
+    dayOf(at).get(java.util.Calendar.YEAR) == dayOf(now).get(java.util.Calendar.YEAR) ->
+        java.text.SimpleDateFormat("EEE, MMM d", java.util.Locale.getDefault()).format(java.util.Date(at))
+    else -> java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault()).format(java.util.Date(at))
+}
+
+/** "9:12 am", or "21:12" where the phone uses a 24-hour clock. */
+private fun clockTime(at: Long): String =
+    java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(at)).replace("AM", "am").replace("PM", "pm")
+
+/** Where a new day starts in the conversation: its name between two hairlines. */
+@Composable
+private fun DayDivider(at: Long, now: Long, modifier: Modifier = Modifier) {
+    val c = Orbit.colors
+    Row(modifier.fillMaxWidth().semantics { heading() }, verticalAlignment = Alignment.CenterVertically) {
+        Hairline(Modifier.weight(1f))
+        Text(dayLabel(at, now), Modifier.padding(horizontal = 12.dp), style = OrbitType.label, color = c.textTertiary)
+        Hairline(Modifier.weight(1f))
+    }
+}
+
+/**
+ * Who's in a room: each member with its model and what it's doing (the one replying is ringed), a way to
+ * message one directly, and the rest of the crew to add.
+ */
+@Composable
+internal fun MembersSheet(
+    room: Room,
+    agents: List<Agent>,
+    everyone: List<Agent>,
+    state: RoomUiState,
+    now: Long,
+    onMessage: (Agent) -> Unit,
+    onAdd: (agentId: String) -> Unit,
+) {
+    val c = Orbit.colors
+    Row(Modifier.fillMaxWidth().padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 4.dp, bottom = 6.dp), verticalAlignment = Alignment.Bottom) {
+        Text("In this room", Modifier.weight(1f), style = OrbitType.titleM, color = c.text)
+        Text(
+            when (room.mode) {
+                Room.MODE_AUTO -> "Best fit"
+                Room.MODE_LEAD -> "Led by ${agents.firstOrNull { it.id == room.leadId }?.name ?: agents.firstOrNull()?.name.orEmpty()}"
+                else -> "Round table"
+            },
+            style = OrbitType.bodyS,
+            color = c.textTertiary,
+        )
+    }
+    for (agent in agents) {
+        val replying = state.run.active && state.run.agentId == agent.id
+        val lastSpoke = state.messages.lastOrNull { it.author.agentId == agent.id && it.createdAt > 0 }?.createdAt
+        MemberRow(
+            agent,
+            ring = replying,
+            status = when {
+                replying -> "Replying now…"
+                lastSpoke != null -> listOf(agent.role, "last spoke ${relativeTime(lastSpoke, now).let { if (it == "now") "just now" else if (it.last().isDigit() || it.endsWith("m") || it.endsWith("h")) "$it ago" else it }}").filter { it.isNotBlank() }.joinToString(" · ")
+                else -> agent.role
+            },
+            statusColor = if (replying) agent.avatar.textColor() else c.textTertiary,
+        ) { Pill("Message", onClick = { onMessage(agent) }) }
+    }
+    val others = everyone.filter { it.id !in room.agentIds }
+    if (others.isNotEmpty()) {
+        Hairline(Modifier.padding(horizontal = OrbitDimens.gutter, vertical = 8.dp))
+        Text(
+            "ADD FROM YOUR CREW",
+            Modifier.padding(start = OrbitDimens.gutter, top = 8.dp, bottom = 4.dp),
+            style = OrbitType.overline,
+            color = c.textTertiary,
+        )
+        for (agent in others) {
+            MemberRow(agent, ring = false, status = agent.role, statusColor = c.textTertiary) { Pill("Add", onClick = { onAdd(agent.id) }, selected = true) }
+        }
+    }
+}
+
+@Composable
+private fun MemberRow(agent: Agent, ring: Boolean, status: String, statusColor: Color, action: @Composable () -> Unit) {
+    val c = Orbit.colors
+    Row(Modifier.fillMaxWidth().padding(horizontal = OrbitDimens.gutter, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        AvatarDisc(agent.avatar, size = 48.dp, ring = ring)
+        Column(Modifier.weight(1f).padding(start = 14.dp, end = 10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(agent.name, style = OrbitType.titleS, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (agent.model.isNotBlank()) {
+                    Text(
+                        modelTag(agent.model),
+                        Modifier.padding(start = 8.dp).border(1.dp, c.hairline, RoundedCornerShape(6.dp)).padding(horizontal = 5.dp),
+                        style = OrbitType.mono,
+                        color = c.textTertiary,
+                        maxLines = 1,
+                    )
+                }
+            }
+            if (status.isNotBlank()) Text(status, Modifier.padding(top = 2.dp), style = OrbitType.bodyS, color = statusColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        action()
+    }
+}

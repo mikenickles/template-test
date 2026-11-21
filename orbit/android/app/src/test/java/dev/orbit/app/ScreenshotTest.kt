@@ -51,6 +51,8 @@ import dev.orbit.app.ui.screens.SearchScreen
 import dev.orbit.app.data.SearchResults
 import dev.orbit.app.data.SearchRoom
 import dev.orbit.app.data.SearchHit
+import dev.orbit.app.data.Message
+import dev.orbit.app.data.Author
 import dev.orbit.app.ui.screens.SettingsScreen
 import dev.orbit.app.ui.screens.ProactiveScreen
 import dev.orbit.app.ui.screens.ShareScreen
@@ -252,6 +254,60 @@ class ScreenshotTest {
     }
     @Test fun settings() = shot("settings") { SettingsScreen(app, "http://192.168.1.20:8787", {}, {}) }
     @Test fun settingsModels() = shot("settings-models") { ModelsScreen(app, {}, {}) }
+    @Test fun roomGrouped() = shot("room-grouped") {
+        val hour = 3_600_000L
+        fun agent(id: String, who: dev.orbit.app.data.Agent, text: String, at: Long, model: String? = null) =
+            Message(id = id, author = Author(type = "agent", agentId = who.id, name = who.name, model = model), text = text, createdAt = at)
+        val messages = listOf(
+            agent("g1", nova, "Beta invites go out Friday. I'll draft the email tonight.", now - 15 * hour, "claude-opus-5-5"),
+            agent("g2", nova, "Draft's ready for you in the Docs folder.", now - 15 * hour + 4 * 60_000),
+            Message(id = "g3", author = Author(type = "user", name = "You"), text = "Pixel, can you tighten the landing copy?", createdAt = now - 2 * hour),
+            agent("g4", pixel, "Cut it to three lines. New headline: *Your team, minus the busywork.*", now - 2 * hour + 60_000, "gpt-large"),
+            agent("g5", pixel, "Also dropped the second signup field.", now - 2 * hour + 2 * 60_000),
+            agent("g6", sage, "One worry: \"busywork\" may read as dismissive to the people who do it.", now - 5 * 60_000, "llama-local"),
+        )
+        RoomScreen(launch, listOf(nova, pixel, sage), RoomUiState(loaded = true, connected = true, messages = messages), {}, {}, {}, {}, {}, now = now)
+    }
+    @Test fun roomMenu() = shot("room-menu") {
+        Box(Modifier.fillMaxSize()) {
+            RoomScreen(launch, listOf(nova, pixel, sage), chat.copy(run = RunState(), messages = chat.messages.take(3)), {}, {}, {}, {}, {})
+            Box(Modifier.fillMaxSize().background(Orbit.colors.bg.copy(alpha = 0.6f)))
+            Surface(
+                Modifier.align(Alignment.BottomCenter),
+                shape = RoundedCornerShape(topStart = OrbitDimens.radiusXL, topEnd = OrbitDimens.radiusXL),
+                color = Orbit.colors.surface,
+            ) {
+                ActionSheetContent(
+                    launch.name,
+                    "3 agents · 2 schedules · 48 messages",
+                    listOf(
+                        SheetAction("Edit room", OrbitIcon.Edit, hint = "Name, mode, description") {},
+                        SheetAction("Members", OrbitIcon.Person, hint = "3 agents") {},
+                        SheetAction("Schedules", OrbitIcon.Clock, hint = "2 on") {},
+                        SheetAction("Search this room", OrbitIcon.Search) {},
+                        SheetAction("Clear chat", OrbitIcon.Retry) {},
+                        SheetAction("Delete room", OrbitIcon.Trash, danger = true) {},
+                    ),
+                    leading = { dev.orbit.app.ui.components.CrewTile(listOf(nova.avatar, pixel.avatar, sage.avatar), size = 44.dp) },
+                ) {}
+            }
+        }
+    }
+    @Test fun roomMembers() = shot("room-members", dark = false) {
+        Box(Modifier.fillMaxSize()) {
+            RoomScreen(launch, listOf(nova, pixel, sage), chat.copy(messages = chat.messages.take(3)), {}, {}, {}, {}, {})
+            Box(Modifier.fillMaxSize().background(Orbit.colors.bg.copy(alpha = 0.6f)))
+            Surface(
+                Modifier.align(Alignment.BottomCenter),
+                shape = RoundedCornerShape(topStart = OrbitDimens.radiusXL, topEnd = OrbitDimens.radiusXL),
+                color = Orbit.colors.surface,
+            ) {
+                Column(Modifier.padding(top = 20.dp, bottom = 24.dp)) {
+                    dev.orbit.app.ui.screens.MembersSheet(launch.copy(agentIds = listOf(nova.id, pixel.id, sage.id)), listOf(nova, pixel, sage), agents, chat, now, {}, {})
+                }
+            }
+        }
+    }
     @Test fun search() = shot("search") {
         SearchScreen(
             "ramen",

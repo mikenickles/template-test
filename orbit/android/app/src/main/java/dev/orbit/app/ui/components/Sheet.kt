@@ -1,5 +1,7 @@
 package dev.orbit.app.ui.components
 
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,7 +31,7 @@ import dev.orbit.app.ui.theme.rememberHaptics
 import kotlinx.coroutines.launch
 
 /** One choice in an [ActionSheet]. A [danger] action is drawn in the danger color. */
-data class SheetAction(val label: String, val icon: OrbitIcon, val danger: Boolean = false, val onClick: () -> Unit)
+data class SheetAction(val label: String, val icon: OrbitIcon, val danger: Boolean = false, val hint: String = "", val onClick: () -> Unit)
 
 /**
  * A sheet of actions that rises from the bottom, for things done to one item (a message, say). The
@@ -37,7 +39,7 @@ data class SheetAction(val label: String, val icon: OrbitIcon, val danger: Boole
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ActionSheet(onDismiss: () -> Unit, title: String?, preview: String?, actions: List<SheetAction>) {
+fun ActionSheet(onDismiss: () -> Unit, title: String?, preview: String?, actions: List<SheetAction>, leading: (@Composable () -> Unit)? = null) {
     val c = Orbit.colors
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -50,7 +52,7 @@ fun ActionSheet(onDismiss: () -> Unit, title: String?, preview: String?, actions
         scrimColor = c.bg.copy(alpha = 0.6f),
         dragHandle = { SheetHandle() },
     ) {
-        ActionSheetContent(title, preview, actions) { action ->
+        ActionSheetContent(title, preview, actions, leading = leading) { action ->
             scope.launch { state.hide() }.invokeOnCompletion {
                 onDismiss()
                 action.onClick()
@@ -66,12 +68,17 @@ private fun SheetHandle() {
 
 /** The inside of an [ActionSheet]: what it is about, then one row per action. */
 @Composable
-fun ActionSheetContent(title: String?, preview: String?, actions: List<SheetAction>, onAction: (SheetAction) -> Unit) {
+fun ActionSheetContent(title: String?, preview: String?, actions: List<SheetAction>, leading: (@Composable () -> Unit)? = null, onAction: (SheetAction) -> Unit) {
     val c = Orbit.colors
     val haptics = rememberHaptics()
     Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 12.dp)) {
         if (title != null || preview != null) {
-            Column(Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 8.dp, bottom = 12.dp)) {
+          Row(Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 8.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            leading?.let {
+                it()
+                Spacer(Modifier.width(12.dp))
+            }
+            Column {
                 title?.let { Text(it, style = OrbitType.titleS, color = c.text) }
                 // A plain-text glimpse: markdown markers and line breaks would only add noise here.
                 preview?.replace(Regex("[*_`#>]+"), "")?.replace(Regex("\\s+"), " ")?.trim()?.takeIf { it.isNotEmpty() }?.let {
@@ -85,6 +92,7 @@ fun ActionSheetContent(title: String?, preview: String?, actions: List<SheetActi
                     )
                 }
             }
+          }
             Hairline()
         }
         for (action in actions) {
@@ -101,8 +109,27 @@ fun ActionSheetContent(title: String?, preview: String?, actions: List<SheetActi
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 OrbitIcon(action.icon, size = 20.dp, tint = ink)
-                Text(action.label, Modifier.padding(start = 16.dp), style = OrbitType.titleS, color = ink)
+                Text(action.label, Modifier.weight(1f).padding(start = 16.dp), style = OrbitType.titleS, color = ink)
+                if (action.hint.isNotBlank()) Text(action.hint, Modifier.padding(start = 12.dp), style = OrbitType.bodyS, color = c.textTertiary)
             }
         }
+    }
+}
+
+/** A sheet that rises from the bottom with any content, in the same style as [ActionSheet]. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OrbitSheet(onDismiss: () -> Unit, content: @Composable () -> Unit) {
+    val c = Orbit.colors
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        shape = RoundedCornerShape(topStart = OrbitDimens.radiusXL, topEnd = OrbitDimens.radiusXL),
+        containerColor = c.surface,
+        contentColor = c.text,
+        scrimColor = c.bg.copy(alpha = 0.6f),
+        dragHandle = { SheetHandle() },
+    ) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 12.dp)) { content() }
     }
 }

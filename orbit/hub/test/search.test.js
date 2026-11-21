@@ -28,6 +28,13 @@ test('finds messages with every word, newest first, across rooms that still exis
   assert.equal(found.messages[1].agentId, null);
 });
 
+test('searching one room finds only its messages, and no rooms', () => {
+  const found = search(state, 'ramen', { roomId: 'r1' });
+  assert.deepEqual(found.messages.map((m) => m.messageId), ['m2', 'm1']);
+  assert.deepEqual(found.rooms, []);
+  assert.deepEqual(search(state, 'beta', { roomId: 'r1' }).messages, []);
+});
+
 test('finds rooms by name or description, and nothing for an empty query', () => {
   assert.deepEqual(search(state, 'lake').rooms.map((r) => r.id), ['r1']);
   assert.deepEqual(search(state, 'launch').rooms.map((r) => r.id), ['r2']);

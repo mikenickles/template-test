@@ -500,7 +500,7 @@ export class Hub {
         return { notices: this.scheduler.noticesSince(Number(url.searchParams.get('since')) || 0), now: Date.now() };
       // Every room and message with all the words, newest first.
       case 'GET /api/search':
-        return search(this.store.state, (url.searchParams.get('q') ?? '').slice(0, 200));
+        return search(this.store.state, (url.searchParams.get('q') ?? '').slice(0, 200), { roomId: url.searchParams.get('room') || null });
       case 'GET /api/usage': {
         // Estimated spend and tokens, per agent and room, over the last N days.
         const days = Math.min(365, Math.max(1, Number(url.searchParams.get('days')) || 30));

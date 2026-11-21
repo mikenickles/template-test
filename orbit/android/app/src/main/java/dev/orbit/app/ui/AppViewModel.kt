@@ -226,7 +226,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val usage: StateFlow<UsageSummary?> = _usage.asStateFlow()
 
     /** Searches every room; null if the hub couldn't be asked. */
-    suspend fun search(query: String): SearchResults? = hub(quiet = true) { it.search(query) }
+    suspend fun search(query: String, roomId: String? = null): SearchResults? = hub(quiet = true) { it.search(query, roomId) }
 
     fun loadUsage(days: Int = 30) {
         viewModelScope.launch { hub(quiet = true) { it.usage(days) }?.let { _usage.value = it } }

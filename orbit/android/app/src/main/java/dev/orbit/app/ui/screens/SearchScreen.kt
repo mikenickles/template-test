@@ -75,6 +75,8 @@ fun SearchScreen(
     onBack: () -> Unit,
     now: Long = System.currentTimeMillis(),
     autoFocus: Boolean = true,
+    /** The room being searched, when it's just one. */
+    roomName: String? = null,
 ) {
     val c = Orbit.colors
     val focus = remember { FocusRequester() }
@@ -110,7 +112,7 @@ fun SearchScreen(
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                         decorationBox = { inner ->
-                            if (query.isEmpty()) Text("Search rooms and messages", style = OrbitType.body, color = c.textTertiary)
+                            if (query.isEmpty()) Text(roomName?.let { "Search $it" } ?: "Search rooms and messages", style = OrbitType.body, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             inner()
                         },
                     )
@@ -127,7 +129,7 @@ fun SearchScreen(
             Box(Modifier.fillMaxSize().padding(padding).imePadding(), contentAlignment = Alignment.Center) {
                 Text(
                     when {
-                        query.isBlank() -> "Find anything you or your crew said, in any room."
+                        query.isBlank() -> if (roomName != null) "Find anything said in $roomName." else "Find anything you or your crew said, in any room."
                         found == null || searching -> ""
                         else -> "Nothing found for “${query.trim()}”."
                     },

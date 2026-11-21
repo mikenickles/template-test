@@ -6,7 +6,7 @@ import { Avatar, CrewTile, characterOf, inkColor, tint } from './avatar.js';
 import { AgentEditor, RoomEditor, Schedules, Settings } from './editors.js';
 import { closeOpenMarkup, markdown } from './markdown.js';
 import { Treehouse } from './treehouse.js';
-import { Icon, Mark, Pill, ago, fileSize, html } from './ui.js';
+import { Icon, Mark, Modal, Pill, ago, fileSize, html } from './ui.js';
 
 // ---------- The app ----------
 
@@ -15,6 +15,8 @@ function App() {
   const [state, setState] = useState(null);
   const [roomId, setRoomId] = useState(() => decodeURIComponent(location.hash.slice(1)) || null);
   const [dialog, setDialog] = useState(null);
+  // A room the sidebar's search is narrowed to, from "Search this room".
+  const [searchRoom, setSearchRoom] = useState(null);
   const [toast, setToast] = useState(null);
   const [updating, setUpdating] = useState(null); // { version, failed } while the hub installs an update and restarts
   const toastTimer = useRef();
@@ -118,6 +120,8 @@ function App() {
 
   const room = state.rooms.find((r) => r.id === roomId) ?? null;
   const close = () => setDialog(null);
+  // "Search this room" narrows the sidebar's search instead of opening a window.
+  const openDialog = (d) => (d?.type === 'search-room' ? setSearchRoom(d.room) : setDialog(d));
   /** Deletes a room once the user confirms, from the sidebar or the room's menu. */
   const deleteRoom = async (target) => {
     if (!confirm(`Delete ${target.name}? Its chat and schedules go too. The agents stay in your crew.`)) return;
@@ -138,10 +142,11 @@ function App() {
   };
 
   return html`<div class=${`shell${room ? ' in-room' : ''}`}>
-    <${Sidebar} state=${state} roomId=${room?.id} onOpen=${openRoom} onDialog=${setDialog} onIntro=${startIntro} onUpdate=${startUpdate} onDelete=${deleteRoom} />
+    <${Sidebar} state=${state} roomId=${room?.id} onOpen=${openRoom} onDialog=${setDialog} onIntro=${startIntro} onUpdate=${startUpdate} onDelete=${deleteRoom}
+      scope=${searchRoom} onScope=${setSearchRoom} />
     <main>
       ${room
-        ? html`<${RoomView} key=${room.id} room=${room} state=${state} onDialog=${setDialog} notify=${notify} onBack=${() => openRoom(null)} onDelete=${() => deleteRoom(room)}
+        ? html`<${RoomView} key=${room.id} room=${room} state=${state} onDialog=${openDialog} notify=${notify} onBack=${() => openRoom(null)} onDelete=${() => deleteRoom(room)}
             onOpenRoom=${(id) => refresh().then(() => openRoom(id))} onStale=${refresh} />`
         : html`<${Welcome} state=${state} onDialog=${setDialog} onIntro=${startIntro} onOpen=${openRoom}
             onDismiss=${(id) => api.dismissNudge(id).then(refresh).catch((e) => notify(e.message))} />`}
@@ -157,6 +162,9 @@ function App() {
         : html`<div class="center"><div class="spinner" style="margin:0 auto 18px"></div><h1 class="title-l">Updating Treehouse</h1>
             <p class="muted">Installing ${updating.version}. This takes a few seconds, and the page reloads by itself.</p></div>`}
     </div>`}
+    ${dialog?.type === 'members' && html`<${Members} room=${state.rooms.find((r) => r.id === dialog.room.id) ?? dialog.room} state=${state} onClose=${close}
+      onMessage=${(agent) => { close(); dispatchEvent(new CustomEvent('treehouse:mention', { detail: agent.name })); }}
+      onAdd=${(id) => { const r = state.rooms.find((x) => x.id === dialog.room.id); api.saveRoom({ ...r, agentIds: [...r.agentIds, id] }).then(refresh).catch((e) => notify(e.message)); }} />`}
     ${dialog?.type === 'schedules' && html`<${Schedules} room=${dialog.room} state=${state} notify=${notify} refresh=${refresh} onClose=${close} onRan=${() => openRoom(dialog.room.id)} />`}
     ${toast && html`<div class="toast" role="status">${toast}</div>`}
   </div>`;
@@ -191,17 +199,19 @@ function Connect({ onConnected }) {
   </form></div>`;
 }
 
-function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate, onDelete }) {
+function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate, onDelete, scope = null, onScope = () => {} }) {
   const byId = useMemo(() => Object.fromEntries(state.agents.map((a) => [a.id, a])), [state.agents]);
   const [query, setQuery] = useState('');
   const [found, setFound] = useState(null);
+  const searchBox = useRef();
+  useEffect(() => { if (scope) searchBox.current?.focus(); }, [scope?.id]);
   // Asks the hub a moment after typing stops.
   useEffect(() => {
     const q = query.trim();
     if (!q) { setFound(null); return undefined; }
-    const timer = setTimeout(() => api.search(q).then(setFound).catch(() => setFound({ query: q, rooms: [], messages: [] })), 250);
+    const timer = setTimeout(() => api.search(q, scope?.id).then(setFound).catch(() => setFound({ query: q, rooms: [], messages: [] })), 250);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, scope?.id]);
   const rooms = [...state.rooms].sort((a, b) => b.updatedAt - a.updatedAt);
   const intro = !state.profile?.notes?.length;
   const demo = !intro && !state.providers.some((p) => p.takesKey && p.configured);
@@ -215,10 +225,11 @@ function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate, onDelete 
     </div>
     <label class="sidebar-search">
       <${Icon} name="search" size=${17} />
-      <input type="search" placeholder="Search rooms and messages" value=${query} onInput=${(e) => setQuery(e.currentTarget.value.slice(0, 200))}
-        onKeyDown=${(e) => e.key === 'Escape' && setQuery('')} aria-label="Search rooms and messages" />
+      ${scope && html`<button class="scope-chip" title="Search every room" onClick=${() => onScope(null)}>${scope.name}<${Icon} name="close" size=${13} /></button>`}
+      <input ref=${searchBox} type="search" placeholder=${scope ? 'Search this room' : 'Search rooms and messages'} value=${query} onInput=${(e) => setQuery(e.currentTarget.value.slice(0, 200))}
+        onKeyDown=${(e) => { if (e.key === 'Escape') { if (query) setQuery(''); else onScope(null); } }} aria-label=${scope ? `Search ${scope.name}` : 'Search rooms and messages'} />
     </label>
-    ${query.trim() ? html`<div class="sidebar-scroll"><${SearchResults} found=${found} byId=${byId} onOpen=${(id) => { onOpen(id); }} /></div>` : html`<div class="sidebar-scroll">
+    ${query.trim() || scope ? html`<div class="sidebar-scroll"><${SearchResults} found=${query.trim() ? found : undefined} byId=${byId} onOpen=${(id) => { onOpen(id); }} /></div>` : html`<div class="sidebar-scroll">
       ${state.updates?.hub.available && html`<button class="card row button-row update-banner" onClick=${onUpdate}>
         <div style="flex:1"><div class="title-s">Treehouse ${state.updates.hub.available} is ready</div>
           <div class="body-s muted">Install it now. Treehouse restarts in a few seconds.</div></div>
@@ -280,6 +291,7 @@ function highlight(text, words) {
 
 /** What a search found: rooms first, then messages with the words around each match. */
 function SearchResults({ found, byId, onOpen }) {
+  if (found === undefined) return html`<p class="note" style="padding:0 10px">Type to search this room.</p>`;
   if (!found) return html`<p class="note" style="padding:0 10px">Searching…</p>`;
   if (!found.rooms.length && !found.messages.length) return html`<p class="note" style="padding:0 10px">Nothing found for “${found.query}”.</p>`;
   const words = found.query.split(' ');
@@ -296,6 +308,23 @@ function SearchResults({ found, byId, onOpen }) {
           <span class="text"><span class="top"><span class="title-s" style=${agent ? `color:${inkColor(agent.avatar)}` : ''}>${m.author}</span><span class="caption faint"> · ${m.roomName} · ${ago(m.at)}</span></span>
             <span class="body-s muted">${highlight(m.snippet, words)}</span></span></button>`;
       })}`}`;
+}
+
+/** Who's in a room: each member, its model and what it's doing, a way to message one, and the rest of the crew to add. */
+function Members({ room, state, onClose, onMessage, onAdd }) {
+  const byId = Object.fromEntries(state.agents.map((a) => [a.id, a]));
+  const members = room.agentIds.map((id) => byId[id]).filter(Boolean);
+  const others = state.agents.filter((a) => !room.agentIds.includes(a.id));
+  const row = (a, action) => html`<div class="member-row">
+    <${Disc} spec=${a.avatar} size=${44} ring=${room.active && room.speaking === a.id} />
+    <div class="text"><div class="title-s">${a.name} ${a.model && html`<span class="model-tag">${modelTag(a.model)}</span>`}</div>
+      <div class="body-s" style=${room.active && room.speaking === a.id ? `color:${inkColor(a.avatar)}` : 'color:var(--text-3)'}>${room.active && room.speaking === a.id ? 'Replying now…' : a.role}</div></div>
+    ${action}</div>`;
+  return html`<${Modal} title=${`In ${room.name}`} onClose=${onClose}>
+    <div class="card">${members.map((a) => row(a, html`<button class="pill" onClick=${() => onMessage(a)}>Message</button>`))}</div>
+    ${others.length > 0 && html`<div class="overline" style="margin:22px 4px 10px">Add from your crew</div>
+      <div class="card">${others.map((a) => row(a, html`<button class="pill selected" onClick=${() => onAdd(a.id)}>Add</button>`))}</div>`}
+  <//>`;
 }
 
 /** An agent's character in a soft circle of its own color. [ring] circles it in its color, for whoever is speaking. */
@@ -427,6 +456,8 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
   const [viewing, setViewing] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null); // the message the next send answers
   const [nearBottom, setNearBottom] = useState(true);
+  // Replies that landed while scrolled back, counted on the Latest button.
+  const [seenReplies, setSeenReplies] = useState(0);
   const list = useRef([]);
   const scroller = useRef();
   const stick = useRef(true);
@@ -498,6 +529,8 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
   const firstReplies = new Set(
     messages.filter((m) => m.author.type === 'agent' && !introduced.has(m.author.agentId) && introduced.add(m.author.agentId)).map((m) => m.id),
   );
+  const replies = messages.filter((m) => m.author.type === 'agent').length;
+  useEffect(() => { if (nearBottom) setSeenReplies(replies); }, [nearBottom, replies]);
   const canRetry = (m) =>
     m.author.type === 'agent' && !run.active && agents.some((a) => a.id === m.author.agentId) &&
     (m.status === 'error' || m.status === 'stopped' || messages.at(-1)?.id === m.id);
@@ -527,11 +560,13 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
               : room.mode === 'lead' && lead ? `Led by ${lead.name}` : `Round table · ${agents.map((a) => a.name).join(', ')}`}
         </div>
       </div>
-      <div class="avatar-stack">${agents.slice(0, 4).map((a) => html`<${Disc} spec=${a.avatar} size=${32} thinking=${run.active && run.agentId === a.id} />`)}</div>
+      <button class="avatar-stack" title="Who's in this room" aria-label="Who's in this room" onClick=${() => onDialog({ type: 'members', room })}>${agents.slice(0, 4).map((a) => html`<${Disc} spec=${a.avatar} size=${32} ring=${run.active && run.agentId === a.id} />`)}</button>
       <button class="icon-button" aria-label="Room options" aria-expanded=${menu} onClick=${() => setMenu(!menu)}><${Icon} name="more" /></button>
       ${menu && html`<div class="menu" onMouseLeave=${() => setMenu(false)}>
         <button onClick=${() => { setMenu(false); onDialog({ type: 'room', room }); }}>Edit room</button>
+        <button onClick=${() => { setMenu(false); onDialog({ type: 'members', room }); }}>Members</button>
         <button onClick=${() => { setMenu(false); onDialog({ type: 'schedules', room }); }}>Schedules</button>
+        <button onClick=${() => { setMenu(false); onDialog({ type: 'search-room', room }); }}>Search this room</button>
         <button onClick=${() => { setMenu(false); if (confirm(`Clear every message in ${room.name}?`)) act(() => api.clear(room.id)); }}>Clear chat</button>
         <button class="danger" onClick=${() => { setMenu(false); onDelete(); }}>Delete room</button>
       </div>`}
@@ -545,10 +580,15 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
             <p class="muted">${room.mode === 'auto' ? 'Ask anything. Whoever it suits best answers.' : room.mode === 'lead' && lead ? `${lead.name} answers first and brings in the others.` : 'Everyone answers in turn.'} Mention someone with @ to ask them directly.</p>
           </div>`
         : html`<div class="messages-inner">
-            ${messages.map((m) => html`<div class=${`message${m.author.type === 'user' ? ' mine' : ''}`} key=${m.id}>
+            ${messages.map((m, i) => {
+              const before = messages[i - 1];
+              const newDay = m.createdAt > 0 && (!before || !sameDay(before.createdAt, m.createdAt));
+              const runsOn = !newDay && continuesRun(before, m);
+              return html`${newDay && html`<div class="day-divider" key=${`day-${m.id}`} role="heading" aria-level="3"><span>${dayLabel(m.createdAt)}</span></div>`}
+            <div class=${`message${m.author.type === 'user' ? ' mine' : ''}${runsOn ? ' run' : ''}`} key=${m.id}>
               ${m.author.type === 'user'
                 ? html`<${UserMessage} message=${m} mentions=${mentions} onPhoto=${setViewing} byId=${byId} />`
-                : html`<${AgentMessage} message=${m} agent=${byId[m.author.agentId]} showModel=${firstReplies.has(m.id)} mentions=${mentions} />
+                : html`<${AgentMessage} message=${m} agent=${byId[m.author.agentId]} showModel=${firstReplies.has(m.id)} mentions=${mentions} continued=${runsOn} />
                   ${(m.created ?? []).map((c) => byId[c.agentId]).filter(Boolean).map((hired) => html`<${NewMember} agent=${hired} onOpen=${() => onDialog({ type: 'agent', agent: hired })} />`)}
                   ${m.crew && html`<${CrewReady} made=${m.crew} crew=${m.crew.agentIds.map((id) => byId[id]).filter(Boolean)} onOpen=${() => onOpenRoom(m.crew.roomId)} />`}`}
               <div class="message-actions">
@@ -557,9 +597,10 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
                 ${canRetry(m) && html`<button onClick=${() => act(() => api.retry(room.id, m.id))}><${Icon} name="retry" />Ask again</button>`}
                 ${m.status !== 'streaming' && html`<button class="danger" onClick=${() => act(() => api.deleteMessage(room.id, m.id))}><${Icon} name="trash" />Delete</button>`}
               </div>
-            </div>`)}
+            </div>`;
+            })}
           </div>`}
-      ${!nearBottom && html`<div class="latest"><button class="pill" onClick=${() => { scroller.current.scrollTop = scroller.current.scrollHeight; }}><${Icon} name="up" size=${16} />Latest</button></div>`}
+      ${!nearBottom && html`<div class="latest"><button class="pill" onClick=${() => { scroller.current.scrollTop = scroller.current.scrollHeight; }}><${Icon} name="up" size=${16} />${replies > seenReplies ? `${replies - seenReplies} new` : 'Latest'}</button></div>`}
     </div>
     <div class="edge-blur top" aria-hidden="true"><i></i><i></i><i></i></div>
     <div class="edge-blur bottom" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -715,18 +756,36 @@ function suggestionsFor(agents, messages) {
   return out;
 }
 
-function AgentMessage({ message, agent, showModel, mentions }) {
+/** Whether a message carries on a run from the same agent: close in time, nothing else in between. */
+function continuesRun(before, m) {
+  return Boolean(before) && before.author.type === 'agent' && m.author.type === 'agent' && before.author.agentId
+    && before.author.agentId === m.author.agentId && !m.proactive && !before.crew && !(before.created ?? []).length
+    && m.createdAt - before.createdAt >= 0 && m.createdAt - before.createdAt <= 10 * 60_000;
+}
+const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
+/** "Today", "Yesterday", "Tue, Nov 18", or with the year once it's not this year. */
+function dayLabel(at) {
+  const now = Date.now();
+  if (sameDay(at, now)) return 'Today';
+  if (sameDay(at, now - 86_400_000)) return 'Yesterday';
+  const sameYear = new Date(at).getFullYear() === new Date(now).getFullYear();
+  return new Date(at).toLocaleDateString(undefined, sameYear ? { weekday: 'short', month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
+}
+const clock = (at) => new Date(at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }).replace('AM', 'am').replace('PM', 'pm');
+
+function AgentMessage({ message, agent, showModel, mentions, continued = false }) {
   const streaming = message.status === 'streaming';
   const text = streaming ? closeOpenMarkup(message.text) : message.text;
   const rendered = useMemo(() => markdown(text, mentions), [text]);
   return html`<div class="agent-message">
-    <${Disc} spec=${agent?.avatar} size=${34} thinking=${streaming && Boolean(message.text)} />
+    ${continued ? html`<span class="disc-space"></span>` : html`<${Disc} spec=${agent?.avatar} size=${34} thinking=${streaming && Boolean(message.text)} />`}
     <div class="body">
-      <div class="agent-head">
+      ${!continued && html`<div class="agent-head">
         <span class="name" style=${`color:${inkColor(agent?.avatar)}`}>${agent?.name ?? message.author.name}</span>
         ${message.proactive && html`<span class="reached"><${Icon} name="bell" size=${13} />${REACHED[message.proactive.kind] ?? 'Checking in'}</span>`}
         ${showModel && !message.proactive && message.author.model && html`<span class="model-tag" title=${message.author.model}>${modelTag(message.author.model)}</span>`}
-      </div>
+        ${message.createdAt > 0 && !streaming && html`<span class="caption faint">${clock(message.createdAt)}</span>`}
+      </div>`}
       <${Trail} activity=${message.activity} streaming=${streaming} />
       ${message.text && html`<div class="md" dangerouslySetInnerHTML=${{ __html: rendered }}></div>`}
       ${streaming && !message.text && (message.activity ?? []).every((a) => a.done) && html`<div class="thinking-dots" style=${`--wash:${tint(agent?.avatar)};--ink:${inkColor(agent?.avatar)}`} aria-label="Thinking"><i></i><i></i><i></i></div>`}
@@ -765,6 +824,16 @@ const Speech = window.SpeechRecognition ?? window.webkitSpeechRecognition;
 
 function Composer({ room, agents, running, notify, onSent, replyingTo = null, replyAgent = null, onCancelReply = () => {}, suggestions = [] }) {
   const [draft, setDraft] = useState('');
+  // "Message" in the members window starts a message to that agent.
+  useEffect(() => {
+    const mention = (e) => {
+      const handle = `@${e.detail.replace(/\s/g, '')} `;
+      setDraft((d) => (d.trim() ? `${d.trimEnd()} ${handle}` : handle));
+      setTimeout(() => box.current?.focus());
+    };
+    addEventListener('treehouse:mention', mention);
+    return () => removeEventListener('treehouse:mention', mention);
+  }, []);
   const [listening, setListening] = useState(false);
   const [focused, setFocused] = useState(false);
   const recognizer = useRef(null);

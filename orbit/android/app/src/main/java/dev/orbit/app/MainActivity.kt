@@ -312,6 +312,9 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onRemoveDraft = roomVm::detach,
                 initialDraft = shared?.text.orEmpty(),
                 onSchedules = { nav.navigate("schedules/$id") },
+                scheduleCount = state.schedules.count { it.roomId == id && it.enabled },
+                onSearchRoom = { nav.navigate("search?room=$id") },
+                onAddMember = { agentId -> vm.saveRoom(room.copy(agentIds = room.agentIds + agentId)) {} },
                 onStop = roomVm::stop,
                 onBack = { nav.popBackStack() },
                 onEdit = { nav.navigate("roomEdit?id=$id") },
@@ -411,7 +414,8 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onOpenAway = { nav.navigate("settings/away") },
             )
         }
-        screen("search") {
+        screen("search?room={room}", arguments = listOf(navArgument("room") { type = NavType.StringType; nullable = true })) { entry ->
+            val scope = state.room(entry.arguments?.getString("room"))
             var query by rememberSaveable { mutableStateOf("") }
             var results by remember { mutableStateOf<SearchResults?>(null) }
             var searching by remember { mutableStateOf(false) }
@@ -424,7 +428,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 }
                 delay(250)
                 searching = true
-                results = vm.search(query.trim())
+                results = vm.search(query.trim(), scope?.id)
                 searching = false
             }
             SearchScreen(
@@ -433,8 +437,9 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 results = results,
                 searching = searching,
                 agents = state.agents,
-                onOpenRoom = { nav.navigate("room/$it") },
+                onOpenRoom = { if (it == scope?.id) nav.popBackStack() else nav.navigate("room/$it") },
                 onBack = { nav.popBackStack() },
+                roomName = scope?.name,
             )
         }
         screen("settings/models") {

@@ -40,7 +40,14 @@ who wrote it. The mic button in the message box turns speech into text (the phon
 the browser's, in Edge or Chrome). While the box is empty, quick suggestions sit above it: "Summarize so far"
 and "What's next?" send right away, and an @mention of a member who hasn't spoken lately starts a message to
 them. The steps an agent took (searches, pages, files) fold into one small line under its name once it has
-answered; tapping it shows them all. Each agent's model shows as a small tag on its first reply. Agents can @mention each other to hand work over. The user can copy, retry or delete messages,
+answered; tapping it shows them all. Each agent's model shows as a small tag on its first reply.
+Chats are grouped: a run of messages from one agent shows its face and name once, with the time beside the
+name, and "Today", "Yesterday" or the date marks where each day starts. Scrolled back, the Latest button says
+how many new replies arrived.
+
+The room's ⋮ menu is a sheet: Edit room, Members, Schedules, Search this room, Clear chat and Delete room.
+Tapping the faces at the top of a room (or Members) shows who's in it, each one's model and what they're
+doing; Message starts a message to one of them, and Add puts someone else from the crew in the room. Agents can @mention each other to hand work over. The user can copy, retry or delete messages,
 reply to one, attach photos, PDFs and text files, stop a reply, and clear a room. Long rooms are summarized
 automatically so they stay affordable. Rooms can have scheduled messages (Schedules, in the room's menu): a
 message posted at a set time on chosen days, which the crew then answers.

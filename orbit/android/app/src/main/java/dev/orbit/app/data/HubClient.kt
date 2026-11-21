@@ -135,7 +135,8 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
     suspend fun usage(days: Int = 30): UsageSummary = call("GET", "/api/usage?days=$days")
 
     /** Rooms and messages with every word of [query], newest first. */
-    suspend fun search(query: String): SearchResults = call("GET", "/api/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}")
+    suspend fun search(query: String, roomId: String? = null): SearchResults =
+        call("GET", "/api/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}${roomId?.let { "&room=" + java.net.URLEncoder.encode(it, "UTF-8") }.orEmpty()}")
 
     suspend fun saveAgent(agent: Agent): Agent {
         val body = OrbitJson.encodeToString(agent)

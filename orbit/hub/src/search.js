@@ -22,7 +22,7 @@ export function snippet(text, word) {
   return `${start > 0 ? '…' : ''}${line.slice(start, end)}${end < line.length ? '…' : ''}`;
 }
 
-export function search(state, query) {
+export function search(state, query, { roomId = null } = {}) {
   const words = flat(query).toLowerCase().split(' ').filter(Boolean).slice(0, MAX_WORDS);
   if (!words.length) return { query: '', rooms: [], messages: [] };
   const has = (text) => {
@@ -30,9 +30,11 @@ export function search(state, query) {
     return words.every((w) => low.includes(w));
   };
   const agents = new Map(state.agents.map((a) => [a.id, a]));
-  const rooms = state.rooms.filter((r) => has(`${r.name} ${r.description ?? ''}`)).map((r) => ({ id: r.id, name: r.name, agentIds: r.agentIds }));
+  // Searching one room finds only its messages.
+  const inScope = roomId ? state.rooms.filter((r) => r.id === roomId) : state.rooms;
+  const rooms = roomId ? [] : inScope.filter((r) => has(`${r.name} ${r.description ?? ''}`)).map((r) => ({ id: r.id, name: r.name, agentIds: r.agentIds }));
   const messages = [];
-  for (const room of state.rooms) {
+  for (const room of inScope) {
     for (const m of state.messages[room.id] ?? []) {
       if (!m.text || !has(m.text)) continue;
       const user = m.author?.type === 'user';

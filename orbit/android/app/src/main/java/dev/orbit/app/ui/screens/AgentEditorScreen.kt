@@ -1,5 +1,9 @@
 package dev.orbit.app.ui.screens
 
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.foundation.text.BasicTextField
+import dev.orbit.app.ui.components.AvatarDisc
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -188,44 +192,54 @@ fun AgentEditorScreen(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(scroll).padding(bottom = 48.dp)) {
-            IdentityCard(avatar, initial?.id, name, role, model, onShuffle = { avatar = randomAvatar() })
-
-            Section("Look")
-            Gutter {
-                val chosen = avatar.character()
-                FieldLabel("Character · ${chosen.name}")
-                CharacterGrid(chosen.number) { pick(AvatarSpec(character = it)) }
+            var choosingLook by rememberSaveable { mutableStateOf(false) }
+            var choosingModel by rememberSaveable { mutableStateOf(initial == null && provider?.configured != true) }
+            Hero(
+                avatar, initial?.id, name, role,
+                choosingLook = choosingLook,
+                onChangeLook = { choosingLook = !choosingLook },
+                onShuffle = { avatar = randomAvatar() },
+            )
+            AnimatedVisibility(choosingLook, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                Gutter {
+                    Spacer(Modifier.height(18.dp))
+                    CharacterGrid(avatar.character().number) { pick(AvatarSpec(character = it)) }
+                }
             }
 
-            Section("Identity")
             Gutter {
-                FieldLabel("Name")
-                OrbitField(name, { name = it.take(40) }, "Nova", keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words))
-                Spacer(Modifier.height(20.dp))
-                FieldLabel("Role")
-                OrbitField(role, { role = it.take(80) }, "the planner")
+                Spacer(Modifier.height(22.dp))
+                OrbitCard(Modifier.fillMaxWidth()) {
+                    Column {
+                        InlineField("Name", name, { name = it.take(40) }, "Nova", KeyboardCapitalization.Words)
+                        Hairline(Modifier.padding(start = OrbitDimens.rowPad))
+                        InlineField("Role", role, { role = it.take(80) }, "the planner", KeyboardCapitalization.None)
+                    }
+                }
             }
 
-            Section("Model")
+            Group("Model")
             Gutter {
-                FieldLabel("Provider")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (option in providers) {
-                        Pill(
-                            label = option.label,
-                            selected = option.id == providerId,
-                            dimmed = !option.configured,
-                            onClick = {
-                                if (option.id != providerId) {
-                                    providerId = option.id
-                                    model = option.models.firstOrNull().orEmpty()
-                                }
-                            },
-                        )
+                // The model at a glance; tapping it opens the choices.
+                OrbitCard(Modifier.fillMaxWidth(), onClick = { choosingModel = !choosingModel }) {
+                    Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).padding(start = OrbitDimens.rowPad, end = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        OrbitIcon(OrbitIcon.Spark, size = 20.dp, tint = c.text)
+                        Column(Modifier.weight(1f).padding(start = 14.dp, top = 10.dp, bottom = 10.dp)) {
+                            Text(if (model.isBlank()) "Choose a model" else modelTag(model), style = OrbitType.titleS, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                listOfNotNull(provider?.label, model.trim().takeIf { it.isNotEmpty() && modelTag(it) != it }).joinToString(" · ").ifEmpty { "Pick a provider" },
+                                Modifier.padding(top = 2.dp),
+                                style = OrbitType.bodyS,
+                                color = c.textSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        OrbitIcon(OrbitIcon.Chevron, Modifier.graphicsLayer { rotationZ = if (choosingModel) 90f else 0f }, size = 18.dp, tint = c.textTertiary)
                     }
                 }
                 AnimatedVisibility(provider != null && !provider.configured, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-                    Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(top = 12.dp, start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             "${provider?.label} needs an API key before this agent can reply.",
                             Modifier.weight(1f).padding(end = 12.dp),
@@ -235,31 +249,53 @@ fun AgentEditorScreen(
                         if (provider?.takesKey == true) Pill("Add key", onClick = { onAddKey(provider.id) })
                     }
                 }
-                Spacer(Modifier.height(20.dp))
-                FieldLabel("Model id")
-                OrbitField(model, { model = it.take(120) }, "Model id", textStyle = OrbitType.monoL)
             }
-            val suggestions = remember(models, model) {
-                models.filter { it != model && it.contains(model.trim(), ignoreCase = true) }.ifEmpty { models.filter { it != model } }.take(24)
-            }
-            AnimatedVisibility(suggestions.isNotEmpty(), enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-                LazyRow(
-                    Modifier.padding(top = 10.dp),
-                    contentPadding = PaddingValues(horizontal = OrbitDimens.gutter),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(suggestions, key = { it }) { id -> Pill(id, onClick = { model = id }, Modifier.animateItem(), textStyle = OrbitType.mono) }
+            AnimatedVisibility(choosingModel, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                Column {
+                    Gutter {
+                        FieldLabel("Provider", Modifier.padding(top = 18.dp))
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            for (option in providers) {
+                                Pill(
+                                    label = option.label,
+                                    selected = option.id == providerId,
+                                    dimmed = !option.configured,
+                                    onClick = {
+                                        if (option.id != providerId) {
+                                            providerId = option.id
+                                            model = option.models.firstOrNull().orEmpty()
+                                        }
+                                    },
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(18.dp))
+                        FieldLabel("Model id")
+                        OrbitField(model, { model = it.take(120) }, "Model id", textStyle = OrbitType.monoL)
+                    }
+                    val suggestions = remember(models, model) {
+                        models.filter { it != model && it.contains(model.trim(), ignoreCase = true) }.ifEmpty { models.filter { it != model } }.take(24)
+                    }
+                    AnimatedVisibility(suggestions.isNotEmpty(), enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                        LazyRow(
+                            Modifier.padding(top = 10.dp),
+                            contentPadding = PaddingValues(horizontal = OrbitDimens.gutter),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            items(suggestions, key = { it }) { id -> Pill(id, onClick = { model = id }, Modifier.animateItem(), textStyle = OrbitType.mono) }
+                        }
+                    }
                 }
             }
 
-            Section("Abilities")
+            Group("Abilities")
             Gutter {
-                // Abilities stay saved on any provider, and come back on when the agent is on Claude again.
+                // Abilities stay saved on any provider, and come back on when the agent is on a real model again.
                 val supported = provider?.abilities == true
                 AnimatedVisibility(provider != null && !supported, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
                     Text(
                         "Demo agents can't use abilities. Switch this agent to a real model to use them.",
-                        Modifier.padding(bottom = 12.dp),
+                        Modifier.padding(start = 4.dp, bottom = 12.dp),
                         style = OrbitType.bodyS,
                         color = c.textSecondary,
                     )
@@ -269,57 +305,37 @@ fun AgentEditorScreen(
                         // Other models search through the hub, with a quick Claude search when there's an Anthropic key.
                         val claudeReady = providers.any { it.runsCode && it.configured }
                         AbilityRow(
-                            OrbitIcon.Globe,
+                            OrbitIcon.Search,
                             "Search the web",
-                            if (provider?.runsCode == true || claudeReady) "Look things up and read pages, with sources." else "Reads pages. Searching needs an Anthropic key on the hub.",
+                            if (provider?.runsCode == true || claudeReady) "Look things up and read pages, with sources" else "Reads pages. Searching needs an Anthropic key",
                             web,
                             supported,
                         ) { web = it }
-                        Hairline()
+                        AbilityDivider()
                         AbilityRow(
                             OrbitIcon.Code,
                             "Run code",
-                            if (provider?.runsCode == false && supported) "Claude models only: it runs in Anthropic's private sandbox." else "Calculate and work through data in a private sandbox.",
+                            if (provider?.runsCode == false && supported) "Claude models only" else "Calculate and work with data",
                             code,
                             supported && provider?.runsCode == true,
                         ) { code = it }
-                        Hairline()
+                        AbilityDivider()
                         AbilityRow(
                             OrbitIcon.Folder,
                             "Read your files",
-                            if (folders.isEmpty()) {
-                                "Read only. Share folders from the Treehouse page on your PC first."
-                            } else {
-                                "Read only, from ${folders.joinToString(", ") { it.name }}."
-                            },
+                            if (folders.isEmpty()) "Share folders on your PC first" else "Read only: ${folders.joinToString(", ") { it.name }}",
                             files,
                             supported,
                         ) { files = it }
-                        Hairline()
-                        AbilityRow(
-                            OrbitIcon.Memory,
-                            "Remember things",
-                            "Keeps notes when you ask it to remember something, for every room.",
-                            remembers,
-                            supported,
-                        ) { remembers = it }
-                        Hairline()
-                        AbilityRow(
-                            OrbitIcon.Hire,
-                            "Build your crew",
-                            "Hires new agents when you ask: writes their instructions, asks which model to use, picks a free look.",
-                            hires,
-                            supported,
-                        ) { hires = it }
-                        Hairline()
+                        AbilityDivider()
+                        AbilityRow(OrbitIcon.Memory, "Remember things", "Notes about you the crew shares", remembers, supported) { remembers = it }
+                        AbilityDivider()
+                        AbilityRow(OrbitIcon.Hire, "Build your crew", "Hire agents when you ask", hires, supported) { hires = it }
+                        AbilityDivider()
                         AbilityRow(
                             OrbitIcon.Mail,
                             "Use your Google account",
-                            if (google.connected) {
-                                "Gmail, Calendar and Drive for ${google.email.ifBlank { "your account" }}. Reads mail and saves drafts, never sends."
-                            } else {
-                                "Gmail, Calendar and Drive. Connect Google in Treehouse on your PC first, under Settings."
-                            },
+                            if (google.connected) "Gmail drafts, Calendar, Drive · never sends" else "Connect Google on your PC first",
                             usesGoogle,
                             supported,
                         ) { usesGoogle = it }
@@ -327,20 +343,19 @@ fun AgentEditorScreen(
                 }
             }
 
-            Section("Reaches out")
+            Group("Reaches out")
             Gutter {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for ((level, label) in listOf(Agent.PROACTIVE_OFF to "Off", Agent.PROACTIVE_GENTLE to "Gentle", Agent.PROACTIVE_ACTIVE to "Active")) {
-                        Pill(label, onClick = {
-                            if (proactive != level) haptics.tick()
-                            proactive = level
-                        }, selected = proactive == level)
-                    }
+                Segmented(
+                    listOf(Agent.PROACTIVE_OFF to "Off", Agent.PROACTIVE_GENTLE to "Gentle", Agent.PROACTIVE_ACTIVE to "Active"),
+                    proactive,
+                ) {
+                    if (proactive != it) haptics.tick()
+                    proactive = it
                 }
                 Text(
                     when (proactive) {
                         Agent.PROACTIVE_GENTLE ->
-                            "About once a day, ${name.ifBlank { "this agent" }} looks over your chats and writes to you only when something is worth it: a deadline coming up, a plan for today."
+                            "About once a day, ${name.ifBlank { "this agent" }} looks over your chats and writes to you only when something is worth it."
                         Agent.PROACTIVE_ACTIVE ->
                             "A few times a day, ${name.ifBlank { "this agent" }} looks over your chats, and your calendar and email if it can, and writes when something needs you."
                         else -> "${name.ifBlank { "This agent" }} only replies when you write."
@@ -349,19 +364,19 @@ fun AgentEditorScreen(
                     } else {
                         ""
                     },
-                    Modifier.padding(top = 12.dp),
+                    Modifier.padding(top = 10.dp, start = 4.dp, end = 4.dp),
                     style = OrbitType.bodyS,
-                    color = c.textSecondary,
+                    color = c.textTertiary,
                 )
             }
 
             // Notes belong to a saved agent, so a new one starts without them.
             if (initial != null) {
-                Section("Memory")
+                Group("Memory")
                 Gutter { MemoryNotes(initial.name, initial.memory, onAddMemory, onRemoveMemory) }
             }
 
-            Section("Instructions")
+            Group("Instructions")
             Gutter {
                 OrbitField(
                     instructions, { instructions = it }, "How should this agent think, behave, and help the crew?",
@@ -370,7 +385,7 @@ fun AgentEditorScreen(
                 )
                 if (onDelete != null) {
                     // Kept well away from Save, at the very end of the form.
-                    Spacer(Modifier.height(40.dp))
+                    Spacer(Modifier.height(32.dp))
                     DangerRow("Delete agent", onDelete)
                 }
             }
@@ -461,22 +476,28 @@ private fun AbilityRow(icon: OrbitIcon, title: String, detail: String, checked: 
                 haptics.tick()
                 onChange(it)
             }
-            .heightIn(min = 68.dp)
+            .heightIn(min = 60.dp)
             .padding(start = OrbitDimens.rowPad, end = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         OrbitIcon(icon, size = 20.dp, tint = if (enabled) c.text else c.textTertiary)
         Column(Modifier.weight(1f).padding(start = 14.dp, end = 12.dp, top = 12.dp, bottom = 12.dp)) {
             Text(title, style = OrbitType.titleS, color = if (enabled) c.text else c.textTertiary)
-            Text(detail, Modifier.padding(top = 2.dp), style = OrbitType.bodyS, color = c.textSecondary)
+            Text(detail, Modifier.padding(top = 1.dp), style = OrbitType.caption, color = c.textTertiary)
         }
         OrbitSwitch(checked, enabled = enabled)
     }
 }
 
+/** A small heading over a card, as in Settings. */
 @Composable
-private fun Section(title: String) {
-    SectionTitle(title, Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = OrbitDimens.section + 4.dp, bottom = 8.dp))
+private fun Group(title: String) {
+    Text(
+        title.uppercase(),
+        Modifier.padding(start = OrbitDimens.gutter + 4.dp, end = OrbitDimens.gutter, top = OrbitDimens.section, bottom = 10.dp),
+        style = OrbitType.overline,
+        color = Orbit.colors.textTertiary,
+    )
 }
 
 @Composable
@@ -484,86 +505,120 @@ private fun Gutter(content: @Composable () -> Unit) {
     Column(Modifier.padding(horizontal = OrbitDimens.gutter)) { content() }
 }
 
+/** Abilities are parted by hairlines inset past their icons. */
+@Composable
+private fun AbilityDivider() = Hairline(Modifier.padding(start = OrbitDimens.rowPad + 34.dp))
+
+/** A labelled field inside a grouped card: the label on the left, what's typed on the right. */
+@Composable
+private fun InlineField(label: String, value: String, onChange: (String) -> Unit, placeholder: String, capitalization: KeyboardCapitalization) {
+    val c = Orbit.colors
+    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(horizontal = OrbitDimens.rowPad), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, Modifier.width(64.dp), style = OrbitType.bodyS, color = c.textTertiary)
+        BasicTextField(
+            value = value,
+            onValueChange = onChange,
+            modifier = Modifier.weight(1f).padding(vertical = 14.dp).semantics { contentDescription = label },
+            singleLine = true,
+            textStyle = OrbitType.body.copy(color = c.text),
+            cursorBrush = SolidColor(c.text),
+            keyboardOptions = KeyboardOptions(capitalization = capitalization),
+            decorationBox = { inner ->
+                if (value.isEmpty()) Text(placeholder, style = OrbitType.body, color = c.textTertiary)
+                inner()
+            },
+        )
+    }
+}
+
+/** A choice of a few, as one track with the chosen one raised. */
+@Composable
+private fun Segmented(options: List<Pair<String, String>>, selected: String, onSelect: (String) -> Unit) {
+    val c = Orbit.colors
+    Row(
+        Modifier.fillMaxWidth().selectableGroup().clip(CircleShape).background(c.surfaceHigh).padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        for ((value, label) in options) {
+            val on = value == selected
+            val fill by animateColorAsState(if (on) c.surfaceRaised else Color.Transparent, OrbitMotion.snappy(), label = "segment")
+            Box(
+                Modifier
+                    .weight(1f)
+                    .height(40.dp)
+                    .semantics {
+                        this.selected = on
+                        role = Role.RadioButton
+                    }
+                    .tap(CircleShape, 0.96f) { onSelect(value) }
+                    .background(fill, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(label, style = if (on) OrbitType.titleS else OrbitType.bodyM, color = if (on) c.text else c.textSecondary)
+            }
+        }
+    }
+}
+
 /**
- * The agent as others will see it, updating live as it's edited: a new character pops in and the
- * wash takes its color. Shuffle rolls the dice and the character hops.
+ * The agent as others will see it, updating live as it's edited: the character large in its color's
+ * circle, which pops when the look changes. Change look opens the characters; the dice rolls one.
  */
 @Composable
-private fun IdentityCard(avatar: AvatarSpec, agentId: String?, name: String, role: String, model: String, onShuffle: () -> Unit) {
+private fun Hero(
+    avatar: AvatarSpec,
+    agentId: String?,
+    name: String,
+    role: String,
+    choosingLook: Boolean,
+    onChangeLook: () -> Unit,
+    onShuffle: () -> Unit,
+) {
     val c = Orbit.colors
     val haptics = rememberHaptics()
     val scope = rememberCoroutineScope()
-    val shape = RoundedCornerShape(OrbitDimens.radiusXL)
-    val wash by animateColorAsState(avatar.tint().copy(alpha = if (c.isDark) 0.22f else 0.26f), OrbitMotion.gentle(), label = "wash")
     val dice = remember { Animatable(0f) }
     val hop = remember { Animatable(1f) }
-    Box(
-        Modifier
-            .padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 4.dp)
-            .fillMaxWidth()
-            .lift(shape)
-            .clip(shape)
-            .background(c.surface)
-            .background(Brush.verticalGradient(listOf(wash, Color.Transparent)))
-            .border(surfaceBorder(), shape),
-    ) {
-        Column(Modifier.fillMaxWidth().padding(top = 32.dp, bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            AgentAvatar(
-                avatar,
-                Modifier
-                    .then(if (agentId != null) Modifier.shared(SharedKeys.agentAvatar(agentId)) else Modifier)
-                    .graphicsLayer {
-                        scaleX = hop.value
-                        scaleY = 2f - hop.value
-                    },
-                size = 104.dp,
-                alive = true,
-            )
-            Text(
-                name.ifBlank { "New agent" },
-                Modifier.padding(top = 18.dp, start = 24.dp, end = 24.dp),
-                style = OrbitType.titleL,
-                color = if (name.isBlank()) c.textTertiary else c.text,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (role.isNotBlank()) {
-                Text(
-                    role.trim(),
-                    Modifier.padding(top = 2.dp, start = 24.dp, end = 24.dp),
-                    style = OrbitType.bodyM,
-                    color = c.textSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            if (model.isNotBlank()) {
-                Text(
-                    model.trim(),
-                    Modifier.padding(top = 10.dp, start = 24.dp, end = 24.dp),
-                    style = OrbitType.mono,
-                    color = c.textTertiary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-        IconPill(
-            OrbitIcon.Dice,
-            "Shuffle avatar",
-            onClick = {
-                haptics.tick()
-                onShuffle()
-                scope.launch { dice.animateTo(dice.value + 360f, OrbitMotion.bouncy()) }
-                scope.launch {
-                    // A squash and stretch: it settles wide and low, then springs back.
-                    hop.animateTo(1.12f, tween(80, easing = OrbitMotion.Decelerate))
-                    hop.animateTo(1f, OrbitMotion.bouncy())
-                }
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        AvatarDisc(
+            avatar,
+            Modifier.graphicsLayer {
+                scaleX = hop.value
+                scaleY = 2f - hop.value
             },
-            modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
-            iconModifier = Modifier.graphicsLayer { rotationZ = dice.value },
+            size = 112.dp,
+            alive = true,
+            avatarModifier = if (agentId != null) Modifier.shared(SharedKeys.agentAvatar(agentId)) else Modifier,
         )
+        Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Pill(if (choosingLook) "Done" else "Change look", onChangeLook, selected = choosingLook)
+            IconPill(
+                OrbitIcon.Dice,
+                "Shuffle look",
+                onClick = {
+                    haptics.tick()
+                    onShuffle()
+                    scope.launch { dice.animateTo(dice.value + 360f, OrbitMotion.bouncy()) }
+                    scope.launch {
+                        // A squash and stretch: it settles wide and low, then springs back.
+                        hop.animateTo(1.12f, tween(80, easing = OrbitMotion.Decelerate))
+                        hop.animateTo(1f, OrbitMotion.bouncy())
+                    }
+                },
+                iconModifier = Modifier.graphicsLayer { rotationZ = dice.value },
+            )
+        }
+        Text(
+            name.ifBlank { "New agent" },
+            Modifier.padding(top = 14.dp, start = 24.dp, end = 24.dp),
+            style = OrbitType.titleL,
+            color = if (name.isBlank()) c.textTertiary else c.text,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (role.isNotBlank()) {
+            Text(role.trim(), Modifier.padding(top = 2.dp, start = 24.dp, end = 24.dp), style = OrbitType.bodyM, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 
