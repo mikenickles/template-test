@@ -38,6 +38,8 @@ data class OrbitColors(
     val surfaceHigh: Color,
     /** Frosted surfaces that float over the crew's wash: headers and room cards. */
     val glass: Color,
+    /** The lit edge of glass. */
+    val glassEdge: Color,
     /** Default 1dp edge on surfaces. */
     val hairline: Color,
     /** A stronger edge: focus rings, unselected controls. */
@@ -62,6 +64,7 @@ private val DarkColors = OrbitColors(
     surfaceRaised = Color(0xFF1F1D1A),
     surfaceHigh = Color(0xFF2B2824),
     glass = Color(0xB81F1D1A),
+    glassEdge = Color(0x17FFF3E2),
     hairline = Color(0x14FFF3E2),
     line = Color(0x33FFF3E2),
     text = Color(0xFFF7F3EE),
@@ -82,6 +85,7 @@ private val LightColors = OrbitColors(
     surfaceRaised = Color(0xFFFFFFFF),
     surfaceHigh = Color(0xFFE9E3DA),
     glass = Color(0xB8FFFFFF),
+    glassEdge = Color(0xC0FFFFFF),
     hairline = Color(0x1A2A1C0C),
     line = Color(0x3D2A1C0C),
     text = Color(0xFF17130F),

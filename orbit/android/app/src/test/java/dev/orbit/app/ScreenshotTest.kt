@@ -153,6 +153,12 @@ class ScreenshotTest {
     @Test fun pair() = shot("pair") { PairScreen(PairState(found = listOf(FoundHub("Home PC", "192.168.1.20:8787"))), {}, { _, _ -> }) }
     @Test fun pairLight() = shot("pair-light", dark = false) { PairScreen(PairState(error = "That code didn't match. Check the one shown on your PC."), {}, { _, _ -> }) }
     @Test fun home() = shot("home") { Home() }
+    @Test fun homeCardsLight() = shot("home-cards-light", dark = false) {
+        HomeScreen(SampleData.app.copy(rooms = SampleData.app.rooms + SampleData.introRoom.copy(id = "r8", name = "Morning brief", intro = false, agentIds = listOf("a1"), updatedAt = now - 3_600_000)), {}, {}, {}, {}, {}, {}, now = now, roomsAsCards = true)
+    }
+    @Test fun homeCards() = shot("home-cards") {
+        HomeScreen(SampleData.app.copy(rooms = SampleData.app.rooms + SampleData.introRoom.copy(id = "r8", name = "Morning brief", intro = false, agentIds = listOf("a1"), updatedAt = now - 3_600_000)), {}, {}, {}, {}, {}, {}, now = now, roomsAsCards = true)
+    }
     @Test fun homeLight() = shot("home-light", dark = false) { Home() }
     /** What the crew brought up on its own, on Home. */
     @Test fun homeNudges() = shot("home-nudges") { Home(SampleData.proactive) }

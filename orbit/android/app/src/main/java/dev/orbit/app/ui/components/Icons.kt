@@ -21,7 +21,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /** Orbit's own icon set: one stroke weight, round caps and joins, to sit with the typeface. */
-enum class OrbitIcon { Back, Up, Down, Plus, Check, More, Dice, Chevron, Search, Globe, Code, Folder, File, Copy, Retry, Trash, Photo, Close, Memory, Clock, Hire, Reply, Mail, Calendar, Bell, Edit, Person, Spark, Chart, Mic }
+enum class OrbitIcon { Back, Up, Down, Plus, Check, More, Dice, Chevron, Search, Globe, Code, Folder, File, Copy, Retry, Trash, Photo, Close, Memory, Clock, Hire, Reply, Mail, Calendar, Bell, Edit, Person, Spark, Chart, Mic, List, Grid }
 
 @Composable
 fun OrbitIcon(
@@ -141,6 +141,19 @@ fun OrbitIcon(
                     close()
                 }
                 drawPath(spark, tint, style = stroke)
+            }
+            OrbitIcon.List -> {
+                // Three rows, each with a dot in front.
+                for (y in listOf(0.28f, 0.5f, 0.72f)) {
+                    polyline(listOf(at(0.38f, y), at(0.8f, y)))
+                    drawCircle(tint, s * 0.045f, at(0.21f, y))
+                }
+            }
+            OrbitIcon.Grid -> {
+                // A wide tile over two small ones, like the room cards.
+                drawRoundRect(tint, at(0.18f, 0.18f), Size(s * 0.64f, s * 0.28f), CornerRadius(s * 0.09f), style = stroke)
+                drawRoundRect(tint, at(0.18f, 0.56f), Size(s * 0.27f, s * 0.26f), CornerRadius(s * 0.09f), style = stroke)
+                drawRoundRect(tint, at(0.55f, 0.56f), Size(s * 0.27f, s * 0.26f), CornerRadius(s * 0.09f), style = stroke)
             }
             OrbitIcon.Chart -> {
                 polyline(listOf(at(0.27f, 0.8f), at(0.27f, 0.56f)))

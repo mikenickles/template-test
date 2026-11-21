@@ -79,8 +79,12 @@ Home shows a greeting and who is replying right now, then notes from the crew as
 rooms. At the bottom of Home on the phone, and at the top of the room list on the PC, **Search rooms and
 messages** finds any room by name or description, and any message with all the words typed, newest first.
 Home and each room glow softly in the crew's own colors (each agent's color from a corner, so a room looks like
-the agents in it); the header is a frosted bar with the hub's name and status, and each room on Home is its own
-card.
+the agents in it); the header is a frosted bar with the hub's name and status. Cards are frosted glass in their
+agents' colors, with a soft colored shadow, and the characters stand on them: the crew on Home stands on its card,
+heads over the top, and agents appear as themselves beside their messages.
+Rooms on Home show as a list or as cards: the switch beside Rooms (beside Recent rooms on the PC) chooses, and
+each phone or browser remembers it. As cards, the most recent room is a wide card with its crew big, and the rest
+are tiles with the crew peeking over the top, the last message and when it was.
 Every page on the phone has the same frosted bar at the top. Swiping back slides the page away to the right with
 the finger, and the page behind is already there underneath; letting go halfway finishes it, and swiping back
 the other way calls it off. An agent's edit page glows in its own color, and a room's Tokens page in the crew's.

@@ -1,5 +1,14 @@
 package dev.orbit.app.ui.screens
 
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.offset
+import dev.orbit.app.ui.components.crewGlass
 import dev.orbit.app.ui.components.CrewWash
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -109,9 +118,13 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val RoomTile = 48.dp
+private val RoomTile = 52.dp
 private val CrewItem = 80.dp
-private val CrewAvatar = 64.dp
+private val CrewAvatar = 68.dp
+
+/** How far the crew stands over the top of its card, and how round cards are. */
+private val CrewOverhang = 36.dp
+private val CardRadius = 28.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -139,6 +152,9 @@ fun HomeScreen(
     onEditRoom: (Room) -> Unit = {},
     onDeleteRoom: (Room) -> Unit = {},
     onSearch: () -> Unit = {},
+    /** Rooms as cards in a grid rather than a list, and switching between the two. */
+    roomsAsCards: Boolean = false,
+    onRoomsAsCards: (Boolean) -> Unit = {},
 ) {
     val c = Orbit.colors
     val haptics = rememberHaptics()
@@ -236,20 +252,19 @@ fun HomeScreen(
                     }
                 }
                 if (state.agents.isNotEmpty()) item(key = "crew") {
-                    // The crew sits on a frosted card; it scrolls sideways inside it when there are many.
-                    val glass = RoundedCornerShape(OrbitDimens.radiusL)
-                    LazyRow(
-                        Modifier
-                            .entrance(entrances, "crew", 1)
-                            .padding(horizontal = GlassInset)
-                            .fillMaxWidth()
-                            .clip(glass)
-                            .background(c.glass)
-                            .border(1.dp, c.hairline, glass),
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 14.dp),
-                    ) {
-                        val speaking = state.rooms.filter { it.active }.mapNotNull { it.speaking }.toSet()
-                        items(state.agents, key = { it.id }) { agent -> CrewMember(agent, agent.id in speaking) { onEditAgent(agent) } }
+                    // The crew stands on a frosted card in their colors, heads over its top edge. It scrolls sideways
+                    // inside when there are many.
+                    Box(Modifier.entrance(entrances, "crew", 1).padding(horizontal = GlassInset).fillMaxWidth()) {
+                        Box(
+                            Modifier
+                                .matchParentSize()
+                                .padding(top = CrewOverhang)
+                                .crewGlass(state.agents.take(2).map { it.avatar.tint() }, RoundedCornerShape(CardRadius)),
+                        )
+                        LazyRow(Modifier.fillMaxWidth(), contentPadding = PaddingValues(start = 4.dp, end = 4.dp, bottom = 8.dp)) {
+                            val speaking = state.rooms.filter { it.active }.mapNotNull { it.speaking }.toSet()
+                            items(state.agents, key = { it.id }) { agent -> CrewMember(agent, agent.id in speaking) { onEditAgent(agent) } }
+                        }
                     }
                 }
 
@@ -259,30 +274,34 @@ fun HomeScreen(
                         Modifier.padding(horizontal = OrbitDimens.gutter).padding(top = OrbitDimens.section, bottom = 2.dp)
                             .entrance(entrances, "rooms-title", 2),
                         count = state.rooms.size,
-                    )
+                    ) {
+                        if (state.rooms.size > 1) ViewSwitch(roomsAsCards, onRoomsAsCards)
+                    }
                 }
                 if (state.rooms.isEmpty() && !showIntro) {
                     item(key = "rooms-empty") {
                         EmptyRooms(state.agents, Modifier.entrance(entrances, "rooms-empty", 3), onNewRoom = onNewRoom, onNewAgent = onNewAgent)
                     }
                 }
-                // Each room is its own frosted card, floating over the crew's wash.
+                // Each room is its own frosted card in its crew's colors: in a list, or as a grid of cards.
                 if (state.rooms.isNotEmpty()) item(key = "rooms") {
-                    Column(
-                        Modifier.fillMaxWidth().padding(horizontal = GlassInset).padding(top = 8.dp).animateItem().entrance(entrances, "rooms", 3),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        state.rooms.forEach { room ->
-                            OrbitCard(Modifier.fillMaxWidth(), color = c.glass, radius = 22.dp) {
-                                RoomRow(
-                                    room,
-                                    room.agentIds.mapNotNull(state::agent),
-                                    now,
-                                    onLongClick = {
-                                        haptics.tick()
-                                        acting = room
-                                    },
-                                ) { onOpenRoom(room) }
+                    val hold = { room: Room ->
+                        haptics.tick()
+                        acting = room
+                    }
+                    AnimatedContent(
+                        roomsAsCards && state.rooms.size > 1,
+                        Modifier.fillMaxWidth().padding(horizontal = GlassInset).padding(top = 14.dp).animateItem().entrance(entrances, "rooms", 3),
+                        transitionSpec = { fadeIn(tween(220, delayMillis = 90)) togetherWith fadeOut(tween(90)) },
+                        label = "rooms",
+                    ) { cards ->
+                        if (cards) {
+                            RoomGrid(state.rooms, state::agent, now, onLongClick = hold, onOpen = onOpenRoom)
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                state.rooms.forEach { room ->
+                                    RoomRow(room, room.agentIds.mapNotNull(state::agent), now, onLongClick = { hold(room) }) { onOpenRoom(room) }
+                                }
                             }
                         }
                     }
@@ -633,24 +652,24 @@ private fun AddKeyNotice(onAddKey: () -> Unit, modifier: Modifier) {
     }
 }
 
-/** One of the crew: the character in its color's circle, ringed while it's speaking, with its name and role. */
+/** One of the crew, standing on the crew card: the character itself, with its name and role. */
 @Composable
 private fun CrewMember(agent: Agent, speaking: Boolean, onClick: () -> Unit) {
     val c = Orbit.colors
     Column(
-        Modifier.width(CrewItem).tap(RoundedCornerShape(OrbitDimens.radiusM), 0.94f, onClick).padding(vertical = 8.dp),
+        Modifier.width(CrewItem).tap(RoundedCornerShape(OrbitDimens.radiusM), 0.94f, onClick).padding(bottom = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        AvatarDisc(
+        AgentAvatar(
             agent.avatar,
+            Modifier.shared(SharedKeys.agentAvatar(agent.id)),
             size = CrewAvatar,
-            ring = speaking,
+            thinking = speaking,
             alive = true,
-            avatarModifier = Modifier.shared(SharedKeys.agentAvatar(agent.id)),
         )
         Text(
             agent.name,
-            Modifier.padding(top = 8.dp, start = 4.dp, end = 4.dp),
+            Modifier.padding(top = 2.dp, start = 4.dp, end = 4.dp),
             style = OrbitType.label,
             color = c.text,
             maxLines = 1,
@@ -670,48 +689,195 @@ private fun CrewMember(agent: Agent, speaking: Boolean, onClick: () -> Unit) {
     }
 }
 
+/** List or cards, beside Rooms. */
+@Composable
+private fun ViewSwitch(cards: Boolean, onChange: (Boolean) -> Unit) {
+    val c = Orbit.colors
+    Row(Modifier.clip(CircleShape).background(c.surfaceHigh.copy(alpha = 0.7f)).padding(3.dp)) {
+        for ((icon, value, label) in listOf(Triple(OrbitIcon.List, false, "Show rooms as a list"), Triple(OrbitIcon.Grid, true, "Show rooms as cards"))) {
+            val on = cards == value
+            Box(
+                Modifier
+                    .size(width = 38.dp, height = 32.dp)
+                    .clip(CircleShape)
+                    .background(if (on) c.surface else Color.Transparent)
+                    .selectable(on, role = Role.RadioButton) { onChange(value) }
+                    .semantics { contentDescription = label },
+                contentAlignment = Alignment.Center,
+            ) {
+                OrbitIcon(icon, size = 16.dp, tint = if (on) c.text else c.textTertiary)
+            }
+        }
+    }
+}
+
+/** The room's crew standing on its tile: the first one taller, its head over the top edge. */
+@Composable
+private fun RoomStickers(room: Room, agents: List<Agent>, size: Dp, modifier: Modifier = Modifier) {
+    val c = Orbit.colors
+    Box(modifier.size(size).clip(RoundedCornerShape(size * 0.34f)).background(agents.firstOrNull()?.avatar?.wash() ?: c.surfaceRaised))
+    // (x, y, size) as fractions of the tile; y below zero stands over the top edge.
+    val layout = when (agents.size.coerceAtMost(3)) {
+        0 -> emptyList()
+        1 -> listOf(Triple(0.04f, -0.24f, 0.94f))
+        2 -> listOf(Triple(-0.02f, -0.2f, 0.68f), Triple(0.38f, 0.34f, 0.62f))
+        else -> listOf(Triple(-0.02f, -0.2f, 0.66f), Triple(0.02f, 0.44f, 0.52f), Triple(0.44f, 0.36f, 0.56f))
+    }
+    Box(modifier.size(size)) {
+        layout.forEachIndexed { i, (x, y, d) ->
+            AgentAvatar(
+                agents[i].avatar,
+                Modifier.offset(size * x, size * y).shared(SharedKeys.roomMember(room.id, agents[i].id)),
+                size = size * d,
+            )
+        }
+    }
+}
+
+/** What a room has to say for itself: who's replying, else its last message. */
+@Composable
+private fun RoomLine(room: Room, agents: List<Agent>, modifier: Modifier = Modifier, lines: Int = 1) {
+    val c = Orbit.colors
+    val speaker = agents.firstOrNull { it.id == room.speaking }
+    val preview = room.preview
+    if (room.active) {
+        ShimmerText(if (speaker != null) "${speaker.name} is replying…" else "Working…", OrbitType.bodyS, speaker?.avatar?.textColor() ?: c.textTertiary, modifier)
+    } else {
+        Text(
+            if (preview == null) "No messages yet" else "${preview.author}: ${preview.text}",
+            modifier,
+            style = OrbitType.bodyS,
+            color = if (preview == null) c.textTertiary else c.textSecondary,
+            maxLines = lines,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** A room in the list: a frosted card in its crew's colors, with the crew standing on its tile. */
 @Composable
 private fun RoomRow(room: Room, agents: List<Agent>, now: Long, onLongClick: () -> Unit = {}, onClick: () -> Unit) {
     val c = Orbit.colors
+    val shape = RoundedCornerShape(24.dp)
     val speaker = agents.firstOrNull { it.id == room.speaking }
-    Row(
-        Modifier.fillMaxWidth().tap(RectangleShape, 0.985f, onLongClick = onLongClick, onClick = onClick).padding(horizontal = OrbitDimens.rowPad, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CrewTile(
-            agents.map { it.avatar },
-            size = RoomTile,
-            // The tile takes a wash of its first member's color.
-            color = agents.firstOrNull()?.avatar?.wash() ?: c.surfaceRaised,
-            itemModifier = { index -> Modifier.shared(SharedKeys.roomMember(room.id, agents[index].id)) },
-        )
-        Column(Modifier.weight(1f).padding(start = 14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(room.name, Modifier.weight(1f), style = OrbitType.titleS, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                // One quiet signal that a room is working: the speaker's dot and a line in their color.
-                if (room.active) {
-                    StatusDot(speaker?.avatar?.textColor() ?: c.textSecondary, Modifier.padding(start = 10.dp), size = 7.dp)
-                } else {
-                    Text(relativeTime(room.updatedAt, now), Modifier.padding(start = 10.dp), style = OrbitType.caption, color = c.textTertiary)
+    Box(Modifier.fillMaxWidth().height(78.dp)) {
+        Row(
+            Modifier
+                .matchParentSize()
+                .crewGlass(agents.take(2).map { it.avatar.tint() }, shape)
+                .tap(shape, 0.985f, onLongClick = onLongClick, onClick = onClick)
+                .padding(start = 12.dp + RoomTile + 14.dp, end = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(room.name, Modifier.weight(1f), style = OrbitType.titleS, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (room.active) {
+                        StatusDot(speaker?.avatar?.textColor() ?: c.textSecondary, Modifier.padding(start = 10.dp), size = 7.dp)
+                    } else {
+                        Text(relativeTime(room.updatedAt, now), Modifier.padding(start = 10.dp), style = OrbitType.caption, color = c.textTertiary)
+                    }
                 }
+                RoomLine(room, agents, Modifier.padding(top = 2.dp))
             }
-            val preview = room.preview
-            when {
-                room.active -> ShimmerText(
-                    if (speaker != null) "${speaker.name} is replying…" else "Working…",
-                    OrbitType.bodyS,
-                    speaker?.avatar?.textColor() ?: c.textTertiary,
-                    Modifier.padding(top = 2.dp),
-                )
-                else -> Text(
-                    if (preview == null) "No messages yet" else "${preview.author}: ${preview.text}",
-                    Modifier.padding(top = 2.dp),
-                    style = OrbitType.bodyS,
-                    color = if (preview == null) c.textTertiary else c.textSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+        }
+        RoomStickers(room, agents, RoomTile, Modifier.align(Alignment.CenterStart).padding(start = 12.dp))
+    }
+}
+
+/**
+ * Rooms as cards: the first (busiest, or most recent) a wide card with its crew big, the rest in pairs, each
+ * with its crew peeking over the top.
+ */
+@Composable
+private fun RoomGrid(rooms: List<Room>, agentOf: (String) -> Agent?, now: Long, onLongClick: (Room) -> Unit, onOpen: (Room) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        val first = rooms.first()
+        WideRoomCard(first, first.agentIds.mapNotNull(agentOf), now, { onLongClick(first) }) { onOpen(first) }
+        rooms.drop(1).chunked(2).forEach { pair ->
+            Row(Modifier.padding(top = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                pair.forEach { room ->
+                    RoomCard(room, room.agentIds.mapNotNull(agentOf), now, Modifier.weight(1f), { onLongClick(room) }) { onOpen(room) }
+                }
+                if (pair.size == 1) Spacer(Modifier.weight(1f))
             }
+        }
+    }
+}
+
+@Composable
+private fun WideRoomCard(room: Room, agents: List<Agent>, now: Long, onLongClick: () -> Unit, onClick: () -> Unit) {
+    val c = Orbit.colors
+    val shape = RoundedCornerShape(CardRadius)
+    val lead = agents.firstOrNull { it.id == room.leadId } ?: agents.firstOrNull()
+    Box(Modifier.fillMaxWidth().padding(top = 20.dp).height(132.dp)) {
+        Column(
+            Modifier
+                .matchParentSize()
+                .crewGlass(agents.take(2).map { it.avatar.tint() }, shape)
+                .tap(shape, 0.985f, onLongClick = onLongClick, onClick = onClick)
+                .padding(16.dp),
+        ) {
+            Text(room.name, Modifier.fillMaxWidth(0.55f), style = OrbitType.titleM, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(
+                when {
+                    agents.size <= 1 -> "Just you and ${lead?.name ?: "your agent"}"
+                    room.mode == Room.MODE_LEAD && lead != null -> "Led by ${lead.name} · ${agents.size} agents"
+                    else -> "${agents.size} agents"
+                },
+                Modifier.padding(top = 2.dp),
+                style = OrbitType.bodyS,
+                color = c.textSecondary,
+            )
+            Spacer(Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RoomLine(room, agents, Modifier.fillMaxWidth(0.55f))
+                if (!room.active) Text(relativeTime(room.updatedAt, now), Modifier.padding(start = 8.dp), style = OrbitType.caption, color = c.textTertiary)
+            }
+        }
+        // The crew big on the right, the last one standing over the top edge.
+        val shown = agents.take(3)
+        shown.forEachIndexed { i, agent ->
+            val last = i == shown.lastIndex
+            AgentAvatar(
+                agent.avatar,
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 10.dp + 50.dp * (shown.lastIndex - i), bottom = if (last) 58.dp else if (i % 2 == 1) 18.dp else 8.dp)
+                    .shared(SharedKeys.roomMember(room.id, agent.id)),
+                size = if (last) 84.dp else 68.dp,
+                thinking = room.active && room.speaking == agent.id,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RoomCard(room: Room, agents: List<Agent>, now: Long, modifier: Modifier, onLongClick: () -> Unit, onClick: () -> Unit) {
+    val c = Orbit.colors
+    val shape = RoundedCornerShape(CardRadius)
+    Box(modifier.height(158.dp)) {
+        Column(
+            Modifier
+                .matchParentSize()
+                .crewGlass(agents.take(2).map { it.avatar.tint() }, shape)
+                .tap(shape, 0.97f, onLongClick = onLongClick, onClick = onClick)
+                .padding(start = 14.dp, end = 14.dp, top = 42.dp, bottom = 14.dp),
+        ) {
+            Text(room.name, style = OrbitType.titleS, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            RoomLine(room, agents, Modifier.padding(top = 4.dp), lines = 3)
+        }
+        if (!room.active) {
+            Text(relativeTime(room.updatedAt, now), Modifier.align(Alignment.TopEnd).padding(top = 14.dp, end = 14.dp), style = OrbitType.caption, color = c.textTertiary)
+        }
+        // The crew peeks over the top edge.
+        agents.take(3).forEachIndexed { i, agent ->
+            AgentAvatar(
+                agent.avatar,
+                Modifier.offset(x = 8.dp + 34.dp * i, y = (-22).dp + 6.dp * (i % 2)).shared(SharedKeys.roomMember(room.id, agent.id)),
+                size = if (i == 0) 56.dp else 48.dp,
+                thinking = room.active && room.speaking == agent.id,
+            )
         }
     }
 }

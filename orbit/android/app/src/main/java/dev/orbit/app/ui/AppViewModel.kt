@@ -118,6 +118,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _pair = MutableStateFlow(PairState())
     val pairState: StateFlow<PairState> = _pair.asStateFlow()
 
+    /** Whether Home shows rooms as cards (a bento grid) rather than a list. Kept on this phone. */
+    private val ui = app.getSharedPreferences("orbit-ui", android.content.Context.MODE_PRIVATE)
+    private val _roomsAsCards = MutableStateFlow(ui.getBoolean(ROOMS_AS_CARDS, false))
+    val roomsAsCards: StateFlow<Boolean> = _roomsAsCards.asStateFlow()
+
+    fun showRoomsAsCards(cards: Boolean) {
+        _roomsAsCards.value = cards
+        ui.edit().putBoolean(ROOMS_AS_CARDS, cards).apply()
+    }
+
     private val _notices = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val notices = _notices.asSharedFlow()
 
@@ -603,3 +613,5 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Model ids the hub can see for a provider; empty if it can't be reached. */
     suspend fun models(providerId: String): List<String> = hub(quiet = true) { it.models(providerId) }.orEmpty()
 }
+
+private const val ROOMS_AS_CARDS = "rooms-as-cards"

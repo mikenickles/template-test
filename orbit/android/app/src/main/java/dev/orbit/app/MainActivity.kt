@@ -244,8 +244,11 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                     vm.refresh()
                 }
             }
+            val roomsAsCards by vm.roomsAsCards.collectAsStateWithLifecycle()
             HomeScreen(
                 state = state,
+                roomsAsCards = roomsAsCards,
+                onRoomsAsCards = vm::showRoomsAsCards,
                 onOpenRoom = { nav.navigate("room/${it.id}") },
                 onNewRoom = { nav.navigate("roomEdit") },
                 onNewAgent = { nav.navigate("agent") },

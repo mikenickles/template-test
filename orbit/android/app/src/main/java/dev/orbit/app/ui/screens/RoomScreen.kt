@@ -1,5 +1,7 @@
 package dev.orbit.app.ui.screens
 
+import androidx.compose.foundation.layout.offset
+import dev.orbit.app.ui.components.crewGlass
 import dev.orbit.app.ui.components.OrbitSheet
 import dev.orbit.app.ui.components.Hairline
 import androidx.compose.ui.semantics.heading
@@ -689,14 +691,14 @@ private fun RoomBar(
     val speaker = agents.firstOrNull { it.id == state.run.agentId }
     Column(Modifier.fillMaxWidth().statusBarsPadding()) {
         // A frosted pill floating over the conversation, which fades and blurs as it passes under.
-        val pill = RoundedCornerShape(22.dp)
+        val pill = RoundedCornerShape(24.dp)
         Row(
             Modifier
-                .padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 4.dp)
+                .padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 8.dp)
                 .fillMaxWidth()
+                // Glass in the room's colors.
+                .crewGlass(agents.take(2).map { it.avatar.tint() }, pill, lift = 10.dp)
                 .clip(pill)
-                .background(c.glass)
-                .border(1.dp, c.hairline, pill)
                 .height(60.dp)
                 .padding(horizontal = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -735,15 +737,17 @@ private fun RoomBar(
             }
             // Who's here, large enough to recognise. They fly in from the room's tile on the home screen.
             Row(
-                Modifier.tap(CircleShape, 0.94f, onMembers).semantics { contentDescription = "Who's in this room" }.padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy((-10).dp),
+                Modifier.tap(RoundedCornerShape(16.dp), 0.94f, onMembers).semantics { contentDescription = "Who's in this room" }.padding(horizontal = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy((-12).dp),
+                verticalAlignment = Alignment.Bottom,
             ) {
+                // The crew stands in the bar, the one replying a little taller.
                 agents.take(3).forEach { agent ->
-                    AvatarDisc(
+                    AgentAvatar(
                         agent.avatar,
-                        Modifier.border(2.dp, c.bg, CircleShape),
-                        size = 32.dp,
-                        avatarModifier = Modifier.shared(SharedKeys.roomMember(room.id, agent.id)),
+                        Modifier.shared(SharedKeys.roomMember(room.id, agent.id)),
+                        size = if (agent.id == state.run.agentId) 46.dp else 40.dp,
+                        thinking = agent.id == state.run.agentId,
                     )
                 }
             }
@@ -932,7 +936,8 @@ private fun AgentMessage(
     val tail by animateFloatAsState(if (catchingUp) FADE_TAIL.toFloat() else 0f, tween(500), label = "tail")
     Row(Modifier.fillMaxWidth()) {
         // A run from one agent shows its face and name once, at the top.
-        if (continued) Spacer(Modifier.width(34.dp)) else AvatarDisc(avatar, Modifier.padding(top = 1.dp), size = 34.dp, thinking = streaming && shown > 0)
+        // The agent itself beside its words, not in a circle: the same character that stands on its cards.
+        if (continued) Spacer(Modifier.width(38.dp)) else AgentAvatar(avatar, Modifier.offset(y = (-5).dp), size = 38.dp, thinking = streaming && shown > 0)
         // New lines glide in rather than jump, and screen readers hear replies as they land.
         Column(
             Modifier

@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -68,6 +70,23 @@ fun ToolCard(
     live: Boolean = true,
     onCancel: (Card) -> Unit = {},
     onDecide: (Card, Boolean) -> Unit = { _, _ -> },
+) {
+    // Every card wears the color of the agent who made it.
+    CompositionLocalProvider(LocalCardTint provides avatar.tint()) { ToolCardBody(card, avatar, agentName, now, modifier, live, onCancel, onDecide) }
+}
+
+private val LocalCardTint = compositionLocalOf<Color?> { null }
+
+@Composable
+private fun ToolCardBody(
+    card: Card,
+    avatar: AvatarSpec,
+    agentName: String,
+    now: Long,
+    modifier: Modifier,
+    live: Boolean,
+    onCancel: (Card) -> Unit,
+    onDecide: (Card, Boolean) -> Unit,
 ) {
     when (card.type) {
         Card.APPROVAL -> ApprovalCard(card, avatar, agentName, modifier) { allow -> onDecide(card, allow) }
@@ -408,7 +427,8 @@ private fun ApprovalCard(card: Card, avatar: AvatarSpec, agentName: String, modi
 
 @Composable
 private fun CardFrame(modifier: Modifier, footer: (@Composable androidx.compose.foundation.layout.RowScope.() -> Unit)? = null, content: @Composable () -> Unit) {
-    OrbitCard(modifier.fillMaxWidth(), radius = 20.dp) {
+    val shape = RoundedCornerShape(24.dp)
+    Box(modifier.fillMaxWidth().crewGlass(listOfNotNull(LocalCardTint.current), shape, lift = 12.dp).clip(shape)) {
         Column {
             content()
             if (footer != null) {

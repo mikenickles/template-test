@@ -463,8 +463,8 @@ function Welcome({ state, onDialog, onIntro, onOpen, onDismiss }) {
     ${state.nudges?.length > 0 && html`<${NudgeCard} nudges=${[...state.nudges].reverse().slice(0, 5)} state=${state} onOpen=${onOpen} onDismiss=${onDismiss} />`}
     ${state.agents.length > 0 && html`<div class="stage-title"><span class="overline">Your crew</span>
       <button class="label muted" onClick=${() => onDialog({ type: 'room' })}>New room</button></div>
-    <div class="stage">${state.agents.map((agent) => html`<button class="stage-member" title=${`Edit ${agent.name}`} onClick=${() => onDialog({ type: 'agent', agent })}>
-      <${Disc} spec=${agent.avatar} size=${72} ring=${speaking.has(agent.id)} />
+    <div class="stage crew-glass" style=${glassOf(state.agents)}>${state.agents.map((agent) => html`<button class="stage-member" title=${`Edit ${agent.name}`} onClick=${() => onDialog({ type: 'agent', agent })}>
+      <${Avatar} spec=${agent.avatar} size=${76} thinking=${speaking.has(agent.id)} />
       <span class="title-s">${agent.name}</span>${speaking.has(agent.id)
         ? html`<span class="caption" style=${`color:${inkColor(agent.avatar)}`}>replying</span>`
         : agent.role && html`<span class="caption faint">${agent.role}</span>`}
@@ -477,21 +477,67 @@ function Welcome({ state, onDialog, onIntro, onOpen, onDismiss }) {
       <p class="muted">Put agents in a room, give them a task, and they'll work it out together.</p>
       <button class="button" onClick=${() => onDialog({ type: 'room' })}>New room</button>
     </div>`}
-    ${state.rooms.length > 0 && html`<div class="stage-title"><span class="overline">Recent rooms</span></div>
-    <div class="card room-list">${[...state.rooms].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5).map((room) => {
-      const crew = room.agentIds.map((id) => state.agents.find((a) => a.id === id)).filter(Boolean);
-      const talking = state.agents.find((a) => a.id === room.speaking);
-      return html`<button class="room-line" onClick=${() => onOpen(room.id)}>
-        <${CrewTile} specs=${crew.map((a) => a.avatar)} size=${44} tint=${crew[0] ? tint(crew[0].avatar) : null} />
-        <div class="text"><div class="top"><span class="title-s">${room.name}</span>${room.active
-          ? html`<span class="dot" style=${`background:${talking ? inkColor(talking.avatar) : 'var(--text-2)'}`}></span>`
-          : html`<span class="caption faint">${ago(room.updatedAt)}</span>`}</div>
-          ${room.active
-            ? html`<div class="body-s shimmer" style=${talking ? `color:${inkColor(talking.avatar)}` : ''}>${talking ? `${talking.name} is replying…` : 'Working…'}</div>`
-            : html`<div class="body-s muted preview">${room.preview ? `${room.preview.author}: ${room.preview.text}` : 'No messages yet'}</div>`}</div>
-      </button>`;
-    })}</div>`}
+    ${state.rooms.length > 0 && html`<${RecentRooms} state=${state} onOpen=${onOpen} />`}
   </div>`;
+}
+
+/** Glass in a crew's colors: the first two agents' tints, for .crew-glass. */
+const glassOf = (agents) => {
+  const tints = agents.slice(0, 2).map((a) => tint(a.avatar));
+  return tints.length ? `--t1:${tints[0]};--t2:${tints[1] ?? tints[0]}` : '';
+};
+
+/** Rooms on Home, as a list or as cards; the choice is kept in this browser. */
+function RecentRooms({ state, onOpen }) {
+  const [cards, setCards] = useState(() => {
+    try {
+      return localStorage.getItem('treehouse:rooms-view') === 'cards';
+    } catch {
+      return false;
+    }
+  });
+  const choose = (value) => {
+    setCards(value);
+    try {
+      localStorage.setItem('treehouse:rooms-view', value ? 'cards' : 'list');
+    } catch {
+      // Private window: it just won't be remembered.
+    }
+  };
+  const rooms = [...state.rooms].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, cards ? 7 : 5);
+  const crewOf = (room) => room.agentIds.map((id) => state.agents.find((a) => a.id === id)).filter(Boolean);
+  const line = (room, crew) => {
+    const talking = crew.find((a) => a.id === room.speaking);
+    return room.active
+      ? html`<div class="body-s shimmer" style=${talking ? `color:${inkColor(talking.avatar)}` : ''}>${talking ? `${talking.name} is replying…` : 'Working…'}</div>`
+      : html`<div class="body-s muted preview">${room.preview ? `${room.preview.author}: ${room.preview.text}` : 'No messages yet'}</div>`;
+  };
+  return html`<div class="stage-title"><span class="overline">Recent rooms</span>
+      ${state.rooms.length > 1 && html`<div class="view-switch" role="radiogroup" aria-label="Show rooms as">
+        <button role="radio" aria-checked=${!cards} aria-label="List" class=${cards ? '' : 'on'} onClick=${() => choose(false)}><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 7h11M9 12h11M9 17h11M4.5 7h.01M4.5 12h.01M4.5 17h.01" /></svg></button>
+        <button role="radio" aria-checked=${cards} aria-label="Cards" class=${cards ? 'on' : ''} onClick=${() => choose(true)}><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="2.5" /><rect x="4" y="14" width="7" height="6" rx="2.5" /><rect x="14" y="14" width="6" height="6" rx="2.5" /></svg></button>
+      </div>`}</div>
+    ${cards
+      ? html`<div class="room-cards">${rooms.map((room, i) => {
+        const crew = crewOf(room);
+        return html`<button class=${`room-card crew-glass${i === 0 ? ' wide' : ''}`} style=${glassOf(crew)} onClick=${() => onOpen(room.id)}>
+          <span class="room-card-crew">${crew.slice(0, 3).map((a) => html`<${Avatar} spec=${a.avatar} size=${i === 0 ? 76 : 54} thinking=${room.active && room.speaking === a.id} />`)}</span>
+          ${!room.active && html`<span class="caption faint when">${ago(room.updatedAt)}</span>`}
+          <span class="title-s">${room.name}</span>
+          ${i === 0 && html`<span class="body-s muted">${crew.length <= 1 ? `Just you and ${crew[0]?.name ?? 'your agent'}` : `${crew.length} agents`}</span>`}
+          ${line(room, crew)}
+        </button>`;
+      })}</div>`
+      : html`<div class="room-rows">${rooms.map((room) => {
+        const crew = crewOf(room);
+        const talking = crew.find((a) => a.id === room.speaking);
+        return html`<button class="room-line crew-glass" style=${glassOf(crew)} onClick=${() => onOpen(room.id)}>
+          <span class="room-stickers" style=${crew[0] ? `--wash:${tint(crew[0].avatar)}` : ''}>${crew.slice(0, 3).map((a) => html`<${Avatar} spec=${a.avatar} size=${crew.length === 1 ? 50 : 32} />`)}</span>
+          <div class="text"><div class="top"><span class="title-s">${room.name}</span>${room.active
+            ? html`<span class="dot" style=${`background:${talking ? inkColor(talking.avatar) : 'var(--text-2)'}`}></span>`
+            : html`<span class="caption faint">${ago(room.updatedAt)}</span>`}</div>${line(room, crew)}</div>
+        </button>`;
+      })}</div>`}`;
 }
 
 /** What agents wrote on their own, as one card to step through: Open goes to the room, Dismiss takes it off Home. */
@@ -641,7 +687,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
 
   return html`
     ${washes.length > 0 && html`<div class="crew-wash" aria-hidden="true" style=${crewWash(washes)}></div>`}
-    <header class="room-bar">
+    <header class="room-bar crew-glass" style=${glassOf(agents)}>
       <button class="icon-button narrow-only" onClick=${onBack} aria-label="Back to rooms"><${Icon} name="back" /></button>
       <div class="titles">
         <div class="title-m">${room.name}</div>
@@ -655,7 +701,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
               : room.mode === 'lead' && lead ? `Led by ${lead.name}` : `Round table · ${agents.map((a) => a.name).join(', ')}`}
         </div>
       </div>
-      <button class="avatar-stack" title="Who's in this room" aria-label="Who's in this room" onClick=${() => onDialog({ type: 'members', room })}>${agents.slice(0, 4).map((a) => html`<${Disc} spec=${a.avatar} size=${32} ring=${run.active && run.agentId === a.id} />`)}</button>
+      <button class="avatar-stack standing" title="Who's in this room" aria-label="Who's in this room" onClick=${() => onDialog({ type: 'members', room })}>${agents.slice(0, 4).map((a) => html`<${Avatar} spec=${a.avatar} size=${run.active && run.agentId === a.id ? 46 : 40} thinking=${run.active && run.agentId === a.id} />`)}</button>
       ${contextTokens != null && html`<button class="token-chip" title="About how many tokens each reply sends" aria-label=${`About ${formatTokens(contextTokens)} tokens per reply`} onClick=${() => onDialog({ type: 'tokens', room })}>${formatTokens(contextTokens)}</button>`}
       <button class="icon-button" aria-label="Room options" aria-expanded=${menu} onClick=${() => setMenu(!menu)}><${Icon} name="more" /></button>
       ${menu && html`<div class="menu" onMouseLeave=${() => setMenu(false)}>
@@ -891,7 +937,7 @@ function AgentMessage({ message, agent, showModel, mentions, continued = false, 
     return parts.map((p, i) => (p.text ? { html: markdown(streaming && i === last ? closeOpenMarkup(p.text) : p.text, mentions) } : p));
   }, [message.text, message.cards, streaming]);
   return html`<div class="agent-message">
-    ${continued ? html`<span class="disc-space"></span>` : html`<${Disc} spec=${agent?.avatar} size=${34} thinking=${streaming && Boolean(message.text)} />`}
+    ${continued ? html`<span class="disc-space"></span>` : html`<span class="speaker"><${Avatar} spec=${agent?.avatar} size=${38} thinking=${streaming && Boolean(message.text)} /></span>`}
     <div class="body">
       ${!continued && html`<div class="agent-head">
         <span class="name" style=${`color:${inkColor(agent?.avatar)}`}>${agent?.name ?? message.author.name}</span>
