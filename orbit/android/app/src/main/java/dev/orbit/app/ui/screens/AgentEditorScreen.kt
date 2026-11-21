@@ -1,5 +1,6 @@
 package dev.orbit.app.ui.screens
 
+import dev.orbit.app.ui.components.Segmented
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.foundation.text.BasicTextField
@@ -528,35 +529,6 @@ private fun InlineField(label: String, value: String, onChange: (String) -> Unit
                 inner()
             },
         )
-    }
-}
-
-/** A choice of a few, as one track with the chosen one raised. */
-@Composable
-private fun Segmented(options: List<Pair<String, String>>, selected: String, onSelect: (String) -> Unit) {
-    val c = Orbit.colors
-    Row(
-        Modifier.fillMaxWidth().selectableGroup().clip(CircleShape).background(c.surfaceHigh).padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        for ((value, label) in options) {
-            val on = value == selected
-            val fill by animateColorAsState(if (on) c.surfaceRaised else Color.Transparent, OrbitMotion.snappy(), label = "segment")
-            Box(
-                Modifier
-                    .weight(1f)
-                    .height(40.dp)
-                    .semantics {
-                        this.selected = on
-                        role = Role.RadioButton
-                    }
-                    .tap(CircleShape, 0.96f) { onSelect(value) }
-                    .background(fill, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(label, style = if (on) OrbitType.titleS else OrbitType.bodyM, color = if (on) c.text else c.textSecondary)
-            }
-        }
     }
 }
 

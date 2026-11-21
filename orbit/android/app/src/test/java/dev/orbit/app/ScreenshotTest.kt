@@ -59,6 +59,11 @@ import dev.orbit.app.ui.screens.ShareScreen
 import dev.orbit.app.ui.screens.ScheduleEditorScreen
 import dev.orbit.app.ui.screens.SchedulesScreen
 import dev.orbit.app.ui.screens.UsageScreen
+import dev.orbit.app.ui.screens.RoomTokensScreen
+import dev.orbit.app.data.RoomContext
+import dev.orbit.app.data.ContextTokens
+import dev.orbit.app.data.ContextMessages
+import dev.orbit.app.data.ContextUsage
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitDimens
 import dev.orbit.app.ui.theme.OrbitTheme
@@ -380,6 +385,11 @@ class ScreenshotTest {
     @Test fun scheduledMessage() = shot("room-scheduled") { RoomScreen(launch, listOf(nova, pixel, sage), SampleData.briefing, {}, {}, {}, {}, {}) }
     @Test fun formatting() = shot("room-formatting") { RoomScreen(trip.copy(agentIds = listOf("a1")), listOf(nova), SampleData.rich, {}, {}, {}, {}, {}) }
     @Test fun formattingLight() = shot("room-formatting-light", dark = false) { RoomScreen(trip.copy(agentIds = listOf("a1")), listOf(nova), SampleData.rich, {}, {}, {}, {}, {}) }
+    @Test fun roomTokens() = shot("room-tokens") { RoomTokensScreen("Launch", tokens, {}, {}, {}, false, null, {}) }
+    @Test fun roomTokensSmallLight() = shot("room-tokens-small-light", dark = false) {
+        RoomTokensScreen("Launch", tokens.copy(size = RoomContext.SIZE_SMALL, photos = false), {}, {}, {}, false, "Summarizing needs an agent in this room on a model with a key.", {})
+    }
+    @Test fun roomTokenChip() = shot("room-token-chip") { RoomScreen(launch, listOf(nova, pixel, sage), chat.copy(run = RunState()), {}, {}, {}, {}, {}, contextTokens = 12_400) }
     @Test fun usage() = shot("usage") { UsageScreen(SampleData.usage, agents, 30, {}, {}) }
     @Test fun usageLight() = shot("usage-light", dark = false) { UsageScreen(SampleData.usage, agents, 30, {}, {}) }
     @Test fun roomResearch() = shot("room-research") { RoomScreen(trip.copy(agentIds = listOf("a1")), listOf(nova), SampleData.research, {}, {}, {}, {}, {}) }
@@ -419,4 +429,11 @@ class TallScreenshotTest {
     @Test fun awayNotSetUp() = shot("settings-away-light", dark = false) {
         AwayScreen(SampleData.app.copy(hub = SampleData.app.hub.copy(remote = emptyList())), "http://192.168.1.20:8787", {})
     }
+
 }
+
+private val tokens = RoomContext(
+    tokens = ContextTokens(instructions = 2_150, summary = 640, recent = 8_900, photos = 1_500, total = 13_190),
+    messages = ContextMessages(recent = 24, summarized = 61, leftOut = 0, total = 85),
+    usage = ContextUsage(input = 182_000, output = 41_300, cacheRead = 512_000, cacheWrite = 64_000, requests = 57, cost = 1.84, priced = true),
+)

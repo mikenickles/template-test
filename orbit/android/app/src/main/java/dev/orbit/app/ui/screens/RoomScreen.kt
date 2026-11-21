@@ -214,6 +214,10 @@ fun RoomScreen(
     onSearchRoom: () -> Unit = {},
     /** Puts one of the crew in this room. */
     onAddMember: (agentId: String) -> Unit = {},
+    /** About how many tokens the next reply sends, for the header chip; null until known. */
+    contextTokens: Int? = null,
+    /** Opens the room's Tokens page. */
+    onTokens: () -> Unit = {},
 ) {
     val c = Orbit.colors
     var draft by rememberSaveable { mutableStateOf(initialDraft) }
@@ -274,7 +278,7 @@ fun RoomScreen(
         }
         Scaffold(
             containerColor = Color.Transparent,
-            topBar = { RoomBar(room, agents, state, onBack, onMenu = { showingMenu = true }, onMembers = { showingMembers = true }) },
+            topBar = { RoomBar(room, agents, state, onBack, onMenu = { showingMenu = true }, onMembers = { showingMembers = true }, contextTokens = contextTokens, onTokens = onTokens) },
             bottomBar = {
                 Composer(
                     draft = draft,
@@ -434,6 +438,7 @@ fun RoomScreen(
                     SheetAction("Members", OrbitIcon.Person, hint = if (agents.size == 1) "1 agent" else "${agents.size} agents") { showingMembers = true },
                     SheetAction("Schedules", OrbitIcon.Clock, hint = if (scheduleCount == 0) "" else "$scheduleCount on", onClick = onSchedules),
                     SheetAction("Search this room", OrbitIcon.Search, onClick = onSearchRoom),
+                    SheetAction("Tokens", OrbitIcon.Chart, hint = contextTokens?.let { "${formatTokens(it.toLong())} per reply" } ?: "", onClick = onTokens),
                     SheetAction("Clear chat", OrbitIcon.Retry, onClick = onClear),
                     SheetAction("Delete room", OrbitIcon.Trash, danger = true) { confirmingDelete = true },
                 ),
@@ -668,6 +673,8 @@ private fun RoomBar(
     onBack: () -> Unit,
     onMenu: () -> Unit,
     onMembers: () -> Unit,
+    contextTokens: Int? = null,
+    onTokens: () -> Unit = {},
 ) {
     val c = Orbit.colors
     val speaker = agents.firstOrNull { it.id == state.run.agentId }
@@ -721,6 +728,20 @@ private fun RoomBar(
             }
             if (agents.size > 3) {
                 Text("+${agents.size - 3}", Modifier.padding(start = 6.dp), style = OrbitType.mono, color = c.textSecondary)
+            }
+            // About how many tokens the next reply sends; opens the Tokens page.
+            contextTokens?.let { tokens ->
+                Text(
+                    formatTokens(tokens.toLong()),
+                    Modifier
+                        .padding(start = 8.dp)
+                        .tap(CircleShape, 0.94f, onTokens)
+                        .semantics { contentDescription = "About ${formatTokens(tokens.toLong())} tokens per reply" }
+                        .background(c.surfaceHigh, CircleShape)
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                    style = OrbitType.mono,
+                    color = c.textSecondary,
+                )
             }
             IconTap(OrbitIcon.More, "Room options", onMenu, tint = c.textSecondary)
         }

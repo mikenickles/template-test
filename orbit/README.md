@@ -65,6 +65,9 @@ hub on an always-on PC.
   `"prices"` in `config.json`.
 - **Long rooms** stay affordable: past about 15,000 words, the oldest part of a
   room is folded into a running summary that agents read instead.
+- **Token counts.** Each room shows about how many tokens a reply sends; its Tokens page breaks that down,
+  shows the last 30 days, and lets you pick a smaller or larger context, stop resending older photos, or
+  summarize now.
 - **Proactive agents.** Set an agent to reach out (Gentle or Active) and it writes to you on its own when
   something is worth it: a deadline coming up, a plan for today. Agents also follow up when they said they
   would, keep an eye on things on the web (a price, a page, news), and one can write a morning brief. It all

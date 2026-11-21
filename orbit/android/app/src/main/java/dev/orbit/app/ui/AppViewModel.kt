@@ -20,6 +20,7 @@ import dev.orbit.app.data.isNewerVersion
 import dev.orbit.app.update.ApkInstaller
 import dev.orbit.app.data.Provider
 import dev.orbit.app.data.Room
+import dev.orbit.app.data.RoomContext
 import dev.orbit.app.data.SearchResults
 import dev.orbit.app.data.Schedule
 import dev.orbit.app.notify.NoticeWorker
@@ -224,6 +225,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Spend and tokens for the period last asked for; null until loaded. */
     val usage: StateFlow<UsageSummary?> = _usage.asStateFlow()
+
+    /** What a room's next reply sends; null if the hub couldn't be asked. */
+    suspend fun roomContext(roomId: String): RoomContext? = hub(quiet = true) { it.roomContext(roomId) }
+
+    fun setRoomContext(roomId: String, size: String, photos: Boolean, onDone: (RoomContext?) -> Unit) {
+        viewModelScope.launch { onDone(hub { it.setRoomContext(roomId, size, photos) }) }
+    }
+
+    /** Summarizes a room now. [onDone] gets the new report, or the reason it couldn't. */
+    fun compactRoom(roomId: String, onDone: (context: RoomContext?, error: String?) -> Unit) {
+        viewModelScope.launch {
+            val client = repo.client ?: return@launch onDone(null, "This phone isn't paired with a hub.")
+            try {
+                onDone(client.compactRoom(roomId), null)
+            } catch (e: HubException) {
+                onDone(null, e.message ?: "The room couldn't be summarized.")
+            }
+        }
+    }
 
     /** Searches every room; null if the hub couldn't be asked. */
     suspend fun search(query: String, roomId: String? = null): SearchResults? = hub(quiet = true) { it.search(query, roomId) }

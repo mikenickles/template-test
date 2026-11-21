@@ -134,6 +134,15 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
     /** Tokens and estimated spend over the last [days] days, overall and per agent and room. */
     suspend fun usage(days: Int = 30): UsageSummary = call("GET", "/api/usage?days=$days")
 
+    /** What a room's next reply sends, and what the room used lately. */
+    suspend fun roomContext(roomId: String): RoomContext = call("GET", "/api/rooms/$roomId/context")
+
+    suspend fun setRoomContext(roomId: String, size: String, photos: Boolean): RoomContext =
+        call("PUT", "/api/rooms/$roomId/context", OrbitJson.encodeToString(ContextSettings(size, photos)))
+
+    /** Folds all but the newest few messages into the room's summary now. */
+    suspend fun compactRoom(roomId: String): RoomContext = call("POST", "/api/rooms/$roomId/compact")
+
     /** Rooms and messages with every word of [query], newest first. */
     suspend fun search(query: String, roomId: String? = null): SearchResults =
         call("GET", "/api/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}${roomId?.let { "&room=" + java.net.URLEncoder.encode(it, "UTF-8") }.orEmpty()}")

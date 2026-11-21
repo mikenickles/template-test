@@ -193,14 +193,19 @@ const MAX_TEXT_FILE = 60_000;
  * Turns attachment references into what models read: images and PDFs as base64, text files as text.
  * Only the newest few are sent in full; older ones, and any that are gone, become a note.
  */
-export function resolveAttachments(turns, files) {
+export function resolveAttachments(turns, files, { latestOnly = false } = {}) {
   let budget = MAX_ATTACHED;
+  // With photos off for a room, only the newest message that carries files sends them; earlier ones become a note.
+  let sawFiles = false;
   for (let t = turns.length - 1; t >= 0; t--) {
     const content = turns[t].content;
     if (typeof content === 'string') continue;
+    const hasFiles = content.some((part) => part.type === 'attachment');
+    const full = !latestOnly || !sawFiles;
     for (let i = content.length - 1; i >= 0; i--) {
-      if (content[i].type === 'attachment') content[i] = resolveOne(content[i], files, budget-- > 0);
+      if (content[i].type === 'attachment') content[i] = resolveOne(content[i], files, full && budget-- > 0);
     }
+    if (hasFiles) sawFiles = true;
   }
   return turns;
 }
@@ -240,6 +245,14 @@ export function withPrompt(turns, text) {
 
 /** How much recent history is sent word for word, in characters (about four to a token). */
 export const RECENT_CHARS = 60_000;
+/** A room's context size: how much of it each agent gets word for word, in characters. */
+export const CONTEXT_SIZES = { small: 20_000, medium: RECENT_CHARS, large: 160_000 };
+/** Rough tokens for a photo, and for text (about four characters to a token). */
+const PHOTO_TOKENS = 1_500;
+const tokensOf = (chars) => Math.ceil(chars / 4);
+const budgetOf = (room) => CONTEXT_SIZES[room.context?.size] ?? RECENT_CHARS;
+/** Messages kept word for word when a room is summarized on request. */
+const KEEP_AFTER_COMPACT = 6;
 /** How much further history may grow before its oldest part is folded into the room's summary. */
 export const FOLD_AFTER = 40_000;
 /** Claude model that writes summaries for agents on Anthropic: quick and inexpensive. */
@@ -463,8 +476,10 @@ export class Orchestrator {
     const all = this.store.messages(room.id);
     let recent = all.filter((m) => m.seq > (room.summary?.through ?? 0));
     let omitted = false;
-    if (sizeOf(recent) > RECENT_CHARS + FOLD_AFTER) {
-      const [fold, keep] = splitForBudget(recent, RECENT_CHARS);
+    const budget = budgetOf(room);
+    // Folding waits until history is well past what's sent, so it happens now and then, not every reply.
+    if (sizeOf(recent) > budget + Math.round((budget * FOLD_AFTER) / RECENT_CHARS)) {
+      const [fold, keep] = splitForBudget(recent, budget);
       const text = await this.#summarize(room, agent, fold, run.abort.signal);
       if (text) {
         room.summary = { text, through: fold.at(-1).seq, updatedAt: Date.now() };
@@ -475,7 +490,61 @@ export class Orchestrator {
       recent = keep;
     }
     const turns = buildTranscript(agent, recent, { summary: room.summary?.text ?? null, omitted: omitted || (!room.summary && recent.length < all.length) });
-    return resolveAttachments(turns, this.files);
+    return resolveAttachments(turns, this.files, { latestOnly: room.context?.photos === false });
+  }
+
+  /**
+   * About how many tokens the next reply in a room sends, by part (the agent's instructions, the summary,
+   * recent messages, photos), with how the room is set and how many messages each part covers.
+   */
+  contextReport(room) {
+    const agents = room.agentIds.map((id) => this.store.agent(id)).filter(Boolean);
+    const agent = agents.find((a) => a.id === room.leadId) ?? agents[0];
+    const all = this.store.messages(room.id);
+    const through = room.summary?.through ?? 0;
+    const pending = all.filter((m) => m.seq > through);
+    const [left, recent] = splitForBudget(pending, budgetOf(room));
+    const photosOn = room.context?.photos !== false;
+    const images = (m) => (m.attachments ?? []).filter((a) => kindOf(a.fileType) === 'image').length;
+    const latestWithFiles = recent.findLast((m) => m.attachments?.length);
+    const photos = photosOn ? Math.min(MAX_ATTACHED, recent.reduce((n, m) => n + images(m), 0)) : (latestWithFiles ? images(latestWithFiles) : 0);
+    let instructions = 0;
+    if (agent) {
+      const profile = this.store.state.profile;
+      const abilities = resolveAbilities(agent, this.providers, this.folders, () => {}, { profile, google: this.google });
+      instructions = tokensOf(buildSystemPrompt(agent, room, agents, abilities, profile).length);
+    }
+    const tokens = {
+      instructions,
+      summary: tokensOf(room.summary?.text?.length ?? 0),
+      recent: tokensOf(sizeOf(recent)),
+      photos: photos * PHOTO_TOKENS,
+    };
+    tokens.total = tokens.instructions + tokens.summary + tokens.recent + tokens.photos;
+    return {
+      size: CONTEXT_SIZES[room.context?.size] ? room.context.size : 'medium',
+      photos: photosOn,
+      tokens,
+      messages: { recent: recent.length, summarized: all.length - pending.length, leftOut: left.length, total: all.length },
+      summaryUpdatedAt: room.summary?.updatedAt ?? null,
+    };
+  }
+
+  /** Folds all but the newest few messages into the room's summary now. Throws when it can't. */
+  async compact(room) {
+    if (this.runState(room.id).active) throw new Error('Wait until the crew has finished replying.');
+    const pending = this.store.messages(room.id).filter((m) => m.seq > (room.summary?.through ?? 0));
+    // The newest few messages stay word for word.
+    const toFold = pending.slice(0, Math.max(0, pending.length - KEEP_AFTER_COMPACT));
+    if (!toFold.length) throw new Error('There’s nothing older to summarize yet.');
+    const agents = room.agentIds.map((id) => this.store.agent(id)).filter(Boolean);
+    const writer = agents.find((a) => this.providers.kindOf?.(a.provider) !== 'demo' && this.providers.isConfigured(a.provider));
+    if (!writer) throw new Error('Summarizing needs an agent in this room on a model with a key.');
+    const text = await this.#summarize(room, writer, toFold, AbortSignal.timeout(120_000));
+    if (!text) throw new Error("The summary couldn't be written. Try again in a moment.");
+    room.summary = { text, through: toFold.at(-1).seq, updatedAt: Date.now() };
+    this.store.save();
+    return this.contextReport(room);
   }
 
   /** The models a hiring agent can offer: each usable provider's suggested or downloaded models. */

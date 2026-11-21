@@ -45,12 +45,25 @@ Chats are grouped: a run of messages from one agent shows its face and name once
 name, and "Today", "Yesterday" or the date marks where each day starts. Scrolled back, the Latest button says
 how many new replies arrived.
 
-The room's ⋮ menu is a sheet: Edit room, Members, Schedules, Search this room, Clear chat and Delete room.
+The room's ⋮ menu is a sheet: Edit room, Members, Schedules, Search this room, Tokens, Clear chat and Delete room.
 Tapping the faces at the top of a room (or Members) shows who's in it, each one's model and what they're
 doing; Message starts a message to one of them, and Add puts someone else from the crew in the room. Agents can @mention each other to hand work over. The user can copy, retry or delete messages,
 reply to one, attach photos, PDFs and text files, stop a reply, and clear a room. Long rooms are summarized
 automatically so they stay affordable. Rooms can have scheduled messages (Schedules, in the room's menu): a
 message posted at a set time on chosen days, which the crew then answers.
+
+Token counts: a small chip at the top of a room (like "12K") is about how many tokens each reply there sends.
+Tapping it, or Tokens in the room's menu, opens the room's Tokens page: what that number is made of (the agent's
+instructions and what it knows about the user, the summary of older messages, recent messages word for word,
+photos), the room's last 30 days (tokens sent and written, how much came from the cache, estimated cost), and
+ways to make replies lighter:
+- **Context size**: Small (about 5,000 tokens of recent messages), Medium (about 15,000, the default) or Large
+  (about 40,000). Older messages are summarized, so agents still know what happened.
+- **Send photos again**: off, only the newest message's photos are sent; earlier ones are mentioned by name.
+- **Summarize now**: folds all but the last 6 messages into the summary right away (needs an agent on a real
+  model with a key).
+These only change what agents are sent; the user still sees the whole chat. Agents can't change them, so point
+the user to the Tokens page when they ask how to spend less.
 
 ## Home and search
 

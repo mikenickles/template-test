@@ -262,6 +262,14 @@ export class Hub {
     };
   }
 
+  #contextView(room) {
+    const used = this.ledger?.summary(30).rooms.find((r) => r.roomId === room.id);
+    const usage = used
+      ? { input: used.input, output: used.output, cacheRead: used.cacheRead, cacheWrite: used.cacheWrite, requests: used.requests, cost: used.cost, priced: used.priced }
+      : { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, requests: 0, cost: 0, priced: true };
+    return { ...this.orchestrator.contextReport(room), usage, days: 30 };
+  }
+
   #roomView(room) {
     const last = this.store.messages(room.id).findLast((m) => m.text);
     const run = this.orchestrator.runState(room.id);
@@ -731,6 +739,28 @@ export class Hub {
         case 'POST stop':
           this.orchestrator.stop(room.id);
           return { ok: true };
+        // What the next reply sends, and what this room has used in the last 30 days.
+        case 'GET context':
+          return this.#contextView(room);
+        // The room's context size and photos setting.
+        case 'PUT context': {
+          const fields = await this.#body(req);
+          room.context = {
+            size: ['small', 'medium', 'large'].includes(fields.size) ? fields.size : (room.context?.size ?? 'medium'),
+            photos: typeof fields.photos === 'boolean' ? fields.photos : (room.context?.photos ?? true),
+          };
+          this.store.save();
+          return this.#contextView(room);
+        }
+        // Fold older messages into the summary now.
+        case 'POST compact':
+          try {
+            await this.orchestrator.compact(room);
+          } catch (err) {
+            if (err instanceof HttpError) throw err;
+            throw new HttpError(400, err?.message ?? "The room couldn't be summarized.");
+          }
+          return this.#contextView(room);
         case 'GET events':
           return this.#subscribe(req, res, room.id);
       }
@@ -896,7 +926,13 @@ export class Hub {
     const leadId = mode === 'lead' ? (agentIds.includes(body.leadId) ? body.leadId : agentIds[0]) : null;
     // What the room is for and rules for every agent in it. An older app that doesn't send it leaves it as it was.
     const description = typeof body.description === 'string' ? text(body.description, 2000) : (existing?.description ?? '');
-    return { name, agentIds, mode, leadId, description };
+    // How much each agent is sent: the context size, and whether older photos are sent again.
+    const given = body.context && typeof body.context === 'object' ? body.context : null;
+    const context = {
+      size: ['small', 'medium', 'large'].includes(given?.size) ? given.size : (existing?.context?.size ?? 'medium'),
+      photos: typeof given?.photos === 'boolean' ? given.photos : (existing?.context?.photos ?? true),
+    };
+    return { name, agentIds, mode, leadId, description, context };
   }
 
   /** Every room at once, for a phone that wants to know when its crew is done. Starts with what is running now. */

@@ -6,7 +6,7 @@ import { Avatar, CrewTile, characterOf, inkColor, tint } from './avatar.js';
 import { AgentEditor, RoomEditor, Schedules, Settings } from './editors.js';
 import { closeOpenMarkup, markdown } from './markdown.js';
 import { Treehouse } from './treehouse.js';
-import { Icon, Mark, Modal, Pill, ago, fileSize, html } from './ui.js';
+import { Icon, Mark, Modal, Pill, Switch, ago, fileSize, formatCost, formatTokens, html } from './ui.js';
 
 // ---------- The app ----------
 
@@ -165,6 +165,7 @@ function App() {
     ${dialog?.type === 'members' && html`<${Members} room=${state.rooms.find((r) => r.id === dialog.room.id) ?? dialog.room} state=${state} onClose=${close}
       onMessage=${(agent) => { close(); dispatchEvent(new CustomEvent('treehouse:mention', { detail: agent.name })); }}
       onAdd=${(id) => { const r = state.rooms.find((x) => x.id === dialog.room.id); api.saveRoom({ ...r, agentIds: [...r.agentIds, id] }).then(refresh).catch((e) => notify(e.message)); }} />`}
+    ${dialog?.type === 'tokens' && html`<${Tokens} room=${dialog.room} notify=${notify} onClose=${close} />`}
     ${dialog?.type === 'schedules' && html`<${Schedules} room=${dialog.room} state=${state} notify=${notify} refresh=${refresh} onClose=${close} onRan=${() => openRoom(dialog.room.id)} />`}
     ${toast && html`<div class="toast" role="status">${toast}</div>`}
   </div>`;
@@ -324,6 +325,83 @@ function Members({ room, state, onClose, onMessage, onAdd }) {
     <div class="card">${members.map((a) => row(a, html`<button class="pill" onClick=${() => onMessage(a)}>Message</button>`))}</div>
     ${others.length > 0 && html`<div class="overline" style="margin:22px 4px 10px">Add from your crew</div>
       <div class="card">${others.map((a) => row(a, html`<button class="pill selected" onClick=${() => onAdd(a.id)}>Add</button>`))}</div>`}
+  <//>`;
+}
+
+const SIZES = [['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']];
+const SIZE_NOTES = {
+  small: 'About 5,000 tokens of recent messages, word for word. Cheapest; older messages are summarized, so agents still know what happened.',
+  medium: 'About 15,000 tokens of recent messages, word for word, and a summary of the rest. A good balance.',
+  large: 'About 40,000 tokens of recent messages, word for word. For long documents and detailed work; costs the most.',
+};
+
+/** A room's tokens: what each reply sends and what it's made of, the last 30 days, and ways to send less. */
+function Tokens({ room, notify, onClose }) {
+  const [context, setContext] = useState(null);
+  const [compacting, setCompacting] = useState(false);
+  const [error, setError] = useState(null);
+  const show = (next) => {
+    setContext(next);
+    dispatchEvent(new CustomEvent('treehouse:context', { detail: { room: room.id, total: next.tokens.total } }));
+  };
+  useEffect(() => { api.roomContext(room.id).then(setContext).catch((e) => notify(e.message)); }, [room.id]);
+  const set = (size, photos) => {
+    setContext({ ...context, size, photos });
+    api.setRoomContext(room.id, size, photos).then(show).catch((e) => notify(e.message));
+  };
+  const compact = async () => {
+    setCompacting(true);
+    setError(null);
+    try {
+      show(await api.compactRoom(room.id));
+      notify('Summarized');
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCompacting(false);
+    }
+  };
+  if (!context) return html`<${Modal} title="Tokens" onClose=${onClose}><div class="spinner" style="margin:40px auto"></div><//>`;
+  const t = context.tokens;
+  const m = context.messages;
+  const u = context.usage;
+  const sent = u.input + u.cacheRead + u.cacheWrite;
+  const parts = [
+    ['instructions', t.instructions, 'Instructions and what the crew knows', ''],
+    ['summary', t.summary, 'Summary of older messages', m.summarized ? `${m.summarized} messages` : ''],
+    ['recent', t.recent, 'Recent messages, word for word', `${m.recent} messages`],
+    ['photos', t.photos, 'Photos', ''],
+  ];
+  return html`<${Modal} title="Tokens" onClose=${onClose}>
+    <div class="card token-hero">
+      <div class="overline">Each reply in ${room.name} sends about</div>
+      <div class="token-total"><span class="hero">${formatTokens(t.total)}</span> <span class="muted">tokens</span></div>
+      <div class="token-bar" aria-hidden="true">${parts.filter((p) => p[1] > 0).map(([key, n]) => html`<span class=${`part-${key}`} style=${`flex:${n}`}></span>`)}</div>
+      ${parts.filter((p) => p[1] > 0 || p[0] === 'recent').map(([key, n, label, detail]) => html`<div class="token-legend">
+        <span class=${`dot part-${key}`}></span><span class="body-s label">${label}</span>${detail && html`<span class="body-s faint">${detail}</span>`}<span class="title-s">${formatTokens(n)}</span></div>`)}
+      ${m.leftOut > 0 && html`<p class="body-s faint" style="margin:12px 0 0">${m.leftOut} older messages aren't summarized yet and aren't sent. Summarize now to fold them in.</p>`}
+    </div>
+    <div class="overline" style="margin:22px 4px 10px">Last ${context.days} days in this room</div>
+    <div class="card">
+      <div class="row"><span style="flex:1">Tokens sent</span><span class="title-s">${formatTokens(sent)}</span></div>
+      <div class="row"><span style="flex:1">Tokens written by the crew</span><span class="title-s">${formatTokens(u.output)}</span></div>
+      <div class="row"><div style="flex:1">Read from cache<div class="body-s faint">Cached tokens cost about a tenth</div></div><span class="title-s">${sent > 0 ? `${Math.floor((u.cacheRead * 100) / sent)}%` : 'None yet'}</span></div>
+      <div class="row"><div style="flex:1">Estimated cost<div class="body-s faint">${u.requests} requests</div></div><span class="title-s">${u.cost > 0 || u.priced ? formatCost(u.cost) : 'Not priced'}</span></div>
+    </div>
+    <div class="overline" style="margin:22px 4px 10px">Make replies lighter</div>
+    <div class="days" role="radiogroup" aria-label="Context size">${SIZES.map(([key, label]) => html`<${Pill} label=${label} selected=${context.size === key} onClick=${() => set(key, context.photos)} />`)}</div>
+    <p class="body-s faint" style="margin:10px 4px 16px">${SIZE_NOTES[context.size] ?? SIZE_NOTES.medium}</p>
+    <div class="card">
+      <button class="row button-row" role="switch" aria-checked=${context.photos} onClick=${() => set(context.size, !context.photos)}>
+        <div style="flex:1"><div class="title-s">Send photos again</div><div class="body-s muted">Off: only the newest message's photos are sent; earlier ones are mentioned by name. About 1,500 tokens saved per photo.</div></div>
+        <${Switch} on=${context.photos} /></button>
+      <div class="row">
+        <div style="flex:1"><div class="title-s">Summarize now</div><div class="body-s muted">Folds all but the last 6 messages into the summary, written by a quick, inexpensive model.</div>
+          ${error && html`<div class="body-s" style="color:var(--danger);margin-top:6px">${error}</div>`}</div>
+        ${compacting ? html`<div class="spinner"></div>` : html`<button class="pill" onClick=${compact}>Summarize</button>`}
+      </div>
+    </div>
+    <p class="body-s faint" style="margin:14px 4px 0">These only change what agents are sent. You still see the whole chat here.</p>
   <//>`;
 }
 
@@ -536,6 +614,18 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
     (m.status === 'error' || m.status === 'stopped' || messages.at(-1)?.id === m.id);
 
   const act = (work) => work().catch((e) => notify(e.message));
+  // About how many tokens the next reply sends, for the chip in the bar: checked again after each reply.
+  const [contextTokens, setContextTokens] = useState(null);
+  useEffect(() => {
+    if (run.active || !loaded) return;
+    api.roomContext(room.id).then((c) => setContextTokens(c.tokens.total)).catch(() => {});
+  }, [room.id, run.active, loaded, messages.length]);
+  // The Tokens window says when its changes move the count.
+  useEffect(() => {
+    const changed = (e) => e.detail.room === room.id && setContextTokens(e.detail.total);
+    addEventListener('treehouse:context', changed);
+    return () => removeEventListener('treehouse:context', changed);
+  }, [room.id]);
   const onCopyCode = (e) => {
     const button = e.target.closest('[data-copy]');
     if (!button) return;
@@ -561,12 +651,14 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
         </div>
       </div>
       <button class="avatar-stack" title="Who's in this room" aria-label="Who's in this room" onClick=${() => onDialog({ type: 'members', room })}>${agents.slice(0, 4).map((a) => html`<${Disc} spec=${a.avatar} size=${32} ring=${run.active && run.agentId === a.id} />`)}</button>
+      ${contextTokens != null && html`<button class="token-chip" title="About how many tokens each reply sends" aria-label=${`About ${formatTokens(contextTokens)} tokens per reply`} onClick=${() => onDialog({ type: 'tokens', room })}>${formatTokens(contextTokens)}</button>`}
       <button class="icon-button" aria-label="Room options" aria-expanded=${menu} onClick=${() => setMenu(!menu)}><${Icon} name="more" /></button>
       ${menu && html`<div class="menu" onMouseLeave=${() => setMenu(false)}>
         <button onClick=${() => { setMenu(false); onDialog({ type: 'room', room }); }}>Edit room</button>
         <button onClick=${() => { setMenu(false); onDialog({ type: 'members', room }); }}>Members</button>
         <button onClick=${() => { setMenu(false); onDialog({ type: 'schedules', room }); }}>Schedules</button>
         <button onClick=${() => { setMenu(false); onDialog({ type: 'search-room', room }); }}>Search this room</button>
+        <button onClick=${() => { setMenu(false); onDialog({ type: 'tokens', room }); }}>Tokens${contextTokens != null ? html`<span class="hint">${formatTokens(contextTokens)} per reply</span>` : ''}</button>
         <button onClick=${() => { setMenu(false); if (confirm(`Clear every message in ${room.name}?`)) act(() => api.clear(room.id)); }}>Clear chat</button>
         <button class="danger" onClick=${() => { setMenu(false); onDelete(); }}>Delete room</button>
       </div>`}

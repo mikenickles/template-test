@@ -472,6 +472,44 @@ data class UsageTotals(
     val tokens: Long get() = input + output + cacheRead + cacheWrite
 }
 
+/** What a room's next reply sends, by part, how the room is set, and what it used lately. */
+@Serializable
+data class RoomContext(
+    val size: String = SIZE_MEDIUM,
+    val photos: Boolean = true,
+    val tokens: ContextTokens = ContextTokens(),
+    val messages: ContextMessages = ContextMessages(),
+    val summaryUpdatedAt: Long? = null,
+    val usage: ContextUsage = ContextUsage(),
+    val days: Int = 30,
+) {
+    companion object {
+        const val SIZE_SMALL = "small"
+        const val SIZE_MEDIUM = "medium"
+        const val SIZE_LARGE = "large"
+    }
+}
+
+@Serializable
+data class ContextTokens(val instructions: Int = 0, val summary: Int = 0, val recent: Int = 0, val photos: Int = 0, val total: Int = 0)
+
+@Serializable
+data class ContextMessages(val recent: Int = 0, val summarized: Int = 0, val leftOut: Int = 0, val total: Int = 0)
+
+@Serializable
+data class ContextUsage(
+    val input: Long = 0,
+    val output: Long = 0,
+    val cacheRead: Long = 0,
+    val cacheWrite: Long = 0,
+    val requests: Int = 0,
+    val cost: Double = 0.0,
+    val priced: Boolean = true,
+)
+
+@Serializable
+data class ContextSettings(val size: String, val photos: Boolean)
+
 /** What a search across every room found. */
 @Serializable
 data class SearchResults(

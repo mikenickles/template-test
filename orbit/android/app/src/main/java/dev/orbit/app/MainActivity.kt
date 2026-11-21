@@ -72,7 +72,9 @@ import dev.orbit.app.ui.screens.AgentEditorScreen
 import dev.orbit.app.ui.screens.HomeScreen
 import dev.orbit.app.ui.screens.PairScreen
 import dev.orbit.app.ui.screens.RoomEditorScreen
+import dev.orbit.app.data.RoomContext
 import dev.orbit.app.ui.screens.RoomScreen
+import dev.orbit.app.ui.screens.RoomTokensScreen
 import dev.orbit.app.ui.screens.SettingsScreen
 import dev.orbit.app.ui.screens.UsageScreen
 import dev.orbit.app.ui.screens.ShareScreen
@@ -297,6 +299,11 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
             // When a run ends, agents may have changed themselves or the room: catch up with the hub.
             LaunchedEffect(roomState.run.active) { if (!roomState.run.active && roomState.loaded) vm.refresh() }
             LaunchedEffect(roomVm) { roomVm.notices.collect { snackbar.showSnackbar(it) } }
+            // About how many tokens the next reply sends, for the header chip: checked again after each reply.
+            var contextTokens by remember(id) { mutableStateOf<Int?>(null) }
+            LaunchedEffect(id, roomState.run.active, roomState.messages.size) {
+                if (!roomState.run.active) vm.roomContext(id)?.let { contextTokens = it.tokens.total }
+            }
             RoomScreen(
                 room = room,
                 agents = room.agentIds.mapNotNull(state::agent),
@@ -315,6 +322,8 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 scheduleCount = state.schedules.count { it.roomId == id && it.enabled },
                 onSearchRoom = { nav.navigate("search?room=$id") },
                 onAddMember = { agentId -> vm.saveRoom(room.copy(agentIds = room.agentIds + agentId)) {} },
+                contextTokens = contextTokens,
+                onTokens = { nav.navigate("tokens/$id") },
                 onStop = roomVm::stop,
                 onBack = { nav.popBackStack() },
                 onEdit = { nav.navigate("roomEdit?id=$id") },
@@ -472,6 +481,39 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onEditAgent = { nav.navigate("agent?id=${it.id}") },
                 onCancelFollowUp = { vm.deleteFollowUp(it.id) },
                 onStopWatch = { vm.deleteWatch(it.id) },
+                onBack = { nav.popBackStack() },
+            )
+        }
+        screen("tokens/{id}") { entry ->
+            val room = state.room(entry.arguments?.getString("id")) ?: return@screen
+            var context by remember { mutableStateOf<RoomContext?>(null) }
+            var compacting by remember { mutableStateOf(false) }
+            var error by remember { mutableStateOf<String?>(null) }
+            LaunchedEffect(room.id) { context = vm.roomContext(room.id) }
+            RoomTokensScreen(
+                roomName = room.name,
+                context = context,
+                onSize = { size ->
+                    context = context?.copy(size = size)
+                    vm.setRoomContext(room.id, size, context?.photos ?: true) { it?.let { context = it } }
+                },
+                onPhotos = { photos ->
+                    context = context?.copy(photos = photos)
+                    vm.setRoomContext(room.id, context?.size ?: RoomContext.SIZE_MEDIUM, photos) { it?.let { context = it } }
+                },
+                onCompact = {
+                    compacting = true
+                    error = null
+                    vm.compactRoom(room.id) { updated, problem ->
+                        compacting = false
+                        if (updated != null) {
+                            context = updated
+                            haptics.confirm()
+                        } else error = problem ?: "The summary couldn't be written."
+                    }
+                },
+                compacting = compacting,
+                error = error,
                 onBack = { nav.popBackStack() },
             )
         }

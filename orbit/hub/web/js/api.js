@@ -53,6 +53,12 @@ export const api = {
   search: (q, room = null) => request('GET', `/api/search?q=${encodeURIComponent(q)}${room ? `&room=${encodeURIComponent(room)}` : ''}`),
   /** "Describe it": the hub sets up a room from the user's own words, and returns it. */
   planRoom: (text) => request('POST', '/api/rooms/plan', { text }),
+  /** About how many tokens a room's next reply sends, by part, and what the room used in 30 days. */
+  roomContext: (id) => request('GET', `/api/rooms/${id}/context`),
+  /** A room's context size (small, medium, large) and whether older photos are sent again. */
+  setRoomContext: (id, size, photos) => request('PUT', `/api/rooms/${id}/context`, { size, photos }),
+  /** Folds all but the newest few messages into the room's summary now. */
+  compactRoom: (id) => request('POST', `/api/rooms/${id}/compact`),
   models: (providerId) => request('GET', `/api/providers/${providerId}/models`),
   setKey: (providerId, apiKey) => request('PUT', `/api/providers/${providerId}/key`, { apiKey }),
   removeKey: (providerId) => request('DELETE', `/api/providers/${providerId}/key`),
