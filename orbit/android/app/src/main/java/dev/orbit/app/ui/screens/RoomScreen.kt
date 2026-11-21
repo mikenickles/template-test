@@ -1,5 +1,13 @@
 package dev.orbit.app.ui.screens
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberInfiniteTransition
+import dev.orbit.app.data.AvatarSpec
+import dev.orbit.app.ui.components.wash
+import dev.orbit.app.ui.components.AvatarDisc
 import android.content.ClipData
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -186,6 +194,8 @@ fun RoomScreen(
     onSendReply: (text: String, replyTo: String) -> Unit = { text, _ -> onSend(text) },
     /** A message to open with a reply already started to. */
     startReplyTo: Message? = null,
+    /** Listens for speech and hands back the words, for the mic button. */
+    onVoice: ((text: String) -> Unit) -> Unit = {},
 ) {
     val c = Orbit.colors
     var draft by rememberSaveable { mutableStateOf(initialDraft) }
@@ -259,6 +269,12 @@ fun RoomScreen(
                         replyingTo = null
                     },
                     onStop = onStop,
+                    onVoice = { onVoice { words -> draft = if (draft.isBlank()) words else "${draft.trimEnd()} $words" } },
+                    suggestions = if (state.loaded && state.messages.isNotEmpty() && !state.run.active) suggestionsFor(agents, state.messages) else emptyList(),
+                    onSuggestion = { suggestion ->
+                        haptics.tick()
+                        if (suggestion.send) onSend(suggestion.text) else draft = suggestion.text
+                    },
                 )
             },
         ) { padding ->
@@ -540,9 +556,9 @@ private fun RoomBar(
                         speaker != null -> RoomStatus("${speaker.name} is replying", speaker.avatar.inkColor(c.isDark))
                         state.run.active -> RoomStatus("Working", c.textTertiary)
                         agents.size == 1 -> RoomStatus("Just you and ${agents[0].name}", null)
-                        room.mode == Room.MODE_AUTO -> RoomStatus("Best fit: whoever suits each message answers", null)
-                        room.mode == Room.MODE_LEAD -> RoomStatus("Led by ${agents.firstOrNull { it.id == room.leadId }?.name ?: "the first agent"}", null)
-                        else -> RoomStatus("Round table", null)
+                        room.mode == Room.MODE_AUTO -> RoomStatus("Best fit · ${agents.joinToString(", ") { it.name }}", null)
+                        room.mode == Room.MODE_LEAD -> RoomStatus("Led by ${agents.firstOrNull { it.id == room.leadId }?.name ?: agents.firstOrNull()?.name ?: "the first agent"}", null)
+                        else -> RoomStatus("Round table · ${agents.joinToString(", ") { it.name }}", null)
                     },
                     transitionSpec = {
                         (fadeIn(tween(220, delayMillis = 60)) + slideInVertically { it / 2 }) togetherWith
@@ -558,13 +574,16 @@ private fun RoomBar(
                 }
             }
             // Who's here, large enough to recognise. They fly in from the room's tile on the home screen.
-            AvatarRow(
-                agents.map { it.avatar },
-                size = 28.dp,
-                max = 3,
-                gap = 5.dp,
-                itemModifier = { index -> Modifier.shared(SharedKeys.roomMember(room.id, agents[index].id)) },
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy((-10).dp)) {
+                agents.take(3).forEach { agent ->
+                    AvatarDisc(
+                        agent.avatar,
+                        Modifier.border(2.dp, c.bg, CircleShape),
+                        size = 32.dp,
+                        avatarModifier = Modifier.shared(SharedKeys.roomMember(room.id, agent.id)),
+                    )
+                }
+            }
             if (agents.size > 3) {
                 Text("+${agents.size - 3}", Modifier.padding(start = 6.dp), style = OrbitType.mono, color = c.textSecondary)
             }
@@ -733,7 +752,7 @@ private fun AgentMessage(message: Message, agent: Agent?, mentionColors: Map<Str
     val catchingUp = streaming || shown < message.text.length
     val tail by animateFloatAsState(if (catchingUp) FADE_TAIL.toFloat() else 0f, tween(500), label = "tail")
     Row(Modifier.fillMaxWidth()) {
-        AgentAvatar(avatar, Modifier.padding(top = 1.dp), size = 34.dp, thinking = streaming)
+        AvatarDisc(avatar, Modifier.padding(top = 1.dp), size = 34.dp, thinking = streaming && shown > 0)
         // New lines glide in rather than jump, and screen readers hear replies as they land.
         Column(
             Modifier
@@ -742,7 +761,7 @@ private fun AgentMessage(message: Message, agent: Agent?, mentionColors: Map<Str
                 .animateContentSize(spring(stiffness = 800f))
                 .semantics { liveRegion = LiveRegionMode.Polite },
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.heightIn(min = 22.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(agent?.name ?: message.author.name, style = OrbitType.titleS, color = avatar.textColor())
                 // Written on its own, unasked: say why, quietly.
                 message.proactive?.let { mark ->
@@ -761,9 +780,13 @@ private fun AgentMessage(message: Message, agent: Agent?, mentionColors: Map<Str
                 }
                 val model = message.author.model
                 if (showModel && !model.isNullOrBlank() && message.proactive == null) {
+                    // The model as a small tag, by its everyday name.
                     Text(
-                        model,
-                        Modifier.padding(start = 8.dp),
+                        modelTag(model),
+                        Modifier
+                            .padding(start = 8.dp)
+                            .border(1.dp, c.hairline, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 6.dp, vertical = 1.dp),
                         style = OrbitType.mono,
                         color = c.textTertiary,
                         maxLines = 1,
@@ -779,8 +802,7 @@ private fun AgentMessage(message: Message, agent: Agent?, mentionColors: Map<Str
                 MarkdownText(if (catchingUp) closeOpenMarkup(visible) else visible, mentions = mentionColors, fadeTail = tail.roundToInt())
             }
             when {
-                streaming && shown == 0 && message.activity.all { it.done } ->
-                    ShimmerText("Thinking", OrbitType.body, c.textTertiary, Modifier.padding(top = 1.dp))
+                streaming && shown == 0 && message.activity.all { it.done } -> ThinkingDots(avatar, Modifier.padding(top = 2.dp))
                 !catchingUp && message.sources.isNotEmpty() -> SourceChips(message.sources, Modifier.padding(top = 10.dp))
                 message.status == Message.STATUS_ERROR -> Row(
                     Modifier
@@ -863,6 +885,9 @@ private fun Composer(
     replyingTo: Pair<String, String>? = null,
     replyColor: Color? = null,
     onCancelReply: () -> Unit = {},
+    onVoice: () -> Unit = {},
+    suggestions: List<Suggestion> = emptyList(),
+    onSuggestion: (Suggestion) -> Unit = {},
 ) {
     val c = Orbit.colors
     val haptics = rememberHaptics()
@@ -879,6 +904,20 @@ private fun Composer(
             .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
             .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp),
     ) {
+      Column {
+        // Quick things to say, while the box is empty and nobody is replying.
+        AnimatedVisibility(
+            suggestions.isNotEmpty() && draft.isEmpty() && !focused && replyingTo == null,
+            enter = expandVertically(OrbitMotion.snappy()) + fadeIn(),
+            exit = shrinkVertically(OrbitMotion.snappy()) + fadeOut(),
+        ) {
+            Row(
+                Modifier.horizontalScroll(rememberScrollState()).padding(start = 2.dp, end = 2.dp, bottom = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                for (suggestion in suggestions) Pill(suggestion.label, onClick = { onSuggestion(suggestion) })
+            }
+        }
         Column(Modifier.fillMaxWidth().lift(shape).clip(shape).background(c.surface).border(1.dp, edge, shape)) {
             MentionChips(focused && agents.size > 1, agents) { agent ->
                 val mention = "@${agent.name.replace(" ", "")} "
@@ -912,6 +951,7 @@ private fun Composer(
                         inner()
                     },
                 )
+                IconTap(OrbitIcon.Mic, "Talk", onVoice, tint = c.textSecondary)
                 SendButton(
                     canSend = (draft.isNotBlank() || drafts.isNotEmpty()) && !sending,
                     running = running,
@@ -925,6 +965,64 @@ private fun Composer(
                     },
                 )
             }
+        }
+      }
+    }
+}
+
+/** Something to say with one tap: sent straight away, or put in the box (an @mention, to finish). */
+internal data class Suggestion(val label: String, val text: String, val send: Boolean)
+
+/** A summary and a next step, and the room member who hasn't spoken lately, to bring them in. */
+internal fun suggestionsFor(agents: List<Agent>, messages: List<Message>): List<Suggestion> = buildList {
+    add(Suggestion("Summarize so far", "Summarize where we are so far.", send = true))
+    add(Suggestion("What's next?", "What should we do next?", send = true))
+    if (agents.size > 1) {
+        val recent = messages.takeLast(6).mapNotNull { it.author.agentId }.toSet()
+        agents.firstOrNull { it.id !in recent }?.let { quiet ->
+            val handle = "@${quiet.name.replace(" ", "")}"
+            add(Suggestion(handle, "$handle ", send = false))
+        }
+    }
+}
+
+private val ClaudeModel = Regex("^claude-([a-z]+)-(\\d+)(?:-(\\d+))?(?:-\\d{8})?$")
+
+/** A model by its everyday name: "claude-opus-5-5" reads as "Opus 5.5", "gpt-6.1-terra" as "GPT-6.1 terra". */
+internal fun modelTag(model: String): String {
+    val id = model.substringAfterLast('/').removeSuffix(":latest")
+    ClaudeModel.find(id)?.let { m ->
+        val (family, major, minor) = m.destructured
+        return "${family.replaceFirstChar { it.uppercase() }} $major${if (minor.isNotEmpty()) ".$minor" else ""}"
+    }
+    if (id.startsWith("gpt-")) return "GPT-" + id.removePrefix("gpt-").replaceFirst('-', ' ')
+    return id
+}
+
+/** Three dots in the agent's color while it thinks. They breathe, unless system animations are off. */
+@Composable
+private fun ThinkingDots(avatar: AvatarSpec, modifier: Modifier = Modifier) {
+    val reduced = LocalReducedMotion.current
+    val ink = avatar.textColor()
+    val phase = if (reduced) {
+        0f
+    } else {
+        val transition = rememberInfiniteTransition(label = "dots")
+        val value by transition.animateFloat(0f, 3f, infiniteRepeatable(tween(1200, easing = LinearEasing)), label = "phase")
+        value
+    }
+    Row(
+        modifier
+            .semantics { contentDescription = "Thinking" }
+            .clip(RoundedCornerShape(16.dp))
+            .background(avatar.wash())
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        repeat(3) { i ->
+            // Each dot is brightest as the wave passes it; at rest they step down from full to faint.
+            val alpha = if (reduced) 1f - i * 0.3f else (1f - (((phase - i) % 3f + 3f) % 3f) / 3f).coerceIn(0.3f, 1f)
+            Box(Modifier.size(7.dp).clip(CircleShape).background(ink.copy(alpha = alpha)))
         }
     }
 }

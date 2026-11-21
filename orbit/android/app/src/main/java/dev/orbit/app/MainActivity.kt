@@ -1,5 +1,8 @@
 package dev.orbit.app
 
+import dev.orbit.app.data.SearchResults
+import dev.orbit.app.ui.screens.SearchScreen
+import android.speech.RecognizerIntent
 import dev.orbit.app.ui.screens.AwayScreen
 import dev.orbit.app.ui.screens.FoldersScreen
 import dev.orbit.app.ui.screens.GoogleScreen
@@ -255,6 +258,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                     nav.navigate("room/${nudge.roomId}")
                 },
                 onDismissNudge = { vm.dismissNudge(it.id) },
+                onSearch = { nav.navigate("search") },
                 onEditRoom = { nav.navigate("roomEdit?id=${it.id}") },
                 onDeleteRoom = { room ->
                     vm.deleteRoom(room.id) {
@@ -283,6 +287,12 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
             LaunchedEffect(shared) { shared?.let { roomVm.attachShared(it.files) } }
             val pickPhotos = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(MAX_DRAFTS)) { roomVm.attach(it) }
             val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { roomVm.attach(it) }
+            // The mic: the phone's own voice typing, whose words land in the message box.
+            var onWords by remember { mutableStateOf<((String) -> Unit)?>(null) }
+            val listen = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.takeIf { it.isNotBlank() }?.let { onWords?.invoke(it) }
+                onWords = null
+            }
             val roomState by roomVm.state.collectAsStateWithLifecycle()
             // When a run ends, agents may have changed themselves or the room: catch up with the hub.
             LaunchedEffect(roomState.run.active) { if (!roomState.run.active && roomState.loaded) vm.refresh() }
@@ -314,6 +324,16 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onSendReply = { text, replyTo ->
                     askNotifications()
                     roomVm.send(text, replyTo)
+                },
+                onVoice = { deliver ->
+                    onWords = deliver
+                    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                        .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                        .putExtra(RecognizerIntent.EXTRA_PROMPT, "Talk to the crew")
+                    runCatching { listen.launch(intent) }.onFailure {
+                        onWords = null
+                        scope.launch { snackbar.showSnackbar("Voice typing isn't available on this phone.") }
+                    }
                 },
             )
         }
@@ -389,6 +409,32 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onOpenGoogle = { nav.navigate("settings/google") },
                 onOpenFolders = { nav.navigate("settings/folders") },
                 onOpenAway = { nav.navigate("settings/away") },
+            )
+        }
+        screen("search") {
+            var query by rememberSaveable { mutableStateOf("") }
+            var results by remember { mutableStateOf<SearchResults?>(null) }
+            var searching by remember { mutableStateOf(false) }
+            // Asks the hub a moment after typing stops, so each keystroke isn't a request.
+            LaunchedEffect(query) {
+                if (query.isBlank()) {
+                    results = null
+                    searching = false
+                    return@LaunchedEffect
+                }
+                delay(250)
+                searching = true
+                results = vm.search(query.trim())
+                searching = false
+            }
+            SearchScreen(
+                query = query,
+                onQuery = { query = it },
+                results = results,
+                searching = searching,
+                agents = state.agents,
+                onOpenRoom = { nav.navigate("room/$it") },
+                onBack = { nav.popBackStack() },
             )
         }
         screen("settings/models") {

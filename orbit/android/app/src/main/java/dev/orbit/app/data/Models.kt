@@ -467,6 +467,29 @@ data class UsageTotals(
     val tokens: Long get() = input + output + cacheRead + cacheWrite
 }
 
+/** What a search across every room found. */
+@Serializable
+data class SearchResults(
+    val query: String = "",
+    val rooms: List<SearchRoom> = emptyList(),
+    val messages: List<SearchHit> = emptyList(),
+)
+
+@Serializable
+data class SearchRoom(val id: String = "", val name: String = "", val agentIds: List<String> = emptyList())
+
+/** One message that matched: where it is, who wrote it ("You" for the user) and the words around the match. */
+@Serializable
+data class SearchHit(
+    val roomId: String = "",
+    val roomName: String = "",
+    val messageId: String = "",
+    val agentId: String? = null,
+    val author: String = "",
+    val snippet: String = "",
+    val at: Long = 0,
+)
+
 @Serializable
 data class UsageSummary(
     val days: Int = 30,

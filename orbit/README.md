@@ -17,6 +17,9 @@ hub on an always-on PC.
   asks which AI model they should use, and picks a character nobody has yet. Your
   guide has it from the start. Their replies show what
   they did ("Searched …", "Read japan.md") and the pages they cite.
+- **Search** every room and message from Home (or the PC's room list), and **talk** instead of
+  typing with the mic in the message box. Quick suggestions ("Summarize so far", "What's next?")
+  sit above an empty message box.
 - **Describe a room** to make one: say what it's for and who should be in it ("a room with
   Nova and Atlas for planning my trip"), typed or with the keyboard's mic, and the hub sets
   up the name, crew, mode and description. Agents can make rooms too when you ask. Delete a

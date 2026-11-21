@@ -20,6 +20,7 @@ import dev.orbit.app.data.isNewerVersion
 import dev.orbit.app.update.ApkInstaller
 import dev.orbit.app.data.Provider
 import dev.orbit.app.data.Room
+import dev.orbit.app.data.SearchResults
 import dev.orbit.app.data.Schedule
 import dev.orbit.app.notify.NoticeWorker
 import dev.orbit.app.widget.WidgetSnapshot
@@ -223,6 +224,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Spend and tokens for the period last asked for; null until loaded. */
     val usage: StateFlow<UsageSummary?> = _usage.asStateFlow()
+
+    /** Searches every room; null if the hub couldn't be asked. */
+    suspend fun search(query: String): SearchResults? = hub(quiet = true) { it.search(query) }
 
     fun loadUsage(days: Int = 30) {
         viewModelScope.launch { hub(quiet = true) { it.usage(days) }?.let { _usage.value = it } }

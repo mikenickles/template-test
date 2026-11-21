@@ -9,6 +9,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import dev.orbit.app.ui.components.wash
+import dev.orbit.app.ui.components.AvatarDisc
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -103,7 +108,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val RoomTile = 56.dp
+private val RoomTile = 48.dp
 private val CrewItem = 80.dp
 private val CrewAvatar = 64.dp
 
@@ -132,6 +137,7 @@ fun HomeScreen(
     onDismissNudge: (Nudge) -> Unit = {},
     onEditRoom: (Room) -> Unit = {},
     onDeleteRoom: (Room) -> Unit = {},
+    onSearch: () -> Unit = {},
 ) {
     val c = Orbit.colors
     val haptics = rememberHaptics()
@@ -141,27 +147,21 @@ fun HomeScreen(
     val list = rememberLazyListState()
     // Content staggers in once, when real data replaces the placeholders.
     val entrances = rememberEntrances(state.loaded)
-    // The new-room button tucks its label away once the list scrolls.
-    val atTop by remember { derivedStateOf { list.firstVisibleItemIndex == 0 && list.firstVisibleItemScrollOffset < 24 } }
 
     // Only a pull shows the refresh indicator; background refreshes stay invisible.
     var pulled by remember { mutableStateOf(false) }
     LaunchedEffect(state.refreshing) { if (!state.refreshing) pulled = false }
     val pull = rememberPullToRefreshState()
 
-    Scaffold(
-        containerColor = c.bg,
-        floatingActionButton = {
-            if (state.agents.isNotEmpty() && state.rooms.isNotEmpty()) NewRoomButton(expanded = atTop, onClick = onNewRoom)
-        },
-    ) { padding ->
+    Scaffold(containerColor = c.bg) { padding ->
+      Box(Modifier.fillMaxSize().padding(padding)) {
         PullToRefreshBox(
             isRefreshing = pulled && state.refreshing,
             onRefresh = {
                 pulled = true
                 onRefresh()
             },
-            modifier = Modifier.fillMaxSize().padding(padding),
+            modifier = Modifier.fillMaxSize(),
             state = pull,
             indicator = { RefreshIndicator(pull, pulled && state.refreshing) },
         ) {
@@ -198,20 +198,10 @@ fun HomeScreen(
                 }
                 // What agents brought up on their own, newest first, until it's opened or dismissed.
                 if (state.nudges.isNotEmpty()) {
-                    item(key = "nudges-title") {
-                        SectionTitle(
-                            "From your crew",
-                            Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = OrbitDimens.section, bottom = 6.dp)
-                                .animateItem().entrance(entrances, "nudges-title", 0),
-                            count = state.nudges.size,
-                        )
-                    }
-                    items(state.nudges.asReversed().take(5), key = { "nudge-${it.id}" }) { nudge ->
-                        NudgeCard(
-                            nudge, state.agent(nudge.agentId), state.room(nudge.roomId), now,
-                            onOpen = { onOpenNudge(nudge) },
-                            onDismiss = { onDismissNudge(nudge) },
-                            modifier = Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 10.dp).animateItem(),
+                    item(key = "nudges") {
+                        NudgePager(
+                            state.nudges.asReversed().take(5), state, now, onOpenNudge, onDismissNudge,
+                            Modifier.padding(top = 20.dp).animateItem().entrance(entrances, "nudges", 0),
                         )
                     }
                 }
@@ -248,7 +238,8 @@ fun HomeScreen(
                         Modifier.entrance(entrances, "crew", 1),
                         contentPadding = PaddingValues(horizontal = OrbitDimens.gutter - (CrewItem - CrewAvatar) / 2),
                     ) {
-                        items(state.agents, key = { it.id }) { agent -> CrewMember(agent) { onEditAgent(agent) } }
+                        val speaking = state.rooms.filter { it.active }.mapNotNull { it.speaking }.toSet()
+                        items(state.agents, key = { it.id }) { agent -> CrewMember(agent, agent.id in speaking) { onEditAgent(agent) } }
                     }
                 }
 
@@ -265,23 +256,31 @@ fun HomeScreen(
                         EmptyRooms(state.agents, Modifier.entrance(entrances, "rooms-empty", 3), onNewRoom = onNewRoom, onNewAgent = onNewAgent)
                     }
                 }
-                itemsIndexed(state.rooms, key = { _, room -> room.id }) { index, room ->
-                    Column(Modifier.animateItem().entrance(entrances, "room:${room.id}", 3 + index)) {
-                        // The tile is the row's only container; rows are parted by a hairline inset to the text.
-                        if (index > 0) Hairline(Modifier.padding(start = OrbitDimens.gutter + RoomTile + 14.dp, end = OrbitDimens.gutter))
-                        RoomRow(
-                            room,
-                            room.agentIds.mapNotNull(state::agent),
-                            now,
-                            onLongClick = {
-                                haptics.tick()
-                                acting = room
-                            },
-                        ) { onOpenRoom(room) }
+                // The rooms share one card, parted by hairlines inset to the text.
+                if (state.rooms.isNotEmpty()) item(key = "rooms") {
+                    OrbitCard(Modifier.fillMaxWidth().padding(horizontal = OrbitDimens.gutter).padding(top = 8.dp).animateItem().entrance(entrances, "rooms", 3)) {
+                        Column {
+                            state.rooms.forEachIndexed { index, room ->
+                                if (index > 0) Hairline(Modifier.padding(start = OrbitDimens.rowPad + RoomTile + 14.dp))
+                                RoomRow(
+                                    room,
+                                    room.agentIds.mapNotNull(state::agent),
+                                    now,
+                                    onLongClick = {
+                                        haptics.tick()
+                                        acting = room
+                                    },
+                                ) { onOpenRoom(room) }
+                            }
+                        }
                     }
                 }
             }
         }
+        if (state.agents.isNotEmpty() && state.rooms.isNotEmpty()) {
+            BottomBar(onSearch, onNewRoom, Modifier.align(Alignment.BottomCenter))
+        }
+      }
     }
     acting?.let { room ->
         ActionSheet(
@@ -351,7 +350,7 @@ private fun Header(state: AppState, onSettings: () -> Unit) {
     }
 }
 
-/** "Good evening, Mike", and what the crew is up to. */
+/** "Good evening," and the name below it, then what the crew is up to, on a wash of the speaker's color. */
 @Composable
 private fun Greeting(state: AppState, now: Long, modifier: Modifier) {
     val c = Orbit.colors
@@ -363,86 +362,145 @@ private fun Greeting(state: AppState, now: Long, modifier: Modifier) {
     }
     val busy = state.rooms.firstOrNull { it.active }
     val speaker = state.agent(busy?.speaking)
-    Column(modifier.fillMaxWidth().padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 26.dp)) {
-        Text(
-            if (state.profile.name.isNotBlank()) "$part, ${state.profile.name}" else part,
-            style = OrbitType.display,
-            color = c.text,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (busy != null) {
-                StatusDot(speaker?.avatar?.textColor() ?: c.live, Modifier.padding(end = 8.dp), size = 7.dp)
+    Column(modifier.fillMaxWidth().padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 24.dp)) {
+        if (state.profile.name.isNotBlank()) {
+            Text("$part,", style = OrbitType.display, color = c.textTertiary, maxLines = 1)
+            Text(state.profile.name, style = OrbitType.display, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        } else {
+            Text(part, style = OrbitType.display, color = c.text, maxLines = 1)
+        }
+        if (busy != null) {
+            Row(
+                Modifier
+                    .padding(top = 12.dp)
+                    .clip(CircleShape)
+                    .background(speaker?.avatar?.tint()?.copy(alpha = if (c.isDark) 0.16f else 0.2f) ?: c.surfaceHigh)
+                    .padding(start = 4.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (speaker != null) AgentAvatar(speaker.avatar, size = 22.dp) else StatusDot(c.live, Modifier.padding(start = 6.dp), size = 7.dp)
                 ShimmerText(
                     if (speaker != null) "${speaker.name} is replying in ${busy.name}" else "Your crew is working in ${busy.name}",
-                    OrbitType.bodyM,
+                    OrbitType.bodyS,
                     c.textSecondary,
-                )
-            } else {
-                Text(
-                    when {
-                        !state.loaded -> "Checking in with your hub"
-                        state.agents.isEmpty() -> "Let's set up your crew"
-                        state.agents.size == 1 -> "${state.agents[0].name} is here when you need them"
-                        else -> "Your crew of ${state.agents.size} is ready"
-                    },
-                    style = OrbitType.bodyM,
-                    color = c.textSecondary,
+                    Modifier.padding(start = 8.dp),
                 )
             }
+        } else {
+            Text(
+                when {
+                    !state.loaded -> "Checking in with your hub"
+                    state.agents.isEmpty() -> "Let's set up your crew"
+                    state.agents.size == 1 -> "${state.agents[0].name} is here when you need them"
+                    else -> "Your crew of ${state.agents.size} is ready"
+                },
+                Modifier.padding(top = 8.dp),
+                style = OrbitType.bodyM,
+                color = c.textSecondary,
+            )
         }
     }
 }
 
 /**
- * The guide's invitation to get to know each other, washed in the guide's color. Without a Claude
- * key it asks for one first.
- */
-/**
- * Something an agent wrote on its own: who, why (a check-in, a follow-up, a watch, the morning brief),
- * and the first lines. Tapping opens the room; the cross takes it off Home.
+ * What agents wrote on their own, newest first, as one card to swipe through: who, why (a check-in, a
+ * follow-up, a watch, the morning brief) and the first lines. Open takes you to the room; Dismiss takes it off Home.
  */
 @Composable
-private fun NudgeCard(nudge: Nudge, agent: Agent?, room: Room?, now: Long, onOpen: () -> Unit, onDismiss: () -> Unit, modifier: Modifier) {
+private fun NudgePager(
+    nudges: List<Nudge>,
+    state: AppState,
+    now: Long,
+    onOpen: (Nudge) -> Unit,
+    onDismiss: (Nudge) -> Unit,
+    modifier: Modifier,
+) {
+    val pager = rememberPagerState(pageCount = { nudges.size })
+    Column(modifier) {
+        HorizontalPager(
+            pager,
+            contentPadding = PaddingValues(horizontal = OrbitDimens.gutter),
+            pageSpacing = 10.dp,
+            verticalAlignment = Alignment.Top,
+            key = { nudges[it].id },
+        ) { page ->
+            val nudge = nudges[page]
+            NudgeCard(
+                nudge, state.agent(nudge.agentId), state.room(nudge.roomId), now,
+                page = page, count = nudges.size,
+                onOpen = { onOpen(nudge) },
+                onDismiss = { onDismiss(nudge) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun NudgeCard(
+    nudge: Nudge,
+    agent: Agent?,
+    room: Room?,
+    now: Long,
+    page: Int,
+    count: Int,
+    onOpen: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     val c = Orbit.colors
     val look = agent?.avatar ?: dev.orbit.app.data.AvatarSpec(0)
-    val wash = look.tint().copy(alpha = if (c.isDark) 0.2f else 0.24f)
-    val shape = RoundedCornerShape(OrbitDimens.radiusL)
     val why = when (nudge.kind) {
         ProactiveMark.KIND_FOLLOW_UP -> "Follow-up"
         ProactiveMark.KIND_WATCH -> "Watch"
         ProactiveMark.KIND_BRIEF -> "Morning brief"
         else -> "Check-in"
     }
-    Box(
-        modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(c.surface)
-            .background(Brush.linearGradient(listOf(wash, Color.Transparent), start = Offset.Zero, end = Offset(700f, 420f)))
-            .border(surfaceBorder(), shape)
-            .tap(shape, 0.98f, onOpen),
-    ) {
-        Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 14.dp, bottom = 16.dp)) {
-            AgentAvatar(look, size = 40.dp)
-            Column(Modifier.weight(1f).padding(start = 12.dp, top = 1.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+    OrbitCard(Modifier.fillMaxWidth(), onClick = onOpen) {
+        Column(Modifier.padding(start = 16.dp, end = 12.dp, top = 14.dp, bottom = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AvatarDisc(look, size = 38.dp)
+                Row(Modifier.weight(1f).padding(start = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(agent?.name ?: "Your crew", style = OrbitType.titleS, color = look.textColor())
                     Text(
                         // The brief has a room of its own, so its name would only repeat what it is.
                         " · $why${room?.takeIf { nudge.kind != ProactiveMark.KIND_BRIEF }?.let { " · ${it.name}" }.orEmpty()}",
                         Modifier.weight(1f, fill = false),
                         style = OrbitType.bodyS,
-                        color = c.textSecondary,
+                        color = c.textTertiary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Text(relativeTime(nudge.at, now), Modifier.padding(start = 8.dp), style = OrbitType.caption, color = c.textTertiary)
                 }
-                Text(nudge.text, Modifier.padding(top = 4.dp), style = OrbitType.bodyM, color = c.text, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                Text(relativeTime(nudge.at, now), Modifier.padding(start = 8.dp, end = 4.dp), style = OrbitType.caption, color = c.textTertiary)
             }
-            IconTap(OrbitIcon.Close, "Dismiss", onDismiss, tint = c.textTertiary)
+            Text(
+                nudge.text,
+                Modifier.padding(top = 10.dp, end = 4.dp),
+                style = OrbitType.bodyM,
+                color = c.text,
+                minLines = 3,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                // Where this card sits among the others: the current one is a longer bar.
+                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (count > 1) repeat(count) { i ->
+                        Box(
+                            Modifier
+                                .size(width = if (i == page) 16.dp else 6.dp, height = 6.dp)
+                                .clip(CircleShape)
+                                .background(if (i == page) c.text else c.surfaceHigh),
+                        )
+                    }
+                }
+                Text(
+                    "Dismiss",
+                    Modifier.tap(CircleShape, 0.94f, onDismiss).padding(horizontal = 12.dp, vertical = 10.dp),
+                    style = OrbitType.label,
+                    color = c.textSecondary,
+                )
+                Pill("Open", onOpen, selected = true)
+            }
         }
     }
 }
@@ -554,38 +612,36 @@ private fun AddKeyNotice(onAddKey: () -> Unit, modifier: Modifier) {
     }
 }
 
+/** One of the crew: the character in its color's circle, ringed while it's speaking, with its name and role. */
 @Composable
-private fun CrewMember(agent: Agent, onClick: () -> Unit) {
+private fun CrewMember(agent: Agent, speaking: Boolean, onClick: () -> Unit) {
     val c = Orbit.colors
     Column(
         Modifier.width(CrewItem).tap(RoundedCornerShape(OrbitDimens.radiusM), 0.94f, onClick).padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(contentAlignment = Alignment.BottomCenter) {
-            // Each character stands on a soft pool of its own color.
-            val floor = agent.avatar.tint()
-            Box(
-                Modifier
-                    .size(width = CrewAvatar, height = 18.dp)
-                    .graphicsLayer { scaleY = 0.55f }
-                    .background(Brush.radialGradient(listOf(floor.copy(alpha = if (c.isDark) 0.55f else 0.5f), floor.copy(alpha = 0f))), CircleShape),
-            )
-            AgentAvatar(agent.avatar, Modifier.padding(bottom = 5.dp).shared(SharedKeys.agentAvatar(agent.id)), size = CrewAvatar, alive = true)
-        }
+        AvatarDisc(
+            agent.avatar,
+            size = CrewAvatar,
+            ring = speaking,
+            alive = true,
+            avatarModifier = Modifier.shared(SharedKeys.agentAvatar(agent.id)),
+        )
         Text(
             agent.name,
-            Modifier.padding(top = 10.dp, start = 4.dp, end = 4.dp),
+            Modifier.padding(top = 8.dp, start = 4.dp, end = 4.dp),
             style = OrbitType.label,
             color = c.text,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        if (agent.role.isNotBlank()) {
+        val role = if (speaking) "replying" else agent.role
+        if (role.isNotBlank()) {
             Text(
-                agent.role,
+                role,
                 Modifier.padding(top = 2.dp, start = 4.dp, end = 4.dp),
                 style = OrbitType.caption,
-                color = c.textTertiary,
+                color = if (speaking) agent.avatar.textColor() else c.textTertiary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -598,20 +654,20 @@ private fun RoomRow(room: Room, agents: List<Agent>, now: Long, onLongClick: () 
     val c = Orbit.colors
     val speaker = agents.firstOrNull { it.id == room.speaking }
     Row(
-        Modifier.fillMaxWidth().tap(RectangleShape, 0.985f, onLongClick = onLongClick, onClick = onClick).padding(horizontal = OrbitDimens.gutter, vertical = 14.dp),
+        Modifier.fillMaxWidth().tap(RectangleShape, 0.985f, onLongClick = onLongClick, onClick = onClick).padding(horizontal = OrbitDimens.rowPad, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CrewTile(
             agents.map { it.avatar },
             size = RoomTile,
-            // The tile takes a hint of its first member's color.
-            color = agents.firstOrNull()?.avatar?.tint()?.copy(alpha = if (c.isDark) 0.2f else 0.24f)?.compositeOver(c.surfaceRaised) ?: c.surfaceRaised,
+            // The tile takes a wash of its first member's color.
+            color = agents.firstOrNull()?.avatar?.wash() ?: c.surfaceRaised,
             itemModifier = { index -> Modifier.shared(SharedKeys.roomMember(room.id, agents[index].id)) },
         )
         Column(Modifier.weight(1f).padding(start = 14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(room.name, Modifier.weight(1f), style = OrbitType.titleM, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                // One quiet signal that a room is working: the speaker's dot and a shimmering line below.
+                Text(room.name, Modifier.weight(1f), style = OrbitType.titleS, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                // One quiet signal that a room is working: the speaker's dot and a line in their color.
                 if (room.active) {
                     StatusDot(speaker?.avatar?.textColor() ?: c.textSecondary, Modifier.padding(start = 10.dp), size = 7.dp)
                 } else {
@@ -621,17 +677,17 @@ private fun RoomRow(room: Room, agents: List<Agent>, now: Long, onLongClick: () 
             val preview = room.preview
             when {
                 room.active -> ShimmerText(
-                    if (speaker != null) "${speaker.name} is replying" else "Working",
-                    OrbitType.bodyM,
-                    c.textTertiary,
-                    Modifier.padding(top = 3.dp),
+                    if (speaker != null) "${speaker.name} is replying…" else "Working…",
+                    OrbitType.bodyS,
+                    speaker?.avatar?.textColor() ?: c.textTertiary,
+                    Modifier.padding(top = 2.dp),
                 )
                 else -> Text(
                     if (preview == null) "No messages yet" else "${preview.author}: ${preview.text}",
-                    Modifier.padding(top = 3.dp),
-                    style = OrbitType.bodyM,
+                    Modifier.padding(top = 2.dp),
+                    style = OrbitType.bodyS,
                     color = if (preview == null) c.textTertiary else c.textSecondary,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -639,28 +695,43 @@ private fun RoomRow(room: Room, agents: List<Agent>, now: Long, onLongClick: () 
     }
 }
 
-/** "New room", which tucks into a round button once the list scrolls. */
+/** Search across every room, and a round button for a new room, floating over the bottom of Home. */
 @Composable
-private fun NewRoomButton(expanded: Boolean, onClick: () -> Unit) {
+private fun BottomBar(onSearch: () -> Unit, onNewRoom: () -> Unit, modifier: Modifier) {
     val c = Orbit.colors
-    val interaction = remember { MutableInteractionSource() }
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.pressScale(interaction, 0.94f),
-        shape = CircleShape,
-        color = c.primary,
-        contentColor = c.onPrimary,
-        shadowElevation = 6.dp,
-        interactionSource = interaction,
+    Row(
+        modifier.fillMaxWidth().padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, bottom = 18.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(Modifier.height(54.dp).padding(horizontal = 17.dp), verticalAlignment = Alignment.CenterVertically) {
-            OrbitIcon(OrbitIcon.Plus, size = 20.dp, tint = c.onPrimary, description = "New room")
-            AnimatedVisibility(
-                expanded,
-                enter = expandHorizontally(OrbitMotion.snappy()) + fadeIn(),
-                exit = shrinkHorizontally(OrbitMotion.snappy()) + fadeOut(),
-            ) {
-                Text("New room", Modifier.padding(start = 8.dp, end = 4.dp), style = OrbitType.titleS, maxLines = 1)
+        val search = remember { MutableInteractionSource() }
+        Surface(
+            onClick = onSearch,
+            modifier = Modifier.weight(1f).pressScale(search, 0.98f),
+            shape = CircleShape,
+            color = c.surfaceRaised,
+            contentColor = c.textTertiary,
+            border = surfaceBorder(),
+            shadowElevation = 6.dp,
+            interactionSource = search,
+        ) {
+            Row(Modifier.height(52.dp).padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+                OrbitIcon(OrbitIcon.Search, size = 18.dp, tint = c.textTertiary)
+                Text("Search rooms and messages", Modifier.padding(start = 10.dp), style = OrbitType.bodyM, color = c.textTertiary, maxLines = 1)
+            }
+        }
+        val add = remember { MutableInteractionSource() }
+        Surface(
+            onClick = onNewRoom,
+            modifier = Modifier.pressScale(add, 0.94f),
+            shape = CircleShape,
+            color = c.primary,
+            contentColor = c.onPrimary,
+            shadowElevation = 6.dp,
+            interactionSource = add,
+        ) {
+            Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+                OrbitIcon(OrbitIcon.Plus, size = 20.dp, tint = c.onPrimary, description = "New room")
             }
         }
     }

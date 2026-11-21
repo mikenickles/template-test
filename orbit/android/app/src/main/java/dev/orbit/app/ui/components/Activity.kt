@@ -140,34 +140,39 @@ private fun iconFor(kind: String) = when (kind) {
 }
 
 /**
- * What an agent did on its way to a reply, one quiet line per step. A step in progress shimmers. Once
- * the reply has landed, a long trail folds into one summary line that opens on tap.
+ * What an agent did on its way to a reply. While it works, one quiet line per step, the current one
+ * shimmering. Once the reply has landed, the steps fold into one small chip that opens on tap.
  */
 @Composable
 fun ActivityTrail(activity: List<Activity>, streaming: Boolean, modifier: Modifier = Modifier) {
     if (activity.isEmpty()) return
     var expanded by rememberSaveable { mutableStateOf(false) }
-    val folded = !streaming && !expanded && activity.size > 3
     Column(modifier.animateContentSize(OrbitMotion.snappy())) {
-        if (folded) {
+        if (streaming) {
+            for (step in activity) ActivityLine(step, live = !step.done)
+        } else {
             val c = Orbit.colors
             Row(
-                Modifier.tap(CircleShape, 0.97f) { expanded = true }.heightIn(min = 28.dp).padding(end = 6.dp),
+                Modifier
+                    .tap(CircleShape, 0.97f) { expanded = !expanded }
+                    .background(c.surface)
+                    .border(1.dp, c.hairline, CircleShape)
+                    .heightIn(min = 30.dp)
+                    .padding(start = 10.dp, end = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                OrbitIcon(iconFor(activity.first().kind), size = 15.dp, tint = c.textTertiary)
+                OrbitIcon(iconFor(activity.first().kind), size = 14.dp, tint = c.textTertiary)
                 Text(
-                    activitySummary(activity),
-                    Modifier.weight(1f, fill = false).padding(start = 8.dp),
-                    style = OrbitType.bodyS,
+                    if (activity.size == 1) activityLabel(activity[0]).let { listOf(it.verb, it.detail).filter(String::isNotBlank).joinToString(" ") } else activitySummary(activity),
+                    Modifier.weight(1f, fill = false).padding(start = 7.dp),
+                    style = OrbitType.caption,
                     color = c.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                OrbitIcon(OrbitIcon.Chevron, Modifier.padding(start = 2.dp).graphicsLayer { rotationZ = 90f }, size = 15.dp, tint = c.textTertiary)
+                OrbitIcon(OrbitIcon.Chevron, Modifier.padding(start = 3.dp).graphicsLayer { rotationZ = if (expanded) -90f else 90f }, size = 14.dp, tint = c.textTertiary)
             }
-        } else {
-            for (step in activity) ActivityLine(step, live = streaming && !step.done)
+            if (expanded) Column(Modifier.padding(top = 6.dp, start = 4.dp)) { for (step in activity) ActivityLine(step, live = false) }
         }
     }
 }

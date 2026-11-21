@@ -49,6 +49,8 @@ export const api = {
   removeMemory: (agentId, noteId) => request('DELETE', `/api/agents/${agentId}/memory/${noteId}`),
   saveRoom: (room) => (room.id ? request('PUT', `/api/rooms/${room.id}`, room) : request('POST', '/api/rooms', room)),
   deleteRoom: (id) => request('DELETE', `/api/rooms/${id}`),
+  /** Rooms and messages with every word, newest first. */
+  search: (q) => request('GET', `/api/search?q=${encodeURIComponent(q)}`),
   /** "Describe it": the hub sets up a room from the user's own words, and returns it. */
   planRoom: (text) => request('POST', '/api/rooms/plan', { text }),
   models: (providerId) => request('GET', `/api/providers/${providerId}/models`),

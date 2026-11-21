@@ -11,6 +11,10 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -299,5 +303,29 @@ fun CrewTile(
         layout.forEachIndexed { index, (x, y, d) ->
             AgentAvatar(specs[index], Modifier.offset(size * x, size * y).then(itemModifier(index)), size * d)
         }
+    }
+}
+
+/** The soft wash of an agent's color that its avatar sits on, over the current surface. */
+@Composable
+fun AvatarSpec.wash(): Color = tint().copy(alpha = if (Orbit.colors.isDark) 0.16f else 0.22f).compositeOver(Orbit.colors.surface)
+
+/**
+ * An agent's character in a soft circle of its own color: the Polished look for faces in lists and chat.
+ * [ring] circles it in its color, for the agent that's speaking.
+ */
+@Composable
+fun AvatarDisc(
+    spec: AvatarSpec,
+    modifier: Modifier = Modifier,
+    size: Dp = 40.dp,
+    ring: Boolean = false,
+    thinking: Boolean = false,
+    alive: Boolean = false,
+    avatarModifier: Modifier = Modifier,
+) {
+    val outline = if (ring) Modifier.border(2.dp, spec.tint(), CircleShape).padding(4.dp) else Modifier
+    Box(modifier.size(size).then(outline).background(spec.wash(), CircleShape), contentAlignment = Alignment.Center) {
+        AgentAvatar(spec, avatarModifier, size = (if (ring) size - 8.dp else size) * 0.84f, thinking = thinking, alive = alive)
     }
 }

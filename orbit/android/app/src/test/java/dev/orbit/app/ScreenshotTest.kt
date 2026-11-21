@@ -47,6 +47,10 @@ import dev.orbit.app.ui.screens.AwayScreen
 import dev.orbit.app.ui.screens.FoldersScreen
 import dev.orbit.app.ui.screens.GoogleScreen
 import dev.orbit.app.ui.screens.ModelsScreen
+import dev.orbit.app.ui.screens.SearchScreen
+import dev.orbit.app.data.SearchResults
+import dev.orbit.app.data.SearchRoom
+import dev.orbit.app.data.SearchHit
 import dev.orbit.app.ui.screens.SettingsScreen
 import dev.orbit.app.ui.screens.ProactiveScreen
 import dev.orbit.app.ui.screens.ShareScreen
@@ -248,6 +252,27 @@ class ScreenshotTest {
     }
     @Test fun settings() = shot("settings") { SettingsScreen(app, "http://192.168.1.20:8787", {}, {}) }
     @Test fun settingsModels() = shot("settings-models") { ModelsScreen(app, {}, {}) }
+    @Test fun search() = shot("search") {
+        SearchScreen(
+            "ramen",
+            {},
+            SearchResults(
+                "ramen",
+                rooms = listOf(SearchRoom(trip.id, "Ramen crawl", listOf(nova.id, sage.id))),
+                messages = listOf(
+                    SearchHit(trip.id, trip.name, "m2", nova.id, "Nova", "Fuunji is your best bet: a 6 minute walk from the hotel, and the tsukemen gets the most praise among ramen fans.", now - 3 * 3_600_000),
+                    SearchHit(trip.id, trip.name, "m1", null, "You", "Find a ramen place near the hotel and check it against my trip notes.", now - 3 * 3_600_000 - 60_000),
+                    SearchHit(launch.id, launch.name, "m9", pixel.id, "Pixel", "…we could do a ramen lunch for the launch team on Friday.", now - 26 * 3_600_000),
+                ),
+            ),
+            false,
+            agents,
+            {},
+            {},
+            now = now,
+            autoFocus = false,
+        )
+    }
     @Test fun settingsFolders() = shot("settings-folders") { FoldersScreen(app, "http://192.168.1.20:8787", {}, {}) }
     @Test fun settingsAway() = shot("settings-away") { AwayScreen(app, "http://100.101.102.103:8787", {}) }
     @Test fun messageActions() = shot("message-actions") {

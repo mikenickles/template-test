@@ -134,6 +134,9 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
     /** Tokens and estimated spend over the last [days] days, overall and per agent and room. */
     suspend fun usage(days: Int = 30): UsageSummary = call("GET", "/api/usage?days=$days")
 
+    /** Rooms and messages with every word of [query], newest first. */
+    suspend fun search(query: String): SearchResults = call("GET", "/api/search?q=${java.net.URLEncoder.encode(query, "UTF-8")}")
+
     suspend fun saveAgent(agent: Agent): Agent {
         val body = OrbitJson.encodeToString(agent)
         return if (agent.id.isEmpty()) call("POST", "/api/agents", body) else call("PUT", "/api/agents/${agent.id}", body)

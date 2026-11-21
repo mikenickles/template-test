@@ -193,6 +193,15 @@ function Connect({ onConnected }) {
 
 function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate, onDelete }) {
   const byId = useMemo(() => Object.fromEntries(state.agents.map((a) => [a.id, a])), [state.agents]);
+  const [query, setQuery] = useState('');
+  const [found, setFound] = useState(null);
+  // Asks the hub a moment after typing stops.
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) { setFound(null); return undefined; }
+    const timer = setTimeout(() => api.search(q).then(setFound).catch(() => setFound({ query: q, rooms: [], messages: [] })), 250);
+    return () => clearTimeout(timer);
+  }, [query]);
   const rooms = [...state.rooms].sort((a, b) => b.updatedAt - a.updatedAt);
   const intro = !state.profile?.notes?.length;
   const demo = !intro && !state.providers.some((p) => p.takesKey && p.configured);
@@ -204,7 +213,12 @@ function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate, onDelete 
         <div class="names"><div class="title-s">${state.hub.name || 'Treehouse'}</div><div class="caption faint">Settings, keys and usage</div></div>
       </button>
     </div>
-    <div class="sidebar-scroll">
+    <label class="sidebar-search">
+      <${Icon} name="search" size=${17} />
+      <input type="search" placeholder="Search rooms and messages" value=${query} onInput=${(e) => setQuery(e.currentTarget.value.slice(0, 200))}
+        onKeyDown=${(e) => e.key === 'Escape' && setQuery('')} aria-label="Search rooms and messages" />
+    </label>
+    ${query.trim() ? html`<div class="sidebar-scroll"><${SearchResults} found=${found} byId=${byId} onOpen=${(id) => { onOpen(id); }} /></div>` : html`<div class="sidebar-scroll">
       ${state.updates?.hub.available && html`<button class="card row button-row update-banner" onClick=${onUpdate}>
         <div style="flex:1"><div class="title-s">Treehouse ${state.updates.hub.available} is ready</div>
           <div class="body-s muted">Install it now. Treehouse restarts in a few seconds.</div></div>
@@ -253,8 +267,41 @@ function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate, onDelete 
           <${Avatar} spec=${agent.avatar} size=${26} />${agent.name}
         </button>`)}
       </div>
-    </div>
+    </div>`}
   </aside>`;
+}
+
+/** Bold every searched word in a snippet; the rest stays plain text. */
+function highlight(text, words) {
+  const pattern = words.filter(Boolean).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  if (!pattern) return text;
+  return text.split(new RegExp(`(${pattern})`, 'gi')).map((part, i) => (i % 2 ? html`<strong>${part}</strong>` : part));
+}
+
+/** What a search found: rooms first, then messages with the words around each match. */
+function SearchResults({ found, byId, onOpen }) {
+  if (!found) return html`<p class="note" style="padding:0 10px">Searching…</p>`;
+  if (!found.rooms.length && !found.messages.length) return html`<p class="note" style="padding:0 10px">Nothing found for “${found.query}”.</p>`;
+  const words = found.query.split(' ');
+  return html`
+    ${found.rooms.length > 0 && html`<div class="sidebar-title"><span class="overline">Rooms</span></div>
+      ${found.rooms.map((r) => html`<button class="search-hit" onClick=${() => onOpen(r.id)}>
+        <${CrewTile} specs=${r.agentIds.map((id) => byId[id]?.avatar).filter(Boolean)} size=${32} tint=${byId[r.agentIds[0]] ? tint(byId[r.agentIds[0]].avatar) : null} />
+        <span class="title-s">${r.name}</span></button>`)}`}
+    ${found.messages.length > 0 && html`<div class="sidebar-title"><span class="overline">Messages</span></div>
+      ${found.messages.map((m) => {
+        const agent = byId[m.agentId];
+        return html`<button class="search-hit message" onClick=${() => onOpen(m.roomId)}>
+          ${agent ? html`<${Disc} spec=${agent.avatar} size=${30} />` : html`<span class="disc you"><${Icon} name="person" size=${16} /></span>`}
+          <span class="text"><span class="top"><span class="title-s" style=${agent ? `color:${inkColor(agent.avatar)}` : ''}>${m.author}</span><span class="caption faint"> · ${m.roomName} · ${ago(m.at)}</span></span>
+            <span class="body-s muted">${highlight(m.snippet, words)}</span></span></button>`;
+      })}`}`;
+}
+
+/** An agent's character in a soft circle of its own color. [ring] circles it in its color, for whoever is speaking. */
+function Disc({ spec, size = 40, ring = false, thinking = false }) {
+  return html`<span class=${`disc${ring ? ' ring' : ''}`} style=${`--wash:${tint(spec)};width:${size}px;height:${size}px`}>
+    <${Avatar} spec=${spec} size=${Math.round(size * 0.84)} thinking=${thinking} /></span>`;
 }
 
 /** The agent who runs the intro: its room's, else the first on Claude, else the guide a new hub would get. */
@@ -280,13 +327,15 @@ function Welcome({ state, onDialog, onIntro, onOpen, onDismiss }) {
   const intro = !state.profile?.notes?.length;
   const guide = guideOf(state);
   const introRoom = state.rooms.find((r) => r.intro);
+  const speaking = new Set(state.rooms.filter((r) => r.active).map((r) => r.speaking));
   return html`<div class="home">
-    <h1 class="display">${name ? `${greeting()}, ${name}` : greeting()}</h1>
-    <p class="muted home-sub">${busy
-      ? html`<span class="dot" style=${`background:${speaker ? inkColor(speaker.avatar) : 'var(--live)'}`}></span><span class="shimmer">${speaker ? `${speaker.name} is replying in ${busy.name}` : `Your crew is working in ${busy.name}`}</span>`
-      : !state.agents.length ? "Let's set up your crew"
-      : state.agents.length === 1 ? `${state.agents[0].name} is here when you need them`
-      : `Your crew of ${state.agents.length} is ready`}</p>
+    <h1 class="display">${name ? html`<span class="faint">${greeting()},</span><br />${name}` : greeting()}</h1>
+    ${busy
+      ? html`<p class="home-chip" style=${`--wash:${speaker ? tint(speaker.avatar) : 'var(--live)'}`}>${speaker ? html`<${Avatar} spec=${speaker.avatar} size=${22} />` : html`<span class="dot"></span>`}
+          <span class="shimmer">${speaker ? `${speaker.name} is replying in ${busy.name}` : `Your crew is working in ${busy.name}`}</span></p>`
+      : html`<p class="muted home-sub">${!state.agents.length ? "Let's set up your crew"
+          : state.agents.length === 1 ? `${state.agents[0].name} is here when you need them`
+          : `Your crew of ${state.agents.length} is ready`}</p>`}
     ${intro && html`<div class="intro-card" style=${`--wash:${tint(guide.avatar)}`}>
       <div class="intro-head">
         <${Avatar} spec=${guide.avatar} size=${84} />
@@ -300,26 +349,14 @@ function Welcome({ state, onDialog, onIntro, onOpen, onDismiss }) {
         ? html`<button class="button" onClick=${onIntro}>${introRoom ? 'Continue the chat' : 'Say hello'}</button>`
         : html`<button class="button" onClick=${() => onDialog({ type: 'settings', page: 'models' })}>Add a key</button>`}
     </div>`}
-    ${state.nudges?.length > 0 && html`<div class="stage-title"><span class="overline">From your crew</span></div>
-    <div class="nudges">${[...state.nudges].reverse().slice(0, 5).map((n) => {
-      const agent = state.agents.find((a) => a.id === n.agentId);
-      const room = state.rooms.find((r) => r.id === n.roomId);
-      const why = { followup: 'Follow-up', watch: 'Watch', brief: 'Morning brief' }[n.kind] ?? 'Check-in';
-      return html`<div class="nudge" key=${n.id} style=${`--wash:${agent ? tint(agent.avatar) : 'transparent'}`}>
-        <${Avatar} spec=${agent?.avatar} size=${40} />
-        <button class="text" style="text-align:left" onClick=${() => onOpen(n.roomId)}>
-          <div class="body-s"><span class="title-s" style=${`color:${agent ? inkColor(agent.avatar) : 'var(--text)'}`}>${agent?.name ?? 'Your crew'}</span>
-            <span class="muted"> · ${why}${room && n.kind !== 'brief' ? ` · ${room.name}` : ''} · ${ago(n.at)}</span></div>
-          <p>${n.text}</p>
-        </button>
-        <button class="icon-button" aria-label="Dismiss" title="Dismiss" onClick=${() => onDismiss(n.id)}><${Icon} name="close" size=${18} /></button>
-      </div>`;
-    })}</div>`}
+    ${state.nudges?.length > 0 && html`<${NudgeCard} nudges=${[...state.nudges].reverse().slice(0, 5)} state=${state} onOpen=${onOpen} onDismiss=${onDismiss} />`}
     ${state.agents.length > 0 && html`<div class="stage-title"><span class="overline">Your crew</span>
       <button class="label muted" onClick=${() => onDialog({ type: 'room' })}>New room</button></div>
-    <div class="stage">${state.agents.map((agent) => html`<button class="stage-member" style=${`--pool:${tint(agent.avatar)}`} title=${`Edit ${agent.name}`} onClick=${() => onDialog({ type: 'agent', agent })}>
-      <span class="pool"></span><${Avatar} spec=${agent.avatar} size=${72} />
-      <span class="title-s">${agent.name}</span>${agent.role && html`<span class="caption faint">${agent.role}</span>`}
+    <div class="stage">${state.agents.map((agent) => html`<button class="stage-member" title=${`Edit ${agent.name}`} onClick=${() => onDialog({ type: 'agent', agent })}>
+      <${Disc} spec=${agent.avatar} size=${72} ring=${speaking.has(agent.id)} />
+      <span class="title-s">${agent.name}</span>${speaking.has(agent.id)
+        ? html`<span class="caption" style=${`color:${inkColor(agent.avatar)}`}>replying</span>`
+        : agent.role && html`<span class="caption faint">${agent.role}</span>`}
     </button>`)}
       <button class="stage-member add" onClick=${() => onDialog({ type: 'agent' })}><span class="plus"><${Icon} name="plus" /></span><span class="title-s">New agent</span></button>
     </div>`}
@@ -330,14 +367,41 @@ function Welcome({ state, onDialog, onIntro, onOpen, onDismiss }) {
       <button class="button" onClick=${() => onDialog({ type: 'room' })}>New room</button>
     </div>`}
     ${state.rooms.length > 0 && html`<div class="stage-title"><span class="overline">Recent rooms</span></div>
-    <div class="room-cards">${[...state.rooms].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4).map((room) => {
+    <div class="card room-list">${[...state.rooms].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5).map((room) => {
       const crew = room.agentIds.map((id) => state.agents.find((a) => a.id === id)).filter(Boolean);
-      return html`<button class="room-card" style=${`--wash:${crew[0] ? tint(crew[0].avatar) : 'transparent'}`} onClick=${() => onOpen(room.id)}>
-        <${CrewTile} specs=${crew.map((a) => a.avatar)} size=${48} />
-        <div class="text"><div class="title-s">${room.name}</div>
-          <div class="body-s muted">${room.active ? 'Working now' : room.preview ? `${room.preview.author}: ${room.preview.text}` : 'No messages yet'}</div></div>
+      const talking = state.agents.find((a) => a.id === room.speaking);
+      return html`<button class="room-line" onClick=${() => onOpen(room.id)}>
+        <${CrewTile} specs=${crew.map((a) => a.avatar)} size=${44} tint=${crew[0] ? tint(crew[0].avatar) : null} />
+        <div class="text"><div class="top"><span class="title-s">${room.name}</span>${room.active
+          ? html`<span class="dot" style=${`background:${talking ? inkColor(talking.avatar) : 'var(--text-2)'}`}></span>`
+          : html`<span class="caption faint">${ago(room.updatedAt)}</span>`}</div>
+          ${room.active
+            ? html`<div class="body-s shimmer" style=${talking ? `color:${inkColor(talking.avatar)}` : ''}>${talking ? `${talking.name} is replying…` : 'Working…'}</div>`
+            : html`<div class="body-s muted preview">${room.preview ? `${room.preview.author}: ${room.preview.text}` : 'No messages yet'}</div>`}</div>
       </button>`;
     })}</div>`}
+  </div>`;
+}
+
+/** What agents wrote on their own, as one card to step through: Open goes to the room, Dismiss takes it off Home. */
+function NudgeCard({ nudges, state, onOpen, onDismiss }) {
+  const [index, setIndex] = useState(0);
+  const at = Math.min(index, nudges.length - 1);
+  const n = nudges[at];
+  const agent = state.agents.find((a) => a.id === n.agentId);
+  const room = state.rooms.find((r) => r.id === n.roomId);
+  const why = { followup: 'Follow-up', watch: 'Watch', brief: 'Morning brief' }[n.kind] ?? 'Check-in';
+  return html`<div class="card nudge-card" key=${n.id}>
+    <div class="head">${agent ? html`<${Disc} spec=${agent.avatar} size=${38} />` : html`<span class="disc you"></span>`}
+      <div class="who"><span class="title-s" style=${agent ? `color:${inkColor(agent.avatar)}` : ''}>${agent?.name ?? 'Your crew'}</span>
+        <span class="body-s faint"> · ${why}${room && n.kind !== 'brief' ? ` · ${room.name}` : ''}</span></div>
+      <span class="caption faint">${ago(n.at)}</span></div>
+    <p>${n.text}</p>
+    <div class="foot">
+      <div class="dots">${nudges.length > 1 && nudges.map((x, i) => html`<button class=${i === at ? 'on' : ''} aria-label=${`Note ${i + 1} of ${nudges.length}`} onClick=${() => setIndex(i)}></button>`)}</div>
+      <button class="label muted" onClick=${() => onDismiss(n.id)}>Dismiss</button>
+      <button class="pill selected" onClick=${() => onOpen(n.roomId)}>Open</button>
+    </div>
   </div>`;
 }
 
@@ -459,11 +523,11 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
             : run.active
               ? html`<span class="dot" style=${`background:${speaker ? inkColor(speaker.avatar) : 'var(--text-2)'}`}></span><span class="shimmer">${speaker ? `${speaker.name} is replying` : 'Working'}</span>`
               : agents.length === 1 ? `Just you and ${agents[0].name}`
-              : room.mode === 'auto' ? 'Best fit: whoever suits each message answers'
-              : room.mode === 'lead' && lead ? `Led by ${lead.name}` : 'Round table'}
+              : room.mode === 'auto' ? `Best fit · ${agents.map((a) => a.name).join(', ')}`
+              : room.mode === 'lead' && lead ? `Led by ${lead.name}` : `Round table · ${agents.map((a) => a.name).join(', ')}`}
         </div>
       </div>
-      <div class="avatar-row">${agents.slice(0, 5).map((a) => html`<${Avatar} spec=${a.avatar} size=${30} thinking=${run.active && run.agentId === a.id} />`)}</div>
+      <div class="avatar-stack">${agents.slice(0, 4).map((a) => html`<${Disc} spec=${a.avatar} size=${32} thinking=${run.active && run.agentId === a.id} />`)}</div>
       <button class="icon-button" aria-label="Room options" aria-expanded=${menu} onClick=${() => setMenu(!menu)}><${Icon} name="more" /></button>
       ${menu && html`<div class="menu" onMouseLeave=${() => setMenu(false)}>
         <button onClick=${() => { setMenu(false); onDialog({ type: 'room', room }); }}>Edit room</button>
@@ -497,6 +561,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
       ${!nearBottom && html`<div class="latest"><button class="pill" onClick=${() => { scroller.current.scrollTop = scroller.current.scrollHeight; }}><${Icon} name="up" size=${16} />Latest</button></div>`}
     </div>
     <${Composer} room=${room} agents=${agents} running=${run.active} notify=${notify} onSent=${() => { stick.current = true; }}
+      suggestions=${loaded && messages.length && !run.active ? suggestionsFor(agents, messages) : []}
       replyingTo=${replyingTo} replyAgent=${replyingTo && byId[replyingTo.author.agentId]} onCancelReply=${() => setReplyingTo(null)} />
     ${viewing && html`<div class="viewer" onClick=${() => setViewing(null)} role="dialog" aria-label=${viewing.name}><img src=${`/api/files/${viewing.id}`} alt=${viewing.name} /></div>`}
   `;
@@ -599,13 +664,20 @@ function summary(activity) {
   return text[0].toUpperCase() + text.slice(1);
 }
 
+/** One line for a single step: "Searched best ramen near the hotel". */
+function stepLine(step) {
+  const [, done, failed] = STEPS[step.kind] ?? ['Working', 'Used a tool', 'Used a tool'];
+  return [step.failed ? failed : done, stepDetail(step)].filter(Boolean).join(' ');
+}
+
+/** While an agent works, a line per step; once it has answered, one small chip that opens to show them. */
 function Trail({ activity, streaming }) {
   const [open, setOpen] = useState(false);
   if (!activity?.length) return null;
-  if (!streaming && !open && activity.length > 3) {
-    return html`<button class="trail-summary" onClick=${() => setOpen(true)}><${Icon} name=${STEPS[activity[0].kind]?.[3] ?? 'more'} />${summary(activity)}<${Icon} name="chevron" size=${15} /></button>`;
-  }
-  return html`<div class="trail">${activity.map((step) => {
+  const chip = !streaming && html`<button class=${`trail-summary${open ? ' open' : ''}`} aria-expanded=${open} onClick=${() => setOpen(!open)}>
+    <${Icon} name=${STEPS[activity[0].kind]?.[3] ?? 'more'} />${activity.length === 1 ? stepLine(activity[0]) : summary(activity)}<${Icon} name="chevron" size=${14} /></button>`;
+  if (!streaming && !open) return chip;
+  return html`${chip}<div class="trail">${activity.map((step) => {
     const [live, done, failed, icon] = STEPS[step.kind] ?? ['Working', 'Used a tool', 'Used a tool', 'more'];
     const isLive = streaming && !step.done;
     const verb = isLive ? live : step.failed ? failed : done;
@@ -616,21 +688,44 @@ function Trail({ activity, streaming }) {
   })}</div>`;
 }
 
+/** A model by its everyday name: "claude-opus-5-5" reads as "Opus 5.5", "gpt-6.1-terra" as "GPT-6.1 terra". */
+function modelTag(model) {
+  const id = model.split('/').pop().replace(/:latest$/, '');
+  const claude = /^claude-([a-z]+)-(\d+)(?:-(\d+))?(?:-\d{8})?$/.exec(id);
+  if (claude) return `${claude[1][0].toUpperCase()}${claude[1].slice(1)} ${claude[2]}${claude[3] ? `.${claude[3]}` : ''}`;
+  if (id.startsWith('gpt-')) return `GPT-${id.slice(4).replace('-', ' ')}`;
+  return id;
+}
+
+/** A summary, a next step, and the member who hasn't spoken lately, to bring them in. */
+function suggestionsFor(agents, messages) {
+  const out = [
+    { label: 'Summarize so far', text: 'Summarize where we are so far.', send: true },
+    { label: "What's next?", text: 'What should we do next?', send: true },
+  ];
+  if (agents.length > 1) {
+    const recent = new Set(messages.slice(-6).map((m) => m.author.agentId).filter(Boolean));
+    const quiet = agents.find((a) => !recent.has(a.id));
+    if (quiet) out.push({ label: `@${quiet.name.replace(/\s/g, '')}`, text: `@${quiet.name.replace(/\s/g, '')} `, send: false });
+  }
+  return out;
+}
+
 function AgentMessage({ message, agent, showModel, mentions }) {
   const streaming = message.status === 'streaming';
   const text = streaming ? closeOpenMarkup(message.text) : message.text;
   const rendered = useMemo(() => markdown(text, mentions), [text]);
   return html`<div class="agent-message">
-    <${Avatar} spec=${agent?.avatar} size=${34} thinking=${streaming} />
+    <${Disc} spec=${agent?.avatar} size=${34} thinking=${streaming && Boolean(message.text)} />
     <div class="body">
       <div class="agent-head">
         <span class="name" style=${`color:${inkColor(agent?.avatar)}`}>${agent?.name ?? message.author.name}</span>
         ${message.proactive && html`<span class="reached"><${Icon} name="bell" size=${13} />${REACHED[message.proactive.kind] ?? 'Checking in'}</span>`}
-        ${showModel && !message.proactive && message.author.model && html`<span class="mono faint">${message.author.model}</span>`}
+        ${showModel && !message.proactive && message.author.model && html`<span class="model-tag" title=${message.author.model}>${modelTag(message.author.model)}</span>`}
       </div>
       <${Trail} activity=${message.activity} streaming=${streaming} />
       ${message.text && html`<div class="md" dangerouslySetInnerHTML=${{ __html: rendered }}></div>`}
-      ${streaming && !message.text && (message.activity ?? []).every((a) => a.done) && html`<div class="shimmer">Thinking</div>`}
+      ${streaming && !message.text && (message.activity ?? []).every((a) => a.done) && html`<div class="thinking-dots" style=${`--wash:${tint(agent?.avatar)};--ink:${inkColor(agent?.avatar)}`} aria-label="Thinking"><i></i><i></i><i></i></div>`}
       ${message.status === 'error' && html`<div class="failure"><span class="dot"></span><div>${message.error || "This agent couldn't reply."}</div></div>`}
       ${message.status === 'stopped' && html`<div class="caption faint" style="margin-top:6px">Stopped</div>`}
       ${!streaming && message.sources?.length > 0 && html`<div class="sources">${message.sources.map((s, i) => html`<a class="source" href=${s.url} target="_blank" rel="noopener noreferrer" title=${s.title}>
@@ -661,8 +756,33 @@ function CrewReady({ made, crew, onOpen }) {
 
 // ---------- Writing a message ----------
 
-function Composer({ room, agents, running, notify, onSent, replyingTo = null, replyAgent = null, onCancelReply = () => {} }) {
+// The browser's own speech recognition, where it has one (Edge and Chrome do).
+const Speech = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+
+function Composer({ room, agents, running, notify, onSent, replyingTo = null, replyAgent = null, onCancelReply = () => {}, suggestions = [] }) {
   const [draft, setDraft] = useState('');
+  const [listening, setListening] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const recognizer = useRef(null);
+  const talk = () => {
+    if (listening) { recognizer.current?.stop(); return; }
+    const r = new Speech();
+    r.interimResults = false;
+    r.lang = navigator.language;
+    r.onresult = (e) => {
+      const words = [...e.results].map((x) => x[0].transcript).join(' ').trim();
+      if (words) setDraft((d) => (d.trim() ? `${d.trimEnd()} ${words}` : words));
+    };
+    r.onerror = (e) => e.error !== 'aborted' && e.error !== 'no-speech' && notify(e.error === 'not-allowed' ? 'Allow the microphone for this page to talk to the crew.' : "Couldn't hear that. Try again.");
+    r.onend = () => setListening(false);
+    recognizer.current = r;
+    setListening(true);
+    r.start();
+  };
+  const suggest = (s) => {
+    if (s.send) api.send(room.id, s.text).then(onSent).catch((e) => notify(e.message));
+    else { setDraft(s.text); box.current?.focus(); }
+  };
   const [files, setFiles] = useState([]);
   const [sending, setSending] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -739,6 +859,7 @@ function Composer({ room, agents, running, notify, onSent, replyingTo = null, re
   const canSend = (draft.trim() || files.length) && !sending;
 
   return html`<div class="composer-wrap">
+    ${suggestions.length > 0 && !draft && !focused && !replyingTo && html`<div class="suggestions">${suggestions.map((s) => html`<${Pill} label=${s.label} small onClick=${() => suggest(s)} />`)}</div>`}
     <div class=${`composer${dragging ? ' dragging' : ''}`}
       onDragOver=${(e) => { e.preventDefault(); setDragging(true); }}
       onDragLeave=${() => setDragging(false)}
@@ -757,7 +878,8 @@ function Composer({ room, agents, running, notify, onSent, replyingTo = null, re
       <div class="composer-row">
         <button class="icon-button" aria-label="Attach photos or files" title="Attach photos or files" onClick=${() => picker.current.click()}><${Icon} name="plus" /></button>
         <input type="file" multiple accept=${ATTACHABLE} hidden ref=${picker} onChange=${(e) => { add(e.currentTarget.files); e.currentTarget.value = ''; }} />
-        <textarea ref=${box} rows="1" placeholder=${agents.length === 1 ? `Message ${agents[0].name}` : 'Message the crew'} value=${draft} onInput=${onInput}
+        <textarea ref=${box} rows="1" placeholder=${listening ? 'Listening…' : agents.length === 1 ? `Message ${agents[0].name}` : 'Message the crew'} value=${draft} onInput=${onInput}
+          onFocus=${() => setFocused(true)} onBlur=${() => setFocused(false)}
           onPaste=${(e) => e.clipboardData.files.length && (e.preventDefault(), add(e.clipboardData.files))}
           onKeyDown=${(e) => {
             if (e.key === 'Escape' && replyingTo) onCancelReply();
@@ -767,6 +889,7 @@ function Composer({ room, agents, running, notify, onSent, replyingTo = null, re
               else send();
             }
           }} aria-label="Message"></textarea>
+        ${Speech && html`<button class=${`icon-button${listening ? ' listening' : ''}`} aria-label=${listening ? 'Stop listening' : 'Talk'} title=${listening ? 'Stop listening' : 'Talk'} aria-pressed=${listening} onClick=${talk}><${Icon} name="mic" /></button>`}
         ${!canSend && running
           ? html`<button class="send" aria-label="Stop" title="Stop" onClick=${() => api.stop(room.id).catch((e) => notify(e.message))}><span class="stop"></span></button>`
           : html`<button class="send" aria-label="Send" disabled=${!canSend} onClick=${send}>${sending ? html`<span class="spinner"></span>` : html`<${Icon} name="up" size=${19} />`}</button>`}

@@ -36,10 +36,21 @@ and rules every agent in it follows) and a mode that decides who answers:
 - **Round table**: every agent answers in turn.
 
 In any mode, @mentioning an agent (like @Nova) asks just them, and replying to a message sends it to the agent
-who wrote it. Agents can @mention each other to hand work over. The user can copy, retry or delete messages,
+who wrote it. The mic button in the message box turns speech into text (the phone's voice typing; on the PC,
+the browser's, in Edge or Chrome). While the box is empty, quick suggestions sit above it: "Summarize so far"
+and "What's next?" send right away, and an @mention of a member who hasn't spoken lately starts a message to
+them. The steps an agent took (searches, pages, files) fold into one small line under its name once it has
+answered; tapping it shows them all. Each agent's model shows as a small tag on its first reply. Agents can @mention each other to hand work over. The user can copy, retry or delete messages,
 reply to one, attach photos, PDFs and text files, stop a reply, and clear a room. Long rooms are summarized
 automatically so they stay affordable. Rooms can have scheduled messages (Schedules, in the room's menu): a
 message posted at a set time on chosen days, which the crew then answers.
+
+## Home and search
+
+Home shows a greeting and who is replying right now, then notes from the crew as one card to swipe through
+(Open goes to the room, Dismiss takes it off Home), the crew (the one speaking is ringed in its color), and the
+rooms. At the bottom of Home on the phone, and at the top of the room list on the PC, **Search rooms and
+messages** finds any room by name or description, and any message with all the words typed, newest first.
 
 ## Agents
 
