@@ -418,7 +418,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale }
 
   return html`
     ${washes.length > 0 && html`<div class="room-wash" aria-hidden="true" style=${`--wash:linear-gradient(90deg, ${(washes.length > 1 ? washes : [washes[0], washes[0]]).join(', ')})`}></div>`}
-    <header class=${`room-bar${nearBottom ? '' : ' scrolled'}`}>
+    <header class="room-bar">
       <button class="icon-button narrow-only" onClick=${onBack} aria-label="Back to rooms"><${Icon} name="back" /></button>
       <div class="titles">
         <div class="title-m">${room.name}</div>

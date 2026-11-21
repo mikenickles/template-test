@@ -89,6 +89,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.Agent
 import dev.orbit.app.data.Attachment
@@ -134,7 +135,10 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
 import dev.orbit.app.data.CrewMade
 import dev.orbit.app.ui.components.CrewTile
 import dev.orbit.app.ui.components.tap
@@ -214,7 +218,6 @@ fun RoomScreen(
     LaunchedEffect(lastFromUser) { if (lastFromUser != null && lastFromUser !in history) list.animateScrollToItem(0) }
 
     val showLatest by remember { derivedStateOf { list.firstVisibleItemIndex > 0 || list.firstVisibleItemScrollOffset > 600 } }
-    val scrolledUnderBar by remember { derivedStateOf { list.canScrollForward } }
 
     Box(Modifier.fillMaxSize().background(c.bg)) {
         // The room is lit softly from the top in its members' colors.
@@ -231,7 +234,7 @@ fun RoomScreen(
         }
         Scaffold(
             containerColor = Color.Transparent,
-            topBar = { RoomBar(room, agents, state, scrolledUnderBar, onBack, onEdit, onClear, onSchedules) },
+            topBar = { RoomBar(room, agents, state, onBack, onEdit, onClear, onSchedules) },
             bottomBar = {
                 Composer(
                     draft = draft,
@@ -255,71 +258,68 @@ fun RoomScreen(
                 )
             },
         ) { padding ->
-            Box(Modifier.fillMaxSize().padding(padding)) {
-                Column(Modifier.fillMaxSize()) {
-                    AnimatedVisibility(state.loaded && !state.connected, enter = fadeIn() + slideInVertically(), exit = fadeOut() + slideOutVertically()) {
-                        Row(
-                            Modifier.fillMaxWidth().background(c.surface).padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            StatusDot(c.textTertiary, size = 6.dp)
-                            Text("Reconnecting to your hub", Modifier.padding(start = 8.dp), style = OrbitType.label, color = c.textSecondary)
-                        }
-                    }
-                    if (state.loaded && state.messages.isEmpty()) {
-                        EmptyRoom(room, Modifier.weight(1f))
-                    } else {
-                        // Newest at the bottom, and the list stays pinned there while replies stream in.
-                        LazyColumn(
-                            Modifier.weight(1f).fillMaxWidth(),
-                            state = list,
-                            reverseLayout = true,
-                            contentPadding = PaddingValues(horizontal = OrbitDimens.gutter, vertical = 20.dp),
-                            verticalArrangement = Arrangement.spacedBy(OrbitDimens.section),
-                        ) {
-                            items(state.messages.asReversed(), key = { it.id }) { message ->
-                                val play = remember(message.id) { entrancesOn && message.id !in history && arrived.add(message.id) }
-                                Box(
-                                    Modifier
-                                        .animateItem(
-                                            fadeInSpec = null,
-                                            // While a reply grows, the rows above move with it in lockstep; placement
-                                            // only animates between runs, when messages are added or cleared.
-                                            placementSpec = if (state.run.active) {
-                                                null
-                                            } else {
-                                                spring(dampingRatio = 0.9f, stiffness = 380f, visibilityThreshold = IntOffset.VisibilityThreshold)
+            // The conversation runs the full height of the screen, behind the bar and the composer, and
+            // fades away softly at both ends rather than stopping at an edge.
+            val top = padding.calculateTopPadding()
+            val bottom = padding.calculateBottomPadding()
+            Box(Modifier.fillMaxSize()) {
+                if (state.loaded && state.messages.isEmpty()) {
+                    EmptyRoom(room, Modifier.fillMaxSize().padding(padding))
+                } else {
+                    // Newest at the bottom, and the list stays pinned there while replies stream in.
+                    LazyColumn(
+                        Modifier.fillMaxSize().fadeEdges(top, bottom),
+                        state = list,
+                        reverseLayout = true,
+                        contentPadding = PaddingValues(
+                            start = OrbitDimens.gutter,
+                            end = OrbitDimens.gutter,
+                            top = top + 36.dp,
+                            bottom = bottom + 28.dp,
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(OrbitDimens.section),
+                    ) {
+                        items(state.messages.asReversed(), key = { it.id }) { message ->
+                            val play = remember(message.id) { entrancesOn && message.id !in history && arrived.add(message.id) }
+                            Box(
+                                Modifier
+                                    .animateItem(
+                                        fadeInSpec = null,
+                                        // While a reply grows, the rows above move with it in lockstep; placement
+                                        // only animates between runs, when messages are added or cleared.
+                                        placementSpec = if (state.run.active) {
+                                            null
+                                        } else {
+                                            spring(dampingRatio = 0.9f, stiffness = 380f, visibilityThreshold = IntOffset.VisibilityThreshold)
+                                        },
+                                    )
+                                    .arrival(play, message.fromUser)
+                                    .pointerInput(message.id) {
+                                        detectTapGestures(
+                                            onLongPress = {
+                                                haptics.tick()
+                                                acting = message
                                             },
                                         )
-                                        .arrival(play, message.fromUser)
-                                        .pointerInput(message.id) {
-                                            detectTapGestures(
-                                                onLongPress = {
-                                                    haptics.tick()
-                                                    acting = message
-                                                },
-                                            )
+                                    }
+                                    .semantics {
+                                        onLongClick("Message options") {
+                                            acting = message
+                                            true
                                         }
-                                        .semantics {
-                                            onLongClick("Message options") {
-                                                acting = message
-                                                true
-                                            }
-                                        },
-                                ) {
-                                    if (message.fromUser) {
-                                        UserMessage(message, mentionColors, onOpenPhoto = { viewing = it }, replyColors = replyColors)
-                                    } else {
-                                        Column {
-                                            AgentMessage(message, byId[message.author.agentId], mentionColors, showModel = message.id in introductions)
-                                            message.created.mapNotNull { byId[it.agentId] }.forEach { hired ->
-                                                NewMember(hired, Modifier.padding(start = 48.dp, top = 14.dp)) { onOpenAgent(hired.id) }
-                                            }
-                                            message.crew?.let { made ->
-                                                CrewReady(made, made.agentIds.mapNotNull(byId::get), Modifier.padding(start = 48.dp, top = 14.dp)) {
-                                                    onOpenRoom(made.roomId)
-                                                }
+                                    },
+                            ) {
+                                if (message.fromUser) {
+                                    UserMessage(message, mentionColors, onOpenPhoto = { viewing = it }, replyColors = replyColors)
+                                } else {
+                                    Column {
+                                        AgentMessage(message, byId[message.author.agentId], mentionColors, showModel = message.id in introductions)
+                                        message.created.mapNotNull { byId[it.agentId] }.forEach { hired ->
+                                            NewMember(hired, Modifier.padding(start = 48.dp, top = 14.dp)) { onOpenAgent(hired.id) }
+                                        }
+                                        message.crew?.let { made ->
+                                            CrewReady(made, made.agentIds.mapNotNull(byId::get), Modifier.padding(start = 48.dp, top = 14.dp)) {
+                                                onOpenRoom(made.roomId)
                                             }
                                         }
                                     }
@@ -328,9 +328,24 @@ fun RoomScreen(
                         }
                     }
                 }
+                // Losing the hub shows as a small pill under the bar, over the conversation.
+                AnimatedVisibility(
+                    state.loaded && !state.connected,
+                    Modifier.align(Alignment.TopCenter).padding(top = top + 4.dp),
+                    enter = fadeIn() + slideInVertically(),
+                    exit = fadeOut() + slideOutVertically(),
+                ) {
+                    Row(
+                        Modifier.clip(CircleShape).background(c.surfaceRaised).border(1.dp, c.hairline, CircleShape).padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        StatusDot(c.textTertiary, size = 6.dp)
+                        Text("Reconnecting to your hub", Modifier.padding(start = 8.dp), style = OrbitType.label, color = c.textSecondary)
+                    }
+                }
                 AnimatedVisibility(
                     showLatest,
-                    Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
+                    Modifier.align(Alignment.BottomCenter).padding(bottom = bottom + 12.dp),
                     enter = fadeIn(tween(OrbitMotion.SHORT)) + slideInVertically(OrbitMotion.snappy()) { it / 2 },
                     exit = fadeOut(tween(OrbitMotion.SHORT)) + slideOutVertically(tween(OrbitMotion.SHORT)) { it / 2 },
                 ) {
@@ -370,6 +385,37 @@ fun RoomScreen(
         }
     }
 }
+
+/**
+ * Fades the content out toward both ends. At the top it eases down through the bar ([top] tall) to a
+ * faint trace at the very edge of the screen, so you can still sense the conversation going up behind
+ * it. At the bottom it's gone by the top of the composer ([bottom] tall). Fully there a little way clear of each.
+ */
+/** How much of the conversation still shows at the very top of the screen. */
+private const val TRACE = 0.1f
+
+private fun Modifier.fadeEdges(top: Dp, bottom: Dp): Modifier = graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        val h = size.height
+        if (h <= 0f) return@drawWithContent
+        val barEnd = (top.toPx() / h).coerceIn(0f, 1f)
+        val solidTop = ((top + 56.dp).toPx() / h).coerceIn(barEnd, 1f)
+        val clearBottom = (1f - bottom.toPx() / h).coerceIn(solidTop, 1f)
+        val solidBottom = (1f - (bottom + 32.dp).toPx() / h).coerceIn(solidTop, clearBottom)
+        drawRect(
+            Brush.verticalGradient(
+                0f to Color.Black.copy(alpha = TRACE),
+                barEnd * 0.6f to Color.Black.copy(alpha = TRACE * 1.6f),
+                barEnd to Color.Black.copy(alpha = 0.38f),
+                solidTop to Color.Black,
+                solidBottom to Color.Black,
+                clearBottom to Color.Transparent,
+                1f to Color.Transparent,
+            ),
+            blendMode = BlendMode.DstIn,
+        )
+    }
 
 /**
  * Whether a reply can be asked again: not while the crew is busy, only if its agent is still in the
@@ -456,7 +502,6 @@ private fun RoomBar(
     room: Room,
     agents: List<Agent>,
     state: RoomUiState,
-    scrolled: Boolean,
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onClear: () -> Unit,
@@ -465,7 +510,6 @@ private fun RoomBar(
     val c = Orbit.colors
     var menu by remember { mutableStateOf(false) }
     val speaker = agents.firstOrNull { it.id == state.run.agentId }
-    val divider by animateColorAsState(if (scrolled) c.hairline else Color.Transparent, tween(OrbitMotion.MEDIUM), label = "divider")
     Column(Modifier.fillMaxWidth().statusBarsPadding()) {
         Row(Modifier.height(64.dp).padding(start = 6.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             IconTap(OrbitIcon.Back, "Back", onBack)
@@ -520,7 +564,6 @@ private fun RoomBar(
                 }
             }
         }
-        Box(Modifier.fillMaxWidth().height(1.dp).background(divider))
     }
 }
 

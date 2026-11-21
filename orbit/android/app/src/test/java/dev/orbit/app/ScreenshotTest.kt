@@ -74,6 +74,10 @@ class ScreenshotTest {
     private val providers = SampleData.providers
     private val app = SampleData.app
     private val chat = SampleData.chat
+    private val longChat = chat.copy(
+        run = RunState(),
+        messages = (SampleData.rich.messages + chat.messages.take(3)).mapIndexed { i, m -> m.copy(id = "long$i", seq = i.toLong()) },
+    )
 
     private fun agentMessage(id: String, agent: Agent, text: String, status: String = "done", error: String? = null) =
         SampleData.agentMessage(id, agent, text, status, error)
@@ -185,6 +189,9 @@ class ScreenshotTest {
             {}, {}, {}, {}, {},
         )
     }
+    /** A conversation longer than the screen: it runs behind the bar and the composer, fading out at both ends. */
+    @Test fun roomLong() = shot("room-long") { RoomScreen(launch, listOf(nova, pixel, sage), longChat, {}, {}, {}, {}, {}) }
+    @Test fun roomLongLight() = shot("room-long-light", dark = false) { RoomScreen(launch, listOf(nova, pixel, sage), longChat, {}, {}, {}, {}, {}) }
     @Test fun roomEmpty() = shot("room-empty") { RoomScreen(empty, listOf(nova, mochi), RoomUiState(loaded = true, connected = true), {}, {}, {}, {}, {}) }
     @Test fun agentEditor() = shot("agent-editor") { AgentEditorScreen(nova, providers, { emptyList() }, {}, {}, {}) }
     @Test fun agentEditorLight() = shot("agent-editor-light", dark = false) { AgentEditorScreen(mochi, providers, { emptyList() }, {}, {}, {}) }
