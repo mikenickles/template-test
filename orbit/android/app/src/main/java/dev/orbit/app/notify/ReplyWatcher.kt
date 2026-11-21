@@ -114,7 +114,7 @@ class ReplyWatcher : Service() {
         .build()
 
     private fun announce(finished: Finished) =
-        Notifier.announce(this, finished.roomId, finished.title, finished.text, if (finished.count > 1) "${finished.count} replies" else null)
+        Notifier.announce(this, finished.roomId, finished.title, finished.text, if (finished.count > 1) "${finished.count} replies" else null, finished.lines)
 
     companion object {
         private const val ID_WORKING = 1

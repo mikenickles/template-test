@@ -42,7 +42,8 @@ class NoticeWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             for (notice in fresh.notices) {
                 // Something an agent brought up on its own, or a scheduled run's result.
                 val label = if (notice.kind == "proactive") "From your crew" else "Scheduled"
-                Notifier.announce(applicationContext, notice.roomId, notice.room.ifBlank { "Treehouse" }, noticeText(notice), label)
+                val line = notice.author.takeIf { it.isNotBlank() && notice.text.isNotBlank() }?.let { NotifyLine(it, notice.text, notice.character) }
+                Notifier.announce(applicationContext, notice.roomId, notice.room.ifBlank { "Treehouse" }, noticeText(notice), label, listOfNotNull(line))
             }
         }
         prefs.edit { putLong(SEEN, fresh.notices.maxOfOrNull { it.at }?.coerceAtLeast(fresh.now) ?: fresh.now.coerceAtLeast(seen)) }

@@ -81,6 +81,11 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- Reply, Mark as read and Mute, from a room's notification. -->
+        <receiver
+            android:name=".notify.NotificationActions"
+            android:exported="false" />
+
         <!-- Follows the hub while agents finish a reply in the background. -->
         <service
             android:name=".notify.ReplyWatcher"

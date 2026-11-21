@@ -237,6 +237,9 @@ export class Hub {
         room: this.store.room(roomId)?.name ?? '',
         id: data.id,
         author: data.author.name,
+        // Who wrote it, so the phone can show their face in the notification.
+        agentId: data.author.agentId ?? null,
+        character: this.store.state.agents.find((a) => a.id === data.author.agentId)?.avatar?.character ?? null,
         text: data.text.replace(/\s+/g, ' ').trim().slice(0, 300),
         status: data.status,
         error: data.error ?? null,

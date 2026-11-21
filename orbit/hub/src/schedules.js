@@ -162,6 +162,8 @@ export class Scheduler {
       room: this.store.room(roomId)?.name ?? '',
       scheduleId: schedule.id,
       author: last?.author.name ?? '',
+      agentId: last?.author.agentId ?? null,
+      character: this.store.state.agents.find((a) => a.id === last?.author.agentId)?.avatar?.character ?? null,
       text: last ? (last.status === 'error' ? `couldn't reply: ${last.error ?? 'something went wrong'}` : last.text.replace(/\s+/g, ' ').trim().slice(0, 300)) : '',
       replies: replies.length,
     });

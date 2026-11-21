@@ -7,6 +7,7 @@ import dev.orbit.app.data.OrbitJson
 import dev.orbit.app.data.Reply
 import dev.orbit.app.data.RoomRun
 import dev.orbit.app.notify.Finished
+import dev.orbit.app.notify.NotifyLine
 import dev.orbit.app.notify.ReplyTracker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -14,21 +15,23 @@ import org.junit.Test
 
 class ReplyTrackerTest {
     private fun run(room: String, active: Boolean, agent: String? = null) = HubEvent.Run(RoomRun("id-$room", room, active, agent = agent))
-    private fun reply(room: String, author: String, text: String, status: String = Message.STATUS_DONE, error: String? = null) =
-        HubEvent.Replied(Reply("id-$room", room, author = author, text = text, status = status, error = error))
+    private fun reply(room: String, author: String, text: String, status: String = Message.STATUS_DONE, error: String? = null, character: Int? = null) =
+        HubEvent.Replied(Reply("id-$room", room, author = author, text = text, status = status, error = error, character = character))
 
     @Test
     fun `a room going quiet becomes one notification with its last reply`() {
         val tracker = ReplyTracker()
         assertEquals(emptyList<Finished>(), tracker.onEvent(HubEvent.Running(ActiveRuns(listOf(RoomRun("id-Trip", "Trip", true, agent = "Nova"))))))
         assertEquals("Nova is replying in Trip", tracker.status())
-        tracker.onEvent(reply("Trip", "Nova", "Fuunji is your best bet."))
+        tracker.onEvent(reply("Trip", "Nova", "Fuunji is your best bet.", character = 9))
         tracker.onEvent(run("Trip", true, "Sage"))
-        tracker.onEvent(reply("Trip", "Sage", "Agreed, go early."))
+        tracker.onEvent(reply("Trip", "Sage", "Agreed, go early.", character = 2))
         tracker.onEvent(run("Launch", true))
         assertEquals("Your crew is working in 2 rooms", tracker.status())
 
-        assertEquals(listOf(Finished("id-Trip", "Trip", "Sage: Agreed, go early.", 2)), tracker.onEvent(run("Trip", false)))
+        // Every reply becomes a line of the conversation, with its author's face.
+        val lines = listOf(NotifyLine("Nova", "Fuunji is your best bet.", 9), NotifyLine("Sage", "Agreed, go early.", 2))
+        assertEquals(listOf(Finished("id-Trip", "Trip", "Sage: Agreed, go early.", 2, lines)), tracker.onEvent(run("Trip", false)))
         assertTrue(!tracker.idle)
         tracker.onEvent(reply("Launch", "Pixel", "", Message.STATUS_ERROR, "Ollama could not be reached."))
         assertEquals("Pixel couldn't reply: Ollama could not be reached.", tracker.onEvent(run("Launch", false)).single().text)
@@ -51,7 +54,7 @@ class ReplyTrackerTest {
         tracker.onEvent(run("Trip", true, "Nova"))
         tracker.onEvent(reply("Trip", "Nova", "Done."))
         val finished = tracker.onEvent(HubEvent.Running(ActiveRuns()))
-        assertEquals(listOf(Finished("id-Trip", "Trip", "Nova: Done.", 1)), finished)
+        assertEquals(listOf(Finished("id-Trip", "Trip", "Nova: Done.", 1, listOf(NotifyLine("Nova", "Done.")))), finished)
         assertTrue(tracker.idle)
     }
 

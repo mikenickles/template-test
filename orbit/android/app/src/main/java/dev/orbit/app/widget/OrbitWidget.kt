@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -127,6 +128,17 @@ private val Ink = ColorProvider(day = Color(0xFF17130F), night = Color(0xFFF7F3E
 private val Secondary = ColorProvider(day = Color(0xFF574E45), night = Color(0xFFB2AAA0))
 private val Tertiary = ColorProvider(day = Color(0xFF6A6157), night = Color(0xFF968E84))
 private val Raised = ColorProvider(day = Color(0xFFE9E3DA), night = Color(0xFF2B2824))
+private val RowFill = ColorProvider(day = Color(0xFFF6F2EC), night = Color(0xFF1F1D1A))
+private val Primary = ColorProvider(day = Color(0xFF17130F), night = Color(0xFFF7F3EE))
+private val OnPrimary = ColorProvider(day = Color(0xFFFFFFFF), night = Color(0xFF0E0D0B))
+
+/** The soft circle of an agent's color its face sits on, as in the app. */
+private fun washOf(avatar: AvatarSpec): androidx.glance.unit.ColorProvider {
+    val fill = avatar.character().fill
+    return ColorProvider(day = fill.copy(alpha = 0.22f).compositeOver(Color.White), night = fill.copy(alpha = 0.16f).compositeOver(Color(0xFF171513)))
+}
+
+private fun inkOf(avatar: AvatarSpec): androidx.glance.unit.ColorProvider = avatar.character().let { ColorProvider(day = it.onLight, night = it.fill) }
 
 class OrbitWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(setOf(DpSize(110.dp, 60.dp), DpSize(250.dp, 110.dp), DpSize(250.dp, 210.dp)))
@@ -153,11 +165,22 @@ internal fun WidgetContent(context: Context, snapshot: WidgetSnapshot, now: Long
         GlanceModifier.fillMaxSize().background(Surface).cornerRadius(22.dp).padding(horizontal = 14.dp, vertical = 12.dp),
     ) {
         if (fits > 1) {
-            Row(GlanceModifier.fillMaxWidth().clickable(open(null)), verticalAlignment = Alignment.CenterVertically) {
-                Image(ImageProvider(R.drawable.ic_stat_treehouse), "Treehouse", GlanceModifier.size(16.dp), colorFilter = ColorFilter.tint(Ink))
-                Text("Treehouse", GlanceModifier.padding(start = 6.dp), style = TextStyle(color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Medium))
+            Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(GlanceModifier.defaultWeight().clickable(open(null)), verticalAlignment = Alignment.CenterVertically) {
+                    Image(ImageProvider(R.drawable.treehouse), "Treehouse", GlanceModifier.size(22.dp).cornerRadius(7.dp))
+                    Text("Treehouse", GlanceModifier.padding(start = 8.dp), style = TextStyle(color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Medium))
+                }
+                // Ask the crew: straight into the room you were last in.
+                if (size.width >= 250.dp && snapshot.paired) {
+                    Box(
+                        GlanceModifier.background(Primary).cornerRadius(15.dp).padding(horizontal = 12.dp, vertical = 6.dp).clickable(open(snapshot.rooms.firstOrNull()?.id)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("Ask the crew", style = TextStyle(color = OnPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium))
+                    }
+                }
             }
-            Spacer(GlanceModifier.height(8.dp))
+            Spacer(GlanceModifier.height(10.dp))
         }
         when {
             !snapshot.paired -> Message("Open Treehouse to pair with your PC", open(null))
@@ -180,18 +203,18 @@ private fun Message(text: String, onClick: androidx.glance.action.Action) {
 @Composable
 private fun RoomLine(room: WidgetRoom, now: Long, onClick: androidx.glance.action.Action) {
     Row(
-        GlanceModifier.fillMaxWidth().cornerRadius(14.dp).clickable(onClick).padding(vertical = 4.dp),
+        GlanceModifier.fillMaxWidth().background(RowFill).cornerRadius(16.dp).clickable(onClick).padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(GlanceModifier.size(34.dp).background(Raised).cornerRadius(17.dp), contentAlignment = Alignment.Center) {
-            Image(ImageProvider(room.avatar.character().image), null, GlanceModifier.size(28.dp))
+        Box(GlanceModifier.size(36.dp).background(washOf(room.avatar)).cornerRadius(18.dp), contentAlignment = Alignment.Center) {
+            Image(ImageProvider(room.avatar.character().image), null, GlanceModifier.size(30.dp))
         }
         Column(GlanceModifier.defaultWeight().padding(start = 10.dp)) {
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(room.name, GlanceModifier.defaultWeight(), style = TextStyle(color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Medium), maxLines = 1)
                 Text(if (room.active) "" else ago(room.updatedAt, now), style = TextStyle(color = Tertiary, fontSize = 12.sp))
             }
-            Text(room.line, style = TextStyle(color = Secondary, fontSize = 13.sp), maxLines = 1)
+            Text(room.line, style = TextStyle(color = if (room.active) inkOf(room.avatar) else Secondary, fontSize = 13.sp), maxLines = 1)
         }
         Spacer(GlanceModifier.width(2.dp))
     }

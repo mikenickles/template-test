@@ -617,7 +617,7 @@ export class Proactive {
     this.store.state.nudges.push({ id: marker.id, at, kind: proactive.kind, label: proactive.label ?? '', agentId: agent.id, roomId: room.id, messageId: message.id, text });
     if (this.store.state.nudges.length > KEEP_NUDGES) this.store.state.nudges.splice(0, this.store.state.nudges.length - KEEP_NUDGES);
     const notices = this.store.state.notices;
-    notices.push({ id: marker.id, at, roomId: room.id, room: room.name, author: agent.name, text, replies: 1, kind: 'proactive' });
+    notices.push({ id: marker.id, at, roomId: room.id, room: room.name, author: agent.name, agentId: agent.id, character: agent.avatar?.character ?? null, text, replies: 1, kind: 'proactive' });
     if (notices.length > KEEP_NOTICES) notices.splice(0, notices.length - KEEP_NOTICES);
     this.store.save();
     return message;

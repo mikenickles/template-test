@@ -267,6 +267,8 @@ data class Notice(
     val replies: Int = 0,
     /** "proactive" for something an agent brought up on its own; empty for a scheduled run. */
     val kind: String = "",
+    val agentId: String? = null,
+    val character: Int? = null,
 )
 
 @Serializable
@@ -436,6 +438,9 @@ data class Reply(
     val text: String = "",
     val status: String = Message.STATUS_DONE,
     val error: String? = null,
+    /** Who wrote it, for their face in the notification. */
+    val agentId: String? = null,
+    val character: Int? = null,
 )
 
 /** What the hub-wide stream says: who is working where, and each reply as it lands. */

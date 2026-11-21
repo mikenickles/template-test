@@ -6,7 +6,7 @@ import dev.orbit.app.data.Reply
 import dev.orbit.app.data.RoomRun
 
 /** A room whose agents have finished, worth a notification. [count] is how many replies landed. */
-data class Finished(val roomId: String, val title: String, val text: String, val count: Int)
+data class Finished(val roomId: String, val title: String, val text: String, val count: Int, val lines: List<NotifyLine> = emptyList())
 
 /**
  * Follows the hub-wide stream while the app is away: which rooms are working, and what landed in each.
@@ -61,6 +61,14 @@ class ReplyTracker {
             Message.STATUS_ERROR -> "${last.author} couldn't reply: ${last.error ?: "something went wrong on the hub."}"
             else -> "${last.author}: ${last.text}"
         }
-        return Finished(run.roomId, title, text, said.size)
+        // Each reply as a line of the conversation, with its author's face.
+        val lines = said.map { reply ->
+            NotifyLine(
+                reply.author.ifBlank { "Your crew" },
+                if (reply.status == Message.STATUS_ERROR) "Couldn't reply: ${reply.error ?: "something went wrong on the hub."}" else reply.text,
+                reply.character,
+            )
+        }
+        return Finished(run.roomId, title, text, said.size, lines)
     }
 }

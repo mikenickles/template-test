@@ -117,9 +117,11 @@ Settings that open because a key is missing go straight to AI models.
 
 ## Other things the app does
 
-- **Notifications** when replies land while the app is closed, and for scheduled and proactive messages.
+- **Notifications** when replies land while the app is closed, and for scheduled and proactive messages. They
+  show as conversations, with each agent's face and name, and have Reply (answer right from the notification),
+  Mark as read, and Mute for an hour (that room stays quiet for an hour).
 - **Share to Treehouse** from any app's share menu: send a link, text, photos or files to a room.
-- **A home-screen widget** showing recent rooms.
+- **A home-screen widget** showing recent rooms, with an **Ask the crew** button that opens the latest room.
 - **Usage**: estimated spend and tokens per agent and room (Settings, Usage).
 - **Updates** arrive from the user's Google Drive: the PC downloads new versions, and the user taps Update PC,
   then Update, on the phone.
