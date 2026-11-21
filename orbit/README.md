@@ -23,7 +23,8 @@ hub on an always-on PC.
   cheap model call; speak to the whole group and everyone joins in. In a *round table*
   every agent replies in turn; in a *lead* room one agent answers first, delegates, and
   sums up. Agents hand work to each other with `@Name`, and you can `@mention` to ask
-  one directly.
+  one directly, or **reply** to one of their messages (long-press it on the phone, or
+  hover it on the desktop) to have that agent answer.
   Long-press a message to copy it, ask the agent again, or delete it. Tap **+** to
   attach photos, PDFs or text files; Claude agents read all three, other models
   see photos where they support them.

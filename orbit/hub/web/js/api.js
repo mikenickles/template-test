@@ -35,7 +35,8 @@ export const api = {
   disconnect: () => request('DELETE', '/api/device'),
 
   messages: (roomId) => request('GET', `/api/rooms/${roomId}/messages`),
-  send: (roomId, text, attachments = []) => request('POST', `/api/rooms/${roomId}/messages`, { text, attachments }),
+  send: (roomId, text, attachments = [], replyTo = null) =>
+    request('POST', `/api/rooms/${roomId}/messages`, { text, attachments, ...(replyTo ? { replyTo } : {}) }),
   stop: (roomId) => request('POST', `/api/rooms/${roomId}/stop`, {}),
   clear: (roomId) => request('DELETE', `/api/rooms/${roomId}/messages`),
   deleteMessage: (roomId, id) => request('DELETE', `/api/rooms/${roomId}/messages/${id}`),

@@ -231,7 +231,9 @@ export function buildTranscript(agent, messages, { summary = null, omitted = fal
     const mine = m.author.type === 'agent' && m.author.agentId === agent.id;
     const role = mine ? 'assistant' : 'user';
     const said = m.text?.trim() ? m.text : `(sent ${attached.map((a) => a.name).join(', ')})`;
-    const text = mine ? said : `[${m.author.type === 'user' ? 'User' : m.author.name}]: ${said}`;
+    // A reply says what it answers, so the agent knows which message the user means.
+    const speaker = m.author.type === 'user' ? (m.replyTo ? `User, replying to ${m.replyTo.name}: "${m.replyTo.text}"` : 'User') : m.author.name;
+    const text = mine ? said : `[${speaker}]: ${said}`;
     // Attachments go before the words about them, which is how models read them best.
     const parts = [...attached.map((a) => ({ type: 'attachment', id: a.id, name: a.name, fileType: a.type })), { type: 'text', text }];
     const prev = turns.at(-1);
@@ -280,7 +282,7 @@ export class Orchestrator {
     if (run) {
       run.restart = true; // picked up when the current speaker finishes
     } else {
-      this.#start(roomId, (room, agents, run) => this.#firstSpeakers(room, agents, text, run.abort.signal));
+      this.#start(roomId, (room, agents, run) => this.#firstSpeakers(room, agents, text, run.abort.signal, extra.replyTo));
     }
     return message;
   }
@@ -371,7 +373,7 @@ export class Orchestrator {
         // The user said something new while this agent was talking.
         run.restart = false;
         const latest = this.store.messages(roomId).findLast((m) => m.author.type === 'user');
-        queue = await this.#firstSpeakers(room, agents, latest?.text ?? '', run.abort.signal);
+        queue = await this.#firstSpeakers(room, agents, latest?.text ?? '', run.abort.signal, latest?.replyTo);
         turns = 0;
         wrapped = false;
         continue;
@@ -424,7 +426,10 @@ export class Orchestrator {
     return list.map((p) => ({ id: p.id, label: p.label, local: Boolean(p.local), models: (p.models ?? []).slice(0, 12) }));
   }
 
-  async #firstSpeakers(room, agents, text, signal) {
+  /** Who answers: @mentions, else the agent a reply answers, else the room's mode decides. */
+  async #firstSpeakers(room, agents, text, signal, replyTo = null) {
+    const repliedTo = replyTo?.agentId && agents.find((a) => a.id === replyTo.agentId);
+    if (repliedTo && !findMentions(text, agents).length) return [repliedTo];
     return initialSpeakers(room, agents, text) ?? (await this.#pick(room, agents, text, signal));
   }
 

@@ -139,6 +139,12 @@ class ScreenshotTest {
     @Test fun introChatLight() = shot("intro-chat-light", dark = false) {
         RoomScreen(SampleData.introRoom, listOf(nova), SampleData.intro, {}, {}, {}, {}, {}, everyone = agents)
     }
+    @Test fun replies() = shot("room-replies") {
+        RoomScreen(launch, listOf(nova, pixel, sage), SampleData.replying, {}, {}, {}, {}, {}, startReplyTo = SampleData.replying.messages.last())
+    }
+    @Test fun repliesLight() = shot("room-replies-light", dark = false) {
+        RoomScreen(launch, listOf(nova, pixel, sage), SampleData.replying, {}, {}, {}, {}, {})
+    }
     @Test fun hiring() = shot("room-hiring") {
         RoomScreen(SampleData.introRoom.copy(name = "Life"), listOf(nova, SampleData.rio), SampleData.hiring, {}, {}, {}, {}, {}, everyone = agents + SampleData.rio)
     }

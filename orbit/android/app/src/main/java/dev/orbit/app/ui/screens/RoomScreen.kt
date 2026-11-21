@@ -138,6 +138,12 @@ import dev.orbit.app.data.CrewMade
 import dev.orbit.app.ui.components.CrewTile
 import dev.orbit.app.ui.components.tap
 import dev.orbit.app.ui.components.tint
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
 
 /** How many trailing characters of a reply fade in as it streams. */
 private const val FADE_TAIL = 16
@@ -168,11 +174,17 @@ fun RoomScreen(
     onStale: () -> Unit = {},
     /** Opens an agent, like one an agent just hired. */
     onOpenAgent: (agentId: String) -> Unit = {},
+    /** Sends a reply to one message; its agent answers. */
+    onSendReply: (text: String, replyTo: String) -> Unit = { text, _ -> onSend(text) },
+    /** A message to open with a reply already started to. */
+    startReplyTo: Message? = null,
 ) {
     val c = Orbit.colors
     var draft by rememberSaveable { mutableStateOf(initialDraft) }
     // The message whose actions are open, after a long press.
     var acting by remember { mutableStateOf<Message?>(null) }
+    // The message the next send answers, chosen with Reply.
+    var replyingTo by remember { mutableStateOf(startReplyTo) }
     var attaching by remember { mutableStateOf(false) }
     var viewing by remember { mutableStateOf<Attachment?>(null) }
     val haptics = rememberHaptics()
@@ -183,6 +195,7 @@ fun RoomScreen(
     // "@nova" is drawn in Nova's color wherever it appears.
     val dark = c.isDark
     val mentionColors = remember(agents, dark) { agents.associate { it.name.replace(" ", "").lowercase() to it.avatar.inkColor(dark) } }
+    val replyColors: Map<String?, Color> = remember(everyone, dark) { everyone.associate { it.id to it.avatar.inkColor(dark) } }
     // An agent's model is named on its first reply only; after that the face is enough.
     val introductions = remember(state.messages) {
         state.messages.filterNot { it.fromUser }.distinctBy { it.author.agentId ?: it.author.name }.map { it.id }.toSet()
@@ -228,9 +241,14 @@ fun RoomScreen(
                     sending = state.sending,
                     onAttach = { attaching = true },
                     onRemoveDraft = onRemoveDraft,
+                    replyingTo = replyingTo?.let { target -> (byId[target.author.agentId]?.name ?: target.author.name) to target.text },
+                    replyColor = replyingTo?.let { byId[it.author.agentId]?.avatar?.inkColor(dark) },
+                    onCancelReply = { replyingTo = null },
                     onSend = {
-                        onSend(draft.trim())
+                        val target = replyingTo
+                        if (target != null) onSendReply(draft.trim(), target.id) else onSend(draft.trim())
                         draft = ""
+                        replyingTo = null
                     },
                     onStop = onStop,
                 )
@@ -290,7 +308,7 @@ fun RoomScreen(
                                         },
                                 ) {
                                     if (message.fromUser) {
-                                        UserMessage(message, mentionColors) { viewing = it }
+                                        UserMessage(message, mentionColors, onOpenPhoto = { viewing = it }, replyColors = replyColors)
                                     } else {
                                         Column {
                                             AgentMessage(message, byId[message.author.agentId], mentionColors, showModel = message.id in introductions)
@@ -345,6 +363,7 @@ fun RoomScreen(
                     },
                     onRetry = { onRetry(message) },
                     onDelete = { onDeleteMessage(message) },
+                    onReply = { replyingTo = message },
                 ),
             )
         }
@@ -368,7 +387,10 @@ internal fun messageActions(
     onCopy: () -> Unit,
     onRetry: () -> Unit,
     onDelete: () -> Unit,
+    onReply: (() -> Unit)? = null,
 ): List<SheetAction> = buildList {
+    // A finished reply can be answered directly: its agent replies, whoever the room would pick.
+    if (onReply != null && !message.fromUser && message.status == Message.STATUS_DONE) add(SheetAction("Reply", OrbitIcon.Reply, onClick = onReply))
     if (message.text.isNotBlank()) add(SheetAction("Copy text", OrbitIcon.Copy, onClick = onCopy))
     if (canRetry) add(SheetAction("Ask again", OrbitIcon.Retry, onClick = onRetry))
     if (message.status != Message.STATUS_STREAMING) add(SheetAction("Delete", OrbitIcon.Trash, danger = true, onClick = onDelete))
@@ -531,7 +553,12 @@ private fun EmptyRoom(room: Room, agents: List<Agent>, modifier: Modifier) {
 }
 
 @Composable
-private fun UserMessage(message: Message, mentionColors: Map<String, Color>, onOpenPhoto: (Attachment) -> Unit) {
+private fun UserMessage(
+    message: Message,
+    mentionColors: Map<String, Color>,
+    onOpenPhoto: (Attachment) -> Unit,
+    replyColors: Map<String?, Color> = emptyMap(),
+) {
     val c = Orbit.colors
     Column(Modifier.fillMaxWidth().padding(start = 56.dp), horizontalAlignment = Alignment.End) {
         // Posted by the hub on a schedule, not typed just now.
@@ -539,6 +566,23 @@ private fun UserMessage(message: Message, mentionColors: Map<String, Color>, onO
             Row(Modifier.padding(bottom = 6.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 OrbitIcon(OrbitIcon.Clock, size = 13.dp, tint = c.textTertiary)
                 Text("Scheduled · ${scheduled.label}", Modifier.padding(start = 5.dp), style = OrbitType.caption, color = c.textTertiary)
+            }
+        }
+        // What this message answers, quoted small above it.
+        message.replyTo?.let { quoted ->
+            Row(Modifier.padding(bottom = 6.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                OrbitIcon(OrbitIcon.Reply, size = 13.dp, tint = c.textTertiary)
+                Text(
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(color = replyColors[quoted.agentId] ?: c.textSecondary, fontWeight = FontWeight.SemiBold)) { append(quoted.name) }
+                        append("  ${quoted.text}")
+                    },
+                    Modifier.padding(start = 5.dp),
+                    style = OrbitType.caption,
+                    color = c.textTertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
         AttachedItems(message.attachments, onOpenPhoto, Modifier.padding(bottom = if (message.text.isNotBlank()) 6.dp else 0.dp))
@@ -742,10 +786,17 @@ private fun Composer(
     onRemoveDraft: (DraftAttachment) -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
+    /** Who and what the next message answers: (name, their words). */
+    replyingTo: Pair<String, String>? = null,
+    replyColor: Color? = null,
+    onCancelReply: () -> Unit = {},
 ) {
     val c = Orbit.colors
     val haptics = rememberHaptics()
     val shape = RoundedCornerShape(OrbitDimens.radiusXL)
+    val focus = remember { FocusRequester() }
+    // Choosing Reply puts the cursor straight in the box.
+    LaunchedEffect(replyingTo) { if (replyingTo != null) runCatching { focus.requestFocus() } }
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val edge by animateColorAsState(if (focused) c.text.copy(alpha = 0.3f) else c.hairline, tween(OrbitMotion.SHORT), label = "edge")
@@ -760,13 +811,24 @@ private fun Composer(
                 val mention = "@${agent.name.replace(" ", "")} "
                 onDraft(if (draft.isEmpty() || draft.endsWith(" ")) draft + mention else "$draft $mention")
             }
+            AnimatedVisibility(replyingTo != null, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                val (name, words) = replyingTo ?: ("" to "")
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    OrbitIcon(OrbitIcon.Reply, size = 16.dp, tint = replyColor ?: c.textSecondary)
+                    Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                        Text("Replying to $name", style = OrbitType.label, color = replyColor ?: c.text)
+                        Text(words, style = OrbitType.bodyS, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    IconTap(OrbitIcon.Close, "Cancel reply", onCancelReply, tint = c.textTertiary)
+                }
+            }
             DraftStrip(drafts, sending, onRemoveDraft)
             Row(Modifier.heightIn(min = 56.dp).padding(start = 4.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconTap(OrbitIcon.Plus, "Attach a photo or file", onAttach, tint = c.textSecondary)
                 BasicTextField(
                     value = draft,
                     onValueChange = onDraft,
-                    modifier = Modifier.weight(1f).padding(vertical = 14.dp),
+                    modifier = Modifier.weight(1f).padding(vertical = 14.dp).focusRequester(focus),
                     textStyle = OrbitType.body.copy(color = c.text),
                     cursorBrush = SolidColor(c.text),
                     maxLines = 6,

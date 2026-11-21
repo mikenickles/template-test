@@ -288,6 +288,10 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onOpenRoom = { other -> vm.refreshThen { nav.navigate("room/$other") } },
                 onStale = vm::refresh,
                 onOpenAgent = { agentId -> vm.refreshThen { nav.navigate("agent?id=$agentId") } },
+                onSendReply = { text, replyTo ->
+                    askNotifications()
+                    roomVm.send(text, replyTo)
+                },
             )
         }
         screen("agent?id={id}", arguments = OptionalId) { entry ->

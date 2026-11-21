@@ -21,7 +21,7 @@ class Scripted extends Providers {
       if (next instanceof Error) throw next;
       return next;
     }
-    this.calls.push({ agent: agent.name, system });
+    this.calls.push({ agent: agent.name, system, messages });
     const reply = `${agent.name} here`;
     onDelta(reply);
     return reply;
@@ -100,4 +100,35 @@ test('a room keeps its description when an older app saves it, and the descripti
   await h.api('POST', `/api/rooms/${room.id}/messages`, { text: 'Hi' });
   await h.hub.orchestrator.idle(room.id);
   assert.deepEqual(h.providers.calls.map((c) => c.agent ?? 'picker'), ['Nova']);
+});
+
+test('replying to a message has that agent answer, unless the reply @mentions someone else', async (t) => {
+  const h = await start(t, ['Nova, Pixel']);
+  const nova = await h.agent('Nova', 'the planner');
+  const pixel = await h.agent('Pixel', 'the designer');
+  const room = (await h.api('POST', '/api/rooms', { name: 'Launch', agentIds: [nova.id, pixel.id], mode: 'auto' })).body;
+  const say = async (body) => {
+    const before = h.providers.calls.length;
+    const sent = (await h.api('POST', `/api/rooms/${room.id}/messages`, body)).body;
+    await h.hub.orchestrator.idle(room.id);
+    return { sent, calls: h.providers.calls.slice(before) };
+  };
+  const messages = async () => (await h.api('GET', `/api/rooms/${room.id}/messages`)).body.messages;
+
+  await say({ text: 'What do you both think?' });
+  const novaReply = (await messages()).find((m) => m.author.name === 'Nova');
+
+  // Pixel spoke last, but the reply is to Nova: Nova answers, and no picker is asked.
+  let { sent, calls } = await say({ text: 'And the budget?', replyTo: novaReply.id });
+  assert.deepEqual(sent.replyTo, { id: novaReply.id, name: 'Nova', agentId: nova.id, text: 'Nova here' });
+  assert.deepEqual(calls.map((c) => c.agent ?? 'picker'), ['Nova']);
+  assert.match(JSON.stringify(calls[0].messages), /\[User, replying to Nova: \\"Nova here\\"\]: And the budget\?/);
+
+  // An @mention in the reply decides instead.
+  ({ calls } = await say({ text: '@Pixel can you sketch it?', replyTo: novaReply.id }));
+  assert.deepEqual(calls.map((c) => c.agent ?? 'picker'), ['Pixel']);
+
+  // A reply to one of your own messages, or to one that's gone, is just a message.
+  ({ sent } = await say({ text: 'Hello?', replyTo: 'no-such-message' }));
+  assert.equal(sent.replyTo, undefined);
 });

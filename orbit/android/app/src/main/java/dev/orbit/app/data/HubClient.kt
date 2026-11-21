@@ -73,7 +73,7 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
     private data class PairBody(val code: String, val deviceName: String)
 
     @Serializable
-    private data class TextBody(val text: String, val attachments: List<String> = emptyList())
+    private data class TextBody(val text: String, val attachments: List<String> = emptyList(), val replyTo: String? = null)
 
     @Serializable
     private data class ModelsBody(val models: List<String> = emptyList())
@@ -169,8 +169,9 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
 
     suspend fun messages(roomId: String): RoomMessages = call("GET", "/api/rooms/$roomId/messages")
 
-    suspend fun send(roomId: String, text: String, attachments: List<String> = emptyList()): Message =
-        call("POST", "/api/rooms/$roomId/messages", OrbitJson.encodeToString(TextBody(text, attachments)))
+    /** Sends a message; with [replyTo], as a reply to that message, which its agent answers. */
+    suspend fun send(roomId: String, text: String, attachments: List<String> = emptyList(), replyTo: String? = null): Message =
+        call("POST", "/api/rooms/$roomId/messages", OrbitJson.encodeToString(TextBody(text, attachments, replyTo)))
 
     /** Uploads a photo or file for a message. Send its id with the message to attach it. */
     suspend fun upload(bytes: ByteArray, name: String, type: String): Attachment {

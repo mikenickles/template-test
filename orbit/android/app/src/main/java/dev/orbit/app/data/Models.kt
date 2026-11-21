@@ -54,6 +54,10 @@ data class HubUpdates(val folder: String = "", val hub: UpdateInfo = UpdateInfo(
 @Serializable
 data class Profile(val name: String = "", val notes: List<MemoryNote> = emptyList())
 
+/** What a reply answers: the message, who wrote it, and the start of its words. */
+@Serializable
+data class ReplyRef(val id: String = "", val name: String = "", val agentId: String? = null, val text: String = "")
+
 /** An agent a reply hired. */
 @Serializable
 data class CreatedAgent(val agentId: String = "", val name: String = "")
@@ -184,6 +188,8 @@ data class Message(
     val crew: CrewMade? = null,
     /** Agents this reply hired into the crew. */
     val created: List<CreatedAgent> = emptyList(),
+    /** The message this one answers, when the user replied to a particular message. */
+    val replyTo: ReplyRef? = null,
 ) {
     val fromUser get() = author.type == "user"
 

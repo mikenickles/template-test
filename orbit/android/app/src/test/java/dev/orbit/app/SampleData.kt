@@ -28,6 +28,7 @@ import dev.orbit.app.data.Message
 import dev.orbit.app.data.Preview
 import dev.orbit.app.data.Profile
 import dev.orbit.app.data.Provider
+import dev.orbit.app.data.ReplyRef
 import dev.orbit.app.data.Room
 import dev.orbit.app.data.RunState
 import dev.orbit.app.data.SharedFolder
@@ -130,6 +131,20 @@ object SampleData {
             ),
         ),
     )
+
+    /** You answered Sage's reply directly, and Sage is answering. */
+    val replying by lazy {
+        chat.copy(
+        messages = chat.messages.take(3) + listOf(
+            agentMessage("m4", sage, SAGE_RISKS),
+            userMessage("m5", "Yes, take both. What would the rate limit be?").copy(
+                replyTo = ReplyRef("m4", "Sage", "a3", "Two risks worth a look before invites go out: Email deliverability. A new domain lands in spam…"),
+            ),
+            agentMessage("m6", sage, "Five signups a minute per address, and a captcha after three failed tries."),
+        ),
+        run = RunState(),
+        )
+    }
 
     /** A hub where the user hasn't met their guide yet. */
     val newcomer = app.copy(profile = Profile(), rooms = emptyList(), agents = emptyList())

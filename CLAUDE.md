@@ -17,7 +17,7 @@ Two independent projects live here:
     `remember_about_user`. The intro room (`room.intro`) is one guide getting to know the user, ending in
     `create_crew` (`src/intro.js`). Rooms have a `description` that goes into every member's prompt, and a `mode`:
     `auto` (best fit: `Orchestrator#pick` asks Claude Haiku, or the first agent's model, who answers), `lead` or
-    `roundtable`. @mentions always decide who answers. Agents with the `crew` ability hire new agents with
+    `roundtable`. @mentions always decide who answers; a reply to a message (`replyTo`) goes to that message's agent. Agents with the `crew` ability hire new agents with
     `create_agent` (`src/recruit.js`), offered the configured providers' models and the free characters.
     Agent abilities (web search, code execution, read-only shared folders) are Claude-only: the tool loop is
     `src/anthropic.js`, folder access is `src/folders.js`. Folders are shared only from the PC's own page

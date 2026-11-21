@@ -41,6 +41,7 @@ import dev.orbit.app.data.RunState
 import dev.orbit.app.ui.RoomUiState
 import dev.orbit.app.ui.reduce
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertSame
@@ -274,5 +275,13 @@ class RoomStateTest {
         assertTrue(parseMarkdown("| a | b |")[0] is Block.Paragraph)
         assertEquals(1, (parseMarkdown("| a | b |\n|---|---|\n| 1 |")[0] as Block.Table).rows.size)
         assertEquals(listOf(Block.Paragraph("a\n---b")), parseMarkdown("a\n---b"))
+    }
+
+    @Test
+    fun `a finished agent reply can be replied to, but not your own message or one still arriving`() {
+        val labels = { m: Message -> messageActions(m, false, {}, {}, {}, onReply = {}).map { it.label } }
+        assertEquals(listOf("Reply", "Copy text", "Delete"), labels(reply("Hello", Message.STATUS_DONE)))
+        assertEquals(listOf("Copy text"), labels(reply("Hel", Message.STATUS_STREAMING)))
+        assertFalse("Reply" in labels(Message("u1", 1, Author("user", name = "You"), "Hi")))
     }
 }

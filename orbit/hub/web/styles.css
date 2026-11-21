@@ -422,3 +422,10 @@ main > header, main > .messages, main > .composer-wrap { position: relative; }
 
 .update-banner { margin: 6px 4px 4px; width: calc(100% - 8px); gap: 12px; border-color: var(--line); }
 .updating { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); }
+
+.quoted { display: flex; align-items: center; gap: 5px; justify-content: flex-end; margin: 0 4px 6px; max-width: 100%; }
+.quoted .icon { width: 13px; height: 13px; flex: none; }
+.quoted span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.replying { display: flex; align-items: center; gap: 10px; padding: 10px 6px 0 16px; }
+.replying .text { flex: 1; min-width: 0; }
+.replying .body-s { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

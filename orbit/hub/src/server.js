@@ -48,6 +48,12 @@ const cookieToken = (req) =>
     .find(([name]) => name === COOKIE)?.[1] ?? '';
 const newPairingCode = () => String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
 const text = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
+
+/** A message's words on one line, without Markdown marks, cut to `max` characters. */
+const plainExcerpt = (value, max = 140) => {
+  const flat = String(value ?? '').replace(/\*\*|~~|`+|^#+\s|^>\s?/gm, '').replace(/\s+/g, ' ').trim();
+  return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}…` : flat;
+};
 const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
@@ -245,7 +251,7 @@ export class Hub {
       active: run.active,
       speaking: run.agentId,
       // Plain words for a one-line preview: no Markdown marks.
-      preview: last ? { author: last.author.name, text: last.text.replace(/\*\*|~~|`+|^#+\s|^>\s?/gm, '').replace(/\s+/g, ' ').trim().slice(0, 140) } : null,
+      preview: last ? { author: last.author.name, text: plainExcerpt(last.text) } : null,
     };
   }
 
@@ -630,7 +636,15 @@ export class Hub {
           if (attachments.length < ids.length) throw new HttpError(400, 'One of the attachments is gone. Attach it again.');
           if (!body && !attachments.length) throw new HttpError(400, 'Message is empty.');
           if (!room.agentIds.length) throw new HttpError(400, 'Add at least one agent to this room first.');
-          return this.orchestrator.post(room.id, body, attachments);
+          // A reply to one message: that message's agent answers, unless the text @mentions someone.
+          const target = typeof fields.replyTo === 'string' ? this.store.messages(room.id).find((m) => m.id === fields.replyTo) : null;
+          const replyTo = target && {
+            id: target.id,
+            name: target.author.type === 'user' ? 'You' : target.author.name,
+            ...(target.author.agentId ? { agentId: target.author.agentId } : {}),
+            text: plainExcerpt(target.text || (target.attachments ?? []).map((a) => a.name).join(', ')),
+          };
+          return this.orchestrator.post(room.id, body, attachments, replyTo ? { replyTo } : {});
         }
         case 'DELETE messages':
           this.orchestrator.stop(room.id);

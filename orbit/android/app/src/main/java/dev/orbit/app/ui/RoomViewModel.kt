@@ -145,7 +145,8 @@ class RoomViewModel(app: Application, private val roomId: String) : AndroidViewM
     }
 
     /** Sends a message with the drafts attached. They stay in the composer until it has gone. */
-    fun send(text: String) {
+    /** Sends the draft, with any attachments; [replyTo] makes it a reply to that message. */
+    fun send(text: String, replyTo: String? = null) {
         val drafts = _state.value.drafts
         if (_state.value.sending) return
         _state.update { it.copy(sending = drafts.isNotEmpty()) }
@@ -158,7 +159,7 @@ class RoomViewModel(app: Application, private val roomId: String) : AndroidViewM
                     val file = withContext(Dispatchers.IO) { prepare(resolver, draft.uri, draft.name to draft.type) }
                     client.upload(file.bytes, file.name, file.type).id
                 }
-                client.send(roomId, text, ids)
+                client.send(roomId, text, ids, replyTo)
                 _state.update { s -> s.copy(drafts = s.drafts.filterNot { it in drafts }) }
             } catch (e: HubException) {
                 _notices.tryEmit(e.message ?: "That didn't send.")

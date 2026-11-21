@@ -323,6 +323,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale }
   const [connected, setConnected] = useState(true);
   const [menu, setMenu] = useState(false);
   const [viewing, setViewing] = useState(null);
+  const [replyingTo, setReplyingTo] = useState(null); // the message the next send answers
   const [nearBottom, setNearBottom] = useState(true);
   const list = useRef([]);
   const scroller = useRef();
@@ -442,11 +443,12 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale }
         : html`<div class="messages-inner">
             ${messages.map((m) => html`<div class=${`message${m.author.type === 'user' ? ' mine' : ''}`} key=${m.id}>
               ${m.author.type === 'user'
-                ? html`<${UserMessage} message=${m} mentions=${mentions} onPhoto=${setViewing} />`
+                ? html`<${UserMessage} message=${m} mentions=${mentions} onPhoto=${setViewing} byId=${byId} />`
                 : html`<${AgentMessage} message=${m} agent=${byId[m.author.agentId]} showModel=${firstReplies.has(m.id)} mentions=${mentions} />
                   ${(m.created ?? []).map((c) => byId[c.agentId]).filter(Boolean).map((hired) => html`<${NewMember} agent=${hired} onOpen=${() => onDialog({ type: 'agent', agent: hired })} />`)}
                   ${m.crew && html`<${CrewReady} made=${m.crew} crew=${m.crew.agentIds.map((id) => byId[id]).filter(Boolean)} onOpen=${() => onOpenRoom(m.crew.roomId)} />`}`}
               <div class="message-actions">
+                ${m.author.type === 'agent' && m.status === 'done' && html`<button onClick=${() => setReplyingTo(m)}><${Icon} name="reply" />Reply</button>`}
                 ${m.text && html`<button onClick=${() => { navigator.clipboard.writeText(m.text); notify('Copied'); }}><${Icon} name="copy" />Copy</button>`}
                 ${canRetry(m) && html`<button onClick=${() => act(() => api.retry(room.id, m.id))}><${Icon} name="retry" />Ask again</button>`}
                 ${m.status !== 'streaming' && html`<button class="danger" onClick=${() => act(() => api.deleteMessage(room.id, m.id))}><${Icon} name="trash" />Delete</button>`}
@@ -455,16 +457,20 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale }
           </div>`}
       ${!nearBottom && html`<div class="latest"><button class="pill" onClick=${() => { scroller.current.scrollTop = scroller.current.scrollHeight; }}><${Icon} name="up" size=${16} />Latest</button></div>`}
     </div>
-    <${Composer} room=${room} agents=${agents} running=${run.active} notify=${notify} onSent=${() => { stick.current = true; }} />
+    <${Composer} room=${room} agents=${agents} running=${run.active} notify=${notify} onSent=${() => { stick.current = true; }}
+      replyingTo=${replyingTo} replyAgent=${replyingTo && byId[replyingTo.author.agentId]} onCancelReply=${() => setReplyingTo(null)} />
     ${viewing && html`<div class="viewer" onClick=${() => setViewing(null)} role="dialog" aria-label=${viewing.name}><img src=${`/api/files/${viewing.id}`} alt=${viewing.name} /></div>`}
   `;
 }
 
-function UserMessage({ message, mentions, onPhoto }) {
+function UserMessage({ message, mentions, onPhoto, byId = {} }) {
   const photos = (message.attachments ?? []).filter((a) => a.type.startsWith('image/'));
   const files = (message.attachments ?? []).filter((a) => !a.type.startsWith('image/'));
   return html`
     ${message.scheduled && html`<div class="scheduled caption faint"><${Icon} name="clock" />Scheduled · ${message.scheduled.label}</div>`}
+    ${message.replyTo && html`<div class="quoted caption faint"><${Icon} name="reply" />
+      <strong style=${`color:${byId[message.replyTo.agentId] ? inkColor(byId[message.replyTo.agentId].avatar) : 'var(--text-2)'}`}>${message.replyTo.name}</strong>
+      <span>${message.replyTo.text}</span></div>`}
     ${photos.length + files.length > 0 && html`<div class="attached">
       ${photos.length === 1
         ? html`<img class="photo-single" src=${`/api/files/${photos[0].id}`} alt=${photos[0].name} onClick=${() => onPhoto(photos[0])} />`
@@ -578,7 +584,7 @@ function CrewReady({ made, crew, onOpen }) {
 
 // ---------- Writing a message ----------
 
-function Composer({ room, agents, running, notify, onSent }) {
+function Composer({ room, agents, running, notify, onSent, replyingTo = null, replyAgent = null, onCancelReply = () => {} }) {
   const [draft, setDraft] = useState('');
   const [files, setFiles] = useState([]);
   const [sending, setSending] = useState(false);
@@ -591,6 +597,10 @@ function Composer({ room, agents, running, notify, onSent }) {
     setDraft('');
     setFiles([]);
   }, [room.id]);
+  // Choosing Reply puts the cursor straight in the box, before the next key press lands.
+  useLayoutEffect(() => {
+    if (replyingTo) box.current?.focus();
+  }, [replyingTo?.id]);
   // The box grows with what's typed, up to a limit.
   useLayoutEffect(() => {
     const el = box.current;
@@ -618,9 +628,10 @@ function Composer({ room, agents, running, notify, onSent }) {
         const { blob, name } = await prepare(file);
         ids.push((await api.upload(blob, name)).id);
       }
-      await api.send(room.id, text, ids);
+      await api.send(room.id, text, ids, replyingTo?.id);
       setDraft('');
       setFiles([]);
+      onCancelReply();
       onSent();
     } catch (e) {
       notify(e.message);
@@ -656,6 +667,12 @@ function Composer({ room, agents, running, notify, onSent }) {
       onDragLeave=${() => setDragging(false)}
       onDrop=${(e) => { e.preventDefault(); setDragging(false); add(e.dataTransfer.files); }}>
       ${matches.length > 0 && html`<div class="mention-chips">${matches.map((a) => html`<${Pill} label=${a.name} small onClick=${() => insertMention(a)}><${Avatar} spec=${a.avatar} size=${20} /><//>`)}</div>`}
+      ${replyingTo && html`<div class="replying">
+        <span style=${`color:${replyAgent ? inkColor(replyAgent.avatar) : 'var(--text-2)'}`}><${Icon} name="reply" size=${16} /></span>
+        <div class="text"><div class="label" style=${replyAgent ? `color:${inkColor(replyAgent.avatar)}` : ''}>Replying to ${replyAgent?.name ?? replyingTo.author.name}</div>
+          <div class="body-s muted">${replyingTo.text.replace(/\s+/g, ' ').slice(0, 160)}</div></div>
+        <button class="icon-button" aria-label="Cancel reply" title="Cancel reply" onClick=${onCancelReply}><${Icon} name="close" /></button>
+      </div>`}
       ${files.length > 0 && html`<div class="drafts">${files.map((f) => html`<div class=${`draft${sending ? ' sending' : ''}`} key=${f.key}>
         ${f.url ? html`<img src=${f.url} alt=${f.file.name} />` : html`<div class="file"><${Icon} name="file" size=${18} /><span>${f.file.name}</span></div>`}
         ${!sending && html`<button class="remove" aria-label=${`Remove ${f.file.name}`} onClick=${() => setFiles(files.filter((x) => x.key !== f.key))}><${Icon} name="close" /></button>`}
@@ -666,6 +683,7 @@ function Composer({ room, agents, running, notify, onSent }) {
         <textarea ref=${box} rows="1" placeholder=${agents.length === 1 ? `Message ${agents[0].name}` : 'Message the crew'} value=${draft} onInput=${onInput}
           onPaste=${(e) => e.clipboardData.files.length && (e.preventDefault(), add(e.clipboardData.files))}
           onKeyDown=${(e) => {
+            if (e.key === 'Escape' && replyingTo) onCancelReply();
             if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
               e.preventDefault();
               if (matches.length) insertMention(matches[0]);
