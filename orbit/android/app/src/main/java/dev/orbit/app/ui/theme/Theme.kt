@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.sp
 import dev.orbit.app.R
 
 /**
- * Orbit's palette. The interface is strictly neutral so that the agents'
+ * Treehouse's palette. The interface is strictly neutral so that the agents'
  * avatars are the only saturated color on screen.
  */
 @Immutable
@@ -51,38 +51,39 @@ data class OrbitColors(
     val dangerSurface: Color,
 )
 
-// Neutrals carry a faint blue-violet cast, like a night sky, rather than flat grey.
+// Neutrals are warm, like paper and bark, rather than flat grey: friendly, while staying quiet
+// enough that the avatars are still the only real color.
 private val DarkColors = OrbitColors(
     isDark = true,
-    bg = Color(0xFF08090D),
-    surface = Color(0xFF111318),
-    surfaceRaised = Color(0xFF181A21),
-    surfaceHigh = Color(0xFF23262F),
-    hairline = Color(0x14E8ECFF),
-    line = Color(0x33E8ECFF),
-    text = Color(0xFFF4F5F8),
-    textSecondary = Color(0xFFA3A7B6),
-    textTertiary = Color(0xFF8B8FA0),
-    primary = Color(0xFFF4F5F8),
-    onPrimary = Color(0xFF08090D),
-    live = Color(0xFF46E3A6),
+    bg = Color(0xFF0E0D0B),
+    surface = Color(0xFF171513),
+    surfaceRaised = Color(0xFF1F1D1A),
+    surfaceHigh = Color(0xFF2B2824),
+    hairline = Color(0x14FFF3E2),
+    line = Color(0x33FFF3E2),
+    text = Color(0xFFF7F3EE),
+    textSecondary = Color(0xFFB2AAA0),
+    textTertiary = Color(0xFF968E84),
+    primary = Color(0xFFF7F3EE),
+    onPrimary = Color(0xFF0E0D0B),
+    live = Color(0xFF5BD9A0),
     danger = Color(0xFFFF7B72),
     dangerSurface = Color(0x1FFF7B72),
 )
 
-// Light is its own design, not an inversion: a faintly tinted page with white surfaces on it.
+// Light is its own design, not an inversion: a warm paper page with white surfaces on it.
 private val LightColors = OrbitColors(
     isDark = false,
-    bg = Color(0xFFF3F4F7),
+    bg = Color(0xFFF6F2EC),
     surface = Color(0xFFFFFFFF),
     surfaceRaised = Color(0xFFFFFFFF),
-    surfaceHigh = Color(0xFFE0E2E9),
-    hairline = Color(0x140A0F2E),
-    line = Color(0x380A0F2E),
-    text = Color(0xFF0A0B10),
-    textSecondary = Color(0xFF4E5262),
-    textTertiary = Color(0xFF676B7C),
-    primary = Color(0xFF0A0B10),
+    surfaceHigh = Color(0xFFE9E3DA),
+    hairline = Color(0x1A2A1C0C),
+    line = Color(0x3D2A1C0C),
+    text = Color(0xFF17130F),
+    textSecondary = Color(0xFF574E45),
+    textTertiary = Color(0xFF6A6157),
+    primary = Color(0xFF17130F),
     onPrimary = Color(0xFFFFFFFF),
     live = Color(0xFF0A7A55),
     danger = Color(0xFFC42F22),
@@ -149,8 +150,8 @@ object OrbitDimens {
     val rowPad = 16.dp
     val radiusS = 12.dp
     val radiusM = 16.dp
-    val radiusL = 22.dp
-    val radiusXL = 28.dp
+    val radiusL = 24.dp
+    val radiusXL = 32.dp
 }
 
 private val LocalOrbitColors = staticCompositionLocalOf { DarkColors }

@@ -122,11 +122,11 @@ internal fun ago(then: Long, now: Long): String {
 }
 
 // The app's neutral palette, as the widget sees it: it follows the system's light or dark mode.
-private val Surface = ColorProvider(day = Color(0xFFFFFFFF), night = Color(0xFF111318))
-private val Ink = ColorProvider(day = Color(0xFF0A0B10), night = Color(0xFFF4F5F8))
-private val Secondary = ColorProvider(day = Color(0xFF4E5262), night = Color(0xFFA3A7B6))
-private val Tertiary = ColorProvider(day = Color(0xFF676B7C), night = Color(0xFF8B8FA0))
-private val Raised = ColorProvider(day = Color(0xFFE0E2E9), night = Color(0xFF23262F))
+private val Surface = ColorProvider(day = Color(0xFFFFFFFF), night = Color(0xFF171513))
+private val Ink = ColorProvider(day = Color(0xFF17130F), night = Color(0xFFF7F3EE))
+private val Secondary = ColorProvider(day = Color(0xFF574E45), night = Color(0xFFB2AAA0))
+private val Tertiary = ColorProvider(day = Color(0xFF6A6157), night = Color(0xFF968E84))
+private val Raised = ColorProvider(day = Color(0xFFE9E3DA), night = Color(0xFF2B2824))
 
 class OrbitWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(setOf(DpSize(110.dp, 60.dp), DpSize(250.dp, 110.dp), DpSize(250.dp, 210.dp)))

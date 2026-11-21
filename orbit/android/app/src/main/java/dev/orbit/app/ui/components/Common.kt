@@ -49,6 +49,8 @@ import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -72,7 +74,6 @@ import dev.orbit.app.ui.theme.rememberHaptics
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.roundToInt
-import kotlin.math.sin
 
 /** A section heading, with an optional count and an action on the right. */
 @Composable
@@ -357,25 +358,28 @@ fun StatusDot(color: Color, modifier: Modifier = Modifier, size: Dp = 8.dp) {
     Canvas(modifier.size(size)) { drawCircle(color) }
 }
 
-/** Loading, Orbit-style: a moon circling a dot, with a fading trail. */
+/** Loading: a rounded arc chasing its own tail, growing and shrinking as it turns. */
 @Composable
 fun OrbitSpinner(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
     val transition = rememberInfiniteTransition(label = "spinner")
-    val spin = transition.animateFloat(0f, 1f, infiniteRepeatable(tween(900, easing = LinearEasing)), label = "turn")
+    val spin = transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1100, easing = LinearEasing)), label = "turn")
     val still = LocalReducedMotion.current
     Canvas(modifier.size(size)) {
-        val turn = if (still) 0.125f else spin.value
-        val s = this.size.minDimension
-        val orbit = s * 0.36f
-        drawCircle(color, s * 0.15f)
-        for (i in 0 until 6) {
-            val angle = (turn - i * 0.045f) * 2 * PI.toFloat()
-            drawCircle(
-                color.copy(alpha = 1f - i / 6f),
-                s * (0.1f - i * 0.009f),
-                Offset(center.x + orbit * cos(angle), center.y + orbit * sin(angle)),
-            )
-        }
+        val turn = if (still) 0f else spin.value
+        val stroke = this.size.minDimension * 0.13f
+        val inset = stroke / 2 + this.size.minDimension * 0.06f
+        // The arc breathes between a quarter and three quarters of the circle, twice a turn.
+        val sweep = 90f + 180f * (0.5f - 0.5f * cos(turn * 4 * PI.toFloat()))
+        drawCircle(color.copy(alpha = 0.16f), this.size.minDimension / 2 - inset, style = Stroke(stroke))
+        drawArc(
+            color,
+            startAngle = turn * 360f * 1.5f - 90f,
+            sweepAngle = sweep,
+            useCenter = false,
+            topLeft = Offset(inset, inset),
+            size = Size(this.size.width - inset * 2, this.size.height - inset * 2),
+            style = Stroke(stroke, cap = StrokeCap.Round),
+        )
     }
 }
 

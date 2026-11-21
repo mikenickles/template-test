@@ -1,5 +1,5 @@
 <resources>
-    <color name="window_background">#FFFFFF</color>
+    <color name="window_background">#F6F2EC</color>
     <!-- Treehouse's icon: the Forest Tree character on warm paper. -->
     <color name="ic_launcher_background">#F4ECDD</color>
 </resources>

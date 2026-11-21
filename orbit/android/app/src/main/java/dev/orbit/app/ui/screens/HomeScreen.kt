@@ -71,7 +71,7 @@ import dev.orbit.app.ui.components.LogoMark
 import dev.orbit.app.ui.components.OrbitCard
 import dev.orbit.app.ui.components.OrbitIcon
 import dev.orbit.app.ui.components.OrbitSpinner
-import dev.orbit.app.ui.components.OrbitSystem
+import dev.orbit.app.ui.components.TreehouseScene
 import dev.orbit.app.ui.components.Pill
 import dev.orbit.app.ui.components.PrimaryButton
 import dev.orbit.app.ui.components.SectionTitle
@@ -631,8 +631,8 @@ private fun EmptyRooms(agents: List<Agent>, modifier: Modifier, onNewRoom: () ->
     val c = Orbit.colors
     OrbitCard(modifier.fillMaxWidth().padding(horizontal = OrbitDimens.gutter).padding(top = 8.dp)) {
         Column(Modifier.padding(horizontal = 24.dp).padding(bottom = OrbitDimens.section), horizontalAlignment = Alignment.CenterHorizontally) {
-            // The crew, circling the hub: rooms are where they get to work.
-            OrbitSystem(agents.map { it.avatar }.ifEmpty { SampleCrew }, Modifier.fillMaxWidth().height(170.dp), avatarSize = 38.dp)
+            // The crew at home: rooms are where they get to work.
+            TreehouseScene(agents.map { it.avatar }.ifEmpty { SampleCrew }, Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 20.dp).height(170.dp))
             Text(if (agents.isEmpty()) "Build your crew" else "Start your first room", style = OrbitType.titleM, color = c.text)
             Text(
                 if (agents.isEmpty()) {

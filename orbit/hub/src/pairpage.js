@@ -10,7 +10,7 @@ export const PAIR_PAGE = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Treehouse hub</title>
 <style>
-  :root { color-scheme: dark; --bg: #08090D; --card: #111318; --edge: rgba(232,236,255,.08); --text: #F4F5F8; --muted: #A3A7B6; --faint: #8B8FA0; --live: #46E3A6; }
+  :root { color-scheme: dark; --bg: #0E0D0B; --card: #171513; --edge: rgba(255,243,226,.08); --text: #F7F3EE; --muted: #B2AAA0; --faint: #8B8FA0; --live: #46E3A6; }
   * { box-sizing: border-box; }
   body { margin: 0; min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; background: var(--bg); color: var(--text);
     font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 24px; }
@@ -49,7 +49,7 @@ export const PAIR_PAGE = `<!doctype html>
   form .primary { margin-top: 0; }
   input { flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--edge);
     border-radius: 999px; padding: 11px 18px; outline: none; }
-  input:focus { border-color: rgba(232,236,255,.24); }
+  input:focus { border-color: rgba(255,243,226,.24); }
   .error { color: #FF7A85; font-size: 14px; margin-top: 10px; min-height: 1em; }
 </style>
 </head>

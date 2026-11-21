@@ -32,19 +32,16 @@ export const tint = (spec) => (characterOf(spec) ?? FORMER).fill;
 
 export const randomAvatar = () => ({ character: 1 + Math.floor(Math.random() * CHARACTERS.length) });
 
-/** An agent's character. [thinking] adds a small moon on an orbit and a gentle bob. */
+/** An agent's character. [thinking] adds a small typing bubble in its color at its shoulder, and a gentle bob. */
 export function Avatar({ spec, size = 40, thinking = false, style = '' }) {
   const character = characterOf(spec);
   const color = tint(spec);
-  const moon = thinking ? html`<svg class="satellite" viewBox="0 0 100 100" aria-hidden="true">
-    <circle cx="50" cy="50" r="66" fill="none" stroke=${color} stroke-opacity="0.22" stroke-width=${100 / size} />
-    <circle cx=${50 + 66 * Math.cos(-Math.PI / 4)} cy=${50 + 66 * Math.sin(-Math.PI / 4)} r="7.5" fill=${color} />
-  </svg>` : null;
+  const bubble = thinking ? html`<span class="thinking-bubble" style=${`--ink:${color}`}><i></i><i></i><i></i></span>` : null;
   return html`<span class=${`avatar${thinking ? ' thinking' : ''}`} style=${`width:${size}px;height:${size}px;${style}`} aria-hidden="true">
     ${character
       ? html`<img src=${character.image} alt="" width=${size} height=${size} draggable="false" />`
       : html`<span class="former"></span>`}
-    ${moon}
+    ${bubble}
   </span>`;
 }
 

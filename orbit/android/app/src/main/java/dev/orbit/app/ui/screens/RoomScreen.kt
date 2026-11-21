@@ -102,6 +102,7 @@ import dev.orbit.app.ui.components.ActivityTrail
 import dev.orbit.app.ui.components.AgentAvatar
 import dev.orbit.app.ui.components.AttachedItems
 import dev.orbit.app.ui.components.AvatarRow
+import dev.orbit.app.ui.components.TreehouseScene
 import dev.orbit.app.ui.components.DraftStrip
 import dev.orbit.app.ui.components.FormerAgentAvatar
 import dev.orbit.app.ui.components.IconTap
@@ -532,9 +533,9 @@ private fun EmptyRoom(room: Room, agents: List<Agent>, modifier: Modifier) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // The crew, still and waiting. (The orbit is kept for pairing and the empty home.)
-        AvatarRow(agents.map { it.avatar }, Modifier.entrance(entrances, "crew", 0), size = 52.dp, alive = true)
-        Spacer(Modifier.height(24.dp))
+        // The room's crew, at home in the treehouse and waiting for a task.
+        TreehouseScene(agents.map { it.avatar }, Modifier.fillMaxWidth().height(190.dp).entrance(entrances, "crew", 0))
+        Spacer(Modifier.height(20.dp))
         Text("The crew is ready", Modifier.entrance(entrances, "title", 1), style = OrbitType.titleL, color = c.text)
         Text(
             if (room.mode == Room.MODE_AUTO) {

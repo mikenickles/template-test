@@ -5,6 +5,7 @@ import { ATTACHABLE, api, canAttach, hubEvents, onThisPC, prepare, roomEvents } 
 import { Avatar, CrewTile, characterOf, inkColor, tint } from './avatar.js';
 import { AgentEditor, RoomEditor, Schedules, Settings } from './editors.js';
 import { closeOpenMarkup, markdown } from './markdown.js';
+import { Treehouse } from './treehouse.js';
 import { Icon, Mark, Pill, ago, fileSize, html } from './ui.js';
 
 // ---------- The app ----------
@@ -291,6 +292,12 @@ function Welcome({ state, onDialog, onIntro, onOpen }) {
     </button>`)}
       <button class="stage-member add" onClick=${() => onDialog({ type: 'agent' })}><span class="plus"><${Icon} name="plus" /></span><span class="title-s">New agent</span></button>
     </div>`}
+    ${state.agents.length > 0 && !state.rooms.some((r) => !r.intro) && html`<div class="first-room">
+      <${Treehouse} specs=${state.agents.map((a) => a.avatar)} height=${170} />
+      <div class="title-m">Start your first room</div>
+      <p class="muted">Put agents in a room, give them a task, and they'll work it out together.</p>
+      <button class="button" onClick=${() => onDialog({ type: 'room' })}>New room</button>
+    </div>`}
     ${state.rooms.length > 0 && html`<div class="stage-title"><span class="overline">Recent rooms</span></div>
     <div class="room-cards">${[...state.rooms].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4).map((room) => {
       const crew = room.agentIds.map((id) => state.agents.find((a) => a.id === id)).filter(Boolean);
@@ -436,7 +443,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale }
     <div class="messages" ref=${scroller} onScroll=${onScroll} onClick=${onCopyCode}>
       ${loaded && !messages.length
         ? html`<div class="empty-room">
-            <div class="avatar-row">${agents.map((a) => html`<${Avatar} spec=${a.avatar} size=${44} />`)}</div>
+            <${Treehouse} specs=${agents.map((a) => a.avatar)} height=${180} />
             <div class="title-m">${agents.map((a) => a.name).join(', ')}</div>
             <p class="muted">${room.mode === 'auto' ? 'Ask anything. Whoever it suits best answers.' : room.mode === 'lead' && lead ? `${lead.name} answers first and brings in the others.` : 'Everyone answers in turn.'} Mention someone with @ to ask them directly.</p>
           </div>`

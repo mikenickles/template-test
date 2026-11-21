@@ -1,4 +1,4 @@
-/* Orbit desktop. The same system as the phone: neutral surfaces so avatars are the only color,
+/* Treehouse desktop. The same system as the phone: warm neutral surfaces so avatars are the only color,
    Geist for words and Geist Mono for what a machine reads, one stroke weight for icons. */
 
 @font-face { font-family: Geist; src: url('/fonts/geist.ttf') format('truetype'); font-weight: 100 900; font-display: swap; }
@@ -6,23 +6,23 @@
 
 :root {
   color-scheme: light;
-  --bg: #F3F4F7;
+  --bg: #F6F2EC;
   --surface: #FFFFFF;
   --raised: #FFFFFF;
-  --high: #E0E2E9;
-  --hairline: rgba(10, 15, 46, 0.08);
-  --line: rgba(10, 15, 46, 0.22);
-  --text: #0A0B10;
-  --text-2: #4E5262;
-  --text-3: #676B7C;
-  --primary: #0A0B10;
+  --high: #E9E3DA;
+  --hairline: rgba(42, 28, 12, 0.1);
+  --line: rgba(42, 28, 12, 0.24);
+  --text: #17130F;
+  --text-2: #574E45;
+  --text-3: #6A6157;
+  --primary: #17130F;
   --on-primary: #FFFFFF;
   --live: #0A7A55;
   --danger: #C42F22;
   --danger-surface: rgba(196, 47, 34, 0.08);
   --edge: 1px solid var(--hairline);
   --lift: 0 4px 18px rgba(0, 0, 0, 0.07);
-  --r-s: 12px; --r-m: 16px; --r-l: 22px; --r-xl: 28px;
+  --r-s: 12px; --r-m: 16px; --r-l: 24px; --r-xl: 32px;
   --sans: Geist, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: 'Geist Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
   --ease: cubic-bezier(0.2, 0, 0, 1);
@@ -32,22 +32,22 @@
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --bg: #08090D;
-    --surface: #111318;
-    --raised: #181A21;
-    --high: #23262F;
-    --hairline: rgba(232, 236, 255, 0.08);
-    --line: rgba(232, 236, 255, 0.2);
-    --text: #F4F5F8;
-    --text-2: #A3A7B6;
-    --text-3: #8B8FA0;
-    --primary: #F4F5F8;
-    --on-primary: #08090D;
-    --live: #46E3A6;
+    --bg: #0E0D0B;
+    --surface: #171513;
+    --raised: #1F1D1A;
+    --high: #2B2824;
+    --hairline: rgba(255, 243, 226, 0.08);
+    --line: rgba(255, 243, 226, 0.2);
+    --text: #F7F3EE;
+    --text-2: #B2AAA0;
+    --text-3: #968E84;
+    --primary: #F7F3EE;
+    --on-primary: #0E0D0B;
+    --live: #5BD9A0;
     --danger: #FF7B72;
     --danger-surface: rgba(255, 123, 114, 0.12);
     /* Dark surfaces are lit from above instead of casting shadows. */
-    --edge: 1px solid rgba(255, 255, 255, 0.09);
+    --edge: 1px solid rgba(255, 243, 226, 0.09);
     --lift: none;
   }
 }
@@ -157,9 +157,14 @@ textarea.field { resize: vertical; min-height: 96px; line-height: 1.5; }
 .avatar { display: block; position: relative; flex: none; }
 .avatar img { display: block; width: 100%; height: 100%; user-select: none; }
 .avatar .former { position: absolute; inset: 8%; border-radius: 50%; background: rgb(163 168 180 / 0.55); }
-.avatar .satellite { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; animation: orbit 2.2s linear infinite; }
+/* An agent at work: a little bubble at its shoulder whose dots rise in turn, like someone typing. */
+.thinking-bubble { position: absolute; right: -24%; top: -10%; width: 62%; height: 32%; min-width: 18px; min-height: 9px; display: flex;
+  align-items: center; justify-content: center; gap: 12%; border-radius: 999px; background: var(--raised); border: 1px solid var(--line); }
+.thinking-bubble i { width: 16%; aspect-ratio: 1; border-radius: 50%; background: var(--ink); opacity: 0.45; animation: typing 1.1s ease-in-out infinite; }
+.thinking-bubble i:nth-child(2) { animation-delay: 0.18s; }
+.thinking-bubble i:nth-child(3) { animation-delay: 0.36s; }
+@keyframes typing { 0%, 60%, 100% { opacity: 0.45; transform: none; } 30% { opacity: 1; transform: translateY(-30%); } }
 .avatar.thinking img { animation: bob 1.1s ease-in-out infinite alternate; }
-@keyframes orbit { to { transform: rotate(360deg); } }
 @keyframes bob { from { transform: translateY(2.5%); } to { transform: translateY(-2.5%); } }
 @keyframes pop { from { transform: scale(0.82); } to { transform: scale(1); } }
 .crew-tile { position: relative; flex: none; border-radius: 30%; background: var(--raised); overflow: hidden; }
@@ -240,7 +245,7 @@ main { min-width: 0; min-height: 0; display: flex; flex-direction: column; backg
 .file-chip .name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .empty-room { margin: auto; text-align: center; max-width: 420px; padding: 40px 24px; }
-.empty-room .avatar-row { justify-content: center; margin-bottom: 18px; }
+.empty-room .treehouse { margin: 0 auto 18px; }
 
 .latest { position: sticky; bottom: 12px; margin: -48px auto 0; display: flex; width: max-content; }
 
@@ -429,3 +434,17 @@ main > header, main > .messages, main > .composer-wrap { position: relative; }
 .replying { display: flex; align-items: center; gap: 10px; padding: 10px 6px 0 16px; }
 .replying .text { flex: 1; min-width: 0; }
 .replying .body-s { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- The treehouse ---------- */
+.treehouse { position: relative; flex: none; }
+.treehouse .scene { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.treehouse .window { position: absolute; overflow: hidden; }
+.treehouse .avatar img { transform-origin: 50% 100%; animation: breathe 3.8s ease-in-out infinite alternate; animation-delay: inherit; }
+.treehouse .leaves { animation: rustle 7s ease-in-out infinite alternate; }
+.treehouse .leaves.late { animation-delay: -3.5s; }
+@keyframes breathe { from { transform: none; } to { transform: scale(0.99, 1.022); } }
+@keyframes rustle { from { transform: translate(-6px, -3px); } to { transform: translate(6px, 3px); } }
+.first-room { margin-top: 28px; padding: 28px 24px 28px; border-radius: var(--r-xl); border: var(--edge); background: var(--surface);
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+.first-room .treehouse { margin-bottom: 14px; }
+.first-room p { margin: 0 0 14px; max-width: 380px; }

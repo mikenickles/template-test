@@ -48,7 +48,6 @@ import dev.orbit.app.ui.theme.LocalReducedMotion
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitMotion
 import kotlin.math.PI
-import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 import kotlinx.coroutines.delay
@@ -133,7 +132,7 @@ private object CharacterImages {
  *
  * - [alive]: it breathes, hops now and then, and pops when the character changes. For avatars
  *   someone looks at, not for every face in a list.
- * - [thinking]: a moon in the character's color circles it, and it bobs gently.
+ * - [thinking]: a small typing bubble in the character's color sits at its shoulder, and it bobs gently.
  *
  * With system animations off, avatars hold still and changes apply at once.
  */
@@ -148,9 +147,11 @@ fun AgentAvatar(
     val reduced = LocalReducedMotion.current
     val phase = if (thinking && !reduced) thinkingPhase() else null
     val color = spec.tint()
+    val bubble = Orbit.colors.surfaceRaised
+    val edge = Orbit.colors.line
     val satellite = if (thinking) Modifier.drawWithContent {
         drawContent()
-        drawSatellite(color, phase?.value ?: 0.125f)
+        drawThinking(color, bubble, edge, phase?.value)
     } else Modifier
 
     if (spec.isFormer) {
@@ -224,18 +225,26 @@ private fun breathing(): State<Float> {
     )
 }
 
-/** The mark of an agent at work: a small moon on a faint orbit, trailing light. */
-private fun DrawScope.drawSatellite(color: Color, phase: Float) {
+/**
+ * The mark of an agent at work: a little speech bubble at its shoulder with three dots that rise
+ * in turn, like someone typing. With animations off ([phase] null) the dots hold still.
+ */
+private fun DrawScope.drawThinking(color: Color, bubble: Color, edge: Color, phase: Float?) {
     val s = size.minDimension
-    val orbit = s * 0.66f
-    drawCircle(color.copy(alpha = 0.22f), orbit, center, style = Stroke(width = 1.dp.toPx()))
-    for (i in 7 downTo 0) {
-        val angle = ((phase - i * 0.022f) * 2 * PI - PI / 4).toFloat()
-        val fade = 1f - i / 8f
+    val w = s * 0.62f
+    val h = s * 0.32f
+    val topLeft = Offset(size.width - w * 0.62f, -h * 0.28f)
+    val corner = CornerRadius(h / 2)
+    drawRoundRect(bubble, topLeft, Size(w, h), corner)
+    drawRoundRect(edge, topLeft, Size(w, h), corner, style = Stroke(width = 1.dp.toPx()))
+    val r = h * 0.15f
+    for (i in 0 until 3) {
+        // Each dot lifts and brightens in turn, a third of a beat after the last.
+        val lift = phase?.let { (sin(((it * 2f - i / 3f) * 2 * PI)).toFloat()).coerceAtLeast(0f) } ?: (if (i == 1) 1f else 0f)
         drawCircle(
-            color.copy(alpha = if (i == 0) 1f else 0.5f * fade * fade),
-            s * 0.075f * (if (i == 0) 1f else 0.55f + 0.45f * fade),
-            Offset(center.x + orbit * cos(angle), center.y + orbit * sin(angle)),
+            color.copy(alpha = 0.45f + 0.55f * lift),
+            r,
+            Offset(topLeft.x + w * (0.3f + i * 0.2f), topLeft.y + h / 2 - lift * h * 0.12f),
         )
     }
 }

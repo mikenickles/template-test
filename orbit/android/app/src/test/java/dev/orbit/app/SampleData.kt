@@ -165,7 +165,7 @@ object SampleData {
         loaded = true,
         connected = true,
         messages = listOf(
-            agentMessage("m1", nova, "Hi! I'm **Nova**, your guide in Orbit. Let's get to know each other so your whole crew can help you well. What should I call you?"),
+            agentMessage("m1", nova, "Hi! I'm **Nova**, your guide in Treehouse. Let's get to know each other so your whole crew can help you well. What should I call you?"),
             userMessage("m2", "Alex! I'm a product designer, and I'm training for a half marathon."),
             agentMessage("m3", nova, "Love that, Alex. Here's a crew I'd suggest:\n\n- **Pixel**, the builder, for prototypes and side projects\n- **Mochi**, the coach, for your training plan\n\nWant me to set them up?").copy(
                 activity = listOf(

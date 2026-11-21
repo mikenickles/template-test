@@ -61,8 +61,8 @@ class MotionTest {
         paparazzi.gif(name, start = 0, end = end, fps = fps) { OrbitTheme(dark = dark, reducedMotion = false) { Hosted(content) } }
     }
 
-    /** The pairing hero: the crew orbiting the hub, blinking. */
-    @Test fun pairOrbit() = record("pair-orbit", 3000, fps = 12) {
+    /** The pairing hero: the crew at home in the treehouse, leaves rustling. */
+    @Test fun pairTreehouse() = record("pair-treehouse", 3000, fps = 12) {
         PairScreen(PairState(), {}, { _, _ -> })
     }
 

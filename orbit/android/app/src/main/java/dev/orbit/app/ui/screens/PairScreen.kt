@@ -52,10 +52,10 @@ import dev.orbit.app.ui.components.Hairline
 import dev.orbit.app.ui.components.LogoMark
 import dev.orbit.app.ui.components.OrbitField
 import dev.orbit.app.ui.components.OrbitSpinner
-import dev.orbit.app.ui.components.OrbitSystem
 import dev.orbit.app.ui.components.Pill
 import dev.orbit.app.ui.components.PrimaryButton
 import dev.orbit.app.ui.components.SecondaryButton
+import dev.orbit.app.ui.components.TreehouseScene
 import dev.orbit.app.ui.components.tap
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitDimens
@@ -131,13 +131,8 @@ fun PairScreen(
                 Text("Treehouse", Modifier.padding(start = 8.dp), style = OrbitType.titleM, color = c.text)
             }
 
-            // The crew drifting around the hub. While connecting, they quicken a little.
-            OrbitSystem(
-                SampleCrew,
-                Modifier.fillMaxWidth().height(210.dp).entrance(entrances, "hero", 0),
-                avatarSize = 46.dp,
-                speed = if (state.busy) 1.6f else 1f,
-            )
+            // The crew at home in the treehouse, waiting for you.
+            TreehouseScene(SampleCrew, Modifier.fillMaxWidth().padding(vertical = 18.dp).height(220.dp).entrance(entrances, "hero", 0))
 
             Text("Pair with your hub", Modifier.entrance(entrances, "title", 1), style = OrbitType.display, color = c.text)
             Spacer(Modifier.height(10.dp))
