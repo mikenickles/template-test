@@ -190,7 +190,7 @@ export class Hub {
         avatar: { character: GUIDE.character }, abilities: ['web', 'memory', 'crew'], createdAt: Date.now(),
       };
       // A guide named like an existing agent would confuse @mentions.
-      if (this.store.state.agents.some((a) => a.name.toLowerCase() === guide.name.toLowerCase())) guide.name = 'Orbi';
+      if (this.store.state.agents.some((a) => a.name.toLowerCase() === guide.name.toLowerCase())) guide.name = 'Hazel';
       this.store.state.agents.push(guide);
     }
     const existing = this.store.state.rooms.find((r) => r.intro && r.agentIds.length === 1 && r.agentIds[0] === guide.id);

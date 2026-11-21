@@ -5,7 +5,7 @@ import { CrewError, createCrew, introPrompt } from './intro.js';
 import { RecruitError, createAgent, recruitPrompt } from './recruit.js';
 import { addUsage, emptyUsage } from './usage.js';
 import { GOOGLE_PROMPT, runGoogleTool } from './google.js';
-import { APP_SUMMARY, GUIDE, SELF_PROMPT, selfTools } from './self.js';
+import { APP_SUMMARY, GUIDE, SELF_PROMPT, modelOf, selfTools } from './self.js';
 
 /** Upper bound on agent replies per user message, so @mention chains can't loop forever. */
 export const MAX_TURNS = 12;
@@ -91,13 +91,15 @@ export function buildSystemPrompt(agent, room, agents, abilities = null, profile
     teammates.length
       ? `You are ${agent.name}${agent.role ? `, ${agent.role}` : ''}. You are one of several AI agents working with a user in Treehouse, in a group chat called "${room.name}".`
       : `You are ${agent.name}${agent.role ? `, ${agent.role}` : ''}, one of the user's AI agents in Treehouse, talking with them in a chat called "${room.name}".`,
+    // Agents are asked how they're set up; they should know without looking it up.
+    `You run on the model ${modelOf(agent)}.${agent.proactive && agent.proactive !== 'off' ? ` You reach out on your own (${agent.proactive}).` : ''} If the user asks about your setup (your model, abilities or instructions), answer from what you're told here.`,
     '',
     APP_SUMMARY,
   ];
   if (agent.instructions?.trim()) lines.push('', agent.instructions.trim());
   if (teammates.length) {
     lines.push('', 'Your teammates in this chat:');
-    for (const t of teammates) lines.push(`- ${t.name}${t.role ? `: ${t.role}` : ''}`);
+    for (const t of teammates) lines.push(`- ${t.name}${t.role ? `: ${t.role}` : ''} (on ${t.model})`);
   }
   lines.push(
     '',

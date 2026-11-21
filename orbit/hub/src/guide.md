@@ -53,6 +53,9 @@ tools (some small local models don't; those just chat). Demo agents have none.
 
 **Reaches out** (Off, Gentle, Active) makes an agent proactive: see below.
 
+Every agent knows which model it runs on and its teammates' models. Treehouse was called Orbit before, so older
+messages and notes may say Orbit; it's the same app.
+
 ## What the crew knows about the user
 
 "About you" (Settings) holds the user's name and facts every agent knows, in every room. Agents add to it as

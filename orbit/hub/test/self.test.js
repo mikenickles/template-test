@@ -58,6 +58,9 @@ test('every agent knows it lives in Treehouse; agents without tools get the whol
   const { providers, nova, pixel, room } = crew();
   const claude = buildSystemPrompt(nova, room, [nova, pixel], { ...resolveAbilities(nova, providers, null), self: {} });
   assert.match(claude, /working with a user in Treehouse, in a group chat called "Launch"/);
+  assert.match(claude, /You run on the model claude-opus-5-5, from Anthropic\./, 'agents know their own model');
+  assert.match(claude, /- Pixel: the builder \(on gpt-x\)/, 'and their teammates\'');
+  assert.match(claude, /used to be called Orbit/);
   assert.ok(claude.includes(APP_SUMMARY));
   assert.match(claude, /call treehouse_guide and answer from it/);
   assert.ok(!claude.includes(GUIDE), 'Claude agents read the guide when they need it');

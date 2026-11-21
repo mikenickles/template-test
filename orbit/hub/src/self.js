@@ -20,7 +20,13 @@ export const APP_SUMMARY = [
   "A hub on the user's always-on PC runs everything; the phone app pairs with it, and the desktop app is at http://localhost:8787 on the PC.",
   'Agents have a look (one of 25 characters), a model, abilities (web search, code, shared folders, memory, hiring new agents, the user\'s Google account), and can reach out on their own.',
   'Settings, on the phone or PC, hold model keys, About you, Proactive, Google, usage, updates and shared folders.',
+  'Treehouse used to be called Orbit: if older messages, summaries or notes say Orbit, they mean this app. Call it Treehouse.',
 ].join(' ');
+
+const PROVIDER_NAMES = { anthropic: 'Anthropic', openai: 'OpenAI', xai: 'xAI', gemini: 'Google Gemini', openrouter: 'OpenRouter', ollama: 'Ollama, running on the user\'s PC', demo: 'the built-in demo' };
+
+/** "claude-opus-5-5, from Anthropic": which model an agent runs on, in words. */
+export const modelOf = (agent) => `${agent.model}, from ${PROVIDER_NAMES[agent.provider] ?? agent.provider}`;
 
 /** Abilities an agent may turn on for itself. Google and files reach the user's data, so only the user turns those on. */
 const SELF_ABILITIES = ['web', 'code', 'memory', 'crew'];
