@@ -18,8 +18,17 @@ const REPORTS_USAGE = new Set(['openai', 'openrouter', 'xai']);
 /** What servers say when a model doesn't take tools. */
 const NO_TOOLS = /does not support tools|tools? (are|is) not supported|not support(ed)? (for )?(tool|function)|function calling is not (enabled|supported)|tool use is not supported/i;
 
+/**
+ * What OpenAI says when a reasoning model won't take tools on /chat/completions while it reasons: "Function
+ * tools with reasoning_effort are not supported for … set reasoning_effort to 'none'".
+ */
+const NO_REASONING_WITH_TOOLS = /reasoning_effort/i;
+
 /** Models found not to take tools, as "provider:model", so they aren't asked again. */
 export const withoutTools = new Set();
+
+/** Models that take tools only with reasoning off, as "provider:model". */
+export const toolsWithoutReasoning = new Set();
 
 // For estimates only: an image counts as about 1,500 tokens.
 const textLength = (content) => (content == null ? 0 : typeof content === 'string' ? content.length : content.reduce((n, p) => n + (p.text?.length ?? 6000), 0));
@@ -52,6 +61,7 @@ async function request(def, body, signal, onDelta) {
     }
     const error = new ProviderError(`${def.label} error ${res.status}: ${detail}`);
     error.noTools = Boolean(body.tools) && NO_TOOLS.test(detail);
+    error.noReasoningWithTools = Boolean(body.tools) && !body.reasoning_effort && res.status === 400 && NO_REASONING_WITH_TOOLS.test(detail) && /tool/i.test(detail);
     throw error;
   }
 
@@ -128,6 +138,7 @@ export async function streamOpenAI({
     const body = { model, stream: true, messages: conversation };
     if (REPORTS_USAGE.has(def.id)) body.stream_options = { include_usage: true };
     if (useTools) body.tools = tools.map(asFunction);
+    if (useTools && toolsWithoutReasoning.has(key)) body.reasoning_effort = 'none';
     // A new paragraph wherever text resumes after a tool, so "Let me check." and the answer don't run together.
     let started = false;
     const emit = (piece) => {
@@ -143,9 +154,16 @@ export async function streamOpenAI({
     try {
       step = await request(def, body, signal, emit);
     } catch (err) {
-      if (!err.noTools) throw err;
-      // This model doesn't take tools: remember, and answer without them.
+      if (err.noReasoningWithTools) {
+        // A reasoning model that takes tools here only with reasoning off: keep the tools, and remember.
+        toolsWithoutReasoning.add(key);
+        continue;
+      }
+      // Tools didn't work even with reasoning off, or the model doesn't take them: answer without them.
+      const failedWithoutReasoning = useTools && body.reasoning_effort === 'none' && err instanceof ProviderError && /400/.test(err.message);
+      if (!err.noTools && !failedWithoutReasoning) throw err;
       withoutTools.add(key);
+      toolsWithoutReasoning.delete(key);
       useTools = false;
       conversation[0] = { role: 'system', content: plainSystem };
       continue;

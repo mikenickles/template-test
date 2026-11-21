@@ -9,7 +9,7 @@ import { Providers } from '../src/providers.js';
 import { Hub } from '../src/server.js';
 import { GUIDE } from '../src/self.js';
 import { fetchPage, isPublicAddress } from '../src/tools.js';
-import { withoutTools } from '../src/openai.js';
+import { toolsWithoutReasoning, withoutTools } from '../src/openai.js';
 
 /** A stand-in for the Anthropic API that streams scripted replies and keeps each request it got. */
 async function fakeClaude(t, steps) {
@@ -198,3 +198,43 @@ test('pages are read from the internet only, never this PC or the home network',
   assert.match((await fetchPage('file:///etc/passwd', { fetch: doFetch, lookup })).text, /Only http and https/);
   assert.match((await fetchPage('https://example.com/file.zip', { fetch: doFetch, lookup })).text, /application\/zip/);
 });
+
+test('a reasoning model that refuses tools while reasoning gets them with reasoning off, and keeps that', async (t) => {
+  withoutTools.clear();
+  toolsWithoutReasoning.clear();
+  const refusal = "Function tools with reasoning_effort are not supported for gpt-6.1-terra in /v1/chat/completions. To use function tools, use /v1/responses or set reasoning_effort to 'none'.";
+  const openai = await fakeOllama(t, [{ error: [400, refusal] }, [{ content: 'We are in Treehouse.' }], [{ content: 'Still here.' }]]);
+  const h = await start(t, { openai: { apiKey: 'sk-test', baseUrl: openai.baseUrl } });
+  const nova = (await h.api('POST', '/api/agents', { name: 'Nova', provider: 'openai', model: 'gpt-6.1-terra', abilities: ['memory'] })).body;
+  const room = (await h.api('POST', '/api/rooms', { name: 'Start', agentIds: [nova.id] })).body;
+  await h.api('POST', `/api/rooms/${room.id}/messages`, { text: 'What app are we on?' });
+  await h.hub.orchestrator.idle(room.id);
+  assert.equal(h.store.messages(room.id).at(-1).text, 'We are in Treehouse.');
+  assert.equal(openai.requests[0].reasoning_effort, undefined);
+  assert.equal(openai.requests[1].reasoning_effort, 'none');
+  assert.ok(openai.requests[1].tools, 'the tools stay');
+
+  await h.api('POST', `/api/rooms/${room.id}/messages`, { text: 'And again?' });
+  await h.hub.orchestrator.idle(room.id);
+  assert.equal(openai.requests.length, 3, 'asked right the first time now');
+  assert.equal(openai.requests[2].reasoning_effort, 'none');
+});
+
+test('if tools fail even with reasoning off, the model answers without them', async (t) => {
+  withoutTools.clear();
+  toolsWithoutReasoning.clear();
+  const openai = await fakeOllama(t, [
+    { error: [400, 'Function tools with reasoning_effort are not supported for this model.'] },
+    { error: [400, "Unsupported value: 'none' for reasoning_effort."] },
+    [{ content: 'Hello without tools.' }],
+  ]);
+  const h = await start(t, { openai: { apiKey: 'sk-test', baseUrl: openai.baseUrl } });
+  const nova = (await h.api('POST', '/api/agents', { name: 'Nova', provider: 'openai', model: 'gpt-x', abilities: [] })).body;
+  const room = (await h.api('POST', '/api/rooms', { name: 'Start', agentIds: [nova.id] })).body;
+  await h.api('POST', `/api/rooms/${room.id}/messages`, { text: 'Hi' });
+  await h.hub.orchestrator.idle(room.id);
+  assert.equal(h.store.messages(room.id).at(-1).text, 'Hello without tools.');
+  assert.equal(openai.requests[2].tools, undefined);
+  assert.equal(openai.requests[2].reasoning_effort, undefined);
+});
+
