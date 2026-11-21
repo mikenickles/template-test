@@ -183,7 +183,7 @@ export class Hub {
     let guide = capable(this.store.agent(agentId)) ? this.store.agent(agentId) : this.store.state.agents.find(capable);
     if (!guide) {
       if (!this.providers.isConfigured('anthropic')) {
-        throw new HttpError(400, 'Getting to know you needs Claude. Add an Anthropic key in Settings, under Model providers.');
+        throw new HttpError(400, 'Getting to know you needs Claude. Add an Anthropic key in Settings, under AI models.');
       }
       guide = {
         id: crypto.randomUUID(), name: GUIDE.name, role: GUIDE.role, instructions: GUIDE.instructions,

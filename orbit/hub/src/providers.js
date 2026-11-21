@@ -357,11 +357,11 @@ export class Providers {
       }
       if (!status.models.some((m) => sameModel(m, model))) {
         throw new ProviderError(def.pullable
-          ? `${model} isn't downloaded yet. Get it in Settings, under Model providers, ${def.label}.`
+          ? `${model} isn't downloaded yet. Get it in Settings, under AI models, ${def.label}.`
           : `${def.label} doesn't have ${model}. Load it there, then try again.`);
       }
     } else if (!this.isConfigured(provider)) {
-      throw new ProviderError(`${def.label} needs an API key. Add one in the app, in Settings under Model providers.`);
+      throw new ProviderError(`${def.label} needs an API key. Add one in the app, in Settings, under AI models.`);
     }
     if (def.kind === 'demo') return streamDemo({ messages: asText(messages), signal, onDelta, agent });
     if (def.kind === 'anthropic') {

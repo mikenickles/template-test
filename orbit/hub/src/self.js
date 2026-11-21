@@ -183,7 +183,7 @@ export function updateSelf(agent, input, { store, providers }) {
   if (input.provider !== undefined || input.model !== undefined) {
     const provider = input.provider !== undefined ? clean(input.provider, 40).toLowerCase() : agent.provider;
     if (!providers.has(provider)) throw new SelfError(`There's no provider called ${provider}.`);
-    if (!providers.isConfigured(provider)) throw new SelfError(`${provider} has no key yet. The user adds keys in Settings, under Model providers.`);
+    if (!providers.isConfigured(provider)) throw new SelfError(`${provider} has no key yet. The user adds keys in Settings, under AI models.`);
     const model = input.model !== undefined ? clean(input.model, 120) : provider === agent.provider ? agent.model : providers.list().find((p) => p.id === provider)?.models?.[0];
     if (!model) throw new SelfError('Say which model.');
     agent.provider = provider;
@@ -339,7 +339,7 @@ export async function planRoom({ store, providers, ledger = null }, text) {
   const choice = ready('anthropic') && providers.kindOf('anthropic') === 'anthropic'
     ? { provider: 'anthropic', model: PLAN_MODEL, agent: agents[0] }
     : agents.filter((a) => ready(a.provider)).map((a) => ({ provider: a.provider, model: a.model, agent: a }))[0];
-  if (!choice) throw new SelfError('Setting up a room needs a model with a key. Add one in Settings, under Model providers.');
+  if (!choice) throw new SelfError('Setting up a room needs a model with a key. Add one in Settings, under AI models.');
   const roster = agents.map((a) => `- ${a.name}${a.role ? `: ${a.role}` : ''}${a.instructions?.trim() ? `. ${clean(a.instructions, 200)}` : ''}`).join('\n');
   let usage = null;
   const answer = await providers.stream({

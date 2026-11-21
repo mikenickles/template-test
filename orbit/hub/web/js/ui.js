@@ -29,6 +29,9 @@ const ICONS = {
   clock: 'M19.7 12a7.7 7.7 0 1 1-15.4 0 7.7 7.7 0 0 1 15.4 0ZM12 7.4V12l3.1 2.4',
   mail: 'M5.4 6.2h13.2q1.6 0 1.6 1.6v8.4q0 1.6-1.6 1.6H5.4q-1.6 0-1.6-1.6V7.8q0-1.6 1.6-1.6ZM4.6 7.2 12 12.7l7.4-5.5',
   calendar: 'M6.2 5.8h11.6q1.9 0 1.9 1.9v10.2q0 1.9-1.9 1.9H6.2q-1.9 0-1.9-1.9V7.7q0-1.9 1.9-1.9ZM4.6 9.8h14.8M8.6 3.8v3.4M15.4 3.8v3.4',
+  person: 'M15.2 8.4a3.2 3.2 0 1 1-6.4 0 3.2 3.2 0 0 1 6.4 0ZM5.3 19.7c.6-4.6 12.8-4.6 13.4 0',
+  spark: 'M12 3.8q1 7.2 8.2 8.2-7.2 1-8.2 8.2-1-7.2-8.2-8.2 7.2-1 8.2-8.2Z',
+  chart: 'M6.5 19.2v-5.6M12 19.2V5.8M17.5 19.2v-8.6',
   bell: 'M6.2 16.3l1.2-5a4.7 4.7 0 0 1 9.2 0l1.2 5ZM10.3 19.2h3.4',
   settings: 'M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4ZM19.2 13.6l1.5 1.2-1.6 2.8-1.9-.6a7 7 0 0 1-1.7 1l-.4 2h-3.2l-.4-2a7 7 0 0 1-1.7-1l-1.9.6-1.6-2.8 1.5-1.2a7 7 0 0 1 0-2l-1.5-1.3L6.2 7.6l1.9.6a7 7 0 0 1 1.7-1l.4-2h3.2l.4 2a7 7 0 0 1 1.7 1l1.9-.6 1.6 2.8-1.5 1.3a7 7 0 0 1 0 2Z',
   dice: 'M5.4 3.8h13.2q1.6 0 1.6 1.6v13.2q0 1.6-1.6 1.6H5.4q-1.6 0-1.6-1.6V5.4q0-1.6 1.6-1.6ZM8.6 8.6h.01M12 12h.01M15.4 15.4h.01',
@@ -63,7 +66,7 @@ export function Modal({ title, onClose, actions = null, children, wide = false }
     return () => removeEventListener('keydown', key);
   }, [onClose]);
   return html`<div class="scrim" onMouseDown=${(e) => e.target === e.currentTarget && onClose()}>
-    <div class="dialog" role="dialog" aria-modal="true" aria-label=${title} style=${wide ? 'width:min(720px,100%)' : ''}>
+    <div class="dialog" role="dialog" aria-modal="true" aria-label=${title} style=${wide ? `width:min(${wide === true ? 720 : wide}px,100%)` : ''}>
       <div class="dialog-head">
         <h2>${title}</h2>
         ${actions}

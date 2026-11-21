@@ -101,7 +101,7 @@ function App() {
       openRoom(intro.id);
     } catch (e) {
       notify(e.message);
-      if (/key/i.test(e.message)) setDialog({ type: 'settings' });
+      if (/key/i.test(e.message)) setDialog({ type: 'settings', page: 'models' });
     }
   };
 
@@ -146,9 +146,9 @@ function App() {
         : html`<${Welcome} state=${state} onDialog=${setDialog} onIntro=${startIntro} onOpen=${openRoom}
             onDismiss=${(id) => api.dismissNudge(id).then(refresh).catch((e) => notify(e.message))} />`}
     </main>
-    ${dialog?.type === 'agent' && html`<${AgentEditor} agent=${dialog.agent} state=${state} notify=${notify} onClose=${close} onSaved=${() => edited()} onChanged=${refresh} onAddKey=${() => setDialog({ type: 'settings' })} />`}
+    ${dialog?.type === 'agent' && html`<${AgentEditor} agent=${dialog.agent} state=${state} notify=${notify} onClose=${close} onSaved=${() => edited()} onChanged=${refresh} onAddKey=${() => setDialog({ type: 'settings', page: 'models' })} />`}
     ${dialog?.type === 'room' && html`<${RoomEditor} room=${dialog.room} state=${state} notify=${notify} onClose=${close} onSaved=${(id) => edited(id)} />`}
-    ${dialog?.type === 'settings' && html`<${Settings} state=${state} notify=${notify} refresh=${refresh} onClose=${close} onIntro=${() => { close(); startIntro(); }} onUpdate=${startUpdate} />`}
+    ${dialog?.type === 'settings' && html`<${Settings} page=${dialog.page} state=${state} notify=${notify} refresh=${refresh} onClose=${close} onIntro=${() => { close(); startIntro(); }} onUpdate=${startUpdate} />`}
     ${updating && html`<div class="updating" role="alertdialog" aria-live="polite">
       ${updating.failed
         ? html`<div class="center"><${Mark} size=${40} /><h1 class="title-l">Treehouse hasn't come back yet</h1>
@@ -210,13 +210,13 @@ function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate, onDelete 
           <div class="body-s muted">Install it now. Treehouse restarts in a few seconds.</div></div>
         <span class="pill selected">Update</span>
       </button>`}
-      ${intro && html`<button class="card row button-row intro-mini" style=${`--wash:${tint(guide.avatar)}`} onClick=${() => (canIntro(state) ? onIntro() : onDialog({ type: 'settings' }))}>
+      ${intro && html`<button class="card row button-row intro-mini" style=${`--wash:${tint(guide.avatar)}`} onClick=${() => (canIntro(state) ? onIntro() : onDialog({ type: 'settings', page: 'models' }))}>
         <${Avatar} spec=${guide.avatar} size=${36} />
         <div style="flex:1"><div class="title-s">${canIntro(state) ? 'Get to know each other' : 'Meet your guide'}</div>
           <div class="body-s muted">${canIntro(state) ? `A quick chat with ${guide.name}, so your whole crew knows you.` : 'Add an Anthropic key to start.'}</div></div>
         <${Icon} name="chevron" size=${18} />
       </button>`}
-      ${demo && html`<button class="card row button-row" style="margin:6px 4px 4px;width:calc(100% - 8px)" onClick=${() => onDialog({ type: 'settings' })}>
+      ${demo && html`<button class="card row button-row" style="margin:6px 4px 4px;width:calc(100% - 8px)" onClick=${() => onDialog({ type: 'settings', page: 'models' })}>
         <div style="flex:1"><div class="title-s">Your crew is in demo mode</div><div class="body-s muted">Add an AI key to get real answers.</div></div>
         <${Icon} name="chevron" size=${18} />
       </button>`}
@@ -298,7 +298,7 @@ function Welcome({ state, onDialog, onIntro, onOpen, onDismiss }) {
         : 'Add an Anthropic key and your guide will get to know you, then build a crew around what you need.'}</p>
       ${canIntro(state)
         ? html`<button class="button" onClick=${onIntro}>${introRoom ? 'Continue the chat' : 'Say hello'}</button>`
-        : html`<button class="button" onClick=${() => onDialog({ type: 'settings' })}>Add a key</button>`}
+        : html`<button class="button" onClick=${() => onDialog({ type: 'settings', page: 'models' })}>Add a key</button>`}
     </div>`}
     ${state.nudges?.length > 0 && html`<div class="stage-title"><span class="overline">From your crew</span></div>
     <div class="nudges">${[...state.nudges].reverse().slice(0, 5).map((n) => {

@@ -43,6 +43,10 @@ import dev.orbit.app.ui.screens.ProviderKeyScreen
 import dev.orbit.app.ui.screens.RoomEditorScreen
 import dev.orbit.app.ui.screens.RoomScreen
 import dev.orbit.app.ui.screens.SampleCrew
+import dev.orbit.app.ui.screens.AwayScreen
+import dev.orbit.app.ui.screens.FoldersScreen
+import dev.orbit.app.ui.screens.GoogleScreen
+import dev.orbit.app.ui.screens.ModelsScreen
 import dev.orbit.app.ui.screens.SettingsScreen
 import dev.orbit.app.ui.screens.ProactiveScreen
 import dev.orbit.app.ui.screens.ShareScreen
@@ -243,6 +247,9 @@ class ScreenshotTest {
         }
     }
     @Test fun settings() = shot("settings") { SettingsScreen(app, "http://192.168.1.20:8787", {}, {}) }
+    @Test fun settingsModels() = shot("settings-models") { ModelsScreen(app, {}, {}) }
+    @Test fun settingsFolders() = shot("settings-folders") { FoldersScreen(app, "http://192.168.1.20:8787", {}, {}) }
+    @Test fun settingsAway() = shot("settings-away") { AwayScreen(app, "http://100.101.102.103:8787", {}) }
     @Test fun messageActions() = shot("message-actions") {
         Box(Modifier.fillMaxSize()) {
             RoomScreen(launch, listOf(nova, pixel, sage), chat.copy(run = RunState(), messages = chat.messages.take(3)), {}, {}, {}, {}, {})
@@ -320,12 +327,15 @@ class TallScreenshotTest {
     @Test fun scheduleEditor() = shot("schedule-editor-full") { ScheduleEditorScreen(SampleData.launch, SampleData.schedules[0], {}, {}, {}, {}) }
     @Test fun scheduleEditorLight() = shot("schedule-editor-full-light", dark = false) { ScheduleEditorScreen(SampleData.trip, null, {}, null, null, {}) }
     @Test fun proactiveFull() = shot("proactive-full") { ProactiveScreen(SampleData.proactive, {}, {}, {}, {}, {}) }
-    @Test fun settingsGoogle() = shot("settings-google-full") { SettingsScreen(SampleData.proactive, "http://192.168.1.20:8787", {}, {}) }
+    @Test fun settingsGoogle() = shot("settings-google-full") { GoogleScreen(SampleData.proactive, "http://192.168.1.20:8787", {}, {}) }
     @Test fun agentEditorProactive() = shot("agent-editor-proactive-full") {
         AgentEditorScreen(SampleData.proactive.agents[0], SampleData.providers, { emptyList() }, {}, null, {}, google = SampleData.proactive.google)
     }
     @Test fun settings() = shot("settings-full") { SettingsScreen(SampleData.app, "http://100.101.102.103:8787", {}, {}, usage = SampleData.usage) }
     @Test fun settingsNoFoldersLight() = shot("settings-full-light", dark = false) {
         SettingsScreen(SampleData.app.copy(folders = emptyList(), hub = SampleData.app.hub.copy(remote = emptyList())), "http://192.168.1.20:8787", {}, {})
+    }
+    @Test fun awayNotSetUp() = shot("settings-away-light", dark = false) {
+        AwayScreen(SampleData.app.copy(hub = SampleData.app.hub.copy(remote = emptyList())), "http://192.168.1.20:8787", {})
     }
 }

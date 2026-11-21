@@ -21,7 +21,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /** Orbit's own icon set: one stroke weight, round caps and joins, to sit with the typeface. */
-enum class OrbitIcon { Back, Up, Down, Plus, Check, More, Dice, Chevron, Search, Globe, Code, Folder, File, Copy, Retry, Trash, Photo, Close, Memory, Clock, Hire, Reply, Mail, Calendar, Bell, Edit }
+enum class OrbitIcon { Back, Up, Down, Plus, Check, More, Dice, Chevron, Search, Globe, Code, Folder, File, Copy, Retry, Trash, Photo, Close, Memory, Clock, Hire, Reply, Mail, Calendar, Bell, Edit, Person, Spark, Chart }
 
 @Composable
 fun OrbitIcon(
@@ -112,6 +112,31 @@ fun OrbitIcon(
                 polyline(listOf(at(0.2f, 0.28f), at(0.8f, 0.28f)))
                 polyline(listOf(at(0.4f, 0.27f), at(0.4f, 0.18f), at(0.6f, 0.18f), at(0.6f, 0.27f)))
                 polyline(listOf(at(0.27f, 0.29f), at(0.31f, 0.82f), at(0.69f, 0.82f), at(0.73f, 0.29f)))
+            }
+            OrbitIcon.Person -> {
+                drawCircle(tint, s * 0.15f, at(0.5f, 0.35f), style = stroke)
+                val shoulders = Path().apply {
+                    moveTo(s * 0.22f, s * 0.82f)
+                    cubicTo(s * 0.25f, s * 0.58f, s * 0.75f, s * 0.58f, s * 0.78f, s * 0.82f)
+                }
+                drawPath(shoulders, tint, style = stroke)
+            }
+            OrbitIcon.Spark -> {
+                // A four-pointed spark: the AI models.
+                val spark = Path().apply {
+                    moveTo(s * 0.5f, s * 0.16f)
+                    quadraticTo(s * 0.55f, s * 0.45f, s * 0.84f, s * 0.5f)
+                    quadraticTo(s * 0.55f, s * 0.55f, s * 0.5f, s * 0.84f)
+                    quadraticTo(s * 0.45f, s * 0.55f, s * 0.16f, s * 0.5f)
+                    quadraticTo(s * 0.45f, s * 0.45f, s * 0.5f, s * 0.16f)
+                    close()
+                }
+                drawPath(spark, tint, style = stroke)
+            }
+            OrbitIcon.Chart -> {
+                polyline(listOf(at(0.27f, 0.8f), at(0.27f, 0.56f)))
+                polyline(listOf(at(0.5f, 0.8f), at(0.5f, 0.24f)))
+                polyline(listOf(at(0.73f, 0.8f), at(0.73f, 0.44f)))
             }
             OrbitIcon.Edit -> {
                 // A pencil, tip down to the left.

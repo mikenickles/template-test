@@ -272,7 +272,24 @@ function LocalPanel({ provider: p, model, setModel, error, onPull, onDismiss }) 
   </div>`;
 }
 
-export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate }) {
+/** The pages of Settings, in the order of the list. */
+const PAGES = {
+  hub: 'This PC',
+  about: 'About you',
+  proactive: 'Reaching out',
+  models: 'AI models',
+  google: 'Google',
+  folders: 'Shared folders',
+  usage: 'Usage',
+};
+const narrowScreen = () => matchMedia('(max-width: 760px)').matches;
+
+/**
+ * Settings: a short list on the left (the PC and its version on top, then one row per page, each saying where it
+ * stands), and the chosen page on the right. On a narrow window, the list, then the page with a way back.
+ */
+export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate, page: initial = null }) {
+  const [page, setPage] = useState(initial ?? (narrowScreen() ? null : 'hub'));
   const [open, setOpen] = useState(null);
   const [key, setKey] = useState('');
   const [checking, setChecking] = useState(false);
@@ -343,15 +360,50 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate })
   };
   const total = usage?.total;
 
-  return html`<${Modal} title="Settings" onClose=${onClose}>
-    <div class="card"><div class="row">
+  const ready = state.providers.filter((p) => p.configured && p.id !== 'demo').map((p) => p.label.replace(/ \(.*\)$/, ''));
+  const reaching = state.agents.filter((a) => (a.proactive ?? 'off') !== 'off');
+  const waiting = state.updates?.hub.available || state.updates?.app.available;
+  const summaries = {
+    about: profile.notes.length ? `${profile.notes.length} ${profile.notes.length === 1 ? 'thing' : 'things'} your crew knows` : 'Nothing yet',
+    proactive: `${reaching.length ? `${reaching.length} ${reaching.length === 1 ? 'agent reaches' : 'agents reach'} out` : 'No agent reaches out yet'}${state.proactive?.brief?.enabled ? ` · brief at ${state.proactive.brief.time}` : ''}`,
+    models: ready.length ? `${joinNames(ready)} ready` : 'Add a key to get real answers',
+    google: state.google?.connected ? state.google.email || 'Connected' : 'Not connected',
+    folders: state.folders.length ? `${state.folders.length} ${state.folders.length === 1 ? 'folder' : 'folders'}` : 'None shared yet',
+    usage: !total ? 'Spend and tokens, per agent' : total.cost > 0 ? `${formatCost(total.cost)} in the last 30 days` : total.requests ? `${formatTokens(total.input + total.output + total.cacheRead + total.cacheWrite)} tokens in 30 days` : 'Nothing in the last 30 days',
+  };
+  const icons = { about: 'person', proactive: 'bell', models: 'spark', google: 'mail', folders: 'folder', usage: 'chart' };
+  const row = (id) => html`<button class=${`settings-row${page === id ? ' current' : ''}`} aria-current=${page === id ? 'page' : null} onClick=${() => setPage(id)}>
+    <${Icon} name=${icons[id]} /><span class="text"><span class="title-s">${PAGES[id]}</span><span class=${`body-s ${id === 'models' && !ready.length ? '' : 'muted'}`}>${summaries[id]}</span></span>
+    <${Icon} name="chevron" size=${16} /></button>`;
+
+  return html`<${Modal} title="Settings" onClose=${onClose} wide=${880}>
+    <div class=${`settings${page ? ' has-page' : ''}`}>
+      <nav class="settings-nav" aria-label="Settings">
+        <button class=${`card settings-hub${page === 'hub' ? ' current' : ''}`} onClick=${() => setPage('hub')}>
+          <span style="flex:1;min-width:0"><span class="title-s">${state.hub.name || 'Your hub'}</span>
+            <span class=${`body-s ${waiting ? '' : 'muted'}`}>Treehouse ${state.hub.version} · ${waiting ? 'update ready' : 'up to date'}</span></span>
+          <span class="dot live"></span></button>
+        <div class="overline">You</div>
+        <div class="card">${row('about')}${row('proactive')}</div>
+        <div class="overline">Connections</div>
+        <div class="card">${row('models')}${row('google')}${row('folders')}</div>
+        <div class="overline">Hub</div>
+        <div class="card">${row('usage')}</div>
+        <p class="note">You can also ask your crew to change things for you, like quiet hours, the morning brief or a room's members.</p>
+        ${!onThisPC && html`<button class="button danger" style="margin-top:20px" onClick=${() => api.disconnect().then(() => location.reload()).catch((e) => notify(e.message))}>Disconnect this browser</button>`}
+      </nav>
+      ${page && html`<section class="settings-page" key=${page}>
+        <div class="settings-page-head"><button class="icon-button narrow-only" aria-label="Back to settings" onClick=${() => setPage(null)}><${Icon} name="back" /></button><h3>${PAGES[page]}</h3></div>
+        ${page === 'hub' && html`    <div class="card"><div class="row">
       <div style="flex:1"><div class="title-m">${state.hub.name || 'Your hub'}</div><div class="mono faint" style="margin-top:3px">${location.host}</div></div>
       <span class="dot live"></span><span class="label" style="color:var(--live)">Online</span>
-    </div>
-    ${state.hub.remote?.length > 0 && html`<div class="row"><span class="muted" style="flex:1">Away from home</span><span class="mono faint">${state.hub.remote[0]}</span></div>`}
-    <div class="row"><span class="muted" style="flex:1">Version</span><span class="mono">${state.hub.version}</span></div></div>
+    </div></div>
+    <div class="card" style="margin-top:12px"><div class="row"><${Icon} name="globe" /><div style="flex:1;min-width:0">
+      <div class="title-s">Away from home</div>
+      <div class="body-s muted">${state.hub.remote?.length ? html`Your phone reaches this PC anywhere through Tailscale, at <span class="mono">${state.hub.remote[0]}</span>.` : 'Not set up. Install Tailscale on this PC and your phone and sign in to both with the same account; Treehouse notices within a minute.'}</div></div>
+      ${!state.hub.remote?.length && html`<a class="pill" href="https://tailscale.com/download" target="_blank" rel="noopener noreferrer">Get Tailscale</a>`}</div></div>
 
-    <div class="section-title">Updates</div>
+          <div class="section-title">Updates</div>
     <div class="card">
       <div class="row"><span style="flex:1">
         <div class="title-s">Treehouse on this PC</div>
@@ -370,9 +422,8 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate })
         : state.updates.feed.error ?? `Treehouse checks your Google Drive for new versions every few hours.${state.updates.feed.checkedAt ? ` Last checked ${new Date(state.updates.feed.checkedAt).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })}.` : ''}`}</span>
       <button class="pill" disabled=${lookingForUpdates} onClick=${checkNow}>Check now</button></div>`}
     <p class="note">New versions ${state.updates?.feed?.enabled ? 'arrive from your Google Drive by themselves, or' : 'arrive'} as two files: <span class="mono">orbit-hub-X.Y.Z.zip</span> for this PC and <span class="mono">orbit-X.Y.Z.apk</span> for the phone, saved in the updates folder. An Update button then appears here and in the phone app.</p>
-
-    <div class="section-title">About you</div>
-    <div class="card">
+`}
+        ${page === 'about' && html`    <div class="card">
       <form class="row" onSubmit=${(e) => { e.preventDefault(); aboutYou(() => api.setProfileName(name.trim())); }}>
         <input class="field" style="flex:1" placeholder="What should your crew call you?" maxlength="40" value=${name} onInput=${(e) => setName(e.currentTarget.value)} aria-label="Your name" />
         ${name.trim() !== profile.name && html`<button class="button">Save</button>`}
@@ -389,12 +440,10 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate })
     </div>
     <p class="note">Every agent in your crew knows this, in every room, and they add to it as they learn about you.
       ${state.providers.some((p) => p.abilities && p.configured) && html` <button class="label" onClick=${onIntro}>Chat with your guide</button>`}</p>
-
-    <${ProactiveSettings} state=${state} notify=${notify} refresh=${refresh} />
-    <${GoogleSettings} state=${state} notify=${notify} refresh=${refresh} />
-
-    <div class="section-title">Model providers</div>
-    <div class="card">${state.providers.map((p) => html`<div>
+`}
+        ${page === 'proactive' && html`<${ProactiveSettings} state=${state} notify=${notify} refresh=${refresh} />`}
+        ${page === 'google' && html`<${GoogleSettings} state=${state} notify=${notify} refresh=${refresh} />`}
+        ${page === 'models' && html`    <div class="card">${state.providers.filter((p) => p.id !== 'demo' || state.agents.some((a) => a.provider === 'demo')).map((p) => html`<div class="provider">
       <button class="row button-row" disabled=${!p.takesKey && !p.local} onClick=${() => { setOpen(open === p.id ? null : p.id); setKey(''); setKeyError(null); }}>
         <div style="flex:1"><div class="title-s">${p.label}</div>${p.keyHint && html`<div class="mono faint">Key ${p.keyHint}</div>`}</div>
         ${p.id === 'demo' ? html`<span class="label faint">Built in</span>`
@@ -416,10 +465,9 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate })
         </div>
       </form>`}
     </div>`)}</div>
-    <p class="note">Keys are checked with the provider, then stored only on your PC.</p>
-
-    <div class="section-title">Usage</div>
-    <div class="card" style="padding:18px 18px 16px">
+    <p class="note">Keys are checked with the provider, then stored only on your PC. Choose each agent's model on its own page.</p>
+`}
+        ${page === 'usage' && html`    <div class="card" style="padding:18px 18px 16px">
       ${!usage ? html`<div class="spinner"></div>`
         : !total.requests ? html`<div class="muted">Nothing in the last 30 days.</div>`
         : html`
@@ -438,9 +486,8 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate })
           })()}`}
     </div>
     <p class="note">Estimates from published token prices, not a bill. Web searches aren't included.</p>
-
-    <div class="section-title">Shared folders</div>
-    <div class="card">
+`}
+        ${page === 'folders' && html`    <div class="card">
       ${state.folders.length
         ? state.folders.map((f) => html`<div class="row"><${Icon} name="folder" />
             <div style="flex:1;min-width:0"><div class="title-s">${f.name}</div><div class="mono faint" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.path}</div></div>
@@ -453,12 +500,16 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate })
           <button class="button secondary" disabled=${!path.trim()}>Share</button>
           ${canPick && html`<button type="button" class="button secondary" onClick=${() => folders(() => api.pickFolder())}>Choose…</button>`}
         </form>
-        <p class="note">Agents with Read your files turned on can read these, never change them.</p>`
+        <p class="note">Agents you give Read your files can read these, never change them.</p>`
       : html`<p class="note">Folders are shared from the PC itself, in Treehouse there.</p>`}
-
-    ${!onThisPC && html`<button class="button danger" style="margin-top:32px" onClick=${() => api.disconnect().then(() => location.reload()).catch((e) => notify(e.message))}>Disconnect this browser</button>`}
+`}
+      </section>`}
+    </div>
   <//>`;
 }
+
+/** "Anthropic", "Anthropic and OpenAI", "Anthropic, OpenAI and Gemini". */
+const joinNames = (names) => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`);
 
 const when = (t) => new Date(t).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' });
 
@@ -473,7 +524,6 @@ function ProactiveSettings({ state, notify, refresh }) {
   const reaching = state.agents.filter((a) => (a.proactive ?? 'off') !== 'off');
   const plans = [...(state.followups ?? [])].sort((a, b) => a.at - b.at);
   return html`
-    <div class="section-title">Proactive</div>
     <div class="card">
       <div class="row"><${Icon} name="bell" /><div style="flex:1">
         <div class="title-s">${reaching.length ? reaching.map((a) => a.name).join(', ') : 'No agent reaches out yet'}</div>
@@ -543,7 +593,6 @@ function GoogleSettings({ state, notify, refresh }) {
     }
   };
   return html`
-    <div class="section-title">Google</div>
     <div class="card">
       <div class="row"><${Icon} name="mail" /><div style="flex:1;min-width:0">
         <div class="title-s">${google.connected ? google.email || 'Connected' : 'Not connected'}</div>
@@ -567,7 +616,7 @@ function GoogleSettings({ state, notify, refresh }) {
       </form>`}
     </div>
     <p class="note">${google.connected
-      ? 'Agents with Use your Google account turned on can search and read your email and save drafts (never send), check your calendar and add events, and read your Drive. Everything stays on this PC.'
+      ? 'Agents you give the Google ability can search and read your email and save drafts (never send), check your calendar and add events, and read your Drive. Turn it on in an agent\'s Abilities. Everything stays on this PC.'
       : onThisPC
         ? html`When you connect, Google shows a warning that it hasn't verified the app: that's expected for an app only you use. Choose Advanced, then Go to Treehouse, and allow everything.${google.configured && !editing ? html` <button class="label" onClick=${() => setEditing(true)}>Change client</button>` : ''}`
         : 'Connect Google from Treehouse on your PC, in Settings there.'}</p>`;

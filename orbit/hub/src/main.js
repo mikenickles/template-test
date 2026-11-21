@@ -99,7 +99,7 @@ function openInBrowser(url) {
 
 console.log(`Treehouse hub "${config.name}" is running.`);
 const keyed = providers.list().filter((p) => p.takesKey && p.configured).map((p) => p.label);
-console.log(`  Model keys:  ${keyed.length ? keyed.join(', ') : 'none yet. Add one in the app: Settings, then Model providers.'}`);
+console.log(`  Model keys:  ${keyed.length ? keyed.join(', ') : 'none yet. Add one in the app: Settings, then AI models.'}`);
 const shared = folders.list().map((f) => f.name);
 console.log(`  Folders:     ${shared.length ? shared.join(', ') : `none shared. Share one at ${pairPage}`}`);
 console.log(`  Away:        ${away.length ? `${away.join(', ')} (Tailscale)` : 'not set up. Install Tailscale on this PC and your phone to use Treehouse anywhere.'}`);

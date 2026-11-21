@@ -1,6 +1,10 @@
 package dev.orbit.app
 
+import dev.orbit.app.ui.screens.AwayScreen
+import dev.orbit.app.ui.screens.FoldersScreen
+import dev.orbit.app.ui.screens.GoogleScreen
 import dev.orbit.app.ui.screens.LocalModelsScreen
+import dev.orbit.app.ui.screens.ModelsScreen
 import dev.orbit.app.ui.screens.ProviderKeyScreen
 import dev.orbit.app.ui.components.rememberQrScanner
 import kotlinx.coroutines.launch
@@ -240,7 +244,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onEditAgent = { nav.navigate("agent?id=${it.id}") },
                 onSettings = { nav.navigate("settings") },
                 onRefresh = vm::refresh,
-                onAddKey = { nav.navigate("settings") },
+                onAddKey = { nav.navigate("settings/models") },
                 appUpdate = state.appUpdate(vm.installedVersion),
                 updateStatus = updateStatus,
                 onUpdate = vm::installUpdate,
@@ -371,11 +375,6 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 via ?: session.baseUrl,
                 onUnpair = vm::unpair,
                 onBack = { nav.popBackStack() },
-                onOpenProvider = { nav.navigate("provider/$it") },
-                onRemoveFolder = {
-                    haptics.tick()
-                    vm.removeFolder(it)
-                },
                 usage = usage?.takeIf { it.days == 30 },
                 onOpenUsage = { nav.navigate("usage") },
                 onOpenAbout = { nav.navigate("about") },
@@ -386,8 +385,34 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onUpdatePc = vm::updatePc,
                 onCheckUpdates = vm::checkForUpdates,
                 onOpenProactive = { nav.navigate("proactive") },
-                onDisconnectGoogle = vm::disconnectGoogle,
+                onOpenModels = { nav.navigate("settings/models") },
+                onOpenGoogle = { nav.navigate("settings/google") },
+                onOpenFolders = { nav.navigate("settings/folders") },
+                onOpenAway = { nav.navigate("settings/away") },
             )
+        }
+        screen("settings/models") {
+            ModelsScreen(state, onOpenProvider = { nav.navigate("provider/$it") }, onBack = { nav.popBackStack() })
+        }
+        screen("settings/google") {
+            val via by vm.via.collectAsStateWithLifecycle()
+            GoogleScreen(state, via ?: session.baseUrl, onDisconnect = vm::disconnectGoogle, onBack = { nav.popBackStack() })
+        }
+        screen("settings/folders") {
+            val via by vm.via.collectAsStateWithLifecycle()
+            FoldersScreen(
+                state,
+                via ?: session.baseUrl,
+                onRemove = {
+                    haptics.tick()
+                    vm.removeFolder(it)
+                },
+                onBack = { nav.popBackStack() },
+            )
+        }
+        screen("settings/away") {
+            val via by vm.via.collectAsStateWithLifecycle()
+            AwayScreen(state, via ?: session.baseUrl, onBack = { nav.popBackStack() })
         }
         screen("proactive") {
             ProactiveScreen(

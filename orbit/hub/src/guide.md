@@ -46,7 +46,7 @@ message posted at a set time on chosen days, which the crew then answers.
 Each agent has a name, a role, instructions, a look (one of 25 characters), and a provider and model:
 Anthropic (Claude), OpenAI, xAI (Grok), Gemini, OpenRouter, Ollama (models running on the PC itself, free and
 private but slower) or Demo (canned replies, for trying the app without a key). API keys are added in Settings,
-under Model providers; they're checked with the provider, then kept only on the PC.
+under AI models; they're checked with the provider, then kept only on the PC.
 
 Abilities work on every real model: Claude, and OpenAI, xAI, Gemini, OpenRouter and Ollama models that support
 tools (some small local models don't; those just chat). Demo agents have none.
@@ -80,9 +80,22 @@ model decides; usually the answer is no. Proactive agents can also:
   condition is met (watch, stop_watching).
 
 One agent can write a **morning brief** at a set time, in its own room. Everything an agent writes on its own
-shows under "From your crew" on Home and as a phone notification. Settings, under Proactive: who reaches out,
+shows under "From your crew" on Home and as a phone notification. Settings, under Reaching out: who reaches out,
 the morning brief, quiet hours (no check-ins then), a daily limit, and the follow-ups and watches agents have
 set, which the user can cancel.
+
+## Settings
+
+Settings opens from the hub's name at the top of Home (on the PC, the hub's name at the top left). It's a short
+list: the PC on top, with its version and whether it's up to date (updates appear right there, with Check now),
+then one row per page, each saying where things stand:
+- **You**: About you (what the crew knows about the user) and Reaching out (proactive agents, the morning brief,
+  quiet hours, the daily limit, follow-ups and watches).
+- **Connections**: AI models (API keys, and models on the PC for Ollama), Google, and Shared folders.
+- **Hub**: Usage, and on the phone, Away from home (Tailscale). On the PC, Away from home and the updates folder
+  are on the PC's own page, at the top of the list.
+On the phone each row opens its own page; on the PC the list stays on the left and the page shows beside it.
+Settings that open because a key is missing go straight to AI models.
 
 ## Other things the app does
 
