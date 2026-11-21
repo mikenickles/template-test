@@ -480,3 +480,22 @@ test('the desktop app is served to any browser, but using it takes this PC or a 
   const preview = (await h.api('GET', '/api/state')).body.rooms.find((r) => r.id === room.id).preview;
   assert.equal(preview.text, 'Bold answer with code');
 });
+
+test('the PC goes by a friendly name, which the user can change', async (t) => {
+  const store = new Store(fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-hub-')));
+  store.isNew = false;
+  const hub = new Hub({ store, providers: new Providers({}, {}), name: 'BOOK-750VAKFGO1' });
+  t.after(() => hub.close());
+  const base = `http://127.0.0.1:${await hub.listen(0, '127.0.0.1')}`;
+  const { token } = await (await fetch(`${base}/api/pair`, { method: 'POST', body: JSON.stringify({ code: hub.pairingCode }) })).json();
+  const api = async (method, route, body) => (await fetch(base + route, { method, headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: body && JSON.stringify(body) })).json();
+
+  assert.equal((await api('GET', '/api/state')).hub.name, 'BOOK-750VAKFGO1', 'the computer name until Treehouse knows the user');
+  store.state.profile = { ...store.state.profile, name: 'Mike Smith' };
+  const state = await api('GET', '/api/state');
+  assert.equal(state.hub.name, "Mike's PC");
+  assert.equal(state.hub.machineName, 'BOOK-750VAKFGO1');
+  assert.equal((await api('PUT', '/api/hub', { name: 'Study desktop' })).name, 'Study desktop');
+  assert.equal((await api('GET', '/api/hub')).name, 'Study desktop');
+  assert.equal((await api('PUT', '/api/hub', { name: '' })).name, "Mike's PC", 'an empty name goes back to the default');
+});

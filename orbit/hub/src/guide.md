@@ -52,8 +52,8 @@ reply to one, attach photos, PDFs and text files, stop a reply, and clear a room
 automatically so they stay affordable. Rooms can have scheduled messages (Schedules, in the room's menu): a
 message posted at a set time on chosen days, which the crew then answers.
 
-Cards: when an agent uses Google or sets a follow-up, what it found or did shows as a card in its reply, in
-its own colors, right where it happened in the text. A look at the calendar is a day card (times, the next
+Cards: when an agent uses Google or sets a follow-up, what it found or did shows as a card in its reply, right
+where it happened in the text. A look at the calendar is a day card (times, the next
 event highlighted with how soon it is, and the free time between events); an event it added, emails it found
 (tap one to open it in Gmail), a draft it saved (Open in Gmail, where the user sends it), Drive files (tap to
 open), and a follow-up or watch it set (with Cancel or Stop watching). Agents don't need to repeat what a card
@@ -78,16 +78,17 @@ Home shows a greeting and who is replying right now, then notes from the crew as
 (Open goes to the room, Dismiss takes it off Home), the crew (the one speaking is ringed in its color), and the
 rooms. At the bottom of Home on the phone, and at the top of the room list on the PC, **Search rooms and
 messages** finds any room by name or description, and any message with all the words typed, newest first.
-Home and each room glow softly in the crew's own colors (each agent's color from a corner, so a room looks like
-the agents in it); the header is a frosted bar with the hub's name and status. Cards are frosted glass in their
-agents' colors, with a soft colored shadow, and the characters stand on them: the crew on Home stands on its card,
-heads over the top, and agents appear as themselves beside their messages.
+The look is calm on purpose: plain dark or warm light surfaces, cards with a thin edge, and no tints or glows,
+so the characters are the only color. The crew on Home stands on its shelf, heads over the top, agents appear as
+themselves beside their messages, and color in text marks only who is replying right now. The header shows the
+PC's friendly name: "<first name>'s PC" once Treehouse knows the user's name, else the computer's own name. Rename
+it from Settings: tap the PC's name at the top (on the PC, Settings, This PC).
 Rooms on Home show as a list or as cards: the switch beside Rooms (beside Recent rooms on the PC) chooses, and
 each phone or browser remembers it. As cards, the most recent room is a wide card with its crew big, and the rest
 are tiles with the crew peeking over the top, the last message and when it was.
 Every page on the phone has the same frosted bar at the top. Swiping back slides the page away to the right with
 the finger, and the page behind is already there underneath; letting go halfway finishes it, and swiping back
-the other way calls it off. An agent's edit page glows in its own color, and a room's Tokens page in the crew's.
+the other way calls it off.
 
 ## Agents
 

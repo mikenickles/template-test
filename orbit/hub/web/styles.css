@@ -694,3 +694,17 @@ button.avatar-stack.standing .avatar { filter: drop-shadow(0 3px 4px rgba(42, 28
   -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
 .room-card { align-items: flex-start; justify-content: flex-start; overflow: visible; }
 .room-card > * { text-align: left; }
+
+/* ---------- Quiet canvas: the characters are the only color ---------- */
+/* Cards, the room bar and tool cards are plain surfaces with a thin edge; nothing takes an agent's color. */
+.crew-glass, .tool-card { background: var(--surface); border: var(--edge); box-shadow: var(--lift); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.room-bar.crew-glass { background: color-mix(in srgb, var(--surface) 88%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+.disc { background: var(--raised); }
+.room-stickers, .date-badge, .check-badge, .file-badge, .draft-tag { background: color-mix(in srgb, var(--high) 60%, var(--surface)); }
+.check-badge, .file-badge, .draft-tag, .date-badge span, .event-title .tag, .tool-card .ink, .mail-row .unread { color: var(--text-2); }
+.mail-row .unread { background: var(--text-2); }
+.event-block.next { background: var(--high); }
+.home-chip { background: var(--raised); }
+.intro-card, .intro-mini, .crew-ready { background: var(--surface) !important; }
+.intro-card::before, .intro-mini::before, .crew-ready::before { display: none; }
+.agent-message .name { color: var(--text); }

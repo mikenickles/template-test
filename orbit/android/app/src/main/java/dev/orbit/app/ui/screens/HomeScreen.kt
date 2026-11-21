@@ -1,5 +1,6 @@
 package dev.orbit.app.ui.screens
 
+import dev.orbit.app.ui.components.characterTile
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.ui.unit.Dp
@@ -8,8 +9,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.offset
-import dev.orbit.app.ui.components.crewGlass
-import dev.orbit.app.ui.components.CrewWash
+import dev.orbit.app.ui.components.quietCard
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
@@ -19,7 +19,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
-import dev.orbit.app.ui.components.wash
 import dev.orbit.app.ui.components.AvatarDisc
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.pager.rememberPagerState
@@ -171,8 +170,6 @@ fun HomeScreen(
     val pull = rememberPullToRefreshState()
 
     Scaffold(containerColor = c.bg) { padding ->
-      // The crew's colors glow softly behind Home, one agent to a corner.
-      CrewWash(state.agents.take(4).map { it.avatar.tint() }, Modifier.fillMaxSize())
       Box(Modifier.fillMaxSize().padding(padding)) {
         PullToRefreshBox(
             isRefreshing = pulled && state.refreshing,
@@ -259,7 +256,7 @@ fun HomeScreen(
                             Modifier
                                 .matchParentSize()
                                 .padding(top = CrewOverhang)
-                                .crewGlass(state.agents.take(2).map { it.avatar.tint() }, RoundedCornerShape(CardRadius)),
+                                .quietCard(RoundedCornerShape(CardRadius)),
                         )
                         LazyRow(Modifier.fillMaxWidth(), contentPadding = PaddingValues(start = 4.dp, end = 4.dp, bottom = 8.dp)) {
                             val speaking = state.rooms.filter { it.active }.mapNotNull { it.speaking }.toSet()
@@ -337,17 +334,9 @@ fun HomeScreen(
 @Composable
 private fun Header(state: AppState, onSettings: () -> Unit) {
     val c = Orbit.colors
-    // A frosted pill with the app's name and, on the right, the hub it's talking to.
-    val pill = RoundedCornerShape(22.dp)
+    // The app's name and, on the right, the PC it's talking to.
     Row(
-        Modifier
-            .padding(start = GlassInset, end = GlassInset, top = 10.dp)
-            .fillMaxWidth()
-            .clip(pill)
-            .background(c.glass)
-            .border(1.dp, c.hairline, pill)
-            .height(60.dp)
-            .padding(start = 14.dp, end = 10.dp),
+        Modifier.fillMaxWidth().padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 14.dp).height(48.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         LogoMark(size = 28.dp)
@@ -414,7 +403,7 @@ private fun Greeting(state: AppState, now: Long, modifier: Modifier) {
                 Modifier
                     .padding(top = 12.dp)
                     .clip(CircleShape)
-                    .background(speaker?.avatar?.tint()?.copy(alpha = if (c.isDark) 0.16f else 0.2f) ?: c.surfaceHigh)
+                    .background(c.surfaceRaised)
                     .padding(start = 4.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -554,7 +543,6 @@ private fun IntroCard(state: AppState, onStart: () -> Unit, onAddKey: () -> Unit
     val look = guide?.avatar ?: dev.orbit.app.data.AvatarSpec(9)
     val name = guide?.name ?: "Nova"
     val shape = RoundedCornerShape(OrbitDimens.radiusXL)
-    val wash = look.tint().copy(alpha = if (c.isDark) 0.26f else 0.3f)
     Box(
         modifier
             .padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 22.dp)
@@ -562,7 +550,6 @@ private fun IntroCard(state: AppState, onStart: () -> Unit, onAddKey: () -> Unit
             .lift(shape)
             .clip(shape)
             .background(c.surface)
-            .background(Brush.linearGradient(listOf(wash, Color.Transparent), start = Offset.Zero, end = Offset(900f, 700f)))
             .border(surfaceBorder(), shape),
     ) {
         Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 20.dp)) {
@@ -715,7 +702,7 @@ private fun ViewSwitch(cards: Boolean, onChange: (Boolean) -> Unit) {
 @Composable
 private fun RoomStickers(room: Room, agents: List<Agent>, size: Dp, modifier: Modifier = Modifier) {
     val c = Orbit.colors
-    Box(modifier.size(size).clip(RoundedCornerShape(size * 0.34f)).background(agents.firstOrNull()?.avatar?.wash() ?: c.surfaceRaised))
+    Box(modifier.size(size).clip(RoundedCornerShape(size * 0.34f)).background(characterTile()))
     // (x, y, size) as fractions of the tile; y below zero stands over the top edge.
     val layout = when (agents.size.coerceAtMost(3)) {
         0 -> emptyList()
@@ -764,7 +751,7 @@ private fun RoomRow(room: Room, agents: List<Agent>, now: Long, onLongClick: () 
         Row(
             Modifier
                 .matchParentSize()
-                .crewGlass(agents.take(2).map { it.avatar.tint() }, shape)
+                .quietCard(shape)
                 .tap(shape, 0.985f, onLongClick = onLongClick, onClick = onClick)
                 .padding(start = 12.dp + RoomTile + 14.dp, end = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -814,7 +801,7 @@ private fun WideRoomCard(room: Room, agents: List<Agent>, now: Long, onLongClick
         Column(
             Modifier
                 .matchParentSize()
-                .crewGlass(agents.take(2).map { it.avatar.tint() }, shape)
+                .quietCard(shape)
                 .tap(shape, 0.985f, onLongClick = onLongClick, onClick = onClick)
                 .padding(16.dp),
         ) {
@@ -860,7 +847,7 @@ private fun RoomCard(room: Room, agents: List<Agent>, now: Long, modifier: Modif
         Column(
             Modifier
                 .matchParentSize()
-                .crewGlass(agents.take(2).map { it.avatar.tint() }, shape)
+                .quietCard(shape)
                 .tap(shape, 0.97f, onLongClick = onLongClick, onClick = onClick)
                 .padding(start = 14.dp, end = 14.dp, top = 42.dp, bottom = 14.dp),
         ) {

@@ -374,6 +374,8 @@ data class HubInfo(
     val addresses: List<String> = emptyList(),
     /** Where it answers from anywhere, through a private VPN like Tailscale. Empty until one is set up. */
     val remote: List<String> = emptyList(),
+    /** The computer's own name, behind the friendly one. */
+    val machineName: String = "",
 )
 
 @Serializable
@@ -636,3 +638,6 @@ data class UsageSummary(
     val agents: List<UsageTotals> = emptyList(),
     val rooms: List<UsageTotals> = emptyList(),
 )
+
+@Serializable
+data class PcName(val name: String = "")

@@ -176,6 +176,10 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
     suspend fun saveProactive(settings: ProactiveSettings): ProactiveSettings =
         call("PUT", "/api/proactive", OrbitJson.encodeToString(settings))
 
+    /** Renames the PC as the apps show it; an empty name goes back to the default. Returns the name now shown. */
+    suspend fun renamePc(name: String): String =
+        call<PcName>("PUT", "/api/hub", OrbitJson.encodeToString(PcName(name))).name
+
     /** Allows or denies a big action an agent wants to take in the Treehouse browser. */
     suspend fun decide(approvalId: String, allow: Boolean) {
         call<Unit>("POST", "/api/approvals/$approvalId", if (allow) "{\"allow\":true}" else "{\"allow\":false}")

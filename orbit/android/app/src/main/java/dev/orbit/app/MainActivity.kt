@@ -421,6 +421,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 state,
                 via ?: session.baseUrl,
                 onUnpair = vm::unpair,
+                onRenamePc = vm::renamePc,
                 onBack = { nav.popBackStack() },
                 usage = usage?.takeIf { it.days == 30 },
                 onOpenUsage = { nav.navigate("usage") },
@@ -535,7 +536,6 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 compacting = compacting,
                 error = error,
                 onBack = { nav.popBackStack() },
-                tints = room.agentIds.mapNotNull(state::agent).take(4).map { it.avatar.tint() },
             )
         }
         screen("schedules/{id}") { entry ->

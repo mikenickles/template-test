@@ -28,7 +28,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.RoomContext
 import dev.orbit.app.ui.components.Hairline
-import dev.orbit.app.ui.components.CrewWash
 import dev.orbit.app.ui.components.OrbitCard
 import dev.orbit.app.ui.components.OrbitSpinner
 import dev.orbit.app.ui.components.OrbitSwitch
@@ -53,13 +52,10 @@ fun RoomTokensScreen(
     compacting: Boolean,
     error: String?,
     onBack: () -> Unit,
-    /** The room's crew colors, glowing softly behind the page. */
-    tints: List<Color> = emptyList(),
 ) {
     val c = Orbit.colors
     val scroll = rememberScrollState()
     Box(Modifier.fillMaxSize().background(c.bg)) {
-    CrewWash(tints, Modifier.fillMaxSize(), strength = 0.6f)
     Scaffold(containerColor = Color.Transparent, topBar = { ScreenBar("Tokens", onBack, scrolled = scroll.value > 0) }) { padding ->
         if (context == null) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { OrbitSpinner(c.textTertiary) }

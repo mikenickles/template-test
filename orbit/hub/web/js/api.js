@@ -90,6 +90,8 @@ export const api = {
   openBrowser: (url = null) => request('POST', '/local/browser/open', { url }, local),
   closeBrowser: () => request('POST', '/local/browser/close', {}, local),
   forgetBrowser: () => request('DELETE', '/local/browser', undefined, local),
+  /** Renames the PC as the apps show it; an empty name goes back to the default. */
+  renamePc: (name) => request('PUT', '/api/hub', { name }),
   /** Allows or denies a big action an agent wants to take in the Treehouse browser. */
   decide: (id, allow) => request('POST', `/api/approvals/${id}`, { allow }),
   // Sharing a folder is for the PC itself only.

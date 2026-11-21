@@ -306,10 +306,6 @@ fun CrewTile(
     }
 }
 
-/** The soft wash of an agent's color that its avatar sits on, over the current surface. */
-@Composable
-fun AvatarSpec.wash(): Color = tint().copy(alpha = if (Orbit.colors.isDark) 0.16f else 0.22f).compositeOver(Orbit.colors.surface)
-
 /**
  * An agent's character in a soft circle of its own color: the Polished look for faces in lists and chat.
  * [ring] circles it in its color, for the agent that's speaking.
@@ -325,7 +321,7 @@ fun AvatarDisc(
     avatarModifier: Modifier = Modifier,
 ) {
     val outline = if (ring) Modifier.border(2.dp, spec.tint(), CircleShape).padding(4.dp) else Modifier
-    Box(modifier.size(size).then(outline).background(spec.wash(), CircleShape), contentAlignment = Alignment.Center) {
+    Box(modifier.size(size).then(outline).background(characterTile(), CircleShape), contentAlignment = Alignment.Center) {
         AgentAvatar(spec, avatarModifier, size = (if (ring) size - 8.dp else size) * 0.84f, thinking = thinking, alive = alive)
     }
 }

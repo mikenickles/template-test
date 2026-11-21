@@ -539,6 +539,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { onDone(hub { it.decide(approvalId, allow) } != null) }
     }
 
+    fun renamePc(name: String) {
+        viewModelScope.launch {
+            hub { it.renamePc(name) }?.let { shown -> _state.update { s -> s.copy(hub = s.hub.copy(name = shown)) } }
+        }
+    }
+
     fun deleteFollowUp(id: String) {
         _state.update { s -> s.copy(followUps = s.followUps.filterNot { it.id == id }) }
         viewModelScope.launch { hub { it.deleteFollowUp(id) } }

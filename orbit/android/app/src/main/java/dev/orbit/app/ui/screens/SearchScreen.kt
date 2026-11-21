@@ -1,5 +1,6 @@
 package dev.orbit.app.ui.screens
 
+import dev.orbit.app.ui.components.characterTile
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -52,7 +53,6 @@ import dev.orbit.app.ui.components.OrbitSpinner
 import dev.orbit.app.ui.components.surfaceBorder
 import dev.orbit.app.ui.components.tap
 import dev.orbit.app.ui.components.textColor
-import dev.orbit.app.ui.components.wash
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitDimens
 import dev.orbit.app.ui.theme.OrbitType
@@ -154,7 +154,7 @@ fun SearchScreen(
                                     Modifier.fillMaxWidth().tap(RectangleShape, 0.985f) { onOpenRoom(room.id) }.padding(horizontal = OrbitDimens.rowPad, vertical = 10.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    CrewTile(members.map { it.avatar }, size = 40.dp, color = members.firstOrNull()?.avatar?.wash() ?: c.surfaceRaised)
+                                    CrewTile(members.map { it.avatar }, size = 40.dp, color = characterTile())
                                     Text(room.name, Modifier.weight(1f).padding(start = 14.dp), style = OrbitType.titleS, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     OrbitIcon(OrbitIcon.Chevron, size = 18.dp, tint = c.textTertiary)
                                 }

@@ -1,5 +1,14 @@
 package dev.orbit.app.ui.screens
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import dev.orbit.app.ui.components.OrbitField
+import dev.orbit.app.ui.components.OrbitSheet
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -67,6 +76,7 @@ fun SettingsScreen(
     onOpenBrowser: () -> Unit = {},
     onOpenFolders: () -> Unit = {},
     onOpenAway: () -> Unit = {},
+    onRenamePc: (String) -> Unit = {},
 ) {
     val c = Orbit.colors
     val scroll = rememberScrollState()
@@ -79,7 +89,7 @@ fun SettingsScreen(
                 .verticalScroll(scroll)
                 .padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 12.dp, bottom = 48.dp),
         ) {
-            HubCard(state, hubAddress, installedVersion, pcUpdating, onCheckUpdates, Modifier.entrance(entrances, "hub", 0))
+            HubCard(state, hubAddress, installedVersion, pcUpdating, onCheckUpdates, Modifier.entrance(entrances, "hub", 0), onRenamePc)
 
             // An update grows the top of the page; otherwise it's one line in the hub card.
             val appUpdate = state.appUpdate(installedVersion)
@@ -188,16 +198,47 @@ private fun HubCard(
     pcUpdating: String?,
     onCheckUpdates: () -> Unit,
     modifier: Modifier = Modifier,
+    onRename: (String) -> Unit = {},
 ) {
     val c = Orbit.colors
     val online = state.loaded && !state.offline
+    var renaming by remember { mutableStateOf(false) }
     val throughTailscale = state.hub.remote.any { hubAddress.endsWith("//$it") }
     val feed = state.updates.feed
+    if (renaming) {
+        var name by remember { mutableStateOf(state.hub.name) }
+        OrbitSheet(onDismiss = { renaming = false }) {
+            Column(Modifier.padding(horizontal = OrbitDimens.gutter, vertical = 8.dp)) {
+                Text("Rename this PC", style = OrbitType.titleM, color = c.text)
+                Text(
+                    "What the apps call it. The computer's own name is ${state.hub.machineName.ifEmpty { "unchanged" }}.",
+                    Modifier.padding(top = 4.dp, bottom = 14.dp),
+                    style = OrbitType.bodyS,
+                    color = c.textSecondary,
+                )
+                OrbitField(name, { name = it.take(40) }, "Mike's PC")
+                PrimaryButton(
+                    "Save",
+                    {
+                        onRename(name.trim())
+                        renaming = false
+                    },
+                    Modifier.padding(top = 16.dp).fillMaxWidth(),
+                )
+            }
+        }
+    }
     OrbitCard(modifier.fillMaxWidth()) {
         Column {
-            Row(Modifier.padding(OrbitDimens.rowPad), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.tap(RoundedCornerShape(0.dp), 0.99f) { renaming = true }.padding(OrbitDimens.rowPad).semantics { contentDescription = "Rename this PC" },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Column(Modifier.weight(1f)) {
-                    Text(state.hub.name.ifEmpty { "Your hub" }, style = OrbitType.titleM, color = c.text)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(state.hub.name.ifEmpty { "Your hub" }, style = OrbitType.titleM, color = c.text)
+                        OrbitIcon(OrbitIcon.Edit, Modifier.padding(start = 8.dp), size = 15.dp, tint = c.textTertiary)
+                    }
                     Text(
                         when {
                             !online -> "Can't reach your PC right now"

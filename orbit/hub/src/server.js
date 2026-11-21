@@ -87,7 +87,8 @@ export class Hub {
     this.ledger = new Ledger(store, prices);
     this.files = new Files(store);
     this.files.sweep();
-    this.name = name;
+    // The computer's own name (its hostname, unless config.json says otherwise), behind the friendly one shown.
+    this.machineName = name;
     this.onPairingCode = onPairingCode;
     this.subscribers = new Map(); // roomId -> Set<ServerResponse>
     this.watchers = new Set(); // phones following every room, to notify when replies land
@@ -221,6 +222,17 @@ export class Hub {
   }
 
   /** What the whole crew knows about the user. */
+  /**
+   * What the PC is called in the apps: the name the user gave it, else "<their first name>'s PC" once Treehouse
+   * knows their name, else the computer's own name.
+   */
+  get name() {
+    const chosen = this.store.state.pcName;
+    if (chosen) return chosen;
+    const first = String(this.store.state.profile?.name ?? '').trim().split(/\s+/)[0];
+    return first ? `${first}'s PC` : this.machineName;
+  }
+
   #profile() {
     return (this.store.state.profile ??= { name: '', notes: [] });
   }
@@ -397,7 +409,7 @@ export class Hub {
       case 'GET /api/state':
         await this.providers.checkLocal?.();
         return {
-          hub: { name: this.name, version: VERSION, addresses: this.addresses, remote: this.remoteAddresses },
+          hub: { name: this.name, machineName: this.machineName, version: VERSION, addresses: this.addresses, remote: this.remoteAddresses },
           agents: this.store.state.agents,
           rooms: this.store.state.rooms.map((r) => this.#roomView(r)),
           providers: this.providers.list(),
@@ -506,6 +518,13 @@ export class Hub {
       }
       case 'GET /api/browser':
         return this.browser.status();
+      // Renames the PC as the apps show it; an empty name goes back to the default.
+      case 'PUT /api/hub': {
+        const body = await this.#body(req);
+        this.store.state.pcName = text(body.name, 40);
+        this.store.save();
+        return { name: this.name, machineName: this.machineName };
+      }
       case 'DELETE /api/followups/:id':
         this.proactive.removeFollowup(id);
         return { followups: this.proactive.followups() };

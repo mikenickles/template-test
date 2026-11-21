@@ -1,7 +1,8 @@
 package dev.orbit.app.ui.screens
 
+import dev.orbit.app.ui.components.characterTile
 import androidx.compose.foundation.layout.offset
-import dev.orbit.app.ui.components.crewGlass
+import dev.orbit.app.ui.components.quietCard
 import dev.orbit.app.ui.components.OrbitSheet
 import dev.orbit.app.ui.components.Hairline
 import androidx.compose.ui.semantics.heading
@@ -19,8 +20,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.rememberInfiniteTransition
 import dev.orbit.app.data.AvatarSpec
-import dev.orbit.app.ui.components.wash
-import dev.orbit.app.ui.components.CrewWash
 import dev.orbit.app.ui.components.AvatarDisc
 import android.content.ClipData
 import androidx.compose.animation.AnimatedContent
@@ -275,8 +274,6 @@ fun RoomScreen(
     val previous = remember(state.messages) { state.messages.zipWithNext().associate { (before, after) -> after.id to before } }
 
     Box(Modifier.fillMaxSize().background(c.bg)) {
-        // The room glows softly in its members' colors.
-        CrewWash(agents.take(4).map { it.avatar.tint() }, Modifier.fillMaxSize(), strength = 0.8f)
         Scaffold(
             containerColor = Color.Transparent,
             topBar = { RoomBar(room, agents, state, onBack, onMenu = { showingMenu = true }, onMembers = { showingMembers = true }, contextTokens = contextTokens, onTokens = onTokens) },
@@ -443,7 +440,7 @@ fun RoomScreen(
                     when (scheduleCount) { 0 -> null; 1 -> "1 schedule"; else -> "$scheduleCount schedules" },
                     state.messages.size.takeIf { it > 0 }?.let { if (it == 1) "1 message" else "$it messages" },
                 ).filterNotNull().joinToString(" · "),
-                leading = { CrewTile(agents.map { it.avatar }, size = 44.dp, color = agents.firstOrNull()?.avatar?.wash() ?: c.surfaceRaised) },
+                leading = { CrewTile(agents.map { it.avatar }, size = 44.dp, color = characterTile()) },
                 actions = listOf(
                     SheetAction("Edit room", OrbitIcon.Edit, hint = "Name, mode, description", onClick = onEdit),
                     SheetAction("Members", OrbitIcon.Person, hint = if (agents.size == 1) "1 agent" else "${agents.size} agents") { showingMembers = true },
@@ -696,8 +693,7 @@ private fun RoomBar(
             Modifier
                 .padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 8.dp)
                 .fillMaxWidth()
-                // Glass in the room's colors.
-                .crewGlass(agents.take(2).map { it.avatar.tint() }, pill, lift = 10.dp)
+                .quietCard(pill, color = c.glass, strength = 0.6f)
                 .clip(pill)
                 .height(60.dp)
                 .padding(horizontal = 2.dp),
@@ -854,13 +850,11 @@ private fun UserMessage(
 private fun NewMember(agent: Agent, modifier: Modifier, onOpen: () -> Unit) {
     val c = Orbit.colors
     val shape = RoundedCornerShape(OrbitDimens.radiusL)
-    val wash = agent.avatar.tint().copy(alpha = if (c.isDark) 0.24f else 0.28f)
     Row(
         modifier
             .fillMaxWidth()
             .clip(shape)
             .background(c.surface)
-            .background(Brush.horizontalGradient(listOf(wash, Color.Transparent)))
             .border(surfaceBorder(), shape)
             .tap(shape, 0.97f, onOpen)
             .padding(14.dp),
@@ -887,13 +881,11 @@ private fun NewMember(agent: Agent, modifier: Modifier, onOpen: () -> Unit) {
 private fun CrewReady(made: CrewMade, crew: List<Agent>, modifier: Modifier, onOpen: () -> Unit) {
     val c = Orbit.colors
     val shape = RoundedCornerShape(OrbitDimens.radiusL)
-    val tints = crew.drop(1).ifEmpty { crew }.map { it.avatar.tint().copy(alpha = if (c.isDark) 0.24f else 0.28f) }
     Row(
         modifier
             .fillMaxWidth()
             .clip(shape)
             .background(c.surface)
-            .background(Brush.horizontalGradient(if (tints.size > 1) tints else listOf(tints.firstOrNull() ?: Color.Transparent, Color.Transparent)))
             .border(surfaceBorder(), shape)
             .tap(shape, 0.97f, onOpen)
             .padding(14.dp),
@@ -947,7 +939,7 @@ private fun AgentMessage(
                 .semantics { liveRegion = LiveRegionMode.Polite },
         ) {
             if (!continued) Row(Modifier.heightIn(min = 22.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(agent?.name ?: message.author.name, style = OrbitType.titleS, color = avatar.textColor())
+                Text(agent?.name ?: message.author.name, style = OrbitType.titleS, color = c.text)
                 // Written on its own, unasked: say why, quietly.
                 message.proactive?.let { mark ->
                     OrbitIcon(OrbitIcon.Bell, Modifier.padding(start = 8.dp), size = 13.dp, tint = c.textTertiary)
@@ -1237,7 +1229,7 @@ private fun ThinkingDots(avatar: AvatarSpec, modifier: Modifier = Modifier) {
         modifier
             .semantics { contentDescription = "Thinking" }
             .clip(RoundedCornerShape(16.dp))
-            .background(avatar.wash())
+            .background(characterTile())
             .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {

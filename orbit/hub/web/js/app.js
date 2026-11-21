@@ -149,7 +149,7 @@ function App() {
       ${room
         ? html`<${RoomView} key=${room.id} room=${room} state=${state} onDialog=${openDialog} notify=${notify} onBack=${() => openRoom(null)} onDelete=${() => deleteRoom(room)}
             onOpenRoom=${(id) => refresh().then(() => openRoom(id))} onStale=${refresh} />`
-        : html`${state.agents.length > 0 && html`<div class="crew-wash" aria-hidden="true" style=${crewWash(state.agents.slice(0, 4).map((a) => tint(a.avatar)))}></div>`}<${Welcome} state=${state} onDialog=${setDialog} onIntro=${startIntro} onOpen=${openRoom}
+        : html`<${Welcome} state=${state} onDialog=${setDialog} onIntro=${startIntro} onOpen=${openRoom}
             onDismiss=${(id) => api.dismissNudge(id).then(refresh).catch((e) => notify(e.message))} />`}
     </main>
     ${dialog?.type === 'agent' && html`<${AgentEditor} agent=${dialog.agent} state=${state} notify=${notify} onClose=${close} onSaved=${() => edited()} onChanged=${refresh} onAddKey=${() => setDialog({ type: 'settings', page: 'models' })} />`}
@@ -686,7 +686,6 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
   };
 
   return html`
-    ${washes.length > 0 && html`<div class="crew-wash" aria-hidden="true" style=${crewWash(washes)}></div>`}
     <header class="room-bar crew-glass" style=${glassOf(agents)}>
       <button class="icon-button narrow-only" onClick=${onBack} aria-label="Back to rooms"><${Icon} name="back" /></button>
       <div class="titles">
@@ -940,7 +939,7 @@ function AgentMessage({ message, agent, showModel, mentions, continued = false, 
     ${continued ? html`<span class="disc-space"></span>` : html`<span class="speaker"><${Avatar} spec=${agent?.avatar} size=${38} thinking=${streaming && Boolean(message.text)} /></span>`}
     <div class="body">
       ${!continued && html`<div class="agent-head">
-        <span class="name" style=${`color:${inkColor(agent?.avatar)}`}>${agent?.name ?? message.author.name}</span>
+        <span class="name">${agent?.name ?? message.author.name}</span>
         ${message.proactive && html`<span class="reached"><${Icon} name="bell" size=${13} />${REACHED[message.proactive.kind] ?? 'Checking in'}</span>`}
         ${showModel && !message.proactive && message.author.model && html`<span class="model-tag" title=${message.author.model}>${modelTag(message.author.model)}</span>`}
         ${message.createdAt > 0 && !streaming && html`<span class="caption faint">${clock(message.createdAt)}</span>`}

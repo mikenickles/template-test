@@ -71,11 +71,8 @@ fun ToolCard(
     onCancel: (Card) -> Unit = {},
     onDecide: (Card, Boolean) -> Unit = { _, _ -> },
 ) {
-    // Every card wears the color of the agent who made it.
-    CompositionLocalProvider(LocalCardTint provides avatar.tint()) { ToolCardBody(card, avatar, agentName, now, modifier, live, onCancel, onDecide) }
+    ToolCardBody(card, avatar, agentName, now, modifier, live, onCancel, onDecide)
 }
-
-private val LocalCardTint = compositionLocalOf<Color?> { null }
 
 @Composable
 private fun ToolCardBody(
@@ -141,7 +138,7 @@ private fun EventsCard(card: Card, avatar: AvatarSpec, now: Long, modifier: Modi
                 if (i > 0 && day != null && day == eventDay(events[i - 1], zone)) {
                     freeBetween(events[i - 1], event, zone)?.let { FreeGap(it) }
                 }
-                EventRow(event, if (i == upcoming) avatar.wash() else c.bg, if (i == upcoming) untilLabel(event, now, zone) else null, avatar.textColor())
+                EventRow(event, if (i == upcoming) c.surfaceHigh else characterTile(), if (i == upcoming) untilLabel(event, now, zone) else null, c.text)
             }
         }
     }
@@ -197,11 +194,11 @@ private fun FreeGap(label: String) {
 @Composable
 private fun DateBadge(day: LocalDate, avatar: AvatarSpec) {
     Column(
-        Modifier.size(38.dp).clip(RoundedCornerShape(11.dp)).background(avatar.wash()),
+        Modifier.size(38.dp).clip(RoundedCornerShape(11.dp)).background(characterTile()),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(weekdayBadge(day), style = OrbitType.overline.copy(fontSize = OrbitType.overline.fontSize * 0.85f), color = avatar.textColor())
+        Text(weekdayBadge(day), style = OrbitType.overline.copy(fontSize = OrbitType.overline.fontSize * 0.85f), color = Orbit.colors.textSecondary)
         Text(day.dayOfMonth.toString(), style = OrbitType.titleS, color = Orbit.colors.text)
     }
 }
@@ -212,8 +209,8 @@ private fun EventAddedCard(event: CardEvent, avatar: AvatarSpec, modifier: Modif
     val zone = LocalZone.current
     CardFrame(modifier, footer = { OpenPill("Open Calendar", event.link.ifBlank { CALENDAR }) }) {
         Row(Modifier.padding(start = OrbitDimens.rowPad, end = OrbitDimens.rowPad, top = 14.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(28.dp).clip(CircleShape).background(avatar.wash()), contentAlignment = Alignment.Center) {
-                OrbitIcon(OrbitIcon.Check, size = 16.dp, tint = avatar.textColor())
+            Box(Modifier.size(28.dp).clip(CircleShape).background(characterTile()), contentAlignment = Alignment.Center) {
+                OrbitIcon(OrbitIcon.Check, size = 16.dp, tint = c.textSecondary)
             }
             Text("Added to your calendar", Modifier.padding(start = 10.dp), style = OrbitType.titleS, color = c.text)
         }
@@ -222,7 +219,7 @@ private fun EventAddedCard(event: CardEvent, avatar: AvatarSpec, modifier: Modif
                 .padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(OrbitDimens.radiusS))
-                .background(avatar.wash())
+                .background(characterTile())
                 .padding(horizontal = 12.dp, vertical = 10.dp),
         ) {
             Text(event.title, style = OrbitType.titleS, color = c.text)
@@ -258,7 +255,7 @@ private fun EmailsCard(card: Card, avatar: AvatarSpec, now: Long, modifier: Modi
                 }
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (email.unread) Box(Modifier.padding(end = 6.dp).size(7.dp).clip(CircleShape).background(avatar.textColor()))
+                        if (email.unread) Box(Modifier.padding(end = 6.dp).size(7.dp).clip(CircleShape).background(c.textSecondary))
                         Text(email.from, Modifier.weight(1f), style = OrbitType.titleS, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         email.at?.let { Text(shortWhen(it, now, LocalZone.current), Modifier.padding(start = 8.dp), style = OrbitType.caption, color = c.textTertiary) }
                     }
@@ -290,9 +287,9 @@ private fun DraftCard(card: Card, avatar: AvatarSpec, modifier: Modifier) {
         Row(Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 "DRAFT",
-                Modifier.clip(RoundedCornerShape(6.dp)).background(avatar.wash()).padding(horizontal = 7.dp, vertical = 2.dp),
+                Modifier.clip(RoundedCornerShape(6.dp)).background(characterTile()).padding(horizontal = 7.dp, vertical = 2.dp),
                 style = OrbitType.overline,
-                color = avatar.textColor(),
+                color = c.textSecondary,
             )
             Text(
                 listOf("To ${card.recipient}", card.subject).filter { it.isNotBlank() }.joinToString(" · "),
@@ -323,8 +320,8 @@ private fun FilesCard(card: Card, avatar: AvatarSpec, now: Long, modifier: Modif
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.size(40.dp).clip(RoundedCornerShape(OrbitDimens.radiusS)).background(avatar.wash()), contentAlignment = Alignment.Center) {
-                    OrbitIcon(OrbitIcon.File, size = 20.dp, tint = avatar.textColor())
+                Box(Modifier.size(40.dp).clip(RoundedCornerShape(OrbitDimens.radiusS)).background(characterTile()), contentAlignment = Alignment.Center) {
+                    OrbitIcon(OrbitIcon.File, size = 20.dp, tint = c.textSecondary)
                 }
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                     Text(file.name, style = OrbitType.titleS, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -369,7 +366,7 @@ private fun PlanCard(card: Card, avatar: AvatarSpec, agentName: String, now: Lon
                 Text(
                     if (followUp) card.time?.let { followUpWhen(it, now, LocalZone.current) } ?: "" else if (card.every == "hour") "Checked every hour" else "Checked every day",
                     style = OrbitType.caption,
-                    color = avatar.textColor(),
+                    color = c.textSecondary,
                 )
             }
         }
@@ -395,7 +392,7 @@ private fun ApprovalCard(card: Card, avatar: AvatarSpec, agentName: String, modi
                 Spacer(Modifier.width(8.dp))
                 Pill("Allow", { if (!answered) { answered = true; onDecide(true) } }, selected = !answered, dimmed = answered)
                 Spacer(Modifier.weight(1f))
-                Text("Waiting for you", style = OrbitType.caption, color = avatar.textColor())
+                Text("Waiting for you", style = OrbitType.caption, color = c.textSecondary)
             } else {
                 Text(
                     when (card.status) {
@@ -411,8 +408,8 @@ private fun ApprovalCard(card: Card, avatar: AvatarSpec, agentName: String, modi
         },
     ) {
         Row(Modifier.padding(OrbitDimens.rowPad), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clip(CircleShape).background(avatar.wash()), contentAlignment = Alignment.Center) {
-                OrbitIcon(OrbitIcon.Globe, size = 20.dp, tint = avatar.textColor())
+            Box(Modifier.size(40.dp).clip(CircleShape).background(characterTile()), contentAlignment = Alignment.Center) {
+                OrbitIcon(OrbitIcon.Globe, size = 20.dp, tint = c.textSecondary)
             }
             Column(Modifier.padding(start = 12.dp)) {
                 Text(if (pending) "$agentName asks first" else "$agentName asked first", style = OrbitType.caption, color = c.textTertiary)
@@ -428,7 +425,7 @@ private fun ApprovalCard(card: Card, avatar: AvatarSpec, agentName: String, modi
 @Composable
 private fun CardFrame(modifier: Modifier, footer: (@Composable androidx.compose.foundation.layout.RowScope.() -> Unit)? = null, content: @Composable () -> Unit) {
     val shape = RoundedCornerShape(24.dp)
-    Box(modifier.fillMaxWidth().crewGlass(listOfNotNull(LocalCardTint.current), shape, lift = 12.dp).clip(shape)) {
+    Box(modifier.fillMaxWidth().quietCard(shape, strength = 0.6f).clip(shape)) {
         Column {
             content()
             if (footer != null) {

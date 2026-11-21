@@ -405,7 +405,12 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate, p
         ${page === 'hub' && html`    <div class="card"><div class="row">
       <div style="flex:1"><div class="title-m">${state.hub.name || 'Your hub'}</div><div class="mono faint" style="margin-top:3px">${location.host}</div></div>
       <span class="dot live"></span><span class="label" style="color:var(--live)">Online</span>
-    </div></div>
+    </div>
+    <form class="row" onSubmit=${(e) => { e.preventDefault(); const name = new FormData(e.currentTarget).get('name'); api.renamePc(String(name).trim()).then(refresh).then(() => notify('Renamed')).catch((err) => notify(err.message)); }}>
+      <label style="flex:1;min-width:0"><span class="body-s muted">Name in the apps${state.hub.machineName ? ` (the computer's own name is ${state.hub.machineName})` : ''}</span>
+        <input class="field" name="name" maxlength="40" value=${state.hub.name} style="margin-top:6px" /></label>
+      <button class="pill" style="align-self:flex-end">Save</button>
+    </form></div>
     <div class="card" style="margin-top:12px"><div class="row"><${Icon} name="globe" /><div style="flex:1;min-width:0">
       <div class="title-s">Away from home</div>
       <div class="body-s muted">${state.hub.remote?.length ? html`Your phone reaches this PC anywhere through Tailscale, at <span class="mono">${state.hub.remote[0]}</span>.` : 'Not set up. Install Tailscale on this PC and your phone and sign in to both with the same account; Treehouse notices within a minute.'}</div></div>
