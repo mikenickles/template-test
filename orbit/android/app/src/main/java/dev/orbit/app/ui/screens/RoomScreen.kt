@@ -392,7 +392,7 @@ fun RoomScreen(
  * it. At the bottom it's gone by the top of the composer ([bottom] tall). Fully there a little way clear of each.
  */
 /** How much of the conversation still shows at the very top of the screen. */
-private const val TRACE = 0.1f
+private const val TRACE = 0.04f
 
 private fun Modifier.fadeEdges(top: Dp, bottom: Dp): Modifier = graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
     .drawWithContent {
@@ -406,8 +406,8 @@ private fun Modifier.fadeEdges(top: Dp, bottom: Dp): Modifier = graphicsLayer { 
         drawRect(
             Brush.verticalGradient(
                 0f to Color.Black.copy(alpha = TRACE),
-                barEnd * 0.6f to Color.Black.copy(alpha = TRACE * 1.6f),
-                barEnd to Color.Black.copy(alpha = 0.38f),
+                barEnd * 0.6f to Color.Black.copy(alpha = TRACE * 2.5f),
+                barEnd to Color.Black.copy(alpha = 0.3f),
                 solidTop to Color.Black,
                 solidBottom to Color.Black,
                 clearBottom to Color.Transparent,
