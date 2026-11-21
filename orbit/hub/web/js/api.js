@@ -67,6 +67,15 @@ export const api = {
   deleteSchedule: (id) => request('DELETE', `/api/schedules/${id}`),
   runSchedule: (id) => request('POST', `/api/schedules/${id}/run`, {}),
   stopSharing: (id) => request('DELETE', `/api/folders/${id}`),
+  // Agents that speak first: quiet hours, the daily limit and the morning brief; follow-ups, watches and Home's cards.
+  saveProactive: (settings) => request('PUT', '/api/proactive', settings),
+  deleteFollowUp: (id) => request('DELETE', `/api/followups/${id}`),
+  deleteWatch: (id) => request('DELETE', `/api/watches/${id}`),
+  dismissNudge: (id) => request('DELETE', `/api/nudges/${id}`),
+  disconnectGoogle: () => request('DELETE', '/api/google'),
+  // Connecting Google happens only on the PC: the client and the sign-in stay on this machine.
+  setGoogleClient: (clientId, clientSecret) => request('PUT', '/local/google/client', { clientId, clientSecret }, local),
+  connectGoogle: () => request('POST', '/local/google/connect', {}, local),
   // Sharing a folder is for the PC itself only.
   pairInfo: () => request('GET', '/pair.json'),
   shareFolder: (path) => request('POST', '/local/folders', { path }, local),

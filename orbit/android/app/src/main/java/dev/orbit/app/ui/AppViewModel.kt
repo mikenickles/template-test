@@ -11,6 +11,11 @@ import dev.orbit.app.data.HubException
 import dev.orbit.app.data.HubInfo
 import dev.orbit.app.data.HubUpdates
 import dev.orbit.app.data.Profile
+import dev.orbit.app.data.ProactiveSettings
+import dev.orbit.app.data.FollowUp
+import dev.orbit.app.data.Watch
+import dev.orbit.app.data.Nudge
+import dev.orbit.app.data.GoogleStatus
 import dev.orbit.app.data.isNewerVersion
 import dev.orbit.app.update.ApkInstaller
 import dev.orbit.app.data.Provider
@@ -53,6 +58,12 @@ data class AppState(
     val schedules: List<Schedule> = emptyList(),
     val profile: Profile = Profile(),
     val updates: HubUpdates = HubUpdates(),
+    val proactive: ProactiveSettings = ProactiveSettings(),
+    val followUps: List<FollowUp> = emptyList(),
+    val watches: List<Watch> = emptyList(),
+    /** What agents brought up on their own, newest last: Home's "From your crew". */
+    val nudges: List<Nudge> = emptyList(),
+    val google: GoogleStatus = GoogleStatus(),
 ) {
     fun agent(id: String?) = agents.firstOrNull { it.id == id }
 
@@ -162,6 +173,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     schedules = fresh.schedules,
                     profile = fresh.profile,
                     updates = fresh.updates,
+                    proactive = fresh.proactive,
+                    followUps = fresh.followups,
+                    watches = fresh.watches,
+                    nudges = fresh.nudges,
+                    google = fresh.google,
                 )
             }
         }
@@ -469,6 +485,41 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 onDeleted()
             }
         }
+    }
+
+    /** Saves quiet hours, the daily limit or the morning brief. Shows the change at once. */
+    fun saveProactive(settings: ProactiveSettings) {
+        val before = _state.value.proactive
+        _state.update { it.copy(proactive = settings) }
+        viewModelScope.launch {
+            val saved = hub { it.saveProactive(settings) }
+            _state.update { it.copy(proactive = saved ?: before) }
+        }
+    }
+
+    fun deleteFollowUp(id: String) {
+        _state.update { s -> s.copy(followUps = s.followUps.filterNot { it.id == id }) }
+        viewModelScope.launch { hub { it.deleteFollowUp(id) } }
+    }
+
+    fun deleteWatch(id: String) {
+        _state.update { s -> s.copy(watches = s.watches.filterNot { it.id == id }) }
+        viewModelScope.launch { hub { it.deleteWatch(id) } }
+    }
+
+    /** Opening a room is seeing what its agents brought up; the hub forgets those cards too. */
+    fun nudgesSeen(roomId: String) {
+        _state.update { s -> s.copy(nudges = s.nudges.filterNot { it.roomId == roomId }) }
+    }
+
+    /** Takes a card off Home. Opening its room does too, on the hub. */
+    fun dismissNudge(id: String) {
+        _state.update { s -> s.copy(nudges = s.nudges.filterNot { it.id == id }) }
+        viewModelScope.launch { hub(quiet = true) { it.dismissNudge(id) } }
+    }
+
+    fun disconnectGoogle() {
+        viewModelScope.launch { hub { it.disconnectGoogle() }?.let { g -> _state.update { it.copy(google = g) } } }
     }
 
     fun runSchedule(id: String, onStarted: () -> Unit) {

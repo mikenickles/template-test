@@ -4,6 +4,7 @@ import { runMemoryTool } from './memory.js';
 import { CrewError, createCrew, introPrompt } from './intro.js';
 import { RecruitError, createAgent, recruitPrompt } from './recruit.js';
 import { addUsage, emptyUsage } from './usage.js';
+import { GOOGLE_PROMPT, runGoogleTool } from './google.js';
 
 /** Upper bound on agent replies per user message, so @mention chains can't loop forever. */
 export const MAX_TURNS = 12;
@@ -49,17 +50,22 @@ export function namedAgents(answer, agents) {
   return hits.sort((a, b) => a.index - b.index).map((h) => h.agent);
 }
 
-/** Abilities an agent can be given. "files" reads folders shared from the PC; "crew" hires new agents. */
-export const ABILITIES = ['web', 'code', 'files', 'memory', 'crew'];
+/**
+ * Abilities an agent can be given. "files" reads folders shared from the PC; "crew" hires new agents;
+ * "google" uses the user's Gmail, Calendar and Drive once Google is connected on the PC.
+ */
+export const ABILITIES = ['web', 'code', 'files', 'memory', 'crew', 'google'];
 
 /**
  * What an agent can do on this turn. Abilities only work with providers that support them; elsewhere
  * the agent runs without them, and its prompt doesn't mention them.
  */
-export function resolveAbilities(agent, providers, folders, save = () => {}, { profile = null, force = [] } = {}) {
+export function resolveAbilities(agent, providers, folders, save = () => {}, { profile = null, force = [], google = null } = {}) {
   if (!providers.supportsAbilities?.(agent.provider)) return null;
   const on = new Set([...(agent.abilities ?? []), ...force]);
-  if (!on.size) return null;
+  // A proactive agent can book follow-ups and watch things; Orchestrator#speak fills in the tools.
+  const proactive = (agent.proactive ?? 'off') !== 'off';
+  if (!on.size && !proactive) return null;
   return {
     web: on.has('web'),
     code: on.has('code'),
@@ -69,6 +75,9 @@ export function resolveAbilities(agent, providers, folders, save = () => {}, { p
     memory: on.has('memory') ? { run: (name, input) => runMemoryTool(agent, name, input, save, profile) } : null,
     // Hiring needs the room and the reply, so Orchestrator#speak fills it in.
     hire: on.has('crew'),
+    google: on.has('google') && google?.connected ? { run: (name, input) => runGoogleTool(google, name, input) } : null,
+    wantsGoogle: on.has('google'),
+    proactiveOn: proactive,
   };
 }
 
@@ -133,6 +142,11 @@ export function buildSystemPrompt(agent, room, agents, abilities = null, profile
       );
     }
     if (abilities.recruit) lines.push(abilities.recruit.prompt);
+    if (abilities.google) lines.push(GOOGLE_PROMPT);
+    else if (abilities.wantsGoogle) {
+      lines.push("- You could use the user's Gmail, Calendar and Drive, but Google isn't connected yet. If they ask about their email or calendar, tell them to connect Google in Treehouse on their PC, under Settings.");
+    }
+    if (abilities.proactive) lines.push(abilities.proactive.prompt);
     if (abilities.memory) {
       lines.push(
         '- Remember things for future chats. Facts about the user (who they are, what they like, their plans) go in remember_about_user, which the whole crew shares. Notes about your own work with them (decisions, ongoing projects) go in remember. Save only what they would want kept, and forget things when they ask or they stop being true.',
@@ -198,6 +212,19 @@ function resolveOne(part, files, inFull) {
   }
 }
 
+/** Placeholder turns buildTranscript adds when a chat ends on an agent or hasn't started. */
+const FILLERS = ['[System]: Your teammates have nothing to add. Wrap up for the user.', '[System]: The user just opened this chat. Say hello.'];
+
+/** Ends a transcript with `text` from the hub, replacing a placeholder turn if there is one. */
+export function withPrompt(turns, text) {
+  const out = [...turns];
+  const last = out.at(-1);
+  if (last?.role === 'user' && FILLERS.includes(last.content)) out[out.length - 1] = { role: 'user', content: text };
+  else if (last?.role === 'user') out[out.length - 1] = { role: 'user', content: joinContent(last.content, [{ type: 'text', text }]) };
+  else out.push({ role: 'user', content: text });
+  return out;
+}
+
 /** How much recent history is sent word for word, in characters (about four to a token). */
 export const RECENT_CHARS = 60_000;
 /** How much further history may grow before its oldest part is folded into the room's summary. */
@@ -260,8 +287,11 @@ export class Orchestrator {
    * @param {{store: import('./store.js').Store, providers: any, folders?: import('./folders.js').Folders,
    *   emit: (roomId: string, event: string, data: any) => void}} deps
    */
-  constructor({ store, providers, folders = null, ledger = null, files = null, emit }) {
+  constructor({ store, providers, folders = null, ledger = null, files = null, google = null, emit }) {
     this.store = store;
+    this.google = google;
+    /** Set by the hub once it's made: follow-ups and watches for proactive agents. */
+    this.proactive = null;
     this.files = files;
     this.providers = providers;
     this.folders = folders;
@@ -285,6 +315,20 @@ export class Orchestrator {
       this.#start(roomId, (room, agents, run) => this.#firstSpeakers(room, agents, text, run.abort.signal, extra.replyTo));
     }
     return message;
+  }
+
+  /**
+   * Has one agent write to the user unprompted, guided by `prompt` (which the user never sees). Only
+   * that agent speaks; @mentions in what it writes don't hand off. False if the room is busy.
+   */
+  reachOut(roomId, agentId, prompt, proactive) {
+    if (this.runs.has(roomId)) return false;
+    this.#start(roomId, (room, agents, run) => {
+      run.prompt = { agentId, text: prompt, proactive };
+      run.solo = true;
+      return agents.filter((a) => a.id === agentId);
+    });
+    return true;
   }
 
   /** Has one agent open a room, speaking first. False if the room is busy. */
@@ -378,14 +422,14 @@ export class Orchestrator {
         wrapped = false;
         continue;
       }
-      if (reply?.status === 'done') {
+      if (reply?.status === 'done' && !run.solo) {
         const others = agents.filter((a) => a.id !== agent.id);
         for (const mentioned of findMentions(reply.text, others)) {
           if (!queue.some((q) => q.id === mentioned.id)) queue.push(mentioned);
         }
       }
       // In lead mode the lead closes the loop once teammates have weighed in.
-      if (!queue.length && room.mode === 'lead' && !wrapped) {
+      if (!queue.length && room.mode === 'lead' && !wrapped && !run.solo) {
         const lead = agents.find((a) => a.id === room.leadId) ?? agents[0];
         if (lead && lead.id !== agent.id) {
           queue.push(lead);
@@ -537,18 +581,28 @@ export class Orchestrator {
     } catch {
       return null; // stopped while summarizing
     }
+    // Speaking unprompted: what prompted it goes last, for this agent only.
+    const prompted = run.prompt?.agentId === agent.id ? run.prompt : null;
+    if (prompted) {
+      run.prompt = null;
+      transcript = withPrompt(transcript, prompted.text);
+    }
     const message = this.#append(
       room.id,
       { type: 'agent', agentId: agent.id, name: agent.name, model: agent.model },
       '',
       'streaming',
+      prompted?.proactive ? { proactive: prompted.proactive } : {},
     );
     run.speaking = agent.id;
     this.emit(room.id, 'run', this.runState(room.id));
     const profile = this.store.state.profile;
     // In the intro, the guide always gets the shared memory, and can create the crew it suggests.
     const intro = room.intro && agents.length === 1;
-    const abilities = resolveAbilities(agent, this.providers, this.folders, () => this.store.save(), { profile, force: intro ? ['memory'] : [] });
+    const abilities = resolveAbilities(agent, this.providers, this.folders, () => this.store.save(), {
+      profile, force: intro ? ['memory'] : [], google: this.google,
+    });
+    if (abilities?.proactiveOn && this.proactive) abilities.proactive = this.proactive.toolsFor(agent, room);
     if (abilities && intro) {
       abilities.crew = {
         run: (input) => {

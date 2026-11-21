@@ -11,6 +11,8 @@ import { GUIDE, INTRO_ROOM_NAME } from './intro.js';
 import { UpdateError, Updates, openFolder } from './updates.js';
 import { Feed } from './feed.js';
 import { ScheduleError, Scheduler } from './schedules.js';
+import { LEVELS, Proactive, ProactiveError } from './proactive.js';
+import { Google, GoogleError } from './google.js';
 import { ABILITIES, Orchestrator } from './orchestrator.js';
 import { ProviderError } from './errors.js';
 import { PAIR_PAGE } from './pairpage.js';
@@ -66,7 +68,7 @@ const JUST_PAIRED_MS = 60_000;
  * bearer token a phone receives when it pairs with the code shown on the PC.
  */
 export class Hub {
-  constructor({ store, providers, folders = new Folders(), prices = {}, name, onPairingCode = () => {}, updates = null, onRestart = null, feedUrl = null, log = () => {} }) {
+  constructor({ store, providers, folders = new Folders(), prices = {}, name, onPairingCode = () => {}, updates = null, onRestart = null, feedUrl = null, google = new Google(), log = () => {} }) {
     this.store = store;
     // Updates saved in the updates folder; `onRestart` is how the hub restarts itself once one is installed.
     this.updates = updates ?? new Updates({
@@ -86,10 +88,15 @@ export class Hub {
     this.onPairingCode = onPairingCode;
     this.subscribers = new Map(); // roomId -> Set<ServerResponse>
     this.watchers = new Set(); // phones following every room, to notify when replies land
+    // The user's Google account, connected from the PC, for agents with the "google" ability.
+    this.google = google;
     this.orchestrator = new Orchestrator({
-      store, providers, folders, ledger: this.ledger, files: this.files, emit: (...args) => this.#emit(...args),
+      store, providers, folders, ledger: this.ledger, files: this.files, google, emit: (...args) => this.#emit(...args),
     });
     this.scheduler = new Scheduler({ store, orchestrator: this.orchestrator, log: (line) => console.log(line) });
+    // Agents that speak first: check-ins, follow-ups, watches and the morning brief.
+    this.proactive = new Proactive({ store, orchestrator: this.orchestrator, providers, google, ledger: this.ledger, log: (line) => console.log(line) });
+    this.orchestrator.proactive = this.proactive;
     this.pairFailures = 0;
     this.pairLockedUntil = 0;
     this.pairingCode = newPairingCode();
@@ -104,6 +111,7 @@ export class Hub {
 
   listen(port, host = '0.0.0.0') {
     this.scheduler.start();
+    this.proactive.start();
     return new Promise((resolve, reject) => {
       this.server.once('error', reject);
       this.server.listen(port, host, () => resolve(this.server.address().port));
@@ -139,6 +147,7 @@ export class Hub {
 
   close() {
     this.scheduler.stop();
+    this.proactive.stop();
     this.discovery?.close();
     for (const set of this.subscribers.values()) for (const res of set) res.end();
     for (const res of this.watchers) res.end();
@@ -358,6 +367,12 @@ export class Hub {
       };
     }
     if (parts[0] === 'local') return this.#localRoute(req, res, parts);
+    // Where Google sends the browser back after the user allows access. Only this PC, and only with a
+    // state the hub just issued (checked in Google#finish).
+    if (key === 'GET /google/callback') {
+      this.#localOnly(req);
+      return this.#googleCallback(res, url);
+    }
 
     const device = this.#authenticate(req);
     switch (key) {
@@ -372,6 +387,11 @@ export class Hub {
           profile: this.#profile(),
           folders: this.folders.list(),
           schedules: this.scheduler.list(),
+          proactive: this.proactive.settings(),
+          followups: this.proactive.followups(),
+          watches: this.proactive.watches(),
+          nudges: this.proactive.nudges(),
+          google: this.google.status(),
         };
       case 'GET /api/events':
         return this.#follow(req, res);
@@ -450,6 +470,27 @@ export class Hub {
       case 'DELETE /api/schedules/:id':
         this.scheduler.remove(id);
         return { ok: true };
+      // When proactive agents may speak, how often, and the morning brief.
+      case 'PUT /api/proactive':
+        try {
+          return this.proactive.update(await this.#body(req));
+        } catch (err) {
+          if (err instanceof ProactiveError) throw new HttpError(400, err.message);
+          throw err;
+        }
+      // Follow-ups and watches agents set, which the user can cancel; and Home's "From your crew" cards.
+      case 'DELETE /api/followups/:id':
+        this.proactive.removeFollowup(id);
+        return { followups: this.proactive.followups() };
+      case 'DELETE /api/watches/:id':
+        this.proactive.removeWatch(id);
+        return { watches: this.proactive.watches() };
+      case 'DELETE /api/nudges/:id':
+        this.proactive.dismiss(id);
+        return { nudges: this.proactive.nudges() };
+      // Any paired device can disconnect Google; connecting happens on the PC.
+      case 'DELETE /api/google':
+        return this.google.disconnect();
       // Results of scheduled runs since a time, for a phone that was asleep.
       case 'GET /api/notices':
         return { notices: this.scheduler.noticesSince(Number(url.searchParams.get('since')) || 0), now: Date.now() };
@@ -530,6 +571,7 @@ export class Hub {
       }
       case 'DELETE /api/agents/:id': {
         this.store.state.agents = this.store.state.agents.filter((a) => a.id !== id);
+        this.proactive.forget({ agentId: id });
         for (const room of this.store.state.rooms) {
           room.agentIds = room.agentIds.filter((a) => a !== id);
           if (room.leadId === id) room.leadId = room.agentIds[0] ?? null;
@@ -566,6 +608,7 @@ export class Hub {
       case 'DELETE /api/rooms/:id': {
         this.orchestrator.stop(id);
         this.scheduler.forgetRoom(id);
+        this.proactive.forget({ roomId: id });
         this.store.state.rooms = this.store.state.rooms.filter((r) => r.id !== id);
         delete this.store.state.messages[id];
         this.store.save();
@@ -634,8 +677,11 @@ export class Hub {
       const room = this.#requireRoom(id);
       switch (`${req.method} ${parts[3]}`) {
         case 'GET messages':
+          // Opening a room is seeing what its agents brought up.
+          this.proactive.seen(room.id);
           return { messages: this.store.messages(room.id), run: this.orchestrator.runState(room.id) };
         case 'POST messages': {
+          this.proactive.seen(room.id);
           const fields = await this.#body(req);
           const body = text(fields.text, 20000);
           const ids = Array.isArray(fields.attachments) ? [...new Set(fields.attachments)].slice(0, 10) : [];
@@ -755,11 +801,46 @@ export class Hub {
         this.folders.remove(parts[2]);
         return { folders: this.folders.list() };
       }
+      // Google is connected only from the PC: the client secret and the sign-in stay on this machine.
+      if (route === 'GET /google') return this.google.status();
+      if (route === 'PUT /google/client') {
+        const body = await this.#body(req);
+        return this.google.setClient(body.clientId, body.clientSecret);
+      }
+      if (route === 'POST /google/connect') return { url: this.google.authUrl(this.#googleRedirect()) };
+      if (route === 'DELETE /google') return this.google.disconnect();
     } catch (err) {
-      if (err instanceof FolderError) throw new HttpError(400, err.message);
+      if (err instanceof FolderError || err instanceof GoogleError) throw new HttpError(400, err.message);
       throw err;
     }
     throw new HttpError(404, 'Not found.');
+  }
+
+  #googleRedirect() {
+    return `http://127.0.0.1:${this.server.address().port}/google/callback`;
+  }
+
+  async #googleCallback(res, url) {
+    let title = 'Google is connected';
+    let detail = 'Your agents with Google turned on can now use your Gmail, Calendar and Drive. You can close this tab.';
+    try {
+      const done = await this.google.finish({
+        code: url.searchParams.get('code'),
+        state: url.searchParams.get('state'),
+        error: url.searchParams.get('error'),
+      });
+      if (done.missing.length) detail = 'Some permissions were left unticked, so a few things won\'t work. Connect again and allow everything to fix it. You can close this tab.';
+    } catch (err) {
+      if (!(err instanceof GoogleError)) throw err;
+      title = "Google isn't connected";
+      detail = err.message;
+    }
+    const escape = (v) => v.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'" });
+    res.end(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escape(title)}</title>
+<body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#F6F2EC;color:#17130F;font:16px/1.5 system-ui,sans-serif">
+<main style="max-width:420px;padding:32px;text-align:center"><h1 style="font-size:24px;margin:0 0 8px">${escape(title)}</h1><p style="color:#574E45;margin:0">${escape(detail)}</p></main></body>`);
+    return undefined;
   }
 
   #agentFields(body, existing = null) {
@@ -780,6 +861,8 @@ export class Hub {
       abilities: Array.isArray(body.abilities)
         ? ABILITIES.filter((a) => body.abilities.includes(a))
         : (existing?.abilities ?? []),
+      // How often the agent reaches out on its own. An older app leaves it as it was.
+      proactive: LEVELS.includes(body.proactive) ? body.proactive : (existing?.proactive ?? 'off'),
     };
   }
 

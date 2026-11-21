@@ -26,8 +26,20 @@ data class Agent(
     val abilities: List<String> = emptyList(),
     /** Notes the agent carries into every room. Changed through their own calls, not by saving the agent. */
     val memory: List<MemoryNote> = emptyList(),
+    /** How often the agent reaches out on its own: [PROACTIVE_OFF], [PROACTIVE_GENTLE] or [PROACTIVE_ACTIVE]. */
+    val proactive: String = PROACTIVE_OFF,
 ) {
     companion object {
+        const val PROACTIVE_OFF = "off"
+
+        /** About once a day, when there's something worth saying. */
+        const val PROACTIVE_GENTLE = "gentle"
+
+        /** A few times a day. */
+        const val PROACTIVE_ACTIVE = "active"
+
+        /** The user's Gmail, Calendar and Drive, once Google is connected on the PC. */
+        const val ABILITY_GOOGLE = "google"
         const val ABILITY_WEB = "web"
         const val ABILITY_CODE = "code"
         const val ABILITY_FILES = "files"
@@ -137,8 +149,75 @@ data class Activity(
         const val KIND_FIND = "find"
         const val KIND_REMEMBER = "remember"
         const val KIND_FORGET = "forget"
+        const val KIND_MAIL_SEARCH = "mail_search"
+        const val KIND_MAIL_READ = "mail_read"
+        const val KIND_MAIL_DRAFT = "mail_draft"
+        const val KIND_CALENDAR = "calendar"
+        const val KIND_CALENDAR_ADD = "calendar_add"
+        const val KIND_DRIVE_SEARCH = "drive_search"
+        const val KIND_DRIVE_READ = "drive_read"
+        const val KIND_FOLLOW_UP = "followup"
+        const val KIND_WATCH = "watch"
+        const val KIND_WATCH_STOP = "watch_stop"
     }
 }
+
+/** Set on a message an agent wrote on its own: a check-in, a follow-up, a watch, or the morning brief. */
+@Serializable
+data class ProactiveMark(val id: String = "", val kind: String = "", val label: String = "") {
+    companion object {
+        const val KIND_CHECK_IN = "checkin"
+        const val KIND_FOLLOW_UP = "followup"
+        const val KIND_WATCH = "watch"
+        const val KIND_BRIEF = "brief"
+    }
+}
+
+/** When proactive agents may speak, how often, and the morning brief. Times are "HH:MM" on the PC's clock. */
+@Serializable
+data class ProactiveSettings(
+    val quietStart: String = "21:00",
+    val quietEnd: String = "08:00",
+    val dailyLimit: Int = 6,
+    val brief: BriefSettings = BriefSettings(),
+)
+
+@Serializable
+data class BriefSettings(val enabled: Boolean = false, val time: String = "08:00", val agentId: String? = null)
+
+/** A time an agent promised to come back to the user, in a room. */
+@Serializable
+data class FollowUp(val id: String = "", val agentId: String = "", val roomId: String = "", val at: Long = 0, val note: String = "")
+
+/** Something an agent keeps an eye on for the user, checked every [every] ("hour" or "day"). */
+@Serializable
+data class Watch(
+    val id: String = "",
+    val agentId: String = "",
+    val roomId: String = "",
+    val what: String = "",
+    val condition: String = "",
+    val every: String = "day",
+    val lastFinding: String = "",
+    val lastCheckedAt: Long? = null,
+)
+
+/** Something an agent brought up on its own, shown on Home until it's seen or dismissed. */
+@Serializable
+data class Nudge(
+    val id: String = "",
+    val at: Long = 0,
+    val kind: String = "",
+    val label: String = "",
+    val agentId: String = "",
+    val roomId: String = "",
+    val messageId: String = "",
+    val text: String = "",
+)
+
+/** Whether the user's Google account is connected on the PC, and as whom. */
+@Serializable
+data class GoogleStatus(val configured: Boolean = false, val connected: Boolean = false, val email: String = "")
 
 /** A photo or file attached to a message. [type] is its media type, like "image/jpeg". */
 @Serializable
@@ -176,6 +255,8 @@ data class Notice(
     val author: String = "",
     val text: String = "",
     val replies: Int = 0,
+    /** "proactive" for something an agent brought up on its own; empty for a scheduled run. */
+    val kind: String = "",
 )
 
 @Serializable
@@ -205,6 +286,8 @@ data class Message(
     val created: List<CreatedAgent> = emptyList(),
     /** The message this one answers, when the user replied to a particular message. */
     val replyTo: ReplyRef? = null,
+    /** Set when the agent wrote this on its own, unasked. */
+    val proactive: ProactiveMark? = null,
 ) {
     val fromUser get() = author.type == "user"
 
@@ -274,6 +357,11 @@ data class HubState(
     val schedules: List<Schedule> = emptyList(),
     val profile: Profile = Profile(),
     val updates: HubUpdates = HubUpdates(),
+    val proactive: ProactiveSettings = ProactiveSettings(),
+    val followups: List<FollowUp> = emptyList(),
+    val watches: List<Watch> = emptyList(),
+    val nudges: List<Nudge> = emptyList(),
+    val google: GoogleStatus = GoogleStatus(),
 )
 
 /** Whether agents are replying in a room right now, and who has the floor. */

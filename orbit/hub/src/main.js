@@ -8,6 +8,7 @@ import { ensureFirewall } from './firewall.js';
 import { Folders } from './folders.js';
 import { hubAddresses } from './network.js';
 import { Providers } from './providers.js';
+import { Google } from './google.js';
 import { qrTerminal } from './qr.js';
 import { Hub } from './server.js';
 import { feedUrl } from './feed.js';
@@ -31,6 +32,13 @@ const folders = new Folders(config.folders, {
     saveConfig(config);
   },
 });
+const google = new Google({
+  config: config.google,
+  onChange: (updated) => {
+    config.google = updated;
+    saveConfig(config);
+  },
+});
 const hubDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
 /**
@@ -48,7 +56,7 @@ function restartForUpdate(version) {
 
 const hub = new Hub({
   store, providers, folders, prices: config.prices, name: config.name, onPairingCode: () => showPairing(), onRestart: restartForUpdate,
-  feedUrl: feedUrl(hubDir, config), log: (line) => console.log(line),
+  feedUrl: feedUrl(hubDir, config), google, log: (line) => console.log(line),
 });
 const port = await hub.listen(Number(process.env.PORT) || config.port);
 hub.startDiscovery(config.discoveryPort, port);

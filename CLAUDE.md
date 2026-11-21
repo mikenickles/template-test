@@ -22,6 +22,11 @@ Two independent projects live here:
     Agent abilities (web search, code execution, read-only shared folders) are Claude-only: the tool loop is
     `src/anthropic.js`, folder access is `src/folders.js`. Folders are shared only from the PC's own page
     (`localhost`), never from a phone.
+    Proactive agents (`agent.proactive`: `off`, `gentle`, `active`) speak first through `src/proactive.js`: check-ins
+    (a cheap model decides whether anything is worth saying), `follow_up` and `watch` tools, and the morning brief,
+    within quiet hours and a daily limit. What they write becomes a Home card (`state.nudges`) and a phone notice.
+    The `google` ability gives Claude agents Gmail (search, read, drafts only, never send), Calendar and Drive through
+    `src/google.js`; the user's own OAuth client and the sign-in are set up only on the PC (`/local/google`).
   - `orbit/android/`: Kotlin + Jetpack Compose (Material 3), single `app` module, package `dev.orbit.app`.
     Screens are stateless composables in `ui/screens`; `AppViewModel` and `RoomViewModel` hold state.
     Design system: colors, type and spacing come only from `ui/theme/Theme.kt` (`Orbit.colors`, `OrbitType`,

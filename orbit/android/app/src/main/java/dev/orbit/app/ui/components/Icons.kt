@@ -21,7 +21,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /** Orbit's own icon set: one stroke weight, round caps and joins, to sit with the typeface. */
-enum class OrbitIcon { Back, Up, Down, Plus, Check, More, Dice, Chevron, Search, Globe, Code, Folder, File, Copy, Retry, Trash, Photo, Close, Memory, Clock, Hire, Reply }
+enum class OrbitIcon { Back, Up, Down, Plus, Check, More, Dice, Chevron, Search, Globe, Code, Folder, File, Copy, Retry, Trash, Photo, Close, Memory, Clock, Hire, Reply, Mail, Calendar, Bell }
 
 @Composable
 fun OrbitIcon(
@@ -126,6 +126,28 @@ fun OrbitIcon(
                 listOf(at(0.3f, 0.17f), at(0.7f, 0.17f), at(0.7f, 0.83f), at(0.5f, 0.67f), at(0.3f, 0.83f)),
                 closed = true,
             )
+            OrbitIcon.Mail -> {
+                drawRoundRect(tint, at(0.16f, 0.26f), Size(s * 0.68f, s * 0.48f), CornerRadius(s * 0.07f), style = stroke)
+                polyline(listOf(at(0.19f, 0.3f), at(0.5f, 0.53f), at(0.81f, 0.3f)))
+            }
+            OrbitIcon.Calendar -> {
+                drawRoundRect(tint, at(0.18f, 0.24f), Size(s * 0.64f, s * 0.58f), CornerRadius(s * 0.08f), style = stroke)
+                polyline(listOf(at(0.19f, 0.41f), at(0.81f, 0.41f)))
+                polyline(listOf(at(0.36f, 0.16f), at(0.36f, 0.3f)))
+                polyline(listOf(at(0.64f, 0.16f), at(0.64f, 0.3f)))
+            }
+            OrbitIcon.Bell -> {
+                // A small bell: something the crew brought up on its own.
+                val bell = Path().apply {
+                    moveTo(s * 0.26f, s * 0.68f)
+                    lineTo(s * 0.31f, s * 0.47f)
+                    cubicTo(s * 0.33f, s * 0.24f, s * 0.67f, s * 0.24f, s * 0.69f, s * 0.47f)
+                    lineTo(s * 0.74f, s * 0.68f)
+                    close()
+                }
+                drawPath(bell, tint, style = stroke)
+                polyline(listOf(at(0.43f, 0.8f), at(0.57f, 0.8f)))
+            }
             OrbitIcon.Clock -> {
                 drawCircle(tint, s * 0.32f, at(0.5f, 0.5f), style = stroke)
                 polyline(listOf(at(0.5f, 0.31f), at(0.5f, 0.5f), at(0.63f, 0.6f)))

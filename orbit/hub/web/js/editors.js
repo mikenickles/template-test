@@ -10,7 +10,10 @@ const ABILITIES = [
   ['files', 'folder', 'Read your files', null],
   ['memory', 'memory', 'Remember things', 'Keeps notes when you ask it to remember something, for every room.'],
   ['crew', 'hire', 'Build your crew', 'Hires new agents when you ask: writes their instructions, asks which model to use, picks a free look.'],
+  ['google', 'mail', 'Use your Google account', null],
 ];
+
+const LEVELS = [['off', 'Off'], ['gentle', 'Gentle'], ['active', 'Active']];
 
 export function AgentEditor({ agent, state, notify, onClose, onSaved, onChanged, onAddKey }) {
   const fresh = !agent;
@@ -23,6 +26,7 @@ export function AgentEditor({ agent, state, notify, onClose, onSaved, onChanged,
   const [model, setModel] = useState(agent?.model ?? firstProvider?.models[0] ?? '');
   const [instructions, setInstructions] = useState(agent?.instructions ?? '');
   const [abilities, setAbilities] = useState(new Set(agent?.abilities ?? ['memory']));
+  const [proactive, setProactive] = useState(agent?.proactive ?? 'off');
   const [models, setModels] = useState([]);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -36,7 +40,7 @@ export function AgentEditor({ agent, state, notify, onClose, onSaved, onChanged,
   const save = async () => {
     setBusy(true);
     try {
-      await api.saveAgent({ ...(agent ?? {}), name: name.trim(), role: role.trim(), instructions: instructions.trim(), provider, model: model.trim(), avatar, abilities: [...abilities] });
+      await api.saveAgent({ ...(agent ?? {}), name: name.trim(), role: role.trim(), instructions: instructions.trim(), provider, model: model.trim(), avatar, abilities: [...abilities], proactive });
       onSaved();
     } catch (e) {
       notify(e.message);
@@ -71,6 +75,17 @@ export function AgentEditor({ agent, state, notify, onClose, onSaved, onChanged,
   };
   const canSave = name.trim() && provider && model.trim() && !busy;
   const folders = state.folders.map((f) => f.name).join(', ');
+  const google = state.google ?? {};
+  const detailOf = (key, detail) => {
+    if (detail) return detail;
+    if (key === 'google') {
+      return google.connected
+        ? `Gmail, Calendar and Drive for ${google.email || 'your account'}. Reads mail and saves drafts, never sends.`
+        : 'Gmail, Calendar and Drive. Connect Google in Settings on this PC first.';
+    }
+    return folders ? `Read only, from ${folders}.` : "Read only. Share folders from the PC's Treehouse page first.";
+  };
+  const who = name.trim() || 'This agent';
 
   return html`<${Modal} title=${fresh ? 'New agent' : 'Edit agent'} onClose=${onClose}
     actions=${html`<button class="button" style="height:36px;padding:0 18px" disabled=${!canSave} onClick=${save}>${fresh ? 'Create' : 'Save'}</button>`}>
@@ -108,9 +123,17 @@ export function AgentEditor({ agent, state, notify, onClose, onSaved, onChanged,
     <div class="card">${ABILITIES.map(([key, icon, title, detail]) => html`<button class=${`ability${chosen?.abilities ? '' : ' disabled'}`} role="switch" aria-checked=${abilities.has(key)}
       disabled=${!chosen?.abilities} onClick=${() => toggle(key)}>
       <${Icon} name=${icon} />
-      <div style="flex:1"><div class="title-s">${title}</div><div class="body-s muted">${detail ?? (folders ? `Read only, from ${folders}.` : "Read only. Share folders from the PC's Treehouse page first.")}</div></div>
+      <div style="flex:1"><div class="title-s">${title}</div><div class="body-s muted">${detailOf(key, detail)}</div></div>
       <${Switch} on=${abilities.has(key)} disabled=${!chosen?.abilities} />
     </button>`)}</div>
+
+    <div class="section-title">Reaches out</div>
+    <div style="display:flex;gap:8px">${LEVELS.map(([level, label]) => html`<${Pill} label=${label} selected=${proactive === level} onClick=${() => setProactive(level)} />`)}</div>
+    <p class="body-s muted" style="margin:12px 0 0">${proactive === 'gentle'
+      ? `About once a day, ${who === 'This agent' ? 'this agent' : who} looks over your chats and writes to you only when something is worth it: a deadline coming up, a plan for today.`
+      : proactive === 'active'
+        ? `A few times a day, ${who === 'This agent' ? 'this agent' : who} looks over your chats, and your calendar and email if it can, and writes when something needs you.`
+        : `${who} only replies when you write.`}${proactive !== 'off' && chosen?.abilities ? ' It can also follow up later and keep an eye on things for you.' : ''}</p>
 
     ${live && html`<div class="section-title">Memory</div>
       ${live.memory?.length
@@ -339,6 +362,9 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate })
     <p class="note">Every agent in your crew knows this, in every room, and they add to it as they learn about you.
       ${state.providers.some((p) => p.abilities && p.configured) && html` <button class="label" onClick=${onIntro}>Chat with your guide</button>`}</p>
 
+    <${ProactiveSettings} state=${state} notify=${notify} refresh=${refresh} />
+    <${GoogleSettings} state=${state} notify=${notify} refresh=${refresh} />
+
     <div class="section-title">Model providers</div>
     <div class="card">${state.providers.map((p) => html`<div>
       <button class="row button-row" disabled=${!p.takesKey && !p.local} onClick=${() => { setOpen(open === p.id ? null : p.id); setKey(''); setKeyError(null); }}>
@@ -404,6 +430,119 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate })
 
     ${!onThisPC && html`<button class="button danger" style="margin-top:32px" onClick=${() => api.disconnect().then(() => location.reload()).catch((e) => notify(e.message))}>Disconnect this browser</button>`}
   <//>`;
+}
+
+const when = (t) => new Date(t).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+
+/** Agents that speak first: who reaches out, the morning brief, quiet hours, the daily limit, and what's coming up. */
+function ProactiveSettings({ state, notify, refresh }) {
+  const settings = state.proactive ?? { quietStart: '21:00', quietEnd: '08:00', dailyLimit: 6, brief: { enabled: false, time: '08:00', agentId: null } };
+  const save = (change) => api.saveProactive(change).then(refresh).catch((e) => notify(e.message));
+  const brief = settings.brief;
+  const intro = state.rooms.find((r) => r.intro);
+  const writer = state.agents.find((a) => a.id === brief.agentId) ?? state.agents.find((a) => a.id === intro?.agentIds[0]) ?? state.agents[0];
+  const byId = Object.fromEntries(state.agents.map((a) => [a.id, a]));
+  const reaching = state.agents.filter((a) => (a.proactive ?? 'off') !== 'off');
+  const plans = [...(state.followups ?? [])].sort((a, b) => a.at - b.at);
+  return html`
+    <div class="section-title">Proactive</div>
+    <div class="card">
+      <div class="row"><${Icon} name="bell" /><div style="flex:1">
+        <div class="title-s">${reaching.length ? reaching.map((a) => a.name).join(', ') : 'No agent reaches out yet'}</div>
+        <div class="body-s muted">${reaching.length ? 'Write to you on their own when something is worth it. Change it per agent, under Reaches out.' : 'Open an agent and choose Gentle or Active under Reaches out.'}</div></div></div>
+      <button class="row button-row" role="switch" aria-checked=${brief.enabled} onClick=${() => save({ brief: { enabled: !brief.enabled } })}>
+        <div style="flex:1"><div class="title-s">Morning brief</div><div class="body-s muted">A short note each morning: your day, what the crew is working on, and anything that needs you.</div></div>
+        <${Switch} on=${brief.enabled} /></button>
+      ${brief.enabled && html`<div class="row" style="gap:12px;flex-wrap:wrap">
+        <label class="body-s muted">At <input class="field mono" style="width:auto;display:inline-block;margin-left:6px;padding:6px 10px" type="time" value=${brief.time} onChange=${(e) => save({ brief: { time: e.currentTarget.value } })} /></label>
+        <label class="body-s muted">From <select class="field" style="width:auto;display:inline-block;margin-left:6px;padding:6px 10px" value=${writer?.id ?? ''} onChange=${(e) => save({ brief: { agentId: e.currentTarget.value } })}>
+          ${state.agents.map((a) => html`<option value=${a.id}>${a.name}</option>`)}</select></label></div>`}
+      <div class="row" style="gap:12px;flex-wrap:wrap">
+        <span style="flex:1;min-width:140px"><div class="title-s">Quiet hours</div><div class="body-s muted">No check-ins then. Promised follow-ups still arrive.</div></span>
+        <input class="field mono" style="width:auto;padding:6px 10px" type="time" aria-label="Quiet from" value=${settings.quietStart} onChange=${(e) => save({ quietStart: e.currentTarget.value })} />
+        <span class="muted">to</span>
+        <input class="field mono" style="width:auto;padding:6px 10px" type="time" aria-label="Quiet until" value=${settings.quietEnd} onChange=${(e) => save({ quietEnd: e.currentTarget.value })} />
+      </div>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><span class="title-s" style="flex:1">At most</span>
+        ${[2, 4, 6, 10].map((n) => html`<${Pill} small label=${`${n} a day`} selected=${settings.dailyLimit === n} onClick=${() => save({ dailyLimit: n })} />`)}</div>
+    </div>
+    ${(plans.length > 0 || state.watches?.length > 0) && html`
+      <div class="card" style="margin-top:12px">
+        ${plans.map((f) => html`<div class="row"><${Icon} name="clock" /><div style="flex:1;min-width:0"><div class="title-s">${f.note}</div>
+          <div class="body-s muted">${byId[f.agentId]?.name ?? 'An agent'} · ${when(f.at)}</div></div>
+          <button class="label muted" onClick=${() => api.deleteFollowUp(f.id).then(refresh).catch((e) => notify(e.message))}>Cancel</button></div>`)}
+        ${(state.watches ?? []).map((w) => html`<div class="row"><${Icon} name="bell" /><div style="flex:1;min-width:0"><div class="title-s">${w.what}${w.condition ? `, when ${w.condition}` : ''}</div>
+          <div class="body-s muted">${byId[w.agentId]?.name ?? 'An agent'} checks every ${w.every}${w.lastFinding ? `. Last: ${w.lastFinding}` : ''}</div></div>
+          <button class="label muted" onClick=${() => api.deleteWatch(w.id).then(refresh).catch((e) => notify(e.message))}>Stop</button></div>`)}
+      </div>`}
+    <p class="note">Gentle agents look over your chats about once a day, Active ones a few times a day, and stay quiet unless something is worth it. What they bring up shows on Home and on your phone.</p>`;
+}
+
+/** The user's Google account: set up and connected only on the PC. */
+function GoogleSettings({ state, notify, refresh }) {
+  const google = state.google ?? {};
+  const [clientId, setClientId] = useState('');
+  const [secret, setSecret] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [waiting, setWaiting] = useState(false);
+  // While the consent tab is open, look for the connection to land.
+  useEffect(() => {
+    if (!waiting) return undefined;
+    const timer = setInterval(() => refresh(), 2500);
+    const stop = setTimeout(() => setWaiting(false), 5 * 60 * 1000);
+    return () => { clearInterval(timer); clearTimeout(stop); };
+  }, [waiting]);
+  useEffect(() => { if (google.connected) setWaiting(false); }, [google.connected]);
+  const saveClient = async (e) => {
+    e.preventDefault();
+    try {
+      await api.setGoogleClient(clientId.trim(), secret.trim());
+      setClientId('');
+      setSecret('');
+      setEditing(false);
+      await refresh();
+    } catch (err) {
+      notify(err.message);
+    }
+  };
+  const connect = async () => {
+    try {
+      const { url } = await api.connectGoogle();
+      window.open(url, '_blank', 'noopener');
+      setWaiting(true);
+    } catch (err) {
+      notify(err.message);
+    }
+  };
+  return html`
+    <div class="section-title">Google</div>
+    <div class="card">
+      <div class="row"><${Icon} name="mail" /><div style="flex:1;min-width:0">
+        <div class="title-s">${google.connected ? google.email || 'Connected' : 'Not connected'}</div>
+        <div class="body-s muted">${google.connected ? 'Gmail, Calendar and Drive' : 'Gmail, Calendar and Drive for your agents'}</div></div>
+        ${google.connected
+          ? html`<button class="label muted" onClick=${() => api.disconnectGoogle().then(refresh).catch((e) => notify(e.message))}>Disconnect</button>`
+          : onThisPC && google.configured && !editing && html`<button class="button" disabled=${waiting} onClick=${connect}>${waiting ? 'Waiting for Google…' : 'Connect'}</button>`}
+      </div>
+      ${onThisPC && !google.connected && (!google.configured || editing) && html`<form class="google-setup" onSubmit=${saveClient}>
+        <p class="body-s" style="margin:0 0 10px">A one-time setup, about five minutes. Google needs a key that's yours alone:</p>
+        <ol class="body-s muted">
+          <li>Open <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener noreferrer">Google Cloud</a>, signed in as you, and create a project called Treehouse.</li>
+          <li>Turn on the <a href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank" rel="noopener noreferrer">Gmail API</a>, <a href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com" target="_blank" rel="noopener noreferrer">Google Calendar API</a> and <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener noreferrer">Google Drive API</a> (Enable on each).</li>
+          <li>Under <a href="https://console.cloud.google.com/auth/branding" target="_blank" rel="noopener noreferrer">Google Auth Platform</a>, set it up as External with your email. Then under Audience, choose Publish app, so your access doesn't expire after a week.</li>
+          <li>Under <a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener noreferrer">Clients</a>, create a client of type Desktop app, and paste its ID and secret here.</li>
+        </ol>
+        <input class="field mono" style="font-size:14px" placeholder="Client ID (ends in .apps.googleusercontent.com)" value=${clientId} onInput=${(e) => setClientId(e.currentTarget.value)} />
+        <input class="field mono" style="font-size:14px;margin-top:8px" type="password" autocomplete="off" placeholder="Client secret" value=${secret} onInput=${(e) => setSecret(e.currentTarget.value)} />
+        <div style="display:flex;gap:8px;margin-top:12px"><button class="button" disabled=${!clientId.trim() || !secret.trim()}>Save</button>
+          ${editing && html`<button type="button" class="button secondary" onClick=${() => setEditing(false)}>Cancel</button>`}</div>
+      </form>`}
+    </div>
+    <p class="note">${google.connected
+      ? 'Agents with Use your Google account turned on can search and read your email and save drafts (never send), check your calendar and add events, and read your Drive. Everything stays on this PC.'
+      : onThisPC
+        ? html`When you connect, Google shows a warning that it hasn't verified the app: that's expected for an app only you use. Choose Advanced, then Go to Treehouse, and allow everything.${google.configured && !editing ? html` <button class="label" onClick=${() => setEditing(true)}>Change client</button>` : ''}`
+        : 'Connect Google from Treehouse on your PC, in Settings there.'}</p>`;
 }
 
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];

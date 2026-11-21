@@ -21,6 +21,7 @@ import dev.orbit.app.data.Room
 import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.data.FoundHub
 import dev.orbit.app.data.RunState
+import dev.orbit.app.data.ProactiveMark
 import dev.orbit.app.ui.AppState
 import dev.orbit.app.ui.PairState
 import dev.orbit.app.ui.RoomUiState
@@ -43,6 +44,7 @@ import dev.orbit.app.ui.screens.RoomEditorScreen
 import dev.orbit.app.ui.screens.RoomScreen
 import dev.orbit.app.ui.screens.SampleCrew
 import dev.orbit.app.ui.screens.SettingsScreen
+import dev.orbit.app.ui.screens.ProactiveScreen
 import dev.orbit.app.ui.screens.ShareScreen
 import dev.orbit.app.ui.screens.ScheduleEditorScreen
 import dev.orbit.app.ui.screens.SchedulesScreen
@@ -123,6 +125,23 @@ class ScreenshotTest {
     @Test fun pairLight() = shot("pair-light", dark = false) { PairScreen(PairState(error = "That code didn't match. Check the one shown on your PC."), {}, { _, _ -> }) }
     @Test fun home() = shot("home") { Home() }
     @Test fun homeLight() = shot("home-light", dark = false) { Home() }
+    /** What the crew brought up on its own, on Home. */
+    @Test fun homeNudges() = shot("home-nudges") { Home(SampleData.proactive) }
+    @Test fun homeNudgesLight() = shot("home-nudges-light", dark = false) { Home(SampleData.proactive) }
+    @Test fun proactive() = shot("proactive") { ProactiveScreen(SampleData.proactive, {}, {}, {}, {}, {}) }
+    @Test fun proactiveLight() = shot("proactive-light", dark = false) { ProactiveScreen(SampleData.proactive, {}, {}, {}, {}, {}) }
+    @Test fun proactiveMessage() = shot("room-proactive") {
+        RoomScreen(
+            launch, listOf(nova, pixel, sage),
+            chat.copy(
+                run = RunState(),
+                messages = chat.messages.take(3) + agentMessage(
+                    "m9", nova, "The beta goes out Friday and the signup page still has placeholder copy. Want me to ask **Pixel** for a first draft today?",
+                ).copy(proactive = ProactiveMark("p1", ProactiveMark.KIND_CHECK_IN, "Check-in")),
+            ),
+            {}, {}, {}, {}, {},
+        )
+    }
     @Test fun homeUpdate() = shot("home-update") {
         HomeScreen(SampleData.updatable, {}, {}, {}, {}, {}, {}, now = now, appUpdate = "0.11.0")
     }
@@ -279,6 +298,11 @@ class TallScreenshotTest {
     }
     @Test fun scheduleEditor() = shot("schedule-editor-full") { ScheduleEditorScreen(SampleData.launch, SampleData.schedules[0], {}, {}, {}, {}) }
     @Test fun scheduleEditorLight() = shot("schedule-editor-full-light", dark = false) { ScheduleEditorScreen(SampleData.trip, null, {}, null, null, {}) }
+    @Test fun proactiveFull() = shot("proactive-full") { ProactiveScreen(SampleData.proactive, {}, {}, {}, {}, {}) }
+    @Test fun settingsGoogle() = shot("settings-google-full") { SettingsScreen(SampleData.proactive, "http://192.168.1.20:8787", {}, {}) }
+    @Test fun agentEditorProactive() = shot("agent-editor-proactive-full") {
+        AgentEditorScreen(SampleData.proactive.agents[0], SampleData.providers, { emptyList() }, {}, null, {}, google = SampleData.proactive.google)
+    }
     @Test fun settings() = shot("settings-full") { SettingsScreen(SampleData.app, "http://100.101.102.103:8787", {}, {}, usage = SampleData.usage) }
     @Test fun settingsNoFoldersLight() = shot("settings-full-light", dark = false) {
         SettingsScreen(SampleData.app.copy(folders = emptyList(), hub = SampleData.app.hub.copy(remote = emptyList())), "http://192.168.1.20:8787", {}, {})

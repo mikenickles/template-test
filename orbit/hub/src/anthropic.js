@@ -4,9 +4,25 @@ import { FOLDER_ACTIVITY, FOLDER_TOOLS, runFolderTool } from './folders.js';
 import { MEMORY_ACTIVITY, MEMORY_TOOLS } from './memory.js';
 import { CREW_TOOL } from './intro.js';
 import { AGENT_TOOL } from './recruit.js';
+import { GOOGLE_ACTIVITY, GOOGLE_TOOLS, googleDetail } from './google.js';
+import { PROACTIVE_ACTIVITY, PROACTIVE_TOOLS } from './proactive.js';
 
 /** Tools the hub runs itself, and what each looks like in the chat. */
-const CLIENT_ACTIVITY = { ...FOLDER_ACTIVITY, ...MEMORY_ACTIVITY };
+const CLIENT_ACTIVITY = { ...FOLDER_ACTIVITY, ...MEMORY_ACTIVITY, ...GOOGLE_ACTIVITY, ...PROACTIVE_ACTIVITY };
+
+/** The words shown beside a hub-run tool in the chat. */
+function clientDetail(name, input = {}) {
+  if (name === 'search_files') return input.query;
+  if (MEMORY_ACTIVITY[name]) return input.note;
+  if (GOOGLE_ACTIVITY[name]) return googleDetail(name, input);
+  if (name === 'follow_up') {
+    const at = Number.isInteger(input.in_minutes) ? Date.now() + input.in_minutes * 60_000 : new Date(input.at ?? '').getTime();
+    return Number.isNaN(at) ? '' : new Date(at).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+  if (name === 'watch') return input.what;
+  if (name === 'stop_watching') return '';
+  return input.path;
+}
 
 const MAX_TOKENS = 64000;
 /** Round trips through the hub's own tools (shared folders) in one reply. */
@@ -26,7 +42,7 @@ const NO_FALLBACK = /^claude-haiku/;
  * here on the hub. With both web and code on, the basic web tools are used so the model has one code
  * sandbox rather than two.
  */
-export function anthropicTools(model, { web = false, code = false, folders = null, memory = null, crew = null, recruit = null } = {}) {
+export function anthropicTools(model, { web = false, code = false, folders = null, memory = null, crew = null, recruit = null, google = null, proactive = null } = {}) {
   const tools = [];
   if (web) {
     const dynamic = DYNAMIC_WEB.test(model) && !code;
@@ -40,6 +56,8 @@ export function anthropicTools(model, { web = false, code = false, folders = nul
   if (memory) tools.push(...MEMORY_TOOLS);
   if (crew) tools.push(CREW_TOOL);
   if (recruit) tools.push(AGENT_TOOL);
+  if (google) tools.push(...GOOGLE_TOOLS);
+  if (proactive) tools.push(...PROACTIVE_TOOLS);
   return tools;
 }
 
@@ -156,9 +174,7 @@ export async function streamAnthropic({
       const entry = serverActivity(block, abilities);
       if (entry) note(block.id, entry);
     } else if (block.type === 'tool_use' && CLIENT_ACTIVITY[block.name]) {
-      const input = block.input ?? {};
-      const detail = block.name === 'search_files' ? input.query : MEMORY_ACTIVITY[block.name] ? input.note : input.path;
-      note(block.id, { kind: CLIENT_ACTIVITY[block.name], detail: short(detail, 300) });
+      note(block.id, { kind: CLIENT_ACTIVITY[block.name], detail: short(clientDetail(block.name, block.input ?? {}), 300) });
     } else if (block.type.endsWith('_tool_result')) {
       finish(block.tool_use_id, String(block.content?.type ?? '').endsWith('_error'));
     } else if (block.type === 'text' && block.citations?.length) {
@@ -243,7 +259,7 @@ export async function streamAnthropic({
       // end_turn, or max_tokens (a tool call cut off there never runs), or anything else that ends the reply.
       if (stop !== 'tool_use' || !calls.length) break;
       if (++steps > MAX_STEPS) {
-        if (!text.trim()) throw new ProviderError('The agent kept looking through files without answering. Try a more specific ask.');
+        if (!text.trim()) throw new ProviderError('The agent kept using its tools without answering. Try a more specific ask.');
         break;
       }
       pushAssistant(echoable(final.content));
@@ -254,6 +270,8 @@ export async function streamAnthropic({
         else if (abilities.memory && MEMORY_ACTIVITY[call.name]) result = await abilities.memory.run(call.name, call.input);
         else if (abilities.crew && call.name === CREW_TOOL.name) result = await abilities.crew.run(call.input);
         else if (abilities.recruit && call.name === AGENT_TOOL.name) result = await abilities.recruit.run(call.input);
+        else if (abilities.google && GOOGLE_ACTIVITY[call.name]) result = await abilities.google.run(call.name, call.input);
+        else if (abilities.proactive && PROACTIVE_ACTIVITY[call.name]) result = await abilities.proactive.run(call.name, call.input);
         finish(call.id, result.isError);
         results.push({ type: 'tool_result', tool_use_id: call.id, content: result.text, ...(result.isError ? { is_error: true } : {}) });
       }

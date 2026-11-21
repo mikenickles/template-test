@@ -63,6 +63,22 @@ fun activityLabel(activity: Activity, live: Boolean = false): ActivityLabel {
         )
         Activity.KIND_REMEMBER -> ActivityLabel(if (live) "Remembering" else if (failed) "Couldn't remember" else "Remembered", detail)
         Activity.KIND_FORGET -> ActivityLabel(if (live) "Forgetting" else if (failed) "Couldn't forget" else "Forgot", detail)
+        Activity.KIND_MAIL_SEARCH -> ActivityLabel(
+            if (live) "Searching email" else if (failed) "Email search failed" else "Searched email",
+            if (detail.isBlank()) "" else "for “$detail”",
+        )
+        Activity.KIND_MAIL_READ -> ActivityLabel(if (live) "Reading an email" else if (failed) "Couldn't read an email" else "Read an email", "")
+        Activity.KIND_MAIL_DRAFT -> ActivityLabel(if (live) "Drafting an email" else if (failed) "Couldn't save a draft" else "Saved a draft", if (detail.isBlank()) "" else "to $detail")
+        Activity.KIND_CALENDAR -> ActivityLabel(if (live) "Checking the calendar" else if (failed) "Couldn't check the calendar" else "Checked the calendar", detail)
+        Activity.KIND_CALENDAR_ADD -> ActivityLabel(if (live) "Adding to the calendar" else if (failed) "Couldn't add to the calendar" else "Added to the calendar", detail)
+        Activity.KIND_DRIVE_SEARCH -> ActivityLabel(
+            if (live) "Searching Drive" else if (failed) "Drive search failed" else "Searched Drive",
+            if (detail.isBlank()) "" else "for “$detail”",
+        )
+        Activity.KIND_DRIVE_READ -> ActivityLabel(if (live) "Reading from Drive" else if (failed) "Couldn't open a Drive file" else "Read from Drive", "")
+        Activity.KIND_FOLLOW_UP -> ActivityLabel(if (live) "Setting a follow-up" else if (failed) "Couldn't set a follow-up" else "Will follow up", detail)
+        Activity.KIND_WATCH -> ActivityLabel(if (live) "Setting up a watch" else if (failed) "Couldn't watch" else "Watching", detail)
+        Activity.KIND_WATCH_STOP -> ActivityLabel(if (live) "Stopping a watch" else if (failed) "Couldn't stop a watch" else "Stopped watching", detail)
         else -> ActivityLabel(if (live) "Working" else "Used a tool", detail)
     }
 }
@@ -80,6 +96,16 @@ fun activitySummary(activity: List<Activity>): String {
         if (count(Activity.KIND_FIND) > 0) add("searched your files")
         count(Activity.KIND_REMEMBER).takeIf { it > 0 }?.let { add(times(it, "saved a note", "saved # notes")) }
         if (count(Activity.KIND_FORGET) > 0) add("forgot a note")
+        if (count(Activity.KIND_MAIL_SEARCH) > 0) add("searched email")
+        count(Activity.KIND_MAIL_READ).takeIf { it > 0 }?.let { add(times(it, "read an email", "read # emails")) }
+        count(Activity.KIND_MAIL_DRAFT).takeIf { it > 0 }?.let { add(times(it, "saved a draft", "saved # drafts")) }
+        if (count(Activity.KIND_CALENDAR) > 0) add("checked the calendar")
+        count(Activity.KIND_CALENDAR_ADD).takeIf { it > 0 }?.let { add(times(it, "added an event", "added # events")) }
+        if (count(Activity.KIND_DRIVE_SEARCH) > 0) add("searched Drive")
+        count(Activity.KIND_DRIVE_READ).takeIf { it > 0 }?.let { add(times(it, "read a Drive file", "read # Drive files")) }
+        if (count(Activity.KIND_FOLLOW_UP) > 0) add("set a follow-up")
+        if (count(Activity.KIND_WATCH) > 0) add("started watching")
+        if (count(Activity.KIND_WATCH_STOP) > 0) add("stopped a watch")
     }.ifEmpty { listOf("used ${activity.size} tools") }
     val joined = if (parts.size == 1) parts[0] else parts.dropLast(1).joinToString(", ") + " and " + parts.last()
     return joined.replaceFirstChar { it.uppercase() }
@@ -93,6 +119,12 @@ private fun iconFor(kind: String) = when (kind) {
     Activity.KIND_FILE -> OrbitIcon.File
     Activity.KIND_FIND -> OrbitIcon.Search
     Activity.KIND_REMEMBER, Activity.KIND_FORGET -> OrbitIcon.Memory
+    Activity.KIND_MAIL_SEARCH, Activity.KIND_MAIL_READ, Activity.KIND_MAIL_DRAFT -> OrbitIcon.Mail
+    Activity.KIND_CALENDAR, Activity.KIND_CALENDAR_ADD -> OrbitIcon.Calendar
+    Activity.KIND_DRIVE_SEARCH -> OrbitIcon.Search
+    Activity.KIND_DRIVE_READ -> OrbitIcon.File
+    Activity.KIND_FOLLOW_UP -> OrbitIcon.Clock
+    Activity.KIND_WATCH, Activity.KIND_WATCH_STOP -> OrbitIcon.Bell
     else -> OrbitIcon.More
 }
 

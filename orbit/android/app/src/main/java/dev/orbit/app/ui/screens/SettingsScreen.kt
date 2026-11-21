@@ -58,6 +58,8 @@ fun SettingsScreen(
     pcUpdating: String? = null,
     onUpdatePc: () -> Unit = {},
     onCheckUpdates: () -> Unit = {},
+    onOpenProactive: () -> Unit = {},
+    onDisconnectGoogle: () -> Unit = {},
 ) {
     val c = Orbit.colors
     val uri = LocalUriHandler.current
@@ -207,6 +209,60 @@ fun SettingsScreen(
                         OrbitIcon(OrbitIcon.Chevron, Modifier.padding(start = 4.dp), size = 18.dp, tint = c.textTertiary)
                     }
                 }
+
+                SectionTitle("Proactive", Modifier.padding(top = OrbitDimens.section, bottom = 8.dp))
+                OrbitCard(Modifier.fillMaxWidth(), onClick = onOpenProactive) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = OrbitDimens.rowPad, end = 8.dp).heightIn(min = 56.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        OrbitIcon(OrbitIcon.Bell, size = 20.dp, tint = c.text)
+                        Column(Modifier.weight(1f).padding(start = 14.dp, top = 12.dp, bottom = 12.dp)) {
+                            Text("Your crew, on its own", style = OrbitType.titleS, color = c.text)
+                            Text(describeProactive(state.proactive, state.agents), Modifier.padding(top = 2.dp), style = OrbitType.bodyS, color = c.textSecondary)
+                        }
+                        OrbitIcon(OrbitIcon.Chevron, Modifier.padding(start = 4.dp), size = 18.dp, tint = c.textTertiary)
+                    }
+                }
+
+                SectionTitle("Google", Modifier.padding(top = OrbitDimens.section, bottom = 8.dp))
+                OrbitCard(Modifier.fillMaxWidth()) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = OrbitDimens.rowPad, end = 6.dp).heightIn(min = 60.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        OrbitIcon(OrbitIcon.Mail, size = 20.dp, tint = c.text)
+                        Column(Modifier.weight(1f).padding(start = 14.dp, end = 8.dp, top = 12.dp, bottom = 12.dp)) {
+                            Text(if (state.google.connected) state.google.email.ifBlank { "Connected" } else "Not connected", style = OrbitType.titleS, color = c.text)
+                            Text(
+                                if (state.google.connected) "Gmail, Calendar and Drive" else "Gmail, Calendar and Drive for your agents",
+                                Modifier.padding(top = 2.dp),
+                                style = OrbitType.bodyS,
+                                color = c.textSecondary,
+                            )
+                        }
+                        if (state.google.connected) {
+                            Text(
+                                "Disconnect",
+                                Modifier.tap(CircleShape, 0.94f, onDisconnectGoogle).padding(horizontal = 10.dp, vertical = 12.dp),
+                                style = OrbitType.label,
+                                color = c.textSecondary,
+                            )
+                        }
+                    }
+                }
+                Text(
+                    if (state.google.connected) {
+                        "Agents with Use your Google account turned on can search and read your email and save drafts (never send), " +
+                            "check your calendar and add events, and read your Drive."
+                    } else {
+                        "Connect it from your PC: open localhost:${hubPort(hubAddress)} in a browser there, then Settings, then Google. " +
+                            "It stays on your PC; nothing about your account is stored on this phone."
+                    },
+                    Modifier.padding(top = OrbitDimens.labelGap),
+                    style = OrbitType.bodyS,
+                    color = c.textTertiary,
+                )
 
                 SectionTitle("Model providers", Modifier.padding(top = OrbitDimens.section, bottom = 8.dp))
                 OrbitCard(Modifier.fillMaxWidth()) {

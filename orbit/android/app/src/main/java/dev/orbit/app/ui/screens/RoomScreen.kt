@@ -94,6 +94,7 @@ import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.Agent
 import dev.orbit.app.data.Attachment
 import dev.orbit.app.data.Message
+import dev.orbit.app.data.ProactiveMark
 import dev.orbit.app.data.Room
 import dev.orbit.app.ui.DraftAttachment
 import dev.orbit.app.ui.RoomUiState
@@ -730,8 +731,23 @@ private fun AgentMessage(message: Message, agent: Agent?, mentionColors: Map<Str
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(agent?.name ?: message.author.name, style = OrbitType.titleS, color = avatar.textColor())
+                // Written on its own, unasked: say why, quietly.
+                message.proactive?.let { mark ->
+                    OrbitIcon(OrbitIcon.Bell, Modifier.padding(start = 8.dp), size = 13.dp, tint = c.textTertiary)
+                    Text(
+                        when (mark.kind) {
+                            ProactiveMark.KIND_FOLLOW_UP -> "Following up"
+                            ProactiveMark.KIND_WATCH -> "Watching"
+                            ProactiveMark.KIND_BRIEF -> "Morning brief"
+                            else -> "Checking in"
+                        },
+                        Modifier.padding(start = 4.dp),
+                        style = OrbitType.caption,
+                        color = c.textTertiary,
+                    )
+                }
                 val model = message.author.model
-                if (showModel && !model.isNullOrBlank()) {
+                if (showModel && !model.isNullOrBlank() && message.proactive == null) {
                     Text(
                         model,
                         Modifier.padding(start = 8.dp),

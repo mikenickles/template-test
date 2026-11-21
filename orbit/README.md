@@ -58,6 +58,15 @@ hub on an always-on PC.
   `"prices"` in `config.json`.
 - **Long rooms** stay affordable: past about 15,000 words, the oldest part of a
   room is folded into a running summary that agents read instead.
+- **Proactive agents.** Set an agent to reach out (Gentle or Active) and it writes to you on its own when
+  something is worth it: a deadline coming up, a plan for today. Agents also follow up when they said they
+  would, keep an eye on things on the web (a price, a page, news), and one can write a morning brief. It all
+  shows under **From your crew** on Home and as a notification, within quiet hours and a daily limit you set
+  in Settings, under Proactive.
+- **Your Google account.** Turn on **Use your Google account** for an agent and it can search and read your
+  Gmail and save drafts (it never sends), check your calendar and add events, and read your Drive. Connect it
+  once from Treehouse on your PC, in Settings, under Google: it walks you through making your own Google
+  Cloud key, and everything stays on the PC.
 - **Desktop app.** The hub also serves Treehouse for the PC: open
   `http://localhost:8787` in Edge or Chrome and choose **Install Treehouse** to keep
   it as an app with its own window. On the PC it signs in by itself; another

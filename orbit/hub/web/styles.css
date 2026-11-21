@@ -444,3 +444,18 @@ main > header, main > .messages, main > .composer-wrap { position: relative; }
   display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
 .first-room .treehouse { margin-bottom: 14px; }
 .first-room p { margin: 0 0 14px; max-width: 380px; }
+
+/* ---------- Proactive and Google ---------- */
+.google-setup { padding: 16px; border-top: 1px solid var(--hairline); }
+.google-setup ol { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 6px; }
+.nudges { display: grid; gap: 10px; margin-top: 10px; }
+.nudge { position: relative; display: flex; gap: 12px; padding: 14px 8px 16px 16px; text-align: left; width: 100%; border-radius: var(--r-l);
+  border: var(--edge); background: var(--surface); overflow: hidden; transition: border-color 0.15s, transform 0.12s; }
+.nudge::before { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, color-mix(in srgb, var(--wash) 22%, transparent), transparent 60%); pointer-events: none; }
+.nudge > * { position: relative; }
+.nudge:hover { border-color: var(--line); }
+.nudge .text { flex: 1; min-width: 0; }
+.nudge .text p { margin: 4px 0 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.reached { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; font-size: 12px; color: var(--text-3); }
+.reached svg { width: 13px; height: 13px; }
+

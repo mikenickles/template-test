@@ -130,7 +130,8 @@ function App() {
       ${room
         ? html`<${RoomView} key=${room.id} room=${room} state=${state} onDialog=${setDialog} notify=${notify} onBack=${() => openRoom(null)}
             onOpenRoom=${(id) => refresh().then(() => openRoom(id))} onStale=${refresh} />`
-        : html`<${Welcome} state=${state} onDialog=${setDialog} onIntro=${startIntro} onOpen=${openRoom} />`}
+        : html`<${Welcome} state=${state} onDialog=${setDialog} onIntro=${startIntro} onOpen=${openRoom}
+            onDismiss=${(id) => api.dismissNudge(id).then(refresh).catch((e) => notify(e.message))} />`}
     </main>
     ${dialog?.type === 'agent' && html`<${AgentEditor} agent=${dialog.agent} state=${state} notify=${notify} onClose=${close} onSaved=${() => edited()} onChanged=${refresh} onAddKey=${() => setDialog({ type: 'settings' })} />`}
     ${dialog?.type === 'room' && html`<${RoomEditor} room=${dialog.room} state=${state} notify=${notify} onClose=${close} onSaved=${(id) => edited(id)} />`}
@@ -257,7 +258,7 @@ function greeting() {
 }
 
 /** Home, when no room is open: a hello, the guide's invitation until the crew knows you, and the crew. */
-function Welcome({ state, onDialog, onIntro, onOpen }) {
+function Welcome({ state, onDialog, onIntro, onOpen, onDismiss }) {
   const name = state.profile?.name;
   const busy = state.rooms.find((r) => r.active);
   const speaker = state.agents.find((a) => a.id === busy?.speaking);
@@ -284,6 +285,21 @@ function Welcome({ state, onDialog, onIntro, onOpen }) {
         ? html`<button class="button" onClick=${onIntro}>${introRoom ? 'Continue the chat' : 'Say hello'}</button>`
         : html`<button class="button" onClick=${() => onDialog({ type: 'settings' })}>Add a key</button>`}
     </div>`}
+    ${state.nudges?.length > 0 && html`<div class="stage-title"><span class="overline">From your crew</span></div>
+    <div class="nudges">${[...state.nudges].reverse().slice(0, 5).map((n) => {
+      const agent = state.agents.find((a) => a.id === n.agentId);
+      const room = state.rooms.find((r) => r.id === n.roomId);
+      const why = { followup: 'Follow-up', watch: 'Watch', brief: 'Morning brief' }[n.kind] ?? 'Check-in';
+      return html`<div class="nudge" key=${n.id} style=${`--wash:${agent ? tint(agent.avatar) : 'transparent'}`}>
+        <${Avatar} spec=${agent?.avatar} size=${40} />
+        <button class="text" style="text-align:left" onClick=${() => onOpen(n.roomId)}>
+          <div class="body-s"><span class="title-s" style=${`color:${agent ? inkColor(agent.avatar) : 'var(--text)'}`}>${agent?.name ?? 'Your crew'}</span>
+            <span class="muted"> · ${why}${room && n.kind !== 'brief' ? ` · ${room.name}` : ''} · ${ago(n.at)}</span></div>
+          <p>${n.text}</p>
+        </button>
+        <button class="icon-button" aria-label="Dismiss" title="Dismiss" onClick=${() => onDismiss(n.id)}><${Icon} name="close" size=${18} /></button>
+      </div>`;
+    })}</div>`}
     ${state.agents.length > 0 && html`<div class="stage-title"><span class="overline">Your crew</span>
       <button class="label muted" onClick=${() => onDialog({ type: 'room' })}>New room</button></div>
     <div class="stage">${state.agents.map((agent) => html`<button class="stage-member" style=${`--pool:${tint(agent.avatar)}`} title=${`Edit ${agent.name}`} onClick=${() => onDialog({ type: 'agent', agent })}>
@@ -500,7 +516,19 @@ const STEPS = {
   find: ['Searching files for', 'Searched files for', 'File search failed for', 'search'],
   remember: ['Remembering', 'Remembered', "Couldn't remember", 'memory'],
   forget: ['Forgetting', 'Forgot', "Couldn't forget", 'memory'],
+  mail_search: ['Searching email', 'Searched email', 'Email search failed', 'mail'],
+  mail_read: ['Reading an email', 'Read an email', "Couldn't read an email", 'mail'],
+  mail_draft: ['Drafting an email', 'Saved a draft', "Couldn't save a draft", 'mail'],
+  calendar: ['Checking the calendar', 'Checked the calendar', "Couldn't check the calendar", 'calendar'],
+  calendar_add: ['Adding to the calendar', 'Added to the calendar', "Couldn't add to the calendar", 'calendar'],
+  drive_search: ['Searching Drive', 'Searched Drive', 'Drive search failed', 'search'],
+  drive_read: ['Reading from Drive', 'Read from Drive', "Couldn't open a Drive file", 'file'],
+  followup: ['Setting a follow-up', 'Will follow up', "Couldn't set a follow-up", 'clock'],
+  watch: ['Setting up a watch', 'Watching', "Couldn't watch", 'bell'],
+  watch_stop: ['Stopping a watch', 'Stopped watching', "Couldn't stop a watch", 'bell'],
 };
+/** Why an agent wrote on its own, beside its name. */
+const REACHED = { checkin: 'Checking in', followup: 'Following up', watch: 'Watching', brief: 'Morning brief' };
 const site = (url) => url.replace(/^https?:\/\/(www\.)?/, '').split(/[/?#]/)[0];
 const leaf = (path) => path.replace(/\/$/, '').split('/').pop() || path;
 function stepDetail(step) {
@@ -510,6 +538,11 @@ function stepDetail(step) {
     case 'file': return leaf(step.detail);
     case 'find': return `“${step.detail}”`;
     case 'code': return '';
+    case 'mail_search':
+    case 'drive_search': return step.detail ? `for “${step.detail}”` : '';
+    case 'mail_draft': return step.detail ? `to ${step.detail}` : '';
+    case 'mail_read':
+    case 'drive_read': return '';
     default: return step.detail;
   }
 }
@@ -525,6 +558,16 @@ function summary(activity) {
     count('find') && 'searched your files',
     count('remember') && times(count('remember'), 'saved a note', 'saved # notes'),
     count('forget') && 'forgot a note',
+    count('mail_search') && 'searched email',
+    count('mail_read') && times(count('mail_read'), 'read an email', 'read # emails'),
+    count('mail_draft') && times(count('mail_draft'), 'saved a draft', 'saved # drafts'),
+    count('calendar') && 'checked the calendar',
+    count('calendar_add') && times(count('calendar_add'), 'added an event', 'added # events'),
+    count('drive_search') && 'searched Drive',
+    count('drive_read') && times(count('drive_read'), 'read a Drive file', 'read # Drive files'),
+    count('followup') && 'set a follow-up',
+    count('watch') && 'started watching',
+    count('watch_stop') && 'stopped a watch',
   ].filter(Boolean);
   const text = parts.length <= 1 ? parts[0] ?? `used ${activity.length} tools` : `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`;
   return text[0].toUpperCase() + text.slice(1);
@@ -556,7 +599,8 @@ function AgentMessage({ message, agent, showModel, mentions }) {
     <div class="body">
       <div class="agent-head">
         <span class="name" style=${`color:${inkColor(agent?.avatar)}`}>${agent?.name ?? message.author.name}</span>
-        ${showModel && message.author.model && html`<span class="mono faint">${message.author.model}</span>`}
+        ${message.proactive && html`<span class="reached"><${Icon} name="bell" size=${13} />${REACHED[message.proactive.kind] ?? 'Checking in'}</span>`}
+        ${showModel && !message.proactive && message.author.model && html`<span class="mono faint">${message.author.model}</span>`}
       </div>
       <${Trail} activity=${message.activity} streaming=${streaming} />
       ${message.text && html`<div class="md" dangerouslySetInnerHTML=${{ __html: rendered }}></div>`}

@@ -8,6 +8,13 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.LinearGradientShader
 import androidx.compose.ui.graphics.Paint
 import dev.orbit.app.data.Activity
+import dev.orbit.app.data.BriefSettings
+import dev.orbit.app.data.FollowUp
+import dev.orbit.app.data.GoogleStatus
+import dev.orbit.app.data.Nudge
+import dev.orbit.app.data.ProactiveMark
+import dev.orbit.app.data.ProactiveSettings
+import dev.orbit.app.data.Watch
 import dev.orbit.app.data.Attachment
 import dev.orbit.app.ui.DraftAttachment
 import dev.orbit.app.ui.components.HubImages
@@ -110,6 +117,19 @@ object SampleData {
     val app = AppState(
         loaded = true, hub = HubInfo("Home PC", "0.1.0", listOf("192.168.1.20:8787"), listOf("100.101.102.103:8787")), agents = agents, rooms = listOf(launch, trip, empty), providers = providers,
         folders = folders, profile = profile,
+    )
+
+    /** Nova and Rio reach out on their own; Google is connected; a follow-up and a watch are set. */
+    val proactive = app.copy(
+        agents = agents.map { if (it.id == "a1") it.copy(proactive = Agent.PROACTIVE_GENTLE, abilities = it.abilities + Agent.ABILITY_GOOGLE) else it },
+        proactive = ProactiveSettings(brief = BriefSettings(enabled = true, time = "07:00", agentId = "a1")),
+        nudges = listOf(
+            Nudge("n1", NOW - 3 * 60 * 60 * 1000, ProactiveMark.KIND_BRIEF, "Morning brief", "a1", "r1", "x1", "Good morning! Two things today: the design review at 10, and the invite email for the beta still needs a final read."),
+            Nudge("n2", NOW - 20 * 60 * 1000, ProactiveMark.KIND_CHECK_IN, "Check-in", "a1", "r1", "x2", "The beta goes out Friday and the signup page still has placeholder copy. Want me to ask Pixel for a first draft today?"),
+        ),
+        followUps = listOf(FollowUp("f1", "a1", "r1", NOW + 26 * 60 * 60 * 1000, "Check the invite email went out")),
+        watches = listOf(Watch("w1", "a1", "r2", "Flights to Kyoto in April", "under $700", "day", "Cheapest is $780 on ANA")),
+        google = GoogleStatus(configured = true, connected = true, email = "alex@example.com"),
     )
 
     /** The PC is holding a newer app and a newer hub. */

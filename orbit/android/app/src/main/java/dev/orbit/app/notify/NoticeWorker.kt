@@ -23,8 +23,8 @@ fun noticeText(notice: Notice): String = when {
 }
 
 /**
- * Checks the hub every so often for results of scheduled runs and posts a notification for each, so
- * "every morning at 8" reaches the phone even when Orbit hasn't been opened. Android decides exactly
+ * Checks the hub every so often for results of scheduled runs, and for what agents brought up on their
+ * own, and posts a notification for each, so they reach the phone even when Treehouse hasn't been opened. Android decides exactly
  * when it runs, about every 15 minutes while there's a network.
  */
 class NoticeWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
@@ -40,7 +40,9 @@ class NoticeWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         // The first check only marks where to start, rather than replaying old results.
         if (seen > 0 && !AppVisibility.onScreen) {
             for (notice in fresh.notices) {
-                Notifier.announce(applicationContext, notice.roomId, notice.room.ifBlank { "Treehouse" }, noticeText(notice), "Scheduled")
+                // Something an agent brought up on its own, or a scheduled run's result.
+                val label = if (notice.kind == "proactive") "From your crew" else "Scheduled"
+                Notifier.announce(applicationContext, notice.roomId, notice.room.ifBlank { "Treehouse" }, noticeText(notice), label)
             }
         }
         prefs.edit { putLong(SEEN, fresh.notices.maxOfOrNull { it.at }?.coerceAtLeast(fresh.now) ?: fresh.now.coerceAtLeast(seen)) }

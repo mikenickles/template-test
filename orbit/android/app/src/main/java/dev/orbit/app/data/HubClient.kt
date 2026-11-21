@@ -159,6 +159,28 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
         call<Unit>("POST", "/api/schedules/$id/run", "{}")
     }
 
+    /** When proactive agents may speak, how often, and the morning brief. Returns what the hub saved. */
+    suspend fun saveProactive(settings: ProactiveSettings): ProactiveSettings =
+        call("PUT", "/api/proactive", OrbitJson.encodeToString(settings))
+
+    /** Cancels a follow-up an agent booked. */
+    suspend fun deleteFollowUp(id: String) {
+        call<Unit>("DELETE", "/api/followups/$id")
+    }
+
+    /** Stops something an agent is watching. */
+    suspend fun deleteWatch(id: String) {
+        call<Unit>("DELETE", "/api/watches/$id")
+    }
+
+    /** Takes a "From your crew" card off Home. */
+    suspend fun dismissNudge(id: String) {
+        call<Unit>("DELETE", "/api/nudges/$id")
+    }
+
+    /** Signs the hub out of the user's Google account. Connecting happens on the PC. */
+    suspend fun disconnectGoogle(): GoogleStatus = call("DELETE", "/api/google")
+
     /** Results of scheduled runs since [since] (milliseconds), and the hub's clock now. */
     suspend fun notices(since: Long): Notices = call("GET", "/api/notices?since=$since")
 

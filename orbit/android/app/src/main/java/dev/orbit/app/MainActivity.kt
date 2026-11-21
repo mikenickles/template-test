@@ -60,6 +60,7 @@ import dev.orbit.app.ui.OrbitNavHost
 import dev.orbit.app.ui.RoomViewModel
 import dev.orbit.app.ui.screen
 import dev.orbit.app.ui.screens.AboutYouScreen
+import dev.orbit.app.ui.screens.ProactiveScreen
 import dev.orbit.app.ui.screens.AgentEditorScreen
 import dev.orbit.app.ui.screens.HomeScreen
 import dev.orbit.app.ui.screens.PairScreen
@@ -245,6 +246,11 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onUpdate = vm::installUpdate,
                 pcUpdating = pcUpdating,
                 onUpdatePc = vm::updatePc,
+                onOpenNudge = { nudge ->
+                    vm.nudgesSeen(nudge.roomId)
+                    nav.navigate("room/${nudge.roomId}")
+                },
+                onDismissNudge = { vm.dismissNudge(it.id) },
                 onStartIntro = {
                     vm.startIntro { id, error ->
                         if (id != null) nav.navigate("room/$id")
@@ -315,6 +321,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 folders = state.folders,
                 onAddMemory = { text, done -> agent?.let { vm.addMemory(it.id, text, done) } },
                 onRemoveMemory = { note -> agent?.let { vm.removeMemory(it.id, note.id) } },
+                google = state.google,
             )
         }
         screen("roomEdit?id={id}", arguments = OptionalId) { entry ->
@@ -359,6 +366,18 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 pcUpdating = pcUpdating,
                 onUpdatePc = vm::updatePc,
                 onCheckUpdates = vm::checkForUpdates,
+                onOpenProactive = { nav.navigate("proactive") },
+                onDisconnectGoogle = vm::disconnectGoogle,
+            )
+        }
+        screen("proactive") {
+            ProactiveScreen(
+                state = state,
+                onSave = vm::saveProactive,
+                onEditAgent = { nav.navigate("agent?id=${it.id}") },
+                onCancelFollowUp = { vm.deleteFollowUp(it.id) },
+                onStopWatch = { vm.deleteWatch(it.id) },
+                onBack = { nav.popBackStack() },
             )
         }
         screen("schedules/{id}") { entry ->

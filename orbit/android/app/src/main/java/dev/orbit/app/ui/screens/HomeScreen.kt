@@ -60,6 +60,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.Agent
+import dev.orbit.app.data.Nudge
+import dev.orbit.app.data.ProactiveMark
 import dev.orbit.app.data.Room
 import dev.orbit.app.ui.AppState
 import dev.orbit.app.ui.UpdateStatus
@@ -83,6 +85,7 @@ import dev.orbit.app.ui.components.UpdateCard
 import dev.orbit.app.ui.components.lift
 import dev.orbit.app.ui.components.surfaceBorder
 import dev.orbit.app.ui.components.tap
+import dev.orbit.app.ui.components.IconTap
 import dev.orbit.app.ui.components.textColor
 import dev.orbit.app.ui.components.tint
 import dev.orbit.app.ui.shared
@@ -121,6 +124,9 @@ fun HomeScreen(
     /** The version the PC is installing right now, if any. */
     pcUpdating: String? = null,
     onUpdatePc: () -> Unit = {},
+    /** Opens what an agent brought up on its own, in its room. */
+    onOpenNudge: (Nudge) -> Unit = {},
+    onDismissNudge: (Nudge) -> Unit = {},
 ) {
     val c = Orbit.colors
     val list = rememberLazyListState()
@@ -178,6 +184,25 @@ fun HomeScreen(
                         UpdateCard(
                             appUpdate, updateStatus, onUpdate,
                             Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 22.dp).entrance(entrances, "update", 0),
+                        )
+                    }
+                }
+                // What agents brought up on their own, newest first, until it's opened or dismissed.
+                if (state.nudges.isNotEmpty()) {
+                    item(key = "nudges-title") {
+                        SectionTitle(
+                            "From your crew",
+                            Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = OrbitDimens.section, bottom = 6.dp)
+                                .animateItem().entrance(entrances, "nudges-title", 0),
+                            count = state.nudges.size,
+                        )
+                    }
+                    items(state.nudges.asReversed().take(5), key = { "nudge-${it.id}" }) { nudge ->
+                        NudgeCard(
+                            nudge, state.agent(nudge.agentId), state.room(nudge.roomId), now,
+                            onOpen = { onOpenNudge(nudge) },
+                            onDismiss = { onDismissNudge(nudge) },
+                            modifier = Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 10.dp).animateItem(),
                         )
                     }
                 }
@@ -338,6 +363,54 @@ private fun Greeting(state: AppState, now: Long, modifier: Modifier) {
  * The guide's invitation to get to know each other, washed in the guide's color. Without a Claude
  * key it asks for one first.
  */
+/**
+ * Something an agent wrote on its own: who, why (a check-in, a follow-up, a watch, the morning brief),
+ * and the first lines. Tapping opens the room; the cross takes it off Home.
+ */
+@Composable
+private fun NudgeCard(nudge: Nudge, agent: Agent?, room: Room?, now: Long, onOpen: () -> Unit, onDismiss: () -> Unit, modifier: Modifier) {
+    val c = Orbit.colors
+    val look = agent?.avatar ?: dev.orbit.app.data.AvatarSpec(0)
+    val wash = look.tint().copy(alpha = if (c.isDark) 0.2f else 0.24f)
+    val shape = RoundedCornerShape(OrbitDimens.radiusL)
+    val why = when (nudge.kind) {
+        ProactiveMark.KIND_FOLLOW_UP -> "Follow-up"
+        ProactiveMark.KIND_WATCH -> "Watch"
+        ProactiveMark.KIND_BRIEF -> "Morning brief"
+        else -> "Check-in"
+    }
+    Box(
+        modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(c.surface)
+            .background(Brush.linearGradient(listOf(wash, Color.Transparent), start = Offset.Zero, end = Offset(700f, 420f)))
+            .border(surfaceBorder(), shape)
+            .tap(shape, 0.98f, onOpen),
+    ) {
+        Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 14.dp, bottom = 16.dp)) {
+            AgentAvatar(look, size = 40.dp)
+            Column(Modifier.weight(1f).padding(start = 12.dp, top = 1.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(agent?.name ?: "Your crew", style = OrbitType.titleS, color = look.textColor())
+                    Text(
+                        // The brief has a room of its own, so its name would only repeat what it is.
+                        " · $why${room?.takeIf { nudge.kind != ProactiveMark.KIND_BRIEF }?.let { " · ${it.name}" }.orEmpty()}",
+                        Modifier.weight(1f, fill = false),
+                        style = OrbitType.bodyS,
+                        color = c.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(relativeTime(nudge.at, now), Modifier.padding(start = 8.dp), style = OrbitType.caption, color = c.textTertiary)
+                }
+                Text(nudge.text, Modifier.padding(top = 4.dp), style = OrbitType.bodyM, color = c.text, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            }
+            IconTap(OrbitIcon.Close, "Dismiss", onDismiss, tint = c.textTertiary)
+        }
+    }
+}
+
 @Composable
 private fun IntroCard(state: AppState, onStart: () -> Unit, onAddKey: () -> Unit, modifier: Modifier) {
     val c = Orbit.colors

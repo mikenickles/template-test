@@ -62,6 +62,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.Agent
 import dev.orbit.app.data.AvatarSpec
+import dev.orbit.app.data.GoogleStatus
 import dev.orbit.app.data.MemoryNote
 import dev.orbit.app.data.OrbitJson
 import dev.orbit.app.data.Provider
@@ -121,6 +122,8 @@ fun AgentEditorScreen(
     folders: List<SharedFolder> = emptyList(),
     onAddMemory: (text: String, onDone: (Boolean) -> Unit) -> Unit = { _, _ -> },
     onRemoveMemory: (MemoryNote) -> Unit = {},
+    /** Whether the user's Google account is connected on the PC, and as whom. */
+    google: GoogleStatus = GoogleStatus(),
 ) {
     val c = Orbit.colors
     val haptics = rememberHaptics()
@@ -144,6 +147,8 @@ fun AgentEditorScreen(
     var files by rememberSaveable { mutableStateOf(Agent.ABILITY_FILES in start.abilities) }
     var remembers by rememberSaveable { mutableStateOf(Agent.ABILITY_MEMORY in start.abilities) }
     var hires by rememberSaveable { mutableStateOf(Agent.ABILITY_CREW in start.abilities) }
+    var usesGoogle by rememberSaveable { mutableStateOf(Agent.ABILITY_GOOGLE in start.abilities) }
+    var proactive by rememberSaveable { mutableStateOf(start.proactive) }
 
     val provider = providers.firstOrNull { it.id == providerId }
     var models by remember { mutableStateOf(emptyList<String>()) }
@@ -163,7 +168,9 @@ fun AgentEditorScreen(
                 Agent.ABILITY_FILES.takeIf { files },
                 Agent.ABILITY_MEMORY.takeIf { remembers },
                 Agent.ABILITY_CREW.takeIf { hires },
+                Agent.ABILITY_GOOGLE.takeIf { usesGoogle },
             ),
+            proactive = proactive,
         ),
     )
     fun pick(next: AvatarSpec) {
@@ -290,8 +297,48 @@ fun AgentEditorScreen(
                             hires,
                             supported,
                         ) { hires = it }
+                        Hairline()
+                        AbilityRow(
+                            OrbitIcon.Mail,
+                            "Use your Google account",
+                            if (google.connected) {
+                                "Gmail, Calendar and Drive for ${google.email.ifBlank { "your account" }}. Reads mail and saves drafts, never sends."
+                            } else {
+                                "Gmail, Calendar and Drive. Connect Google in Treehouse on your PC first, under Settings."
+                            },
+                            usesGoogle,
+                            supported,
+                        ) { usesGoogle = it }
                     }
                 }
+            }
+
+            Section("Reaches out")
+            Gutter {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for ((level, label) in listOf(Agent.PROACTIVE_OFF to "Off", Agent.PROACTIVE_GENTLE to "Gentle", Agent.PROACTIVE_ACTIVE to "Active")) {
+                        Pill(label, onClick = {
+                            if (proactive != level) haptics.tick()
+                            proactive = level
+                        }, selected = proactive == level)
+                    }
+                }
+                Text(
+                    when (proactive) {
+                        Agent.PROACTIVE_GENTLE ->
+                            "About once a day, ${name.ifBlank { "this agent" }} looks over your chats and writes to you only when something is worth it: a deadline coming up, a plan for today."
+                        Agent.PROACTIVE_ACTIVE ->
+                            "A few times a day, ${name.ifBlank { "this agent" }} looks over your chats, and your calendar and email if it can, and writes when something needs you."
+                        else -> "${name.ifBlank { "This agent" }} only replies when you write."
+                    } + if (proactive != Agent.PROACTIVE_OFF && provider?.abilities == true) {
+                        " It can also follow up later and keep an eye on things for you."
+                    } else {
+                        ""
+                    },
+                    Modifier.padding(top = 12.dp),
+                    style = OrbitType.bodyS,
+                    color = c.textSecondary,
+                )
             }
 
             // Notes belong to a saved agent, so a new one starts without them.
