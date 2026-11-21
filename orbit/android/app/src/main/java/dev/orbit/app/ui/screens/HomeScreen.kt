@@ -1,5 +1,6 @@
 package dev.orbit.app.ui.screens
 
+import dev.orbit.app.ui.components.CrewWash
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
@@ -154,6 +155,8 @@ fun HomeScreen(
     val pull = rememberPullToRefreshState()
 
     Scaffold(containerColor = c.bg) { padding ->
+      // The crew's colors glow softly behind Home, one agent to a corner.
+      CrewWash(state.agents.take(4).map { it.avatar.tint() }, Modifier.fillMaxSize())
       Box(Modifier.fillMaxSize().padding(padding)) {
         PullToRefreshBox(
             isRefreshing = pulled && state.refreshing,
@@ -233,10 +236,17 @@ fun HomeScreen(
                     }
                 }
                 if (state.agents.isNotEmpty()) item(key = "crew") {
-                    // Items are wider than the avatars; the row's inset keeps the first avatar on the gutter.
+                    // The crew sits on a frosted card; it scrolls sideways inside it when there are many.
+                    val glass = RoundedCornerShape(OrbitDimens.radiusL)
                     LazyRow(
-                        Modifier.entrance(entrances, "crew", 1),
-                        contentPadding = PaddingValues(horizontal = OrbitDimens.gutter - (CrewItem - CrewAvatar) / 2),
+                        Modifier
+                            .entrance(entrances, "crew", 1)
+                            .padding(horizontal = GlassInset)
+                            .fillMaxWidth()
+                            .clip(glass)
+                            .background(c.glass)
+                            .border(1.dp, c.hairline, glass),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 14.dp),
                     ) {
                         val speaking = state.rooms.filter { it.active }.mapNotNull { it.speaking }.toSet()
                         items(state.agents, key = { it.id }) { agent -> CrewMember(agent, agent.id in speaking) { onEditAgent(agent) } }
@@ -256,12 +266,14 @@ fun HomeScreen(
                         EmptyRooms(state.agents, Modifier.entrance(entrances, "rooms-empty", 3), onNewRoom = onNewRoom, onNewAgent = onNewAgent)
                     }
                 }
-                // The rooms share one card, parted by hairlines inset to the text.
+                // Each room is its own frosted card, floating over the crew's wash.
                 if (state.rooms.isNotEmpty()) item(key = "rooms") {
-                    OrbitCard(Modifier.fillMaxWidth().padding(horizontal = OrbitDimens.gutter).padding(top = 8.dp).animateItem().entrance(entrances, "rooms", 3)) {
-                        Column {
-                            state.rooms.forEachIndexed { index, room ->
-                                if (index > 0) Hairline(Modifier.padding(start = OrbitDimens.rowPad + RoomTile + 14.dp))
+                    Column(
+                        Modifier.fillMaxWidth().padding(horizontal = GlassInset).padding(top = 8.dp).animateItem().entrance(entrances, "rooms", 3),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        state.rooms.forEach { room ->
+                            OrbitCard(Modifier.fillMaxWidth(), color = c.glass, radius = 22.dp) {
                                 RoomRow(
                                     room,
                                     room.agentIds.mapNotNull(state::agent),
@@ -306,12 +318,21 @@ fun HomeScreen(
 @Composable
 private fun Header(state: AppState, onSettings: () -> Unit) {
     val c = Orbit.colors
+    // A frosted pill with the app's name and, on the right, the hub it's talking to.
+    val pill = RoundedCornerShape(22.dp)
     Row(
-        Modifier.fillMaxWidth().padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 14.dp),
+        Modifier
+            .padding(start = GlassInset, end = GlassInset, top = 10.dp)
+            .fillMaxWidth()
+            .clip(pill)
+            .background(c.glass)
+            .border(1.dp, c.hairline, pill)
+            .height(60.dp)
+            .padding(start = 14.dp, end = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         LogoMark(size = 28.dp)
-        Text("Treehouse", Modifier.padding(start = 9.dp).weight(1f), style = OrbitType.titleL, color = c.text)
+        Text("Treehouse", Modifier.padding(start = 9.dp).weight(1f), style = OrbitType.titleM.copy(fontSize = OrbitType.titleL.fontSize * 0.9f), color = c.text)
 
         // The hub is the app's one piece of infrastructure, so its status is also the way into settings.
         val online = state.loaded && !state.offline
@@ -843,3 +864,6 @@ fun relativeTime(then: Long, now: Long): String {
         else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(then))
     }
 }
+
+/** Frosted cards sit a little wider than the gutter, so the text inside them lines up with the text outside. */
+private val GlassInset = OrbitDimens.gutter - 6.dp

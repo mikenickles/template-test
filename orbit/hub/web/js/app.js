@@ -149,7 +149,7 @@ function App() {
       ${room
         ? html`<${RoomView} key=${room.id} room=${room} state=${state} onDialog=${openDialog} notify=${notify} onBack=${() => openRoom(null)} onDelete=${() => deleteRoom(room)}
             onOpenRoom=${(id) => refresh().then(() => openRoom(id))} onStale=${refresh} />`
-        : html`<${Welcome} state=${state} onDialog=${setDialog} onIntro=${startIntro} onOpen=${openRoom}
+        : html`${state.agents.length > 0 && html`<div class="crew-wash" aria-hidden="true" style=${crewWash(state.agents.slice(0, 4).map((a) => tint(a.avatar)))}></div>`}<${Welcome} state=${state} onDialog=${setDialog} onIntro=${startIntro} onOpen=${openRoom}
             onDismiss=${(id) => api.dismissNudge(id).then(refresh).catch((e) => notify(e.message))} />`}
     </main>
     ${dialog?.type === 'agent' && html`<${AgentEditor} agent=${dialog.agent} state=${state} notify=${notify} onClose=${close} onSaved=${() => edited()} onChanged=${refresh} onAddKey=${() => setDialog({ type: 'settings', page: 'models' })} />`}
@@ -406,6 +406,9 @@ function Tokens({ room, notify, onClose }) {
   <//>`;
 }
 
+/** The crew's colors glowing softly behind a screen, one agent to a corner; fewer agents take turns. Still. */
+const crewWash = (tints) => [0, 1, 2, 3].map((i) => `--c${i + 1}:${tints[i % tints.length]}`).join(';');
+
 /** An agent's character in a soft circle of its own color. [ring] circles it in its color, for whoever is speaking. */
 function Disc({ spec, size = 40, ring = false, thinking = false }) {
   return html`<span class=${`disc${ring ? ' ring' : ''}`} style=${`--wash:${tint(spec)};width:${size}px;height:${size}px`}>
@@ -601,7 +604,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
   useEffect(() => {
     if (unknown) onStale();
   }, [unknown]);
-  const washes = agents.slice(0, 3).map((a) => tint(a.avatar));
+  const washes = agents.slice(0, 4).map((a) => tint(a.avatar));
   const mentions = Object.fromEntries(agents.map((a) => [a.name.replace(/\s/g, '').toLowerCase(), inkColor(a.avatar)]));
   const lead = agents.find((a) => a.id === room.leadId);
   const speaker = byId[run.agentId];
@@ -637,7 +640,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
   };
 
   return html`
-    ${washes.length > 0 && html`<div class="room-wash" aria-hidden="true" style=${`--wash:linear-gradient(90deg, ${(washes.length > 1 ? washes : [washes[0], washes[0]]).join(', ')})`}></div>`}
+    ${washes.length > 0 && html`<div class="crew-wash" aria-hidden="true" style=${crewWash(washes)}></div>`}
     <header class="room-bar">
       <button class="icon-button narrow-only" onClick=${onBack} aria-label="Back to rooms"><${Icon} name="back" /></button>
       <div class="titles">

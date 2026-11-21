@@ -18,6 +18,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.rememberInfiniteTransition
 import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.ui.components.wash
+import dev.orbit.app.ui.components.CrewWash
 import dev.orbit.app.ui.components.AvatarDisc
 import android.content.ClipData
 import androidx.compose.animation.AnimatedContent
@@ -270,18 +271,8 @@ fun RoomScreen(
     val previous = remember(state.messages) { state.messages.zipWithNext().associate { (before, after) -> after.id to before } }
 
     Box(Modifier.fillMaxSize().background(c.bg)) {
-        // The room is lit softly from the top in its members' colors.
-        val tints = agents.take(3).map { it.avatar.tint() }
-        val washAlpha = if (c.isDark) 0.16f else 0.2f
-        if (tints.isNotEmpty()) {
-            Box(
-                Modifier.fillMaxWidth().height(300.dp).drawBehind {
-                    val band = if (tints.size == 1) listOf(tints[0], tints[0]) else tints
-                    drawRect(Brush.horizontalGradient(band.map { it.copy(alpha = washAlpha) }))
-                    drawRect(Brush.verticalGradient(listOf(Color.Transparent, c.bg)))
-                },
-            )
-        }
+        // The room glows softly in its members' colors.
+        CrewWash(agents.take(4).map { it.avatar.tint() }, Modifier.fillMaxSize(), strength = 0.8f)
         Scaffold(
             containerColor = Color.Transparent,
             topBar = { RoomBar(room, agents, state, onBack, onMenu = { showingMenu = true }, onMembers = { showingMembers = true }, contextTokens = contextTokens, onTokens = onTokens) },
@@ -694,7 +685,19 @@ private fun RoomBar(
     val c = Orbit.colors
     val speaker = agents.firstOrNull { it.id == state.run.agentId }
     Column(Modifier.fillMaxWidth().statusBarsPadding()) {
-        Row(Modifier.height(64.dp).padding(start = 6.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        // A frosted pill floating over the conversation, which fades and blurs as it passes under.
+        val pill = RoundedCornerShape(22.dp)
+        Row(
+            Modifier
+                .padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 4.dp)
+                .fillMaxWidth()
+                .clip(pill)
+                .background(c.glass)
+                .border(1.dp, c.hairline, pill)
+                .height(60.dp)
+                .padding(horizontal = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             IconTap(OrbitIcon.Back, "Back", onBack)
             Column(Modifier.weight(1f).padding(start = 2.dp, end = 12.dp)) {
                 Text(

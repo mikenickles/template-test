@@ -89,7 +89,7 @@ private fun EventsCard(card: Card, avatar: AvatarSpec, now: Long, modifier: Modi
             DateBadge(firstDay, avatar)
             Column(Modifier.padding(start = 12.dp)) {
                 Text(
-                    if (days.size <= 1) firstDay.format(DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.getDefault())) else rangeLabel(days.first(), days.last()),
+                    if (days.size <= 1) dayTitle(firstDay) else rangeLabel(days.first(), days.last()),
                     style = OrbitType.titleS,
                     color = c.text,
                 )
@@ -107,7 +107,7 @@ private fun EventsCard(card: Card, avatar: AvatarSpec, now: Long, modifier: Modi
                 val day = eventDay(event, zone)
                 if (days.size > 1 && day != null && day != events.getOrNull(i - 1)?.let { eventDay(it, zone) }) {
                     Text(
-                        day.format(DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())).uppercase(),
+                        dayHeading(day),
                         Modifier.padding(top = if (i == 0) 0.dp else 8.dp, bottom = 2.dp).semantics { heading() },
                         style = OrbitType.overline,
                         color = c.textTertiary,
@@ -176,7 +176,7 @@ private fun DateBadge(day: LocalDate, avatar: AvatarSpec) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(day.format(DateTimeFormatter.ofPattern("EEE", Locale.getDefault())).uppercase(), style = OrbitType.overline.copy(fontSize = OrbitType.overline.fontSize * 0.85f), color = avatar.textColor())
+        Text(weekdayBadge(day), style = OrbitType.overline.copy(fontSize = OrbitType.overline.fontSize * 0.85f), color = avatar.textColor())
         Text(day.dayOfMonth.toString(), style = OrbitType.titleS, color = Orbit.colors.text)
     }
 }
@@ -453,6 +453,15 @@ internal fun untilLabel(event: CardEvent, now: Long, zone: ZoneId): String? {
         else -> null
     }
 }
+
+/** "Friday, January 15". */
+private fun dayTitle(day: LocalDate): String = day.format(DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.getDefault()))
+
+/** "FRI, JAN 15", between days in a card that covers several. */
+private fun dayHeading(day: LocalDate): String = day.format(DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())).uppercase()
+
+/** "FRI", on the date badge. */
+private fun weekdayBadge(day: LocalDate): String = day.format(DateTimeFormatter.ofPattern("EEE", Locale.getDefault())).uppercase()
 
 private fun rangeLabel(first: LocalDate, last: LocalDate): String {
     val day = DateTimeFormatter.ofPattern("MMM d", Locale.getDefault())

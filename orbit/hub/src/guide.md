@@ -78,6 +78,9 @@ Home shows a greeting and who is replying right now, then notes from the crew as
 (Open goes to the room, Dismiss takes it off Home), the crew (the one speaking is ringed in its color), and the
 rooms. At the bottom of Home on the phone, and at the top of the room list on the PC, **Search rooms and
 messages** finds any room by name or description, and any message with all the words typed, newest first.
+Home and each room glow softly in the crew's own colors (each agent's color from a corner, so a room looks like
+the agents in it); the header is a frosted bar with the hub's name and status, and each room on Home is its own
+card.
 
 ## Agents
 
