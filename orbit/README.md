@@ -205,7 +205,7 @@ cd orbit/android && ./gradlew :app:recordPaparazziDebug   # re-render screen sna
 ```
 
 Screen snapshots land in `android/app/src/test/snapshots/images`. `MotionTest` records the app's
-animations (the orbiting hero, characters popping in, streaming chat, shared-element navigation) as
+animations (the treehouse hero, characters popping in, streaming chat, shared-element navigation) as
 animated PNGs in `android/app/src/test/snapshots/videos`, so motion can be reviewed frame by frame
 without a device.
 
