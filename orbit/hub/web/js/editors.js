@@ -76,7 +76,10 @@ export function AgentEditor({ agent, state, notify, onClose, onSaved, onChanged,
   const canSave = name.trim() && provider && model.trim() && !busy;
   const folders = state.folders.map((f) => f.name).join(', ');
   const google = state.google ?? {};
+  const claudeReady = state.providers.some((p) => p.runsCode && p.configured);
   const detailOf = (key, detail) => {
+    if (key === 'code' && chosen?.abilities && !chosen?.runsCode) return "Claude models only: it runs in Anthropic's private sandbox.";
+    if (key === 'web' && chosen?.abilities && !chosen?.runsCode && !claudeReady) return 'Reads pages. Searching needs an Anthropic key on the hub.';
     if (detail) return detail;
     if (key === 'google') {
       return google.connected
@@ -119,13 +122,17 @@ export function AgentEditor({ agent, state, notify, onClose, onSaved, onChanged,
     <datalist id="model-ids">${models.map((m) => html`<option value=${m} />`)}</datalist>
 
     <div class="section-title">Abilities</div>
-    ${!chosen?.abilities && html`<p class="body-s muted" style="margin:0 0 12px">Abilities work with Anthropic models for now. Switch this agent's provider to use them.</p>`}
-    <div class="card">${ABILITIES.map(([key, icon, title, detail]) => html`<button class=${`ability${chosen?.abilities ? '' : ' disabled'}`} role="switch" aria-checked=${abilities.has(key)}
-      disabled=${!chosen?.abilities} onClick=${() => toggle(key)}>
+    ${!chosen?.abilities && html`<p class="body-s muted" style="margin:0 0 12px">Demo agents can't use abilities. Switch this agent to a real model to use them.</p>`}
+    <div class="card">${ABILITIES.map(([key, icon, title, detail]) => {
+      // Running code needs Anthropic's sandbox, so only Claude agents can turn it on.
+      const off = !chosen?.abilities || (key === 'code' && !chosen?.runsCode);
+      return html`<button class=${`ability${off ? ' disabled' : ''}`} role="switch" aria-checked=${abilities.has(key)}
+      disabled=${off} onClick=${() => toggle(key)}>
       <${Icon} name=${icon} />
       <div style="flex:1"><div class="title-s">${title}</div><div class="body-s muted">${detailOf(key, detail)}</div></div>
-      <${Switch} on=${abilities.has(key)} disabled=${!chosen?.abilities} />
-    </button>`)}</div>
+      <${Switch} on=${abilities.has(key)} disabled=${off} />
+    </button>`;
+    })}</div>
 
     <div class="section-title">Reaches out</div>
     <div style="display:flex;gap:8px">${LEVELS.map(([level, label]) => html`<${Pill} label=${label} selected=${proactive === level} onClick=${() => setProactive(level)} />`)}</div>

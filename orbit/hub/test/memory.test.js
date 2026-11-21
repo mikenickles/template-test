@@ -45,7 +45,7 @@ test("every agent's notes go in its prompt; Claude agents with the ability also 
   const room = { name: 'Trip', mode: 'roundtable' };
   const sage = { id: 'a3', name: 'Sage', provider: 'ollama', model: 'llama', memory: [{ id: 'n1', text: 'Prefers short answers' }] };
   assert.match(buildSystemPrompt(sage, room, [sage], null), /Your own notes from earlier conversations[^\n]*\n- Prefers short answers/);
-  assert.equal(resolveAbilities({ ...sage, abilities: ['memory'] }, providers, null), null, 'only Claude agents save notes themselves');
+  assert.ok(resolveAbilities({ ...sage, abilities: ['memory'] }, providers, null).memory, 'agents on other models save notes too');
 
   const nova = { id: 'a1', name: 'Nova', provider: 'anthropic', model: 'claude-opus-5-5', abilities: ['memory'] };
   const abilities = resolveAbilities(nova, providers, null);

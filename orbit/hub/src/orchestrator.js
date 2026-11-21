@@ -67,9 +67,11 @@ export function resolveAbilities(agent, providers, folders, save = () => {}, { p
   // A proactive agent can book follow-ups and watch things; Orchestrator#speak fills in the tools. Every agent
   // on a provider with tools can read the Treehouse guide and change itself, so this is never empty.
   const proactive = (agent.proactive ?? 'off') !== 'off';
+  const claude = providers.kindOf?.(agent.provider) === 'anthropic';
   return {
     web: on.has('web'),
-    code: on.has('code'),
+    // Running code needs Anthropic's sandbox.
+    code: on.has('code') && claude,
     files: on.has('files'),
     folders: on.has('files') ? folders : null,
     // Notes about the user that the whole crew shares, and the agent's own: "remember", "forget" and friends.
@@ -132,7 +134,9 @@ export function buildSystemPrompt(agent, room, agents, abilities = null, profile
   }
   if (abilities) {
     lines.push('', 'What you can do here:');
-    if (abilities.web) {
+    if (abilities.web && abilities.hubWeb && !abilities.hubWeb.canSearch) {
+      lines.push('- Read web pages with web_fetch, when you have an address. (Searching the web needs an Anthropic key on the hub.)');
+    } else if (abilities.web) {
       lines.push('- Search the web and read web pages. Use them for anything recent or that you are unsure of, and say where facts came from.');
     }
     if (abilities.code) lines.push('- Run code in a sandbox, for calculations, working with data, and checking your work.');
@@ -548,6 +552,40 @@ export class Orchestrator {
     }
   }
 
+  /**
+   * Web search and page reading for a model without its own: searches go to Claude Haiku with Anthropic's
+   * web search (when the hub has a Claude key), and come back as short notes with their sources.
+   */
+  #hubWeb(agent, room, run) {
+    const canSearch = this.providers.isConfigured('anthropic') && this.providers.kindOf('anthropic') === 'anthropic';
+    return {
+      canSearch,
+      search: async (query) => {
+        let found = [];
+        let usage = null;
+        const text = await this.providers.stream({
+          provider: 'anthropic',
+          model: SUMMARY_MODEL,
+          system: 'You search the web for another AI assistant. Search, then reply with the facts that answer the query as short bullets, each naming its source site. No preamble.',
+          messages: [{ role: 'user', content: query }],
+          abilities: { web: true },
+          agent,
+          signal: AbortSignal.any([run.abort.signal, AbortSignal.timeout(90_000)]),
+          onDelta: () => {},
+          onSources: (sources) => {
+            found = sources;
+          },
+          onUsage: (u) => {
+            usage = addUsage(usage ?? emptyUsage(), u);
+          },
+        });
+        if (usage) this.ledger?.record({ agentId: agent.id, roomId: room.id, model: SUMMARY_MODEL, usage });
+        const list = found.map((s, i) => `[${i + 1}] ${s.title}: ${s.url}`).join('\n');
+        return { text: `${text.trim()}${list ? `\n\nSources:\n${list}` : ''}`, sources: found };
+      },
+    };
+  }
+
   /** Folds messages into the room's running summary, written by the agent's provider. Null if it can't. */
   async #summarize(room, agent, messages, signal) {
     const kind = this.providers.kindOf?.(agent.provider);
@@ -612,6 +650,10 @@ export class Orchestrator {
       profile, force: intro ? ['memory'] : [], google: this.google,
     });
     if (abilities?.proactiveOn && this.proactive) abilities.proactive = this.proactive.toolsFor(agent, room);
+    // Models other than Claude search through the hub: a quick Claude search when there's a key, and pages
+    // fetched by the hub itself.
+    const claude = this.providers.kindOf?.(agent.provider) === 'anthropic';
+    if (abilities?.web && !claude) abilities.hubWeb = this.#hubWeb(agent, room, run);
     if (abilities) {
       abilities.self = selfTools(agent, room, {
         store: this.store, providers: this.providers, google: this.google, folders: this.folders, proactive: this.proactive, hub: this.hubInfo?.() ?? {},
@@ -655,6 +697,8 @@ export class Orchestrator {
         provider: agent.provider,
         model: agent.model,
         system: buildSystemPrompt(agent, room, agents, abilities, profile),
+        // For a model that turns out not to take tools: the same agent, told about the app without them.
+        plainSystem: claude ? undefined : buildSystemPrompt(agent, room, agents, null, profile),
         messages: transcript,
         signal: run.abort.signal,
         agent,

@@ -75,7 +75,7 @@ data class AppState(
     val pcUpdate: String? get() = updates.hub.available
 
     /** Whether the hub has a Claude key, which the getting-to-know-you chat needs. */
-    val canIntro: Boolean get() = providers.any { it.abilities && it.configured }
+    val canIntro: Boolean get() = providers.any { it.runsCode && it.configured }
 
     /** The getting-to-know-you chat, if it has been started. */
     val introRoom: Room? get() = rooms.firstOrNull { it.intro }

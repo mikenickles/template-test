@@ -416,7 +416,7 @@ private fun IntroCard(state: AppState, onStart: () -> Unit, onAddKey: () -> Unit
     val c = Orbit.colors
     val room = state.introRoom
     val guide = state.agent(room?.agentIds?.firstOrNull())
-        ?: state.agents.firstOrNull { agent -> state.providers.any { it.id == agent.provider && it.abilities && it.configured } }
+        ?: state.agents.firstOrNull { agent -> state.providers.any { it.id == agent.provider && it.runsCode && it.configured } }
     val look = guide?.avatar ?: dev.orbit.app.data.AvatarSpec(9)
     val name = guide?.name ?: "Nova"
     val shape = RoundedCornerShape(OrbitDimens.radiusXL)

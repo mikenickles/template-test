@@ -72,6 +72,10 @@ hub on an always-on PC.
 - **Agents do things for you.** Ask an agent to rename itself, change its instructions, look or model, or how
   often it reaches out; or to rename the room, change its mode or members, or change quiet hours and the
   morning brief. Keys, Google, shared folders and updates stay with you.
+- **Abilities on local models too.** Agents on Ollama, OpenAI, Grok, Gemini or OpenRouter models can search the
+  web, read pages, remember things, read your shared folders, use Google, follow up and change settings, through
+  the hub's own tools. Web search for them goes through a quick Claude search, so it needs an Anthropic key;
+  reading pages doesn't. Running code stays Claude-only. Small local models that don't support tools just chat.
 - **Desktop app.** The hub also serves Treehouse for the PC: open
   `http://localhost:8787` in Edge or Chrome and choose **Install Treehouse** to keep
   it as an app with its own window. On the PC it signs in by itself; another

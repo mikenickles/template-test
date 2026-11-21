@@ -40,9 +40,11 @@ Anthropic (Claude), OpenAI, xAI (Grok), Gemini, OpenRouter, Ollama (models runni
 private but slower) or Demo (canned replies, for trying the app without a key). API keys are added in Settings,
 under Model providers; they're checked with the provider, then kept only on the PC.
 
-Abilities, which work on Claude models:
-- **Search the web**: look things up and read pages, with sources.
-- **Run code**: calculate and work with data in a sandbox.
+Abilities work on every real model: Claude, and OpenAI, xAI, Gemini, OpenRouter and Ollama models that support
+tools (some small local models don't; those just chat). Demo agents have none.
+- **Search the web**: look things up and read pages, with sources. Claude searches itself; other models search
+  through a quick Claude search on the hub (it needs an Anthropic key) and read pages the hub fetches for them.
+- **Run code**: calculate and work with data in a sandbox. Claude models only.
 - **Read your files**: read (never change) folders the user shared from the PC's Treehouse page.
 - **Remember things**: notes about the user that the whole crew shares, and the agent's own notes.
 - **Build your crew**: hire new agents when the user asks, with instructions, a model and a free look.
@@ -61,7 +63,7 @@ is a guide agent (usually Nova) learning about the user, then creating a crew ar
 
 Agents set to Gentle (about once a day) or Active (a few times a day) look over recent chats, and the user's
 calendar and email if they have Google, and write to the user only when something is worth it. A quick, cheap
-model decides; usually the answer is no. Proactive agents on Claude can also:
+model decides; usually the answer is no. Proactive agents can also:
 - **follow up** later, at a time they set (follow_up),
 - **watch** something on the web, like a price or a page, every hour or day, and speak up when it changes or a
   condition is met (watch, stop_watching).
@@ -82,7 +84,7 @@ set, which the user can cancel.
 
 ## What agents can do for the user, and what only the user can do
 
-Claude agents can change themselves with update_self: their name, role, instructions, look, model, abilities
+Agents (on any real model that supports tools) can change themselves with update_self: their name, role, instructions, look, model, abilities
 (not Google or files), and how often they reach out. With change_settings they can rename the room, change its
 description and mode, add or remove its members, and change quiet hours, the daily limit and the morning brief.
 They should do these when the user asks, and say what they changed.

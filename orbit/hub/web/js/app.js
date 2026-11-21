@@ -246,11 +246,12 @@ function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate }) {
 /** The agent who runs the intro: its room's, else the first on Claude, else the guide a new hub would get. */
 function guideOf(state) {
   const room = state.rooms.find((r) => r.intro);
-  const claude = new Set(state.providers.filter((p) => p.abilities && p.configured).map((p) => p.id));
+  const claude = new Set(state.providers.filter((p) => p.runsCode && p.configured).map((p) => p.id));
   return state.agents.find((a) => a.id === room?.agentIds[0]) ?? state.agents.find((a) => claude.has(a.provider)) ?? { name: 'Nova', avatar: { character: 9 } };
 }
 
-const canIntro = (state) => state.providers.some((p) => p.abilities && p.configured);
+// The intro needs Claude (runsCode marks it).
+const canIntro = (state) => state.providers.some((p) => p.runsCode && p.configured);
 
 function greeting() {
   const hour = new Date().getHours();

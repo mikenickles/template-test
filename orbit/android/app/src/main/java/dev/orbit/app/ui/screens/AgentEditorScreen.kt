@@ -258,7 +258,7 @@ fun AgentEditorScreen(
                 val supported = provider?.abilities == true
                 AnimatedVisibility(provider != null && !supported, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
                     Text(
-                        "Abilities work with Anthropic models for now. Switch this agent's provider to use them.",
+                        "Demo agents can't use abilities. Switch this agent to a real model to use them.",
                         Modifier.padding(bottom = 12.dp),
                         style = OrbitType.bodyS,
                         color = c.textSecondary,
@@ -266,9 +266,23 @@ fun AgentEditorScreen(
                 }
                 OrbitCard(Modifier.fillMaxWidth()) {
                     Column {
-                        AbilityRow(OrbitIcon.Globe, "Search the web", "Look things up and read pages, with sources.", web, supported) { web = it }
+                        // Other models search through the hub, with a quick Claude search when there's an Anthropic key.
+                        val claudeReady = providers.any { it.runsCode && it.configured }
+                        AbilityRow(
+                            OrbitIcon.Globe,
+                            "Search the web",
+                            if (provider?.runsCode == true || claudeReady) "Look things up and read pages, with sources." else "Reads pages. Searching needs an Anthropic key on the hub.",
+                            web,
+                            supported,
+                        ) { web = it }
                         Hairline()
-                        AbilityRow(OrbitIcon.Code, "Run code", "Calculate and work through data in a private sandbox.", code, supported) { code = it }
+                        AbilityRow(
+                            OrbitIcon.Code,
+                            "Run code",
+                            if (provider?.runsCode == false && supported) "Claude models only: it runs in Anthropic's private sandbox." else "Calculate and work through data in a private sandbox.",
+                            code,
+                            supported && provider?.runsCode == true,
+                        ) { code = it }
                         Hairline()
                         AbilityRow(
                             OrbitIcon.Folder,

@@ -1,30 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { ProviderError } from './errors.js';
-import { FOLDER_ACTIVITY, FOLDER_TOOLS, runFolderTool } from './folders.js';
-import { MEMORY_ACTIVITY, MEMORY_TOOLS } from './memory.js';
-import { CREW_TOOL } from './intro.js';
-import { AGENT_TOOL } from './recruit.js';
-import { GOOGLE_ACTIVITY, GOOGLE_TOOLS, googleDetail } from './google.js';
-import { PROACTIVE_ACTIVITY, PROACTIVE_TOOLS } from './proactive.js';
-import { SELF_ACTIVITY, SELF_TOOLS, selfDetail } from './self.js';
-
-/** Tools the hub runs itself, and what each looks like in the chat. */
-const CLIENT_ACTIVITY = { ...FOLDER_ACTIVITY, ...MEMORY_ACTIVITY, ...GOOGLE_ACTIVITY, ...PROACTIVE_ACTIVITY, ...SELF_ACTIVITY };
-
-/** The words shown beside a hub-run tool in the chat. */
-function clientDetail(name, input = {}) {
-  if (name === 'search_files') return input.query;
-  if (MEMORY_ACTIVITY[name]) return input.note;
-  if (GOOGLE_ACTIVITY[name]) return googleDetail(name, input);
-  if (name === 'follow_up') {
-    const at = Number.isInteger(input.in_minutes) ? Date.now() + input.in_minutes * 60_000 : new Date(input.at ?? '').getTime();
-    return Number.isNaN(at) ? '' : new Date(at).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  }
-  if (name === 'watch') return input.what;
-  if (name === 'stop_watching') return '';
-  if (SELF_ACTIVITY[name]) return selfDetail(name, input);
-  return input.path;
-}
+import { CLIENT_ACTIVITY, clientDetail, clientTools, runClientTool } from './tools.js';
 
 const MAX_TOKENS = 64000;
 /** Round trips through the hub's own tools (shared folders) in one reply. */
@@ -44,7 +20,8 @@ const NO_FALLBACK = /^claude-haiku/;
  * here on the hub. With both web and code on, the basic web tools are used so the model has one code
  * sandbox rather than two.
  */
-export function anthropicTools(model, { web = false, code = false, folders = null, memory = null, crew = null, recruit = null, google = null, proactive = null, self = null } = {}) {
+export function anthropicTools(model, abilities = {}) {
+  const { web = false, code = false } = abilities;
   const tools = [];
   if (web) {
     const dynamic = DYNAMIC_WEB.test(model) && !code;
@@ -54,13 +31,8 @@ export function anthropicTools(model, { web = false, code = false, folders = nul
     );
   }
   if (code) tools.push({ type: 'code_execution_20260521', name: 'code_execution' });
-  if (folders?.list().length) tools.push(...FOLDER_TOOLS);
-  if (memory) tools.push(...MEMORY_TOOLS);
-  if (crew) tools.push(CREW_TOOL);
-  if (recruit) tools.push(AGENT_TOOL);
-  if (google) tools.push(...GOOGLE_TOOLS);
-  if (proactive) tools.push(...PROACTIVE_TOOLS);
-  if (self) tools.push(...SELF_TOOLS);
+  // The hub's own web tools are for other models; Claude searches on Anthropic's side.
+  tools.push(...clientTools({ ...abilities, hubWeb: null }));
   return tools;
 }
 
@@ -268,14 +240,7 @@ export async function streamAnthropic({
       pushAssistant(echoable(final.content));
       const results = [];
       for (const call of calls) {
-        let result = { text: `There is no tool called "${call.name}".`, isError: true };
-        if (abilities.folders && FOLDER_ACTIVITY[call.name]) result = await runFolderTool(abilities.folders, call.name, call.input);
-        else if (abilities.memory && MEMORY_ACTIVITY[call.name]) result = await abilities.memory.run(call.name, call.input);
-        else if (abilities.crew && call.name === CREW_TOOL.name) result = await abilities.crew.run(call.input);
-        else if (abilities.recruit && call.name === AGENT_TOOL.name) result = await abilities.recruit.run(call.input);
-        else if (abilities.google && GOOGLE_ACTIVITY[call.name]) result = await abilities.google.run(call.name, call.input);
-        else if (abilities.proactive && PROACTIVE_ACTIVITY[call.name]) result = await abilities.proactive.run(call.name, call.input);
-        else if (abilities.self && SELF_ACTIVITY[call.name]) result = await abilities.self.run(call.name, call.input);
+        const result = await runClientTool({ ...abilities, hubWeb: null }, call.name, call.input);
         finish(call.id, result.isError);
         results.push({ type: 'tool_result', tool_use_id: call.id, content: result.text, ...(result.isError ? { is_error: true } : {}) });
       }

@@ -316,8 +316,10 @@ data class Provider(
     val keySource: String? = null,
     /** The end of the saved key, e.g. "…1a2b", so you can tell keys apart. */
     val keyHint: String? = null,
-    /** Whether agents on this provider can use abilities (web, code, files). */
+    /** Whether agents on this provider can use abilities (web, files, memory, Google...). */
     val abilities: Boolean = false,
+    /** Whether agents on it can run code: Claude only, since it needs Anthropic's sandbox. Also marks Claude. */
+    val runsCode: Boolean = false,
     /** A runtime on the PC itself (Ollama), with no key. Its [models] are the ones downloaded there. */
     val local: Boolean = false,
     /** For a local runtime: whether it answered the hub just now. */

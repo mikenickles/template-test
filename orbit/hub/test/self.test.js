@@ -62,7 +62,8 @@ test('every agent knows it lives in Treehouse; agents without tools get the whol
   assert.match(claude, /call treehouse_guide and answer from it/);
   assert.ok(!claude.includes(GUIDE), 'Claude agents read the guide when they need it');
 
-  const other = buildSystemPrompt(pixel, room, [nova, pixel], resolveAbilities(pixel, providers, null));
+  // A model that turns out not to take tools gets the prompt without them.
+  const other = buildSystemPrompt(pixel, room, [nova, pixel], null);
   assert.match(other, /Treehouse/);
   assert.ok(other.includes(GUIDE), 'agents without tools carry the guide');
   assert.match(GUIDE, /# The Treehouse guide/);

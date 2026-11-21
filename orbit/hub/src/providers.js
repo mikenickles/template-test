@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { streamAnthropic } from './anthropic.js';
+import { streamOpenAI } from './openai.js';
 import { ProviderError } from './errors.js';
 
 export { ProviderError };
@@ -165,8 +166,10 @@ export class Providers {
       keyUrl: d.keyUrl ?? null,
       keySource: d.configKey ? 'app' : d.apiKey ? 'environment' : null,
       keyHint: d.configKey ? `…${d.configKey.slice(-4)}` : null,
-      // Web search, code and shared folders: only Claude models get these for now.
-      abilities: d.kind === 'anthropic',
+      // Abilities work on Claude and on OpenAI-compatible models (through the hub's own tools); running
+      // code needs Anthropic's sandbox, so it's Claude only.
+      abilities: d.kind === 'anthropic' || d.kind === 'openai',
+      runsCode: d.kind === 'anthropic',
     }));
   }
 
@@ -229,9 +232,13 @@ export class Providers {
     return this.defs.get(id)?.kind ?? null;
   }
 
-  /** Whether agents on this provider can use abilities (web search, code, shared folders). */
+  /**
+   * Whether agents on this provider can use abilities: Claude, with Anthropic's tools and the hub's, and
+   * OpenAI-compatible models, with the hub's own tools (see openai.js).
+   */
   supportsAbilities(id) {
-    return this.defs.get(id)?.kind === 'anthropic';
+    const kind = this.defs.get(id)?.kind;
+    return kind === 'anthropic' || kind === 'openai';
   }
 
   /** Ready to reply: a key, or for a local runtime, running with at least one model. */
@@ -339,7 +346,7 @@ export class Providers {
    * Claude models also get the agent's `abilities` ({web, code, folders}) and report their tool use
    * through onActivity, cited pages through onSources, and a re-run step through onReset.
    */
-  async stream({ provider, model, system, messages, signal, onDelta, agent, abilities, onActivity, onSources, onReset, onUsage = () => {} }) {
+  async stream({ provider, model, system, plainSystem, messages, signal, onDelta, agent, abilities, onActivity, onSources, onReset, onUsage = () => {} }) {
     const def = this.defs.get(provider);
     if (!def) throw new ProviderError(`Unknown provider "${provider}"`);
     if (this.#isLocal(def)) {
@@ -372,7 +379,7 @@ export class Providers {
         onUsage,
       });
     }
-    return streamOpenAICompatible({ def, model, system, messages: forOpenAI(messages), signal, onDelta, onUsage });
+    return streamOpenAI({ def, model, system, plainSystem, messages: forOpenAI(messages), signal, abilities, onDelta, onActivity, onSources, onUsage });
   }
 }
 
@@ -404,87 +411,6 @@ function asText(messages) {
   return messages.map((m) =>
     typeof m.content === 'string' ? m : { role: m.role, content: m.content.map((p) => p.text ?? `[${p.name}]`).join('\n\n') },
   );
-}
-
-// For estimates only: an image counts as about 1,500 tokens.
-const textLength = (content) => (typeof content === 'string' ? content.length : content.reduce((n, p) => n + (p.text?.length ?? 6000), 0));
-
-/** Providers known to accept a request for token counts at the end of a stream. */
-const REPORTS_USAGE = new Set(['openai', 'openrouter', 'xai']);
-
-async function streamOpenAICompatible({ def, model, system, messages, signal, onDelta, onUsage = () => {} }) {
-  let res;
-  const body = { model, stream: true, messages: [{ role: 'system', content: system }, ...messages] };
-  if (REPORTS_USAGE.has(def.id)) body.stream_options = { include_usage: true };
-  try {
-    res = await fetch(`${def.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        ...(def.apiKey ? { authorization: `Bearer ${def.apiKey}` } : {}),
-      },
-      body: JSON.stringify(body),
-      signal,
-    });
-  } catch (err) {
-    if (err.name === 'AbortError') throw err;
-    throw new ProviderError(`The hub could not reach ${def.label} at ${def.baseUrl}.`);
-  }
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    let detail = body.slice(0, 300);
-    try {
-      const parsed = JSON.parse(body);
-      detail = parsed.error?.message ?? parsed[0]?.error?.message ?? detail;
-    } catch {
-      // not JSON; keep the raw snippet
-    }
-    throw new ProviderError(`${def.label} error ${res.status}: ${detail}`);
-  }
-
-  let text = '';
-  let buffer = '';
-  let reported = null;
-  const decoder = new TextDecoder();
-  for await (const chunk of res.body) {
-    buffer += decoder.decode(chunk, { stream: true });
-    let newline;
-    while ((newline = buffer.indexOf('\n')) >= 0) {
-      const line = buffer.slice(0, newline).trim();
-      buffer = buffer.slice(newline + 1);
-      if (!line.startsWith('data:')) continue;
-      const data = line.slice(5).trim();
-      if (!data || data === '[DONE]') continue;
-      let piece;
-      try {
-        const chunk = JSON.parse(data);
-        piece = chunk.choices?.[0]?.delta?.content;
-        if (chunk.usage) reported = chunk.usage;
-      } catch {
-        continue;
-      }
-      if (typeof piece === 'string' && piece) {
-        text += piece;
-        onDelta(piece);
-      }
-    }
-  }
-  // Without counts from the provider, about four characters to a token.
-  const cached = reported?.prompt_tokens_details?.cached_tokens ?? 0;
-  onUsage(
-    reported
-      ? { input: (reported.prompt_tokens ?? 0) - cached, output: reported.completion_tokens ?? 0, cacheRead: cached, cacheWrite: 0, searches: 0, requests: 1, estimated: false }
-      : {
-          input: Math.ceil((system.length + messages.reduce((n, m) => n + textLength(m.content), 0)) / 4),
-          output: Math.ceil(text.length / 4),
-          cacheRead: 0,
-          cacheWrite: 0,
-          searches: 0,
-          requests: 1,
-          estimated: true,
-        },
-  );
-  return text;
 }
 
 /** Canned replies so the app can be tried end to end before any key is added. */

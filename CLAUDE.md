@@ -19,17 +19,19 @@ Two independent projects live here:
     `auto` (best fit: `Orchestrator#pick` asks Claude Haiku, or the first agent's model, who answers), `lead` or
     `roundtable`. @mentions always decide who answers; a reply to a message (`replyTo`) goes to that message's agent. Agents with the `crew` ability hire new agents with
     `create_agent` (`src/recruit.js`), offered the configured providers' models and the free characters.
-    Agent abilities (web search, code execution, read-only shared folders) are Claude-only: the tool loop is
-    `src/anthropic.js`, folder access is `src/folders.js`. Folders are shared only from the PC's own page
+    Agent abilities work on Claude (tool loop `src/anthropic.js`, with Anthropic's web search and code execution) and
+    on OpenAI-compatible models like Ollama (`src/openai.js`, function calling); the hub-run tools both share live in
+    `src/tools.js`, including web search for non-Claude models (a quick Claude Haiku search) and `web_fetch` (pages
+    fetched by the hub, never local or private addresses). Running code is Claude-only. Folder access is `src/folders.js`. Folders are shared only from the PC's own page
     (`localhost`), never from a phone.
     Proactive agents (`agent.proactive`: `off`, `gentle`, `active`) speak first through `src/proactive.js`: check-ins
     (a cheap model decides whether anything is worth saying), `follow_up` and `watch` tools, and the morning brief,
     within quiet hours and a daily limit. What they write becomes a Home card (`state.nudges`) and a phone notice.
-    The `google` ability gives Claude agents Gmail (search, read, drafts only, never send), Calendar and Drive through
+    The `google` ability gives agents Gmail (search, read, drafts only, never send), Calendar and Drive through
     `src/google.js`; the user's own OAuth client and the sign-in are set up only on the PC (`/local/google`).
     Agents know the app from `src/guide.md` (the Treehouse guide), read through the `treehouse_guide` tool with a live
     summary of the setup (`src/self.js`); agents without tools get it in their prompt. **Update `guide.md` with every
-    user-visible change**, so agents can answer questions about the app. Claude agents change themselves
+    user-visible change**, so agents can answer questions about the app. Agents change themselves
     (`update_self`) and the room and proactive settings (`change_settings`); keys, Google, folders, updates and giving
     an agent Google or file access stay with the user.
   - `orbit/android/`: Kotlin + Jetpack Compose (Material 3), single `app` module, package `dev.orbit.app`.

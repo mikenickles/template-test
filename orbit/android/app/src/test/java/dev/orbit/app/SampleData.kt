@@ -80,7 +80,7 @@ object SampleData {
     )
     val ollama = Provider(
         "ollama", "Ollama (local)", false, local = true, running = false,
-        installUrl = "https://ollama.com/download", suggestions = smallModels,
+        installUrl = "https://ollama.com/download", suggestions = smallModels, abilities = true,
     )
     val ollamaDownloading = ollama.copy(
         running = true, configured = true, models = listOf("gemma3:1b"),
@@ -89,13 +89,13 @@ object SampleData {
 
     val anthropic = Provider(
         "anthropic", "Anthropic", true, listOf("claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"),
-        takesKey = true, keyUrl = "https://console.anthropic.com/settings/keys", keySource = "app", keyHint = "…a1b2", abilities = true,
+        takesKey = true, keyUrl = "https://console.anthropic.com/settings/keys", keySource = "app", keyHint = "…a1b2", abilities = true, runsCode = true,
     )
     val providers = listOf(
         anthropic,
-        Provider("openai", "OpenAI", true, takesKey = true, keyUrl = "https://platform.openai.com/api-keys", keySource = "environment"),
-        Provider("xai", "xAI", false, takesKey = true, keyUrl = "https://console.x.ai"),
-        Provider("gemini", "Gemini", false, takesKey = true, keyUrl = "https://aistudio.google.com/apikey"),
+        Provider("openai", "OpenAI", true, takesKey = true, keyUrl = "https://platform.openai.com/api-keys", keySource = "environment", abilities = true),
+        Provider("xai", "xAI", false, takesKey = true, keyUrl = "https://console.x.ai", abilities = true),
+        Provider("gemini", "Gemini", false, takesKey = true, keyUrl = "https://aistudio.google.com/apikey", abilities = true),
         ollama,
         Provider("demo", "Demo", true, listOf("demo")),
     )

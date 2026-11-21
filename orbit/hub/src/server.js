@@ -169,7 +169,7 @@ export class Hub {
    */
   #seed() {
     if (!this.store.isNew || this.store.state.agents.length) return;
-    if (this.providers.isConfigured('anthropic') && this.providers.supportsAbilities?.('anthropic')) this.#startIntro();
+    if (this.providers.isConfigured('anthropic') && this.providers.kindOf?.('anthropic') === 'anthropic') this.#startIntro();
   }
 
   /**
@@ -177,7 +177,8 @@ export class Hub {
    * Reuses the agent's intro room if it has one. Returns the room.
    */
   #startIntro(agentId = null) {
-    const capable = (a) => a && this.providers.supportsAbilities(a.provider) && this.providers.isConfigured(a.provider);
+    // The intro needs a capable model that can create the crew reliably: Claude.
+    const capable = (a) => a && this.providers.kindOf(a.provider) === 'anthropic' && this.providers.isConfigured(a.provider);
     let guide = capable(this.store.agent(agentId)) ? this.store.agent(agentId) : this.store.state.agents.find(capable);
     if (!guide) {
       if (!this.providers.isConfigured('anthropic')) {

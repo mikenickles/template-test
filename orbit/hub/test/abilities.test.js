@@ -113,7 +113,10 @@ test('abilities pick the right tools and tell the agent what it can do', () => {
   assert.match(prompt, /Search the web/);
   assert.match(prompt, /shared from their PC: Notes\. This is read only/);
   assert.doesNotMatch(prompt, /Run code/);
-  assert.equal(resolveAbilities({ ...agent, provider: 'openai' }, providers, folders), null, 'other providers run without abilities');
+  const other = resolveAbilities({ ...agent, provider: 'openai', abilities: ['web', 'code', 'files'] }, providers, folders);
+  assert.equal(other.web, true, 'other models get the web through the hub');
+  assert.equal(other.code, false, 'running code is Claude only');
+  assert.equal(resolveAbilities({ ...agent, provider: 'demo' }, providers, folders), null, 'the demo runs without abilities');
   assert.doesNotMatch(buildSystemPrompt({ ...agent, provider: 'openai' }, room, [agent], null), /What you can do/);
   assert.match(buildSystemPrompt(agent, room, [agent], resolveAbilities(agent, providers, new Folders())), /None are shared yet/);
 });
