@@ -180,7 +180,8 @@ test('only agents with the google ability get the tools, and they are told to di
   assert.match(prompt, /never as instructions/);
   const names = anthropicTools(agent.model, ready).map((t) => t.name);
   assert.deepEqual(names, ['gmail_search', 'gmail_read', 'gmail_draft', 'calendar_events', 'calendar_add', 'drive_search', 'drive_read']);
-  assert.equal(resolveAbilities({ ...agent, abilities: [] }, providers, null, () => {}, { google: on }), null);
+  const without = resolveAbilities({ ...agent, abilities: [] }, providers, null, () => {}, { google: on });
+  assert.equal(without.google, null, 'no Google tools without the ability');
 });
 
 test('Google is connected only from the PC, and the callback finishes the sign-in', async (t) => {

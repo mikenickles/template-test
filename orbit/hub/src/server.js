@@ -97,6 +97,7 @@ export class Hub {
     // Agents that speak first: check-ins, follow-ups, watches and the morning brief.
     this.proactive = new Proactive({ store, orchestrator: this.orchestrator, providers, google, ledger: this.ledger, log: (line) => console.log(line) });
     this.orchestrator.proactive = this.proactive;
+    this.orchestrator.hubInfo = () => ({ name: this.name, addresses: this.addresses, remote: this.remoteAddresses });
     this.pairFailures = 0;
     this.pairLockedUntil = 0;
     this.pairingCode = newPairingCode();

@@ -67,6 +67,11 @@ hub on an always-on PC.
   Gmail and save drafts (it never sends), check your calendar and add events, and read your Drive. Connect it
   once from Treehouse on your PC, in Settings, under Google: it walks you through making your own Google
   Cloud key, and everything stays on the PC.
+- **Agents know Treehouse.** Every agent knows the app it lives in: its features, settings and how it's built,
+  from a guide that ships with each update, plus a live summary of your setup. Ask them anything about it.
+- **Agents do things for you.** Ask an agent to rename itself, change its instructions, look or model, or how
+  often it reaches out; or to rename the room, change its mode or members, or change quiet hours and the
+  morning brief. Keys, Google, shared folders and updates stay with you.
 - **Desktop app.** The hub also serves Treehouse for the PC: open
   `http://localhost:8787` in Edge or Chrome and choose **Install Treehouse** to keep
   it as an app with its own window. On the PC it signs in by itself; another

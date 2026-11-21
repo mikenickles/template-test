@@ -273,6 +273,8 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
             val pickPhotos = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(MAX_DRAFTS)) { roomVm.attach(it) }
             val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { roomVm.attach(it) }
             val roomState by roomVm.state.collectAsStateWithLifecycle()
+            // When a run ends, agents may have changed themselves or the room: catch up with the hub.
+            LaunchedEffect(roomState.run.active) { if (!roomState.run.active && roomState.loaded) vm.refresh() }
             LaunchedEffect(roomVm) { roomVm.notices.collect { snackbar.showSnackbar(it) } }
             RoomScreen(
                 room = room,

@@ -6,9 +6,10 @@ import { CREW_TOOL } from './intro.js';
 import { AGENT_TOOL } from './recruit.js';
 import { GOOGLE_ACTIVITY, GOOGLE_TOOLS, googleDetail } from './google.js';
 import { PROACTIVE_ACTIVITY, PROACTIVE_TOOLS } from './proactive.js';
+import { SELF_ACTIVITY, SELF_TOOLS, selfDetail } from './self.js';
 
 /** Tools the hub runs itself, and what each looks like in the chat. */
-const CLIENT_ACTIVITY = { ...FOLDER_ACTIVITY, ...MEMORY_ACTIVITY, ...GOOGLE_ACTIVITY, ...PROACTIVE_ACTIVITY };
+const CLIENT_ACTIVITY = { ...FOLDER_ACTIVITY, ...MEMORY_ACTIVITY, ...GOOGLE_ACTIVITY, ...PROACTIVE_ACTIVITY, ...SELF_ACTIVITY };
 
 /** The words shown beside a hub-run tool in the chat. */
 function clientDetail(name, input = {}) {
@@ -21,6 +22,7 @@ function clientDetail(name, input = {}) {
   }
   if (name === 'watch') return input.what;
   if (name === 'stop_watching') return '';
+  if (SELF_ACTIVITY[name]) return selfDetail(name, input);
   return input.path;
 }
 
@@ -42,7 +44,7 @@ const NO_FALLBACK = /^claude-haiku/;
  * here on the hub. With both web and code on, the basic web tools are used so the model has one code
  * sandbox rather than two.
  */
-export function anthropicTools(model, { web = false, code = false, folders = null, memory = null, crew = null, recruit = null, google = null, proactive = null } = {}) {
+export function anthropicTools(model, { web = false, code = false, folders = null, memory = null, crew = null, recruit = null, google = null, proactive = null, self = null } = {}) {
   const tools = [];
   if (web) {
     const dynamic = DYNAMIC_WEB.test(model) && !code;
@@ -58,6 +60,7 @@ export function anthropicTools(model, { web = false, code = false, folders = nul
   if (recruit) tools.push(AGENT_TOOL);
   if (google) tools.push(...GOOGLE_TOOLS);
   if (proactive) tools.push(...PROACTIVE_TOOLS);
+  if (self) tools.push(...SELF_TOOLS);
   return tools;
 }
 
@@ -272,6 +275,7 @@ export async function streamAnthropic({
         else if (abilities.recruit && call.name === AGENT_TOOL.name) result = await abilities.recruit.run(call.input);
         else if (abilities.google && GOOGLE_ACTIVITY[call.name]) result = await abilities.google.run(call.name, call.input);
         else if (abilities.proactive && PROACTIVE_ACTIVITY[call.name]) result = await abilities.proactive.run(call.name, call.input);
+        else if (abilities.self && SELF_ACTIVITY[call.name]) result = await abilities.self.run(call.name, call.input);
         finish(call.id, result.isError);
         results.push({ type: 'tool_result', tool_use_id: call.id, content: result.text, ...(result.isError ? { is_error: true } : {}) });
       }

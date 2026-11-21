@@ -5,6 +5,7 @@ import { CrewError, createCrew, introPrompt } from './intro.js';
 import { RecruitError, createAgent, recruitPrompt } from './recruit.js';
 import { addUsage, emptyUsage } from './usage.js';
 import { GOOGLE_PROMPT, runGoogleTool } from './google.js';
+import { APP_SUMMARY, GUIDE, SELF_PROMPT, selfTools } from './self.js';
 
 /** Upper bound on agent replies per user message, so @mention chains can't loop forever. */
 export const MAX_TURNS = 12;
@@ -63,9 +64,9 @@ export const ABILITIES = ['web', 'code', 'files', 'memory', 'crew', 'google'];
 export function resolveAbilities(agent, providers, folders, save = () => {}, { profile = null, force = [], google = null } = {}) {
   if (!providers.supportsAbilities?.(agent.provider)) return null;
   const on = new Set([...(agent.abilities ?? []), ...force]);
-  // A proactive agent can book follow-ups and watch things; Orchestrator#speak fills in the tools.
+  // A proactive agent can book follow-ups and watch things; Orchestrator#speak fills in the tools. Every agent
+  // on a provider with tools can read the Treehouse guide and change itself, so this is never empty.
   const proactive = (agent.proactive ?? 'off') !== 'off';
-  if (!on.size && !proactive) return null;
   return {
     web: on.has('web'),
     code: on.has('code'),
@@ -85,9 +86,11 @@ export function buildSystemPrompt(agent, room, agents, abilities = null, profile
   const teammates = agents.filter((a) => a.id !== agent.id);
   const isLead = room.mode === 'lead' && (room.leadId === agent.id || (!room.leadId && agents[0]?.id === agent.id));
   const lines = [
-    teammates.length || !room.intro
-      ? `You are ${agent.name}${agent.role ? `, ${agent.role}` : ''}. You are one of several AI agents working with a user in a group chat called "${room.name}".`
-      : `You are ${agent.name}${agent.role ? `, ${agent.role}` : ''}, one of the user's AI agents in Treehouse.`,
+    teammates.length
+      ? `You are ${agent.name}${agent.role ? `, ${agent.role}` : ''}. You are one of several AI agents working with a user in Treehouse, in a group chat called "${room.name}".`
+      : `You are ${agent.name}${agent.role ? `, ${agent.role}` : ''}, one of the user's AI agents in Treehouse, talking with them in a chat called "${room.name}".`,
+    '',
+    APP_SUMMARY,
   ];
   if (agent.instructions?.trim()) lines.push('', agent.instructions.trim());
   if (teammates.length) {
@@ -152,6 +155,10 @@ export function buildSystemPrompt(agent, room, agents, abilities = null, profile
         '- Remember things for future chats. Facts about the user (who they are, what they like, their plans) go in remember_about_user, which the whole crew shares. Notes about your own work with them (decisions, ongoing projects) go in remember. Save only what they would want kept, and forget things when they ask or they stop being true.',
       );
     }
+    if (abilities.self) lines.push(SELF_PROMPT);
+  } else {
+    // Without tools, the whole guide comes along, so questions about Treehouse still get real answers.
+    lines.push('', 'The Treehouse guide, for questions about the app (answer from it; never guess):', '', GUIDE);
   }
   if (room.intro && !teammates.length) lines.push(introPrompt(profile));
   return lines.join('\n');
@@ -292,6 +299,8 @@ export class Orchestrator {
     this.google = google;
     /** Set by the hub once it's made: follow-ups and watches for proactive agents. */
     this.proactive = null;
+    /** Set by the hub: its name and addresses, for the Treehouse guide's live summary. */
+    this.hubInfo = null;
     this.files = files;
     this.providers = providers;
     this.folders = folders;
@@ -603,6 +612,11 @@ export class Orchestrator {
       profile, force: intro ? ['memory'] : [], google: this.google,
     });
     if (abilities?.proactiveOn && this.proactive) abilities.proactive = this.proactive.toolsFor(agent, room);
+    if (abilities) {
+      abilities.self = selfTools(agent, room, {
+        store: this.store, providers: this.providers, google: this.google, folders: this.folders, proactive: this.proactive, hub: this.hubInfo?.() ?? {},
+      });
+    }
     if (abilities && intro) {
       abilities.crew = {
         run: (input) => {

@@ -526,6 +526,9 @@ const STEPS = {
   followup: ['Setting a follow-up', 'Will follow up', "Couldn't set a follow-up", 'clock'],
   watch: ['Setting up a watch', 'Watching', "Couldn't watch", 'bell'],
   watch_stop: ['Stopping a watch', 'Stopped watching', "Couldn't stop a watch", 'bell'],
+  guide: ['Reading the Treehouse guide', 'Read the Treehouse guide', "Couldn't read the guide", 'file'],
+  self: ['Updating its', 'Updated its', "Couldn't update its", 'check'],
+  settings: ['Changing', 'Changed', "Couldn't change", 'check'],
 };
 /** Why an agent wrote on its own, beside its name. */
 const REACHED = { checkin: 'Checking in', followup: 'Following up', watch: 'Watching', brief: 'Morning brief' };
@@ -542,7 +545,10 @@ function stepDetail(step) {
     case 'drive_search': return step.detail ? `for “${step.detail}”` : '';
     case 'mail_draft': return step.detail ? `to ${step.detail}` : '';
     case 'mail_read':
-    case 'drive_read': return '';
+    case 'drive_read':
+    case 'guide': return '';
+    case 'self':
+    case 'settings': return step.detail || 'settings';
     default: return step.detail;
   }
 }
@@ -568,6 +574,9 @@ function summary(activity) {
     count('followup') && 'set a follow-up',
     count('watch') && 'started watching',
     count('watch_stop') && 'stopped a watch',
+    count('guide') && 'read the Treehouse guide',
+    count('self') && 'updated itself',
+    count('settings') && 'changed settings',
   ].filter(Boolean);
   const text = parts.length <= 1 ? parts[0] ?? `used ${activity.length} tools` : `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`;
   return text[0].toUpperCase() + text.slice(1);

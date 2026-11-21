@@ -79,6 +79,9 @@ fun activityLabel(activity: Activity, live: Boolean = false): ActivityLabel {
         Activity.KIND_FOLLOW_UP -> ActivityLabel(if (live) "Setting a follow-up" else if (failed) "Couldn't set a follow-up" else "Will follow up", detail)
         Activity.KIND_WATCH -> ActivityLabel(if (live) "Setting up a watch" else if (failed) "Couldn't watch" else "Watching", detail)
         Activity.KIND_WATCH_STOP -> ActivityLabel(if (live) "Stopping a watch" else if (failed) "Couldn't stop a watch" else "Stopped watching", detail)
+        Activity.KIND_GUIDE -> ActivityLabel(if (live) "Reading the Treehouse guide" else if (failed) "Couldn't read the guide" else "Read the Treehouse guide", "")
+        Activity.KIND_SELF -> ActivityLabel(if (live) "Updating its" else if (failed) "Couldn't update its" else "Updated its", detail.ifBlank { "settings" })
+        Activity.KIND_SETTINGS -> ActivityLabel(if (live) "Changing" else if (failed) "Couldn't change" else "Changed", detail.ifBlank { "settings" })
         else -> ActivityLabel(if (live) "Working" else "Used a tool", detail)
     }
 }
@@ -106,6 +109,9 @@ fun activitySummary(activity: List<Activity>): String {
         if (count(Activity.KIND_FOLLOW_UP) > 0) add("set a follow-up")
         if (count(Activity.KIND_WATCH) > 0) add("started watching")
         if (count(Activity.KIND_WATCH_STOP) > 0) add("stopped a watch")
+        if (count(Activity.KIND_GUIDE) > 0) add("read the Treehouse guide")
+        if (count(Activity.KIND_SELF) > 0) add("updated itself")
+        if (count(Activity.KIND_SETTINGS) > 0) add("changed settings")
     }.ifEmpty { listOf("used ${activity.size} tools") }
     val joined = if (parts.size == 1) parts[0] else parts.dropLast(1).joinToString(", ") + " and " + parts.last()
     return joined.replaceFirstChar { it.uppercase() }
@@ -125,6 +131,8 @@ private fun iconFor(kind: String) = when (kind) {
     Activity.KIND_DRIVE_READ -> OrbitIcon.File
     Activity.KIND_FOLLOW_UP -> OrbitIcon.Clock
     Activity.KIND_WATCH, Activity.KIND_WATCH_STOP -> OrbitIcon.Bell
+    Activity.KIND_GUIDE -> OrbitIcon.File
+    Activity.KIND_SELF, Activity.KIND_SETTINGS -> OrbitIcon.Check
     else -> OrbitIcon.More
 }
 

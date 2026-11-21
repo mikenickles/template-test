@@ -159,6 +159,9 @@ data class Activity(
         const val KIND_FOLLOW_UP = "followup"
         const val KIND_WATCH = "watch"
         const val KIND_WATCH_STOP = "watch_stop"
+        const val KIND_GUIDE = "guide"
+        const val KIND_SELF = "self"
+        const val KIND_SETTINGS = "settings"
     }
 }
 

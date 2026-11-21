@@ -17,11 +17,11 @@ class Scripted extends Providers {
     this.calls = [];
   }
   async stream({ system, messages, agent, onDelta }) {
-    if (/proactive message/.test(system)) {
+    if (/^You decide whether an AI assistant/.test(system)) {
       this.calls.push({ decide: messages[0].content });
       return this.decisions.shift() ?? '{"reach_out": false}';
     }
-    if (/check things on the web/.test(system)) {
+    if (/^You check things on the web/.test(system)) {
       this.calls.push({ check: messages[0].content });
       return this.checks.shift() ?? '{"finding": "nothing", "notify": false}';
     }

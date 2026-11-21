@@ -27,6 +27,11 @@ Two independent projects live here:
     within quiet hours and a daily limit. What they write becomes a Home card (`state.nudges`) and a phone notice.
     The `google` ability gives Claude agents Gmail (search, read, drafts only, never send), Calendar and Drive through
     `src/google.js`; the user's own OAuth client and the sign-in are set up only on the PC (`/local/google`).
+    Agents know the app from `src/guide.md` (the Treehouse guide), read through the `treehouse_guide` tool with a live
+    summary of the setup (`src/self.js`); agents without tools get it in their prompt. **Update `guide.md` with every
+    user-visible change**, so agents can answer questions about the app. Claude agents change themselves
+    (`update_self`) and the room and proactive settings (`change_settings`); keys, Google, folders, updates and giving
+    an agent Google or file access stay with the user.
   - `orbit/android/`: Kotlin + Jetpack Compose (Material 3), single `app` module, package `dev.orbit.app`.
     Screens are stateless composables in `ui/screens`; `AppViewModel` and `RoomViewModel` hold state.
     Design system: colors, type and spacing come only from `ui/theme/Theme.kt` (`Orbit.colors`, `OrbitType`,
