@@ -383,7 +383,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale }
   const agents = room.agentIds.map((id) => state.agents.find((a) => a.id === id)).filter(Boolean);
   const byId = Object.fromEntries(state.agents.map((a) => [a.id, a]));
   // The intro just built a crew this window doesn't know yet: fetch it.
-  const unknown = messages.some((m) => m.crew?.agentIds.some((id) => !byId[id]));
+  const unknown = messages.some((m) => [...(m.crew?.agentIds ?? []), ...(m.created ?? []).map((c) => c.agentId)].some((id) => !byId[id]));
   useEffect(() => {
     if (unknown) onStale();
   }, [unknown]);
@@ -444,6 +444,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale }
               ${m.author.type === 'user'
                 ? html`<${UserMessage} message=${m} mentions=${mentions} onPhoto=${setViewing} />`
                 : html`<${AgentMessage} message=${m} agent=${byId[m.author.agentId]} showModel=${firstReplies.has(m.id)} mentions=${mentions} />
+                  ${(m.created ?? []).map((c) => byId[c.agentId]).filter(Boolean).map((hired) => html`<${NewMember} agent=${hired} onOpen=${() => onDialog({ type: 'agent', agent: hired })} />`)}
                   ${m.crew && html`<${CrewReady} made=${m.crew} crew=${m.crew.agentIds.map((id) => byId[id]).filter(Boolean)} onOpen=${() => onOpenRoom(m.crew.roomId)} />`}`}
               <div class="message-actions">
                 ${m.text && html`<button onClick=${() => { navigator.clipboard.writeText(m.text); notify('Copied'); }}><${Icon} name="copy" />Copy</button>`}
@@ -554,6 +555,15 @@ function AgentMessage({ message, agent, showModel, mentions }) {
       </a>`)}</div>`}
     </div>
   </div>`;
+}
+
+/** Someone an agent just hired, washed in their own color, and the way to look them over. */
+function NewMember({ agent, onOpen }) {
+  return html`<button class="crew-ready new-member" onClick=${onOpen} style=${`--wash:linear-gradient(90deg, ${tint(agent.avatar)}, transparent)`}>
+    <${Avatar} spec=${agent.avatar} size=${52} />
+    <div class="text"><div class="title-s">Meet ${agent.name}</div><div class="body-s muted">${[agent.role, agent.model].filter(Boolean).join(' · ')}</div></div>
+    <span class="pill">View</span>
+  </button>`;
 }
 
 /** The intro's payoff: the crew it just built, and the way into their room. */

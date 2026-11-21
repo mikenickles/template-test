@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { kindOf } from './files.js';
 import { runMemoryTool } from './memory.js';
 import { CrewError, createCrew, introPrompt } from './intro.js';
+import { RecruitError, createAgent, recruitPrompt } from './recruit.js';
 import { addUsage, emptyUsage } from './usage.js';
 
 /** Upper bound on agent replies per user message, so @mention chains can't loop forever. */
@@ -48,8 +49,8 @@ export function namedAgents(answer, agents) {
   return hits.sort((a, b) => a.index - b.index).map((h) => h.agent);
 }
 
-/** Abilities an agent can be given. "files" reads folders shared from the PC. */
-export const ABILITIES = ['web', 'code', 'files', 'memory'];
+/** Abilities an agent can be given. "files" reads folders shared from the PC; "crew" hires new agents. */
+export const ABILITIES = ['web', 'code', 'files', 'memory', 'crew'];
 
 /**
  * What an agent can do on this turn. Abilities only work with providers that support them; elsewhere
@@ -66,6 +67,8 @@ export function resolveAbilities(agent, providers, folders, save = () => {}, { p
     folders: on.has('files') ? folders : null,
     // Notes about the user that the whole crew shares, and the agent's own: "remember", "forget" and friends.
     memory: on.has('memory') ? { run: (name, input) => runMemoryTool(agent, name, input, save, profile) } : null,
+    // Hiring needs the room and the reply, so Orchestrator#speak fills it in.
+    hire: on.has('crew'),
   };
 }
 
@@ -129,6 +132,7 @@ export function buildSystemPrompt(agent, room, agents, abilities = null, profile
           : "- Read files the user shares from their PC. None are shared yet; if the user asks about their files, tell them to share a folder from the Orbit page on their PC.",
       );
     }
+    if (abilities.recruit) lines.push(abilities.recruit.prompt);
     if (abilities.memory) {
       lines.push(
         '- Remember things for future chats. Facts about the user (who they are, what they like, their plans) go in remember_about_user, which the whole crew shares. Notes about your own work with them (decisions, ongoing projects) go in remember. Save only what they would want kept, and forget things when they ask or they stop being true.',
@@ -413,6 +417,13 @@ export class Orchestrator {
     return resolveAttachments(turns, this.files);
   }
 
+  /** The models a hiring agent can offer: each usable provider's suggested or downloaded models. */
+  #hireOptions() {
+    const usable = this.providers.list().filter((p) => p.configured && p.id !== 'demo');
+    const list = usable.length ? usable : this.providers.list().filter((p) => p.id === 'demo');
+    return list.map((p) => ({ id: p.id, label: p.label, local: Boolean(p.local), models: (p.models ?? []).slice(0, 12) }));
+  }
+
   async #firstSpeakers(room, agents, text, signal) {
     return initialSpeakers(room, agents, text) ?? (await this.#pick(room, agents, text, signal));
   }
@@ -543,6 +554,24 @@ export class Orchestrator {
             return { text: `Created the room "${made.name}" with ${crew.map((a) => a.name).join(', ')} and you.`, isError: false };
           } catch (err) {
             if (err instanceof CrewError) return { text: err.message, isError: true };
+            throw err;
+          }
+        },
+      };
+    }
+    if (abilities?.hire) {
+      const models = this.#hireOptions();
+      abilities.recruit = {
+        prompt: recruitPrompt(models, this.store.state.agents),
+        run: (input) => {
+          try {
+            const hired = createAgent(this.store, this.providers, room, input, models);
+            message.created = [...(message.created ?? []), { agentId: hired.id, name: hired.name }];
+            this.store.save();
+            const joined = room.agentIds.includes(hired.id) ? ' They joined this room.' : '';
+            return { text: `${hired.name} is in the crew, on ${hired.model}, as character ${hired.avatar.character}.${joined}`, isError: false };
+          } catch (err) {
+            if (err instanceof RecruitError) return { text: err.message, isError: true };
             throw err;
           }
         },

@@ -166,6 +166,8 @@ fun RoomScreen(
     onOpenRoom: (roomId: String) -> Unit = {},
     /** Asks for fresh hub state, e.g. when the intro has created agents this screen doesn't know yet. */
     onStale: () -> Unit = {},
+    /** Opens an agent, like one an agent just hired. */
+    onOpenAgent: (agentId: String) -> Unit = {},
 ) {
     val c = Orbit.colors
     var draft by rememberSaveable { mutableStateOf(initialDraft) }
@@ -176,7 +178,7 @@ fun RoomScreen(
     val haptics = rememberHaptics()
     val clipboard = LocalClipboard.current
     val byId = remember(everyone) { everyone.associateBy { it.id } }
-    val unknown = state.messages.mapNotNull { it.crew }.flatMap { it.agentIds }.any { it !in byId }
+    val unknown = state.messages.flatMap { m -> m.crew?.agentIds.orEmpty() + m.created.map { it.agentId } }.any { it !in byId }
     LaunchedEffect(unknown) { if (unknown) onStale() }
     // "@nova" is drawn in Nova's color wherever it appears.
     val dark = c.isDark
@@ -292,6 +294,9 @@ fun RoomScreen(
                                     } else {
                                         Column {
                                             AgentMessage(message, byId[message.author.agentId], mentionColors, showModel = message.id in introductions)
+                                            message.created.mapNotNull { byId[it.agentId] }.forEach { hired ->
+                                                NewMember(hired, Modifier.padding(start = 48.dp, top = 14.dp)) { onOpenAgent(hired.id) }
+                                            }
                                             message.crew?.let { made ->
                                                 CrewReady(made, made.agentIds.mapNotNull(byId::get), Modifier.padding(start = 48.dp, top = 14.dp)) {
                                                     onOpenRoom(made.roomId)
@@ -547,6 +552,39 @@ private fun UserMessage(message: Message, mentionColors: Map<String, Color>, onO
                 MarkdownText(message.text, mentions = mentionColors)
             }
         }
+    }
+}
+
+/** Someone an agent just hired, washed in their own color, and the way to look them over. */
+@Composable
+private fun NewMember(agent: Agent, modifier: Modifier, onOpen: () -> Unit) {
+    val c = Orbit.colors
+    val shape = RoundedCornerShape(OrbitDimens.radiusL)
+    val wash = agent.avatar.tint().copy(alpha = if (c.isDark) 0.24f else 0.28f)
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(c.surface)
+            .background(Brush.horizontalGradient(listOf(wash, Color.Transparent)))
+            .border(surfaceBorder(), shape)
+            .tap(shape, 0.97f, onOpen)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AgentAvatar(agent.avatar, size = 52.dp, alive = true)
+        Column(Modifier.weight(1f).padding(start = 14.dp, end = 10.dp)) {
+            Text("Meet ${agent.name}", style = OrbitType.titleS, color = c.text)
+            Text(
+                listOf(agent.role, agent.model).filter { it.isNotBlank() }.joinToString(" · "),
+                Modifier.padding(top = 2.dp),
+                style = OrbitType.bodyS,
+                color = c.textSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Pill("View", onOpen)
     }
 }
 

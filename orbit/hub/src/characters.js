@@ -3,6 +3,14 @@
 
 export const CHARACTER_COUNT = 25;
 
+/** The characters' names, in number order (character 1 is the Explorer Bot). */
+export const CHARACTER_NAMES = [
+  'Explorer Bot', 'Leaf Sprout', 'Red Yeti', 'Teal Fox', 'Mushroom Friend', 'Wise Owl', 'Mechanic Bot', 'Smiling Cloud',
+  'White Astronaut', 'Teal Hiker', 'Forest Tree', 'Water Drop', 'Mushroom Explorer', 'Pink Axolotl', 'Penguin Pilot',
+  'Purple Wizard', 'Retro Computer', 'Leafy Bush', 'Music Monster', 'Happy Sun', 'Ice Crystal', 'Raccoon Explorer',
+  'Purple Alien', 'Sprout Bot', 'Blue Yeti',
+];
+
 const valid = (n) => Number.isInteger(n) && n >= 1 && n <= CHARACTER_COUNT;
 
 /**

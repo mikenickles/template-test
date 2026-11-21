@@ -143,6 +143,7 @@ fun AgentEditorScreen(
     var code by rememberSaveable { mutableStateOf(Agent.ABILITY_CODE in start.abilities) }
     var files by rememberSaveable { mutableStateOf(Agent.ABILITY_FILES in start.abilities) }
     var remembers by rememberSaveable { mutableStateOf(Agent.ABILITY_MEMORY in start.abilities) }
+    var hires by rememberSaveable { mutableStateOf(Agent.ABILITY_CREW in start.abilities) }
 
     val provider = providers.firstOrNull { it.id == providerId }
     var models by remember { mutableStateOf(emptyList<String>()) }
@@ -161,6 +162,7 @@ fun AgentEditorScreen(
                 Agent.ABILITY_CODE.takeIf { code },
                 Agent.ABILITY_FILES.takeIf { files },
                 Agent.ABILITY_MEMORY.takeIf { remembers },
+                Agent.ABILITY_CREW.takeIf { hires },
             ),
         ),
     )
@@ -280,6 +282,14 @@ fun AgentEditorScreen(
                             remembers,
                             supported,
                         ) { remembers = it }
+                        Hairline()
+                        AbilityRow(
+                            OrbitIcon.Hire,
+                            "Build your crew",
+                            "Hires new agents when you ask: writes their instructions, asks which model to use, picks a free look.",
+                            hires,
+                            supported,
+                        ) { hires = it }
                     }
                 }
             }

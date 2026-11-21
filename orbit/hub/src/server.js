@@ -90,6 +90,7 @@ export class Hub {
     this.server = http.createServer((req, res) => this.#handle(req, res));
     this.#seed();
     if (migrateAvatars(this.store.state.agents)) this.store.save();
+    this.#letGuidesHire();
   }
 
   listen(port, host = '0.0.0.0') {
@@ -166,7 +167,7 @@ export class Hub {
       guide = {
         id: crypto.randomUUID(), name: GUIDE.name, role: GUIDE.role, instructions: GUIDE.instructions,
         provider: 'anthropic', model: this.providers.list().find((p) => p.id === 'anthropic')?.models?.[0] ?? 'claude-opus-5-5',
-        avatar: { character: GUIDE.character }, abilities: ['web', 'memory'], createdAt: Date.now(),
+        avatar: { character: GUIDE.character }, abilities: ['web', 'memory', 'crew'], createdAt: Date.now(),
       };
       // A guide named like an existing agent would confuse @mentions.
       if (this.store.state.agents.some((a) => a.name.toLowerCase() === guide.name.toLowerCase())) guide.name = 'Orbi';
@@ -180,6 +181,18 @@ export class Hub {
     this.store.save();
     this.orchestrator.greet(room.id, guide.id);
     return room;
+  }
+
+  /** Guides from before hiring existed get the ability once; after that it is the user's switch. */
+  #letGuidesHire() {
+    const flags = (this.store.state.flags ??= {});
+    if (flags.guidesHire) return;
+    for (const room of this.store.state.rooms.filter((r) => r.intro)) {
+      const guide = this.store.agent(room.agentIds[0]);
+      if (guide && !(guide.abilities ?? []).includes('crew')) guide.abilities = [...(guide.abilities ?? []), 'crew'];
+    }
+    flags.guidesHire = true;
+    this.store.save();
   }
 
   /** What the whole crew knows about the user. */

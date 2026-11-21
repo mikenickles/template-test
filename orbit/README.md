@@ -12,7 +12,10 @@ hub on an always-on PC.
 - **Agents** each have their own character (one of 25), model, provider, and instructions. An agent's name and
   @mentions take its character's color.
   Agents on Claude models can also be given **abilities**: search the web,
-  run code, and read folders you share from your PC. Their replies show what
+  run code, read folders you share from your PC, and **build your crew**: ask
+  such an agent to create, add or hire someone and it writes their instructions,
+  asks which AI model they should use, and picks a character nobody has yet. Your
+  guide has it from the start. Their replies show what
   they did ("Searched …", "Read japan.md") and the pages they cite.
 - **Rooms** are group chats, with a description every agent in them follows ("We're
   planning a trip to Japan in April. Keep replies short."). In a *best fit* room (the

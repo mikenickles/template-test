@@ -32,6 +32,9 @@ data class Agent(
         const val ABILITY_CODE = "code"
         const val ABILITY_FILES = "files"
         const val ABILITY_MEMORY = "memory"
+
+        /** Hires new agents when the user asks: instructions, the model they choose, a free character. */
+        const val ABILITY_CREW = "crew"
     }
 }
 
@@ -50,6 +53,10 @@ data class HubUpdates(val folder: String = "", val hub: UpdateInfo = UpdateInfo(
 /** What the whole crew knows about the user: what to call them, and notes from them or their agents. */
 @Serializable
 data class Profile(val name: String = "", val notes: List<MemoryNote> = emptyList())
+
+/** An agent a reply hired. */
+@Serializable
+data class CreatedAgent(val agentId: String = "", val name: String = "")
 
 /** The room the intro created, and who is in it. */
 @Serializable
@@ -175,6 +182,8 @@ data class Message(
     val scheduled: ScheduledBy? = null,
     /** Set on the intro reply that created the user's crew: the room it made. */
     val crew: CrewMade? = null,
+    /** Agents this reply hired into the crew. */
+    val created: List<CreatedAgent> = emptyList(),
 ) {
     val fromUser get() = author.type == "user"
 

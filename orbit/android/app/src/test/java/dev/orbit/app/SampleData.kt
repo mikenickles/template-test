@@ -17,6 +17,7 @@ import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.data.HubInfo
 import dev.orbit.app.data.HubUpdates
 import dev.orbit.app.data.UpdateInfo
+import dev.orbit.app.data.CreatedAgent
 import dev.orbit.app.data.CrewMade
 import dev.orbit.app.data.MemoryNote
 import dev.orbit.app.data.ModelDownload
@@ -111,6 +112,24 @@ object SampleData {
 
     /** The PC is holding a newer app and a newer hub. */
     val updatable = app.copy(updates = HubUpdates("C:\\Users\\you\\.orbit-hub\\updates", UpdateInfo("0.10.0", "0.11.0"), UpdateInfo("", "0.11.0", 14_200_000)))
+
+    /** Nova hired a running coach on request. */
+    val rio = Agent(
+        "a5", "Rio", "the running coach", "Builds training plans around Alex's spring half marathon.", "anthropic", "claude-sonnet-5-5",
+        AvatarSpec(20), listOf("web", "memory"),
+    )
+    val hiring = RoomUiState(
+        loaded = true,
+        connected = true,
+        messages = listOf(
+            userMessage("m1", "Can you hire me a running coach?"),
+            agentMessage("m2", nova, "Happy to! Which model should they use? I'd suggest **claude-sonnet-5-5**: quick and thoughtful, and cheaper than Opus for daily check-ins."),
+            userMessage("m3", "Sonnet sounds good."),
+            agentMessage("m4", nova, "Meet **Rio**, your running coach. Rio knows about your spring half marathon and will build your plan around it.").copy(
+                created = listOf(CreatedAgent("a5", "Rio")),
+            ),
+        ),
+    )
 
     /** A hub where the user hasn't met their guide yet. */
     val newcomer = app.copy(profile = Profile(), rooms = emptyList(), agents = emptyList())

@@ -139,6 +139,9 @@ class ScreenshotTest {
     @Test fun introChatLight() = shot("intro-chat-light", dark = false) {
         RoomScreen(SampleData.introRoom, listOf(nova), SampleData.intro, {}, {}, {}, {}, {}, everyone = agents)
     }
+    @Test fun hiring() = shot("room-hiring") {
+        RoomScreen(SampleData.introRoom.copy(name = "Life"), listOf(nova, SampleData.rio), SampleData.hiring, {}, {}, {}, {}, {}, everyone = agents + SampleData.rio)
+    }
     @Test fun aboutYou() = shot("about-you") {
         AboutYouScreen(SampleData.profile, agents, canIntro = true, {}, { _, _ -> }, {}, {}, {})
     }

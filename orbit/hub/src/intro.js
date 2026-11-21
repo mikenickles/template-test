@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { CHARACTER_COUNT } from './characters.js';
+import { CHARACTER_COUNT, CHARACTER_NAMES } from './characters.js';
 
 /**
  * The first chat: one agent gets to know the user, saves what it learns to the memory the whole crew
@@ -44,12 +44,6 @@ export function introPrompt(profile) {
   ].join('\n');
 }
 
-const CHARACTER_NAMES = [
-  'Explorer Bot', 'Leaf Sprout', 'Red Yeti', 'Teal Fox', 'Mushroom Friend', 'Wise Owl', 'Mechanic Bot', 'Smiling Cloud',
-  'White Astronaut', 'Teal Hiker', 'Forest Tree', 'Water Drop', 'Mushroom Explorer', 'Pink Axolotl', 'Penguin Pilot',
-  'Purple Wizard', 'Retro Computer', 'Leafy Bush', 'Music Monster', 'Happy Sun', 'Ice Crystal', 'Raccoon Explorer',
-  'Purple Alien', 'Sprout Bot', 'Blue Yeti',
-];
 
 export const CREW_TOOL = {
   name: 'create_crew',

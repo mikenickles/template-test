@@ -287,6 +287,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 everyone = state.agents,
                 onOpenRoom = { other -> vm.refreshThen { nav.navigate("room/$other") } },
                 onStale = vm::refresh,
+                onOpenAgent = { agentId -> vm.refreshThen { nav.navigate("agent?id=$agentId") } },
             )
         }
         screen("agent?id={id}", arguments = OptionalId) { entry ->

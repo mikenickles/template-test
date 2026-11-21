@@ -9,6 +9,7 @@ const ABILITIES = [
   ['code', 'code', 'Run code', 'Calculate and work through data in a private sandbox.'],
   ['files', 'folder', 'Read your files', null],
   ['memory', 'memory', 'Remember things', 'Keeps notes when you ask it to remember something, for every room.'],
+  ['crew', 'hire', 'Build your crew', 'Hires new agents when you ask: writes their instructions, asks which model to use, picks a free look.'],
 ];
 
 export function AgentEditor({ agent, state, notify, onClose, onSaved, onChanged, onAddKey }) {

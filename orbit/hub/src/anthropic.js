@@ -3,6 +3,7 @@ import { ProviderError } from './errors.js';
 import { FOLDER_ACTIVITY, FOLDER_TOOLS, runFolderTool } from './folders.js';
 import { MEMORY_ACTIVITY, MEMORY_TOOLS } from './memory.js';
 import { CREW_TOOL } from './intro.js';
+import { AGENT_TOOL } from './recruit.js';
 
 /** Tools the hub runs itself, and what each looks like in the chat. */
 const CLIENT_ACTIVITY = { ...FOLDER_ACTIVITY, ...MEMORY_ACTIVITY };
@@ -25,7 +26,7 @@ const NO_FALLBACK = /^claude-haiku/;
  * here on the hub. With both web and code on, the basic web tools are used so the model has one code
  * sandbox rather than two.
  */
-export function anthropicTools(model, { web = false, code = false, folders = null, memory = null, crew = null } = {}) {
+export function anthropicTools(model, { web = false, code = false, folders = null, memory = null, crew = null, recruit = null } = {}) {
   const tools = [];
   if (web) {
     const dynamic = DYNAMIC_WEB.test(model) && !code;
@@ -38,6 +39,7 @@ export function anthropicTools(model, { web = false, code = false, folders = nul
   if (folders?.list().length) tools.push(...FOLDER_TOOLS);
   if (memory) tools.push(...MEMORY_TOOLS);
   if (crew) tools.push(CREW_TOOL);
+  if (recruit) tools.push(AGENT_TOOL);
   return tools;
 }
 
@@ -251,6 +253,7 @@ export async function streamAnthropic({
         if (abilities.folders && FOLDER_ACTIVITY[call.name]) result = await runFolderTool(abilities.folders, call.name, call.input);
         else if (abilities.memory && MEMORY_ACTIVITY[call.name]) result = await abilities.memory.run(call.name, call.input);
         else if (abilities.crew && call.name === CREW_TOOL.name) result = await abilities.crew.run(call.input);
+        else if (abilities.recruit && call.name === AGENT_TOOL.name) result = await abilities.recruit.run(call.input);
         finish(call.id, result.isError);
         results.push({ type: 'tool_result', tool_use_id: call.id, content: result.text, ...(result.isError ? { is_error: true } : {}) });
       }
