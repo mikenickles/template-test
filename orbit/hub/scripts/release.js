@@ -1,12 +1,12 @@
 // Prepares a release for the Drive feed: splits the phone app into parts small enough to upload
-// (under 10 MB each) and writes release.json with every file's size and SHA-256. The manifest the
+// (Claude's Drive connection takes about 3 MB per file) and writes release.json with every file's size and SHA-256. The manifest the
 // hub reads is release.json plus each uploaded file's download link (see CLAUDE.md, Releases).
 //   node scripts/release.js <dir>     <dir> holds orbit-hub-X.Y.Z.zip and orbit-X.Y.Z.apk
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const PART = 9 * 1000 * 1000;
+const PART = 2.9 * 1000 * 1000;
 const dir = path.resolve(process.argv[2] ?? '.');
 const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
 const find = (pattern) => fs.readdirSync(dir).find((f) => pattern.test(f));

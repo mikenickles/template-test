@@ -61,11 +61,19 @@ The hub's HTTP API, the app's `HubClient`/`Models.kt`, and the desktop app's `we
 change them together.
 
 Releases: the app and hub share one version (`versionName` in `android/app/build.gradle.kts`, `version` in
-`hub/package.json` and the lock file). A release is two files: `cd orbit/hub && npm run package -- <dir>` for
-`orbit-hub-X.Y.Z.zip`, and the signed release APK renamed `orbit-X.Y.Z.apk`. The user saves them in the hub's
-updates folder (`~/.orbit-hub/updates`) and clicks Update on desktop and phone; see `hub/src/updates.js`. The
-updater only installs `src/`, `web/`, `package.json` and `package-lock.json`, and never `Start Orbit.bat`, so
-changes to the start script need a manual install. Nothing here goes through GitHub or Google Drive.
+`hub/package.json` and the lock file). A release is two files: `orbit-hub-X.Y.Z.zip` and the signed release APK
+renamed `orbit-X.Y.Z.apk`. They're published to the user's Google Drive, where the hub picks them up
+(`hub/src/feed.js`), and the user installs from the phone (Update PC, then Update); see `hub/src/updates.js`. To
+publish with the Google Drive and Docs connectors:
+1. Find the **Orbit update feed** Doc and the link-shared **Orbit updates** folder (in "Orbit") in the user's Drive.
+2. `cd orbit/hub && npm run package -- <dir> --feed https://docs.google.com/document/d/<doc id>/export?format=txt`,
+   copy the APK in as `orbit-X.Y.Z.apk`, then `node scripts/release.js <dir>` (splits the app into parts under
+   3 MB, the connector's limit per upload, and writes `release.json` with sizes and SHA-256s).
+3. Upload the hub zip and every part into the folder (they inherit its link sharing).
+4. Replace the Doc's JSON line with `release.json` plus each file's `url`:
+   `https://drive.usercontent.google.com/download?id=<file id>&export=download&confirm=t` (`file` keys dropped).
+The updater only installs `src/`, `web/`, `package.json` and `package-lock.json`, and never `Start Orbit.bat`, so
+changes to the start script need a manual install. Files saved by hand in `~/.orbit-hub/updates` also work.
 
 Release signing: the key lives outside the repo (`orbit/android/keystore.properties` locally, or the
 `ORBIT_KEYSTORE_BASE64`/`ORBIT_KEYSTORE_PASSWORD` secrets for the GitHub workflow). Never commit a keystore

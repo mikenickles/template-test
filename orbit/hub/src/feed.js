@@ -12,7 +12,7 @@ import { compareVersions } from './updates.js';
  * Manifest: { "orbit": "update-feed", "version": "X.Y.Z", "notes": "...",
  *   "hub": { "url", "sha256", "size" },
  *   "app": { "sha256", "size", "parts": [{ "url", "sha256", "size" }] } }
- * The app comes in parts because files uploaded to Drive from Claude's side are capped at 10 MB.
+ * The app comes in parts because files uploaded to Drive from Claude's side are capped at about 3 MB.
  */
 
 const MAX_FILE = 200 * 1024 * 1024;
@@ -124,7 +124,8 @@ export class Feed {
       }
       this.error = null;
     } catch (err) {
-      this.error = err instanceof FeedError ? err.message : `Couldn't check for updates (${err?.cause?.code ?? err?.message ?? 'no connection'}).`;
+      const why = err?.cause?.code || err?.cause?.message || (err?.name === 'TimeoutError' ? 'timed out' : err?.message) || 'no connection';
+      this.error = err instanceof FeedError ? err.message : `Couldn't reach Google Drive to check for updates (${why}).`;
       this.log(`Update check: ${this.error}`);
     }
   }

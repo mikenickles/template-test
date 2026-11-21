@@ -129,20 +129,23 @@ account like any other usage.
 
 ## 5. Update Orbit
 
-New versions arrive as two files: `orbit-hub-X.Y.Z.zip` for the PC and `orbit-X.Y.Z.apk` for
-phones. Save both in the hub's **updates folder** (`C:\Users\<you>\.orbit-hub\updates`;
-**Settings, Updates, Open folder** opens it).
+New versions are published to an **Orbit updates** folder in the owner's Google Drive. The hub
+checks it every few hours (or straight away with **Settings, Updates, Check now**), downloads a
+newer version into its updates folder (`C:\Users\<you>\.orbit-hub\updates`) and checks each
+file's SHA-256 before keeping it. Then, from anywhere:
 
-- **PC:** an **Orbit X.Y.Z is ready** card appears in the desktop app. Click **Update**: the hub
-  checks the package, installs it, restarts and the page reloads. The files it replaced are kept in
-  `updates\previous`. Updating restarts the hub, so it asks first if your crew is mid-reply.
-- **Phone:** **Orbit X.Y.Z is ready** appears on Home and in Settings. Tap **Update**: the phone
-  downloads the app from your PC (at home or through Tailscale) and Android asks you to confirm.
-  The first time, Android sends you to a screen to allow Orbit to install updates.
+- **Update the PC** first: **Orbit X.Y.Z is ready for your PC** appears on the phone's Home and in
+  Settings, and in the desktop app. Tap **Update PC**: the hub checks the package, installs it and
+  restarts. The files it replaced are kept in `updates\previous`.
+- **Then the phone:** **Orbit X.Y.Z is ready** appears. Tap **Update**: the phone downloads the app
+  from your PC (at home or through Tailscale) and Android asks you to confirm. The first time,
+  Android sends you to a screen to allow Orbit to install updates.
 
-Updates only come from files you saved on your PC. The hub refuses a package that is damaged,
-isn't Orbit's, is the same or an older version, or holds anything outside its own `src`, `web` and
-`package.json`. `Start Orbit.bat` isn't updated this way; a release that changes it says so.
+Files saved by hand in the updates folder (`orbit-hub-X.Y.Z.zip` and `orbit-X.Y.Z.apk`) work the
+same way. The hub refuses a package that is damaged, isn't Orbit's, is the same or an older version,
+or holds anything outside its own `src`, `web` and `package.json`. `Start Orbit.bat` isn't updated
+this way; a release that changes it says so. Updating restarts the hub, so it asks first if your
+crew is mid-reply.
 
 ## 6. Build the app
 
@@ -181,7 +184,17 @@ It needs two repository secrets: `ORBIT_KEYSTORE_BASE64` (the key file, base64) 
    `hub/package.json` and `hub/package-lock.json` to the same `X.Y.Z`: the app and hub are released together.
 2. `cd hub && npm run package -- <folder>` writes `orbit-hub-X.Y.Z.zip`.
 3. `cd android && ./gradlew :app:assembleRelease`, then copy `app-release.apk` to `orbit-X.Y.Z.apk`.
-4. Hand over both files to be saved in the updates folder.
+4. Publish them to the Drive feed (below), or hand over both files to be saved in the updates folder.
+
+### The Drive update feed
+
+A Google Doc, **Orbit update feed**, holds one line of JSON: the version, and each file's download
+link, size and SHA-256. The hub reads it through the Doc's text export
+(`https://docs.google.com/document/d/<doc id>/export?format=txt`), a link packed into the hub package
+with `npm run package -- <dir> --feed <link>` (kept out of git). The files live beside it in the link-
+shared **Orbit updates** folder. `node scripts/release.js <dir>` splits the app into parts under 3 MB
+(the most Claude's Drive connection uploads at once) and writes `release.json`; each part's link is
+`https://drive.usercontent.google.com/download?id=<file id>&export=download&confirm=t`.
 
 ## Tests
 
