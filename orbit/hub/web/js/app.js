@@ -536,6 +536,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
         <button class="danger" onClick=${() => { setMenu(false); onDelete(); }}>Delete room</button>
       </div>`}
     </header>
+    <div class="messages-frame">
     <div class="messages" ref=${scroller} onScroll=${onScroll} onClick=${onCopyCode}>
       ${loaded && !messages.length
         ? html`<div class="empty-room">
@@ -559,6 +560,9 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
             </div>`)}
           </div>`}
       ${!nearBottom && html`<div class="latest"><button class="pill" onClick=${() => { scroller.current.scrollTop = scroller.current.scrollHeight; }}><${Icon} name="up" size=${16} />Latest</button></div>`}
+    </div>
+    <div class="edge-blur top" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="edge-blur bottom" aria-hidden="true"><i></i><i></i><i></i></div>
     </div>
     <${Composer} room=${room} agents=${agents} running=${run.active} notify=${notify} onSent=${() => { stick.current = true; }}
       suggestions=${loaded && messages.length && !run.active ? suggestionsFor(agents, messages) : []}

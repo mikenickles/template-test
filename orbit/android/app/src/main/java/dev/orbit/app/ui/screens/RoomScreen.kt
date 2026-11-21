@@ -1,5 +1,12 @@
 package dev.orbit.app.ui.screens
 
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.GraphicsLayerScope
+import androidx.annotation.RequiresApi
+import android.graphics.RuntimeShader
+import android.graphics.RenderEffect
+import android.os.Build
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.infiniteRepeatable
@@ -288,7 +295,7 @@ fun RoomScreen(
                 } else {
                     // Newest at the bottom, and the list stays pinned there while replies stream in.
                     LazyColumn(
-                        Modifier.fillMaxSize().fadeEdges(top, bottom),
+                        Modifier.fillMaxSize().fadeEdges(top, bottom).edgeBlur(top, bottom),
                         state = list,
                         reverseLayout = true,
                         contentPadding = PaddingValues(
@@ -444,6 +451,74 @@ private fun Modifier.fadeEdges(top: Dp, bottom: Dp): Modifier = graphicsLayer { 
             blendMode = BlendMode.DstIn,
         )
     }
+
+/**
+ * As the conversation fades toward the bar and the composer, it also goes softly out of focus: no blur
+ * where the text is fully there, growing to a few dp at the very edges. Android 13 and newer; earlier
+ * phones keep the fade alone.
+ */
+private fun Modifier.edgeBlur(top: Dp, bottom: Dp): Modifier = composed {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || LocalInspectionMode.current) return@composed this
+    // A phone that can't build the effect (the shader is compiled as it's made) keeps the plain fade.
+    val blur = remember { runCatching { EdgeBlur() }.getOrNull() } ?: return@composed this
+    graphicsLayer { renderEffect = runCatching { blur.effect(this, top, bottom) }.getOrNull() }
+}
+
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+private class EdgeBlur {
+    private val across = RuntimeShader(EDGE_BLUR)
+    private val down = RuntimeShader(EDGE_BLUR)
+
+    fun effect(scope: GraphicsLayerScope, top: Dp, bottom: Dp): androidx.compose.ui.graphics.RenderEffect = with(scope) {
+        // The same bands as the fade: clear below the bar's solid line and above the composer's.
+        val topEnd = (top + 56.dp).toPx()
+        val bottomStart = size.height - (bottom + 32.dp).toPx()
+        for ((shader, x, y) in listOf(Triple(across, 1f, 0f), Triple(down, 0f, 1f))) {
+            shader.setFloatUniform("topEnd", topEnd)
+            shader.setFloatUniform("bottomStart", bottomStart)
+            shader.setFloatUniform("height", size.height)
+            shader.setFloatUniform("radius", MAX_EDGE_BLUR.toPx())
+            shader.setFloatUniform("direction", x, y)
+        }
+        RenderEffect.createChainEffect(
+            RenderEffect.createRuntimeShaderEffect(down, "content"),
+            RenderEffect.createRuntimeShaderEffect(across, "content"),
+        ).asComposeRenderEffect()
+    }
+}
+
+/** How soft the conversation gets at the very edges of the screen. */
+private val MAX_EDGE_BLUR = 7.dp
+
+/** One pass of a blur whose radius grows toward the top and bottom bands; run across, then down. */
+private const val EDGE_BLUR = """
+uniform shader content;
+uniform float topEnd;
+uniform float bottomStart;
+uniform float height;
+uniform float radius;
+uniform float2 direction;
+
+half4 main(float2 p) {
+    float t = 0.0;
+    if (p.y < topEnd) {
+        t = 1.0 - p.y / max(topEnd, 1.0);
+    } else if (p.y > bottomStart) {
+        t = (p.y - bottomStart) / max(height - bottomStart, 1.0);
+    }
+    float r = radius * t * sqrt(t);
+    if (r < 0.5) return content.eval(p);
+    half4 sum = half4(0.0);
+    float total = 0.0;
+    for (int i = -6; i <= 6; i++) {
+        float x = float(i) / 6.0;
+        float w = exp(-2.5 * x * x);
+        sum += content.eval(p + direction * (x * r)) * w;
+        total += w;
+    }
+    return sum / total;
+}
+"""
 
 /**
  * Whether a reply can be asked again: not while the crew is busy, only if its agent is still in the

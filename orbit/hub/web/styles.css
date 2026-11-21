@@ -250,6 +250,21 @@ main { min-width: 0; min-height: 0; display: flex; flex-direction: column; backg
 .messages { flex: 1; overflow-y: auto; position: relative;
   -webkit-mask-image: linear-gradient(transparent, #000 56px, #000 calc(100% - 44px), transparent);
   mask-image: linear-gradient(transparent, #000 56px, #000 calc(100% - 44px), transparent); }
+/* As it fades, the conversation also goes softly out of focus: layers of growing blur toward each edge. */
+.messages-frame { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.edge-blur { position: absolute; left: 0; right: 14px; height: 64px; pointer-events: none; z-index: 1; }
+.edge-blur.top { top: 0; }
+.edge-blur.bottom { bottom: 0; height: 52px; }
+.edge-blur i { position: absolute; inset: 0; }
+.edge-blur i:nth-child(1) { -webkit-backdrop-filter: blur(1px); backdrop-filter: blur(1px); }
+.edge-blur i:nth-child(2) { -webkit-backdrop-filter: blur(2.5px); backdrop-filter: blur(2.5px); }
+.edge-blur i:nth-child(3) { -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
+.edge-blur.top i:nth-child(1) { -webkit-mask-image: linear-gradient(#000 40%, transparent); mask-image: linear-gradient(#000 40%, transparent); }
+.edge-blur.top i:nth-child(2) { -webkit-mask-image: linear-gradient(#000 15%, transparent 65%); mask-image: linear-gradient(#000 15%, transparent 65%); }
+.edge-blur.top i:nth-child(3) { -webkit-mask-image: linear-gradient(#000, transparent 35%); mask-image: linear-gradient(#000, transparent 35%); }
+.edge-blur.bottom i:nth-child(1) { -webkit-mask-image: linear-gradient(to top, #000 40%, transparent); mask-image: linear-gradient(to top, #000 40%, transparent); }
+.edge-blur.bottom i:nth-child(2) { -webkit-mask-image: linear-gradient(to top, #000 15%, transparent 65%); mask-image: linear-gradient(to top, #000 15%, transparent 65%); }
+.edge-blur.bottom i:nth-child(3) { -webkit-mask-image: linear-gradient(to top, #000, transparent 35%); mask-image: linear-gradient(to top, #000, transparent 35%); }
 .messages-inner { max-width: 780px; margin: 0 auto; padding: 44px 28px 40px; display: flex; flex-direction: column; gap: 28px; }
 .message { position: relative; animation: rise 0.42s var(--decelerate) both; }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
@@ -482,7 +497,7 @@ main { min-width: 0; min-height: 0; display: flex; flex-direction: column; backg
 .stage-member.add .plus { width: 72px; height: 72px; margin-bottom: 8px; border-radius: 50%; border: 1.5px dashed var(--line); display: grid; place-items: center; color: var(--text-2); }
 .room-wash { position: absolute; left: 0; right: 0; top: 0; height: 280px; pointer-events: none; background: var(--wash); opacity: 0.16; -webkit-mask-image: linear-gradient(#000, transparent); mask-image: linear-gradient(#000, transparent); }
 main { position: relative; }
-main > header, main > .messages, main > .composer-wrap { position: relative; }
+main > header, main > .messages, main > .messages-frame, main > .composer-wrap { position: relative; }
 .crew-ready { display: flex; align-items: center; gap: 14px; width: calc(100% - 48px); margin: 14px 0 0 48px; padding: 14px; text-align: left; border-radius: var(--r-l); border: var(--edge); background: var(--surface); position: relative; overflow: hidden; transition: transform 0.12s; animation: pop 0.45s cubic-bezier(.34,1.56,.64,1); }
 .crew-ready::before { content: ''; position: absolute; inset: 0; background: var(--wash); opacity: 0.26; pointer-events: none; }
 .crew-ready > * { position: relative; }
