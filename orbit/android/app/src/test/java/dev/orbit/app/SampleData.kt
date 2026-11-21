@@ -15,6 +15,7 @@ import dev.orbit.app.data.Agent
 import dev.orbit.app.data.Author
 import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.data.HubInfo
+import dev.orbit.app.data.FeedStatus
 import dev.orbit.app.data.HubUpdates
 import dev.orbit.app.data.UpdateInfo
 import dev.orbit.app.data.CreatedAgent
@@ -112,7 +113,15 @@ object SampleData {
     )
 
     /** The PC is holding a newer app and a newer hub. */
-    val updatable = app.copy(updates = HubUpdates("C:\\Users\\you\\.orbit-hub\\updates", UpdateInfo("0.10.0", "0.11.0"), UpdateInfo("", "0.11.0", 14_200_000)))
+    val updatable = app.copy(
+        updates = HubUpdates(
+            "C:\\Users\\you\\.orbit-hub\\updates", UpdateInfo("0.10.0", "0.11.0"), UpdateInfo("", "0.11.0", 14_200_000),
+            FeedStatus(enabled = true, checkedAt = NOW - 2 * 60 * 60 * 1000, latest = "0.11.0"),
+        ),
+    )
+
+    /** The PC is already on the new version; the phone's update is waiting. */
+    val phoneUpdatable = updatable.copy(updates = updatable.updates.copy(hub = UpdateInfo("0.11.0", null)), hub = updatable.hub.copy(version = "0.11.0"))
 
     /** Nova hired a running coach on request. */
     val rio = Agent(

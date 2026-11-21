@@ -190,10 +190,10 @@ function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate }) {
       </button>
     </div>
     <div class="sidebar-scroll">
-      ${state.updates?.hub.available && html`<button class="card row button-row update-banner" onClick=${() => (onThisPC ? onUpdate() : onDialog({ type: 'settings' }))}>
+      ${state.updates?.hub.available && html`<button class="card row button-row update-banner" onClick=${onUpdate}>
         <div style="flex:1"><div class="title-s">Orbit ${state.updates.hub.available} is ready</div>
-          <div class="body-s muted">${onThisPC ? 'Install it now. Orbit restarts in a few seconds.' : 'Install it from Orbit on the PC.'}</div></div>
-        ${onThisPC && html`<span class="pill selected">Update</span>`}
+          <div class="body-s muted">Install it now. Orbit restarts in a few seconds.</div></div>
+        <span class="pill selected">Update</span>
       </button>`}
       ${intro && html`<button class="card row button-row intro-mini" style=${`--wash:${tint(guide.avatar)}`} onClick=${() => (canIntro(state) ? onIntro() : onDialog({ type: 'settings' }))}>
         <${Avatar} spec=${guide.avatar} size=${36} />

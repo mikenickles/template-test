@@ -10,6 +10,7 @@ import { hubAddresses } from './network.js';
 import { Providers } from './providers.js';
 import { qrTerminal } from './qr.js';
 import { Hub } from './server.js';
+import { feedUrl } from './feed.js';
 import { Store } from './store.js';
 
 const config = loadConfig();
@@ -45,7 +46,10 @@ function restartForUpdate(version) {
   process.exit(0);
 }
 
-const hub = new Hub({ store, providers, folders, prices: config.prices, name: config.name, onPairingCode: () => showPairing(), onRestart: restartForUpdate });
+const hub = new Hub({
+  store, providers, folders, prices: config.prices, name: config.name, onPairingCode: () => showPairing(), onRestart: restartForUpdate,
+  feedUrl: feedUrl(hubDir, config), log: (line) => console.log(line),
+});
 const port = await hub.listen(Number(process.env.PORT) || config.port);
 hub.startDiscovery(config.discoveryPort, port);
 
@@ -91,13 +95,14 @@ console.log(`  Model keys:  ${keyed.length ? keyed.join(', ') : 'none yet. Add o
 const shared = folders.list().map((f) => f.name);
 console.log(`  Folders:     ${shared.length ? shared.join(', ') : `none shared. Share one at ${pairPage}`}`);
 console.log(`  Away:        ${away.length ? `${away.join(', ')} (Tailscale)` : 'not set up. Install Tailscale on this PC and your phone to use Orbit anywhere.'}`);
-console.log(`  Updates:     save new versions in ${hub.updates.dir}`);
+console.log(`  Updates:     ${hub.feed.url ? 'checked in your Google Drive every few hours, and ' : ''}saved in ${hub.updates.dir}`);
 console.log(`  Desktop app: ${appPage}  (in Edge or Chrome, use "Install Orbit" to keep it as an app)`);
 console.log(`  Data:        ${dataDir}`);
 
 await ensureFirewall({ port, discoveryPort: config.discoveryPort, dataDir, log: (line) => console.log(line) });
 
 showPairing();
+hub.feed.start();
 if (!background && store.state.devices.length === 0) openInBrowser(pairPage);
 
 // First run on Windows: offer to start with the computer, so the hub is always there.

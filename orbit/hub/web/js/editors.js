@@ -234,6 +234,19 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate })
   const [fact, setFact] = useState('');
   const byName = Object.fromEntries(state.agents.map((a) => [a.name, a]));
   const aboutYou = (work) => work().then(refresh).catch((e) => notify(e.message));
+  const [checking, setChecking] = useState(false);
+  const checkNow = async () => {
+    setChecking(true);
+    try {
+      const found = await api.checkForUpdates();
+      await refresh();
+      notify(found.feed?.error ?? (found.hub.available ? `Orbit ${found.hub.available} is ready to install.` : 'Orbit is up to date.'));
+    } catch (e) {
+      notify(e.message);
+    } finally {
+      setChecking(false);
+    }
+  };
 
   // While a local runtime's panel is open, keep its status fresh: quickly during a download.
   const local = state.providers.find((p) => p.id === open && p.local);
@@ -292,7 +305,7 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate })
       <div class="row"><span style="flex:1">
         <div class="title-s">Orbit on this PC</div>
         <div class="body-s muted">${state.updates?.hub.available ? `Version ${state.updates.hub.available} is ready to install` : `Version ${state.hub.version}, up to date`}</div></span>
-        ${state.updates?.hub.available && (onThisPC ? html`<button class="button" onClick=${onUpdate}>Update</button>` : html`<span class="label faint">Install from the PC</span>`)}</div>
+        ${state.updates?.hub.available && html`<button class="button" onClick=${onUpdate}>Update</button>`}</div>
       <div class="row"><span style="flex:1">
         <div class="title-s">Orbit on your phone</div>
         <div class="body-s muted">${state.updates?.app.available ? `Version ${state.updates.app.available} is ready. Open Orbit on the phone, Settings, Update.` : 'Nothing new waiting'}</div></span></div>
@@ -301,7 +314,11 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate })
         <div class="mono faint" style="overflow-wrap:anywhere">${state.updates?.folder}</div></span>
         ${onThisPC && html`<button class="pill" onClick=${() => api.openUpdates().catch((e) => notify(e.message))}>Open folder</button>`}</div>
     </div>
-    <p class="note">New versions arrive as two files: <span class="mono">orbit-hub-X.Y.Z.zip</span> for this PC and <span class="mono">orbit-X.Y.Z.apk</span> for the phone. Save them in the updates folder and an Update button appears here and in the phone app.</p>
+    ${state.updates?.feed?.enabled && html`<div class="note" style="display:flex;align-items:center;gap:12px">
+      <span style=${`flex:1;${state.updates.feed.error ? 'color:var(--danger)' : ''}`}>${checking || state.updates.feed.checking ? 'Looking in your Google Drive…'
+        : state.updates.feed.error ?? `Orbit checks your Google Drive for new versions every few hours.${state.updates.feed.checkedAt ? ` Last checked ${new Date(state.updates.feed.checkedAt).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })}.` : ''}`}</span>
+      <button class="pill" disabled=${checking} onClick=${checkNow}>Check now</button></div>`}
+    <p class="note">New versions ${state.updates?.feed?.enabled ? 'arrive from your Google Drive by themselves, or' : 'arrive'} as two files: <span class="mono">orbit-hub-X.Y.Z.zip</span> for this PC and <span class="mono">orbit-X.Y.Z.apk</span> for the phone, saved in the updates folder. An Update button then appears here and in the phone app.</p>
 
     <div class="section-title">About you</div>
     <div class="card">

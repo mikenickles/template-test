@@ -30,6 +30,7 @@ import dev.orbit.app.ui.components.OrbitCard
 import dev.orbit.app.ui.components.OrbitIcon
 import dev.orbit.app.ui.components.ScreenBar
 import dev.orbit.app.ui.components.SectionTitle
+import dev.orbit.app.ui.components.PcUpdateCard
 import dev.orbit.app.ui.components.UpdateCard
 import dev.orbit.app.ui.components.StatusDot
 import dev.orbit.app.ui.components.tap
@@ -38,6 +39,7 @@ import dev.orbit.app.ui.theme.OrbitDimens
 import dev.orbit.app.ui.theme.OrbitType
 import dev.orbit.app.ui.theme.entrance
 import dev.orbit.app.ui.theme.rememberEntrances
+import androidx.compose.foundation.layout.Arrangement
 
 @Composable
 fun SettingsScreen(
@@ -53,6 +55,9 @@ fun SettingsScreen(
     installedVersion: String = "",
     updateStatus: UpdateStatus = UpdateStatus.Idle,
     onUpdate: () -> Unit = {},
+    pcUpdating: String? = null,
+    onUpdatePc: () -> Unit = {},
+    onCheckUpdates: () -> Unit = {},
 ) {
     val c = Orbit.colors
     val uri = LocalUriHandler.current
@@ -129,24 +134,55 @@ fun SettingsScreen(
 
             Column(Modifier.entrance(entrances, "providers", 1)) {
                 SectionTitle("Updates", Modifier.padding(top = OrbitDimens.section, bottom = 8.dp))
+                val updates = state.updates
                 val appUpdate = state.appUpdate(installedVersion)
-                if (appUpdate != null) {
-                    UpdateCard(appUpdate, updateStatus, onUpdate)
-                } else {
-                    OrbitCard(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(start = OrbitDimens.rowPad, end = OrbitDimens.rowPad, top = 14.dp, bottom = 14.dp)) {
-                            Text("Orbit on this phone", style = OrbitType.titleS, color = c.text)
-                            Text("Version $installedVersion, up to date", Modifier.padding(top = 2.dp), style = OrbitType.bodyS, color = c.textSecondary)
+                val pcUpdate = state.pcUpdate ?: pcUpdating
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // The PC first: the phone's update is offered once the PC is on the new version.
+                    if (pcUpdate != null) PcUpdateCard(pcUpdate, pcUpdating != null, onUpdatePc)
+                    if (appUpdate != null) UpdateCard(appUpdate, updateStatus, onUpdate)
+                    if (pcUpdate == null && appUpdate == null) {
+                        OrbitCard(Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(start = OrbitDimens.rowPad, end = OrbitDimens.rowPad, top = 14.dp, bottom = 14.dp)) {
+                                Text("Up to date", style = OrbitType.titleS, color = c.text)
+                                Text(
+                                    "Version $installedVersion on this phone${if (state.hub.version.isNotBlank()) ", ${state.hub.version} on your PC" else ""}.",
+                                    Modifier.padding(top = 2.dp),
+                                    style = OrbitType.bodyS,
+                                    color = c.textSecondary,
+                                )
+                            }
                         }
                     }
                 }
-                state.updates.hub.available?.let { version ->
-                    Text(
-                        "Orbit $version is ready for your PC. Open Orbit on the PC and tap Update.",
-                        Modifier.padding(top = OrbitDimens.labelGap),
-                        style = OrbitType.bodyS,
-                        color = c.textTertiary,
-                    )
+                if (updates.feed.enabled) {
+                    Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            when {
+                                updates.feed.checking -> "Looking in your Google Drive…"
+                                updates.feed.error != null -> updates.feed.error
+                                updates.feed.checkedAt != null -> {
+                                    val ago = relativeTime(updates.feed.checkedAt, System.currentTimeMillis())
+                                    val last = when {
+                                        ago == "now" -> "just now"
+                                        ago.last().isDigit() || ago.endsWith("m") || ago.endsWith("h") -> "$ago ago"
+                                        else -> "on $ago"
+                                    }
+                                    "Your PC checks your Google Drive every few hours. Last checked $last."
+                                }
+                                else -> "Your PC checks your Google Drive for new versions every few hours."
+                            },
+                            Modifier.weight(1f).padding(vertical = 8.dp),
+                            style = OrbitType.bodyS,
+                            color = if (updates.feed.error != null) c.danger else c.textTertiary,
+                        )
+                        Text(
+                            "Check now",
+                            Modifier.tap(CircleShape, 0.92f, onCheckUpdates).padding(horizontal = 12.dp, vertical = 10.dp),
+                            style = OrbitType.label,
+                            color = c.text,
+                        )
+                    }
                 }
 
                 SectionTitle("About you", Modifier.padding(top = OrbitDimens.section, bottom = 8.dp))

@@ -104,6 +104,14 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
 
     suspend fun removeKey(providerId: String): Provider = call("DELETE", "/api/providers/$providerId/key")
 
+    /** Installs the hub update waiting on the PC; the hub restarts right after answering. */
+    suspend fun updatePc() {
+        call<Unit>("POST", "/api/updates/apply", "{}")
+    }
+
+    /** Has the hub look in the Drive feed for a newer version now. */
+    suspend fun checkForUpdates(): HubUpdates = call("POST", "/api/updates/check", "{}")
+
     /** Starts (or reopens) the getting-to-know-you chat. Returns its room. */
     suspend fun startIntro(): Room = call("POST", "/api/intro", "{}")
 

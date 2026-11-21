@@ -48,7 +48,22 @@ data class UpdateInfo(val current: String = "", val available: String? = null, v
 
 /** What is waiting in the hub's updates folder: a new hub for the PC, and a new app for phones. */
 @Serializable
-data class HubUpdates(val folder: String = "", val hub: UpdateInfo = UpdateInfo(), val app: UpdateInfo = UpdateInfo())
+data class HubUpdates(
+    val folder: String = "",
+    val hub: UpdateInfo = UpdateInfo(),
+    val app: UpdateInfo = UpdateInfo(),
+    val feed: FeedStatus = FeedStatus(),
+)
+
+/** The user's Google Drive update feed, which the hub checks every few hours. */
+@Serializable
+data class FeedStatus(
+    val enabled: Boolean = false,
+    val checking: Boolean = false,
+    val checkedAt: Long? = null,
+    val error: String? = null,
+    val latest: String? = null,
+)
 
 /** What the whole crew knows about the user: what to call them, and notes from them or their agents. */
 @Serializable

@@ -9,6 +9,7 @@ import { FolderError, Folders } from './folders.js';
 import { MemoryError, addNote, addProfileNote, cleanName, removeNote, removeProfileNote } from './memory.js';
 import { GUIDE, INTRO_ROOM_NAME } from './intro.js';
 import { UpdateError, Updates, openFolder } from './updates.js';
+import { Feed } from './feed.js';
 import { ScheduleError, Scheduler } from './schedules.js';
 import { ABILITIES, Orchestrator } from './orchestrator.js';
 import { ProviderError } from './errors.js';
@@ -65,7 +66,7 @@ const JUST_PAIRED_MS = 60_000;
  * bearer token a phone receives when it pairs with the code shown on the PC.
  */
 export class Hub {
-  constructor({ store, providers, folders = new Folders(), prices = {}, name, onPairingCode = () => {}, updates = null, onRestart = null }) {
+  constructor({ store, providers, folders = new Folders(), prices = {}, name, onPairingCode = () => {}, updates = null, onRestart = null, feedUrl = null, log = () => {} }) {
     this.store = store;
     // Updates saved in the updates folder; `onRestart` is how the hub restarts itself once one is installed.
     this.updates = updates ?? new Updates({
@@ -74,6 +75,8 @@ export class Hub {
       current: VERSION,
     });
     this.onRestart = onRestart;
+    // New versions published to the user's Google Drive, downloaded into the updates folder.
+    this.feed = new Feed({ url: feedUrl, updates: this.updates, log });
     this.providers = providers;
     this.folders = folders;
     this.ledger = new Ledger(store, prices);
@@ -365,7 +368,7 @@ export class Hub {
           agents: this.store.state.agents,
           rooms: this.store.state.rooms.map((r) => this.#roomView(r)),
           providers: this.providers.list(),
-          updates: this.updates.status(),
+          updates: { ...this.updates.status(), feed: this.feed.status() },
           profile: this.#profile(),
           folders: this.folders.list(),
           schedules: this.scheduler.list(),
@@ -405,13 +408,17 @@ export class Hub {
         return undefined;
       }
       case 'POST /api/updates/:id': {
-        // Both only from this PC: it is where the update files were saved, and where Orbit restarts.
-        this.#localOnly(req, true);
         if (id === 'open') {
+          // Opens a window on the PC, so only from the PC.
+          this.#localOnly(req, true);
           openFolder(this.updates.dir);
           return { ok: true };
         }
+        // Looks in Drive for a newer version now, rather than waiting for the next check.
+        if (id === 'check') return { ...this.updates.status(), feed: await this.feed.check() };
         if (id !== 'apply') throw new HttpError(404, 'Not found.');
+        // Installing works from any paired device, so the PC can be updated from a phone. The package can
+        // only come from the updates folder, which the user or their own Drive feed filled.
         if (this.restarting) throw new HttpError(409, 'Orbit is already updating.');
         let installed;
         try {

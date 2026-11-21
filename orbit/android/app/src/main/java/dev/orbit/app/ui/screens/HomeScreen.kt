@@ -78,6 +78,7 @@ import dev.orbit.app.ui.components.SectionTitle
 import dev.orbit.app.ui.components.ShimmerText
 import dev.orbit.app.ui.components.SkeletonBlock
 import dev.orbit.app.ui.components.StatusDot
+import dev.orbit.app.ui.components.PcUpdateCard
 import dev.orbit.app.ui.components.UpdateCard
 import dev.orbit.app.ui.components.lift
 import dev.orbit.app.ui.components.surfaceBorder
@@ -117,6 +118,9 @@ fun HomeScreen(
     appUpdate: String? = null,
     updateStatus: UpdateStatus = UpdateStatus.Idle,
     onUpdate: () -> Unit = {},
+    /** The version the PC is installing right now, if any. */
+    pcUpdating: String? = null,
+    onUpdatePc: () -> Unit = {},
 ) {
     val c = Orbit.colors
     val list = rememberLazyListState()
@@ -161,7 +165,15 @@ fun HomeScreen(
                     return@LazyColumn
                 }
 
-                if (appUpdate != null) {
+                val pcUpdate = state.pcUpdate ?: pcUpdating
+                if (pcUpdate != null) {
+                    item(key = "pc-update") {
+                        PcUpdateCard(
+                            pcUpdate, pcUpdating != null, onUpdatePc,
+                            Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 22.dp).entrance(entrances, "pc-update", 0),
+                        )
+                    }
+                } else if (appUpdate != null) {
                     item(key = "update") {
                         UpdateCard(
                             appUpdate, updateStatus, onUpdate,

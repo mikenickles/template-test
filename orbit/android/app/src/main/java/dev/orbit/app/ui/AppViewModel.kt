@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 data class AppState(
@@ -55,8 +56,12 @@ data class AppState(
 ) {
     fun agent(id: String?) = agents.firstOrNull { it.id == id }
 
-    /** The app version waiting on the PC, if it is newer than [installed]. */
-    fun appUpdate(installed: String): String? = updates.app.available?.takeIf { isNewerVersion(it, installed) }
+    /** The app version waiting on the PC, if it is newer than [installed]. Offered once the PC itself is current. */
+    fun appUpdate(installed: String): String? =
+        updates.app.available?.takeIf { updates.hub.available == null && isNewerVersion(it, installed) }
+
+    /** A newer version waiting for the PC, installable from here. */
+    val pcUpdate: String? get() = updates.hub.available
 
     /** Whether the hub has a Claude key, which the getting-to-know-you chat needs. */
     val canIntro: Boolean get() = providers.any { it.abilities && it.configured }
@@ -284,6 +289,43 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _updateStatus = MutableStateFlow<UpdateStatus>(UpdateStatus.Idle)
     val updateStatus: StateFlow<UpdateStatus> = _updateStatus.asStateFlow()
+
+    /** The version the PC is installing right now, while it restarts; null otherwise. */
+    private val _pcUpdating = MutableStateFlow<String?>(null)
+    val pcUpdating: StateFlow<String?> = _pcUpdating.asStateFlow()
+
+    /** Installs the waiting update on the PC from here, then waits for the hub to come back on it. */
+    fun updatePc() {
+        val version = _state.value.updates.hub.available ?: return
+        if (_pcUpdating.value != null) return
+        viewModelScope.launch {
+            _pcUpdating.value = version
+            if (hub { it.updatePc() } == null) {
+                _pcUpdating.value = null
+                return@launch
+            }
+            // The hub restarts on the new files; give it up to two minutes.
+            repeat(60) {
+                delay(2000)
+                val back = runCatching { repo.client?.state() }.getOrNull()
+                if (back?.hub?.version == version) {
+                    reload()
+                    _pcUpdating.value = null
+                    _notices.tryEmit("Your PC is on Orbit $version.")
+                    return@launch
+                }
+            }
+            _pcUpdating.value = null
+            _notices.tryEmit("Your PC hasn't come back yet. If Orbit's window on the PC closed, start it again.")
+        }
+    }
+
+    /** Asks the hub to look in Drive for a newer version now. */
+    fun checkForUpdates() {
+        viewModelScope.launch {
+            hub { it.checkForUpdates() }?.let { found -> _state.update { it.copy(updates = found) } }
+        }
+    }
 
     /** Downloads the app update from the PC and opens Android's installer. */
     fun installUpdate() {

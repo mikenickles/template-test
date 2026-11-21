@@ -123,10 +123,16 @@ class ScreenshotTest {
         HomeScreen(SampleData.updatable, {}, {}, {}, {}, {}, {}, now = now, appUpdate = "0.11.0")
     }
     @Test fun homeUpdateDownloadingLight() = shot("home-update-downloading-light", dark = false) {
-        HomeScreen(SampleData.updatable, {}, {}, {}, {}, {}, {}, now = now, appUpdate = "0.11.0", updateStatus = UpdateStatus.Downloading(42))
+        HomeScreen(SampleData.phoneUpdatable, {}, {}, {}, {}, {}, {}, now = now, appUpdate = "0.11.0", updateStatus = UpdateStatus.Downloading(42))
+    }
+    @Test fun homePcUpdating() = shot("home-pc-updating") {
+        HomeScreen(SampleData.updatable, {}, {}, {}, {}, {}, {}, now = now, pcUpdating = "0.11.0")
     }
     @Test fun settingsUpdate() = shot("settings-update") {
-        SettingsScreen(SampleData.updatable, "http://192.168.1.20:8787", {}, {}, installedVersion = "0.10.0", updateStatus = UpdateStatus.Failed("The download stopped early. Try again."))
+        SettingsScreen(SampleData.updatable, "http://192.168.1.20:8787", {}, {}, installedVersion = "0.10.0")
+    }
+    @Test fun settingsPhoneUpdate() = shot("settings-phone-update", dark = false) {
+        SettingsScreen(SampleData.phoneUpdatable, "http://192.168.1.20:8787", {}, {}, installedVersion = "0.10.0", updateStatus = UpdateStatus.Failed("The download stopped early. Try again."))
     }
     @Test fun homeIntro() = shot("home-intro") { Home(SampleData.newcomer) }
     @Test fun homeIntroLight() = shot("home-intro-light", dark = false) { Home(SampleData.newcomer) }

@@ -96,7 +96,7 @@ test('installing replaces the hub files, keeps a copy of the old ones, and leave
   assert.deepEqual(fs.readdirSync(path.join(hubDir, 'src')), ['main.js'], 'no temporary files left behind');
 });
 
-test('the hub tells apps what is waiting, serves the phone app to paired phones, and installs only from the PC', async (t) => {
+test('the hub tells apps what is waiting, serves the phone app to paired phones, and installs from any paired device', async (t) => {
   const { hubDir, dir, updates } = setup('0.10.0');
   const store = new Store(temp());
   store.isNew = false;
@@ -122,11 +122,13 @@ test('the hub tells apps what is waiting, serves the phone app to paired phones,
   assert.deepEqual(Buffer.from(await download.arrayBuffer()), apk);
   assert.equal((await get('/api/updates/app', {})).status, 401, 'an unpaired device gets nothing');
 
-  const post = (route, headers = { ...auth, 'x-orbit-local': '1' }) => fetch(base + route, { method: 'POST', headers });
-  assert.equal((await post('/api/updates/apply', auth)).status, 403, 'the page on the PC must send it');
+  const post = (route, headers = auth) => fetch(base + route, { method: 'POST', headers });
+  assert.equal((await post('/api/updates/apply', {})).status, 401, 'an unpaired device can\'t install');
+  // Opening the folder opens a window on the PC, so only the page on the PC may ask.
+  assert.equal((await post('/api/updates/open', auth)).status, 403, 'the page on the PC must send it');
   // fetch won't send a made-up Host header, so this one is raw: a page that points its own domain at this PC.
   const spoofed = await new Promise((resolve, reject) => {
-    const req = http.request(base + '/api/updates/apply', { method: 'POST', headers: { ...auth, 'x-orbit-local': '1', host: 'evil.example' } }, (res) => {
+    const req = http.request(base + '/api/updates/open', { method: 'POST', headers: { ...auth, 'x-orbit-local': '1', host: 'evil.example' } }, (res) => {
       res.resume();
       resolve(res.statusCode);
     });

@@ -202,6 +202,7 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
     }
     // A tapped notification opens its room.
     val updateStatus by vm.updateStatus.collectAsStateWithLifecycle()
+    val pcUpdating by vm.pcUpdating.collectAsStateWithLifecycle()
     val pendingRoom by vm.pendingRoom.collectAsStateWithLifecycle()
     LaunchedEffect(pendingRoom) {
         val id = pendingRoom ?: return@LaunchedEffect
@@ -242,6 +243,8 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 appUpdate = state.appUpdate(vm.installedVersion),
                 updateStatus = updateStatus,
                 onUpdate = vm::installUpdate,
+                pcUpdating = pcUpdating,
+                onUpdatePc = vm::updatePc,
                 onStartIntro = {
                     vm.startIntro { id, error ->
                         if (id != null) nav.navigate("room/$id")
@@ -353,6 +356,9 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 installedVersion = vm.installedVersion,
                 updateStatus = updateStatus,
                 onUpdate = vm::installUpdate,
+                pcUpdating = pcUpdating,
+                onUpdatePc = vm::updatePc,
+                onCheckUpdates = vm::checkForUpdates,
             )
         }
         screen("schedules/{id}") { entry ->

@@ -59,3 +59,26 @@ fun UpdateCard(version: String, status: UpdateStatus, onUpdate: () -> Unit, modi
         }
     }
 }
+
+/**
+ * "Orbit 0.15.0 is ready for your PC": a hub update waiting on the PC, installable from the phone.
+ * While it installs, the hub restarts and the card says so.
+ */
+@Composable
+fun PcUpdateCard(version: String, updating: Boolean, onUpdate: () -> Unit, modifier: Modifier = Modifier) {
+    val c = Orbit.colors
+    OrbitCard(modifier.fillMaxWidth()) {
+        Row(Modifier.padding(start = OrbitDimens.rowPad, end = 12.dp, top = 14.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Orbit $version is ready for your PC", style = OrbitType.titleS, color = c.text)
+                Text(
+                    if (updating) "Your PC is updating and restarting. This takes a few seconds." else "Install it from here. Your phone gets its update right after.",
+                    Modifier.padding(top = 2.dp),
+                    style = OrbitType.bodyS,
+                    color = c.textSecondary,
+                )
+            }
+            if (updating) OrbitSpinner(c.text, Modifier.padding(start = 12.dp)) else Pill("Update PC", onUpdate, Modifier.padding(start = 12.dp), selected = true)
+        }
+    }
+}
