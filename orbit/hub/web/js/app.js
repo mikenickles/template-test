@@ -1,4 +1,4 @@
-// Orbit for the desktop: the same rooms and crew as the phone, in a window on the PC.
+// Treehouse for the desktop: the same rooms and crew as the phone, in a window on the PC.
 import { render } from '/vendor/preact.mjs';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from '/vendor/hooks.mjs';
 import { ATTACHABLE, api, canAttach, hubEvents, onThisPC, prepare, roomEvents } from './api.js';
@@ -110,7 +110,7 @@ function App() {
     return html`<div class="connect"><div class="center">
       <${Mark} size=${40} />
       <h1 class="title-l">Can't reach the hub</h1>
-      <p class="muted">Check that Orbit is running on the PC, then try again.</p>
+      <p class="muted">Check that Treehouse is running on the PC, then try again.</p>
       <button class="button" onClick=${refresh}>Try again</button>
     </div></div>`;
   }
@@ -136,10 +136,10 @@ function App() {
     ${dialog?.type === 'settings' && html`<${Settings} state=${state} notify=${notify} refresh=${refresh} onClose=${close} onIntro=${() => { close(); startIntro(); }} onUpdate=${startUpdate} />`}
     ${updating && html`<div class="updating" role="alertdialog" aria-live="polite">
       ${updating.failed
-        ? html`<div class="center"><${Mark} size=${40} /><h1 class="title-l">Orbit hasn't come back yet</h1>
-            <p class="muted">The update to ${updating.version} was installed, but the hub didn't answer. Look at its window on the PC. If it closed, start Orbit again.</p>
+        ? html`<div class="center"><${Mark} size=${40} /><h1 class="title-l">Treehouse hasn't come back yet</h1>
+            <p class="muted">The update to ${updating.version} was installed, but the hub didn't answer. Look at its window on the PC. If it closed, start Treehouse again.</p>
             <button class="button" onClick=${() => location.reload()}>Try again</button></div>`
-        : html`<div class="center"><div class="spinner" style="margin:0 auto 18px"></div><h1 class="title-l">Updating Orbit</h1>
+        : html`<div class="center"><div class="spinner" style="margin:0 auto 18px"></div><h1 class="title-l">Updating Treehouse</h1>
             <p class="muted">Installing ${updating.version}. This takes a few seconds, and the page reloads by itself.</p></div>`}
     </div>`}
     ${dialog?.type === 'schedules' && html`<${Schedules} room=${dialog.room} state=${state} notify=${notify} refresh=${refresh} onClose=${close} onRan=${() => openRoom(dialog.room.id)} />`}
@@ -166,7 +166,7 @@ function Connect({ onConnected }) {
     }
   };
   return html`<div class="connect"><form class="card" onSubmit=${submit}>
-    <div class="wordmark"><${Mark} size=${26} /> Orbit</div>
+    <div class="wordmark"><${Mark} size=${26} /> Treehouse</div>
     <h1 class="title-l" style="margin:24px 0 6px">Connect to your hub</h1>
     <p class="muted" style="margin:0 0 22px">Type the six-digit code your PC shows. On the PC, it's at <span class="mono">localhost:8787/pair</span>.</p>
     <input class="field code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000 000" value=${code}
@@ -186,13 +186,13 @@ function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate }) {
     <div class="sidebar-head">
       <button class="hub-button" onClick=${() => onDialog({ type: 'settings' })}>
         <${Mark} size=${26} />
-        <div class="names"><div class="title-s">${state.hub.name || 'Orbit'}</div><div class="caption faint">Settings, keys and usage</div></div>
+        <div class="names"><div class="title-s">${state.hub.name || 'Treehouse'}</div><div class="caption faint">Settings, keys and usage</div></div>
       </button>
     </div>
     <div class="sidebar-scroll">
       ${state.updates?.hub.available && html`<button class="card row button-row update-banner" onClick=${onUpdate}>
-        <div style="flex:1"><div class="title-s">Orbit ${state.updates.hub.available} is ready</div>
-          <div class="body-s muted">Install it now. Orbit restarts in a few seconds.</div></div>
+        <div style="flex:1"><div class="title-s">Treehouse ${state.updates.hub.available} is ready</div>
+          <div class="body-s muted">Install it now. Treehouse restarts in a few seconds.</div></div>
         <span class="pill selected">Update</span>
       </button>`}
       ${intro && html`<button class="card row button-row intro-mini" style=${`--wash:${tint(guide.avatar)}`} onClick=${() => (canIntro(state) ? onIntro() : onDialog({ type: 'settings' }))}>
@@ -610,7 +610,7 @@ function Composer({ room, agents, running, notify, onSent, replyingTo = null, re
 
   const add = (list) => {
     const usable = [...list].filter(canAttach);
-    if (usable.length < list.length) notify('Orbit can attach photos, PDFs and text files.');
+    if (usable.length < list.length) notify('Treehouse can attach photos, PDFs and text files.');
     setFiles((current) => {
       const next = [...current, ...usable.map((file) => ({ file, key: crypto.randomUUID(), url: file.type.startsWith('image/') ? URL.createObjectURL(file) : null }))];
       if (next.length > 6) notify('A message can carry up to six photos and files.');

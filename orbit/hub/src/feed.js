@@ -58,7 +58,7 @@ export function parseManifest(text) {
   } catch {
     throw new FeedError("The update manifest isn't readable.");
   }
-  if (manifest?.orbit !== 'update-feed' || !VERSION.test(manifest.version ?? '')) throw new FeedError("That isn't an Orbit update manifest.");
+  if (manifest?.orbit !== 'update-feed' || !VERSION.test(manifest.version ?? '')) throw new FeedError("That isn't a Treehouse update manifest.");
   checkFile(manifest.hub, 'hub package');
   if (!manifest.app || !HEX64.test(manifest.app.sha256 ?? '') || !Array.isArray(manifest.app.parts) || !manifest.app.parts.length) {
     throw new FeedError('The update manifest has no phone app.');
@@ -112,7 +112,7 @@ export class Feed {
       const newestApp = this.updates.appFile()?.version ?? '0.0.0';
       if (compareVersions(version, this.updates.current) > 0 && !fs.existsSync(hubFile)) {
         this.#keep(hubFile, await this.#fetchFile(manifest.hub, 'the hub package'));
-        this.log(`Downloaded Orbit ${version} for this PC.`);
+        this.log(`Downloaded Treehouse ${version} for this PC.`);
       }
       if (compareVersions(version, newestApp) > 0) {
         const parts = [];
@@ -120,7 +120,7 @@ export class Feed {
         const app = Buffer.concat(parts);
         if (sha256(app) !== manifest.app.sha256) throw new FeedError("The phone app's parts don't fit together. It'll be tried again later.");
         this.#keep(appFile, app);
-        this.log(`Downloaded Orbit ${version} for phones.`);
+        this.log(`Downloaded Treehouse ${version} for phones.`);
       }
       this.error = null;
     } catch (err) {

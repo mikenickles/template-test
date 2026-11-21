@@ -154,14 +154,14 @@ internal fun WidgetContent(context: Context, snapshot: WidgetSnapshot, now: Long
     ) {
         if (fits > 1) {
             Row(GlanceModifier.fillMaxWidth().clickable(open(null)), verticalAlignment = Alignment.CenterVertically) {
-                Image(ImageProvider(R.drawable.ic_stat_orbit), "Orbit", GlanceModifier.size(16.dp), colorFilter = ColorFilter.tint(Ink))
-                Text("Orbit", GlanceModifier.padding(start = 6.dp), style = TextStyle(color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Medium))
+                Image(ImageProvider(R.drawable.ic_stat_treehouse), "Treehouse", GlanceModifier.size(16.dp), colorFilter = ColorFilter.tint(Ink))
+                Text("Treehouse", GlanceModifier.padding(start = 6.dp), style = TextStyle(color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Medium))
             }
             Spacer(GlanceModifier.height(8.dp))
         }
         when {
-            !snapshot.paired -> Message("Open Orbit to pair with your PC", open(null))
-            snapshot.rooms.isEmpty() -> Message("No rooms yet. Open Orbit to start one.", open(null))
+            !snapshot.paired -> Message("Open Treehouse to pair with your PC", open(null))
+            snapshot.rooms.isEmpty() -> Message("No rooms yet. Open Treehouse to start one.", open(null))
             else -> for ((index, room) in snapshot.rooms.take(fits).withIndex()) {
                 if (index > 0) Spacer(GlanceModifier.height(6.dp))
                 RoomLine(room, now, open(room.id))

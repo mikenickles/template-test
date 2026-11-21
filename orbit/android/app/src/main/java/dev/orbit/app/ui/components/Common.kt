@@ -379,25 +379,11 @@ fun OrbitSpinner(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) 
     }
 }
 
-/** The Orbit mark: a dot with two eyes and a satellite, in the current text color. */
+/** Treehouse's mark. */
 @Composable
 fun LogoMark(modifier: Modifier = Modifier, size: Dp = 26.dp) {
-    val fill = Orbit.colors.text
-    val eye = Orbit.colors.bg
-    Canvas(modifier.size(size)) {
-        val s = this.size.minDimension
-        val center = Offset(s * 0.44f, s * 0.57f)
-        drawCircle(fill, s * 0.4f, center)
-        for (dx in listOf(-0.14f, 0.14f)) {
-            drawRoundRect(
-                eye,
-                topLeft = Offset(center.x + s * dx - s * 0.055f, center.y - s * 0.14f),
-                size = Size(s * 0.11f, s * 0.26f),
-                cornerRadius = CornerRadius(s * 0.055f),
-            )
-        }
-        drawCircle(fill, s * 0.11f, Offset(s * 0.87f, s * 0.13f))
-    }
+    // Treehouse's mark is the Forest Tree character, the same as its app icon.
+    AgentAvatar(dev.orbit.app.data.AvatarSpec(character = 11), modifier, size = size)
 }
 
 /**

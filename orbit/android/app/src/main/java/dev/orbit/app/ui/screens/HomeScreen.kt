@@ -251,7 +251,7 @@ private fun Header(state: AppState, onSettings: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         LogoMark(size = 28.dp)
-        Text("Orbit", Modifier.padding(start = 9.dp).weight(1f), style = OrbitType.titleL, color = c.text)
+        Text("Treehouse", Modifier.padding(start = 9.dp).weight(1f), style = OrbitType.titleL, color = c.text)
 
         // The hub is the app's one piece of infrastructure, so its status is also the way into settings.
         val online = state.loaded && !state.offline

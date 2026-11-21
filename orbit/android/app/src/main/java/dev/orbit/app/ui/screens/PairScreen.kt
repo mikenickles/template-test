@@ -128,7 +128,7 @@ fun PairScreen(
             Spacer(Modifier.height(20.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 LogoMark(size = 24.dp)
-                Text("Orbit", Modifier.padding(start = 8.dp), style = OrbitType.titleM, color = c.text)
+                Text("Treehouse", Modifier.padding(start = 8.dp), style = OrbitType.titleM, color = c.text)
             }
 
             // The crew drifting around the hub. While connecting, they quicken a little.

@@ -267,7 +267,7 @@ fun AgentEditorScreen(
                             OrbitIcon.Folder,
                             "Read your files",
                             if (folders.isEmpty()) {
-                                "Read only. Share folders from the Orbit page on your PC first."
+                                "Read only. Share folders from the Treehouse page on your PC first."
                             } else {
                                 "Read only, from ${folders.joinToString(", ") { it.name }}."
                             },

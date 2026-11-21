@@ -81,8 +81,8 @@ fun ShareScreen(content: SharedContent, rooms: List<Room>, agents: List<Agent>, 
                     }
                     if (content.skipped > 0) {
                         Text(
-                            if (content.skipped == 1) "One item was left out: Orbit can send photos, PDFs and text files, up to six at a time."
-                            else "${content.skipped} items were left out: Orbit can send photos, PDFs and text files, up to six at a time.",
+                            if (content.skipped == 1) "One item was left out: Treehouse can send photos, PDFs and text files, up to six at a time."
+                            else "${content.skipped} items were left out: Treehouse can send photos, PDFs and text files, up to six at a time.",
                             style = OrbitType.bodyS,
                             color = c.textTertiary,
                         )

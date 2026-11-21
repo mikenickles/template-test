@@ -34,9 +34,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     console.log('Starting with the computer is only set up automatically on Windows.');
   } else if (process.argv[2] === 'off') {
     disable();
-    console.log('The Orbit hub will no longer start when you sign in.');
+    console.log('The Treehouse hub will no longer start when you sign in.');
   } else {
     enable();
-    console.log('The Orbit hub will start (minimized) whenever you sign in to Windows.');
+    console.log('The Treehouse hub will start (minimized) whenever you sign in to Windows.');
   }
 }

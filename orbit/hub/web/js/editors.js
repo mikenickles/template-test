@@ -108,7 +108,7 @@ export function AgentEditor({ agent, state, notify, onClose, onSaved, onChanged,
     <div class="card">${ABILITIES.map(([key, icon, title, detail]) => html`<button class=${`ability${chosen?.abilities ? '' : ' disabled'}`} role="switch" aria-checked=${abilities.has(key)}
       disabled=${!chosen?.abilities} onClick=${() => toggle(key)}>
       <${Icon} name=${icon} />
-      <div style="flex:1"><div class="title-s">${title}</div><div class="body-s muted">${detail ?? (folders ? `Read only, from ${folders}.` : "Read only. Share folders from the PC's Orbit page first.")}</div></div>
+      <div style="flex:1"><div class="title-s">${title}</div><div class="body-s muted">${detail ?? (folders ? `Read only, from ${folders}.` : "Read only. Share folders from the PC's Treehouse page first.")}</div></div>
       <${Switch} on=${abilities.has(key)} disabled=${!chosen?.abilities} />
     </button>`)}</div>
 
@@ -234,17 +234,17 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate })
   const [fact, setFact] = useState('');
   const byName = Object.fromEntries(state.agents.map((a) => [a.name, a]));
   const aboutYou = (work) => work().then(refresh).catch((e) => notify(e.message));
-  const [checking, setChecking] = useState(false);
+  const [lookingForUpdates, setLookingForUpdates] = useState(false);
   const checkNow = async () => {
-    setChecking(true);
+    setLookingForUpdates(true);
     try {
       const found = await api.checkForUpdates();
       await refresh();
-      notify(found.feed?.error ?? (found.hub.available ? `Orbit ${found.hub.available} is ready to install.` : 'Orbit is up to date.'));
+      notify(found.feed?.error ?? (found.hub.available ? `Treehouse ${found.hub.available} is ready to install.` : 'Treehouse is up to date.'));
     } catch (e) {
       notify(e.message);
     } finally {
-      setChecking(false);
+      setLookingForUpdates(false);
     }
   };
 
@@ -303,21 +303,21 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate })
     <div class="section-title">Updates</div>
     <div class="card">
       <div class="row"><span style="flex:1">
-        <div class="title-s">Orbit on this PC</div>
+        <div class="title-s">Treehouse on this PC</div>
         <div class="body-s muted">${state.updates?.hub.available ? `Version ${state.updates.hub.available} is ready to install` : `Version ${state.hub.version}, up to date`}</div></span>
         ${state.updates?.hub.available && html`<button class="button" onClick=${onUpdate}>Update</button>`}</div>
       <div class="row"><span style="flex:1">
-        <div class="title-s">Orbit on your phone</div>
-        <div class="body-s muted">${state.updates?.app.available ? `Version ${state.updates.app.available} is ready. Open Orbit on the phone, Settings, Update.` : 'Nothing new waiting'}</div></span></div>
+        <div class="title-s">Treehouse on your phone</div>
+        <div class="body-s muted">${state.updates?.app.available ? `Version ${state.updates.app.available} is ready. Open Treehouse on the phone, Settings, Update.` : 'Nothing new waiting'}</div></span></div>
       <div class="row"><span style="flex:1;min-width:0">
         <div class="title-s">Updates folder</div>
         <div class="mono faint" style="overflow-wrap:anywhere">${state.updates?.folder}</div></span>
         ${onThisPC && html`<button class="pill" onClick=${() => api.openUpdates().catch((e) => notify(e.message))}>Open folder</button>`}</div>
     </div>
     ${state.updates?.feed?.enabled && html`<div class="note" style="display:flex;align-items:center;gap:12px">
-      <span style=${`flex:1;${state.updates.feed.error ? 'color:var(--danger)' : ''}`}>${checking || state.updates.feed.checking ? 'Looking in your Google Drive…'
-        : state.updates.feed.error ?? `Orbit checks your Google Drive for new versions every few hours.${state.updates.feed.checkedAt ? ` Last checked ${new Date(state.updates.feed.checkedAt).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })}.` : ''}`}</span>
-      <button class="pill" disabled=${checking} onClick=${checkNow}>Check now</button></div>`}
+      <span style=${`flex:1;${state.updates.feed.error ? 'color:var(--danger)' : ''}`}>${lookingForUpdates || state.updates.feed.checking ? 'Looking in your Google Drive…'
+        : state.updates.feed.error ?? `Treehouse checks your Google Drive for new versions every few hours.${state.updates.feed.checkedAt ? ` Last checked ${new Date(state.updates.feed.checkedAt).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })}.` : ''}`}</span>
+      <button class="pill" disabled=${lookingForUpdates} onClick=${checkNow}>Check now</button></div>`}
     <p class="note">New versions ${state.updates?.feed?.enabled ? 'arrive from your Google Drive by themselves, or' : 'arrive'} as two files: <span class="mono">orbit-hub-X.Y.Z.zip</span> for this PC and <span class="mono">orbit-X.Y.Z.apk</span> for the phone, saved in the updates folder. An Update button then appears here and in the phone app.</p>
 
     <div class="section-title">About you</div>
@@ -400,7 +400,7 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate })
           ${canPick && html`<button type="button" class="button secondary" onClick=${() => folders(() => api.pickFolder())}>Choose…</button>`}
         </form>
         <p class="note">Agents with Read your files turned on can read these, never change them.</p>`
-      : html`<p class="note">Folders are shared from the PC itself, in Orbit there.</p>`}
+      : html`<p class="note">Folders are shared from the PC itself, in Treehouse there.</p>`}
 
     ${!onThisPC && html`<button class="button danger" style="margin-top:32px" onClick=${() => api.disconnect().then(() => location.reload()).catch((e) => notify(e.message))}>Disconnect this browser</button>`}
   <//>`;

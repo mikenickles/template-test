@@ -38,7 +38,7 @@ export class Files {
   /** Saves an upload. Refuses types no model can read. */
   save(bytes, name, type) {
     const kind = kindOf(type);
-    if (!kind) throw new FileError('Orbit can attach photos, PDFs and text files.');
+    if (!kind) throw new FileError('Treehouse can attach photos, PDFs and text files.');
     if (!bytes.length) throw new FileError('That file is empty.');
     if (bytes.length > MAX_FILE_BYTES) throw new FileError('That file is too large. Attach files up to 20 MB.');
     const id = crypto.randomUUID();

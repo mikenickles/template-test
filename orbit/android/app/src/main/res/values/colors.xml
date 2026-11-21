@@ -1,6 +1,5 @@
 <resources>
     <color name="window_background">#FFFFFF</color>
-    <color name="ic_launcher_background">#09090B</color>
-    <!-- The mark on the splash screen: ink on the light page, paper on the dark one. -->
-    <color name="splash_mark">#09090B</color>
+    <!-- Treehouse's icon: the Forest Tree character on warm paper. -->
+    <color name="ic_launcher_background">#F4ECDD</color>
 </resources>

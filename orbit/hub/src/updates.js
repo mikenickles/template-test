@@ -107,7 +107,7 @@ export class Updates {
     let total = 0;
     for (const entry of entries) {
       if (!allowedPath(entry.name)) {
-        throw new UpdateError(`${found.name} holds a file the hub won't install (${entry.name.slice(0, 80)}). Was it made by Orbit?`);
+        throw new UpdateError(`${found.name} holds a file the hub won't install (${entry.name.slice(0, 80)}). Was it made by Treehouse?`);
       }
       total += entry.size;
       if (total > MAX_UNPACKED) throw new UpdateError(`${found.name} is bigger than a hub update should be.`);
@@ -122,10 +122,10 @@ export class Updates {
     try {
       manifest = JSON.parse(files.get('package.json')?.toString('utf8') ?? '');
     } catch {
-      throw new UpdateError(`${found.name} has no readable package.json. Was it made by Orbit?`);
+      throw new UpdateError(`${found.name} has no readable package.json. Was it made by Treehouse?`);
     }
     if (manifest.name !== 'orbit-hub' || !VERSION.test(manifest.version ?? '')) {
-      throw new UpdateError(`${found.name} isn't an Orbit hub package.`);
+      throw new UpdateError(`${found.name} isn't a Treehouse hub package.`);
     }
     if (manifest.version !== found.version) {
       throw new UpdateError(`${found.name} says it is version ${manifest.version}. Download it again.`);
@@ -163,7 +163,7 @@ export class Updates {
       for (const [temp, target] of staged) fs.renameSync(temp, target);
     } catch (err) {
       for (const [temp] of staged) fs.rmSync(temp, { force: true });
-      throw new UpdateError(`Couldn't write the update (${err.code ?? err.message}). Is Orbit's folder read only?`);
+      throw new UpdateError(`Couldn't write the update (${err.code ?? err.message}). Is Treehouse's folder read only?`);
     }
     return update;
   }

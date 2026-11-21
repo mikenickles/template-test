@@ -359,7 +359,7 @@ fun RoomScreen(
                     message,
                     canRetry = canRetry(message, state, agents),
                     onCopy = {
-                        scope.launch { clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Orbit message", message.text))) }
+                        scope.launch { clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Treehouse message", message.text))) }
                     },
                     onRetry = { onRetry(message) },
                     onDelete = { onDeleteMessage(message) },

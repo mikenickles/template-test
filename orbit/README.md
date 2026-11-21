@@ -1,4 +1,4 @@
-# Orbit
+# Treehouse
 
 An Android app for running a crew of AI agents that work together, paired to a
 hub on an always-on PC.
@@ -28,10 +28,10 @@ hub on an always-on PC.
   Long-press a message to copy it, ask the agent again, or delete it. Tap **+** to
   attach photos, PDFs or text files; Claude agents read all three, other models
   see photos where they support them.
-- **Share to Orbit** from any app's share menu: a link, some text, photos or
+- **Share to Treehouse** from any app's share menu: a link, some text, photos or
   PDFs. Pick a room and it opens with them ready to send, so you can add a
   question first.
-- **Getting to know you.** Orbit starts with one agent, your guide, in a chat
+- **Getting to know you.** Treehouse starts with one agent, your guide, in a chat
   of its own. It asks a few questions about you, then suggests a crew of two or
   three agents shaped around what you need and, once you agree, creates them and
   a room to work in. (Needs an Anthropic key; you can reopen the chat from
@@ -58,8 +58,8 @@ hub on an always-on PC.
   `"prices"` in `config.json`.
 - **Long rooms** stay affordable: past about 15,000 words, the oldest part of a
   room is folded into a running summary that agents read instead.
-- **Desktop app.** The hub also serves Orbit for the PC: open
-  `http://localhost:8787` in Edge or Chrome and choose **Install Orbit** to keep
+- **Desktop app.** The hub also serves Treehouse for the PC: open
+  `http://localhost:8787` in Edge or Chrome and choose **Install Treehouse** to keep
   it as an app with its own window. On the PC it signs in by itself; another
   computer on your network can open the hub's address and pair with the code.
 - **The hub** (`hub/`) runs on your PC. It holds the API keys, calls the
@@ -76,7 +76,7 @@ Install [Node.js](https://nodejs.org) (the LTS version), then double-click
 - opens the pairing page in your browser (`http://localhost:8787/pair`) with a QR code, and
 - offers to start the hub automatically whenever you sign in to Windows.
 
-Keep its window open while you use Orbit. On a Mac or Linux, run `npm start` in `hub/`.
+Keep its window open while you use Treehouse. On a Mac or Linux, run `npm start` in `hub/`.
 
 If you skipped a step, you can redo it from the `hub` folder:
 `npm run firewall` (allow phones through Windows Firewall), `npm run autostart:on`
@@ -89,7 +89,7 @@ the hub's window). If scanning isn't available, tap **Find** or type the address
 and six-digit code shown under the QR code. The code changes after each pairing.
 
 The phone talks to the hub over plain HTTP, so it only works on your home
-network, or through a private VPN. To use Orbit away from home, install
+network, or through a private VPN. To use Treehouse away from home, install
 [Tailscale](https://tailscale.com/download) on the PC and the phone and sign in
 to both with the same account. The hub notices its Tailscale address within a
 minute and tells the app, which then tries your home network first and
@@ -127,22 +127,22 @@ can stop sharing one.
 Web search and code run on Anthropic's side and are billed to your Anthropic
 account like any other usage.
 
-## 5. Update Orbit
+## 5. Update Treehouse
 
-New versions are published to an **Orbit updates** folder in the owner's Google Drive. The hub
+New versions are published to an **Treehouse updates** folder in the owner's Google Drive. The hub
 checks it every few hours (or straight away with **Settings, Updates, Check now**), downloads a
 newer version into its updates folder (`C:\Users\<you>\.orbit-hub\updates`) and checks each
 file's SHA-256 before keeping it. Then, from anywhere:
 
-- **Update the PC** first: **Orbit X.Y.Z is ready for your PC** appears on the phone's Home and in
+- **Update the PC** first: **Treehouse X.Y.Z is ready for your PC** appears on the phone's Home and in
   Settings, and in the desktop app. Tap **Update PC**: the hub checks the package, installs it and
   restarts. The files it replaced are kept in `updates\previous`.
-- **Then the phone:** **Orbit X.Y.Z is ready** appears. Tap **Update**: the phone downloads the app
+- **Then the phone:** **Treehouse X.Y.Z is ready** appears. Tap **Update**: the phone downloads the app
   from your PC (at home or through Tailscale) and Android asks you to confirm. The first time,
-  Android sends you to a screen to allow Orbit to install updates.
+  Android sends you to a screen to allow Treehouse to install updates.
 
 Files saved by hand in the updates folder (`orbit-hub-X.Y.Z.zip` and `orbit-X.Y.Z.apk`) work the
-same way. The hub refuses a package that is damaged, isn't Orbit's, is the same or an older version,
+same way. The hub refuses a package that is damaged, isn't Treehouse's, is the same or an older version,
 or holds anything outside its own `src`, `web` and `package.json`. `Start Orbit.bat` isn't updated
 this way; a release that changes it says so. Updating restarts the hub, so it asks first if your
 crew is mid-reply.
@@ -173,7 +173,7 @@ keyPassword=...
 or from the environment variables `ORBIT_KEYSTORE_FILE` and `ORBIT_KEYSTORE_PASSWORD`.
 Without either, release builds are left unsigned.
 
-The **Orbit Android release** GitHub workflow builds a signed APK on demand (Actions
+The **Treehouse Android release** GitHub workflow builds a signed APK on demand (Actions
 tab, Run workflow) and publishes a release when a tag like `orbit-v0.4.0` is pushed.
 It needs two repository secrets: `ORBIT_KEYSTORE_BASE64` (the key file, base64) and
 `ORBIT_KEYSTORE_PASSWORD`.
@@ -188,11 +188,11 @@ It needs two repository secrets: `ORBIT_KEYSTORE_BASE64` (the key file, base64) 
 
 ### The Drive update feed
 
-A Google Doc, **Orbit update feed**, holds one line of JSON: the version, and each file's download
+A Google Doc, **Treehouse update feed**, holds one line of JSON: the version, and each file's download
 link, size and SHA-256. The hub reads it through the Doc's text export
 (`https://docs.google.com/document/d/<doc id>/export?format=txt`), a link packed into the hub package
 with `npm run package -- <dir> --feed <link>` (kept out of git). The files live beside it in the link-
-shared **Orbit updates** folder. `node scripts/release.js <dir>` splits the app into parts under 3 MB
+shared **Treehouse updates** folder. `node scripts/release.js <dir>` splits the app into parts under 3 MB
 (the most Claude's Drive connection uploads at once) and writes `release.json`; each part's link is
 `https://drive.usercontent.google.com/download?id=<file id>&export=download&confirm=t`.
 

@@ -104,7 +104,7 @@ class ReplyWatcher : Service() {
     }
 
     private fun working(status: String) = NotificationCompat.Builder(this, Notifier.CHANNEL_WORKING)
-        .setSmallIcon(R.drawable.ic_stat_orbit)
+        .setSmallIcon(R.drawable.ic_stat_treehouse)
         .setContentTitle(status)
         .setContentText("You'll get a ping when they're done.")
         .setOngoing(true)

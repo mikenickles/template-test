@@ -7,7 +7,7 @@
 Two independent projects live here:
 
 - **Blog** (repo root): Astro 5 + Tailwind. `npm run dev`, `npm run build`.
-- **Orbit** (`orbit/`): multi-agent Android app plus the PC hub it pairs with. See `orbit/README.md`.
+- **Treehouse** (`orbit/`, code name Orbit, which internal names keep): multi-agent Android app plus the PC hub it pairs with. See `orbit/README.md`.
   - `orbit/hub/`: Node 20+ ESM server, plain JavaScript. Calls Claude through `@anthropic-ai/sdk`; other
     providers through their OpenAI-compatible HTTP APIs. State is a JSON file in `~/.orbit-hub`.
     The desktop app is `orbit/hub/web/`: plain ES modules with Preact and htm served from the hub's own
@@ -65,7 +65,7 @@ Releases: the app and hub share one version (`versionName` in `android/app/build
 renamed `orbit-X.Y.Z.apk`. They're published to the user's Google Drive, where the hub picks them up
 (`hub/src/feed.js`), and the user installs from the phone (Update PC, then Update); see `hub/src/updates.js`. To
 publish with the Google Drive and Docs connectors:
-1. Find the **Orbit update feed** Doc and the link-shared **Orbit updates** folder (in "Orbit") in the user's Drive.
+1. Find the **Treehouse update feed** Doc and the link-shared **Treehouse updates** folder (in "Treehouse") in the user's Drive.
 2. `cd orbit/hub && npm run package -- <dir> --feed https://docs.google.com/document/d/<doc id>/export?format=txt`,
    copy the APK in as `orbit-X.Y.Z.apk`, then `node scripts/release.js <dir>` (splits the app into parts under
    3 MB, the connector's limit per upload, and writes `release.json` with sizes and SHA-256s).

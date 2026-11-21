@@ -32,7 +32,7 @@ object ApkInstaller {
     fun problem(context: Context, file: File): String? {
         val archive = context.packageManager.getPackageArchiveInfo(file.path, 0)
             ?: return "The download isn't an app. Try again."
-        if (archive.packageName != context.packageName) return "That file isn't an Orbit update."
+        if (archive.packageName != context.packageName) return "That file isn't a Treehouse update."
         if (!isNewerVersion(archive.versionName.orEmpty(), installedVersion(context))) return "That update isn't newer than this version."
         return null
     }

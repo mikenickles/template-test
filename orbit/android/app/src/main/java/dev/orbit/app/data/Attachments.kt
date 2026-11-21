@@ -51,7 +51,7 @@ fun canAttach(type: String?): Boolean =
  */
 fun prepare(resolver: ContentResolver, uri: Uri, known: Pair<String, String>? = null): PreparedFile {
     val (name, type) = known ?: describe(resolver, uri)
-    if (!canAttach(type)) throw HubException("Orbit can attach photos, PDFs and text files.")
+    if (!canAttach(type)) throw HubException("Treehouse can attach photos, PDFs and text files.")
     if (type!!.startsWith("image/")) {
         val bitmap = decodeImage(resolver, uri, MAX_IMAGE_EDGE) ?: throw HubException("That photo couldn't be opened.")
         val out = ByteArrayOutputStream()

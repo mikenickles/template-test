@@ -7,7 +7,7 @@ export const PICKER_SCRIPT = [
   'Add-Type -AssemblyName System.Windows.Forms',
   '$owner = New-Object System.Windows.Forms.Form -Property @{ TopMost = $true; ShowInTaskbar = $false }',
   '$dialog = New-Object System.Windows.Forms.FolderBrowserDialog',
-  "$dialog.Description = 'Choose a folder your Orbit agents can read'",
+  "$dialog.Description = 'Choose a folder your Treehouse agents can read'",
   '$dialog.ShowNewFolderButton = $false',
   'if ($dialog.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) { $dialog.SelectedPath }',
   '$owner.Dispose()',

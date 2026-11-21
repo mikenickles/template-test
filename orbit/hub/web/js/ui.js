@@ -1,4 +1,4 @@
-// Shared pieces: Orbit's icon set (one stroke weight, round caps), and small controls.
+// Shared pieces: Treehouse's icon set (one stroke weight, round caps), and small controls.
 import { h } from '/vendor/preact.mjs';
 import { useEffect } from '/vendor/hooks.mjs';
 import htm from '/vendor/htm.mjs';
@@ -37,12 +37,9 @@ export function Icon({ name, size = 20, label = null }) {
   </svg>`;
 }
 
-/** The Orbit mark: a face and its satellite. */
+/** Treehouse's mark: the Forest Tree character, the same as its app icon. */
 export function Mark({ size = 24 }) {
-  return html`<svg width=${size} height=${size} viewBox="0 0 26 26" aria-hidden="true">
-    <circle cx="11.4" cy="14.8" r="10.4" fill="currentColor" /><rect x="6.3" y="11.2" width="2.9" height="6.8" rx="1.4" fill="var(--bg)" />
-    <rect x="13.6" y="11.2" width="2.9" height="6.8" rx="1.4" fill="var(--bg)" /><circle cx="22.6" cy="3.4" r="2.9" fill="currentColor" />
-  </svg>`;
+  return html`<img class="mark" src="/avatars/11.webp" width=${size} height=${size} alt="" aria-hidden="true" />`;
 }
 
 export function Switch({ on, disabled = false }) {

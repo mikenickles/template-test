@@ -360,7 +360,7 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
         return try {
             OrbitJson.decodeFromString<T>(raw.decodeToString())
         } catch (e: kotlinx.serialization.SerializationException) {
-            throw HubException("That address answered, but it isn't an Orbit hub.")
+            throw HubException("That address answered, but it isn't a Treehouse hub.")
         }
     }
 
@@ -408,7 +408,7 @@ internal fun neverArrived(e: IOException): Boolean = when (e) {
 
 private fun describeHomeFailure(e: IOException): String = when (e) {
     is java.net.SocketTimeoutException, is java.net.NoRouteToHostException ->
-        "Your PC didn't answer. Check your phone is on the same Wi-Fi as the PC, and that Windows Firewall allows Orbit " +
+        "Your PC didn't answer. Check your phone is on the same Wi-Fi as the PC, and that Windows Firewall allows Treehouse " +
             "(Start Orbit sets this up the first time)."
     is java.net.ConnectException ->
         "Nothing answered at that address. Check the hub is running on your PC and the address matches the one it shows."

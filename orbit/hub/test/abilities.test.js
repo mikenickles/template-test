@@ -67,8 +67,8 @@ test('shared folders: agents read inside them and nowhere else', async () => {
   assert.throws(() => folders.add(os.homedir()), /inside your user folder/);
   assert.throws(() => folders.add(path.join(notes, 'todo.md')), /a file, not a folder/);
   assert.throws(() => folders.add(path.join(root, 'nope')), /doesn't exist/);
-  assert.throws(() => folders.add(hubData), /Orbit's own settings/);
-  assert.throws(() => folders.add(root), /Orbit's own settings/);
+  assert.throws(() => folders.add(hubData), /Treehouse's own settings/);
+  assert.throws(() => folders.add(root), /Treehouse's own settings/);
   assert.throws(() => folders.add('relative/path'), /full path/);
 
   // Same name twice stays addressable.

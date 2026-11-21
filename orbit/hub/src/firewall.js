@@ -63,7 +63,7 @@ export async function ensureFirewall({ port, discoveryPort, dataDir, log, force 
     return 'declined-before';
   }
 
-  log('Allowing Orbit through Windows Firewall so your phone can reach it.');
+  log('Allowing Treehouse through Windows Firewall so your phone can reach it.');
   log('Windows will ask for permission once. Click Yes.');
   const elevated = encodeCommand(ruleScript(port, discoveryPort));
   await powershell(
@@ -85,6 +85,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const { loadConfig, dataDir } = await import('./config.js');
   const config = loadConfig();
   const result = await ensureFirewall({ port: config.port, discoveryPort: config.discoveryPort, dataDir, log: console.log, force: true });
-  if (result === 'present') console.log('Windows Firewall already allows Orbit.');
+  if (result === 'present') console.log('Windows Firewall already allows Treehouse.');
   if (result === 'not-windows') console.log('This is only needed on Windows.');
 }

@@ -185,7 +185,7 @@ class RoomViewModel(app: Application, private val roomId: String) : AndroidViewM
             }
             when {
                 uris.size > space -> _notices.tryEmit("A message can carry up to $MAX_DRAFTS photos and files.")
-                picked.any { it == null } -> _notices.tryEmit("Orbit can attach photos, PDFs and text files.")
+                picked.any { it == null } -> _notices.tryEmit("Treehouse can attach photos, PDFs and text files.")
             }
             _state.update { it.copy(drafts = it.drafts + picked.filterNotNull()) }
         }

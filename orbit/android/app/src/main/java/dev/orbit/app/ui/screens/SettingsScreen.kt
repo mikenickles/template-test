@@ -124,7 +124,7 @@ fun SettingsScreen(
 
             if (state.loaded && remote.isEmpty()) {
                 Text(
-                    "To use Orbit away from home, install Tailscale on your PC and this phone and sign in to both with the " +
+                    "To use Treehouse away from home, install Tailscale on your PC and this phone and sign in to both with the " +
                         "same account. The hub picks it up within a minute.",
                     Modifier.padding(top = OrbitDimens.labelGap),
                     style = OrbitType.bodyS,

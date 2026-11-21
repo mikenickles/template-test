@@ -1,6 +1,6 @@
-name: Orbit Android release
+name: Treehouse Android release
 
-# Builds the Orbit app as a signed release APK. Run it from the Actions tab ("Run workflow"), or push
+# Builds the Treehouse app as a signed release APK. Run it from the Actions tab ("Run workflow"), or push
 # a tag like orbit-v0.4.0 to also publish the APK as a GitHub release you can download on your phone.
 #
 # Needs two repository secrets (Settings > Secrets and variables > Actions):
@@ -68,4 +68,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "${{ steps.apk.outputs.file }}" --title "Orbit ${GITHUB_REF_NAME#orbit-v}" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" "${{ steps.apk.outputs.file }}" --title "Treehouse ${GITHUB_REF_NAME#orbit-v}" --generate-notes

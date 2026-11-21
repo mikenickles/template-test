@@ -76,7 +76,7 @@ sealed interface UpdateStatus {
     data object Idle : UpdateStatus
     data class Downloading(val percent: Int) : UpdateStatus
 
-    /** Android's "allow installing from Orbit" screen is open; tapping Update again continues. */
+    /** Android's "allow installing from Treehouse" screen is open; tapping Update again continues. */
     data object NeedsPermission : UpdateStatus
     data class Failed(val message: String) : UpdateStatus
 }
@@ -191,7 +191,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun pairWithLink(text: String) {
         val link = parsePairingLink(text)
         if (link == null) {
-            _pair.update { it.copy(error = "That isn't an Orbit pairing code. Scan the QR code your hub shows.") }
+            _pair.update { it.copy(error = "That isn't a Treehouse pairing code. Scan the QR code your hub shows.") }
             return
         }
         val current = session.value
@@ -224,7 +224,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val (files, skipped) = withContext(Dispatchers.IO) { copyShared(getApplication(), uris, MAX_DRAFTS) }
             val content = SharedContent(sharedText(text, subject), files, skipped)
             if (content.text.isBlank() && content.files.isEmpty()) {
-                _notices.tryEmit("Orbit can send text, photos, PDFs and text files.")
+                _notices.tryEmit("Treehouse can send text, photos, PDFs and text files.")
                 return@launch
             }
             shareRoom = null
@@ -311,12 +311,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (back?.hub?.version == version) {
                     reload()
                     _pcUpdating.value = null
-                    _notices.tryEmit("Your PC is on Orbit $version.")
+                    _notices.tryEmit("Your PC is on Treehouse $version.")
                     return@launch
                 }
             }
             _pcUpdating.value = null
-            _notices.tryEmit("Your PC hasn't come back yet. If Orbit's window on the PC closed, start it again.")
+            _notices.tryEmit("Your PC hasn't come back yet. If Treehouse's window on the PC closed, start it again.")
         }
     }
 

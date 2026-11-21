@@ -38,7 +38,7 @@ const hubDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
  * hub again. Started any other way, the hub does that itself.
  */
 function restartForUpdate(version) {
-  console.log(`Orbit ${version} is installed. Restarting...`);
+  console.log(`Treehouse ${version} is installed. Restarting...`);
   hub.close();
   if (process.env.ORBIT_SUPERVISED) process.exit(75);
   spawnSync('npm', ['install', '--no-audit', '--no-fund', '--loglevel=error'], { cwd: hubDir, stdio: 'inherit', shell: true });
@@ -70,7 +70,7 @@ const appPage = `http://localhost:${port}`;
 function showPairing() {
   const code = hub.pairingCode;
   console.log('');
-  console.log('  Pair your phone: open Orbit, tap "Scan QR code", and scan this.');
+  console.log('  Pair your phone: open Treehouse, tap "Scan QR code", and scan this.');
   console.log('');
   console.log(qrTerminal(hub.pairingLink()));
   console.log('');
@@ -89,14 +89,14 @@ function openInBrowser(url) {
   }
 }
 
-console.log(`Orbit hub "${config.name}" is running.`);
+console.log(`Treehouse hub "${config.name}" is running.`);
 const keyed = providers.list().filter((p) => p.takesKey && p.configured).map((p) => p.label);
 console.log(`  Model keys:  ${keyed.length ? keyed.join(', ') : 'none yet. Add one in the app: Settings, then Model providers.'}`);
 const shared = folders.list().map((f) => f.name);
 console.log(`  Folders:     ${shared.length ? shared.join(', ') : `none shared. Share one at ${pairPage}`}`);
-console.log(`  Away:        ${away.length ? `${away.join(', ')} (Tailscale)` : 'not set up. Install Tailscale on this PC and your phone to use Orbit anywhere.'}`);
+console.log(`  Away:        ${away.length ? `${away.join(', ')} (Tailscale)` : 'not set up. Install Tailscale on this PC and your phone to use Treehouse anywhere.'}`);
 console.log(`  Updates:     ${hub.feed.url ? 'checked in your Google Drive every few hours, and ' : ''}saved in ${hub.updates.dir}`);
-console.log(`  Desktop app: ${appPage}  (in Edge or Chrome, use "Install Orbit" to keep it as an app)`);
+console.log(`  Desktop app: ${appPage}  (in Edge or Chrome, use "Install Treehouse" to keep it as an app)`);
 console.log(`  Data:        ${dataDir}`);
 
 await ensureFirewall({ port, discoveryPort: config.discoveryPort, dataDir, log: (line) => console.log(line) });
@@ -108,7 +108,7 @@ if (!background && store.state.devices.length === 0) openInBrowser(pairPage);
 // First run on Windows: offer to start with the computer, so the hub is always there.
 if (interactive && autostart.supported() && config.autostart === undefined) {
   const prompt = readline.createInterface({ input: process.stdin, output: process.stdout });
-  const answer = (await prompt.question('Start the Orbit hub automatically when you sign in to Windows? (Y/n) ')).trim().toLowerCase();
+  const answer = (await prompt.question('Start the Treehouse hub automatically when you sign in to Windows? (Y/n) ')).trim().toLowerCase();
   prompt.close();
   config.autostart = answer !== 'n' && answer !== 'no';
   saveConfig(config);
@@ -120,7 +120,7 @@ if (interactive && autostart.supported() && config.autostart === undefined) {
   }
 }
 
-console.log(`Keep this window open while you use Orbit. Settings live in ${configFile}.`);
+console.log(`Keep this window open while you use Treehouse. Settings live in ${configFile}.`);
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {

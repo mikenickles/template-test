@@ -64,7 +64,7 @@ export class Folders {
       throw new FolderError('Share a folder inside your user folder, like Documents, rather than all of it.');
     }
     if (this.protect.some((p) => isWithin(p, real) || isWithin(real, p))) {
-      throw new FolderError("That folder holds Orbit's own settings, so it can't be shared.");
+      throw new FolderError("That folder holds Treehouse's own settings, so it can't be shared.");
     }
     const existing = this.items.find((f) => f.path === real);
     if (existing) return existing;

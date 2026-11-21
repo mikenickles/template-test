@@ -148,7 +148,7 @@ fun ProviderKeyScreen(
                 Text(error.orEmpty(), Modifier.padding(top = 10.dp), style = OrbitType.bodyS, color = c.danger)
             }
             Text(
-                "Orbit checks the key with ${provider.label} first, then stores it only on your PC.",
+                "Treehouse checks the key with ${provider.label} first, then stores it only on your PC.",
                 Modifier.padding(top = 10.dp),
                 style = OrbitType.bodyS,
                 color = c.textTertiary,

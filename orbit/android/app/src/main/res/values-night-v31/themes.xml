@@ -2,7 +2,6 @@
     <style name="Theme.Orbit" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/window_background</item>
         <item name="android:windowSplashScreenBackground">@color/window_background</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_mark_animated</item>
-        <item name="android:windowSplashScreenAnimationDuration">1100</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_tree</item>
     </style>
 </resources>

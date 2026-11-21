@@ -1,5 +1,5 @@
 /**
- * The hub's page on the PC: a large QR code to scan with the Orbit app, with the address and code
+ * The hub's page on the PC: a large QR code to scan with the Treehouse app, with the address and code
  * underneath for typing by hand, and the folders agents may read. It refreshes itself when the code
  * changes and says so when a phone pairs. Served only to the PC itself; folders are shared only here.
  */
@@ -8,7 +8,7 @@ export const PAIR_PAGE = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Orbit hub</title>
+<title>Treehouse hub</title>
 <style>
   :root { color-scheme: dark; --bg: #08090D; --card: #111318; --edge: rgba(232,236,255,.08); --text: #F4F5F8; --muted: #A3A7B6; --faint: #8B8FA0; --live: #46E3A6; }
   * { box-sizing: border-box; }
@@ -56,21 +56,21 @@ export const PAIR_PAGE = `<!doctype html>
 <body>
 <main>
   <div class="mark">
-    <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><circle cx="11.4" cy="14.8" r="10.4" fill="#F4F5F8"/><rect x="6.3" y="11.2" width="2.9" height="6.8" rx="1.4" fill="#08090D"/><rect x="13.6" y="11.2" width="2.9" height="6.8" rx="1.4" fill="#08090D"/><circle cx="22.6" cy="3.4" r="2.9" fill="#F4F5F8"/></svg>
-    Orbit
+    <img src="/avatars/11.webp" width="30" height="30" alt="">
+    Treehouse
   </div>
   <h1>Pair your phone</h1>
-  <p>Open Orbit on your phone, tap <b>Scan QR code</b>, and point it at this.</p>
+  <p>Open Treehouse on your phone, tap <b>Scan QR code</b>, and point it at this.</p>
   <div class="qr" id="qr"></div>
   <div class="done" id="done"></div>
-  <p class="app">Use Orbit on this PC: <a href="/">open the desktop app</a>.</p>
+  <p class="app">Use Treehouse on this PC: <a href="/">open the desktop app</a>.</p>
   <div class="manual">
     <div class="row"><span>Or type the address</span><span class="mono" id="address">…</span></div>
     <div class="row"><span>and the code</span><span class="mono code" id="code">…</span></div>
   </div>
   <section class="folders">
     <h2>Folders your agents can read</h2>
-    <p class="hint">Agents with <b>Read your files</b> turned on can look inside these. Read only: Orbit never changes your files.</p>
+    <p class="hint">Agents with <b>Read your files</b> turned on can look inside these. Read only: Treehouse never changes your files.</p>
     <div class="list" id="folders"></div>
     <button class="primary" id="pick" hidden>Share a folder…</button>
     <form id="typed" hidden><input id="path" placeholder="Full path, like /home/you/Documents" autocomplete="off"><button class="primary">Share</button></form>

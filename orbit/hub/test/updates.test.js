@@ -30,7 +30,7 @@ const manifest = (version, extra = {}) => JSON.stringify({ name: 'orbit-hub', ve
 const hubZip = (version, files = {}) =>
   writeZip({ 'package.json': manifest(version), 'src/main.js': `new main ${version}`, 'web/app.js': `new app ${version}`, ...files });
 
-test('versions compare by number, and only Orbit paths are allowed in a package', () => {
+test('versions compare by number, and only hub paths are allowed in a package', () => {
   assert.equal(compareVersions('0.11.0', '0.10.0'), 1);
   assert.equal(compareVersions('0.9.0', '0.10.0'), -1);
   assert.equal(compareVersions('1.0.0', '0.99.99'), 1);
@@ -73,7 +73,7 @@ test('a package is checked before anything is touched', () => {
   put('orbit-hub-0.11.0.zip', writeZip({ 'package.json': manifest('0.11.0'), 'src/main.js': 'x', 'src/../../out.js': 'evil' }));
   refuses(/won't install/);
   put('orbit-hub-0.11.0.zip', writeZip({ 'package.json': JSON.stringify({ name: 'something-else', version: '0.11.0' }), 'src/main.js': 'x' }));
-  refuses(/isn't an Orbit hub package/);
+  refuses(/isn't a Treehouse hub package/);
   put('orbit-hub-0.11.0.zip', writeZip({ 'package.json': manifest('0.12.0'), 'src/main.js': 'x' }));
   refuses(/says it is version 0.12.0/);
   put('orbit-hub-0.11.0.zip', writeZip({ 'package.json': manifest('0.11.0') }));

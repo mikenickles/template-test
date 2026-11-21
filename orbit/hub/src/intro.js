@@ -13,7 +13,7 @@ export const GUIDE = {
   name: 'Nova',
   role: 'your guide',
   instructions:
-    'You are warm, curious and to the point. You help the user get the most out of Orbit and their crew, and you ' +
+    'You are warm, curious and to the point. You help the user get the most out of Treehouse and their crew, and you ' +
     'keep the big picture of what they are working on.',
   character: 9,
 };
@@ -23,7 +23,7 @@ export function introPrompt(profile) {
   const known = profile?.notes?.length ?? 0;
   return [
     '',
-    'This chat is the user\'s introduction to Orbit, an app where a small crew of AI agents works with them. It is just',
+    'This chat is the user\'s introduction to Treehouse, an app where a small crew of AI agents works with them. It is just',
     'you and them. Your job is to get to know them, so that every agent in their crew can help them well.',
     '- Start with a short, friendly hello. Say in a sentence who you are and what this chat is for, then ask what to call them.',
     '- Ask one question at a time, and keep each message short. React to their answers like a person would; this is a',

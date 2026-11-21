@@ -40,7 +40,7 @@ class NoticeWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         // The first check only marks where to start, rather than replaying old results.
         if (seen > 0 && !AppVisibility.onScreen) {
             for (notice in fresh.notices) {
-                Notifier.announce(applicationContext, notice.roomId, notice.room.ifBlank { "Orbit" }, noticeText(notice), "Scheduled")
+                Notifier.announce(applicationContext, notice.roomId, notice.room.ifBlank { "Treehouse" }, noticeText(notice), "Scheduled")
             }
         }
         prefs.edit { putLong(SEEN, fresh.notices.maxOfOrNull { it.at }?.coerceAtLeast(fresh.now) ?: fresh.now.coerceAtLeast(seen)) }

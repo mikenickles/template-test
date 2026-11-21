@@ -27,12 +27,12 @@ object Notifier {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL_REPLIES, "Replies", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                description = "When your agents finish replying while Orbit is in the background, and scheduled results"
+                description = "When your agents finish replying while Treehouse is in the background, and scheduled results"
             },
         )
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL_WORKING, "Agents working", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "Shown while agents are still replying and Orbit is in the background"
+                description = "Shown while agents are still replying and Treehouse is in the background"
                 setShowBadge(false)
             },
         )
@@ -50,7 +50,7 @@ object Notifier {
     fun announce(context: Context, roomId: String, title: String, text: String, subText: String? = null) {
         if (!canNotify(context)) return
         val notification = NotificationCompat.Builder(context, CHANNEL_REPLIES)
-            .setSmallIcon(R.drawable.ic_stat_orbit)
+            .setSmallIcon(R.drawable.ic_stat_treehouse)
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))

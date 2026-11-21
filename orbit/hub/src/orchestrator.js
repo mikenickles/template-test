@@ -78,7 +78,7 @@ export function buildSystemPrompt(agent, room, agents, abilities = null, profile
   const lines = [
     teammates.length || !room.intro
       ? `You are ${agent.name}${agent.role ? `, ${agent.role}` : ''}. You are one of several AI agents working with a user in a group chat called "${room.name}".`
-      : `You are ${agent.name}${agent.role ? `, ${agent.role}` : ''}, one of the user's AI agents in Orbit.`,
+      : `You are ${agent.name}${agent.role ? `, ${agent.role}` : ''}, one of the user's AI agents in Treehouse.`,
   ];
   if (agent.instructions?.trim()) lines.push('', agent.instructions.trim());
   if (teammates.length) {
@@ -129,7 +129,7 @@ export function buildSystemPrompt(agent, room, agents, abilities = null, profile
       lines.push(
         names.length
           ? `- Read files in folders the user shared from their PC: ${names.join(', ')}. This is read only: you can't change, add or delete files.`
-          : "- Read files the user shares from their PC. None are shared yet; if the user asks about their files, tell them to share a folder from the Orbit page on their PC.",
+          : "- Read files the user shares from their PC. None are shared yet; if the user asks about their files, tell them to share a folder from the Treehouse page on their PC.",
       );
     }
     if (abilities.recruit) lines.push(abilities.recruit.prompt);

@@ -49,7 +49,7 @@ suspend fun discoverHubs(timeoutMs: Long = 1500): List<FoundHub> = withContext(D
                 }.getOrNull() ?: continue
                 if (reply.app != "orbit-hub") continue
                 val address = "${packet.address.hostAddress}:${reply.port}"
-                found[address] = FoundHub(reply.name.ifEmpty { "Orbit hub" }, address)
+                found[address] = FoundHub(reply.name.ifEmpty { "Treehouse hub" }, address)
             }
         }
     }

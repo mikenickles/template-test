@@ -419,7 +419,7 @@ export class Hub {
         if (id !== 'apply') throw new HttpError(404, 'Not found.');
         // Installing works from any paired device, so the PC can be updated from a phone. The package can
         // only come from the updates folder, which the user or their own Drive feed filled.
-        if (this.restarting) throw new HttpError(409, 'Orbit is already updating.');
+        if (this.restarting) throw new HttpError(409, 'Treehouse is already updating.');
         let installed;
         try {
           installed = this.updates.install();
@@ -725,7 +725,7 @@ export class Hub {
     if (!LOOPBACK.has(req.socket.remoteAddress) || !LOCAL_HOSTS.has(host)) {
       throw new HttpError(403, 'This page only opens on the PC running the hub, at http://localhost.');
     }
-    if (change && req.headers['x-orbit-local'] !== '1') throw new HttpError(403, 'Use the Orbit page on this PC.');
+    if (change && req.headers['x-orbit-local'] !== '1') throw new HttpError(403, 'Use the Treehouse page on this PC.');
   }
 
   async #localRoute(req, res, parts) {
