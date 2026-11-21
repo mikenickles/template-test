@@ -293,7 +293,7 @@ function Welcome({ state, onDialog, onIntro, onOpen }) {
       <button class="stage-member add" onClick=${() => onDialog({ type: 'agent' })}><span class="plus"><${Icon} name="plus" /></span><span class="title-s">New agent</span></button>
     </div>`}
     ${state.agents.length > 0 && !state.rooms.some((r) => !r.intro) && html`<div class="first-room">
-      <${Treehouse} specs=${state.agents.map((a) => a.avatar)} height=${170} />
+      <${Treehouse} height=${200} />
       <div class="title-m">Start your first room</div>
       <p class="muted">Put agents in a room, give them a task, and they'll work it out together.</p>
       <button class="button" onClick=${() => onDialog({ type: 'room' })}>New room</button>
@@ -443,7 +443,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale }
     <div class="messages" ref=${scroller} onScroll=${onScroll} onClick=${onCopyCode}>
       ${loaded && !messages.length
         ? html`<div class="empty-room">
-            <${Treehouse} specs=${agents.map((a) => a.avatar)} height=${180} />
+            <${Treehouse} height=${200} />
             <div class="title-m">${agents.map((a) => a.name).join(', ')}</div>
             <p class="muted">${room.mode === 'auto' ? 'Ask anything. Whoever it suits best answers.' : room.mode === 'lead' && lead ? `${lead.name} answers first and brings in the others.` : 'Everyone answers in turn.'} Mention someone with @ to ask them directly.</p>
           </div>`

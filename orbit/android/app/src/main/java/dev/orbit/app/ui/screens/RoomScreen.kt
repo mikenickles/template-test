@@ -268,7 +268,7 @@ fun RoomScreen(
                         }
                     }
                     if (state.loaded && state.messages.isEmpty()) {
-                        EmptyRoom(room, agents, Modifier.weight(1f))
+                        EmptyRoom(room, Modifier.weight(1f))
                     } else {
                         // Newest at the bottom, and the list stays pinned there while replies stream in.
                         LazyColumn(
@@ -525,7 +525,7 @@ private fun RoomBar(
 }
 
 @Composable
-private fun EmptyRoom(room: Room, agents: List<Agent>, modifier: Modifier) {
+private fun EmptyRoom(room: Room, modifier: Modifier) {
     val c = Orbit.colors
     val entrances = rememberEntrances()
     Column(
@@ -534,7 +534,7 @@ private fun EmptyRoom(room: Room, agents: List<Agent>, modifier: Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // The room's crew, at home in the treehouse and waiting for a task.
-        TreehouseScene(agents.map { it.avatar }, Modifier.fillMaxWidth().height(190.dp).entrance(entrances, "crew", 0))
+        TreehouseScene(Modifier.fillMaxWidth().height(220.dp).entrance(entrances, "crew", 0))
         Spacer(Modifier.height(20.dp))
         Text("The crew is ready", Modifier.entrance(entrances, "title", 1), style = OrbitType.titleL, color = c.text)
         Text(

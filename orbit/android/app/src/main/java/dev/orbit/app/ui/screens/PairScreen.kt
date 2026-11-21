@@ -132,7 +132,7 @@ fun PairScreen(
             }
 
             // The crew at home in the treehouse, waiting for you.
-            TreehouseScene(SampleCrew, Modifier.fillMaxWidth().padding(vertical = 18.dp).height(220.dp).entrance(entrances, "hero", 0))
+            TreehouseScene(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 20.dp).height(280.dp).entrance(entrances, "hero", 0))
 
             Text("Pair with your hub", Modifier.entrance(entrances, "title", 1), style = OrbitType.display, color = c.text)
             Spacer(Modifier.height(10.dp))

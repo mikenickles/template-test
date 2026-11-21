@@ -26,7 +26,9 @@ Two independent projects live here:
     Screens are stateless composables in `ui/screens`; `AppViewModel` and `RoomViewModel` hold state.
     Design system: colors, type and spacing come only from `ui/theme/Theme.kt` (`Orbit.colors`, `OrbitType`,
     `OrbitDimens`); controls, icons and avatars from `ui/components`. The interface stays neutral so avatars are
-    the only color: washes and tints in a screen come from the agents' `tint()` colors, never new ones. Don't add one-off sizes, Material icons, or new colors in a screen.
+    the only color: washes and tints in a screen come from the agents' `tint()` colors, never new ones. The one exception is
+    the treehouse illustration (`TreehouseScene`; `res/drawable-nodpi/treehouse.webp` and `hub/web/images/treehouse.webp`),
+    shown when pairing and in empty states. Don't add one-off sizes, Material icons, or new colors in a screen.
     Avatars are 25 character pictures (`res/drawable-nodpi/avatar_NN.webp` and `hub/web/avatars/NN.webp`), in the
     order of `Characters` in `ui/components/Avatar.kt` and `web/js/avatar.js`; the hub stores only `{ character: n }`.
     Motion comes from `ui/theme/Motion.kt` (`OrbitMotion` easings and springs, `pressScale`, `entrance`,

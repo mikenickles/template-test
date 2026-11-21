@@ -436,14 +436,8 @@ main > header, main > .messages, main > .composer-wrap { position: relative; }
 .replying .body-s { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- The treehouse ---------- */
-.treehouse { position: relative; flex: none; }
-.treehouse .scene { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.treehouse .window { position: absolute; overflow: hidden; }
-.treehouse .avatar img { transform-origin: 50% 100%; animation: breathe 3.8s ease-in-out infinite alternate; animation-delay: inherit; }
-.treehouse .leaves { animation: rustle 7s ease-in-out infinite alternate; }
-.treehouse .leaves.late { animation-delay: -3.5s; }
-@keyframes breathe { from { transform: none; } to { transform: scale(0.99, 1.022); } }
-@keyframes rustle { from { transform: translate(-6px, -3px); } to { transform: translate(6px, 3px); } }
+.treehouse { display: block; width: auto; aspect-ratio: 960 / 980; user-select: none; animation: float 3.6s var(--ease) infinite alternate; }
+@keyframes float { from { transform: none; } to { transform: translateY(-4px); } }
 .first-room { margin-top: 28px; padding: 28px 24px 28px; border-radius: var(--r-xl); border: var(--edge); background: var(--surface);
   display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
 .first-room .treehouse { margin-bottom: 14px; }
