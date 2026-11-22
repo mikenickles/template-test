@@ -10491,3 +10491,16 @@ html[data-ambient="on"] .tabbar:not(.floating) {
 .tabbar-inner > .slide-pill::after {
   bottom: 5px;
 }
+
+/* ---- (0.59.6) the menu button and your initial sit in frosted circles, readable over the chat ---- */
+.topbar .ring,
+.topbar.floating .ring,
+.topbar .ring:has(.initial) {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 0 0 1px var(--border), 0 4px 14px rgba(0, 0, 0, 0.08);
+}
