@@ -868,12 +868,11 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus, 
           <div className="sheet" role="dialog" aria-modal="true" aria-label="Attach">
             <div className="group">
               {(
+                // (0.59.8) just the three: a paper to scan is a photo too, and voice memos have the quick-capture tile
                 [
-                  ["Scan a paper (flyer, slip, receipt)", scanPick],
-                  ["Voice memo", null],
-                  ["Take a photo", cameraPick],
-                  ["Photo library", photoPick],
-                  ["File (PDF or text)", filePick],
+                  ["Camera", cameraPick],
+                  ["Photos", photoPick],
+                  ["Files", filePick],
                 ] as const
               ).map(([label, ref]) => (
                 <button
@@ -881,8 +880,6 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus, 
                   className="item"
                   onClick={() => {
                     setAttaching(false);
-                    // a voice memo opens the listening sheet, and what you say comes back to this chat
-                    if (!ref) return void dispatchEvent(new CustomEvent("lyra:memo", { detail: channelId === null ? "#/" : `#/c/${channelId}` }));
                     ref.current?.click();
                   }}
                 >
