@@ -10504,3 +10504,19 @@ html[data-ambient="on"] .tabbar:not(.floating) {
   backdrop-filter: blur(14px);
   box-shadow: 0 0 0 1px var(--border), 0 4px 14px rgba(0, 0, 0, 0.08);
 }
+
+/* ---- (0.59.7) a long, soft fade at the top and the bottom: the chat stays faintly readable right to
+   the screen's edges, getting lighter as it goes (like the app the user pointed to) ---- */
+.chat .log {
+  --fade: linear-gradient(
+    rgba(0, 0, 0, 0.18) 0,
+    rgba(0, 0, 0, 0.3) calc(var(--inset-top) + 40px),
+    rgba(0, 0, 0, 0.62) calc(var(--inset-top) + 110px),
+    #000 calc(var(--inset-top) + 190px),
+    #000 calc(100% - var(--below) - 40px),
+    rgba(0, 0, 0, 0.45) calc(100% - var(--below) + 30px),
+    rgba(0, 0, 0, 0.18) 100%
+  );
+  -webkit-mask-image: var(--fade);
+  mask-image: var(--fade);
+}
