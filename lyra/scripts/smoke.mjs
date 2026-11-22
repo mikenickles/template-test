@@ -563,7 +563,10 @@ try {
   await page.getByText("Lyra will talk more like you").waitFor();
   await page.goto(`${base}/#/`);
   await page.locator(".bubble").first().waitFor();
-  check((await page.locator(".topbar .avatar").getAttribute("src")).includes("avatar-orange"), "the avatar's glow follows the accent color");
+  check(
+    (await page.locator(".topbar .kit .kit-body").evaluate((el) => getComputedStyle(el).fill)) === (await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--accent").trim().replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)})`))),
+    "Kit, Lyra's face, takes the accent color",
+  );
   await shot("light-23-accent-chat");
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto(`${base}/#/tasks`);

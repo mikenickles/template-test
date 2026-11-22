@@ -1,19 +1,11 @@
-import { useEffect, useState } from "react";
 
-// one avatar per accent color: the headphone glow matches the accent
-const AVATARS = import.meta.glob<string>("./assets/avatar-*.webp", { eager: true, import: "default" });
-export const avatarFor = (accent: string) => AVATARS[`./assets/avatar-${accent}.webp`] ?? AVATARS["./assets/avatar-lime.webp"];
+// (0.59) Lyra's face is Kit: a small blob in the accent color that glances, blinks and hops.
+// Drawn on a 100-unit square; the motion is CSS (".kit" in styles.css), so it follows Gentle motion.
+const KIT_BODY = "M19 70 C19 46 32 30 50 30 C68 30 81 45 81 66 C81 75 77 79 68 79 L30 79 C22 79 19 76 19 70 Z";
 
-/** The accent color set on <html>, kept current when it changes in Settings. */
-function useAccent(): string {
-  const read = () => document.documentElement.dataset.accent ?? "lime";
-  const [accent, setAccent] = useState(read);
-  useEffect(() => {
-    const watch = new MutationObserver(() => setAccent(read()));
-    watch.observe(document.documentElement, { attributes: true, attributeFilter: ["data-accent"] });
-    return () => watch.disconnect();
-  }, []);
-  return accent;
+/** Kit as an SVG file with fixed colors, for places outside the page (the home-screen widget). */
+export function kitSvg(accent: string, soft: string): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="160" height="160"><circle cx="50" cy="50" r="50" fill="${soft}"/><ellipse cx="50" cy="83" rx="21" ry="2.6" fill="${accent}" opacity=".18"/><path d="${KIT_BODY}" fill="${accent}"/><ellipse cx="57" cy="52" rx="2.4" ry="3.4" fill="#1a1a1a"/><ellipse cx="66" cy="52" rx="2.4" ry="3.4" fill="#1a1a1a"/></svg>`;
 }
 
 /**
@@ -46,9 +38,21 @@ export function LyraMark({ size = 30 }: { size?: number }) {
   );
 }
 
-/** Lyra's face: the avatar artwork, round. */
+/** Lyra's face: Kit. */
 export function Avatar() {
-  return <img className="avatar" src={avatarFor(useAccent())} alt="" draggable={false} />;
+  return (
+    <svg className="avatar kit" viewBox="0 0 100 100" aria-hidden="true">
+      <circle className="kit-halo" cx="50" cy="50" r="50" />
+      <ellipse className="kit-shadow" cx="50" cy="83" rx="21" ry="2.6" />
+      <g className="kit-hop">
+        <path className="kit-body" d={KIT_BODY} />
+        <g className="kit-eyes">
+          <ellipse className="kit-lid" cx="57" cy="52" rx="2.4" ry="3.4" />
+          <ellipse className="kit-lid" cx="66" cy="52" rx="2.4" ry="3.4" />
+        </g>
+      </g>
+    </svg>
+  );
 }
 
 export function Orb({ size = "sm" }: { size?: "sm" | "lg" }) {

@@ -10222,3 +10222,131 @@ a.drawer-head {
   -webkit-mask-image: linear-gradient(#000 55%, transparent);
   mask-image: linear-gradient(#000 55%, transparent);
 }
+
+/* =========================================================================
+   Kit (0.59): Lyra's face. A blob in the accent color on a soft halo. On its own it
+   glances side to side, blinks and hops now and then; it wobbles while Lyra works
+   (body[data-busy]), hops when a reply lands (body[data-landed]) and tilts to listen
+   in a voice call (.voice-listening). Still when Gentle motion is off.
+   ========================================================================= */
+.kit {
+  display: block;
+  overflow: visible;
+  border-radius: 0;
+}
+.orb:has(.kit),
+.orb:has(.avatar) {
+  background: transparent;
+  box-shadow: none;
+}
+html[data-ambient="on"] .orb:has(.kit)::before,
+.orb:has(.kit)::after {
+  display: none;
+}
+.kit .kit-halo {
+  fill: var(--accent-soft);
+}
+.kit .kit-body {
+  fill: var(--accent);
+}
+.kit .kit-shadow {
+  fill: var(--accent);
+  opacity: 0.18;
+}
+.kit .kit-lid {
+  fill: #1a1a1a;
+}
+.kit .kit-hop {
+  transform-box: view-box;
+  transform-origin: 50px 80px;
+  transition: transform 0.4s ease;
+}
+.kit .kit-eyes {
+  transform-box: view-box;
+  transition: transform 0.4s ease;
+}
+.kit .kit-lid {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.kit .kit-shadow {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+html[data-ambient="on"] .kit .kit-eyes {
+  animation: kit-look 7s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+}
+html[data-ambient="on"] .kit .kit-lid {
+  animation: kit-blink 4.6s infinite;
+}
+html[data-ambient="on"] .kit .kit-hop {
+  animation: kit-hop 5.2s cubic-bezier(0.3, 0.7, 0.3, 1) infinite;
+}
+html[data-ambient="on"] .kit .kit-shadow {
+  animation: kit-shadow 5.2s cubic-bezier(0.3, 0.7, 0.3, 1) infinite;
+}
+/* thinking: eyes up, a little wobble */
+body[data-busy] .kit .kit-eyes,
+html[data-ambient="on"] body[data-busy] .kit .kit-eyes {
+  animation: none;
+  transform: translate(2px, -5px);
+}
+html[data-ambient="on"] body[data-busy] .kit .kit-hop {
+  animation: kit-wobble 1.2s ease-in-out infinite;
+}
+html[data-ambient="on"] body[data-busy] .kit .kit-shadow {
+  animation: none;
+}
+/* a reply landed: one quick hop */
+html[data-ambient="on"] body[data-landed] .kit .kit-hop {
+  animation: kit-hop-once 1.2s cubic-bezier(0.3, 0.7, 0.3, 1) 1;
+}
+html[data-ambient="on"] body[data-landed] .kit .kit-shadow {
+  animation: kit-shadow-once 1.2s cubic-bezier(0.3, 0.7, 0.3, 1) 1;
+}
+/* listening in a voice call: head tilted */
+.voice-listening .kit .kit-hop,
+html[data-ambient="on"] .voice-listening .kit .kit-hop {
+  animation: none;
+  transform: rotate(-7deg);
+}
+@keyframes kit-look {
+  0%, 18% { transform: translateX(0); }
+  26%, 44% { transform: translateX(-17px); }
+  52%, 62% { transform: translateX(0); }
+  68%, 84% { transform: translateX(4px); }
+  92%, 100% { transform: translateX(0); }
+}
+@keyframes kit-blink {
+  0%, 46%, 50%, 92%, 95%, 100% { transform: scaleY(1); }
+  48%, 93.5% { transform: scaleY(0.12); }
+}
+@keyframes kit-hop {
+  0%, 70% { transform: translateY(0) scale(1, 1); }
+  74% { transform: translateY(0) scale(1.07, 0.9); }
+  82% { transform: translateY(-9px) scale(0.96, 1.05); }
+  90% { transform: translateY(0) scale(1.05, 0.94); }
+  95%, 100% { transform: translateY(0) scale(1, 1); }
+}
+@keyframes kit-shadow {
+  0%, 74% { transform: scale(1); opacity: 0.18; }
+  82% { transform: scale(0.7); opacity: 0.08; }
+  90%, 100% { transform: scale(1); opacity: 0.18; }
+}
+@keyframes kit-hop-once {
+  0% { transform: translateY(0) scale(1.07, 0.9); }
+  35% { transform: translateY(-11px) scale(0.96, 1.05); }
+  65% { transform: translateY(0) scale(1.05, 0.94); }
+  100% { transform: none; }
+}
+@keyframes kit-shadow-once {
+  35% { transform: scale(0.65); opacity: 0.07; }
+}
+@keyframes kit-wobble {
+  50% { transform: rotate(3deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kit * {
+    animation: none !important;
+  }
+}

@@ -173,9 +173,21 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus, 
   );
 
   // Lets the orb in the top bar pulse while Lyra is working.
+  // (0.59) and Kit, Lyra's face, does a little hop when the reply lands
+  const wasPending = useRef(false);
   useEffect(() => {
     if (pending) document.body.dataset.busy = "1";
     else delete document.body.dataset.busy;
+    if (wasPending.current && !pending) {
+      document.body.dataset.landed = "1";
+      const t = setTimeout(() => delete document.body.dataset.landed, 1300);
+      wasPending.current = false;
+      return () => {
+        clearTimeout(t);
+        delete document.body.dataset.busy;
+      };
+    }
+    wasPending.current = !!pending;
     return () => {
       delete document.body.dataset.busy;
     };
