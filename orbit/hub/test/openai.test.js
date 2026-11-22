@@ -239,6 +239,56 @@ test('if tools fail even with reasoning off, the model answers without them', as
 });
 
 
+test('an agent answering without tools is told why, and tools are tried again after a while', async (t) => {
+  withoutTools.clear();
+  const ollama = await fakeOllama(t, [
+    { error: [400, 'registry.ollama.ai/library/lfm3:latest does not support tools'] },
+    [{ content: 'No tools here.' }],
+    [{ content: 'Back with tools.' }],
+  ]);
+  const h = await start(t, { ollama: { baseUrl: ollama.baseUrl } });
+  const lfm = (await h.api('POST', '/api/agents', { name: 'Lumi', provider: 'ollama', model: 'lfm3:latest', abilities: ['google'] })).body;
+  const room = (await h.api('POST', '/api/rooms', { name: 'Local', agentIds: [lfm.id] })).body;
+  await h.api('POST', `/api/rooms/${room.id}/messages`, { text: 'Check my email' });
+  await h.hub.orchestrator.idle(room.id);
+  assert.match(ollama.requests[1].messages[0].content, /turned down tool use for the model lfm3:latest \("registry.*does not support tools"\)/);
+  assert.match(ollama.requests[1].messages[0].content, /don't send them to check their settings/);
+
+  // Half an hour on, the model is asked with its tools again.
+  withoutTools.get('ollama:lfm3:latest').at -= 31 * 60_000;
+  await h.api('POST', `/api/rooms/${room.id}/messages`, { text: 'And now?' });
+  await h.hub.orchestrator.idle(room.id);
+  assert.ok(ollama.requests[2].tools, 'tools are offered again');
+  assert.equal(h.store.messages(room.id).at(-1).text, 'Back with tools.');
+});
+
+test('a model that takes tools with reasoning off keeps them when a request fails for another reason', async (t) => {
+  withoutTools.clear();
+  toolsWithoutReasoning.clear();
+  const openai = await fakeOllama(t, [
+    { error: [400, 'Function tools with reasoning_effort are not supported for gpt-x.'] },
+    [{ content: 'Hi.' }],
+    { error: [400, 'This model maximum context length is 128000 tokens.'] },
+    [{ content: 'Still with tools.' }],
+  ]);
+  const h = await start(t, { openai: { apiKey: 'sk-test', baseUrl: openai.baseUrl } });
+  const nova = (await h.api('POST', '/api/agents', { name: 'Nova', provider: 'openai', model: 'gpt-x', abilities: ['google'] })).body;
+  const room = (await h.api('POST', '/api/rooms', { name: 'Start', agentIds: [nova.id] })).body;
+  await h.api('POST', `/api/rooms/${room.id}/messages`, { text: 'Hi' });
+  await h.hub.orchestrator.idle(room.id);
+  await h.api('POST', `/api/rooms/${room.id}/messages`, { text: 'Long one' });
+  await h.hub.orchestrator.idle(room.id);
+  const failed = h.store.messages(room.id).at(-1);
+  assert.equal(failed.status, 'error', 'the real error shows');
+  assert.match(failed.error, /context length/);
+  assert.equal(withoutTools.size, 0, 'the model is not marked as tool-less');
+
+  await h.api('POST', `/api/rooms/${room.id}/messages`, { text: 'Try again' });
+  await h.hub.orchestrator.idle(room.id);
+  assert.ok(openai.requests[3].tools, 'tools are still offered');
+  assert.equal(openai.requests[3].reasoning_effort, 'none');
+});
+
 test('a follow-up an agent books shows as a card where it happened in the reply', async (t) => {
   withoutTools.clear();
   const ollama = await fakeOllama(t, [

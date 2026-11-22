@@ -24,8 +24,23 @@ const NO_TOOLS = /does not support tools|tools? (are|is) not supported|not suppo
  */
 const NO_REASONING_WITH_TOOLS = /reasoning_effort/i;
 
-/** Models found not to take tools, as "provider:model", so they aren't asked again. */
-export const withoutTools = new Set();
+/**
+ * Models found not to take tools, as "provider:model" → { at, reason }, so they aren't asked again for a while.
+ * Only for a while: a wrong guess, or a provider that adds tool support, shouldn't leave an agent without its
+ * tools (Google, web, files) until the hub restarts.
+ */
+export const withoutTools = new Map();
+const TOOLLESS_MS = 30 * 60_000;
+
+function toolless(key) {
+  const entry = withoutTools.get(key);
+  if (entry && Date.now() - entry.at > TOOLLESS_MS) withoutTools.delete(key);
+  return withoutTools.get(key) ?? null;
+}
+
+/** What an agent answering without its tools is told, so it says why instead of guessing at settings. */
+const toollessNote = (def, model, reason) =>
+  `\n\nRight now your tools (Google, web search, files, memory and the rest) can't be used: ${def.label} turned down tool use for the model ${model}${reason ? ` ("${reason.slice(0, 200)}")` : ''}. If the user asks for something that needs them, say plainly that your model isn't taking tools at the moment, so you can't reach their email, calendar, files or the web from here; don't send them to check their settings. Suggest switching you to a model that supports tools (any Claude model does) in your settings, or trying again in a while.`;
 
 /** Models that take tools only with reasoning off, as "provider:model". */
 export const toolsWithoutReasoning = new Set();
@@ -119,9 +134,10 @@ export async function streamOpenAI({
   onCard = () => {},
 }) {
   const key = `${def.id}:${model}`;
-  const tools = abilities && !withoutTools.has(key) ? clientTools(abilities) : [];
+  const known = abilities ? toolless(key) : null;
+  const tools = abilities && !known ? clientTools(abilities) : [];
   let useTools = tools.length > 0;
-  const conversation = [{ role: 'system', content: useTools ? system : plainSystem }, ...messages];
+  const conversation = [{ role: 'system', content: useTools ? system : plainSystem + (known ? toollessNote(def, model, known.reason) : '') }, ...messages];
   const activity = [];
   const sources = new Map();
   let text = '';
@@ -160,13 +176,17 @@ export async function streamOpenAI({
         toolsWithoutReasoning.add(key);
         continue;
       }
-      // Tools didn't work even with reasoning off, or the model doesn't take them: answer without them.
-      const failedWithoutReasoning = useTools && body.reasoning_effort === 'none' && err instanceof ProviderError && /400/.test(err.message);
+      // Tools didn't work even with reasoning off, or the model doesn't take them: answer without them. Only an
+      // error about reasoning or tools counts; anything else (a long chat, a bad photo) is a real error to show.
+      const failedWithoutReasoning = useTools && body.reasoning_effort === 'none' && err instanceof ProviderError && /400/.test(err.message)
+        && /reasoning|tool|function/i.test(err.message);
       if (!err.noTools && !failedWithoutReasoning) throw err;
-      withoutTools.add(key);
+      const reason = err.message.replace(/^[^:]*error \d+: /, '');
+      withoutTools.set(key, { at: Date.now(), reason });
       toolsWithoutReasoning.delete(key);
+      console.warn(`[treehouse] ${def.label} ${model} turned down tools; answering without them for now: ${reason}`);
       useTools = false;
-      conversation[0] = { role: 'system', content: plainSystem };
+      conversation[0] = { role: 'system', content: plainSystem + toollessNote(def, model, reason) };
       continue;
     }
     const sent = conversation.reduce((n, m) => n + textLength(m.content), 0);

@@ -102,7 +102,9 @@ private but slower) or Demo (canned replies, for trying the app without a key). 
 under AI models; they're checked with the provider, then kept only on the PC.
 
 Abilities work on every real model: Claude, and OpenAI, xAI, Gemini, OpenRouter and Ollama models that support
-tools (some small local models don't; those just chat). Demo agents have none.
+tools (some small local models don't; those just chat). Demo agents have none. If a model turns down tools, its
+agent answers without them for half an hour and says so (it can't reach email, the web or files meanwhile), then
+tries again; switching the agent to a Claude model fixes it for good. Updating or restarting the PC also retries.
 - **Search the web**: look things up and read pages, with sources. Claude searches itself; other models search
   through a quick Claude search on the hub (it needs an Anthropic key) and read pages the hub fetches for them.
 - **Run code**: calculate and work with data in a sandbox. Claude models only.
