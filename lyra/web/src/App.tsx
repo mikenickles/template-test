@@ -464,7 +464,7 @@ export function App() {
         )}
 
         {route.name === "chat" && !channelMissing && (
-          <Chat key={route.channelId ?? "main"} focus={route.focus} hasOpenAI={state.keys.openai} userName={state.userName} toast={toast} channel={channel ?? null} onTasksChanged={refreshCounts} webSearch={state.webSearch} />
+          <Chat key={route.channelId ?? "main"} focus={route.focus} hasOpenAI={state.keys.openai} userName={state.userName} toast={toast} channel={channel ?? null} onTasksChanged={refreshCounts} />
         )}
         {channelMissing && <MissingChannel loaded={channelsLoaded} />}
         {route.name === "channel-info" && (

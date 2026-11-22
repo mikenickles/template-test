@@ -14,7 +14,7 @@ import { ScanCard } from "../ScanCard";
 import { WidgetCard } from "../WidgetCard";
 import { SetupCard } from "../Setup";
 import { markSeen } from "../seen";
-import { Globe, Pencil, Refresh, Reply as ReplyIcon, Star } from "../icons";
+import { Pencil, Refresh, Reply as ReplyIcon, Star } from "../icons";
 import { excerptOf, splitQuote, withQuote } from "../../../core/quote";
 import { showTokens, tokenLine } from "../tokens";
 import { setChatStatus } from "../StatusLine";
@@ -48,8 +48,6 @@ interface ChatProps {
   onTasksChanged?: () => void;
   /** a message to scroll to and highlight (from search) */
   focus?: number;
-  /** web search is on (the "Web" switch in the message box, same as Settings, AI model) */
-  webSearch: boolean;
 }
 
 
@@ -57,23 +55,12 @@ interface ChatProps {
 export const Chat = memo(ChatView, (a, b) => {
   const same = (x: Channel | null, y: Channel | null) =>
     x === y || (!!x && !!y && x.id === y.id && x.name === y.name && x.icon === y.icon && x.about === y.about);
-  return a.focus === b.focus && a.webSearch === b.webSearch && a.hasOpenAI === b.hasOpenAI && a.userName === b.userName && a.toast === b.toast && a.onTasksChanged === b.onTasksChanged && same(a.channel, b.channel);
+  return a.focus === b.focus && a.hasOpenAI === b.hasOpenAI && a.userName === b.userName && a.toast === b.toast && a.onTasksChanged === b.onTasksChanged && same(a.channel, b.channel);
 });
 
-function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus, webSearch }: ChatProps) {
+function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }: ChatProps) {
   const channelId = channel?.id ?? null;
-  // (0.58) the message box's Web switch: shown at once, saved in the background
-  const [web, setWeb] = useState(webSearch);
-  useEffect(() => setWeb(webSearch), [webSearch]);
-  const toggleWeb = () => {
-    const on = !web;
-    setWeb(on);
-    haptic.select();
-    api.saveSettings({ webSearch: on }).then(
-      () => toast(on ? "Lyra can search the web" : "Web search off"),
-      () => setWeb(!on),
-    );
-  };
+
   const [messages, setMessages] = useState<Message[] | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
@@ -962,10 +949,6 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus, 
             onClick={() => (isNative ? setAttaching(true) : filePick.current?.click())}
           >
             <Plus size={20} />
-          </button>
-          <button type="button" className={`web-toggle${web ? " on" : ""}`} aria-pressed={web} title="Search the web when it helps" onClick={toggleWeb}>
-            <Globe size={16} />
-            <span>Web</span>
           </button>
           <span className="composer-gap" aria-hidden="true" />
           <input ref={filePick} type="file" hidden multiple accept="image/*,application/pdf,text/*,.md,.csv,.json,.ics" aria-label="Choose files" onChange={(e) => { void addFiles(e.target.files ?? []); e.target.value = ""; }} />
