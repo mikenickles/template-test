@@ -10520,3 +10520,17 @@ html[data-ambient="on"] .tabbar:not(.floating) {
   -webkit-mask-image: var(--fade);
   mask-image: var(--fade);
 }
+
+/* ---- (0.59.9) a little more room under the last reply, so its thumbs and token line clear the message box ---- */
+.chat .log {
+  padding-bottom: calc(var(--below) + 40px);
+  --fade: linear-gradient(
+    rgba(0, 0, 0, 0.18) 0,
+    rgba(0, 0, 0, 0.3) calc(var(--inset-top) + 40px),
+    rgba(0, 0, 0, 0.62) calc(var(--inset-top) + 110px),
+    #000 calc(var(--inset-top) + 190px),
+    #000 calc(100% - var(--below) - 6px),
+    rgba(0, 0, 0, 0.45) calc(100% - var(--below) + 40px),
+    rgba(0, 0, 0, 0.18) 100%
+  );
+}
