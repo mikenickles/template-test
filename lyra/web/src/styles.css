@@ -10443,3 +10443,51 @@ html[data-ambient="on"] .lp-orb:has(.kit)::before {
 .app:not(.desk) .chat::before {
   display: none;
 }
+
+/* ---- (0.59.5) the chat runs from the very top to the very bottom of the screen, fading only at the
+   two edges; the tab bar is a floating pill with the accent line under the section you're on ---- */
+.chat {
+  --tabbar-h: calc(var(--inset-bottom) + 72px);
+}
+.chat .log {
+  --fade: linear-gradient(
+    transparent 0,
+    transparent var(--inset-top),
+    #000 calc(var(--inset-top) + 36px),
+    #000 calc(100% - var(--inset-bottom) - 44px),
+    transparent calc(100% - var(--inset-bottom) - 4px)
+  );
+  -webkit-mask-image: var(--fade);
+  mask-image: var(--fade);
+}
+.tabbar,
+.tabbar.floating,
+.tabbar:not(.floating),
+html[data-ambient="on"] .tabbar:not(.floating) {
+  padding: 0 24px calc(var(--inset-bottom) + 12px);
+  border-top: 0;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+.tabbar-inner,
+.tabbar.floating .tabbar-inner {
+  pointer-events: auto;
+  max-width: 340px;
+  margin: 0 auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  backdrop-filter: blur(16px) saturate(1.3);
+  box-shadow: 0 0 0 1px var(--border), 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+.tabbar-item,
+.tabbar-item.on {
+  min-height: 48px;
+  padding-top: 6px;
+}
+.tabbar-inner > .slide-pill::after {
+  bottom: 5px;
+}
