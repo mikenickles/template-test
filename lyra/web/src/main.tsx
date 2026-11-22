@@ -1,4 +1,5 @@
-import "@fontsource-variable/bricolage-grotesque/opsz.css";
+import "@fontsource-variable/inter";
+import "@fontsource-variable/inter-tight";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
@@ -7,7 +8,7 @@ import { applySizes } from "./sizes";
 
 applySizes(); // text and avatar size, before the first paint
 
-// Apply the saved accent before the first paint, so the app doesn't flash lime.
+// Apply the saved accent before the first paint, so the app doesn't flash coral.
 try {
   const accent = localStorage.getItem("lyra.accent");
   if (accent) document.documentElement.dataset.accent = accent;

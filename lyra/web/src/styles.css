@@ -1,41 +1,43 @@
 /*
- * Lyra: "night sky notebook".
- * Warm paper and ink, one signal accent (Vega, Lyra's bright star),
- * and type with character. Personality from type, space and one colour.
+ * Lyra (0.58): "Quiet". Ink on white, thin lines, one accent used sparingly
+ * (the face, a dot, an underline). Inter for text, Inter Tight for titles.
+ * The redesign itself is the "QUIET" block at the end of this file.
  */
 
 :root {
-  --bg: #f3f1ea;
-  --surface: #fbfaf6;
-  --surface-2: #e9e6dc;
-  --text: #131416;
-  --text-muted: #67665f;
-  --border: #dcd8cc;
-  --accent: #c4ef4b;
-  --accent-ink: #131416;
-  --accent-soft: #e8f4c2;
-  --accent-text: #4b6a00;
+  --bg: #ffffff;
+  --surface: #f6f6f4;
+  --surface-2: #ececea;
+  --text: #111111;
+  --text-muted: #6b6b6b;
+  --border: #ebebe9;
+  --accent: #ee6a55;
+  --accent-ink: #2b0d07;
+  --accent-soft: #fde6e1;
+  --accent-text: #c2422f;
   --good: #2e7d4f;
   --warn: #b7791f;
   --bad: #c2412d;
 
-  /* your messages: softer ink by default (Settings, You and appearance, Your messages) */
-  --me: #3a3834;
-  --me-text: #f6f4ee;
-  --orb: #131416;
+  /* your messages: a light grey bubble by default (Settings, You and appearance, Your messages) */
+  --me: #f1f1ef;
+  --me-text: #111111;
+  --me-line: transparent;
+  --orb: #111111;
   --orb-edge: transparent;
-  --orb-line: rgba(243, 241, 234, 0.42);
-  --orb-star: #f3f1ea;
-  --chart-line: #bdb8aa;
+  --orb-line: rgba(255, 255, 255, 0.42);
+  --orb-star: #ffffff;
+  --chart-line: #d4d4d0;
   --drawer-w: min(82vw, 340px);
-  --drawer-bg: #e8e5dc;
-  --drawer-hover: rgba(19, 20, 22, 0.04);
-  --drawer-active: rgba(19, 20, 22, 0.07);
-  --drawer-active-edge: rgba(19, 20, 22, 0.22);
-  --tree-line: #c4bfb2;
-  --scrim: rgba(19, 20, 22, 0.32);
+  --drawer-bg: #f4f4f2;
+  --drawer-hover: rgba(17, 17, 17, 0.04);
+  --drawer-active: rgba(17, 17, 17, 0.06);
+  --drawer-active-edge: rgba(17, 17, 17, 0.2);
+  --tree-line: #d6d6d2;
+  --scrim: rgba(17, 17, 17, 0.28);
 
-  --font: "Bricolage Grotesque Variable", "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: "Inter Tight Variable", "Inter Variable", Inter, system-ui, sans-serif;
   --text-xs: 12px;
   --text-sm: 14px;
   --text-base: 16px;
@@ -54,7 +56,7 @@
 
   --radius: 20px;
   --radius-sm: 12px;
-  --shadow: 0 1px 2px rgba(19, 20, 22, 0.04), 0 10px 30px rgba(19, 20, 22, 0.07);
+  --shadow: 0 1px 2px rgba(17, 17, 17, 0.03), 0 10px 30px rgba(17, 17, 17, 0.07);
   --content: 680px;
   --ease: 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
   /* Capacitor injects --safe-area-inset-* on Android; browsers use env() */
@@ -66,150 +68,150 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #141310;
-    --surface: #1d1c18;
-    --surface-2: #27251f;
-    --text: #eeebe3;
-    --text-muted: #9d988b;
-    --border: #302e27;
-    --accent: #cbf25c;
-    --accent-ink: #10130a;
-    --accent-soft: #2a3317;
-    --accent-text: #cbf25c;
+    --bg: #0f0f10;
+    --surface: #19191b;
+    --surface-2: #242427;
+    --text: #f2f2f2;
+    --text-muted: #9b9ba0;
+    --border: #252528;
+    --accent: #ff8370;
+    --accent-ink: #2b0d07;
+    --accent-soft: #3a1e19;
+    --accent-text: #ff9a8a;
     --good: #5cc48a;
     --warn: #e0a940;
     --bad: #f07a68;
 
-    --me: #d4cfc4;
-    --me-text: #141310;
-    --orb: #1b1a16;
-    --orb-edge: #33302a;
-    --orb-line: rgba(238, 235, 227, 0.38);
-    --orb-star: #eeebe3;
-    --chart-line: #45423a;
-    --drawer-bg: #0e0d0b;
-    --drawer-hover: rgba(238, 235, 227, 0.05);
-    --drawer-active: rgba(238, 235, 227, 0.09);
-    --drawer-active-edge: rgba(238, 235, 227, 0.2);
-    --tree-line: #3d3a33;
-    --scrim: rgba(0, 0, 0, 0.45);
+    --me: #232326;
+    --me-text: #f2f2f2;
+    --orb: #19191b;
+    --orb-edge: #2c2c30;
+    --orb-line: rgba(242, 242, 242, 0.38);
+    --orb-star: #f2f2f2;
+    --chart-line: #3a3a3e;
+    --drawer-bg: #09090a;
+    --drawer-hover: rgba(242, 242, 242, 0.05);
+    --drawer-active: rgba(242, 242, 242, 0.08);
+    --drawer-active-edge: rgba(242, 242, 242, 0.2);
+    --tree-line: #333337;
+    --scrim: rgba(0, 0, 0, 0.5);
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
     color-scheme: dark;
   }
 }
 
-/* accent colors the user can pick in Settings; set on <html>, and on each swatch to preview it */
-[data-accent="lime"] {
-  --accent: #c4ef4b;
-  --accent-ink: #131416;
-  --accent-soft: #e8f4c2;
-  --accent-text: #4b6a00;
+/* accent colors the user can pick in Settings (0.58: coral first, the default); set on <html>, and on each swatch to preview it */
+[data-accent="coral"] {
+  --accent: #ee6a55;
+  --accent-ink: #2b0d07;
+  --accent-soft: #fde6e1;
+  --accent-text: #c2422f;
 }
 
 [data-accent="orange"] {
-  --accent: #d2602a;
-  --accent-ink: #ffffff;
-  --accent-soft: #f7ddcc;
-  --accent-text: #a4441a;
-}
-
-[data-accent="yellow"] {
-  --accent: #f3c331;
-  --accent-ink: #131416;
-  --accent-soft: #faedc0;
-  --accent-text: #866200;
+  --accent: #f08a24;
+  --accent-ink: #2a1503;
+  --accent-soft: #fdebd7;
+  --accent-text: #b05a07;
 }
 
 [data-accent="red"] {
-  --accent: #e0352e;
+  --accent: #e23d3d;
   --accent-ink: #ffffff;
-  --accent-soft: #f9d7d5;
-  --accent-text: #b5231d;
+  --accent-soft: #fce0e0;
+  --accent-text: #c42b2b;
 }
 
-[data-accent="maroon"] {
-  --accent: #7d2230;
+[data-accent="rose"] {
+  --accent: #e2508c;
   --accent-ink: #ffffff;
-  --accent-soft: #f0dadd;
-  --accent-text: #7d2230;
+  --accent-soft: #fce1ec;
+  --accent-text: #b8336c;
 }
 
-[data-accent="navy"] {
-  --accent: #1e3a6b;
+[data-accent="violet"] {
+  --accent: #7b5cf0;
   --accent-ink: #ffffff;
-  --accent-soft: #dae2f0;
-  --accent-text: #1e3a6b;
+  --accent-soft: #ece6fe;
+  --accent-text: #6544d6;
 }
 
-[data-accent="indigo"] {
-  --accent: #5a5bd8;
+[data-accent="blue"] {
+  --accent: #3570e8;
   --accent-ink: #ffffff;
-  --accent-soft: #e2e2fb;
-  --accent-text: #4445b6;
+  --accent-soft: #e0e9fd;
+  --accent-text: #2559c9;
 }
 
 [data-accent="teal"] {
-  --accent: #13897b;
+  --accent: #13998a;
   --accent-ink: #ffffff;
-  --accent-soft: #d2ede9;
-  --accent-text: #0c6a5f;
+  --accent-soft: #d3f0ec;
+  --accent-text: #0b7468;
+}
+
+[data-accent="lime"] {
+  --accent: #a3d72a;
+  --accent-ink: #131416;
+  --accent-soft: #eaf5c9;
+  --accent-text: #4b6a00;
 }
 
 @media (prefers-color-scheme: dark) {
+  [data-accent="coral"] {
+    --accent: #ff8370;
+    --accent-ink: #2b0d07;
+    --accent-soft: #3a1e19;
+    --accent-text: #ff9a8a;
+  }
+
+  [data-accent="orange"] {
+    --accent: #ffa04a;
+    --accent-ink: #2a1503;
+    --accent-soft: #3a2612;
+    --accent-text: #ffb26b;
+  }
+
+  [data-accent="red"] {
+    --accent: #ff5f5f;
+    --accent-ink: #1f0606;
+    --accent-soft: #3b1717;
+    --accent-text: #ff8080;
+  }
+
+  [data-accent="rose"] {
+    --accent: #ff6fa8;
+    --accent-ink: #22060f;
+    --accent-soft: #3a1626;
+    --accent-text: #ff8fbb;
+  }
+
+  [data-accent="violet"] {
+    --accent: #9c85ff;
+    --accent-ink: #120b2e;
+    --accent-soft: #251e45;
+    --accent-text: #b3a2ff;
+  }
+
+  [data-accent="blue"] {
+    --accent: #6a9bff;
+    --accent-ink: #08142e;
+    --accent-soft: #172440;
+    --accent-text: #8fb3ff;
+  }
+
+  [data-accent="teal"] {
+    --accent: #34c9b6;
+    --accent-ink: #04140f;
+    --accent-soft: #12302c;
+    --accent-text: #5ed6c6;
+  }
+
   [data-accent="lime"] {
     --accent: #cbf25c;
     --accent-ink: #10130a;
     --accent-soft: #232c14;
     --accent-text: #cbf25c;
-  }
-
-  [data-accent="orange"] {
-    --accent: #ec7a40;
-    --accent-ink: #1a0b04;
-    --accent-soft: #3a2116;
-    --accent-text: #f29462;
-  }
-
-  [data-accent="yellow"] {
-    --accent: #f6cc48;
-    --accent-ink: #1a1404;
-    --accent-soft: #332a10;
-    --accent-text: #f6cc48;
-  }
-
-  [data-accent="red"] {
-    --accent: #f25c52;
-    --accent-ink: #1c0605;
-    --accent-soft: #3a1714;
-    --accent-text: #f6827a;
-  }
-
-  [data-accent="maroon"] {
-    --accent: #c85a6d;
-    --accent-ink: #1a0609;
-    --accent-soft: #361b20;
-    --accent-text: #e3889a;
-  }
-
-  [data-accent="navy"] {
-    --accent: #7096da;
-    --accent-ink: #0a1020;
-    --accent-soft: #18233b;
-    --accent-text: #94b1e8;
-  }
-
-  [data-accent="indigo"] {
-    --accent: #8c8df2;
-    --accent-ink: #0d0d24;
-    --accent-soft: #23234b;
-    --accent-text: #a7a8f6;
-  }
-
-  [data-accent="teal"] {
-    --accent: #3dc3b1;
-    --accent-ink: #04140f;
-    --accent-soft: #13302c;
-    --accent-text: #62d4c4;
   }
 }
 
@@ -6514,31 +6516,34 @@ button.orb {
   margin-top: 2px;
 }
 
-/* ---- Your messages: bubble styles (Settings, You and appearance). Softer ink is the default in :root. ---- */
+/* ---- Your messages: bubble styles (Settings, You and appearance). Soft grey is the default in :root. ---- */
 [data-bubbles="classic"] {
-  --me: #131416;
-  --me-text: #f3f1ea;
+  --me: #111111;
+  --me-text: #ffffff;
 }
 [data-bubbles="accent"] {
   --me: var(--accent-soft);
   --me-text: var(--text);
 }
+/* (0.58) "Outline": white with a thin line */
 [data-bubbles="neutral"] {
-  --me: #e5e1d4;
+  --me: var(--bg);
   --me-text: var(--text);
+  --me-line: #dededb;
 }
 @media (prefers-color-scheme: dark) {
   [data-bubbles="classic"] {
-    --me: #e4e7ec;
-    --me-text: #141310;
+    --me: #f2f2f2;
+    --me-text: #111111;
   }
   [data-bubbles="accent"] {
     --me: color-mix(in srgb, var(--accent) 20%, var(--surface));
     --me-text: var(--text);
   }
   [data-bubbles="neutral"] {
-    --me: #2b2924;
+    --me: var(--bg);
     --me-text: var(--text);
+    --me-line: #36363a;
   }
 }
 
@@ -6592,15 +6597,16 @@ button.orb {
   color: var(--text-muted);
 }
 
-/* "Softer" is the default in :root; stated here too so its preview card shows it whatever style is chosen */
+/* "Soft grey" (id "softer") is the default in :root; stated here too so its preview card shows it whatever style is chosen */
 [data-bubbles="softer"] {
-  --me: #3a3834;
-  --me-text: #f6f4ee;
+  --me: #f1f1ef;
+  --me-text: #111111;
+  --me-line: transparent;
 }
 @media (prefers-color-scheme: dark) {
   [data-bubbles="softer"] {
-    --me: #d4cfc4;
-    --me-text: #141310;
+    --me: #232326;
+    --me-text: #f2f2f2;
   }
   /* white on the lighter dark-mode warn/bad colors was too faint */
   .badge,
@@ -7814,10 +7820,10 @@ button.lp-svc:active {
    the bubble style stay the user's own choice in every look.
    ========================================================================= */
 
-/* Paper, restated so its picker card looks right inside another look */
+/* Quiet (id "paper"), restated so its picker card looks right inside another look */
 [data-theme="paper"] {
-  --bg: #f3f1ea; --surface: #fbfaf6; --surface-2: #e9e6dc; --text: #131416; --text-muted: #67665f; --border: #dcd8cc;
-  --shadow: 0 1px 2px rgba(19, 20, 22, 0.04), 0 10px 30px rgba(19, 20, 22, 0.07);
+  --bg: #ffffff; --surface: #f6f6f4; --surface-2: #ececea; --text: #111111; --text-muted: #6b6b6b; --border: #ebebe9;
+  --shadow: 0 1px 2px rgba(17, 17, 17, 0.03), 0 10px 30px rgba(17, 17, 17, 0.07);
 }
 
 /* ---- Zine: photocopied. Ink edges, hard shadows, tighter corners, typewriter labels, grain. ---- */
@@ -7835,7 +7841,7 @@ button.lp-svc:active {
 /* ---- Night Radio: always dark, plum-black with a warm amber glow from above. ---- */
 [data-theme="radio"] {
   /* (0.50.3) the dark is tinted by --night, a color picked to pair with each accent (set with the accents below) */
-  --night: #7a3fa0;
+  --night: #1f6f86;
   --bg: color-mix(in srgb, var(--night) 12%, #0c0c0d); --surface: color-mix(in srgb, var(--night) 13%, #161617);
   --surface-2: color-mix(in srgb, var(--night) 16%, #202022); --border: color-mix(in srgb, var(--night) 22%, #2b2b2e);
   --text: #f2f0eb; --text-muted: color-mix(in srgb, var(--night) 18%, #a4a3a0);
@@ -7859,7 +7865,7 @@ button.lp-svc:active {
 
 @media (prefers-color-scheme: dark) {
   [data-theme="paper"] {
-    --bg: #141310; --surface: #1d1c18; --surface-2: #27251f; --text: #eeebe3; --text-muted: #9d988b; --border: #302e27;
+    --bg: #0f0f10; --surface: #19191b; --surface-2: #242427; --text: #f2f2f2; --text-muted: #9b9ba0; --border: #252528;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
   }
   [data-theme="zine"] {
@@ -7879,6 +7885,62 @@ button.lp-svc:active {
 }
 
 /* Night Radio is dark whatever the phone is set to: the dark accent and bubble colors, always */
+[data-theme="radio"][data-accent="coral"],
+[data-theme="radio"] [data-accent="coral"] {
+  --night: #1f6f86;
+  --accent: #ff8370;
+  --accent-ink: #2b0d07;
+  --accent-soft: #3a1e19;
+  --accent-text: #ff9a8a;
+}
+[data-theme="radio"][data-accent="orange"],
+[data-theme="radio"] [data-accent="orange"] {
+  --night: #2f5fa0;
+  --accent: #ffa04a;
+  --accent-ink: #2a1503;
+  --accent-soft: #3a2612;
+  --accent-text: #ffb26b;
+}
+[data-theme="radio"][data-accent="red"],
+[data-theme="radio"] [data-accent="red"] {
+  --night: #1f8a80;
+  --accent: #ff5f5f;
+  --accent-ink: #1f0606;
+  --accent-soft: #3b1717;
+  --accent-text: #ff8080;
+}
+[data-theme="radio"][data-accent="rose"],
+[data-theme="radio"] [data-accent="rose"] {
+  --night: #3f7a5a;
+  --accent: #ff6fa8;
+  --accent-ink: #22060f;
+  --accent-soft: #3a1626;
+  --accent-text: #ff8fbb;
+}
+[data-theme="radio"][data-accent="violet"],
+[data-theme="radio"] [data-accent="violet"] {
+  --night: #6f7f2a;
+  --accent: #9c85ff;
+  --accent-ink: #120b2e;
+  --accent-soft: #251e45;
+  --accent-text: #b3a2ff;
+}
+[data-theme="radio"][data-accent="blue"],
+[data-theme="radio"] [data-accent="blue"] {
+  --night: #b0703a;
+  --accent: #6a9bff;
+  --accent-ink: #08142e;
+  --accent-soft: #172440;
+  --accent-text: #8fb3ff;
+}
+[data-theme="radio"][data-accent="teal"],
+[data-theme="radio"] [data-accent="teal"] {
+  --night: #a33a5c;
+  --accent: #34c9b6;
+  --accent-ink: #04140f;
+  --accent-soft: #12302c;
+  --accent-text: #5ed6c6;
+}
 [data-theme="radio"][data-accent="lime"],
 [data-theme="radio"] [data-accent="lime"] {
   --night: #7a3fa0;
@@ -7886,62 +7948,6 @@ button.lp-svc:active {
   --accent-ink: #10130a;
   --accent-soft: #232c14;
   --accent-text: #cbf25c;
-}
-[data-theme="radio"][data-accent="orange"],
-[data-theme="radio"] [data-accent="orange"] {
-  --night: #2f6f9a;
-  --accent: #ec7a40;
-  --accent-ink: #1a0b04;
-  --accent-soft: #3a2116;
-  --accent-text: #f29462;
-}
-[data-theme="radio"][data-accent="yellow"],
-[data-theme="radio"] [data-accent="yellow"] {
-  --night: #4a4fb0;
-  --accent: #f6cc48;
-  --accent-ink: #1a1404;
-  --accent-soft: #332a10;
-  --accent-text: #f6cc48;
-}
-[data-theme="radio"][data-accent="red"],
-[data-theme="radio"] [data-accent="red"] {
-  --night: #1f8a80;
-  --accent: #f25c52;
-  --accent-ink: #1c0605;
-  --accent-soft: #3a1714;
-  --accent-text: #f6827a;
-}
-[data-theme="radio"][data-accent="maroon"],
-[data-theme="radio"] [data-accent="maroon"] {
-  --night: #3f7a5a;
-  --accent: #c85a6d;
-  --accent-ink: #1a0609;
-  --accent-soft: #361b20;
-  --accent-text: #e3889a;
-}
-[data-theme="radio"][data-accent="navy"],
-[data-theme="radio"] [data-accent="navy"] {
-  --night: #b0703a;
-  --accent: #7096da;
-  --accent-ink: #0a1020;
-  --accent-soft: #18233b;
-  --accent-text: #94b1e8;
-}
-[data-theme="radio"][data-accent="indigo"],
-[data-theme="radio"] [data-accent="indigo"] {
-  --night: #6f7f2a;
-  --accent: #8c8df2;
-  --accent-ink: #0d0d24;
-  --accent-soft: #23234b;
-  --accent-text: #a7a8f6;
-}
-[data-theme="radio"][data-accent="teal"],
-[data-theme="radio"] [data-accent="teal"] {
-  --night: #a33a5c;
-  --accent: #3dc3b1;
-  --accent-ink: #04140f;
-  --accent-soft: #13302c;
-  --accent-text: #62d4c4;
 }
 [data-theme="radio"][data-bubbles="classic"],
 [data-theme="radio"] [data-bubbles="classic"] {
@@ -7955,13 +7961,14 @@ button.lp-svc:active {
 }
 [data-theme="radio"][data-bubbles="neutral"],
 [data-theme="radio"] [data-bubbles="neutral"] {
-  --me: #2b2924;
+  --me: var(--bg);
   --me-text: var(--text);
+  --me-line: color-mix(in srgb, var(--night) 30%, #3a3a3d);
 }
 [data-theme="radio"][data-bubbles="softer"],
 [data-theme="radio"] [data-bubbles="softer"] {
-  --me: #d4cfc4;
-  --me-text: #141310;
+  --me: var(--surface-2);
+  --me-text: var(--text);
 }
 [data-theme="radio"] .badge,
 [data-theme="radio"] .voice-btn.end {
@@ -9183,5 +9190,307 @@ html[data-ambient="on"] body[data-music] .lp-orb {
   html[data-ambient="on"] .orb:has(.avatar)::before,
   html[data-ambient="on"] .lp-orb::before {
     animation: none;
+  }
+}
+
+/* =========================================================================
+   Lyra's face (0.58): Face.tsx, colored from the accent. Expressions are classes
+   (.mood-*), so a change of mood glides; blinking and looking around come from mood.ts.
+   ========================================================================= */
+.face {
+  --face-hi: color-mix(in oklab, var(--accent) 52%, #fff);
+  --face-mid: var(--accent);
+  --face-lo: color-mix(in oklab, var(--accent) 80%, #000);
+  --face-ink: color-mix(in oklab, var(--accent) 14%, #17171a);
+  --face-blush: color-mix(in oklab, var(--accent) 30%, #ff4d7d);
+  display: block;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+}
+.orb:has(.face) {
+  background: transparent;
+}
+.face .face-hi {
+  stop-color: var(--face-hi);
+}
+.face .face-mid {
+  stop-color: var(--face-mid);
+}
+.face .face-lo {
+  stop-color: var(--face-lo);
+}
+.face .face-shine {
+  fill: #fff;
+  opacity: 0.26;
+}
+.face rect {
+  fill: var(--face-ink);
+}
+.face .eye-glint {
+  fill: #fff;
+}
+.face .face-mouth,
+.face .eye-arc,
+.face .eye-shut,
+.face .brow {
+  fill: none;
+  stroke: var(--face-ink);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.face .brow {
+  stroke-width: 3.4;
+}
+.face .face-o {
+  fill: var(--face-ink);
+}
+.face .face-cheek {
+  fill: var(--face-blush);
+}
+.face .face-heart {
+  fill: #ff4d6d;
+}
+.face .face-z {
+  fill: var(--face-ink);
+  font: 700 13px/1 system-ui, sans-serif;
+}
+
+/* what moves, and how */
+.face .face-head {
+  transform-box: view-box;
+  transform-origin: 50px 56px;
+  transition: transform 0.6s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.face .face-eyes {
+  transform: translate(calc(var(--gx) * 5.5px), calc(var(--gy) * 4.5px));
+  transition: transform 0.42s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.face .face-lower {
+  transform: translate(calc(var(--gx) * 2.5px), calc(var(--gy) * 2px));
+  transition: transform 0.5s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.face .eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.3s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+.face .eye-lid {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.07s ease-out, opacity 0.18s;
+}
+.face .face-mouth {
+  transition: d 0.32s cubic-bezier(0.3, 0.7, 0.2, 1), opacity 0.2s;
+}
+.face .brow {
+  opacity: 0;
+  transition: d 0.32s cubic-bezier(0.3, 0.7, 0.2, 1), opacity 0.25s;
+}
+.face .eye-arc,
+.face .eye-shut,
+.face .face-o,
+.face .face-cheek,
+.face .face-heart,
+.face .face-z {
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.face .face-o {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.face.blink .eye-lid {
+  transform: scaleY(0.1);
+}
+
+/* happy, love, vibing: smiling eyes, a wide smile, rosy cheeks */
+.face:is(.mood-happy, .mood-love, .mood-vibing) .eye-lid {
+  opacity: 0;
+}
+.face:is(.mood-happy, .mood-love, .mood-vibing) .eye-arc {
+  opacity: 1;
+}
+.face:is(.mood-happy, .mood-love, .mood-vibing) .face-mouth {
+  d: path("M38 61 Q50 76 62 61");
+}
+.face:is(.mood-happy, .mood-love, .mood-vibing) .face-cheek {
+  opacity: 0.5;
+}
+.face.mood-love .face-cheek {
+  opacity: 0.75;
+}
+.face.mood-love .face-heart {
+  opacity: 1;
+  animation: face-heart 1.4s ease-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.face.mood-love .face-head {
+  transform: rotate(-6deg);
+}
+.face.mood-happy .face-head {
+  transform: translateY(-1.5px);
+}
+
+/* thinking: eyes up and to the side, one brow raised, mouth to one side */
+.face.mood-thinking .face-mouth {
+  d: path("M45 67 Q51 66.5 57 64.5");
+}
+.face.mood-thinking .brow {
+  opacity: 1;
+}
+.face.mood-thinking .brow-l {
+  d: path("M31 29.5 Q37 26.5 43 29.5");
+}
+.face.mood-thinking .brow-r {
+  d: path("M57 33 Q63 32.5 69 33");
+}
+.face.mood-thinking .face-head {
+  transform: rotate(-5deg);
+}
+
+/* surprised: wide eyes, brows up, a little "o" */
+.face.mood-surprised .eye {
+  transform: scale(1.14);
+}
+.face.mood-surprised .brow {
+  opacity: 1;
+}
+.face.mood-surprised .brow-l {
+  d: path("M31 28 Q37 24 43 28");
+}
+.face.mood-surprised .brow-r {
+  d: path("M57 28 Q63 24 69 28");
+}
+.face:is(.mood-surprised, .mood-talking) .face-mouth {
+  opacity: 0;
+}
+.face:is(.mood-surprised, .mood-talking) .face-o {
+  opacity: 1;
+}
+
+/* concerned: worried brows, a small frown */
+.face.mood-concerned .brow {
+  opacity: 1;
+}
+.face.mood-concerned .brow-l {
+  d: path("M31 33.5 Q38 32 43 28.5");
+}
+.face.mood-concerned .brow-r {
+  d: path("M57 28.5 Q62 32 69 33.5");
+}
+.face.mood-concerned .face-mouth {
+  d: path("M42 68.5 Q50 63.5 58 68.5");
+}
+.face.mood-concerned .eye {
+  transform: scale(0.92);
+}
+
+/* sleepy: eyes shut, head tipped, a couple of z's */
+.face.mood-sleepy .eye-lid {
+  opacity: 0;
+}
+.face.mood-sleepy .eye-shut,
+.face.mood-sleepy .face-z {
+  opacity: 1;
+}
+.face.mood-sleepy .face-mouth {
+  d: path("M46 66 Q50 68 54 66");
+}
+.face.mood-sleepy .face-head {
+  transform: rotate(7deg) translateY(1px);
+}
+
+/* listening: bright eyes, head tilted toward you */
+.face.mood-listening .eye {
+  transform: scale(1.07);
+}
+.face.mood-listening .face-mouth {
+  d: path("M43 64 Q50 70.5 57 64");
+}
+.face.mood-listening .face-head {
+  transform: rotate(5deg);
+}
+
+/* talking: the mouth moves while Lyra writes or speaks */
+.face.mood-talking .face-mouth {
+  d: path("M44 65 Q50 69 56 65");
+}
+
+/* the looping bits only with Gentle motion on */
+html:not([data-ambient="off"]) .face.mood-talking .face-o {
+  animation: face-talk 0.26s ease-in-out infinite alternate;
+}
+html:not([data-ambient="off"]) .face.mood-vibing .face-head {
+  animation: face-sway 1.7s ease-in-out infinite;
+}
+html:not([data-ambient="off"]) .face.mood-sleepy .face-z {
+  animation: face-z 3s ease-in-out infinite;
+}
+html:not([data-ambient="off"]) .face.mood-sleepy .face-z.z2 {
+  animation-delay: 1.5s;
+}
+html:not([data-ambient="off"]) .face.mood-listening .face-head {
+  animation: face-nod 2.4s ease-in-out infinite;
+}
+@keyframes face-talk {
+  from {
+    transform: scale(1.1, 0.35);
+  }
+  to {
+    transform: scale(0.95, 1);
+  }
+}
+@keyframes face-sway {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+@keyframes face-nod {
+  0%,
+  100% {
+    transform: rotate(5deg) translateY(0);
+  }
+  50% {
+    transform: rotate(5deg) translateY(1.6px);
+  }
+}
+@keyframes face-z {
+  0% {
+    opacity: 0;
+    transform: translate(0, 4px);
+  }
+  30%,
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(4px, -6px);
+  }
+}
+@keyframes face-heart {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+    transform: translateY(0) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.9);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .face .face-eyes,
+  .face .face-lower,
+  .face .face-head {
+    transition: none;
   }
 }

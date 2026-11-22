@@ -2,7 +2,7 @@
 // a status that always fits, and the latest thing Lyra posted on its own today.
 import { registerPlugin } from "@capacitor/core";
 import type { Lyra } from "../../core/lyra";
-import { avatarFor } from "./LyraMark";
+import { faceSvg } from "./Face";
 import { isNative } from "./platform";
 import { widgetWords } from "./statusText";
 
@@ -21,10 +21,20 @@ function words(lyra: Lyra, now = new Date()) {
   );
 }
 
-/** The accent's avatar as a small round PNG. */
+/** The accent's color as #rrggbb, read from the palette in styles.css. */
+function accentHex(accent: string): string {
+  const probe = document.createElement("span");
+  probe.dataset.accent = accent;
+  document.body.append(probe);
+  const v = getComputedStyle(probe).getPropertyValue("--accent").trim();
+  probe.remove();
+  return v;
+}
+
+/** Lyra's face in the accent color as a small round PNG. */
 async function avatarPng(accent: string): Promise<string | undefined> {
   const img = new Image();
-  img.src = avatarFor(accent);
+  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(faceSvg(accentHex(accent)))}`;
   await img.decode();
   const size = 160;
   const c = document.createElement("canvas");

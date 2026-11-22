@@ -22,15 +22,15 @@ export type SettingsSection = "model" | "usage" | "you" | "alerts" | "sync" | "a
 export const SETTINGS_SECTIONS: SettingsSection[] = ["model", "usage", "you", "alerts", "sync", "about"];
 
 const BUBBLE_CHOICES: { id: AppState["bubbles"]; label: string; about: string }[] = [
-  { id: "softer", label: "Softer", about: "Charcoal, or soft white in dark mode" },
+  { id: "softer", label: "Soft grey", about: "Light grey, or dark grey in dark mode" },
   { id: "accent", label: "Accent", about: "A tint of your accent color" },
-  { id: "neutral", label: "Soft neutral", about: "A quiet grey" },
+  { id: "neutral", label: "Outline", about: "White with a thin line" },
   { id: "classic", label: "Classic", about: "Solid black, or white in dark mode" },
 ];
 
 /** The whole look, as a mood. Each card previews itself. */
 const THEME_CHOICES: { id: AppState["theme"]; label: string; about: string }[] = [
-  { id: "paper", label: "Paper", about: "Warm paper and ink. The original." },
+  { id: "paper", label: "Quiet", about: "Ink on white, one accent. The default." },
   { id: "zine", label: "Zine", about: "Photocopied: ink edges, hard shadows, grain." },
   { id: "radio", label: "Night Radio", about: "Always dark, with a warm glow." },
   { id: "film", label: "Film", about: "Faded and soft, with a little grain." },
@@ -80,14 +80,14 @@ const FINDER: { label: string; more: string; where: string; href: string; phone?
 ];
 
 const ACCENT_CHOICES: { id: AppState["accent"]; label: string }[] = [
-  { id: "lime", label: "Lime" },
-  { id: "orange", label: "Burnt orange" },
-  { id: "yellow", label: "Yellow" },
+  { id: "coral", label: "Coral" },
+  { id: "orange", label: "Tangerine" },
   { id: "red", label: "Red" },
-  { id: "maroon", label: "Maroon" },
-  { id: "navy", label: "Navy" },
-  { id: "indigo", label: "Indigo" },
+  { id: "rose", label: "Rose" },
+  { id: "violet", label: "Violet" },
+  { id: "blue", label: "Blue" },
   { id: "teal", label: "Teal" },
+  { id: "lime", label: "Lime" },
 ];
 
 const TITLES: Record<SettingsSection, string> = {

@@ -120,12 +120,12 @@ describe("hand-off sync", () => {
     const drive = fakeDrive();
     const phone = await device("Phone", drive);
     await phone.lyra.connectGoogle("gmail");
-    await phone.lyra.saveSettings({ appLock: true, accent: "navy" });
+    await phone.lyra.saveSettings({ appLock: true, accent: "violet" });
     await phone.sync.enable(PASS, "Phone");
     const laptop = await device("Laptop", drive);
     await laptop.sync.enable(PASS, "Laptop");
     await laptop.restart();
-    expect(laptop.lyra.state().accent).toBe("navy"); // shared
+    expect(laptop.lyra.state().accent).toBe("violet"); // shared
     expect(laptop.lyra.state().appLock).toBe(false); // the phone's own
     expect(laptop.lyra.state().connectors.find((c) => c.id === "gmail")?.state).toBe("not_connected");
 

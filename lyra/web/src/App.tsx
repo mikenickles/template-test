@@ -416,17 +416,17 @@ export function App() {
           )}
           {route.name === "tasks" && <div className="topbar-slot" id="topbar-center" />}
           {route.name === "chat" && !channel && (
-            <div className="avatar-stack">
-              {route.name === "chat" ? (
-                <a className="orb orb-sm" href="#/access" aria-label="Lyra" title="Lyra">
-                  <Avatar />
+            <div className="avatar-stack head-row">
+              <a className="orb orb-sm" href="#/access" aria-label="Lyra" title="Lyra">
+                <Avatar />
+              </a>
+              {/* (0.58) the name and Lyra's status sit beside the face */}
+              <div className="head-words">
+                <a className="head-name" href="#/access" tabIndex={-1} aria-hidden="true">
+                  Lyra
                 </a>
-              ) : (
-                <a className="orb orb-sm" href="#/" aria-label="Chat">
-                  <Avatar />
-                </a>
-              )}
-              <StatusLine state={state} />
+                <StatusLine state={state} />
+              </div>
             </div>
           )}
           {inChat && channel && (

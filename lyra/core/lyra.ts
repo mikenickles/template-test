@@ -219,7 +219,9 @@ export interface WeatherPlace {
 }
 
 /** Accent colors the user can pick in Settings. The colors themselves live in the app's stylesheet. */
-export const ACCENTS = ["lime", "orange", "yellow", "red", "maroon", "navy", "indigo", "teal"] as const;
+export const ACCENTS = ["coral", "orange", "red", "rose", "violet", "blue", "teal", "lime"] as const;
+/** (0.58) Colors from before the new palette, shown as their nearest new one. */
+const OLD_ACCENTS: Record<string, Accent> = { yellow: "orange", maroon: "red", navy: "blue", indigo: "violet" };
 export type Accent = (typeof ACCENTS)[number];
 /** Your message bubbles: softer ink (default), the accent's tint, soft neutral, or the original solid ink. */
 export const BUBBLES = ["softer", "accent", "neutral", "classic"] as const;
@@ -1570,8 +1572,8 @@ export class Lyra {
   }
 
   get accent(): Accent {
-    const a = getSetting(this.db, "accent");
-    return (ACCENTS as readonly string[]).includes(a ?? "") ? (a as Accent) : "lime";
+    const a = getSetting(this.db, "accent") ?? "";
+    return (ACCENTS as readonly string[]).includes(a) ? (a as Accent) : (OLD_ACCENTS[a] ?? "coral");
   }
 
   async saveSettings(patch: SettingsPatch): Promise<AppState> {

@@ -1,20 +1,4 @@
-import { useEffect, useState } from "react";
-
-// one avatar per accent color: the headphone glow matches the accent
-const AVATARS = import.meta.glob<string>("./assets/avatar-*.webp", { eager: true, import: "default" });
-export const avatarFor = (accent: string) => AVATARS[`./assets/avatar-${accent}.webp`] ?? AVATARS["./assets/avatar-lime.webp"];
-
-/** The accent color set on <html>, kept current when it changes in Settings. */
-function useAccent(): string {
-  const read = () => document.documentElement.dataset.accent ?? "lime";
-  const [accent, setAccent] = useState(read);
-  useEffect(() => {
-    const watch = new MutationObserver(() => setAccent(read()));
-    watch.observe(document.documentElement, { attributes: true, attributeFilter: ["data-accent"] });
-    return () => watch.disconnect();
-  }, []);
-  return accent;
-}
+import { Face } from "./Face";
 
 /**
  * Lyra's identity is the Lyra constellation: Vega, the bright star,
@@ -46,9 +30,9 @@ export function LyraMark({ size = 30 }: { size?: number }) {
   );
 }
 
-/** Lyra's face: the avatar artwork, round. */
+/** Lyra's face: round, in the accent color, alive (see Face.tsx). */
 export function Avatar() {
-  return <img className="avatar" src={avatarFor(useAccent())} alt="" draggable={false} />;
+  return <Face />;
 }
 
 export function Orb({ size = "sm" }: { size?: "sm" | "lg" }) {
