@@ -10401,3 +10401,36 @@ html[data-ambient="on"] .lp-orb:has(.kit)::before {
 .app:not(.desk) .chat::before {
   height: calc(var(--inset-top) + 150px);
 }
+
+/* ---- (0.59.3) the chat stays readable most of the way up, and the words under Kit sit in a pill ---- */
+.chat .log {
+  --fade: linear-gradient(
+    transparent 0,
+    transparent calc(var(--inset-top) + 2px),
+    rgba(0, 0, 0, 0.45) calc(var(--inset-top) + 26px),
+    rgba(0, 0, 0, 0.8) calc(var(--inset-top) + 64px),
+    #000 calc(var(--inset-top) + 96px),
+    #000 calc(100% - var(--below) - 40px),
+    rgba(0, 0, 0, 0.4) calc(100% - var(--below) + 20px),
+    rgba(0, 0, 0, 0.1) 100%
+  );
+}
+.app:not(.desk) .chat::before {
+  height: calc(var(--inset-top) + 70px);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  -webkit-mask-image: linear-gradient(#000 30%, transparent);
+  mask-image: linear-gradient(#000 30%, transparent);
+}
+.avatar-stack.head-row .head-words {
+  margin-top: 0;
+  padding: 3px 12px 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 0 0 1px var(--border), 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+.avatar-stack.head-row .head-name {
+  line-height: 1.2;
+}
