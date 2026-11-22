@@ -315,6 +315,24 @@ export const MIGRATIONS: string[] = [
      SELECT id, kind, status, payload, result, error, tainted, channel_id, created_at, decided_at, message_id FROM actions;
    DROP TABLE actions;
    ALTER TABLE actions_next RENAME TO actions;`,
+  // 0.60: a step on a web page (pressing a button in Lyra's browser window) joins the cards
+  `CREATE TABLE actions_next (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     kind TEXT NOT NULL CHECK (kind IN ('email','event','playlist','move','rsvp','archive','text','remove','mail','edit_event','file','browser')),
+     status TEXT NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed','working','done','declined')),
+     payload TEXT NOT NULL,
+     result TEXT,
+     error TEXT,
+     tainted INTEGER NOT NULL DEFAULT 0,
+     channel_id INTEGER REFERENCES channels(id) ON DELETE SET NULL,
+     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+     decided_at TEXT,
+     message_id INTEGER
+   );
+   INSERT INTO actions_next (id, kind, status, payload, result, error, tainted, channel_id, created_at, decided_at, message_id)
+     SELECT id, kind, status, payload, result, error, tainted, channel_id, created_at, decided_at, message_id FROM actions;
+   DROP TABLE actions;
+   ALTER TABLE actions_next RENAME TO actions;`,
 ];
 
 const FILE = "lyra.db";

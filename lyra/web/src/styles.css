@@ -10534,3 +10534,24 @@ html[data-ambient="on"] .tabbar:not(.floating) {
     rgba(0, 0, 0, 0.18) 100%
   );
 }
+
+/* ---- (0.60) a step on a web page: what Lyra filled in, as label / value rows ---- */
+.browser-typed {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.browser-typed li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.browser-typed li:last-child {
+  border-bottom: 0;
+}

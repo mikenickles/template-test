@@ -7,7 +7,7 @@ import { googleGet } from "./connectors/google-http.ts";
 import { NeedsConsentError, type TokenSource } from "./connectors/google.ts";
 import { describeDue, localToDate } from "./reminders.ts";
 
-export type ActionKind = "email" | "event" | "playlist" | "move" | "rsvp" | "archive" | "text" | "remove" | "mail" | "edit_event" | "file";
+export type ActionKind = "email" | "event" | "playlist" | "move" | "rsvp" | "archive" | "text" | "remove" | "mail" | "edit_event" | "file" | "browser";
 export type ActionStatus = "proposed" | "working" | "done" | "declined";
 
 export interface EmailDraft {
@@ -279,7 +279,19 @@ export function checkFileChange(input: Record<string, unknown>): {
   return { op, fileId };
 }
 
-export type ActionPayload = EmailDraft | EventDraft | PlaylistDraft | MoveDraft | RsvpDraft | ArchiveDraft | TextDraft | RemoveDraft | MailDraft | EditEventDraft | FileDraft;
+export type ActionPayload = EmailDraft | EventDraft | PlaylistDraft | MoveDraft | RsvpDraft | ArchiveDraft | TextDraft | RemoveDraft | MailDraft | EditEventDraft | FileDraft | BrowserDraft;
+
+/** (0.60) A step on a web page that needs the user's OK: press a button (or Enter in a field) in Lyra's browser window. */
+export interface BrowserDraft {
+  site: string;
+  url: string;
+  title: string;
+  op: "click" | "submit";
+  ref: number;
+  label: string;
+  /** what Lyra typed on this site so far, so the user sees what would be sent */
+  typed: { label: string; text: string }[];
+}
 
 const EVENT_ID = /^[a-zA-Z0-9_-]{5,1024}$/;
 const THREAD_ID = /^[0-9a-f]{6,32}$/i;
@@ -336,6 +348,9 @@ export interface ActionResult {
   link?: string;
   /** (0.55) the user tapped Undo, and it was put back */
   undone?: string;
+  /** (0.60) a browser step: the page it led to */
+  title?: string;
+  url?: string;
 }
 
 export interface ActionRow {
@@ -427,6 +442,10 @@ function toLocal(d: Date, timeZone?: string): string {
 
 /** One line for prompts and lists: what it is, not the whole text. */
 export function describeAction(a: Pick<ActionRow, "kind" | "payload">, timeZone?: string): string {
+  if (a.kind === "browser") {
+    const b = a.payload as BrowserDraft;
+    return `${b.op === "submit" ? `Send the form ("${b.label}")` : `Press "${b.label}"`} on ${b.site}${b.title ? ` (${b.title})` : ""}`;
+  }
   if (a.kind === "mail") {
     const m = a.payload as MailDraft;
     const t = m.threads;

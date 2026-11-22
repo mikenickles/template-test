@@ -239,8 +239,21 @@ check(true, "playback control is its own switch");
 // ---- 0.56: your browser, through Lyra's extension (a real Chromium with the real extension) ----
 {
   const http = await import("node:http");
+  const orders = [];
   const site = http.createServer((req, res) => {
     res.writeHead(200, { "content-type": "text/html" });
+    // (0.60) a checkout: Lyra may fill in the note, but Place order only goes through after the tap
+    if (req.url === "/checkout")
+      return res.end("<title>Checkout</title><main><h1>Checkout</h1><p>Hiking boots $120</p><form method='post' action='/order'><label>Gift note <input name='note'></label> <button>Place order</button></form></main>");
+    if (req.url === "/order" && req.method === "POST") {
+      let body = "";
+      req.on("data", (d) => (body += d));
+      req.on("end", () => {
+        orders.push(decodeURIComponent(body.replace(/\+/g, " ")));
+        res.end("<title>Thanks for your order</title><main><h1>Thanks!</h1></main>");
+      });
+      return;
+    }
     res.end("<title>Your orders</title><main><h1>Orders</h1><p>Hiking boots arrive Thursday.</p><a href='/track'>Track package</a></main>");
   });
   await new Promise((r) => site.listen(0, "127.0.0.1", r));
@@ -275,6 +288,29 @@ check(true, "playback control is its own switch");
     check(true, "Lyra opens a page in the browser and reads it");
     check(browser.pages().filter((p) => p.url() === siteUrl).length === 2 && own.url() === siteUrl, "it uses its own window; your tab is left alone");
     await page.screenshot({ path: join(shots, "desktop-19-browser-read.png") });
+
+    // ---- 0.60: using the page: typing is free, Place order waits for the tap on the card ----
+    const checkoutUrl = siteUrl.replace("/orders", "/checkout");
+    const ask = async (words) => {
+      await page.getByPlaceholder("Message Lyra").fill(words);
+      await page.getByRole("button", { name: "Send" }).click();
+    };
+    await ask(`open ${checkoutUrl}`);
+    await page.locator(".reply", { hasText: "Hiking boots $120" }).last().waitFor({ timeout: 30_000 });
+    await ask("type Happy birthday into Gift note");
+    await page.locator(".reply", { hasText: "Typed it in." }).last().waitFor({ timeout: 30_000 });
+    const lyraTab = browser.pages().find((p) => p !== own && p.url() === checkoutUrl);
+    check((await lyraTab.locator("input[name=note]").inputValue()) === "Happy birthday", "Lyra types into a field on the page");
+    await ask("press Place order");
+    const stepCard = page.locator(".action-card", { hasText: "Place order" }).last();
+    await stepCard.waitFor({ timeout: 30_000 });
+    check(orders.length === 0, "a button that buys isn't pressed by Lyra: it becomes a card");
+    check(await stepCard.getByText("Happy birthday").isVisible(), "the card shows the site, the button and what Lyra filled in");
+    await page.screenshot({ path: join(shots, "desktop-20-browser-card.png") });
+    await stepCard.getByRole("button", { name: /Press "Place order"/ }).click();
+    await stepCard.getByText(/Pressed/).waitFor({ timeout: 30_000 });
+    check(orders.length === 1 && orders[0] === "note=Happy birthday", "after the tap, Lyra presses it and the order goes through once");
+    await page.screenshot({ path: join(shots, "desktop-21-browser-done.png") });
   } finally {
     await browser.close();
     site.close();

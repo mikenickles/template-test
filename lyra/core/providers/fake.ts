@@ -59,6 +59,22 @@ export class FakeProvider implements ModelProvider {
     };
 
     const result = last?.parts.find((p) => p.type === "tool_result");
+    // (0.60) "type Happy birthday into Gift note" / "press Place order": read the page, then use it
+    const askedNow = [...req.messages].reverse().find((m) => m.role === "user" && m.parts.some((p) => p.type === "text"))?.parts.map((p) => (p.type === "text" ? p.text : "")).join("").trim() ?? "";
+    const press = askedNow.match(/^(?:click|press) (.+)$/i);
+    const typeIn = askedNow.match(/^type (.+?) in(?:to)? (.+)$/i);
+    const refFor = (content: string, label: string) => content.match(new RegExp(`\\[(\\d+)\\] "${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`, "i"))?.[1];
+    if (result && result.type === "tool_result" && (press || typeIn) && has("browser__click")) {
+      if (result.name === "browser__read_page" && !result.isError) {
+        const ref = refFor(result.content, (press?.[1] ?? typeIn![2]).trim());
+        if (ref && press) return call("browser__click", { ref: Number(ref) });
+        if (ref && typeIn) return call("browser__type_text", { ref: Number(ref), text: typeIn[1] });
+      }
+      const ask = result.isError && result.content.match(/propose_browser_step with ref (\d+)/);
+      if (ask) return call("propose_browser_step", { ref: Number(ask[1]) });
+      if (result.name === "propose_browser_step") return say("It's ready for you to check: tap the button on the card to press it.");
+      if (result.name === "browser__type_text" && !result.isError) return say("Typed it in.");
+    }
     if (result && result.type === "tool_result") {
       if (result.isError) return say(`That didn't work: ${result.content.slice(0, 160)}`);
       if (result.name === "remember") return say("Got it.");
@@ -178,6 +194,8 @@ export class FakeProvider implements ModelProvider {
     // "email dana@example.com saying yes to Friday": the practice model can propose an email (the user still taps Send)
     const mail = text.match(/^e-?mail (\S+@\S+) saying (.+)$/i);
     if (mail && has("propose_email")) return callSaying("It's ready for you to check.", "propose_email", { to: [mail[1]], subject: "Quick note", body: mail[2] });
+    // (0.60) "press …" / "type … into …": look at the page in the browser first
+    if (/^(?:(?:click|press) .+|type .+? in(?:to)? .+)$/i.test(text.trim()) && has("browser__read_page")) return call("browser__read_page", {});
     // "open https://…": the practice model reads it in the user's browser (0.56)
     const page = text.match(/^open (https?:\/\/\S+)$/i);
     if (page && has("browser__open_page")) return call("browser__open_page", { url: page[1] });

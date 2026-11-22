@@ -17,7 +17,7 @@ import wasmUrl from "sql.js/dist/sql-wasm.wasm?url";
 import { NeedsConsentError, type GoogleAuth } from "../../core/connectors/google";
 import type { BlobStore } from "../../core/db";
 import type { Platform, SecretStore } from "../../core/lyra";
-import type { BrowserPage } from "../../core/connectors/browser/server";
+import type { BrowserPage, BrowserStep } from "../../core/connectors/browser/server";
 import type { OAuthRedirect } from "../../core/connectors/spotify/auth";
 import { App as CapApp } from "@capacitor/app";
 import type { TextStore } from "../../core/memory";
@@ -274,6 +274,8 @@ function deskBrowser(b: NonNullable<DesktopBridge["browser"]>): NonNullable<Plat
     open: clean((url: string) => b.do("open", { url }) as Promise<BrowserPage>),
     read: clean(() => b.do("read") as Promise<BrowserPage>),
     close: clean(async () => void (await b.do("close"))),
+    // (0.60) a step on the page; an older Windows app answers "Not something the browser link does"
+    act: clean((step: BrowserStep) => b.do(step.op, step as unknown as Record<string, unknown>) as Promise<BrowserPage>),
   };
 }
 

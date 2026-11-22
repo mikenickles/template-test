@@ -72,6 +72,15 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### Lyra uses your browser (0.60)
+
+- In its own window of your browser, Lyra can now follow links, search, fill in forms and pick options,
+  for what you ask. Anything that could send, buy, book, post, delete or change an account (a button
+  like "Place order", or sending a form that isn't a search) becomes a card in the chat showing the site,
+  the button and what Lyra filled in; only your tap presses it, and only if the page is still the same.
+- Lyra never types into password or card fields. Logins through your password manager come next.
+- Needs this version's full Windows install, and one press of reload on Lyra's extension in the browser.
+
 ### Quiet (0.58)
 
 - A new look built from the Quiet mockups: ink on white, thin lines, and your accent used only as a small

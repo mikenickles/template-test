@@ -117,8 +117,8 @@ export interface Workspace {
   contacts?: { find(name: string): Promise<string> };
   /** Emails and events Lyra proposes; the user approves each one on a card. */
   actions?: {
-    allowed(): { email: boolean; event: boolean; playlist?: boolean; move?: boolean; rsvp?: boolean; archive?: boolean; text?: boolean; remove?: boolean; mail?: boolean; edit_event?: boolean; file?: boolean };
-    propose(kind: "email" | "event" | "playlist" | "move" | "rsvp" | "archive" | "text" | "remove" | "mail" | "edit_event" | "file", input: Record<string, unknown>, tainted: boolean, channelId: number | null): Promise<{ id: number; summary: string }>;
+    allowed(): { email: boolean; event: boolean; playlist?: boolean; move?: boolean; rsvp?: boolean; archive?: boolean; text?: boolean; remove?: boolean; mail?: boolean; edit_event?: boolean; file?: boolean; browser?: boolean };
+    propose(kind: "email" | "event" | "playlist" | "move" | "rsvp" | "archive" | "text" | "remove" | "mail" | "edit_event" | "file" | "browser", input: Record<string, unknown>, tainted: boolean, channelId: number | null): Promise<{ id: number; summary: string }>;
     /** recent proposals and what happened to them, one per line */
     recent(): string;
   };
@@ -316,6 +316,20 @@ function peopleTools(ws: Workspace): ToolDef[] {
 /** Phase 9: proposing (never doing) an email or a calendar event. Only offered once the user has allowed it. */
 function actionTools(allowed: ReturnType<NonNullable<Workspace["actions"]>["allowed"]> | undefined, music: boolean): ToolDef[] {
   const tools: ToolDef[] = [];
+  if (allowed?.browser)
+    tools.push({
+      name: "propose_browser_step",
+      description:
+        "Ask the user's OK to press a button or link marked ⚑ on the page in Lyra's browser window (buying, sending, booking, posting, deleting, changing an account), or to send a form (op \"submit\" on a field). It appears as a card showing the site, the button and what you typed; nothing happens until they tap. Only for a step the user asked for; fill in the form first with type_text.",
+      schema: {
+        type: "object",
+        properties: {
+          ref: { type: "integer", description: "The [number] from the page as last read" },
+          op: { type: "string", enum: ["click", "submit"], description: "click a button or link (default), or submit the form a field is in" },
+        },
+        required: ["ref"],
+      },
+    });
   if (music)
     tools.push({
       name: "control_music",
@@ -486,7 +500,8 @@ function actionTools(allowed: ReturnType<NonNullable<Workspace["actions"]>["allo
 }
 
 /** Tools that only make a card for the user's OK, and what kind of card. */
-const PROPOSALS: Record<string, { kind: "email" | "event" | "playlist" | "move" | "rsvp" | "archive" | "text" | "remove" | "mail" | "edit_event" | "file"; label: string }> = {
+const PROPOSALS: Record<string, { kind: "email" | "event" | "playlist" | "move" | "rsvp" | "archive" | "text" | "remove" | "mail" | "edit_event" | "file" | "browser"; label: string }> = {
+  propose_browser_step: { kind: "browser", label: "Step on the page" },
   propose_email: { kind: "email", label: "Email" },
   propose_event: { kind: "event", label: "Event" },
   propose_playlist: { kind: "playlist", label: "Playlist" },

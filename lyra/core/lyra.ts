@@ -12,7 +12,7 @@ import { createCalendarServer } from "./connectors/calendar/server.ts";
 import { createDriveServer, isTextual } from "./connectors/drive/server.ts";
 import { googleGet } from "./connectors/google-http.ts";
 import { graftHomeWork, type Grafted } from "./graft.ts";
-import { createBrowserServer, type BrowserLink } from "./connectors/browser/server.ts";
+import { BrowserSession, createBrowserServer, host, needsOk, type BrowserLink, type BrowserPage } from "./connectors/browser/server.ts";
 import { createPhoneServer, describeNotices, filterNotices, type NoticeSource } from "./connectors/phone/server.ts";
 import { CALENDAR_EVENTS, CALENDAR_READONLY, DRIVE_FILE, DRIVE_FULL, DRIVE_READONLY, GMAIL_COMPOSE, GMAIL_MODIFY, GMAIL_READONLY, grantIsAllowed, TokenSource, type GoogleAuth } from "./connectors/google.ts";
 import * as A from "./actions.ts";
@@ -503,6 +503,7 @@ export class Lyra {
             const row = A.createAction(this.db, "playlist", { name, description: p.description, ...(p.playlistId ? { playlistId: p.playlistId } : {}), tracks }, tainted, channelId);
             return { id: row.id, summary: A.describeAction(row) };
           }
+          if (kind === "browser") return this.proposeBrowserStep(input, tainted, channelId);
           if (kind === "text") {
             if (!this.actionsAllowed().text) throw new Error("Texting isn't available here: it works on the phone, and the user can turn it on in Connections.");
             const row = A.createAction(this.db, "text", A.checkText(input), tainted, channelId);
@@ -633,13 +634,13 @@ export class Lyra {
       {
         id: "browser",
         label: "Browser",
-        access: "Can open and read pages in its own window of your browser",
-        allow: ["open_page", "read_page"],
-        labels: { open_page: "Opening the page", read_page: "Reading the page" },
+        access: "Can open pages in its own window of your browser, follow links, type and search there; asks first before anything that sends, buys or changes something",
+        allow: ["open_page", "read_page", "click", "type_text", "choose_option", "go_back"],
+        labels: { open_page: "Opening the page", read_page: "Reading the page", click: "Clicking on the page", type_text: "Typing on the page", choose_option: "Picking an option", go_back: "Going back" },
         available: () => !!p.browser,
         connected: () => getSetting(this.db, "browser") === "on",
         account: () => undefined,
-        server: () => createBrowserServer(p.browser!),
+        server: () => createBrowserServer(p.browser!, this.browserSession),
       },
       {
         id: "phone",
@@ -889,7 +890,43 @@ export class Lyra {
     return (this.actionTokens[kind] ??= new TokenSource(this.p.google, [ACTION_ACCESS[kind].scope]));
   }
 
-  actionsAllowed(): { email: boolean; event: boolean; move: boolean; rsvp: boolean; remove: boolean; archive: boolean; mail: boolean; edit_event: boolean; file: boolean; text: boolean; playlist: boolean } {
+  /** (0.60) What Lyra saw and typed in its browser window, shared by the browser tools and the step cards. */
+  readonly browserSession = new BrowserSession();
+
+  /** A card for a step on a web page: the button as it is on the page right now, and what Lyra typed there. */
+  private async proposeBrowserStep(input: Record<string, unknown>, tainted: boolean, channelId: number | null): Promise<{ id: number; summary: string }> {
+    const b = this.p.browser;
+    if (!b?.act || !this.actionsAllowed().browser) throw new Error("Lyra can't use the browser here: it works on the computer with Lyra's extension, once the Browser tile is on.");
+    const ref = Number(input.ref);
+    const op = input.op === "submit" ? "submit" : "click";
+    const page = this.browserSession.seen(await b.read());
+    const c = page.controls?.find((x) => x.ref === ref);
+    if (!c) throw new Error(`There's no [${ref}] on the page now. Read the page again (browser__read_page) and use a number from it.`);
+    if (c.secret) throw new Error("That's a password or card field: the user does that part themselves.");
+    if (op === "submit" ? c.kind !== "field" : c.kind !== "button" && c.kind !== "link") throw new Error(op === "submit" ? `[${ref}] isn't a field in a form.` : `[${ref}] isn't a button or link.`);
+    if (!needsOk(c, op)) throw new Error(`[${ref}] doesn't need the user's OK: use ${op === "submit" ? "browser__type_text with enter" : "browser__click"} for it.`);
+    const draft: A.BrowserDraft = { site: host(page.url), url: page.url, title: page.title.slice(0, 120), op, ref, label: (c.label || "(button with no words)").slice(0, 120), typed: this.browserSession.typedOn(page.url).slice(-8) };
+    const row = A.createAction(this.db, "browser", draft, tainted, channelId);
+    return { id: row.id, summary: A.describeAction(row) };
+  }
+
+  /** The user said yes: press it, if the page is still the one on the card. */
+  private async doBrowserStep(d: A.BrowserDraft): Promise<{ did: string; title: string; url: string; at: string }> {
+    const b = this.p.browser;
+    if (!b?.act || getSetting(this.db, "browser") !== "on") throw new Error("Do this on the computer, with Lyra's browser link on.");
+    const now: BrowserPage = this.browserSession.seen(await b.read());
+    const same = (u: string) => u.replace(/#.*$/, "");
+    if (same(now.url) !== same(d.url)) throw new Error(`Lyra's browser window has moved on from that page (now ${host(now.url)}). Ask Lyra to go back to it.`);
+    // the same button: its number, or else the only one with the same words
+    const byRef = now.controls?.find((x) => x.ref === d.ref && (x.label || "(button with no words)").slice(0, 120) === d.label);
+    const byLabel = now.controls?.filter((x) => (x.label || "(button with no words)").slice(0, 120) === d.label && (d.op === "submit" ? x.kind === "field" : x.kind === "button" || x.kind === "link")) ?? [];
+    const c = byRef ?? (byLabel.length === 1 ? byLabel[0] : undefined);
+    if (!c) throw new Error(`"${d.label}" isn't on the page anymore. Ask Lyra to look again.`);
+    const after = this.browserSession.seen(await b.act({ op: d.op, ref: c.ref, label: c.label }));
+    return { did: d.op === "submit" ? "sent" : "pressed", title: after.title.slice(0, 120), url: after.url, at: new Date().toISOString() };
+  }
+
+  actionsAllowed(): { email: boolean; event: boolean; move: boolean; rsvp: boolean; remove: boolean; archive: boolean; mail: boolean; edit_event: boolean; file: boolean; text: boolean; playlist: boolean; browser: boolean } {
     const on = (k: GoogleAction) => !!this.link(ACTION_ACCESS[k].link) && getSetting(this.db, ACTION_ACCESS[k].setting) === "on";
     const event = on("event");
     return {
@@ -905,6 +942,8 @@ export class Lyra {
       // only opens the messaging app with the text ready: on by default on a phone
       text: !!this.p.sms && getSetting(this.db, "actions.text") !== "off",
       playlist: this.spotifyLinked && getSetting(this.db, "spotify.playlists") === "on",
+      // (0.60) a step on a web page: wherever Lyra's browser link is on
+      browser: !!this.p.browser && getSetting(this.db, "browser") === "on",
     };
   }
 
@@ -1304,6 +1343,13 @@ export class Lyra {
             this.db.run("UPDATE actions SET payload = ? WHERE id = ?", [JSON.stringify({ ...(a.payload as A.PlaylistDraft), playlistId, made: true }), id]);
             void this.db.flush();
           });
+          A.finishAction(this.db, id, { status: "done", result });
+          await this.db.flush();
+          this.listeners.forEach((l) => l({ type: "message", channelId: a.channel_id }));
+          return A.getAction(this.db, id)!;
+        }
+        if (a.kind === "browser") {
+          const result = await this.doBrowserStep(a.payload as A.BrowserDraft);
           A.finishAction(this.db, id, { status: "done", result });
           await this.db.flush();
           this.listeners.forEach((l) => l({ type: "message", channelId: a.channel_id }));

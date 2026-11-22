@@ -1,9 +1,9 @@
 // A proposed email or calendar event, as a card under Lyra's reply. Shows exactly what
 // will happen; nothing does until the user taps Send / Save to Drafts / Add.
 import { useEffect, useState } from "react";
-import { MAIL_OPS, undoable, type ActionRow, type ArchiveDraft, type EditEventDraft, type EmailDraft, type EventDraft, type FileDraft, type MailDraft, type MoveDraft, type PlaylistDraft, type RemoveDraft, type RsvpDraft, type TextDraft } from "../../core/actions";
+import { MAIL_OPS, undoable, type ActionRow, type ArchiveDraft, type BrowserDraft, type EditEventDraft, type EmailDraft, type EventDraft, type FileDraft, type MailDraft, type MoveDraft, type PlaylistDraft, type RemoveDraft, type RsvpDraft, type TextDraft } from "../../core/actions";
 import { api, onChange } from "./api";
-import { Calendar, ChatIcon, File as FileIcon, Mail, Music } from "./icons";
+import { Calendar, ChatIcon, File as FileIcon, Globe, Mail, Music } from "./icons";
 import { haptic } from "./haptics";
 
 const when = (iso: string) => new Date(iso).toLocaleString(undefined, { hour: "numeric", minute: "2-digit" });
@@ -31,6 +31,8 @@ const DONE: Record<string, string> = {
   tentative: "Said maybe",
   archived: "Archived",
   opened: "Opened in Messages",
+  // 0.60: a step on a web page
+  pressed: "Pressed",
   // 0.55
   changed: "Changed",
   ...Object.fromEntries(Object.entries(MAIL_OPS).map(([op, m]) => [`mail_${op}`, m.done])),
@@ -446,6 +448,30 @@ function SimpleCard({ a, setA, toast }: { a: ActionRow; setA: (r: ActionRow) => 
         {f.op === "replace" && <Change what={f.count === 1 ? "Replace" : `Replace all ${f.count}`} was={f.find ?? ""} now={f.text ?? ""} />}
         {open && f.op === "trash" && <div className="action-sub action-warn">Into Drive's trash: you can undo it, and Drive empties the trash after 30 days.</div>}
         {open && (f.op === "append" || f.op === "replace") && <div className="action-sub">Google keeps the earlier version in the file's version history.</div>}
+      </>
+    );
+  } else if (a.kind === "browser") {
+    const b = a.payload as BrowserDraft;
+    icon = <Globe size={16} />;
+    kind = `On ${b.site}`;
+    go = b.op === "submit" ? "Send it" : `Press "${b.label.length > 24 ? `${b.label.slice(0, 24)}…` : b.label}"`;
+    label = "Step on a web page for your OK";
+    content = (
+      <>
+        <div className="action-title">{b.op === "submit" ? `Send the form at "${b.label}"` : `Press "${b.label}"`}</div>
+        {b.title && <div className="action-sub">{b.title}</div>}
+        {b.typed.length > 0 && (
+          <ul className="browser-typed" aria-label="What Lyra filled in">
+            {b.typed.map((t) => (
+              <li key={t.label}>
+                <span className="action-sub">{t.label}</span>
+                <span>{t.text}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {open && <div className="action-sub">Lyra presses it in its own browser window. Check the window first if you like.</div>}
+        {a.status === "done" && a.result?.title && <div className="action-sub">Now on: {String(a.result.title)}</div>}
       </>
     );
   } else if (a.kind === "archive") {

@@ -544,10 +544,14 @@ ipcMain.handle("app:relaunch", () => {
 // Lyra's extension in Vivaldi (or Chrome, Edge) connects here over a WebSocket on 127.0.0.1.
 // Only that extension is let in (browsers always send the page's or extension's true origin,
 // and its id is fixed by the key in its manifest), and only while the user has turned
-// "Your browser" on. The app can ask for a fixed few things: open a page, read it, close.
+// "Your browser" on. The app can ask for a fixed few things: open a page, read it, close,
+// and (0.60, from this full install on; packs on an older install get "Not something the
+// browser link does" and Lyra asks for the update) click, type, pick, send a form, go back.
+// Lyra decides in the app which of those need the user's OK first.
 const BROWSER_PORT = 47615;
 const EXTENSION_ID = "nfjpmjibepkhclmbgnlkkebpjhpfopef";
-const BROWSER_CMDS = new Set(["open", "read", "close"]);
+const BROWSER_CMDS = new Set(["open", "read", "close", "click", "type", "choose", "submit", "back"]);
+let browserExtVersion = "";
 let browserServer = null;
 let browserSock = null;
 let browserAgent = "";
@@ -595,7 +599,16 @@ function onBrowserMessage(socket, text) {
   }
   if (m.type === "hello") {
     browserAgent = String(m.agent ?? "").slice(0, 300);
+    browserExtVersion = String(m.version ?? "").slice(0, 20);
     browserChanged();
+    // an older copy of the extension: the files were refreshed when the link started, so ask it
+    // to reload itself (0.2 and later know how; 0.1 needs the reload button once)
+    try {
+      const want = JSON.parse(fs.readFileSync(path.join(DIST, "browser-extension", "manifest.json"), "utf8")).version;
+      if (want && browserExtVersion && want !== browserExtVersion) wsSend(socket, JSON.stringify({ type: "do", id: 0, cmd: "reload", args: {} }));
+    } catch {
+      /* no bundled extension: nothing to compare */
+    }
   } else if (m.type === "done") {
     const w = browserWaits.get(m.id);
     if (!w) return;
@@ -608,6 +621,12 @@ function onBrowserMessage(socket, text) {
 
 function startBrowserLink() {
   if (browserServer) return;
+  // the extension the user loaded lives in a copy of these files: keep it current with this version
+  try {
+    if (fs.existsSync(path.join(app.getPath("userData"), "browser-extension"))) extensionFolder();
+  } catch {
+    /* it's only a refresh */
+  }
   browserServer = http.createServer((_req, res) => {
     res.writeHead(404);
     res.end();
@@ -703,12 +722,22 @@ ipcMain.handle("browser:listen", (_e, on) => {
   if (on) startBrowserLink();
   else stopBrowserLink();
 });
-ipcMain.handle("browser:status", () => ({ listening: !!browserServer, connected: !!browserSock && !!browserAgent, agent: browserAgent }));
+ipcMain.handle("browser:status", () => ({ listening: !!browserServer, connected: !!browserSock && !!browserAgent, agent: browserAgent, extension: browserExtVersion }));
 ipcMain.handle("browser:do", (_e, cmd, args) => {
   if (!BROWSER_CMDS.has(cmd)) throw new Error("Not something the browser link does.");
-  const url = cmd === "open" ? String(args?.url ?? "") : "";
-  if (cmd === "open" && !/^https?:\/\/[^\s]+$/i.test(url)) throw new Error("Only web pages (http or https).");
-  return browserDo(cmd, cmd === "open" ? { url } : {});
+  // only plain values go on to the extension: a page number, the words on it, what to type
+  const ref = Math.trunc(Number(args?.ref));
+  const label = String(args?.label ?? "").slice(0, 200);
+  if (cmd === "open") {
+    const url = String(args?.url ?? "");
+    if (!/^https?:\/\/[^\s]+$/i.test(url)) throw new Error("Only web pages (http or https).");
+    return browserDo(cmd, { url });
+  }
+  if (["click", "type", "choose", "submit"].includes(cmd) && !(ref > 0)) throw new Error("Which one on the page?");
+  if (cmd === "click" || cmd === "submit") return browserDo(cmd, { ref, label });
+  if (cmd === "type") return browserDo(cmd, { ref, label, text: String(args?.text ?? "").slice(0, 2000), enter: args?.enter === true });
+  if (cmd === "choose") return browserDo(cmd, { ref, label, option: String(args?.option ?? "").slice(0, 200) });
+  return browserDo(cmd, {});
 });
 ipcMain.handle("browser:showExtension", async () => {
   const dir = extensionFolder();

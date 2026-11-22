@@ -38,8 +38,12 @@ function abilities(id: ServiceId, state: AppState, spotify: SpotifyState | null)
       return { yes: ["Find and read your files", ...(state.actions.file ? ["Create, rename, move, edit or trash files you approve"] : [])], no: [state.actions.file ? "Change anything on its own, or share it" : "Change, share or delete them"] };
     case "browser":
       return {
-        yes: ["Open and read pages in its own window of your browser, where you're signed in", "Only for what you ask about"],
-        no: ["Click, type, buy or send anything (not yet)", "Touch your own tabs", "See your passwords or what you type"],
+        yes: [
+          "Open pages in its own window of your browser, where you're signed in",
+          "Follow links, search, fill in forms and pick options there, for what you ask",
+          "Press a button that sends, buys, books, posts or deletes only when you tap Yes on a card",
+        ],
+        no: ["Do any of that on its own", "Type passwords or card numbers", "Touch your own tabs", "See what you type"],
       };
     case "contacts":
       return { yes: ["Look up one name when you mention someone"], no: ["Copy or upload your address book"] };
@@ -626,7 +630,7 @@ function BrowserPanel({ state, setState, toast }: { state: AppState; setState: (
           </li>
         </ol>
       )}
-      {state.browser && status?.connected && <p className="hint">Lyra opens pages in its own window there and reads them. Your own tabs are left alone. Ask something like “open my Amazon orders and tell me what's arriving”.</p>}
+      {state.browser && status?.connected && <p className="hint">Lyra opens pages in its own window there, reads them, and can click, search and fill in forms. Before anything that sends, buys or books, it shows you a card first. Your own tabs are left alone. Try “find the cheapest flight to Denver on Kayak for next Friday”.</p>}
     </>
   );
 }
