@@ -70,17 +70,31 @@ function tomorrowMorning(now = new Date()): Date {
 
 const snoozed = (t: Task) => !!t.snoozed_until && new Date(t.snoozed_until).getTime() > Date.now();
 
-/** A ready task: a card that stands out, since it's waiting on you. */
-function ReadyCard({ t }: { t: Task }) {
+/** A ready task: a card that stands out, since it's waiting on you. (0.58) A label, the title,
+ *  what Lyra needs, how far it got, and the two things you'd do next. */
+function ReadyCard({ t, onDone }: { t: Task; onDone: () => void }) {
+  const share = t.steps_total ? Math.round((100 * t.steps_done) / t.steps_total) : 0;
   return (
-    <a className="ready-card" href={`#/t/${t.id}`}>
-      <Star size={20} className="ready-star" />
-      <span className="ready-body">
+    <div className="ready-card">
+      <span className="ready-label">Ready for you</span>
+      <a className="ready-body" href={`#/t/${t.id}`}>
         <span className="task-title">{t.title}</span>
         <span className="task-sub">{t.needs || (t.channel_name ? t.channel_name : "Lyra finished its part")}</span>
+      </a>
+      {t.steps_total > 0 && (
+        <span className="ready-progress" role="progressbar" aria-label="Steps done" aria-valuenow={t.steps_done} aria-valuemin={0} aria-valuemax={t.steps_total}>
+          <span style={{ width: `${share}%` }} />
+        </span>
+      )}
+      <span className="ready-actions">
+        <a className="btn primary" href={`#/t/${t.id}`}>
+          See what Lyra found
+        </a>
+        <button type="button" className="btn" onClick={onDone}>
+          Mark done
+        </button>
       </span>
-      <Chevron size={18} className="chev" />
-    </a>
+    </div>
   );
 }
 
@@ -272,16 +286,16 @@ export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: 
     </button>
   );
 
-  // the same head on every tab, so the tab selector stays put and its pill slides
-  const head = wide ? (
-    <div className="tasks-head">
-      {seg}
-      {tab === "active" && searchBtn}
-    </div>
-  ) : (
+  // the same head on every tab, so the tab selector stays put and its underline slides.
+  // (0.58) a big title with the tabs under it; on a phone search sits in the top bar
+  const head = (
     <>
-      <TopSlot id="topbar-center">{seg}</TopSlot>
-      <TopSlot id="topbar-right">{tab === "active" ? searchBtn : null}</TopSlot>
+      {!wide && <TopSlot id="topbar-right">{tab === "active" ? searchBtn : null}</TopSlot>}
+      <div className="tasks-head">
+        <h1 className="page-title">Tasks</h1>
+        {seg}
+        {wide && tab === "active" && searchBtn}
+      </div>
     </>
   );
 
@@ -330,7 +344,7 @@ export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: 
                 {g.items.map((t) =>
                   t.status === "ready" ? (
                     <SwipeRow key={t.id} title={t.title} onLater={() => void later(t)} onDone={() => void toggle(t)}>
-                      <ReadyCard t={t} />
+                      <ReadyCard t={t} onDone={() => void toggle(t)} />
                     </SwipeRow>
                   ) : t.status === "working" ? (
                     <TaskRowView key={t.id} t={t} onToggle={toggle} />

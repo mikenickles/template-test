@@ -72,6 +72,21 @@ This is **Phase 7 plus the Windows app**: everything from Phases 1 to 6 (chat, m
 - **Home base**: it holds off loading while one of its own runs is in flight; it doesn't wait on a draft or an open sheet when nobody is at the computer; it stops saying "I'm here" if it can't sync for ten minutes, so a phone takes over; it steps down at once if another computer takes the job; the Sync page warns when the computer has no model key or Google connection of its own. Each device leaves a small "up to date" mark in Drive, so the home base rings a phone about a reminder or a life admin heads-up only when the phone couldn't have scheduled it itself (`Sync.caughtUpSince`, `SeenMark`).
 - **How it was tested**: besides the unit and smoke tests, Lyra's real engine and prompt were run against real models through a local harness with a made-up inbox and calendar (not in the repo), reading what Lyra actually said before and after.
 
+### Quiet (0.58)
+
+- A new look built from the Quiet mockups: ink on white, thin lines, and your accent used only as a small
+  mark (the dot by Lyra's status, the line under the tab you're on, the ring that breathes around Lyra).
+  Inter for text, Inter Tight for titles. Dark mode follows, and the other looks (Zine, Night Radio, Film)
+  still work on top.
+- Chat: Lyra's face, name and status sit together at the top; replies are plain text; your messages are a
+  light grey bubble (Settings, You: Soft grey, Accent, Outline or Classic).
+- The message box has two levels: what you type on top, and underneath + (attach), Web (search the web,
+  same as the switch in Settings, AI model), Talk and Send.
+- The tab bar is three words with the accent underline. Tasks has a big title with its tabs underlined, and a
+  task waiting on you shows how far Lyra got, with "See what Lyra found" and "Mark done".
+- Artifacts, Settings, the menu, the Lyra page and Activity follow the same plain rows and grey tiles.
+- No features changed. The drifting haze is off in Quiet (it stays in the other looks).
+
 ### Living next to Cove (0.57.1)
 
 - Lyra ignores sync files in Drive that belong to another app (Cove, the copy with its own design), so the

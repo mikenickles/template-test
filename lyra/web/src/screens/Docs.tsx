@@ -62,7 +62,7 @@ export function Docs({ toast }: { toast: (m: string) => void }) {
           <Plus size={16} /> New doc
         </button>
       </div>
-      <p className="page-sub">Made by Lyra. Ask in chat for a doc or a dashboard.</p>
+      {!docs?.length && <p className="page-sub">Made by Lyra. Ask in chat for a doc or a dashboard.</p>}
       {!!docs?.length && (
         <div className="activity-filters artifact-filters" role="tablist" aria-label="Show">
           {FILTERS.map((f) => (

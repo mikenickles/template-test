@@ -8,7 +8,7 @@ import { applySizes } from "./sizes";
 
 applySizes(); // text and avatar size, before the first paint
 
-// Apply the saved accent before the first paint, so the app doesn't flash coral.
+// Apply the saved accent before the first paint, so the app doesn't flash lime.
 try {
   const accent = localStorage.getItem("lyra.accent");
   if (accent) document.documentElement.dataset.accent = accent;

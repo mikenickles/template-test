@@ -1,6 +1,6 @@
 // 0.45: more things Lyra can do with the user's OK (move an event, answer an invitation,
 // archive mail, write a text), the phone's notifications as a connector, and live progress.
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { checkRsvp, checkText } from "../core/actions.ts";
 import { describeNotices, filterNotices, type PhoneNotice } from "../core/connectors/phone/server.ts";
 import { GMAIL_MODIFY, NeedsConsentError } from "../core/connectors/google.ts";
@@ -80,6 +80,13 @@ async function setup(script: GenerateResult[], extra: Partial<Parameters<typeof 
 }
 
 describe("more actions with your OK", () => {
+  // the events below are on fixed dates in November 2026: keep "now" before them, so a move
+  // to 3pm on the 20th is still in the future however long after that the tests run
+  beforeAll(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-18T12:00:00Z"));
+  });
+  afterAll(() => vi.useRealTimers());
   it("moves an event the user organizes, keeping its length, only after the tap", async () => {
     const { lyra, api, provider } = await setup([say("Sure."), call("propose_reschedule", { event_id: "mine123", start: "2026-11-20 15:00" }), say("Ready for you to check.")]);
     await lyra.chat("hi", noop);

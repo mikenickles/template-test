@@ -533,10 +533,10 @@ try {
   await page.getByRole("radio", { name: "Burnt orange" }).waitFor();
   check((await page.getByRole("radio", { name: "Burnt orange" }).isChecked()) === true, "the accent color is saved");
   // ---- your messages: four bubble styles ----
-  check((await page.evaluate(() => document.documentElement.dataset.bubbles)) === "softer", "your messages start in the softer style");
+  check((await page.evaluate(() => document.documentElement.dataset.bubbles)) === "softer", "your messages start in the soft grey style");
   await page.getByText("Your messages").scrollIntoViewIfNeeded();
   await shot("light-44-bubble-styles");
-  for (const [label, id] of [["Accent", "accent"], ["Soft neutral", "neutral"], ["Classic", "classic"], ["Softer", "softer"]]) {
+  for (const [label, id] of [["Accent", "accent"], ["Outline", "neutral"], ["Classic", "classic"], ["Soft grey", "softer"]]) {
     await page.locator(`.bubble-style[data-bubbles="${id}"]`).click();
     await page.getByText(`${label} it is`).waitFor();
     await page.waitForFunction((v) => document.documentElement.dataset.bubbles === v, id);

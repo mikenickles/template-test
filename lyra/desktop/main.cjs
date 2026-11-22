@@ -327,7 +327,7 @@ function startMenuShortcut() {
 
 // Lyra draws its own title bar; Windows keeps its minimize, maximize and close buttons, in Lyra's colors.
 const themeColors = () =>
-  nativeTheme.shouldUseDarkColors ? { bg: "#141310", symbol: "#eeebe3" } : { bg: "#f3f1ea", symbol: "#131416" };
+  nativeTheme.shouldUseDarkColors ? { bg: "#0f0f10", symbol: "#f2f2f2" } : { bg: "#ffffff", symbol: "#111111" };
 const overlay = () => ({ color: themeColors().bg, symbolColor: themeColors().symbol, height: 52 });
 
 function createWindow(show = true) {

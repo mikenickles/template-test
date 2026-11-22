@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { DB, setSetting } from "../core/db.ts";
 import { Lyra } from "../core/lyra.ts";
 import { FakeProvider } from "../core/providers/fake.ts";
 import type { GenerateResult } from "../core/providers/types.ts";
@@ -29,13 +28,10 @@ describe("Lyra engine", () => {
   it("refuses a provider that isn't set up, and bad model names", async () => {
     const lyra = await Lyra.start(platform());
     await expect(lyra.saveSettings({ provider: "gemini" })).rejects.toThrow(/Gemini API key/);
-    expect(lyra.state().accent).toBe("coral");
+    expect(lyra.state().accent).toBe("lime");
     expect(lyra.state().notifications).toBe(true);
     expect((await lyra.saveSettings({ notifications: false })).notifications).toBe(false);
-    expect((await lyra.saveSettings({ accent: "rose" })).accent).toBe("rose");
-    // a color from before 0.58 shows as its nearest new one
-    setSetting((lyra as unknown as { db: DB }).db, "accent", "navy");
-    expect(lyra.state().accent).toBe("blue");
+    expect((await lyra.saveSettings({ accent: "maroon" })).accent).toBe("maroon");
     await expect(lyra.saveSettings({ accent: "chartreuse" })).rejects.toThrow(/choices/);
     expect(lyra.state().bubbles).toBe("softer");
     expect((await lyra.saveSettings({ bubbles: "accent" })).bubbles).toBe("accent");

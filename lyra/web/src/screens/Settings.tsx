@@ -80,14 +80,14 @@ const FINDER: { label: string; more: string; where: string; href: string; phone?
 ];
 
 const ACCENT_CHOICES: { id: AppState["accent"]; label: string }[] = [
-  { id: "coral", label: "Coral" },
-  { id: "orange", label: "Tangerine" },
-  { id: "red", label: "Red" },
-  { id: "rose", label: "Rose" },
-  { id: "violet", label: "Violet" },
-  { id: "blue", label: "Blue" },
-  { id: "teal", label: "Teal" },
   { id: "lime", label: "Lime" },
+  { id: "orange", label: "Burnt orange" },
+  { id: "yellow", label: "Yellow" },
+  { id: "red", label: "Red" },
+  { id: "maroon", label: "Maroon" },
+  { id: "navy", label: "Navy" },
+  { id: "indigo", label: "Indigo" },
+  { id: "teal", label: "Teal" },
 ];
 
 const TITLES: Record<SettingsSection, string> = {

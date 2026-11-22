@@ -1,39 +1,46 @@
 /*
  * Lyra (0.58): "Quiet". Ink on white, thin lines, one accent used sparingly
- * (the face, a dot, an underline). Inter for text, Inter Tight for titles.
- * The redesign itself is the "QUIET" block at the end of this file.
+ * (a dot, an underline, the ring around Lyra). Inter for text, Inter Tight for titles.
+ * The screens themselves are re-dressed in the "QUIET" block at the end of this file.
  */
 
 :root {
   --bg: #ffffff;
-  --surface: #f6f6f4;
+  --surface: #f6f7f2;
   --surface-2: #ececea;
   --text: #111111;
   --text-muted: #6b6b6b;
-  --border: #ebebe9;
-  --accent: #ee6a55;
-  --accent-ink: #2b0d07;
-  --accent-soft: #fde6e1;
-  --accent-text: #c2422f;
+  --border: #ececec;
+  --accent: #c4ef4b;
+  --accent-ink: #131416;
+  --accent-soft: #e8f4c2;
+  --accent-text: #4b6a00;
   --good: #2e7d4f;
   --warn: #b7791f;
   --bad: #c2412d;
 
   /* your messages: a light grey bubble by default (Settings, You and appearance, Your messages) */
-  --me: #f1f1ef;
+  --me: #f3f3f3;
   --me-text: #111111;
   --me-line: transparent;
-  --orb: #111111;
+  /* the accent as a small mark (a dot, an underline): a touch deeper than the accent so it shows on white */
+  --mark: color-mix(in srgb, var(--accent) 70%, var(--accent-text));
+  /* (0.58) greys made from the text and page colors, so they work in light, dark and every look */
+  --line-strong: color-mix(in srgb, var(--text) 11%, var(--bg));
+  --fill: color-mix(in srgb, var(--text) 5%, var(--bg));
+  --faint: color-mix(in srgb, var(--text) 28%, var(--bg));
+  --text-faint: color-mix(in srgb, var(--text) 52%, var(--bg));
+  --orb: #131416;
   --orb-edge: transparent;
-  --orb-line: rgba(255, 255, 255, 0.42);
-  --orb-star: #ffffff;
+  --orb-line: rgba(243, 241, 234, 0.42);
+  --orb-star: #f3f1ea;
   --chart-line: #d4d4d0;
   --drawer-w: min(82vw, 340px);
-  --drawer-bg: #f4f4f2;
+  --drawer-bg: #ffffff;
   --drawer-hover: rgba(17, 17, 17, 0.04);
-  --drawer-active: rgba(17, 17, 17, 0.06);
-  --drawer-active-edge: rgba(17, 17, 17, 0.2);
-  --tree-line: #d6d6d2;
+  --drawer-active: #f6f7f2;
+  --drawer-active-edge: transparent;
+  --tree-line: #dadada;
   --scrim: rgba(17, 17, 17, 0.28);
 
   --font: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -74,144 +81,144 @@
     --text: #f2f2f2;
     --text-muted: #9b9ba0;
     --border: #252528;
-    --accent: #ff8370;
-    --accent-ink: #2b0d07;
-    --accent-soft: #3a1e19;
-    --accent-text: #ff9a8a;
+    --accent: #cbf25c;
+    --accent-ink: #10130a;
+    --accent-soft: #2a3317;
+    --accent-text: #cbf25c;
     --good: #5cc48a;
     --warn: #e0a940;
     --bad: #f07a68;
 
     --me: #232326;
     --me-text: #f2f2f2;
-    --orb: #19191b;
-    --orb-edge: #2c2c30;
-    --orb-line: rgba(242, 242, 242, 0.38);
-    --orb-star: #f2f2f2;
+    --orb: #1b1a16;
+    --orb-edge: #33302a;
+    --orb-line: rgba(238, 235, 227, 0.38);
+    --orb-star: #eeebe3;
     --chart-line: #3a3a3e;
-    --drawer-bg: #09090a;
+    --drawer-bg: #0f0f10;
     --drawer-hover: rgba(242, 242, 242, 0.05);
-    --drawer-active: rgba(242, 242, 242, 0.08);
-    --drawer-active-edge: rgba(242, 242, 242, 0.2);
+    --drawer-active: #19191b;
+    --drawer-active-edge: transparent;
     --tree-line: #333337;
-    --scrim: rgba(0, 0, 0, 0.5);
+    --scrim: rgba(0, 0, 0, 0.45);
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
     color-scheme: dark;
   }
 }
 
-/* accent colors the user can pick in Settings (0.58: coral first, the default); set on <html>, and on each swatch to preview it */
-[data-accent="coral"] {
-  --accent: #ee6a55;
-  --accent-ink: #2b0d07;
-  --accent-soft: #fde6e1;
-  --accent-text: #c2422f;
-}
-
-[data-accent="orange"] {
-  --accent: #f08a24;
-  --accent-ink: #2a1503;
-  --accent-soft: #fdebd7;
-  --accent-text: #b05a07;
-}
-
-[data-accent="red"] {
-  --accent: #e23d3d;
-  --accent-ink: #ffffff;
-  --accent-soft: #fce0e0;
-  --accent-text: #c42b2b;
-}
-
-[data-accent="rose"] {
-  --accent: #e2508c;
-  --accent-ink: #ffffff;
-  --accent-soft: #fce1ec;
-  --accent-text: #b8336c;
-}
-
-[data-accent="violet"] {
-  --accent: #7b5cf0;
-  --accent-ink: #ffffff;
-  --accent-soft: #ece6fe;
-  --accent-text: #6544d6;
-}
-
-[data-accent="blue"] {
-  --accent: #3570e8;
-  --accent-ink: #ffffff;
-  --accent-soft: #e0e9fd;
-  --accent-text: #2559c9;
-}
-
-[data-accent="teal"] {
-  --accent: #13998a;
-  --accent-ink: #ffffff;
-  --accent-soft: #d3f0ec;
-  --accent-text: #0b7468;
-}
-
+/* accent colors the user can pick in Settings; set on <html>, and on each swatch to preview it */
 [data-accent="lime"] {
-  --accent: #a3d72a;
+  --accent: #c4ef4b;
   --accent-ink: #131416;
-  --accent-soft: #eaf5c9;
+  --accent-soft: #e8f4c2;
   --accent-text: #4b6a00;
 }
 
+[data-accent="orange"] {
+  --accent: #d2602a;
+  --accent-ink: #ffffff;
+  --accent-soft: #f7ddcc;
+  --accent-text: #a4441a;
+}
+
+[data-accent="yellow"] {
+  --accent: #f3c331;
+  --accent-ink: #131416;
+  --accent-soft: #faedc0;
+  --accent-text: #866200;
+}
+
+[data-accent="red"] {
+  --accent: #e0352e;
+  --accent-ink: #ffffff;
+  --accent-soft: #f9d7d5;
+  --accent-text: #b5231d;
+}
+
+[data-accent="maroon"] {
+  --accent: #7d2230;
+  --accent-ink: #ffffff;
+  --accent-soft: #f0dadd;
+  --accent-text: #7d2230;
+}
+
+[data-accent="navy"] {
+  --accent: #1e3a6b;
+  --accent-ink: #ffffff;
+  --accent-soft: #dae2f0;
+  --accent-text: #1e3a6b;
+}
+
+[data-accent="indigo"] {
+  --accent: #5a5bd8;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2e2fb;
+  --accent-text: #4445b6;
+}
+
+[data-accent="teal"] {
+  --accent: #13897b;
+  --accent-ink: #ffffff;
+  --accent-soft: #d2ede9;
+  --accent-text: #0c6a5f;
+}
+
 @media (prefers-color-scheme: dark) {
-  [data-accent="coral"] {
-    --accent: #ff8370;
-    --accent-ink: #2b0d07;
-    --accent-soft: #3a1e19;
-    --accent-text: #ff9a8a;
-  }
-
-  [data-accent="orange"] {
-    --accent: #ffa04a;
-    --accent-ink: #2a1503;
-    --accent-soft: #3a2612;
-    --accent-text: #ffb26b;
-  }
-
-  [data-accent="red"] {
-    --accent: #ff5f5f;
-    --accent-ink: #1f0606;
-    --accent-soft: #3b1717;
-    --accent-text: #ff8080;
-  }
-
-  [data-accent="rose"] {
-    --accent: #ff6fa8;
-    --accent-ink: #22060f;
-    --accent-soft: #3a1626;
-    --accent-text: #ff8fbb;
-  }
-
-  [data-accent="violet"] {
-    --accent: #9c85ff;
-    --accent-ink: #120b2e;
-    --accent-soft: #251e45;
-    --accent-text: #b3a2ff;
-  }
-
-  [data-accent="blue"] {
-    --accent: #6a9bff;
-    --accent-ink: #08142e;
-    --accent-soft: #172440;
-    --accent-text: #8fb3ff;
-  }
-
-  [data-accent="teal"] {
-    --accent: #34c9b6;
-    --accent-ink: #04140f;
-    --accent-soft: #12302c;
-    --accent-text: #5ed6c6;
-  }
-
   [data-accent="lime"] {
     --accent: #cbf25c;
     --accent-ink: #10130a;
     --accent-soft: #232c14;
     --accent-text: #cbf25c;
+  }
+
+  [data-accent="orange"] {
+    --accent: #ec7a40;
+    --accent-ink: #1a0b04;
+    --accent-soft: #3a2116;
+    --accent-text: #f29462;
+  }
+
+  [data-accent="yellow"] {
+    --accent: #f6cc48;
+    --accent-ink: #1a1404;
+    --accent-soft: #332a10;
+    --accent-text: #f6cc48;
+  }
+
+  [data-accent="red"] {
+    --accent: #f25c52;
+    --accent-ink: #1c0605;
+    --accent-soft: #3a1714;
+    --accent-text: #f6827a;
+  }
+
+  [data-accent="maroon"] {
+    --accent: #c85a6d;
+    --accent-ink: #1a0609;
+    --accent-soft: #361b20;
+    --accent-text: #e3889a;
+  }
+
+  [data-accent="navy"] {
+    --accent: #7096da;
+    --accent-ink: #0a1020;
+    --accent-soft: #18233b;
+    --accent-text: #94b1e8;
+  }
+
+  [data-accent="indigo"] {
+    --accent: #8c8df2;
+    --accent-ink: #0d0d24;
+    --accent-soft: #23234b;
+    --accent-text: #a7a8f6;
+  }
+
+  [data-accent="teal"] {
+    --accent: #3dc3b1;
+    --accent-ink: #04140f;
+    --accent-soft: #13302c;
+    --accent-text: #62d4c4;
   }
 }
 
@@ -6529,7 +6536,7 @@ button.orb {
 [data-bubbles="neutral"] {
   --me: var(--bg);
   --me-text: var(--text);
-  --me-line: #dededb;
+  --me-line: #dedede;
 }
 @media (prefers-color-scheme: dark) {
   [data-bubbles="classic"] {
@@ -6599,7 +6606,7 @@ button.orb {
 
 /* "Soft grey" (id "softer") is the default in :root; stated here too so its preview card shows it whatever style is chosen */
 [data-bubbles="softer"] {
-  --me: #f1f1ef;
+  --me: #f3f3f3;
   --me-text: #111111;
   --me-line: transparent;
 }
@@ -7822,8 +7829,8 @@ button.lp-svc:active {
 
 /* Quiet (id "paper"), restated so its picker card looks right inside another look */
 [data-theme="paper"] {
-  --bg: #ffffff; --surface: #f6f6f4; --surface-2: #ececea; --text: #111111; --text-muted: #6b6b6b; --border: #ebebe9;
-  --shadow: 0 1px 2px rgba(17, 17, 17, 0.03), 0 10px 30px rgba(17, 17, 17, 0.07);
+  --bg: #ffffff; --surface: #f6f7f2; --surface-2: #ececea; --text: #111111; --text-muted: #6b6b6b; --border: #ececec;
+  --shadow: 0 1px 2px rgba(19, 20, 22, 0.04), 0 10px 30px rgba(19, 20, 22, 0.07);
 }
 
 /* ---- Zine: photocopied. Ink edges, hard shadows, tighter corners, typewriter labels, grain. ---- */
@@ -7841,7 +7848,7 @@ button.lp-svc:active {
 /* ---- Night Radio: always dark, plum-black with a warm amber glow from above. ---- */
 [data-theme="radio"] {
   /* (0.50.3) the dark is tinted by --night, a color picked to pair with each accent (set with the accents below) */
-  --night: #1f6f86;
+  --night: #7a3fa0;
   --bg: color-mix(in srgb, var(--night) 12%, #0c0c0d); --surface: color-mix(in srgb, var(--night) 13%, #161617);
   --surface-2: color-mix(in srgb, var(--night) 16%, #202022); --border: color-mix(in srgb, var(--night) 22%, #2b2b2e);
   --text: #f2f0eb; --text-muted: color-mix(in srgb, var(--night) 18%, #a4a3a0);
@@ -7885,62 +7892,6 @@ button.lp-svc:active {
 }
 
 /* Night Radio is dark whatever the phone is set to: the dark accent and bubble colors, always */
-[data-theme="radio"][data-accent="coral"],
-[data-theme="radio"] [data-accent="coral"] {
-  --night: #1f6f86;
-  --accent: #ff8370;
-  --accent-ink: #2b0d07;
-  --accent-soft: #3a1e19;
-  --accent-text: #ff9a8a;
-}
-[data-theme="radio"][data-accent="orange"],
-[data-theme="radio"] [data-accent="orange"] {
-  --night: #2f5fa0;
-  --accent: #ffa04a;
-  --accent-ink: #2a1503;
-  --accent-soft: #3a2612;
-  --accent-text: #ffb26b;
-}
-[data-theme="radio"][data-accent="red"],
-[data-theme="radio"] [data-accent="red"] {
-  --night: #1f8a80;
-  --accent: #ff5f5f;
-  --accent-ink: #1f0606;
-  --accent-soft: #3b1717;
-  --accent-text: #ff8080;
-}
-[data-theme="radio"][data-accent="rose"],
-[data-theme="radio"] [data-accent="rose"] {
-  --night: #3f7a5a;
-  --accent: #ff6fa8;
-  --accent-ink: #22060f;
-  --accent-soft: #3a1626;
-  --accent-text: #ff8fbb;
-}
-[data-theme="radio"][data-accent="violet"],
-[data-theme="radio"] [data-accent="violet"] {
-  --night: #6f7f2a;
-  --accent: #9c85ff;
-  --accent-ink: #120b2e;
-  --accent-soft: #251e45;
-  --accent-text: #b3a2ff;
-}
-[data-theme="radio"][data-accent="blue"],
-[data-theme="radio"] [data-accent="blue"] {
-  --night: #b0703a;
-  --accent: #6a9bff;
-  --accent-ink: #08142e;
-  --accent-soft: #172440;
-  --accent-text: #8fb3ff;
-}
-[data-theme="radio"][data-accent="teal"],
-[data-theme="radio"] [data-accent="teal"] {
-  --night: #a33a5c;
-  --accent: #34c9b6;
-  --accent-ink: #04140f;
-  --accent-soft: #12302c;
-  --accent-text: #5ed6c6;
-}
 [data-theme="radio"][data-accent="lime"],
 [data-theme="radio"] [data-accent="lime"] {
   --night: #7a3fa0;
@@ -7948,6 +7899,62 @@ button.lp-svc:active {
   --accent-ink: #10130a;
   --accent-soft: #232c14;
   --accent-text: #cbf25c;
+}
+[data-theme="radio"][data-accent="orange"],
+[data-theme="radio"] [data-accent="orange"] {
+  --night: #2f6f9a;
+  --accent: #ec7a40;
+  --accent-ink: #1a0b04;
+  --accent-soft: #3a2116;
+  --accent-text: #f29462;
+}
+[data-theme="radio"][data-accent="yellow"],
+[data-theme="radio"] [data-accent="yellow"] {
+  --night: #4a4fb0;
+  --accent: #f6cc48;
+  --accent-ink: #1a1404;
+  --accent-soft: #332a10;
+  --accent-text: #f6cc48;
+}
+[data-theme="radio"][data-accent="red"],
+[data-theme="radio"] [data-accent="red"] {
+  --night: #1f8a80;
+  --accent: #f25c52;
+  --accent-ink: #1c0605;
+  --accent-soft: #3a1714;
+  --accent-text: #f6827a;
+}
+[data-theme="radio"][data-accent="maroon"],
+[data-theme="radio"] [data-accent="maroon"] {
+  --night: #3f7a5a;
+  --accent: #c85a6d;
+  --accent-ink: #1a0609;
+  --accent-soft: #361b20;
+  --accent-text: #e3889a;
+}
+[data-theme="radio"][data-accent="navy"],
+[data-theme="radio"] [data-accent="navy"] {
+  --night: #b0703a;
+  --accent: #7096da;
+  --accent-ink: #0a1020;
+  --accent-soft: #18233b;
+  --accent-text: #94b1e8;
+}
+[data-theme="radio"][data-accent="indigo"],
+[data-theme="radio"] [data-accent="indigo"] {
+  --night: #6f7f2a;
+  --accent: #8c8df2;
+  --accent-ink: #0d0d24;
+  --accent-soft: #23234b;
+  --accent-text: #a7a8f6;
+}
+[data-theme="radio"][data-accent="teal"],
+[data-theme="radio"] [data-accent="teal"] {
+  --night: #a33a5c;
+  --accent: #3dc3b1;
+  --accent-ink: #04140f;
+  --accent-soft: #13302c;
+  --accent-text: #62d4c4;
 }
 [data-theme="radio"][data-bubbles="classic"],
 [data-theme="radio"] [data-bubbles="classic"] {
@@ -9194,303 +9201,997 @@ html[data-ambient="on"] body[data-music] .lp-orb {
 }
 
 /* =========================================================================
-   Lyra's face (0.58): Face.tsx, colored from the accent. Expressions are classes
-   (.mood-*), so a change of mood glides; blinking and looking around come from mood.ts.
+   QUIET (0.58): the redesign. Ink on white, hairlines, one accent as a small mark.
+   Built to match the Quiet mockups screen by screen; everything above still
+   provides structure, this block re-dresses it. Other looks (Zine, Night Radio,
+   Film) keep their own tokens on top of this.
    ========================================================================= */
-.face {
-  --face-hi: color-mix(in oklab, var(--accent) 52%, #fff);
-  --face-mid: var(--accent);
-  --face-lo: color-mix(in oklab, var(--accent) 80%, #000);
-  --face-ink: color-mix(in oklab, var(--accent) 14%, #17171a);
-  --face-blush: color-mix(in oklab, var(--accent) 30%, #ff4d7d);
-  display: block;
-  overflow: visible;
-  -webkit-tap-highlight-color: transparent;
+
+/* ---- type ---- */
+h1,
+h2,
+.page-head h1,
+.page-title {
+  font-family: var(--display);
 }
-.orb:has(.face) {
+.page-head h1,
+.page-title {
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+/* ---- the haze: a faint wash at the very top, nothing behind the content ---- */
+html[data-ambient="on"] .haze {
+  opacity: 0.32;
+  height: 46dvh;
+  margin-bottom: -46dvh;
+  -webkit-mask-image: linear-gradient(#000, transparent);
+  mask-image: linear-gradient(#000, transparent);
+}
+html[data-ambient="on"] .topbar:not(.floating),
+html[data-ambient="on"] .tabbar:not(.floating) {
+  background: var(--bg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* ---- top bar: plain icons, the initial in a thin ring ---- */
+.topbar {
+  padding: calc(var(--inset-top) + 14px) 16px 10px;
+}
+.ring,
+.topbar.floating .ring {
+  width: 44px;
+  height: 44px;
+  border: 0;
   background: transparent;
+  box-shadow: none;
+  color: var(--text);
 }
-.face .face-hi {
-  stop-color: var(--face-hi);
+.ring:hover {
+  background: var(--drawer-hover);
 }
-.face .face-mid {
-  stop-color: var(--face-mid);
+.topbar .initial,
+.topbar.floating .ring:has(.initial) {
+  color: var(--text);
 }
-.face .face-lo {
-  stop-color: var(--face-lo);
+.topbar .ring:has(.initial) {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line-strong);
 }
-.face .face-shine {
-  fill: #fff;
-  opacity: 0.26;
-}
-.face rect {
-  fill: var(--face-ink);
-}
-.face .eye-glint {
-  fill: #fff;
-}
-.face .face-mouth,
-.face .eye-arc,
-.face .eye-shut,
-.face .brow {
-  fill: none;
-  stroke: var(--face-ink);
-  stroke-width: 4;
-  stroke-linecap: round;
-}
-.face .brow {
-  stroke-width: 3.4;
-}
-.face .face-o {
-  fill: var(--face-ink);
-}
-.face .face-cheek {
-  fill: var(--face-blush);
-}
-.face .face-heart {
-  fill: #ff4d6d;
-}
-.face .face-z {
-  fill: var(--face-ink);
-  font: 700 13px/1 system-ui, sans-serif;
+.topbar .initial {
+  font-size: 15px;
+  font-weight: 600;
 }
 
-/* what moves, and how */
-.face .face-head {
-  transform-box: view-box;
-  transform-origin: 50px 56px;
-  transition: transform 0.6s cubic-bezier(0.3, 0.7, 0.2, 1);
+/* ---- Lyra in the top bar: face, name and status in a row ---- */
+:root {
+  --orb-sm: 40px;
 }
-.face .face-eyes {
-  transform: translate(calc(var(--gx) * 5.5px), calc(var(--gy) * 4.5px));
-  transition: transform 0.42s cubic-bezier(0.3, 0.7, 0.2, 1);
+[data-avatar="small"] {
+  --orb-sm: 34px;
 }
-.face .face-lower {
-  transform: translate(calc(var(--gx) * 2.5px), calc(var(--gy) * 2px));
-  transition: transform 0.5s cubic-bezier(0.3, 0.7, 0.2, 1);
+[data-avatar="large"] {
+  --orb-sm: 52px;
 }
-.face .eye {
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: transform 0.3s cubic-bezier(0.3, 1.4, 0.5, 1);
+.avatar-stack.head-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
 }
-.face .eye-lid {
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: transform 0.07s ease-out, opacity 0.18s;
+.head-words {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
 }
-.face .face-mouth {
-  transition: d 0.32s cubic-bezier(0.3, 0.7, 0.2, 1), opacity 0.2s;
+.head-name {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--text);
+  text-decoration: none;
 }
-.face .brow {
-  opacity: 0;
-  transition: d 0.32s cubic-bezier(0.3, 0.7, 0.2, 1), opacity 0.25s;
+.head-words .status-line {
+  position: static;
+  transform: none;
 }
-.face .eye-arc,
-.face .eye-shut,
-.face .face-o,
-.face .face-cheek,
-.face .face-heart,
-.face .face-z {
-  opacity: 0;
-  transition: opacity 0.25s;
+.head-words .status-pill {
+  padding: 0;
+  gap: 6px;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 450;
+  color: var(--text-muted);
 }
-.face .face-o {
-  transform-box: fill-box;
-  transform-origin: center;
+.status-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--mark);
 }
-.face.blink .eye-lid {
-  transform: scaleY(0.1);
+.status-dot.live {
+  background: var(--mark);
+  box-shadow: none;
+  animation: quiet-live 2s ease-in-out infinite;
 }
-
-/* happy, love, vibing: smiling eyes, a wide smile, rosy cheeks */
-.face:is(.mood-happy, .mood-love, .mood-vibing) .eye-lid {
-  opacity: 0;
-}
-.face:is(.mood-happy, .mood-love, .mood-vibing) .eye-arc {
-  opacity: 1;
-}
-.face:is(.mood-happy, .mood-love, .mood-vibing) .face-mouth {
-  d: path("M38 61 Q50 76 62 61");
-}
-.face:is(.mood-happy, .mood-love, .mood-vibing) .face-cheek {
-  opacity: 0.5;
-}
-.face.mood-love .face-cheek {
-  opacity: 0.75;
-}
-.face.mood-love .face-heart {
-  opacity: 1;
-  animation: face-heart 1.4s ease-out infinite;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-.face.mood-love .face-head {
-  transform: rotate(-6deg);
-}
-.face.mood-happy .face-head {
-  transform: translateY(-1.5px);
-}
-
-/* thinking: eyes up and to the side, one brow raised, mouth to one side */
-.face.mood-thinking .face-mouth {
-  d: path("M45 67 Q51 66.5 57 64.5");
-}
-.face.mood-thinking .brow {
-  opacity: 1;
-}
-.face.mood-thinking .brow-l {
-  d: path("M31 29.5 Q37 26.5 43 29.5");
-}
-.face.mood-thinking .brow-r {
-  d: path("M57 33 Q63 32.5 69 33");
-}
-.face.mood-thinking .face-head {
-  transform: rotate(-5deg);
-}
-
-/* surprised: wide eyes, brows up, a little "o" */
-.face.mood-surprised .eye {
-  transform: scale(1.14);
-}
-.face.mood-surprised .brow {
-  opacity: 1;
-}
-.face.mood-surprised .brow-l {
-  d: path("M31 28 Q37 24 43 28");
-}
-.face.mood-surprised .brow-r {
-  d: path("M57 28 Q63 24 69 28");
-}
-.face:is(.mood-surprised, .mood-talking) .face-mouth {
-  opacity: 0;
-}
-.face:is(.mood-surprised, .mood-talking) .face-o {
-  opacity: 1;
-}
-
-/* concerned: worried brows, a small frown */
-.face.mood-concerned .brow {
-  opacity: 1;
-}
-.face.mood-concerned .brow-l {
-  d: path("M31 33.5 Q38 32 43 28.5");
-}
-.face.mood-concerned .brow-r {
-  d: path("M57 28.5 Q62 32 69 33.5");
-}
-.face.mood-concerned .face-mouth {
-  d: path("M42 68.5 Q50 63.5 58 68.5");
-}
-.face.mood-concerned .eye {
-  transform: scale(0.92);
-}
-
-/* sleepy: eyes shut, head tipped, a couple of z's */
-.face.mood-sleepy .eye-lid {
-  opacity: 0;
-}
-.face.mood-sleepy .eye-shut,
-.face.mood-sleepy .face-z {
-  opacity: 1;
-}
-.face.mood-sleepy .face-mouth {
-  d: path("M46 66 Q50 68 54 66");
-}
-.face.mood-sleepy .face-head {
-  transform: rotate(7deg) translateY(1px);
-}
-
-/* listening: bright eyes, head tilted toward you */
-.face.mood-listening .eye {
-  transform: scale(1.07);
-}
-.face.mood-listening .face-mouth {
-  d: path("M43 64 Q50 70.5 57 64");
-}
-.face.mood-listening .face-head {
-  transform: rotate(5deg);
-}
-
-/* talking: the mouth moves while Lyra writes or speaks */
-.face.mood-talking .face-mouth {
-  d: path("M44 65 Q50 69 56 65");
-}
-
-/* the looping bits only with Gentle motion on */
-html:not([data-ambient="off"]) .face.mood-talking .face-o {
-  animation: face-talk 0.26s ease-in-out infinite alternate;
-}
-html:not([data-ambient="off"]) .face.mood-vibing .face-head {
-  animation: face-sway 1.7s ease-in-out infinite;
-}
-html:not([data-ambient="off"]) .face.mood-sleepy .face-z {
-  animation: face-z 3s ease-in-out infinite;
-}
-html:not([data-ambient="off"]) .face.mood-sleepy .face-z.z2 {
-  animation-delay: 1.5s;
-}
-html:not([data-ambient="off"]) .face.mood-listening .face-head {
-  animation: face-nod 2.4s ease-in-out infinite;
-}
-@keyframes face-talk {
-  from {
-    transform: scale(1.1, 0.35);
-  }
-  to {
-    transform: scale(0.95, 1);
+@keyframes quiet-live {
+  50% {
+    opacity: 0.25;
   }
 }
-@keyframes face-sway {
+.orb,
+.orb:has(.avatar) {
+  box-shadow: none;
+}
+.chat .log {
+  padding-top: calc(var(--inset-top) + 84px);
+}
+.chat.in-channel .log {
+  padding-top: calc(var(--inset-top) + 150px);
+}
+
+/* the ring around Lyra breathes out and fades, in the accent */
+html[data-ambient="on"] .orb:has(.avatar),
+html[data-ambient="on"] body[data-busy] .orb:has(.avatar) {
+  animation: none;
+}
+html[data-ambient="on"] .orb:has(.avatar)::before {
+  inset: -4px;
+  z-index: 0;
+  background: none;
+  border: 1.5px solid var(--mark);
+  animation: quiet-breathe 3.6s ease-in-out infinite;
+}
+html[data-ambient="on"] body[data-busy] .orb:has(.avatar)::before {
+  animation-duration: 1.6s;
+}
+@keyframes quiet-breathe {
   0%,
   100% {
-    transform: rotate(-6deg);
+    transform: scale(1);
+    opacity: 0.55;
   }
   50% {
-    transform: rotate(6deg);
+    transform: scale(1.18);
+    opacity: 0;
   }
 }
-@keyframes face-nod {
-  0%,
-  100% {
-    transform: rotate(5deg) translateY(0);
-  }
-  50% {
-    transform: rotate(5deg) translateY(1.6px);
-  }
+body[data-busy] .orb:has(.avatar)::after {
+  display: none;
 }
-@keyframes face-z {
-  0% {
-    opacity: 0;
-    transform: translate(0, 4px);
-  }
-  30%,
-  60% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(4px, -6px);
-  }
+
+/* ---- the conversation ---- */
+.day {
+  margin: var(--s5) 0 var(--s3);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-faint);
 }
-@keyframes face-heart {
-  0% {
-    opacity: 0;
-    transform: translateY(6px) scale(0.6);
-  }
-  25% {
-    opacity: 1;
-    transform: translateY(0) scale(1.1);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.9);
-  }
+.day svg {
+  display: none;
 }
-@media (prefers-reduced-motion: reduce) {
-  .face .face-eyes,
-  .face .face-lower,
-  .face .face-head {
-    transition: none;
-  }
+.day::before,
+.day::after {
+  background: var(--border);
+}
+.bubble {
+  border-radius: 20px;
+  padding: 10px 16px;
+  line-height: 1.4;
+  box-shadow: inset 0 0 0 1px var(--me-line, transparent);
+}
+.reply {
+  padding-left: 0;
+  line-height: 1.45;
+}
+.reply::before,
+.reply.error::before {
+  display: none;
+}
+.row.lyra > :not(.reply) {
+  margin-left: 0;
+}
+
+/* buttons Lyra suggests: thin pills */
+.suggestions {
+  margin-left: 0;
+  gap: 8px;
+}
+.suggestion {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 20px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 450;
+  box-shadow: none;
+}
+.suggestion:hover {
+  border-color: var(--faint);
+  background: var(--bg);
+}
+
+/* what Lyra did (a reminder, a saved note): a thin card with a small dot */
+.note {
+  border-radius: 16px;
+  border-color: var(--border);
+  background: var(--bg);
+  padding: 10px 14px;
+  color: var(--text);
+}
+
+/* ---- the message box: two levels, words on top, buttons underneath ---- */
+.composer {
+  padding: 0 14px 6px;
+}
+.composer-inner,
+.chat .composer-inner {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto auto;
+  align-items: center;
+  column-gap: 6px;
+  row-gap: 0;
+  padding: 14px 10px 10px 18px;
+  border-radius: 28px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
+}
+.composer-inner::before,
+.composer-inner::after {
+  display: none;
+}
+.composer-inner > .replying,
+.composer-inner > .drafts {
+  grid-column: 1 / -1;
+  margin: 0 8px 10px 0;
+}
+.composer-inner > .replying {
+  grid-row: 1;
+}
+.composer-inner > .drafts {
+  grid-row: 2;
+}
+.composer textarea {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  padding: 0 8px 10px 0;
+  min-height: 34px;
+  line-height: 24px;
+  font-size: 16px;
+}
+.composer textarea::placeholder {
+  color: var(--text-faint);
+}
+.composer-inner > .attach {
+  grid-column: 1;
+  grid-row: 4;
+}
+.composer-inner > .web-toggle {
+  grid-column: 2;
+  grid-row: 4;
+}
+.composer-inner > .composer-gap {
+  grid-column: 3;
+  grid-row: 4;
+}
+.composer-inner > .talk {
+  grid-column: 4;
+  grid-row: 4;
+}
+.composer-inner > .send {
+  grid-column: 5;
+  grid-row: 4;
+}
+.attach,
+.talk,
+.send {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+.attach {
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--text);
+  place-items: center;
+}
+.web-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 20px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  white-space: nowrap;
+  transition: background var(--ease), border-color var(--ease), color var(--ease);
+}
+.web-toggle.on {
+  border-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: 550;
+}
+.talk {
+  background: var(--fill);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+}
+.send,
+.send:disabled {
+  background: var(--text);
+  color: var(--bg);
+}
+.send:disabled {
+  opacity: 0.22;
+}
+.send.stop {
+  background: var(--text);
+  color: var(--bg);
+}
+
+/* ---- the tab bar: three words, the one you're on underlined in the accent ---- */
+.chat {
+  --tabbar-h: calc(var(--inset-bottom) + 62px);
+}
+.tabbar {
+  padding: 0 24px calc(var(--inset-bottom) + 12px);
+}
+.tabbar:not(.floating) {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.tabbar.floating {
+  background: var(--bg);
+}
+.tabbar-inner,
+.tabbar.floating .tabbar-inner {
+  max-width: none;
+  padding: 0;
+  gap: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.tabbar-item,
+.tabbar-item.on {
+  flex-direction: column;
+  gap: 5px;
+  min-height: 44px;
+  padding-top: 4px;
+  border-radius: 0;
+  background: none;
+  font-size: 12px;
+  font-weight: 450;
+  color: var(--text-faint);
+}
+.tabbar-item.on {
+  font-weight: 600;
+  color: var(--text);
+}
+.tabbar-item > svg,
+.tabbar-icon > svg {
+  display: none;
+}
+.tabbar-icon {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  margin-left: 18px;
+}
+.tabbar-icon .badge {
+  position: static;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  box-shadow: none;
+}
+.tabbar-inner > .slide-pill {
+  background: none;
+  box-shadow: none;
+}
+.tabbar-inner > .slide-pill::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 18px;
+  height: 3px;
+  margin-left: -9px;
+  border-radius: 2px;
+  background: var(--mark);
+}
+
+/* ---- Tasks: a big title, tabs underlined, a ready card, plain rows ---- */
+.tasks-head {
+  margin: 6px 0 18px;
+}
+.tasks-head .page-title {
+  margin: 0 0 14px;
+}
+.seg-tabs,
+.tasks-head .seg-tabs {
+  display: flex;
+  gap: 28px;
+  padding: 0 0 10px;
+  border-radius: 0;
+  background: none;
+  border-bottom: 1px solid var(--border);
+}
+.seg-tabs button,
+.seg-tabs button.on {
+  min-height: 0;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font-size: 15px;
+  font-weight: 450;
+  color: var(--text-faint);
+}
+.seg-tabs button.on {
+  font-weight: 600;
+  color: var(--text);
+}
+.seg-tabs > .slide-pill {
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+.seg-tabs > .slide-pill::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -11px;
+  height: 2px;
+  background: var(--text);
+}
+.section-label,
+.task-group .section-label {
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-faint);
+}
+.section-label .count::before {
+  content: "· ";
+}
+.task-group + .task-group {
+  margin-top: 26px;
+}
+.ready-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 18px;
+  margin-bottom: 8px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--surface);
+}
+.ready-label {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.ready-card .ready-body {
+  gap: 6px;
+  color: inherit;
+  text-decoration: none;
+}
+.ready-card .task-title {
+  font-family: var(--display);
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+.ready-card .task-sub {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.ready-progress {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  overflow: hidden;
+}
+.ready-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--text);
+  transition: width 1.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.ready-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.ready-actions .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
+  height: 46px;
+  border-radius: 23px;
+  white-space: nowrap;
+  font-size: 15px;
+}
+.task-row {
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 14px;
+}
+.task-group .swipe:last-child .task-row,
+.task-group > .task-row:last-child {
+  border-bottom: 0;
+}
+.task-check {
+  color: var(--faint);
+}
+.task-check svg {
+  width: 24px;
+  height: 24px;
+}
+.task-row.done .task-check {
+  color: var(--text);
+}
+.task-title {
+  font-size: 16px;
+  font-weight: 450;
+}
+.task-sub {
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+/* buttons: ink for the main one, a thin outline for the rest */
+.btn {
+  border-radius: 999px;
+  font-weight: 500;
+}
+.btn.primary {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+  font-weight: 600;
+}
+.btn.quiet,
+.btn:not(.primary):not(.danger):not(.link) {
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* the + button: an ink circle */
+.fab {
+  width: 56px;
+  height: 56px;
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+/* switches: ink when on */
+.switch:checked {
+  background: var(--text);
+  border-color: var(--text);
+}
+
+/* ---- Artifacts: tiles with the title underneath ---- */
+.artifact-filters,
+.activity-filters.artifact-filters {
+  gap: 28px;
+  margin: 2px 0 18px;
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.activity-filters.artifact-filters button,
+.activity-filters.artifact-filters button.on {
+  height: auto;
+  padding: 0 0 10px;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-size: 15px;
+  font-weight: 450;
+  color: var(--text-faint);
+}
+.activity-filters.artifact-filters button.on {
+  font-weight: 600;
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 var(--text);
+}
+.art-grid {
+  gap: 18px 14px;
+}
+.art-card,
+.art-card:hover {
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.art-preview {
+  height: 150px;
+  border-radius: 18px;
+}
+.art-preview.dash {
+  background: var(--surface);
+}
+.art-preview.doc {
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.art-stat {
+  font-family: var(--display);
+  letter-spacing: -0.02em;
+}
+.art-bars i {
+  background: var(--text);
+}
+.art-bars i:first-child {
+  background: var(--mark);
+}
+.art-body {
+  padding: 0 2px;
+}
+.art-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+.art-meta {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* ---- the menu ---- */
+.drawer-head {
+  gap: 12px;
+  padding: 4px 2px 18px;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.drawer-head .drawer-orb {
+  width: 44px;
+  height: 44px;
+}
+.drawer-title {
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.drawer-search {
+  height: 44px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--fill);
+  box-shadow: none;
+}
+.star-row {
+  border-radius: 16px;
+}
+.star-row.active,
+.star-row.everything.active {
+  background: var(--surface);
+  box-shadow: none;
+}
+.star-row .star {
+  width: 8px;
+  height: 8px;
+  background: var(--bg);
+  border: 1.5px solid var(--faint);
+  box-shadow: none;
+}
+.star-row .star.vega,
+.star-row .star.bright {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  background: var(--mark);
+}
+.star-row.active .star:not(.vega) {
+  border-color: var(--text);
+}
+.star-name {
+  font-size: 16px;
+  font-weight: 500;
+}
+.star-row.active .star-name,
+.everything .star-name {
+  font-weight: 600;
+}
+.star-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.constellation-lines polyline {
+  stroke: var(--line-strong);
+  stroke-width: 1.2;
+}
+.star-row.add .star-name {
+  color: var(--text-muted);
+}
+.new-pill {
+  background: var(--text);
+  color: var(--bg);
+}
+.drawer-sections.single {
+  border-top: 1px solid var(--border);
+}
+
+/* ---- fixes from the first comparison ---- */
+/* Quiet is plain white: the drifting haze belongs to the other looks */
+html[data-theme="paper"] .haze,
+html:not([data-theme]) .haze {
+  display: none;
+}
+.tasks-head {
+  display: block;
+}
+.task-group.g-ready > .section-label {
+  display: none;
+}
+.drawer-head,
+.drawer-head:hover,
+a.drawer-head {
+  background: none;
+  box-shadow: none;
+}
+
+/* ---- the Lyra page ---- */
+.lp-head {
+  gap: 4px;
+}
+.lp-name {
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.lp-status {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.lp-big {
+  gap: 12px;
+}
+.lp-big-card {
+  gap: 2px;
+  padding: 16px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: none;
+}
+.lp-big-card .c {
+  display: none;
+}
+.lp-big-card .n {
+  font-size: 13px;
+  font-weight: 450;
+  color: var(--text-muted);
+}
+.lp-big-card .s {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.lp-chip {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  background: var(--bg);
+  box-shadow: none;
+  font-size: 14px;
+  font-weight: 450;
+}
+.lp-chip svg {
+  display: none;
+}
+.lp-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.lp-svc,
+.lp-svc.off {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg);
+  box-shadow: none;
+  text-align: left;
+}
+.lp-svc.off {
+  border-style: dashed;
+  border-color: var(--line-strong);
+}
+.lp-svc .t,
+.lp-svc.more {
+  display: none;
+}
+.lp-svc .n {
+  font-size: 14px;
+  font-weight: 600;
+}
+.lp-svc .s {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.lp-svc .s i {
+  width: 7px;
+  height: 7px;
+  background: var(--mark);
+}
+.lp-svc.off .s i {
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--faint);
+}
+.lp-promise {
+  border: 0;
+  background: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* ---- Settings: plain rows, a grey circle for each icon ---- */
+.settings-search {
+  height: 46px;
+  border: 0;
+  border-radius: 23px;
+  background: var(--fill);
+  box-shadow: none;
+}
+.group.settings-home {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+}
+.settings-home .item {
+  min-height: 64px;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  background: none;
+}
+.settings-home .item:last-child {
+  border-bottom: 0;
+}
+.settings-home .item:hover,
+.settings-home .item:active {
+  background: none;
+}
+.settings-home .tile {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--fill);
+  color: var(--text);
+}
+.settings-home .title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.settings-home .sub {
+  font-size: 13px;
+  color: var(--text-faint);
+}
+.settings-home .chev {
+  color: var(--faint);
+}
+
+/* ---- Activity: a title, three numbers between lines, a timeline ---- */
+.activity-orb {
+  display: none;
+}
+.activity-head {
+  margin: 6px 0 18px;
+}
+.activity-name {
+  font-family: var(--display);
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.activity-status {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.activity-stats {
+  gap: 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: none;
+}
+.activity-stats > div {
+  padding: 12px 0 12px 14px;
+  border-left: 1px solid var(--border);
+  background: none;
+  border-radius: 0;
+}
+.activity-stats > div:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.activity-stats b {
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 600;
+}
+.activity-stats span {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+.activity-filters button {
+  height: 36px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  font-size: 14px;
+  font-weight: 450;
+}
+.activity-filters button.on {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+.activity-card {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.activity-row {
+  border-radius: 0;
+}
+.activity-day-head {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-faint);
 }
