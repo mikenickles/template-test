@@ -10350,3 +10350,54 @@ html[data-ambient="on"] .voice-listening .kit .kit-hop {
     animation: none !important;
   }
 }
+
+/* ---- (0.59.1) Kit stands on its own: no circle behind it, bigger, front and center at the top of the chat ---- */
+.kit .kit-halo {
+  display: none;
+}
+html[data-ambient="on"] .lp-orb:has(.kit)::before,
+.lp-orb:has(.kit) {
+  background: none;
+  box-shadow: none;
+}
+html[data-ambient="on"] .lp-orb:has(.kit)::before {
+  display: none;
+}
+:root {
+  --orb-sm: 72px;
+}
+[data-avatar="small"] {
+  --orb-sm: 58px;
+}
+[data-avatar="large"] {
+  --orb-sm: 88px;
+}
+.avatar-stack.head-row {
+  flex-direction: column;
+  gap: 0;
+}
+.avatar-stack.head-row .head-words {
+  align-items: center;
+  margin-top: -4px;
+}
+.avatar-stack.head-row .head-name {
+  font-size: 15px;
+}
+.chat .log {
+  padding-top: calc(var(--inset-top) + 150px);
+}
+.chat .log {
+  --fade: linear-gradient(
+    transparent 0,
+    transparent calc(var(--inset-top) + 6px),
+    rgba(0, 0, 0, 0.12) calc(var(--inset-top) + 60px),
+    rgba(0, 0, 0, 0.45) calc(var(--inset-top) + 112px),
+    #000 calc(var(--inset-top) + 156px),
+    #000 calc(100% - var(--below) - 40px),
+    rgba(0, 0, 0, 0.4) calc(100% - var(--below) + 20px),
+    rgba(0, 0, 0, 0.1) 100%
+  );
+}
+.app:not(.desk) .chat::before {
+  height: calc(var(--inset-top) + 150px);
+}

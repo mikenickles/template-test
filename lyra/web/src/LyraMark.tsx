@@ -41,7 +41,7 @@ export function LyraMark({ size = 30 }: { size?: number }) {
 /** Lyra's face: Kit. */
 export function Avatar() {
   return (
-    <svg className="avatar kit" viewBox="0 0 100 100" aria-hidden="true">
+    <svg className="avatar kit" viewBox="12 17 76 72" aria-hidden="true">
       <circle className="kit-halo" cx="50" cy="50" r="50" />
       <ellipse className="kit-shadow" cx="50" cy="83" rx="21" ry="2.6" />
       <g className="kit-hop">
