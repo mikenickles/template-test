@@ -1,0 +1,8 @@
+{
+  "name": "bedroom-battalion-tests",
+  "private": true,
+  "description": "Headless test harness. three is installed locally only so tests can run where the CDN is blocked.",
+  "devDependencies": {
+    "three": "0.170.0"
+  }
+}
