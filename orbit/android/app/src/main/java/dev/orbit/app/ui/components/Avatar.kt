@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -51,6 +52,7 @@ import dev.orbit.app.data.AvatarSpec
 import dev.orbit.app.ui.theme.LocalReducedMotion
 import dev.orbit.app.ui.theme.Orbit
 import dev.orbit.app.ui.theme.OrbitMotion
+import dev.orbit.app.ui.theme.OrbitType
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.random.Random
@@ -323,5 +325,112 @@ fun AvatarDisc(
     val outline = if (ring) Modifier.border(2.dp, spec.tint(), CircleShape).padding(4.dp) else Modifier
     Box(modifier.size(size).then(outline).background(characterTile(), CircleShape), contentAlignment = Alignment.Center) {
         AgentAvatar(spec, avatarModifier, size = (if (ring) size - 8.dp else size) * 0.84f, thinking = thinking, alive = alive)
+    }
+}
+
+/**
+ * An agent as a portrait: their character's head and shoulders in a circle, on a neutral tile. The everyday
+ * face in lists and chat, so a screen full of them stays calm; the whole character is for the agent's own
+ * page and the moment they're working on a reply.
+ *
+ * [thinking] puts the typing bubble at its shoulder, as on [AgentAvatar].
+ */
+@Composable
+fun AgentPortrait(
+    spec: AvatarSpec,
+    modifier: Modifier = Modifier,
+    size: Dp = 40.dp,
+    thinking: Boolean = false,
+) {
+    val reduced = LocalReducedMotion.current
+    val phase = if (thinking && !reduced) thinkingPhase() else null
+    val color = spec.tint()
+    val bubble = Orbit.colors.surfaceRaised
+    val edge = Orbit.colors.line
+    val satellite = if (thinking) Modifier.drawWithContent {
+        drawContent()
+        drawThinking(color, bubble, edge, phase?.value)
+    } else Modifier
+    val tile = characterTile()
+    Box(modifier.size(size).then(satellite)) {
+        if (spec.isFormer) {
+            Spacer(Modifier.size(size).clip(CircleShape).background(tile).drawBehind { drawFormer() })
+            return@Box
+        }
+        val image = CharacterImages.get(LocalContext.current, spec.character())
+        Box(Modifier.size(size).clip(CircleShape).background(tile)) {
+            Image(
+                image,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(size)
+                    .graphicsLayer {
+                        // Half again as big, held near the top: the head fills the circle, the feet fall away.
+                        transformOrigin = TransformOrigin(0.5f, PortraitAnchor)
+                        scaleX = PortraitZoom
+                        scaleY = PortraitZoom
+                    },
+                filterQuality = FilterQuality.High,
+            )
+        }
+    }
+}
+
+private const val PortraitZoom = 1.5f
+private const val PortraitAnchor = 0.16f
+
+/**
+ * Portraits overlapping in a line, each ringed in [ring] (the color behind them) so they read as separate faces.
+ * Shows up to [max]; the rest become a count.
+ */
+@Composable
+fun PortraitStack(
+    specs: List<AvatarSpec>,
+    modifier: Modifier = Modifier,
+    size: Dp = 32.dp,
+    ring: Color = Orbit.colors.surface,
+    max: Int = 4,
+) {
+    val overlap = size * 0.28f
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        specs.take(max).forEachIndexed { i, spec ->
+            AgentPortrait(
+                spec,
+                Modifier
+                    .offset(x = -overlap * i)
+                    .border(2.dp, ring, CircleShape)
+                    .padding(2.dp),
+                size = size,
+            )
+        }
+        if (specs.size > max) {
+            MoreBadge(specs.size - max, ring, Modifier.offset(x = -overlap * max))
+        }
+    }
+}
+
+/** "+2": how many more agents there are than the faces shown, in a small pill ringed in [ring]. */
+@Composable
+fun MoreBadge(count: Int, ring: Color, modifier: Modifier = Modifier) {
+    val c = Orbit.colors
+    Box(
+        modifier
+            .border(2.dp, ring, CircleShape)
+            .padding(2.dp)
+            .clip(CircleShape)
+            .background(c.surfaceHigh)
+            .padding(horizontal = 5.dp, vertical = 1.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("+$count", style = OrbitType.caption, color = c.textSecondary, maxLines = 1)
+    }
+}
+
+/** A group as one face: the first member's portrait, with "+2" on its corner for the rest. [ring]: the color behind it. */
+@Composable
+fun GroupPortrait(specs: List<AvatarSpec>, modifier: Modifier = Modifier, size: Dp = 40.dp, ring: Color = Orbit.colors.surface) {
+    Box(modifier.size(size)) {
+        specs.firstOrNull()?.let { AgentPortrait(it, size = size) }
+        if (specs.size > 1) MoreBadge(specs.size - 1, ring, Modifier.align(Alignment.BottomEnd).offset(x = 6.dp, y = 4.dp))
     }
 }

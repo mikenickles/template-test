@@ -1,6 +1,7 @@
 package dev.orbit.app.ui.screens
 
-import dev.orbit.app.ui.components.characterTile
+import dev.orbit.app.ui.components.AgentPortrait
+import dev.orbit.app.ui.components.GroupPortrait
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -43,8 +44,6 @@ import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.Agent
 import dev.orbit.app.data.SearchHit
 import dev.orbit.app.data.SearchResults
-import dev.orbit.app.ui.components.AvatarDisc
-import dev.orbit.app.ui.components.CrewTile
 import dev.orbit.app.ui.components.Hairline
 import dev.orbit.app.ui.components.IconTap
 import dev.orbit.app.ui.components.OrbitCard
@@ -154,7 +153,7 @@ fun SearchScreen(
                                     Modifier.fillMaxWidth().tap(RectangleShape, 0.985f) { onOpenRoom(room.id) }.padding(horizontal = OrbitDimens.rowPad, vertical = 10.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    CrewTile(members.map { it.avatar }, size = 40.dp, color = characterTile())
+                                    GroupPortrait(members.map { it.avatar }, size = 40.dp)
                                     Text(room.name, Modifier.weight(1f).padding(start = 14.dp), style = OrbitType.titleS, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     OrbitIcon(OrbitIcon.Chevron, size = 18.dp, tint = c.textTertiary)
                                 }
@@ -189,7 +188,7 @@ private fun Hit(hit: SearchHit, agent: Agent?, words: List<String>, now: Long, o
         Modifier.fillMaxWidth().tap(RoundedCornerShape(OrbitDimens.radiusM), 0.985f, onClick).padding(vertical = 10.dp, horizontal = 4.dp),
     ) {
         if (agent != null) {
-            AvatarDisc(agent.avatar, size = 34.dp)
+            AgentPortrait(agent.avatar, size = 34.dp)
         } else {
             Box(Modifier.size(34.dp).clip(CircleShape).background(c.surfaceHigh), contentAlignment = Alignment.Center) {
                 OrbitIcon(OrbitIcon.Person, size = 18.dp, tint = c.textSecondary)

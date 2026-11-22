@@ -1,5 +1,8 @@
 package dev.orbit.app.ui.screens
 
+import dev.orbit.app.ui.components.MoreBadge
+import dev.orbit.app.ui.components.GroupPortrait
+import dev.orbit.app.ui.components.AgentPortrait
 import dev.orbit.app.ui.components.characterTile
 import androidx.compose.foundation.layout.offset
 import dev.orbit.app.ui.components.quietCard
@@ -20,7 +23,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.rememberInfiniteTransition
 import dev.orbit.app.data.AvatarSpec
-import dev.orbit.app.ui.components.AvatarDisc
 import android.content.ClipData
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -126,7 +128,6 @@ import dev.orbit.app.ui.components.ActionSheet
 import dev.orbit.app.ui.components.ActivityTrail
 import dev.orbit.app.ui.components.AgentAvatar
 import dev.orbit.app.ui.components.AttachedItems
-import dev.orbit.app.ui.components.AvatarRow
 import dev.orbit.app.ui.components.TreehouseScene
 import dev.orbit.app.ui.components.DraftStrip
 import dev.orbit.app.ui.components.FormerAgentAvatar
@@ -440,7 +441,7 @@ fun RoomScreen(
                     when (scheduleCount) { 0 -> null; 1 -> "1 schedule"; else -> "$scheduleCount schedules" },
                     state.messages.size.takeIf { it > 0 }?.let { if (it == 1) "1 message" else "$it messages" },
                 ).filterNotNull().joinToString(" · "),
-                leading = { CrewTile(agents.map { it.avatar }, size = 44.dp, color = characterTile()) },
+                leading = { GroupPortrait(agents.map { it.avatar }, size = 44.dp) },
                 actions = listOf(
                     SheetAction("Edit room", OrbitIcon.Edit, hint = "Name, mode, description", onClick = onEdit),
                     SheetAction("Members", OrbitIcon.Person, hint = if (agents.size == 1) "1 agent" else "${agents.size} agents") { showingMembers = true },
@@ -731,24 +732,24 @@ private fun RoomBar(
                     }
                 }
             }
-            // Who's here, large enough to recognise. They fly in from the room's tile on the home screen.
+            // Who's here, as overlapping faces. The room's face flies in from its row on the home screen.
             Row(
-                Modifier.tap(RoundedCornerShape(16.dp), 0.94f, onMembers).semantics { contentDescription = "Who's in this room" }.padding(horizontal = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy((-12).dp),
-                verticalAlignment = Alignment.Bottom,
+                Modifier.tap(RoundedCornerShape(16.dp), 0.94f, onMembers).semantics { contentDescription = "Who's in this room" }.padding(horizontal = 4.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy((-9).dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                // The crew stands in the bar, the one replying a little taller.
                 agents.take(3).forEach { agent ->
-                    AgentAvatar(
+                    AgentPortrait(
                         agent.avatar,
-                        Modifier.shared(SharedKeys.roomMember(room.id, agent.id)),
-                        size = if (agent.id == state.run.agentId) 46.dp else 40.dp,
+                        Modifier
+                            .shared(SharedKeys.roomMember(room.id, agent.id))
+                            .border(2.dp, c.surface, CircleShape)
+                            .padding(2.dp),
+                        size = 30.dp,
                         thinking = agent.id == state.run.agentId,
                     )
                 }
-            }
-            if (agents.size > 3) {
-                Text("+${agents.size - 3}", Modifier.padding(start = 6.dp), style = OrbitType.mono, color = c.textSecondary)
+                if (agents.size > 3) MoreBadge(agents.size - 3, c.surface)
             }
             // About how many tokens the next reply sends; opens the Tokens page.
             contextTokens?.let { tokens ->
@@ -927,9 +928,19 @@ private fun AgentMessage(
     val catchingUp = streaming || shown < message.text.length
     val tail by animateFloatAsState(if (catchingUp) FADE_TAIL.toFloat() else 0f, tween(500), label = "tail")
     Row(Modifier.fillMaxWidth()) {
-        // A run from one agent shows its face and name once, at the top.
-        // The agent itself beside its words, not in a circle: the same character that stands on its cards.
-        if (continued) Spacer(Modifier.width(38.dp)) else AgentAvatar(avatar, Modifier.offset(y = (-5).dp), size = 38.dp, thinking = streaming && shown > 0)
+        // A run from one agent shows its face and name once, at the top. While the agent works out what to say,
+        // its whole character stands there, bobbing; once words arrive it settles back into its portrait.
+        val working = streaming && shown == 0 && message.activity.all { it.done }
+        when {
+            continued -> Spacer(Modifier.width(MessageFace))
+            else -> Box(Modifier.animateContentSize(spring(stiffness = 600f))) {
+                if (working) {
+                    AgentAvatar(avatar, Modifier.offset(x = (-6).dp, y = (-14).dp).padding(end = 4.dp), size = 64.dp, thinking = true)
+                } else {
+                    AgentPortrait(avatar, size = MessageFace, thinking = streaming && shown > 0)
+                }
+            }
+        }
         // New lines glide in rather than jump, and screen readers hear replies as they land.
         Column(
             Modifier
@@ -1254,7 +1265,7 @@ private fun MentionChips(visible: Boolean, agents: List<Agent>, onMention: (Agen
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             for (agent in agents) {
-                Pill(agent.name, onClick = { onMention(agent) }, leading = { AgentAvatar(agent.avatar, size = 24.dp) })
+                Pill(agent.name, onClick = { onMention(agent) }, leading = { AgentPortrait(agent.avatar, size = 24.dp) })
             }
         }
     }
@@ -1313,6 +1324,9 @@ private data class RoomStatus(val text: String, val dot: Color?)
 
 
 /** Whether [message] carries on a run from the same agent: close in time, nothing else in between. */
+/** The face beside an agent's message. */
+private val MessageFace = 36.dp
+
 internal fun continuesRun(before: Message?, message: Message): Boolean =
     before != null && !before.fromUser && !message.fromUser &&
         before.author.agentId != null && before.author.agentId == message.author.agentId &&
@@ -1413,7 +1427,11 @@ internal fun MembersSheet(
 private fun MemberRow(agent: Agent, ring: Boolean, status: String, statusColor: Color, action: @Composable () -> Unit) {
     val c = Orbit.colors
     Row(Modifier.fillMaxWidth().padding(horizontal = OrbitDimens.gutter, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        AvatarDisc(agent.avatar, size = 48.dp, ring = ring)
+        AgentPortrait(
+            agent.avatar,
+            Modifier.then(if (ring) Modifier.border(2.dp, agent.avatar.tint(), CircleShape).padding(4.dp) else Modifier),
+            size = if (ring) 40.dp else 48.dp,
+        )
         Column(Modifier.weight(1f).padding(start = 14.dp, end = 10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(agent.name, style = OrbitType.titleS, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)

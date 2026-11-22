@@ -54,3 +54,36 @@ export function CrewTile({ specs, size = 48, tint: hint = null }) {
     ${layout.map(([x, y, d], i) => html`<${Avatar} spec=${specs[i]} size=${size * d} style=${`left:${size * x}px;top:${size * y}px`} />`)}
   </div>`;
 }
+
+/**
+ * An agent as a portrait: their character's head and shoulders in a circle on a neutral tile. The everyday
+ * face in lists and chat; the whole character is for the agent's own page and while they're working on a reply.
+ * [ring] circles it, for whoever is speaking.
+ */
+export function Portrait({ spec, size = 40, thinking = false, ring = false, style = '' }) {
+  const character = characterOf(spec);
+  const bubble = thinking ? html`<span class="thinking-bubble" style=${`--ink:${tint(spec)}`}><i></i><i></i><i></i></span>` : null;
+  return html`<span class=${`portrait${ring ? ' ring' : ''}`} style=${`width:${size}px;height:${size}px;${ring ? `--ring:${tint(spec)};` : ''}${style}`} aria-hidden="true">
+    <span class="face">${character ? html`<img src=${character.image} alt="" draggable="false" />` : html`<span class="former"></span>`}</span>
+    ${bubble}
+  </span>`;
+}
+
+/** "+2": how many more agents there are than the faces shown. */
+export const More = ({ count }) => html`<span class="more" aria-hidden="true">+${count}</span>`;
+
+/** A group as one face: [face] (else the first member), with "+2" on its corner for the rest. */
+export function GroupPortrait({ specs, size = 40, face = null, thinking = false }) {
+  const shown = face ?? specs[0];
+  return html`<span class="group-portrait" style=${`width:${size}px;height:${size}px`}>
+    ${shown && html`<${Portrait} spec=${shown} size=${size} thinking=${thinking} />`}
+    ${specs.length > 1 && html`<${More} count=${specs.length - 1} />`}
+  </span>`;
+}
+
+/** The face a room shows: whoever is replying, else whoever spoke last, else its lead or first agent. */
+export const faceOf = (room, crew) =>
+  crew.find((a) => room.active && a.id === room.speaking)
+  ?? crew.find((a) => a.name === room.preview?.author)
+  ?? crew.find((a) => a.id === room.leadId)
+  ?? crew[0];

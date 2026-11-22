@@ -1,7 +1,7 @@
 // Making and changing things: agents, rooms, settings and schedules, each in a dialog.
 import { useEffect, useState } from '/vendor/hooks.mjs';
 import { api, onThisPC } from './api.js';
-import { Avatar, CHARACTERS, characterOf, randomAvatar, tint } from './avatar.js';
+import { Avatar, CHARACTERS, Portrait, characterOf, randomAvatar, tint } from './avatar.js';
 import { Icon, Modal, Pill, Switch, formatCost, formatTokens, html } from './ui.js';
 
 const ABILITIES = [
@@ -224,7 +224,7 @@ export function RoomEditor({ room, state, notify, onClose, onSaved }) {
     <p class="note" style="margin-top:6px">Every agent in this room reads it before answering.</p>
     <div class="section-title">Crew</div>
     ${state.agents.length
-      ? html`<div style="display:flex;flex-wrap:wrap;gap:8px">${state.agents.map((a) => html`<${Pill} label=${a.name} selected=${members.includes(a.id)} onClick=${() => toggle(a.id)}><${Avatar} spec=${a.avatar} size=${24} /><//>`)}</div>`
+      ? html`<div style="display:flex;flex-wrap:wrap;gap:8px">${state.agents.map((a) => html`<${Pill} label=${a.name} selected=${members.includes(a.id)} onClick=${() => toggle(a.id)}><${Portrait} spec=${a.avatar} size=${24} /><//>`)}</div>`
       : html`<p class="muted">Make an agent first, then put it in a room.</p>`}
     <div class="section-title">Who answers</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -236,7 +236,7 @@ export function RoomEditor({ room, state, notify, onClose, onSaved }) {
       ? 'Only the agent or two best suited to each message answer it. Talk to the whole group ("what do you all think?") and everyone joins in.'
       : mode === 'lead' ? 'The lead answers first, brings in the others with @mentions, then sums up.' : 'Everyone answers in turn.'} Mention someone with @ to ask them directly.</p>
     ${mode === 'lead' && members.length > 1 && html`<label class="field-label" style="margin-top:18px">Lead</label>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">${members.map((id) => state.agents.find((a) => a.id === id)).filter(Boolean).map((a) => html`<${Pill} label=${a.name} selected=${a.id === lead} onClick=${() => setLeadId(a.id)}><${Avatar} spec=${a.avatar} size=${24} /><//>`)}</div>`}
+      <div style="display:flex;flex-wrap:wrap;gap:8px">${members.map((id) => state.agents.find((a) => a.id === id)).filter(Boolean).map((a) => html`<${Pill} label=${a.name} selected=${a.id === lead} onClick=${() => setLeadId(a.id)}><${Portrait} spec=${a.avatar} size=${24} /><//>`)}</div>`}
     ${!fresh && html`<button class="button danger" style="margin-top:32px" onClick=${remove}>Delete room</button>`}
   <//>`;
 }
@@ -443,7 +443,7 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate, p
       </form>
       ${profile.notes.map((n) => html`<div class="about-note">
         <div style="flex:1"><div>${n.text}</div>
-          <div class="who caption faint">${byName[n.source] && html`<${Avatar} spec=${byName[n.source].avatar} size=${16} />`}${n.source === 'you' ? 'Added by you' : `Learned by ${n.source}`}</div></div>
+          <div class="who caption faint">${byName[n.source] && html`<${Portrait} spec=${byName[n.source].avatar} size=${16} />`}${n.source === 'you' ? 'Added by you' : `Learned by ${n.source}`}</div></div>
         <button class="icon-button" aria-label=${`Forget "${n.text}"`} title="Forget" onClick=${() => aboutYou(() => api.removeProfileNote(n.id))}><${Icon} name="close" /></button>
       </div>`)}
       <form class="row" style="border-top:1px solid var(--hairline)" onSubmit=${(e) => { e.preventDefault(); if (fact.trim()) aboutYou(async () => { await api.addProfileNote(fact.trim()); setFact(''); }); }}>

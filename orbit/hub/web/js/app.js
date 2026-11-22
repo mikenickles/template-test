@@ -2,7 +2,7 @@
 import { render } from '/vendor/preact.mjs';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from '/vendor/hooks.mjs';
 import { ATTACHABLE, api, canAttach, hubEvents, onThisPC, prepare, roomEvents } from './api.js';
-import { Avatar, CrewTile, characterOf, inkColor, tint } from './avatar.js';
+import { Avatar, CrewTile, GroupPortrait, More, Portrait, characterOf, faceOf, inkColor, tint } from './avatar.js';
 import { AgentEditor, RoomEditor, Schedules, Settings } from './editors.js';
 import { ToolCard, splitAtCards } from './cards.js';
 import { closeOpenMarkup, markdown } from './markdown.js';
@@ -238,7 +238,7 @@ function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate, onDelete,
         <span class="pill selected">Update</span>
       </button>`}
       ${intro && html`<button class="card row button-row intro-mini" style=${`--wash:${tint(guide.avatar)}`} onClick=${() => (canIntro(state) ? onIntro() : onDialog({ type: 'settings', page: 'models' }))}>
-        <${Avatar} spec=${guide.avatar} size=${36} />
+        <${Portrait} spec=${guide.avatar} size=${36} />
         <div style="flex:1"><div class="title-s">${canIntro(state) ? 'Get to know each other' : 'Meet your guide'}</div>
           <div class="body-s muted">${canIntro(state) ? `A quick chat with ${guide.name}, so your whole crew knows you.` : 'Add an Anthropic key to start.'}</div></div>
         <${Icon} name="chevron" size=${18} />
@@ -255,7 +255,7 @@ function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate, onDelete,
         const crew = room.agentIds.map((id) => byId[id]).filter(Boolean);
         const speaker = byId[room.speaking];
         return html`<div class="room-entry" key=${room.id}><button class=${`room-item${room.id === roomId ? ' current' : ''}`} onClick=${() => onOpen(room.id)} aria-current=${room.id === roomId ? 'page' : null}>
-          <${CrewTile} specs=${crew.map((a) => a.avatar)} size=${44} tint=${crew[0] ? tint(crew[0].avatar) : null} />
+          <${GroupPortrait} specs=${crew.map((a) => a.avatar)} face=${faceOf(room, crew)?.avatar} size=${40} thinking=${room.active && Boolean(speaker)} />
           <div class="text">
             <div class="top">
               <span class="name">${room.name}</span>
@@ -277,7 +277,7 @@ function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate, onDelete,
       </div>
       <div class="crew-list">
         ${state.agents.map((agent) => html`<button class="agent-chip" onClick=${() => onDialog({ type: 'agent', agent })} title=${agent.role || agent.name}>
-          <${Avatar} spec=${agent.avatar} size=${26} />${agent.name}
+          <${Portrait} spec=${agent.avatar} size=${26} />${agent.name}
         </button>`)}
       </div>
     </div>`}
@@ -300,7 +300,7 @@ function SearchResults({ found, byId, onOpen }) {
   return html`
     ${found.rooms.length > 0 && html`<div class="sidebar-title"><span class="overline">Rooms</span></div>
       ${found.rooms.map((r) => html`<button class="search-hit" onClick=${() => onOpen(r.id)}>
-        <${CrewTile} specs=${r.agentIds.map((id) => byId[id]?.avatar).filter(Boolean)} size=${32} tint=${byId[r.agentIds[0]] ? tint(byId[r.agentIds[0]].avatar) : null} />
+        <${GroupPortrait} specs=${r.agentIds.map((id) => byId[id]?.avatar).filter(Boolean)} size=${32} />
         <span class="title-s">${r.name}</span></button>`)}`}
     ${found.messages.length > 0 && html`<div class="sidebar-title"><span class="overline">Messages</span></div>
       ${found.messages.map((m) => {
@@ -409,11 +409,8 @@ function Tokens({ room, notify, onClose }) {
 /** The crew's colors glowing softly behind a screen, one agent to a corner; fewer agents take turns. Still. */
 const crewWash = (tints) => [0, 1, 2, 3].map((i) => `--c${i + 1}:${tints[i % tints.length]}`).join(';');
 
-/** An agent's character in a soft circle of its own color. [ring] circles it in its color, for whoever is speaking. */
-function Disc({ spec, size = 40, ring = false, thinking = false }) {
-  return html`<span class=${`disc${ring ? ' ring' : ''}`} style=${`--wash:${tint(spec)};width:${size}px;height:${size}px`}>
-    <${Avatar} spec=${spec} size=${Math.round(size * 0.84)} thinking=${thinking} /></span>`;
-}
+/** An agent's portrait. [ring] circles it in its color, for whoever is speaking. */
+const Disc = ({ spec, size = 40, ring = false, thinking = false }) => html`<${Portrait} spec=${spec} size=${size} ring=${ring} thinking=${thinking} />`;
 
 /** The agent who runs the intro: its room's, else the first on Claude, else the guide a new hub would get. */
 function guideOf(state) {
@@ -442,7 +439,7 @@ function Welcome({ state, onDialog, onIntro, onOpen, onDismiss }) {
   return html`<div class="home">
     <h1 class="display">${name ? html`<span class="faint">${greeting()},</span><br />${name}` : greeting()}</h1>
     ${busy
-      ? html`<p class="home-chip" style=${`--wash:${speaker ? tint(speaker.avatar) : 'var(--live)'}`}>${speaker ? html`<${Avatar} spec=${speaker.avatar} size=${22} />` : html`<span class="dot"></span>`}
+      ? html`<p class="home-chip" style=${`--wash:${speaker ? tint(speaker.avatar) : 'var(--live)'}`}>${speaker ? html`<${Portrait} spec=${speaker.avatar} size=${22} />` : html`<span class="dot"></span>`}
           <span class="shimmer">${speaker ? `${speaker.name} is replying in ${busy.name}` : `Your crew is working in ${busy.name}`}</span></p>`
       : html`<p class="muted home-sub">${!state.agents.length ? "Let's set up your crew"
           : state.agents.length === 1 ? `${state.agents[0].name} is here when you need them`
@@ -463,11 +460,11 @@ function Welcome({ state, onDialog, onIntro, onOpen, onDismiss }) {
     ${state.nudges?.length > 0 && html`<${NudgeCard} nudges=${[...state.nudges].reverse().slice(0, 5)} state=${state} onOpen=${onOpen} onDismiss=${onDismiss} />`}
     ${state.agents.length > 0 && html`<div class="stage-title"><span class="overline">Your crew</span>
       <button class="label muted" onClick=${() => onDialog({ type: 'room' })}>New room</button></div>
-    <div class="stage crew-glass" style=${glassOf(state.agents)}>${state.agents.map((agent) => html`<button class="stage-member" title=${`Edit ${agent.name}`} onClick=${() => onDialog({ type: 'agent', agent })}>
-      <${Avatar} spec=${agent.avatar} size=${76} thinking=${speaking.has(agent.id)} />
-      <span class="title-s">${agent.name}</span>${speaking.has(agent.id)
-        ? html`<span class="caption" style=${`color:${inkColor(agent.avatar)}`}>replying</span>`
-        : agent.role && html`<span class="caption faint">${agent.role}</span>`}
+    <div class="stage faces">${state.agents.map((agent) => html`<button class="stage-member" title=${`Edit ${agent.name}`} onClick=${() => onDialog({ type: 'agent', agent })}>
+      <${Portrait} spec=${agent.avatar} size=${60} thinking=${speaking.has(agent.id)} />
+      ${speaking.has(agent.id)
+        ? html`<span class="label" style=${`color:${inkColor(agent.avatar)}`}>replying</span>`
+        : html`<span class="label">${agent.name}</span>`}
     </button>`)}
       <button class="stage-member add" onClick=${() => onDialog({ type: 'agent' })}><span class="plus"><${Icon} name="plus" /></span><span class="title-s">New agent</span></button>
     </div>`}
@@ -518,21 +515,31 @@ function RecentRooms({ state, onOpen }) {
         <button role="radio" aria-checked=${cards} aria-label="Cards" class=${cards ? 'on' : ''} onClick=${() => choose(true)}><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="2.5" /><rect x="4" y="14" width="7" height="6" rx="2.5" /><rect x="14" y="14" width="6" height="6" rx="2.5" /></svg></button>
       </div>`}</div>
     ${cards
-      ? html`<div class="room-cards">${rooms.map((room, i) => {
+      ? html`<div class="room-cards faces">${rooms.map((room, i) => {
         const crew = crewOf(room);
-        return html`<button class=${`room-card crew-glass${i === 0 ? ' wide' : ''}`} style=${glassOf(crew)} onClick=${() => onOpen(room.id)}>
-          <span class="room-card-crew">${crew.slice(0, 3).map((a) => html`<${Avatar} spec=${a.avatar} size=${i === 0 ? 76 : 54} thinking=${room.active && room.speaking === a.id} />`)}</span>
-          ${!room.active && html`<span class="caption faint when">${ago(room.updatedAt)}</span>`}
-          <span class="title-s">${room.name}</span>
-          ${i === 0 && html`<span class="body-s muted">${crew.length <= 1 ? `Just you and ${crew[0]?.name ?? 'your agent'}` : `${crew.length} agents`}</span>`}
-          ${line(room, crew)}
-        </button>`;
+        const face = faceOf(room, crew);
+        const thinking = room.active && face && room.speaking === face.id;
+        const when = !room.active && html`<span class="caption faint when">${ago(room.updatedAt)}</span>`;
+        // The first a wide card with its face beside its name; the rest one face each, the count beside the name.
+        return i === 0
+          ? html`<button class="room-card crew-glass wide" onClick=${() => onOpen(room.id)}>
+            <span class="head"><${GroupPortrait} specs=${crew.map((a) => a.avatar)} face=${face?.avatar} size=${44} thinking=${thinking} />
+              <span class="text"><span class="title-s">${room.name}</span>
+                <span class="body-s faint">${crew.length <= 1 ? `Just you and ${crew[0]?.name ?? 'your agent'}` : crew.map((a) => a.name).join(', ')}</span></span>${when}</span>
+            ${line(room, crew)}
+          </button>`
+          : html`<button class="room-card crew-glass" onClick=${() => onOpen(room.id)}>
+            ${face && html`<${Portrait} spec=${face.avatar} size=${40} thinking=${thinking} />`}${when}
+            <span class="title-s">${room.name}${crew.length > 1 && html`<span class="count">+${crew.length - 1}</span>`}</span>
+            ${line(room, crew)}
+          </button>`;
       })}</div>`
-      : html`<div class="room-rows">${rooms.map((room) => {
+      : html`<div class="room-rows one-card">${rooms.map((room) => {
         const crew = crewOf(room);
         const talking = crew.find((a) => a.id === room.speaking);
-        return html`<button class="room-line crew-glass" style=${glassOf(crew)} onClick=${() => onOpen(room.id)}>
-          <span class="room-stickers" style=${crew[0] ? `--wash:${tint(crew[0].avatar)}` : ''}>${crew.slice(0, 3).map((a) => html`<${Avatar} spec=${a.avatar} size=${crew.length === 1 ? 50 : 32} />`)}</span>
+        const face = faceOf(room, crew);
+        return html`<button class="room-line" onClick=${() => onOpen(room.id)}>
+          <${GroupPortrait} specs=${crew.map((a) => a.avatar)} face=${face?.avatar} size=${48} thinking=${room.active && face && room.speaking === face.id} />
           <div class="text"><div class="top"><span class="title-s">${room.name}</span>${room.active
             ? html`<span class="dot" style=${`background:${talking ? inkColor(talking.avatar) : 'var(--text-2)'}`}></span>`
             : html`<span class="caption faint">${ago(room.updatedAt)}</span>`}</div>${line(room, crew)}</div>
@@ -700,7 +707,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
               : room.mode === 'lead' && lead ? `Led by ${lead.name}` : `Round table · ${agents.map((a) => a.name).join(', ')}`}
         </div>
       </div>
-      <button class="avatar-stack standing" title="Who's in this room" aria-label="Who's in this room" onClick=${() => onDialog({ type: 'members', room })}>${agents.slice(0, 4).map((a) => html`<${Avatar} spec=${a.avatar} size=${run.active && run.agentId === a.id ? 46 : 40} thinking=${run.active && run.agentId === a.id} />`)}</button>
+      <button class="avatar-stack faces" title="Who's in this room" aria-label="Who's in this room" onClick=${() => onDialog({ type: 'members', room })}>${agents.slice(0, 3).map((a) => html`<${Portrait} spec=${a.avatar} size=${32} thinking=${run.active && run.agentId === a.id} />`)}${agents.length > 3 && html`<${More} count=${agents.length - 3} />`}</button>
       ${contextTokens != null && html`<button class="token-chip" title="About how many tokens each reply sends" aria-label=${`About ${formatTokens(contextTokens)} tokens per reply`} onClick=${() => onDialog({ type: 'tokens', room })}>${formatTokens(contextTokens)}</button>`}
       <button class="icon-button" aria-label="Room options" aria-expanded=${menu} onClick=${() => setMenu(!menu)}><${Icon} name="more" /></button>
       ${menu && html`<div class="menu" onMouseLeave=${() => setMenu(false)}>
@@ -926,6 +933,7 @@ const clock = (at) => new Date(at).toLocaleTimeString(undefined, { hour: 'numeri
 
 function AgentMessage({ message, agent, showModel, mentions, continued = false, notify }) {
   const streaming = message.status === 'streaming';
+  const working = streaming && !message.text && (message.activity ?? []).every((a) => a.done);
   const text = streaming ? closeOpenMarkup(message.text) : message.text;
   const rendered = useMemo(() => (message.cards?.length ? '' : markdown(text, mentions)), [text, message.cards]);
   // With cards, the text is cut where each card goes; only the last piece can still be arriving.
@@ -936,7 +944,10 @@ function AgentMessage({ message, agent, showModel, mentions, continued = false, 
     return parts.map((p, i) => (p.text ? { html: markdown(streaming && i === last ? closeOpenMarkup(p.text) : p.text, mentions) } : p));
   }, [message.text, message.cards, streaming]);
   return html`<div class="agent-message">
-    ${continued ? html`<span class="disc-space"></span>` : html`<span class="speaker"><${Avatar} spec=${agent?.avatar} size=${38} thinking=${streaming && Boolean(message.text)} /></span>`}
+    ${continued ? html`<span class="disc-space"></span>` : working
+      // While it works out what to say, the agent's whole character stands there; once words arrive, its portrait.
+      ? html`<span class="speaker working"><${Avatar} spec=${agent?.avatar} size=${64} thinking /></span>`
+      : html`<span class="speaker"><${Portrait} spec=${agent?.avatar} size=${36} thinking=${streaming && Boolean(message.text)} /></span>`}
     <div class="body">
       ${!continued && html`<div class="agent-head">
         <span class="name">${agent?.name ?? message.author.name}</span>
@@ -950,7 +961,7 @@ function AgentMessage({ message, agent, showModel, mentions, continued = false, 
           ? html`<${ToolCard} key=${p.card.id} card=${p.card} agent=${agent} notify=${notify} />`
           : html`<div class="md" dangerouslySetInnerHTML=${{ __html: p.html }}></div>`))}</div>`
         : message.text && html`<div class="md" dangerouslySetInnerHTML=${{ __html: rendered }}></div>`}
-      ${streaming && !message.text && (message.activity ?? []).every((a) => a.done) && html`<div class="thinking-dots" style=${`--wash:${tint(agent?.avatar)};--ink:${inkColor(agent?.avatar)}`} aria-label="Thinking"><i></i><i></i><i></i></div>`}
+      ${working && html`<div class="thinking-dots" style=${`--wash:${tint(agent?.avatar)};--ink:${inkColor(agent?.avatar)}`} aria-label="Thinking"><i></i><i></i><i></i></div>`}
       ${message.status === 'error' && html`<div class="failure"><span class="dot"></span><div>${message.error || "This agent couldn't reply."}</div></div>`}
       ${message.status === 'stopped' && html`<div class="caption faint" style="margin-top:6px">Stopped</div>`}
       ${!streaming && message.sources?.length > 0 && html`<div class="sources">${message.sources.map((s, i) => html`<a class="source" href=${s.url} target="_blank" rel="noopener noreferrer" title=${s.title}>
@@ -1099,7 +1110,7 @@ function Composer({ room, agents, running, notify, onSent, replyingTo = null, re
       onDragOver=${(e) => { e.preventDefault(); setDragging(true); }}
       onDragLeave=${() => setDragging(false)}
       onDrop=${(e) => { e.preventDefault(); setDragging(false); add(e.dataTransfer.files); }}>
-      ${matches.length > 0 && html`<div class="mention-chips">${matches.map((a) => html`<${Pill} label=${a.name} small onClick=${() => insertMention(a)}><${Avatar} spec=${a.avatar} size=${20} /><//>`)}</div>`}
+      ${matches.length > 0 && html`<div class="mention-chips">${matches.map((a) => html`<${Pill} label=${a.name} small onClick=${() => insertMention(a)}><${Portrait} spec=${a.avatar} size=${20} /><//>`)}</div>`}
       ${replyingTo && html`<div class="replying">
         <span style=${`color:${replyAgent ? inkColor(replyAgent.avatar) : 'var(--text-2)'}`}><${Icon} name="reply" size=${16} /></span>
         <div class="text"><div class="label" style=${replyAgent ? `color:${inkColor(replyAgent.avatar)}` : ''}>Replying to ${replyAgent?.name ?? replyingTo.author.name}</div>

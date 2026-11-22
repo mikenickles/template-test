@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import dev.orbit.app.data.Agent
 import dev.orbit.app.data.Room
 import dev.orbit.app.data.SharedContent
-import dev.orbit.app.ui.components.CrewTile
+import dev.orbit.app.ui.components.GroupPortrait
 import dev.orbit.app.ui.components.Hairline
 import dev.orbit.app.ui.components.OrbitCard
 import dev.orbit.app.ui.components.OrbitIcon
@@ -113,7 +113,7 @@ fun ShareScreen(content: SharedContent, rooms: List<Room>, agents: List<Agent>, 
                     Modifier.fillMaxWidth().tap(RectangleShape, 0.985f) { onPick(room) }.padding(horizontal = OrbitDimens.gutter, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    CrewTile(crew.map { it.avatar })
+                    GroupPortrait(crew.map { it.avatar }, size = 48.dp, ring = Orbit.colors.bg)
                     Column(Modifier.weight(1f).padding(start = 14.dp)) {
                         Text(room.name, style = OrbitType.titleM, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(

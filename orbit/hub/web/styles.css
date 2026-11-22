@@ -708,3 +708,47 @@ button.avatar-stack.standing .avatar { filter: drop-shadow(0 3px 4px rgba(42, 28
 .intro-card, .intro-mini, .crew-ready { background: var(--surface) !important; }
 .intro-card::before, .intro-mini::before, .crew-ready::before { display: none; }
 .agent-message .name { color: var(--text); }
+
+/* Portraits: characters as faces in circles, one size per place, nothing breaking out of its box. The whole
+   character is for the agent's own page and the moment they're working on a reply. */
+.portrait { position: relative; display: inline-block; flex: none; border-radius: 50%; }
+.portrait .face { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; background: var(--tile); }
+.portrait .face img { position: absolute; width: 150%; height: 150%; left: -25%; top: -8%; user-select: none; }
+.portrait .former { position: absolute; inset: 8%; border-radius: 50%; background: rgb(163 168 180 / 0.55); }
+.portrait.ring { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--ring); }
+:root { --tile: var(--bg); }
+@media (prefers-color-scheme: dark) { :root { --tile: var(--raised); } }
+.group-portrait { position: relative; display: inline-block; flex: none; }
+.more { position: absolute; right: -6px; bottom: -4px; min-width: 22px; height: 20px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: var(--high); box-shadow: 0 0 0 2px var(--surface); color: var(--text-2); font-size: 11px; font-weight: 600; line-height: 20px; text-align: center; }
+
+/* Home: the crew as a line of faces. */
+.stage.faces { gap: 4px; margin: 0 -6px; }
+.stage.faces .stage-member { width: 84px; padding: 8px 4px; gap: 6px; }
+.stage.faces .stage-member .portrait { transition: transform 0.25s cubic-bezier(.34,1.56,.64,1); }
+.stage.faces .stage-member:hover .portrait { transform: translateY(-3px); }
+.stage.faces .stage-member.add .plus { width: 60px; height: 60px; margin-bottom: 0; }
+
+/* Home: rooms as one card parted by hairlines, or as cards with one face each. */
+.room-rows.one-card { gap: 0; background: var(--surface); border: var(--edge); box-shadow: var(--lift); border-radius: 24px; overflow: hidden; }
+.room-rows.one-card .room-line { border-radius: 0; min-height: 0; padding: 12px 16px; background: none; border: 0; box-shadow: none; }
+.room-rows.one-card .room-line + .room-line { border-top: 1px solid var(--hairline); }
+.room-rows.one-card .room-line:hover { transform: none; background: color-mix(in srgb, var(--high) 45%, transparent); }
+.room-cards.faces { gap: 12px; padding-top: 0; }
+.room-cards.faces .room-card { padding: 16px; gap: 2px; min-height: 160px; }
+.room-cards.faces .room-card .portrait, .room-cards.faces .room-card .group-portrait { margin-bottom: 10px; }
+.room-cards.faces .room-card.wide { padding: 16px 18px; min-height: 0; }
+.room-cards.faces .room-card.wide .head { display: flex; align-self: stretch; align-items: center; gap: 12px; margin-bottom: 10px; }
+.room-cards.faces .room-card.wide .head .group-portrait { margin: 0; }
+.room-cards.faces .room-card.wide .head .text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.room-cards.faces .room-card.wide .when { position: static; order: 0; margin: 0; align-self: flex-start; }
+.room-cards.faces .room-card .count { color: var(--text-3); font-size: 12px; font-weight: 400; margin-left: 6px; }
+
+/* A room: overlapping faces in the bar, portraits beside messages, the whole character while one thinks. */
+button.avatar-stack.faces { display: flex; align-items: center; padding: 4px 6px; border-radius: 999px; }
+button.avatar-stack.faces .portrait { box-shadow: 0 0 0 2px var(--surface); }
+button.avatar-stack.faces .portrait + .portrait { margin-left: -9px; }
+button.avatar-stack.faces .more { position: static; margin-left: 4px; }
+.agent-message .speaker { width: 36px; margin-top: 0; }
+.agent-message .speaker.working { width: 64px; margin: -14px 0 0 -6px; }
+.disc-space { width: 36px; }
+.sidebar .room-item .group-portrait .more { box-shadow: 0 0 0 2px var(--bg); }

@@ -79,13 +79,17 @@ Home shows a greeting and who is replying right now, then notes from the crew as
 rooms. At the bottom of Home on the phone, and at the top of the room list on the PC, **Search rooms and
 messages** finds any room by name or description, and any message with all the words typed, newest first.
 The look is calm on purpose: plain dark or warm light surfaces, cards with a thin edge, and no tints or glows,
-so the characters are the only color. The crew on Home stands on its shelf, heads over the top, agents appear as
-themselves beside their messages, and color in text marks only who is replying right now. The header shows the
+so the characters are the only color. Agents appear as portraits: their character's head in a circle, one size,
+nothing breaking out of its box. The crew on Home is a line of faces (tap one to open that agent); each room shows
+one face, whoever is replying or spoke last, with "+2" on its corner for the others in it; messages have small
+portraits. An agent's whole character appears on its own page and in a room while it's working out what to say,
+standing beside the chat until its words arrive. Color in text marks only who is replying right now. The header shows the
 PC's friendly name: "<first name>'s PC" once Treehouse knows the user's name, else the computer's own name. Rename
 it from Settings: tap the PC's name at the top (on the PC, Settings, This PC).
 Rooms on Home show as a list or as cards: the switch beside Rooms (beside Recent rooms on the PC) chooses, and
-each phone or browser remembers it. As cards, the most recent room is a wide card with its crew big, and the rest
-are tiles with the crew peeking over the top, the last message and when it was.
+each phone or browser remembers it. As a list, rooms sit in one card parted by thin lines. As cards, the most
+recent room is a wide card with its face, who's in it and its last message, and the rest are tiles with one face,
+how many others are in the room, the last message and when it was.
 Every page on the phone has the same frosted bar at the top. Swiping back slides the page away to the right with
 the finger, and the page behind is already there underneath; letting go halfway finishes it, and swiping back
 the other way calls it off.

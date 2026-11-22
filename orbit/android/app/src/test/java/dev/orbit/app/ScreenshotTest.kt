@@ -27,6 +27,9 @@ import dev.orbit.app.ui.PairState
 import dev.orbit.app.ui.RoomUiState
 import dev.orbit.app.ui.components.ActionSheetContent
 import dev.orbit.app.ui.components.AgentAvatar
+import dev.orbit.app.ui.components.AgentPortrait
+import dev.orbit.app.ui.components.GroupPortrait
+import dev.orbit.app.ui.components.PortraitStack
 import dev.orbit.app.ui.components.CrewTile
 import dev.orbit.app.ui.components.Characters
 import dev.orbit.app.ui.components.LocalHubImages
@@ -144,6 +147,18 @@ class ScreenshotTest {
                 CrewTile(SampleCrew.take(3))
                 CrewTile(SampleCrew.drop(2))
                 AgentAvatar(SampleCrew[2], Modifier.padding(start = 8.dp), size = 34.dp, thinking = true)
+            }
+            // Portraits: the everyday face in lists and chat.
+            for (size in listOf(56, 36)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    for (number in 1..6) AgentPortrait(AvatarSpec(number * 4 - size % 3), size = size.dp)
+                    AgentPortrait(FormerAgentAvatar, size = size.dp)
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                GroupPortrait(SampleCrew.take(3), size = 48.dp)
+                PortraitStack(SampleCrew, size = 30.dp, ring = Orbit.colors.bg, max = 3)
+                AgentPortrait(SampleCrew[2], size = 40.dp, thinking = true)
             }
         }
     }
@@ -313,7 +328,7 @@ class ScreenshotTest {
                         SheetAction("Clear chat", OrbitIcon.Retry) {},
                         SheetAction("Delete room", OrbitIcon.Trash, danger = true) {},
                     ),
-                    leading = { dev.orbit.app.ui.components.CrewTile(listOf(nova.avatar, pixel.avatar, sage.avatar), size = 44.dp) },
+                    leading = { dev.orbit.app.ui.components.GroupPortrait(listOf(nova.avatar, pixel.avatar, sage.avatar), size = 44.dp) },
                 ) {}
             }
         }

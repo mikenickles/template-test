@@ -360,7 +360,7 @@ private fun PlanCard(card: Card, avatar: AvatarSpec, agentName: String, now: Lon
         },
     ) {
         Row(Modifier.padding(OrbitDimens.rowPad), verticalAlignment = Alignment.CenterVertically) {
-            AvatarDisc(avatar, size = 40.dp)
+            AgentPortrait(avatar, size = 40.dp)
             Column(Modifier.padding(start = 12.dp)) {
                 Text(if (followUp) "$agentName will check in" else "$agentName is watching", style = OrbitType.titleS, color = c.text)
                 Text(

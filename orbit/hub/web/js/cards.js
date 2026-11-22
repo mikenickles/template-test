@@ -2,7 +2,7 @@
 // added, emails, a draft it saved, Drive files, or a follow-up or watch it set. Colored by the agent who made them.
 import { useState } from '/vendor/hooks.mjs';
 import { api } from './api.js';
-import { Avatar, inkColor, tint } from './avatar.js';
+import { Portrait, inkColor, tint } from './avatar.js';
 import { Icon, html } from './ui.js';
 
 const MAX_ROWS = 5;
@@ -165,7 +165,7 @@ function PlanCard({ card, agent, now, notify }) {
   const detail = followUp ? card.note : [card.what, card.condition && `for when ${card.condition}`].filter(Boolean).join(', ');
   return html`<${Frame} footer=${ended ? html`<span class="caption faint">${ended}</span>` : html`<button class="pill" onClick=${cancel}>${followUp ? 'Cancel' : 'Stop watching'}</button>`}>
     <div class="tool-card-head">
-      <span class="disc" style=${`--wash:${tint(agent?.avatar)};width:40px;height:40px`}><${Avatar} spec=${agent?.avatar} size=${34} /></span>
+      <${Portrait} spec=${agent?.avatar} size=${40} />
       <div><div class="title-s">${agent?.name ?? 'Your agent'} ${followUp ? 'will check in' : 'is watching'}</div>
         <div class="caption ink">${followUp ? (card.time ? followUpWhen(card.time, now) : '') : card.every === 'hour' ? 'Checked every hour' : 'Checked every day'}</div></div>
     </div>
