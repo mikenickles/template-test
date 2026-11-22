@@ -10434,3 +10434,12 @@ html[data-ambient="on"] .lp-orb:has(.kit)::before {
 .avatar-stack.head-row .head-name {
   line-height: 1.2;
 }
+
+/* ---- (0.59.4) no fading at all: the chat is fully visible from the very top to the very bottom ---- */
+.chat .log {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.app:not(.desk) .chat::before {
+  display: none;
+}
