@@ -10196,13 +10196,15 @@ a.drawer-head {
   color: var(--text-faint);
 }
 
-/* ---- (0.58.1) the conversation runs all the way to the top of the screen, fading and blurring as it goes ---- */
+/* ---- (0.58.1) the conversation runs up toward the top, fading and blurring as it goes; (0.58.2) nothing
+   shows behind the phone's status bar, and the part under Lyra's name is faint and well blurred ---- */
 .chat .log {
   --fade: linear-gradient(
     transparent 0,
-    rgba(0, 0, 0, 0.22) calc(var(--inset-top) + 18px),
-    rgba(0, 0, 0, 0.55) calc(var(--inset-top) + 64px),
-    #000 calc(var(--inset-top) + 118px),
+    transparent calc(var(--inset-top) + 6px),
+    rgba(0, 0, 0, 0.14) calc(var(--inset-top) + 34px),
+    rgba(0, 0, 0, 0.45) calc(var(--inset-top) + 76px),
+    #000 calc(var(--inset-top) + 124px),
     #000 calc(100% - var(--below) - 40px),
     rgba(0, 0, 0, 0.4) calc(100% - var(--below) + 20px),
     rgba(0, 0, 0, 0.1) 100%
@@ -10212,11 +10214,11 @@ a.drawer-head {
   content: "";
   position: absolute;
   inset: 0 0 auto;
-  height: calc(var(--inset-top) + 110px);
+  height: calc(var(--inset-top) + 116px);
   z-index: 4;
   pointer-events: none;
-  -webkit-backdrop-filter: blur(5px);
-  backdrop-filter: blur(5px);
-  -webkit-mask-image: linear-gradient(#000 35%, transparent);
-  mask-image: linear-gradient(#000 35%, transparent);
+  -webkit-backdrop-filter: blur(9px);
+  backdrop-filter: blur(9px);
+  -webkit-mask-image: linear-gradient(#000 55%, transparent);
+  mask-image: linear-gradient(#000 55%, transparent);
 }

@@ -331,7 +331,15 @@ export function App() {
     } catch {
       // fine: it's only to avoid a flash on start
     }
-    if (isNative) void SystemBars.setStyle({ style: state.theme === "radio" ? SystemBarsStyle.Dark : SystemBarsStyle.Default }).catch(() => {});
+    if (!isNative) return;
+    // (0.58.2) the phone's clock and battery icons: light on a dark page, dark on a light one.
+    // "Default" kept them dark in dark mode, so the look and the phone's setting decide it here.
+    const dark = matchMedia("(prefers-color-scheme: dark)");
+    const apply = () =>
+      void SystemBars.setStyle({ style: state.theme === "radio" || dark.matches ? SystemBarsStyle.Dark : SystemBarsStyle.Light }).catch(() => {});
+    apply();
+    dark.addEventListener("change", apply);
+    return () => dark.removeEventListener("change", apply);
   }, [state?.theme]);
 
   // Keep the chosen accent on <html>, and remember it for the next launch's first paint.
