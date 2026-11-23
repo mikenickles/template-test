@@ -854,3 +854,132 @@ Screenshots looked at:
   - HUD, title, pause, picker and results screens, damage arcs, the spectate view;
   - crouch pose and chevrons in a fight;
   - draw calls in the busiest firefights.
+
+## Round 3, pass 2
+
+Builder fix pass on the five FIXLIST items (DESIGN 16.11). Only `index.html` changed in the game; new scripts are
+`tests/builder_r3c_*.cjs` (`live`: stepped position detector and pacing numbers; `checks`: R3-1 repro, R3-3, R3-4, R3-5,
+R3-6; `balance`: wins, rounds and kills per lane per side; `east`: early east-lane kills on any build; `map`, `rides`, `shots`).
+The testers' scripts and `snapshots/` were not edited.
+
+### Changes
+
+1. **Bots never freeze (R3-1, R3-2, R3-3):**
+   - **R3-1 (sniper frozen in engage):** snipers now stand and scope to fire and crouch only while cycling or reloading, an
+     empty magazine reloads, and every fire, scope or reload marks the bot active. Engage gives up after `lostAfter` 3 s without
+     sight and chases the last known position. A bot that has camped for 15 s relocates (below).
+   - **R3-2 (push and hunt bots idle at the enemy spawn):** at the end of a push or hunt path the brain had no next goal.
+     `brainPathDone` now always moves on: a push hands over to the hunt, and a hunt goes straight to the next search node.
+     Search nodes are in the enemy half, the oldest visited per team in `match.visit`, and claimed so two bots don't pick the
+     same one. A chase or relocation resumes the plan, and `brainIdle` only lets a hold before push time stand.
+   - **Liveness rule (16.11):** a living bot idle for over 5 s (under 0.5 units in 3D) outside allowed stillness gets an `idleLog`
+     entry and a forced move. Allowed: freeze time, a hold before push time, active fighting (fired, scoped or reloaded in the last
+     2 s), climbing or riding, a crossing or ride wait up to 8 s (a crossing wait over 8 s re-routes around that edge). A bot
+     camping within 1 unit for 15 s relocates 4 to 12 units on its own level, or 3 to 20 units on any level from a perch.
+     `idleLog` is in the hook and in `matchReport`.
+   - **Start choice on a re-plan:** a re-plan no longer picks a start node across a stair lip (`segmentEndY`) or a straight walk
+     through the train envelope (`reachableStart`). This removed the last 2 idle entries (an evade loop at the south crayon).
+   - **R3-3:** `startMatch` resets the clock, the accumulator, the train pose and cars, live grenades, the bot id sequence and all
+     held input before seeding.
+2. **Pacing and awareness:**
+   - `holdUntil` 20 (push earlier when leading), `huntLast` 60, `lostAfter` 3, `retreatCalm` 5.
+   - Hunt searches unvisited nodes.
+   - Hits and near misses (a shot passing within 3 units) alert a bot in any state: it looks at the source for 0.7 s, then fights,
+     covers or retreats. Heard shots turn the head.
+   - Visible live grenades within 8 units are fled (8.5 units).
+   - Per-weapon engage ranges (SMG 40, pistol 50, rifle 90, sniper any): beyond range the bot closes in, re-planning every 3 s.
+3. **Difficulty, east lane, train:**
+   - Recruit preset: reaction 1.0 s, aim error 7.0 to 3.0 settling over 2.0 s, bursts 2 to 3, pause 0.9 s.
+   - East lane: a cardboard toy box `m.E-d.toybox` (x 81.4–85, z 78.5–81.5, 2.5 high) blocks the fort-to-fort sightline.
+     `m.e.w` was replaced by `m.e.cn` (84, 0, 75), `m.e.u` (89, 0, 80) and `m.e.cs` (84, 0, 85), routing under the chair.
+     All three are at the DESIGN positions; none was moved. The tunnel drop now lands on `m.e.u`.
+   - `rideChance` 0.6, `rideMaxWait` 8. The wish to ride now survives fights (`rideWanted`) and is re-checked every 2 s until
+     the bot reaches the enemy half.
+   - Whistle: same sound, pitch ×1.15 on the west straight and ×0.85 on the east.
+4. **Visual:**
+   - Spectating shows the watched bot's viewmodel and scope and hides its model.
+   - Bodies tip and fade toward grey (`bodyTint` 0.5) with the gun lying flat.
+   - Climbing: no base, leaning in, arms up, gun slung.
+   - Train: underframe, bogies and wheels at `wheelY` 0.68; the engine rear trim and gondola door posts were offset 0.03 to stop
+     z-fighting.
+   - The grenade burst sphere is rendered once at opacity 0 during load.
+5. **Rules and callouts:**
+   - R3-4: after three replays an equal 0:00 goes to total health, then to round damage (reason `damage`), else the round is drawn
+     ("ROUND DRAWN", no point, replay count reset).
+   - R3-5: spectating starts after 1.5 s.
+   - R3-6: every callout obeys one per bot per 4 s, and the same "Enemy …" text is not repeated within 8 s by anyone.
+   - Lane callouts say "our side" or "their side"; "I'm hit" once per life.
+
+### Measured
+
+| Check | Result |
+| --- | --- |
+| Position detector (`builder_r3c_live`: living bot under 0.5 units for 37 s in a live round, stepped every tick), 16 matches per difficulty, seeds 1000–1015 | frozen periods recruit 0, regular 0, veteran 0. `idleLog` 0 / 0 / 0, `stuckLog` 0 / 0 / 0, `trainRescueLog` 0 / 0 / 0, errors 0 |
+| Bug tester's `bug_r3_01_matches.cjs`, regular seeds 1 and 2 | 0 "stationary over 62 s" entries. stuckLog 0, trainRescues 0, same=true, errors []. Its other categories: 14 "stall >12 s", nearly all in engage with the last shot under 4 s before; 9 "enemy in view 3 s, never fired" at 57–120 units, mostly beyond the engage range; 1 "never left spawn" (Tan 5 in round 6, traced: crossed the map, pushed, hunted and came back to fight at its own spawn); 6 "inside a static solid" on the desk-top climb, the known BUGS line 164 case |
+| R3-1 repro, recruit seed 201 autoplay, at 40 s | Tan 2 and Green 3 snipers in engage; in the next 20 s each fired 5 shots and moved 11.9 and 13.4 units |
+| R3-3, regular seed 1, three times in one page | identical: Tan 5-2, 7 rounds, 633.5 s, 53 kills, 0 idle |
+| Rounds to 0:00 and median length (16 matches each) | recruit 14.6 % (18/123), median 116.7 s; regular 4.0 % (5/124), 80.0 s; veteran 1.7 % (2/118), 80.1 s. Recruit seeds 2000–2039: old 3B build 46.7 % (161/345 time or replay), new 14.8 % (47/318) |
+| Damage per second, rifle duel (`feel_r3_duel`, 16 trials) | Recruit 50.8 at 10 units, 13.0 at 30 (3B: 93 and 37); Veteran 135.5 and 49.4 |
+| Early (first 20 s) east-lane kills over 50 units, per round | 6 seeds each, 700+: old build recruit 0.34, regular 0.30, veteran 0.12; new 0.05, 0.11, 0.19. 16 matches (seeds 1000+): new 0.057, 0.097, 0.271 |
+| Rides per match (16 matches) | recruit 0.44 (7 of 35 tries), regular 0.19 (3/25), veteran 0.19 (3/23) |
+| R3-4 forced ties | replay 1, 2, 3, then `draw` with replays back to 0, then replay 1 |
+| R3-5 | spectating after 1.517 s |
+| R3-6 | 55 callouts in a match, 0 under 4 s apart from one bot, 10 "I'm hit" |
+| Routes | all 18 ok walking and sprinting, no damage. `validateWaypoints()` `[]`. 342 single-edge walks ok (the new east edges included) |
+| startNavTest, 10 bots, 10 minutes, seeds 1 and 2 | every edge kind, route and crossing used, 344 edge directions, 0 stuck, 0 rescues, 0 envelope seconds, 0 train pushes, rides 10 / 15 |
+| Draw calls (`builder_r3b_fight`, 120 frames of a live round) | max 15, mean 14.9, max triangles 31,286. Sim 0.23 ms per tick |
+| File size | 326,450 bytes (3B: 306,871) |
+| Console errors | `[]` in every script |
+
+**Balance** (`builder_r3c_balance`, autoplay, seeds 2000–2039 per difficulty = 120 matches; kills by victim region):
+
+| Difficulty | Wins G / T | Rounds G / T / none | Kills G / T | Rounds to time or replay |
+| --- | --- | --- | --- | --- |
+| Recruit | 12 / 28 | 130 / 171 / 17 | 1061 / 1192 | 47 of 318 |
+| Regular | 23 / 17 | 161 / 141 / 13 | 1194 / 1123 | 14 of 315 |
+| Veteran | 20 / 20 | 150 / 147 / 4 | 1092 / 1092 | 7 of 301 |
+| **All 120** | **55 / 65** | **441 / 459** | **3347 / 3407** | |
+
+| Kills per lane | west | centre | east | desk | bed | shelves |
+| --- | --- | --- | --- | --- | --- | --- |
+| By Green | 1067 | 1035 | 923 | 147 | 142 | 33 |
+| By Tan | 1019 | 1074 | 911 | 190 | 185 | 28 |
+
+The Recruit 12–28 was not repeated. On seeds 3000–3039 Recruit went 19 / 21 (rounds 154 / 154). On seeds 2000–2039 the old 3B
+build went 20 / 20. So Recruit over 80 matches is 31 / 49 and all 160 matches are 74 / 86. Neither side is clearly ahead and no
+lane is lopsided. Tan's 190 desk and 185 bed kills against Green's 147 and 142 are the largest gap.
+
+Screenshots looked at (`screenshots/round3/`):
+- `builder_r3c_spectating.png`: "Spectating Green 1" from Green 1's eye. Its rifle is in the viewmodel, the HUD shows its ammo
+  (24/90), and no part of its own model is in the frame. The callout reads "Enemy west lane, their side".
+- `builder_r3c_body.png`, `builder_r3c_body_close.png`: a Tan body lying flat on the floor next to a living Tan bot. The body is a
+  visibly duller, greyer tan. Its gun was not visible in either shot (under the body or behind the viewmodel), so the flat gun was
+  not confirmed by eye.
+- `builder_r3c_climbing.png`: a Tan bot high on the tall-shelf string, seen from below. It is off the string's line and leaning in.
+  From this angle the arm and slung-gun pose cannot be read.
+- `builder_r3c_train_wheels.png`: a flatbed from floor level. Red wheels sit on the rails under the deck, with a dark bogie
+  between them. Nothing flickers on the visible faces.
+
+### Done differently, and why
+
+- The new east nodes are at the DESIGN positions; none needed moving.
+- Snipers stand to fire. Crouching scoped while waiting was the R3-1 freeze.
+- A camping bot relocates after 15 s, even in engage. Without this, 13 Recruit perch campers counted as frozen.
+- The ride wish persists until the bot reaches the enemy half. Deciding once at push time gave almost no wait-node arrivals.
+- The whistle keeps the one sound name `train_whistle` and changes pitch per straight.
+- Callouts: "Enemy down" and "I'm down" also obey the 4 s limit. The north fort counts as a lane for "our side" / "their side".
+
+### Design problems (for the lead)
+
+- **Rides are still rare** (0.19 to 0.44 per match). A deck reaches the Centre's wait node within 8 s of push time only about a
+  fifth of the time. That wait node is behind the hold, and fights interrupt the walk. Suggestion: let the Centre time its push to
+  the next deck.
+- **Veteran early east kills did not fall** (0.12 to 0.19 and 0.27 per round on the two samples). The toy box blocks the corridor
+  ray, but Veteran snipers still find angles past it from the forts.
+- **Recruit rounds are long** (median 117 s against 80 s on the other difficulties). They are within the 20 % time target.
+
+### Known weak spots
+
+- Shot-in-the-back reaction was built but not measured with a script in this pass.
+- First-burst frame time was not measured (headless software rendering).
+- The tester's "enemy in view, never fired" fires for rifles beyond 90 units and SMGs beyond 40 by design of the engage ranges.

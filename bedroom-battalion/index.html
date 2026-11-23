@@ -276,15 +276,17 @@ const CONFIG = {
            pushEps: 0.02, bandEps: 0.03,   // pushed this far clear; parts lower than feet + bandEps do not push
            envCell: 0.25, envStep: 0.1, envBox: [36, 84, 28, 132], envBand: [13.5, 19.5],   // swept-envelope grid (x0, x1, z0, z1)
            crossLook: 1.5, crossMargin: 2, span: 67,   // a cross edge starts only if no car reaches it within crossLook s (16.10: was 3); span = track the train covers
-           whistleZ: 80, jointGap: 6, axles: [-4.7, -3.3, 3.3, 4.7],      // wheel axles along each car; a clack per axle per rail joint
+           whistleZ: 80, whistlePitch: { west: 1.15, east: 0.85 }, jointGap: 6, axles: [-4.7, -3.3, 3.3, 4.7],      // wheel axles along each car; a clack per axle per rail joint
            clackDelays: [0, 0.35, 2.0, 2.35],   // = (lead axle - each axle) / speed: one logged clack event per car per joint plays all four axles
            rumbleGain: 0.35, rumbleRef: 6, clackRange: 45, soundSpeed: 60, audioRef: 5,   // distance attenuation ref / doppler sound speed
            colors: { engine: '#1F4FA8', boxcar: '#D43C2E', flatbed: '#F2C230', gondola: '#F08A2A', caboose: '#7B4BB5',
                      trim: '#F2C230', wheel: '#D43C2E', dark: '#2B2F36', cargo: '#2F6FD0', window: '#BFD3E0' },
+           wheelY: 0.68, bogieHalf: 1.4, frameHalf: 1.3, zOff: 0.03,   // 16.11 looks: wheels on the rail top, narrower bogies; coplanar trim pushed out
            grenadeGrip: 0.35,             // tangential speed relative to a car kept on a bounce, so a grenade picks up most of the car's velocity
            surface: 'metal' },
   soldier: { body: [0.8, 1.3, 0.5], crouchBody: 0.7, head: 0.45, base: [1.0, 0.05, 0.8], gun: [0.1, 0.12, 0.75], gunAt: [0.32, 1.05, -0.18],
-             gunColor: '#3A4048', tipTime: 0.25, chips: 8, bob: 0.06, stride: 1.2,
+             gunColor: '#3A4048', tipTime: 0.25, chips: 8, bob: 0.06, stride: 1.2, bodyGrey: '#8C8C8C', bodyTint: 0.5, climbTilt: 0.21, climbBack: 0.28,
+             arms: [0.62, 0.55, 0.12],     // raised-arms box, shown only while climbing
              chevron: { range: 60, above: 0.55, size: 0.32, losHz: 10 } },
   bot: { max: 10, hp: 100, crossWaitCost: 5, arrive: 0.3, arriveY: 0.75, sprintCross: true,
          costClimb: 1.5, costRamp: 1.2, costJump: 4, costCross: 2, waitCost: 5, maxWait: 8,     // A* edge costs (DESIGN 16.3); waitCost per s of waiting
@@ -298,19 +300,26 @@ const CONFIG = {
   navTest: { pRoute: 0.2, pEdge: 0.35, pRide: 1 },
   // ---- round 3B: combat, team play, match rules, HUD (DESIGN.md 16.4 to 16.6, 16.10) ----
   difficulty: {      // DESIGN 16.4 presets; aim error in degrees (half angle), burst in shots, strafe = chance per engagement
-    recruit: { label: 'Recruit', reaction: 0.70, aimAcquire: 5.0, aimSettled: 2.0, settle: 1.6, headChance: 0.00, burst: [3, 4], burstPause: 0.55, vision: 90, strafe: 0.0, grenadeChance: 0.10, retreat: 25 },
+    recruit: { label: 'Recruit', reaction: 1.00, aimAcquire: 7.0, aimSettled: 3.0, settle: 2.0, headChance: 0.00, burst: [2, 3], burstPause: 0.90, vision: 90, strafe: 0.0, grenadeChance: 0.10, retreat: 25 },   // 16.11
     regular: { label: 'Regular', reaction: 0.45, aimAcquire: 3.2, aimSettled: 1.1, settle: 1.1, headChance: 0.10, burst: [4, 6], burstPause: 0.35, vision: 120, strafe: 0.5, grenadeChance: 0.30, retreat: 35 },
     veteran: { label: 'Veteran', reaction: 0.28, aimAcquire: 2.0, aimSettled: 0.55, settle: 0.7, headChance: 0.25, burst: [5, 8], burstPause: 0.22, vision: 140, strafe: 1.0, grenadeChance: 0.50, retreat: 40 } },
-  ai: { cone: 110, losHz: 10, hearRange: 40, targetSpeedK: 7, movingMult: 1.5, lostAfter: 1.5, memory: 8,
-        holdUntil: 40, huntLast: 30, coverRadius: 12, coverCheck: 3, coverHeight: 1.2, crouchEye: 1.0, coverMaxPath: 20,
-        peekStand: [0.8, 1.2], peekCrouch: [1.0, 1.8], coverLeave: 6, flankAfter: 6, flankCooldown: 12, retreatRadius: 20, retreatCalm: 8,
+  ai: { cone: 110, losHz: 10, hearRange: 40, targetSpeedK: 7, movingMult: 1.5, lostAfter: 3, memory: 8,          // 16.11: lostAfter 1.5 -> 3
+        holdUntil: 20, huntLast: 60, coverRadius: 12, coverCheck: 3, coverHeight: 1.2, crouchEye: 1.0, coverMaxPath: 20,   // 16.11: 40 -> 20, 30 -> 60
+        peekStand: [0.8, 1.2], peekCrouch: [1.0, 1.8], flankAfter: 6, flankCooldown: 12, retreatRadius: 20, retreatCalm: 5,   // 16.11: 8 -> 5
+        // 16.11 liveness: standing still outside an allowed case for idleLimit s is logged in idleLog and the bot moves on;
+        // any bot that has stayed within campRadius for campLimit s relocates (so nobody holds one spot for half a minute)
+        idleLimit: 5, idleMove: 0.5, activeWindow: 2, campLimit: 15, campRadius: 1.0, waitMax: 8, relocateMin: 4, relocateMax: 12,
+        // 16.11 awareness: hits and near misses (within nearMiss of the bot) turn it in every state; gunshots turn bots without a target
+        nearMiss: 3, lookTime: 0.7, grenadeFlee: 8, fleeDist: 8.5,
+        engageRange: { smg: 40, pistol: 50, rifle: 90, sniper: 1e9 }, closeReplan: 3,
+        searchFresh: 45, searchDistK: 0.25,
         grenadeMin: 10, grenadeMax: 25, grenadeCooldown: 6, grenadeHit: 2.5, grenadeFresh: 3, sniperMin: 12, tacticalReload: 0.5,
         strafeSwap: [0.5, 1.0], holdScan: 0.6, holdScanSpeed: 0.5,
-        rideChance: 0.35, rideMaxWait: 6, rideFlankSlack: 1.15, rideHoldMax: 15,
+        rideChance: 0.6, rideMaxWait: 8, rideFlankSlack: 1.15,                    // 16.11: 0.35 -> 0.6, 6 -> 8
         separation: 0.9, sepRate: 0.3, sepSwirl: 1.0, sepClosing: 1.0, occupiedArrive: 1.3,
         sprintStates: ['setup', 'cover', 'retreat', 'flank'] },
   match: { roundsToWin: 5, roundTime: 150, freeze: 5, roundEnd: 4, maxReplays: 3, deathCam: 1.5, maxSimSeconds: 2400,
-           killFeed: 5, killFeedTime: 5, calloutGap: 4, calloutMax: 3, calloutTime: 4, dmgArcTime: 1, botLogMax: 4000,
+           killFeed: 5, killFeedTime: 5, calloutGap: 4, calloutMax: 2, calloutTime: 4, calloutRegionGap: 8, dmgArcTime: 1, botLogMax: 4000, idleLogMax: 2000,
            playerSpawn: { green: [60, 0, 20, Math.PI], tan: [60, 0, 140, 0] },
            botSpawns: { green: [[52, 0, 13], [56, 0, 20], [64, 0, 20], [68, 0, 18]], tan: [[60, 0, 140], [52, 0, 147], [56, 0, 140], [64, 0, 140], [68, 0, 142]] } },
   roles: {           // DESIGN 16.4: hold node(s) and the push route into the enemy half, per team; primaries to pick from
@@ -339,7 +348,7 @@ const CONFIG = {
     sun: '#FFE2B0', hemiSky: '#FFF8EC', hemiGround: '#D8CFC4',
     bed: '#E9E4DA', bedUnder: '#6F6A63', blanket: '#3D5A99', sheet: '#E8EEF5', desk: '#8FA3B5', shelf: '#EFE9DD',
     fortGreen: '#2F6FD0', fortTan: '#D43C2E', ruin: '#7B4BB5',
-    route: '#FF8A1F', string: '#FFD21F', cover: '#9AA3AD', spare: '#B9BEC6', track: '#4B5058', sleeper: '#3A3E45',
+    cardboard: '#8F6B47', route: '#FF8A1F', string: '#FFD21F', cover: '#9AA3AD', spare: '#B9BEC6', track: '#4B5058', sleeper: '#3A3E45',
     hud: '#FFFFFF', accent: '#FFD21F', danger: '#E0281F'
   },
   debug: { box: '#00E5FF', ramp: '#FF4DFF', cyl: '#B6FF00', string: '#FFD21F', pad: '#FF3030', shell: '#FFFFFF',
@@ -866,6 +875,7 @@ function buildWorld(scene, renderer) {
   boxNS('E-a.1', 80, 83, 30, 33, 0, 6, G, 'wood'); boxNS('E-a.2', 83, 86, 30, 33, 0, 3, G, 'wood'); boxNS('E-a.3', 80, 83, 33, 36, 0, 3, G, 'wood');
   boxNS('E-b.car', 110, 116, 46, 49, 0, 2.2, G, 'plastic');
   box('n.E-c', 79.5, 82.5, 44, 47, 0, 3, G, 'wood');
+  box('m.E-d.toybox', 81.4, 85, 78.5, 81.5, 0, 2.5, CONFIG.color.cardboard, 'card');      // 16.11: closes the fort-to-fort east corridor
   box('tunnel.wall.w', 72.6, 73.6, 68, 92, 0, 6.5, G, 'card'); box('tunnel.wall.e', 80.4, 81.4, 68, 92, 0, 6.5, G, 'card');
   box('tunnel.roof', 72.6, 81.4, 68, 92, 6.5, 8, G, 'card');      // round 3: underside 6.5, so a rider standing on a 5-high roof is scraped off
 
@@ -1537,7 +1547,9 @@ function tickTrain(dt) {
   if ((Math.abs(e.x - K.xWest) < 0.5 && e.pz > T.whistleZ && e.z <= T.whistleZ) || (Math.abs(e.x - K.xEast) < 0.5 && e.pz < T.whistleZ && e.z >= T.whistleZ)) {
     TRAIN.whistles++; TRAIN.whistleLog.push({ time: +(game.time + dt).toFixed(3), side: e.x < 60 ? 'west' : 'east' });
     if (TRAIN.whistleLog.length > 100) TRAIN.whistleLog.shift();
-    sfxAt('train_whistle', e.x + e.fx * 5, 5.5, e.z + e.fz * 5, e.vx, e.vz);
+    const wx = e.x + e.fx * 5, wz = e.z + e.fz * 5, side = e.x < 60 ? 'west' : 'east';     // 16.11: higher on the west straight, lower on the east
+    sfx('train_whistle', listenerGain(wx, 5.5, wz, T.audioRef), dopplerAt(wx, wz, e.vx, e.vz) * T.whistlePitch[side]);
+    TRAIN.lastWhistlePitch = T.whistlePitch[side];
   }
   // wheel clacks: when a car's leading axle crosses a rail joint, that car's axles click over it one after another
   const ax = T.axles, lead = ax[ax.length - 1];
@@ -1554,8 +1566,8 @@ function tickTrain(dt) {
 function trainVisualBoxes(type) {            // [u0, u1, y0, y1, v0, v1, colour]; local u along the car, v to its left
   const T = CONFIG.train, C = T.colors, hl = T.carLen / 2, hw = T.carWid / 2, col = C[type], B = [], t = 0.04;
   const add = (u0, u1, y0, y1, v0, v1, c) => B.push([u0, u1, y0, y1, v0, v1, c]);
-  add(-hl + 0.2, hl - 0.2, 0.5, 0.75, -hw + 0.3, hw - 0.3, C.dark);                                  // underframe
-  for (const u of [-4, 4]) add(u - 1.05, u + 1.05, 0.25, 0.62, -hw + 0.15, hw - 0.15, C.dark);      // bogies
+  add(-hl + 0.2, hl - 0.2, 0.5, 0.75, -T.frameHalf, T.frameHalf, C.dark);                            // underframe (16.11: narrower)
+  for (const u of [-4, 4]) add(u - 1.05, u + 1.05, 0.4, 0.62, -T.bogieHalf, T.bogieHalf, C.dark);   // bogies, inside the wheels so the red wheels show
   add(hl, hl + 0.5, 0.55, 0.85, -0.25, 0.25, C.dark); add(-hl - 0.5, -hl, 0.55, 0.85, -0.25, 0.25, C.dark);   // couplers
   if (type === 'engine') {
     const cu = hl - T.cabLen;
@@ -1565,7 +1577,7 @@ function trainVisualBoxes(type) {            // [u0, u1, y0, y1, v0, v1, colour]
       add(cu + 0.6, hl - 0.6, 4.2, 5.4, sd > 0 ? hw : -hw - t, sd > 0 ? hw + t : -hw, C.window);    // cab side windows
     }
     add(hl, hl + t, 4.2, 5.4, -hw + 0.4, hw - 0.4, C.window); add(hl, hl + t, 1.6, 2.2, -0.5, 0.5, C.trim);   // windscreen, headlight
-    add(-hl, -hl + 0.04, 3.2, 4.6, -1.2, 1.2, C.trim);
+    add(-hl - T.zOff, -hl, 3.2, 4.6, -1.2, 1.2, C.trim);                                               // rear trim outside the body face (16.11)
   } else if (type === 'flatbed') {
     const c = T.cargo / 2;
     add(-hl, hl, 0.75, T.deck, -hw, hw, col); add(-c, c, T.deck, T.deck + T.cargo, -c, c, C.cargo);
@@ -1576,7 +1588,7 @@ function trainVisualBoxes(type) {            // [u0, u1, y0, y1, v0, v1, colour]
     for (const sd of [1, -1]) {
       const v0 = sd > 0 ? hw - w : -hw, v1 = sd > 0 ? hw : -hw + w;
       add(-hl, -d, T.deck, y1, v0, v1, col); add(d, hl, T.deck, y1, v0, v1, col);
-      add(-d - 0.3, -d, T.deck, y1 + 0.05, v0 - t, v1 + t, C.trim); add(d, d + 0.3, T.deck, y1 + 0.05, v0 - t, v1 + t, C.trim);   // door posts
+      add(-d - 0.3, -d + T.zOff, T.deck, y1 + 0.05, v0 - t, v1 + t, C.trim); add(d - T.zOff, d + 0.3, T.deck, y1 + 0.05, v0 - t, v1 + t, C.trim);   // door posts, past the wall ends (16.11)
       add(sd > 0 ? hl - w : -hl, sd > 0 ? hl : -hl + w, T.deck, y1, -hw + w, hw - w, col);
     }
   } else {
@@ -1625,7 +1637,7 @@ function updateTrainVisuals(time) {              // pose at the render time, so 
     const P = TRAIN.rpose[o.car.i];
     _tv.q.setFromAxisAngle(_tv.up, P.yaw);
     _tv.r.makeRotationX(spin);
-    _tv.m.compose(_tv.v.set(P.x + o.u * P.fx + o.v * P.lx, 0.38, P.z + o.u * P.fz + o.v * P.lz), _tv.q, _tv.s.set(1, 1, 1)).multiply(_tv.r);
+    _tv.m.compose(_tv.v.set(P.x + o.u * P.fx + o.v * P.lx, T.wheelY, P.z + o.u * P.fz + o.v * P.lz), _tv.q, _tv.s.set(1, 1, 1)).multiply(_tv.r);   // on the rail top (16.11)
     V.wheelMesh.setMatrixAt(i, _tv.m);
   });
   V.mesh.instanceMatrix.needsUpdate = true; V.wheelMesh.instanceMatrix.needsUpdate = true;
@@ -2001,7 +2013,7 @@ function fireShot(S = player) {
   if (me) spawnCasing(ox + brx * 0.34 + bfx * 0.8, oy - 0.22 + bfy * 0.8, oz + brz * 0.34 + bfz * 0.8, brx * 2.6 + p.vx, 2.2, brz * 2.6 + p.vz, p.y);
   sfxS(S, 'shot_' + name);
   if (me && (e.kind === 'target' || (e.kind === 'soldier' && e.damage > 0))) sfx(killed ? 'kill' : 'hit');
-  if (typeof onGunshot === 'function') onGunshot(S);
+  if (typeof onGunshot === 'function') { onGunshot(S); onShotPath(S, ox, oy, oz, hx, hy, hz); }
   // recoil: the view kicks, then part of the kick returns over 0.25 s
   const up = W.kickUp * DEG, side = (rnd(A) * 2 - 1) * W.kickSide * DEG;
   p.pitch = clamp(p.pitch + up, -L, L); p.yaw = wrapAngle(p.yaw + side);
@@ -2447,8 +2459,8 @@ function buildViewmodels() {
   vm.flash = new THREE.Mesh(fg, new THREE.MeshBasicMaterial({ color: CONFIG.fx.flashColor, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, side: THREE.DoubleSide }));
   vm.flash.frustumCulled = false; vm.flash.visible = false; vm.scene.add(vm.flash);
 }
-function poseViewmodel() {      // places the current gun model (kick, sway, reload dip, draw); returns it
-  const A = arsenal, V = CONFIG.viewmodel, W = CONFIG.weapons[A.current], p = player;
+function poseViewmodel(p = player) {      // places the current gun model of soldier p (kick, sway, reload dip, draw); returns it
+  const A = p.arsenal || arsenal, V = CONFIG.viewmodel, W = CONFIG.weapons[A.current];
   const g = vm.guns[A.current], sp = Math.min(1, Math.hypot(p.vx, p.vz) / CONFIG.move.sprint) * (p.onGround ? 1 : 0.2), t = game.time * V.swayFreq;
   const rl = A.reloadT > 0 ? Math.sin(Math.PI * (1 - A.reloadT / W.reload)) : 0, dr = A.drawT > 0 ? A.drawT / W.draw : 0, aim = A.gAim ? 1 : 0;
   g.position.set(V.pos[0] + Math.sin(t) * V.swayAmp * sp, V.pos[1] + Math.abs(Math.cos(t)) * V.swayAmp * sp - rl * V.reloadDip - (dr + aim) * V.drawDrop, V.pos[2] + A.kick);
@@ -2474,11 +2486,15 @@ function precompileEffects() {
   const show = [fx.arc, fx.sphere, vm.flash, vm.hand, fx.targetMesh, ...Object.values(vm.guns), ...soldierMeshes()].filter(Boolean), was = show.map((o) => o.visible);
   for (const o of show) o.visible = true;
   renderer.compile(scene, camera); renderer.compile(vm.scene, vm.cam);
+  // 16.11: also upload the burst sphere's geometry (compile does not), drawn once at load at opacity 0
+  const op = fx.sphere.material.opacity; fx.sphere.material.opacity = 0; fx.sphere.position.set(60, 2, 40); fx.sphere.scale.set(1, 1, 1);
+  camera.position.set(60, 2, 30); camera.lookAt(60, 2, 40); renderer.render(scene, camera);
+  fx.sphere.material.opacity = op;
   show.forEach((o, i) => { o.visible = was[i]; });
 }
-function renderViewmodel() {
-  const A = arsenal, V = CONFIG.viewmodel;
-  if (game.view || A.scope > 0.6 || player.dead) return;
+function renderViewmodel() {                    // the player's gun, or while spectating the watched bot's (16.11)
+  const P = viewSubject(), A = P.arsenal || arsenal, V = CONFIG.viewmodel;
+  if (game.view || A.scope > 0.6 || P.dead) return;
   for (const k in vm.guns) vm.guns[k].visible = k === A.current;
   vm.hand.visible = A.gAim;
   if (A.gAim) {                                  // the gun drops away (poseViewmodel) and the hand rises with the firecracker
@@ -2486,7 +2502,7 @@ function renderViewmodel() {
     vm.hand.position.set(hp[0], hp[1] - (1 - k) * V.handRise, hp[2]);
     vm.hand.rotation.set(0.25 + 0.15 * k, -0.2, 0.15);
   }
-  const g = poseViewmodel();
+  const g = poseViewmodel(P);
   vm.flash.visible = A.flash > 0;      // A.flash is a time (gun.flashTime), counted down in tickWeapons
   if (A.flash > 0) {
     if (vm.flash.parent !== g) g.add(vm.flash);                    // child of the gun, so it follows the kicked muzzle
@@ -2532,7 +2548,7 @@ function buildWaypoints() {
     's.r.s': [55.5, 0, 85.2], 's.r.se': [65.2, 0, 85.2], 'm.r.e': [65.2, 0, 80],
     // 9.4 east lane, chair, desk and shelves
     'n.e.1': [78, 0, 24], 'n.e.2': [90, 0, 26], 'n.e.3w': [84, 0, 48.5], 'n.e.3': [89, 0, 48.5], 'n.e.x': [81, 0, 59.5],
-    'n.e.6': [83.2, 0, 66], 'm.e.w': [83.2, 0, 80], 'n.e.4': [100, 0, 48], 'n.e.5': [100, 0, 66], 'n.seat': [89, 17, 74.5],
+    'n.e.6': [83.2, 0, 66], 'm.e.cn': [84, 0, 75], 'm.e.u': [89, 0, 80], 'm.e.cs': [84, 0, 85], 'n.e.4': [100, 0, 48], 'n.e.5': [100, 0, 66], 'n.seat': [89, 17, 74.5],
     'm.seat': [91, 17, 80], 'n.rul.foot': [94, 17, 76.5], 'n.rul.top': [94, 26, 64.3], 'n.desk.w': [97, 26, 64.3],
     'n.desk.1': [104, 26, 66], 'm.desk': [97.5, 26, 80], 'n.yy.foot': [107, 0, 53.3], 'n.desk.n': [107, 26, 57.5],
     'n.desk.br': [111.5, 26, 56.5], 'n.ss.app': [100, 0, 7], 'n.ss.foot': [105.7, 0, 7.5], 'n.ss.top': [105.7, 20, 40],
@@ -2561,7 +2577,7 @@ function buildWaypoints() {
     add('walk', `${h}.f.wdoor>${h}.w.1 ${h}.ub.n>${h}.ub.1 ${h}.ub.1>${h}.ub.2 ${h}.ub.2>${h}.ub.e ${h}.ub.2>m.ub ${h}.ub.e>m.ub ${h}.ub.e>${h}.w.4
       ${h}.w.1>${h}.w.2 ${h}.w.2>${h}.w.3 ${h}.w.3>${h}.w.x ${h}.w.x>${h}.w.4 ${h}.w.4>${h}.w.5 ${h}.bed.b>m.bed
       ${h}.c.2>${h}.c.3 ${h}.c.3>${h}.c.4 ${h}.c.4>${h}.c.5 ${h}.c.3>${h}.c.x ${h}.c.x>${h}.c.w ${h}.c.w>m.c.w ${h}.c.4>${h}.c.y ${h}.c.y>${h}.c.e ${h}.c.e>m.c.e
-      ${h}.f.edoor>${h}.e.1 ${h}.e.1>${h}.e.2 ${h}.e.2>${h}.e.3w ${h}.e.3w>${h}.e.3 ${h}.e.3w>${h}.e.x ${h}.e.x>${h}.e.6 ${h}.e.6>m.e.w ${h}.e.2>${h}.e.4
+      ${h}.f.edoor>${h}.e.1 ${h}.e.1>${h}.e.2 ${h}.e.2>${h}.e.3w ${h}.e.3w>${h}.e.3 ${h}.e.3w>${h}.e.x ${h}.e.x>${h}.e.6 ${h}.e.2>${h}.e.4
       ${h}.e.4>${h}.e.5 ${h}.e.5>m.e ${h}.seat>m.seat ${h}.seat>${h}.rul.foot m.seat>${h}.rul.foot ${h}.rul.top>${h}.desk.w ${h}.desk.w>${h}.desk.1 ${h}.desk.w>m.desk`);
     add('walk', `${h}.w.5>m.pad`, true);        // one way: standing on the pad always launches
     add('cross', `${h}.f.gate>${h}.c.2 ${h}.w.x>${h}.c.x ${h}.e.x>${h}.c.y`);
@@ -2584,7 +2600,9 @@ function buildWaypoints() {
   add('climb', 'n.ss1.b>n.ss2.b n.ss1.c>n.ss2.c n.yy.foot>n.desk.n s.ts1.b>s.ts2.b s.ts1.c>s.ts2.c s.ts2.d>s.ts3.d s.ts2.e>s.ts3.e s.sl.foot>s.desk.s');
   add('drop', 'm.seat>m.tunnel.top', true);
   // round 3A: the tunnel top was a dead end (nothing left it), so a bot that took tunnel_drop could never leave. Two drops off its sides.
-  add('drop', 'm.tunnel.top>m.c.e m.tunnel.top>m.e.w', true);
+  add('drop', 'm.tunnel.top>m.c.e m.tunnel.top>m.e.u', true);
+  // 16.11: the east lane goes under the chair seat round the toy box (m.e.w is gone; m.e.cn and m.e.cs are not linked to each other)
+  add('walk', 'n.e.6>m.e.cn m.e.cn>m.e.u m.e.u>m.e.cs m.e.cs>s.e.6');
   // round 3A ride edges (DESIGN 16.3): a wait node beside each straight, linked by a walk edge; one-way ride edges in the train's direction
   for (const id in CONFIG.rides) N[CONFIG.rides[id].a] = CONFIG.rides[id].wait.slice();
   add('walk', 'w.ride.w>s.c.x w.ride.e>n.c.y');
@@ -2744,6 +2762,7 @@ function astar(fromId, toId, opts = {}) {
     if (u === goal) { found = true; break; }
     for (const L of NAV.adj[u]) {
       let c = L.e.cost;
+      if (opts.avoid && opts.avoid[L.e.key]) continue;
       if (L.e.kind === 'ride') {
         if (!ride || (opts.avoid && opts.avoid[L.e.ride])) continue;
         const w = deckWait(L.e.ride, t0 + g[u] / spd);
@@ -2845,25 +2864,40 @@ function botGoto(id, nodeId, opts = {}) {
   return ok ? b.path.slice() : false;
 }
 // Repath from the nearest node the bot can walk straight to (static sweep), toward its goal.
-function segmentWalkable(x0, y0, z0, x1, z1) {
+function segmentEndY(x0, y0, z0, x1, z1) {      // height reached walking straight there (steps and stairs followed), or null
   const r = CONFIG.player.radius, M = CONFIG.move, n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, z1 - z0) / 0.25));
   let y = y0;
   return withStatic(() => {
     for (let i = 1; i <= n; i++) {
       const x = lerp(x0, x1, i / n), z = lerp(z0, z1, i / n), g = groundBelow(x, z, r, y + M.stepUp, y + M.stepUp);
-      if (!g.c) return false;
-      if (g.y < y - M.stepUp - 0.01) return false;
+      if (!g.c) return null;
+      if (g.y < y - M.stepUp - 0.01) return null;
       y = g.y;
-      if (firstBlocker(x, z, r, y + M.stepUp, y + CONFIG.player.height)) return false;
+      if (firstBlocker(x, z, r, y + M.stepUp, y + CONFIG.player.height)) return null;
     }
-    return true;
+    return y;
   });
+}
+const segmentWalkable = (x0, y0, z0, x1, z1) => segmentEndY(x0, y0, z0, x1, z1) !== null;
+function segmentInEnvelope(x0, y0, z0, x1, z1) {  // does a straight floor-level walk pass through the train's envelope?
+  if (y0 > CONFIG.train.cab + 0.5) return false;
+  const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, z1 - z0) / 0.25));
+  for (let i = 1; i < n; i++) if (inEnvelope(lerp(x0, x1, i / n), lerp(z0, z1, i / n), true)) return true;
+  return false;
+}
+function reachableStart(b, list) {                // the first node of the list the soldier can walk straight to (stairs allowed), never across the track
+  const inside = actorInEnvelope(b);
+  for (const [id] of list) {
+    const P = WAYPOINTS.nodes[id]; if (Math.abs(P[1] - b.y) > 25) continue;
+    if (!inside && segmentInEnvelope(b.x, b.y, b.z, P[0], P[2])) continue;
+    const y = segmentEndY(b.x, b.y, b.z, P[0], P[2]); if (y !== null && Math.abs(y - P[1]) < 0.8) return id;
+  }
+  return null;
 }
 function botRepath(b, why) {
   const goal = b.goal || b.lastNode;
-  const cands = NAV.stop.map((id) => { const P = WAYPOINTS.nodes[id]; return [id, Math.hypot(P[0] - b.x, (P[1] - b.y) * 3, P[2] - b.z)]; }).sort((u, v) => u[1] - v[1]).slice(0, 10);
-  let start = null;
-  for (const [id] of cands) { const P = WAYPOINTS.nodes[id]; if (Math.abs(P[1] - b.y) < 0.8 && segmentWalkable(b.x, b.y, b.z, P[0], P[2])) { start = id; break; } }
+  const cands = NAV.stop.map((id) => { const P = WAYPOINTS.nodes[id]; return [id, Math.hypot(P[0] - b.x, P[1] - b.y, P[2] - b.z)]; }).sort((u, v) => u[1] - v[1]).slice(0, 10);
+  let start = reachableStart(b, cands);
   if (!start) start = cands.length ? cands[0][0] : b.lastNode;
   const rest = astar(start, goal, { ride: false }) || astar(start, nearestNode(b.x, b.y, b.z), { ride: false });
   nav.repaths = (nav.repaths || 0) + 1;
@@ -2883,11 +2917,13 @@ function damageSoldier(b, dmg, zone, attacker, weapon, extra) {
   if (b === player) {
     if (game.god && match.active) return { dealt: 0, killed: false, god: true };
     if (match.active && match.stats && attacker && zone !== 'fall' && zone !== 'blast') { match.stats.hits++; if (zone === 'head') match.stats.headHits++; }
+    if (match.active && match.roundDamage && atk && atk !== 'green') match.roundDamage[atk] += Math.min(dmg, player.health);
     const cause = zone === 'fall' ? 'fall' : weapon === 'grenade' ? 'grenade' : 'shot';
     const died = hurtPlayer(dmg, cause, Object.assign({ attacker: attacker ? attacker.id : null, weapon: weapon || null, zone }, extra), attacker, zone === 'head');
     return { dealt: dmg, killed: died };
   }
   b.hp = Math.max(0, b.hp - dmg); b.health = b.hp;
+  if (match.active && match.roundDamage && atk && atk !== b.team) match.roundDamage[atk] += dmg;
   if (match.active && match.stats && attacker && zone !== 'fall' && zone !== 'blast') { match.stats.hits++; if (zone === 'head') match.stats.headHits++; }
   if (attacker === player && zone !== 'fall') spawnNumber(b.x, b.y + 1.85 + CONFIG.target.numberAbove, b.z, dmg, zone === 'head', b.hp <= 0);
   if (typeof brainHurt === 'function') brainHurt(b, attacker);
@@ -2932,10 +2968,11 @@ function botReached(b) {
     if (nav.edgeUse) { nav.edgeUse[dk] = (nav.edgeUse[dk] || 0) + 1; nav.kindUse[e.kind] = (nav.kindUse[e.kind] || 0) + 1; }
     if (e.kind === 'cross' && nav.crossUse) { nav.crossUse[e.key] = (nav.crossUse[e.key] || 0) + 1; nav.crossTotal++; }
     if (e.kind === 'ride' && nav.rides) nav.rides[e.ride]++;
-    if (match.active && match.stats) { if (e.kind === 'ride') match.stats.rides[b.team]++; if (e.kind === 'cross') match.stats.crossings[b.team]++; }
+    if (match.active && match.stats) { if (e.kind === 'ride') { match.stats.rides[b.team]++; if (b.brain) b.brain.rideWanted = null; } if (e.kind === 'cross') match.stats.crossings[b.team]++; }
   }
   if (e && b.stuckEp === e.key) { b.stuckEp = null; b.stuckCarry = 0; }              // got through the edge it once stalled on
   b.crossing = false; b.ride = null; b.lastNode = id; b.pi++;
+  if (match.active && match.visit && b.team && NAV.index[id] !== undefined) match.visit[b.team][NAV.index[id]] = game.time;
   b.hist.push(id); if (b.hist.length > 12) b.hist.shift();
   if (nav.routeUse) for (const rid in ROUTES) {
     const R = ROUTES[rid], H = b.hist;
@@ -2963,27 +3000,30 @@ function crossWaitAt(e, t) {
 }
 function holdAt(b, P) { if (Math.hypot(P[0] - b.x, P[2] - b.z) > 0.6) { aimYaw(b, P[0], P[2]); b.input.forward = true; } }
 // Leave the envelope by the shortest way: the nearest point outside it with ground at this level and a clear straight line.
-function startEvade(b) {
+function startEvade(b, failed) {
   const r = CONFIG.player.radius;
   for (let rad = 0.25; rad <= 8; rad += 0.25) {
     let best = null, bd = Infinity;
     for (let k = 0; k < 32; k++) {
       const a = k / 32 * Math.PI * 2, x = b.x + Math.cos(a) * rad, z = b.z + Math.sin(a) * rad;
       if (inEnvelope(x, z, true) || x < 1 || x > 119 || z < 1 || z > 159) continue;
+      if (failed && failed.some((f) => Math.hypot(f[0] - x, f[1] - z) < 1.5)) continue;          // an exit that did not work: try another
       const g = withStatic(() => groundBelow(x, z, r, b.y + CONFIG.move.stepUp, b.y + CONFIG.move.stepUp));
       if (!g.c || g.y < b.y - 1.5) continue;
       if (!segmentWalkable(b.x, b.y, b.z, x, z)) continue;
       const d = rad; if (d < bd) { bd = d; best = [x, z]; }
     }
-    if (best) { b.evade = { x: best[0], z: best[1], t: 0 }; nav.evades = (nav.evades || 0) + 1; return; }
+    if (best) { b.evade = { x: best[0], z: best[1], t: 0, failed: failed || [], best: Infinity, stall: 0 }; nav.evades = (nav.evades || 0) + 1; return; }
   }
-  b.evade = { x: b.x + (b.x < 60 ? -4 : 4), z: b.z, t: 0 };
+  b.evade = { x: b.x + (b.x < 60 ? -4 : 4), z: b.z, t: 0, failed: failed || [], best: Infinity, stall: 0 };
 }
 function botEvade(b, dt) {
   const E = b.evade, I = b.input;
   b.botState = 'evade'; E.t += dt;
   if (!actorInEnvelope(b)) { b.evade = null; botRepath(b, 'evade'); return; }
-  if (E.t > 3) { startEvade(b); return; }
+  const d = Math.hypot(E.x - b.x, E.z - b.z);
+  if (d < E.best - 0.25) { E.best = d; E.stall = 0; } else E.stall += dt;
+  if (E.stall > 1 || E.t > 3) { const F = (E.failed || []).concat([[E.x, E.z]]).slice(-8); startEvade(b, F); return; }   // no progress: another exit
   aimYaw(b, E.x, E.z); I.forward = true; I.sprint = true;
 }
 // Ride edges (DESIGN 16.3): wait, board a deck with a run and a jump, ride, step off, walk to the edge's end node.
@@ -3000,11 +3040,12 @@ function botRide(b, e, dt) {
   st.t += dt;
   const onCar = b.onGround && b.ground && b.ground.train ? b.ground.car : null;
   if (st.phase === 'wait') {
+    if (st.t <= dt + 1e-9 && match.active && match.stats) match.stats.rideAtWait++;
     b.botState = 'wait_ride'; b.stuckT = 0;
     holdAt(b, R.wait);
     if (!b.input.forward) aimYaw(b, R.x, b.z);
     const w = deckWait(e.ride, game.time), car = _deck.car;
-    if (!car || w > RB.maxWait) { nav.rideGiveUps = (nav.rideGiveUps || 0) + 1; b.avoid[e.ride] = game.time + 20; b.ride = null; botRepath(b, 'ride wait'); return; }
+    if (!car || w > RB.maxWait) { nav.rideGiveUps = (nav.rideGiveUps || 0) + 1; if (match.active && match.stats) match.stats.rideGiveUps++; b.avoid[e.ride] = game.time + 20; b.ride = null; botRepath(b, 'ride wait'); return; }
     if (w <= RB.rideLead[car.type] && Math.hypot(R.wait[0] - b.x, R.wait[2] - b.z) < 0.7 && b.onGround) {
       st.phase = 'board'; st.car = car; st.t = 0; car.claim = b.id; nav.rideStarts = (nav.rideStarts || 0) + 1;
     } else return;
@@ -3207,6 +3248,7 @@ function driveSoldier(b, dt, armed) {
       nav.envTime += dt; nav.envTimeByBot[b.id] = (nav.envTimeByBot[b.id] || 0) + dt;
     }
     if (match.active && match.phase === 'live' && actorInEnvelope(b) && !b.riding && !b.crossing && !(b.ride && b.ride.phase !== 'wait') && match.stats) match.stats.envTime += dt;
+    if (match.active && b.brain) livenessCheck(b, dt);
     updateHitVolumes(b);
   }
 }
@@ -3260,12 +3302,23 @@ function setState(b, st) {
   if (botLog.length > CONFIG.match.botLogMax) botLog.shift();
   B.state = st;
 }
+// 16.11: every callout, "I'm down" and "Enemy down" included, obeys one per bot per calloutGap; the same enemy region is not
+// called twice within calloutRegionGap by anyone. Returns true when posted.
 function postCallout(b, text) {
-  if (!match.active || b.team !== 'green' || b === player || b.dead && text !== "I'm down") return;
-  if (game.time - (b.lastCallout || -99) < CONFIG.match.calloutGap) return;
+  const M = CONFIG.match;
+  if (!match.active || b.team !== 'green' || b === player || (b.dead && text !== "I'm down")) return false;
+  if (game.time - (b.lastCallout === undefined ? -99 : b.lastCallout) < M.calloutGap) return false;
+  if (text.startsWith('Enemy ') && text !== 'Enemy down') { for (let i = callouts.length - 1; i >= 0 && game.time - callouts[i].time < M.calloutRegionGap; i--) if (callouts[i].text === text) return false; }
   b.lastCallout = game.time;
   callouts.push({ time: +game.time.toFixed(2), who: b.name, text });
   if (callouts.length > 200) callouts.shift();
+  return true;
+}
+function calloutFor(caller, e) {                 // lane callouts say which half: "our side" / "their side" from the caller's team
+  const r = regionOf(e.x, e.y, e.z), lane = r[1] === null || r[0] === 'north fort';     // Green calls; its own fort is a lane spot
+  if (!lane) return 'Enemy ' + r[2];
+  const ours = caller.team === 'green' ? e.z < 80 : e.z > 80;
+  return 'Enemy ' + r[2] + ', ' + (ours ? 'our side' : 'their side');
 }
 function newBrain(b, role) {
   const R = CONFIG.roles[role][b.team];
@@ -3274,7 +3327,8 @@ function newBrain(b, role) {
     errYaw: 0, errPitch: 0, lastFireSeen: -1, semi: false, strafeOn: false, strafeSwap: 0, atCover: false, coverT: 0, peekStand: false, peekT: 0,
     coverCool: -99, retreated: false, calmT: 0, flankCool: -99, flankStage: 0, grenadeCool: -99, throwT: 0, throwYaw: 0, throwPitch: 0,
     lastHurtT: -99, threat: null, heard: null, rideTry: !!(R.ride && brnd() < CONFIG.ai.rideChance), rideWaitT: 0, rideDone: false, scanT: brnd() * 10,
-    huntT: 0, lostT: 0, gotoNode: null };
+    huntT: 0, lostT: 0, gotoNode: null, activeT: -99, alertT: -99, alertSeen: -99, alertSrc: null, lookUntil: -99, heardSeen: -99,
+    rideWanted: null, flee: null, fleeYaw: 0, chasing: false, relocating: false, relocUntil: 0, closeIn: null, pushDone: false, memUsed: -1 };
 }
 // A path from where the soldier stands: walk straight to the nearest node it can reach, then A* (16.10 crossing waits included).
 function pathFromHere(b, goal, extra) {
@@ -3283,9 +3337,9 @@ function pathFromHere(b, goal, extra) {
   let start = null;
   if (L && Math.hypot(L[0] - b.x, L[2] - b.z) < 0.6 && Math.abs(L[1] - b.y) < 0.8) start = b.lastNode;
   else {
-    const cands = NAV.stop.map((id) => { const P = WAYPOINTS.nodes[id]; return [id, Math.hypot(P[0] - b.x, (P[1] - b.y) * 3, P[2] - b.z)]; }).sort((u, v) => u[1] - v[1]).slice(0, 8);
-    for (const [id] of cands) { const P = WAYPOINTS.nodes[id]; if (Math.abs(P[1] - b.y) < 0.8 && segmentWalkable(b.x, b.y, b.z, P[0], P[2])) { start = id; break; } }
-    if (!start) start = cands.length ? cands[0][0] : b.lastNode;
+    const cands = NAV.stop.map((id) => { const P = WAYPOINTS.nodes[id]; return [id, Math.hypot(P[0] - b.x, P[1] - b.y, P[2] - b.z)]; }).sort((u, v) => u[1] - v[1]).slice(0, 10);
+    start = reachableStart(b, cands);
+    if (!start) { const ok = cands.find(([id]) => { const P = WAYPOINTS.nodes[id]; return !segmentInEnvelope(b.x, b.y, b.z, P[0], P[2]); }); start = ok ? ok[0] : cands.length ? cands[0][0] : b.lastNode; }
   }
   let res = extra && extra.res ? extra.res : astar(start, goal, { cross: true });
   if (extra && extra.res && extra.res.nodes[0] !== start) { const lead = astar(start, extra.res.nodes[0], { cross: true }); res = lead ? appendPath(lead, extra.res) : null; }
@@ -3311,52 +3365,79 @@ function brainStartRound(b) {
   B.phase = 'setup'; setState(b, 'advance'); b.sprintMove = true;
   setupPath(b);
 }
+const pushTime = (b) => match.liveT >= CONFIG.ai.holdUntil || teamLeads(b.team);
 function resumePlan(b) {
-  const B = b.brain; B.atCover = false; b.sprintMove = false; B.gotoNode = null;
-  if (B.phase === 'hunt') return startHunt(b, true);
-  if (B.phase === 'setup' || B.phase === 'hold') { B.phase = 'setup'; setState(b, 'advance'); b.sprintMove = true; if (!setupPath(b)) { B.phase = 'hold'; setState(b, 'hold'); } return; }
-  setState(b, 'advance');
-  const n = B.push[Math.min(B.pushIdx, B.push.length - 1)];
-  pathFromHere(b, n);
-}
-function startPush(b) {
-  const B = b.brain, AI = CONFIG.ai, R = CONFIG.roles[B.role][b.team];
-  if (B.rideTry && !B.rideDone && R.ride) {      // 16.10: Centre rides its team's edge when the expected wait is under 6 s
-    const C = CONFIG.rides[R.ride], to = astar(b.lastNode, C.a, { cross: true });
-    if (to) {
-      const w = deckWait(R.ride, game.time + to.cost / CONFIG.move.walk + 0.5);
-      if (w < AI.rideMaxWait) {
-        const e = WAYPOINTS.edges.find((x) => x.ride === R.ride);
-        let k = 0, bd = Infinity; B.push.forEach((id, i) => { const P = WAYPOINTS.nodes[id], Q = WAYPOINTS.nodes[C.b], d = Math.hypot(P[0] - Q[0], P[2] - Q[2]); if (d < bd) { bd = d; k = i; } });
-        B.pushIdx = Math.min(k + 1, B.push.length - 1);
-        if (pathFromHere(b, C.b, { res: appendPath(to, { nodes: [C.a, C.b], edges: [e], cost: e.cost }) })) { B.phase = 'push'; B.rideDone = true; setState(b, 'advance'); match.stats.rideTries++; return true; }
-      }
-      if (B.rideWaitT < AI.rideHoldMax) return false;        // keep holding for a better deck, up to rideHoldMax
-    }
+  const B = b.brain; B.atCover = false; b.sprintMove = false; B.gotoNode = null; B.chasing = false; B.relocating = false; B.closeIn = null;
+  if (B.phase === 'hunt' || match.timeLeft <= CONFIG.ai.huntLast) return startHunt(b);
+  if (B.phase === 'setup' || B.phase === 'hold') {
+    if (pushTime(b)) return startPush(b);
+    B.phase = 'setup'; setState(b, 'advance'); b.sprintMove = true; if (!setupPath(b)) { B.phase = 'hold'; setState(b, 'hold'); } return;
   }
-  B.phase = 'push'; B.pushIdx = 0; setState(b, 'advance'); b.sprintMove = false;
-  pathFromHere(b, B.push[0]);
+  if (B.pushIdx >= B.push.length - 1 && B.pushDone) return startHunt(b);
+  setState(b, 'advance');
+  if (B.rideWanted && tryRide(b)) return;
+  if (!pathFromHere(b, B.push[Math.min(B.pushIdx, B.push.length - 1)])) startHunt(b);
+}
+// 16.10 / 16.11: the Centre bot rides its team's edge into the enemy half when a deck is due within rideMaxWait of its arrival.
+// The wish is kept until the ride is taken, so a fight on the way does not cancel it; it is dropped when no deck is due.
+function tryRide(b) {
+  const B = b.brain, AI = CONFIG.ai, rid = B.rideWanted;
+  if (!rid) return false;
+  const C = CONFIG.rides[rid], to = b.lastNode === C.a ? { nodes: [C.a], edges: [], cost: 0 } : astar(b.lastNode, C.a, { cross: true });
+  if ((b.team === 'green' ? b.z > 80 : b.z < 80)) { B.rideWanted = null; return false; }       // already in the enemy half
+  if (!to || to.cost > 45 || deckWait(rid, game.time + to.cost / CONFIG.move.walk + 0.5) >= AI.rideMaxWait) return false;   // no deck due: walk on, look again later
+  const e = WAYPOINTS.edges.find((x) => x.ride === rid);
+  let k = 0, bd = Infinity; B.push.forEach((id, i) => { const P = WAYPOINTS.nodes[id], Q = WAYPOINTS.nodes[C.b], d = Math.hypot(P[0] - Q[0], P[2] - Q[2]); if (d < bd) { bd = d; k = i; } });
+  if (!pathFromHere(b, C.b, { res: appendPath(to, { nodes: [C.a, C.b], edges: [e], cost: e.cost }) })) { B.rideWanted = null; return false; }
+  B.pushIdx = Math.min(k + 1, B.push.length - 1); match.stats.rideTries++;
   return true;
 }
-function startHunt(b, again) {
-  const B = b.brain, M = match.teamMem[b.team], enemyFort = b.team === 'green' ? 's.f.spawn' : 'n.f.spawn';
-  B.phase = 'hunt'; setState(b, 'hunt'); b.sprintMove = false; B.huntT = game.time; B.atCover = false;
-  const goal = M && game.time - M.t < 20 ? nearestNode(M.x, M.y, M.z) : enemyFort;
-  if (!pathFromHere(b, goal) && !again) pathFromHere(b, enemyFort);
+function startPush(b) {
+  const B = b.brain, R = CONFIG.roles[B.role][b.team];
+  B.phase = 'push'; B.pushIdx = 0; B.pushDone = false; setState(b, 'advance'); b.sprintMove = false;
+  if (B.rideTry && !B.rideDone && R.ride) { B.rideDone = true; B.rideWanted = R.ride; if (tryRide(b)) return true; }
+  if (!pathFromHere(b, B.push[0])) startHunt(b);
+  return true;
+}
+// 16.11 hunt: go to fresh news of the enemy if there is any, otherwise search the enemy half, oldest-visited node first,
+// never an enemy spawn. Arriving with nothing found picks the next node at once.
+const SPAWN_NODES = new Set(['n.f.spawn', 's.f.spawn']);
+function searchNode(b) {
+  const AI = CONFIG.ai, V = match.visit[b.team], now = game.time;
+  let best = null, bs = -Infinity;
+  for (const id of NAV.stop) {
+    if (SPAWN_NODES.has(id) || id === b.lastNode) continue;
+    const P = WAYPOINTS.nodes[id];
+    if (b.team === 'green' ? P[2] < 80 : P[2] > 80) continue;
+    const i = NAV.index[id], age = Math.min(AI.searchFresh, now - V[i]);
+    const s = age - Math.hypot(P[0] - b.x, P[1] - b.y, P[2] - b.z) * AI.searchDistK + brnd() * 6;
+    if (s > bs) { bs = s; best = id; }
+  }
+  if (best) V[NAV.index[best]] = now;            // claimed, so teammates spread out
+  return best;
+}
+function startHunt(b) {
+  const B = b.brain, M = match.teamMem[b.team], now = game.time;
+  B.phase = 'hunt'; setState(b, 'hunt'); b.sprintMove = false; B.huntT = now; B.atCover = false; B.chasing = false;
+  let goal = null;
+  if (M && now - M.t < 10 && M.t !== B.memUsed) { B.memUsed = M.t; goal = nearestNode(M.x, M.y, M.z); if (goal === b.lastNode) goal = null; }
+  for (let k = 0; k < 4 && !(goal && pathFromHere(b, goal)); k++) goal = searchNode(b);
 }
 function brainPathDone(b) {
   const B = b.brain;
   if (B.state === 'cover' || B.state === 'retreat') { B.atCover = true; B.coverT = game.time; B.peekT = 0; B.peekStand = false; return; }
+  if (B.chasing || B.relocating || B.closeIn) return resumePlan(b);
   if (B.state === 'flank') {
     if (B.flankStage === 1 && B.gotoNode) { B.flankStage = 2; pathFromHere(b, B.gotoNode); return; }
     return resumePlan(b);
   }
   if (B.phase === 'setup') { B.phase = 'hold'; setState(b, 'hold'); b.sprintMove = false; return; }
-  if (B.phase === 'push') { if (B.pushIdx < B.push.length - 1) { B.pushIdx++; pathFromHere(b, B.push[B.pushIdx]); } else { setState(b, 'hold'); } return; }
-  if (B.phase === 'hunt' && game.time - B.huntT > 4) startHunt(b, true);
+  if (B.phase === 'push') { if (B.pushIdx < B.push.length - 1) { B.pushIdx++; pathFromHere(b, B.push[B.pushIdx]); } else { B.pushDone = true; startHunt(b); } return; }
+  if (B.phase === 'hunt') startHunt(b);
 }
 function brainIdle(b, dt) {                      // standing at the end of a path: scan toward the enemy side
   const B = b.brain, AI = CONFIG.ai;
+  if (B.phase !== 'hold' || pushTime(b)) { resumePlan(b); return; }     // only a hold before push time may stand at a path's end
   B.scanT += dt * AI.holdScanSpeed;
   const P = WAYPOINTS.nodes[B.push[Math.min(B.pushIdx, B.push.length - 1)]] || WAYPOINTS.nodes[B.push[0]];
   const base = P ? Math.atan2(-(P[0] - b.x), -(P[2] - b.z)) : (b.team === 'green' ? Math.PI : 0);
@@ -3382,8 +3463,7 @@ function perceive(b) {
   const was = B.target;
   if (best) {
     if (best !== was) { B.target = best; B.engageT = 0; B.reactT = D.reaction; B.burstLeft = 0; B.pauseT = 0; B.strafeOn = brnd() < D.strafe; B.seenSince = game.time;
-      if (!B.mem || B.mem.who !== best.id || game.time - B.mem.t > 5) postCallout(b, 'Enemy ' + regionOf(best.x, best.y, best.z)[2] + (best.onGround && best.ground && best.ground.train ? '' : ''));
-      if (best.onGround && best.ground && best.ground.train) postCallout(b, 'Enemy on the train'); }
+      if (!B.mem || B.mem.who !== best.id || game.time - B.mem.t > 5) postCallout(b, best.onGround && best.ground && best.ground.train ? 'Enemy on the train' : calloutFor(b, best)); }
     B.vis = true; B.visBody = bVis; B.lastSeenT = game.time;
     B.mem = B.mem || { x: 0, y: 0, z: 0, t: 0, who: null }; B.mem.x = best.x; B.mem.y = best.y; B.mem.z = best.z; B.mem.t = game.time; B.mem.who = best.id;
     const M = match.teamMem[b.team]; M.x = best.x; M.y = best.y; M.z = best.z; M.t = game.time;
@@ -3402,8 +3482,8 @@ function onGunshot(S) {                          // a gunshot within hearRange r
 function brainHurt(b, attacker) {                // being hit reveals the attacker's direction
   if (!b.brain || !match.active) return;
   const B = b.brain; B.lastHurtT = game.time;
-  if (attacker && attacker !== b) { const H = B.heard || (B.heard = { x: 0, y: 0, z: 0, t: 0 }); H.x = attacker.x; H.y = attacker.y; H.z = attacker.z; H.t = game.time; B.threat = attacker; }
-  if (b.hp > 0) postCallout(b, "I'm hit");
+  if (attacker && attacker !== b) { const H = B.heard || (B.heard = { x: 0, y: 0, z: 0, t: 0 }); H.x = attacker.x; H.y = attacker.y; H.z = attacker.z; H.t = game.time; B.threat = attacker; brainAlert(b, attacker); }
+  if (b.hp > 0 && !b.hitCalled) { b.hitCalled = postCallout(b, "I'm hit"); }        // 16.11: once per life
 }
 function onGrenadeThrown(S) { if (match.active && match.stats) match.stats.grenades[S.team]++; }
 // ---- engage: reaction time, aim error that settles, bursts through the real weapon code ----
@@ -3432,9 +3512,12 @@ function engage(b, T, dt, fromCover) {
   const d = Math.hypot(T.x - b.x, T.y - b.y, T.z - b.z);
   chooseWeapon(b, d);
   const W = CONFIG.weapons[A.current], sniper = A.current === 'sniper';
-  // stance and movement: snipers scope, crouch and stand still (16.10); others may strafe on flat ground
+  // stance and movement: snipers stand still and stand up to fire, crouching only between shots (16.11, R3-1); others may strafe
   let moving = false;
-  if (sniper) { I.scope = true; I.crouch = true; }
+  const g0 = A.guns[A.current];
+  if (g0.mag <= 0 && g0.reserve > 0) I.reload = true;                 // an empty magazine is reloaded at once (R3-1)
+  if (A.reloadT > 0 || A.scope > 0 || A.lastFire === game.time) B.activeT = game.time;
+  if (sniper) { const cycling = A.cool > 0.05 || A.reloadT > 0; I.crouch = cycling; I.scope = !cycling; }
   else if (B.strafeOn && !fromCover && b.onGround) {
     B.strafeSwap -= dt;
     if (B.strafeSwap <= 0) { B.strafeSwap = lerp(AI.strafeSwap[0], AI.strafeSwap[1], brnd()); b.strafeDir = brnd() < 0.5 ? -1 : 1; }
@@ -3565,46 +3648,171 @@ function tryGrenade(b) {
   B.throwYaw = s[0]; B.throwPitch = s[1]; B.throwT = 3;      // hold the pin for 2 ticks, release on the 3rd
   return true;
 }
+// 16.11 awareness: a hit or a near miss (within ai.nearMiss) alerts the bot in any state; a gunshot within hearRange turns a bot
+// that has no target. Grenades it can see within grenadeFlee make it sprint away.
+function brainAlert(b, src) {
+  if (!b.brain || b.dead || !src || src.dead) return;
+  const B = b.brain; B.alertSrc = src; B.alertT = game.time;
+}
+function onShotPath(S, ox, oy, oz, hx, hy, hz) {
+  if (!match.active || match.phase !== 'live') return;
+  const dx = hx - ox, dy = hy - oy, dz = hz - oz, L2 = dx * dx + dy * dy + dz * dz, R = CONFIG.ai.nearMiss;
+  for (const b of match.soldiers) {
+    if (b.dead || !b.brain || b.team === S.team) continue;
+    const px = b.x - ox, py = b.y + 1.2 - oy, pz = b.z - oz, t = L2 > 0 ? clamp((px * dx + py * dy + pz * dz) / L2, 0, 1) : 0;
+    if (Math.hypot(px - dx * t, py - dy * t, pz - dz * t) < R) brainAlert(b, S);
+  }
+}
+function grenadeThreat(b) {                      // a live grenade within grenadeFlee that the bot can see: the direction to run, or null
+  const AI = CONFIG.ai, r = CONFIG.player.radius;
+  for (const o of grenadesLive) {
+    if (o.owner && o.owner.team === b.team && o.owner !== b) continue;      // teammates' grenades cannot hurt it
+    const d = Math.hypot(o.x - b.x, o.y - b.y - 0.9, o.z - b.z);
+    if (d > AI.grenadeFlee || !losClear(b.x, b.y + b.eye, b.z, o.x, o.y + 0.1, o.z)) continue;
+    const away = Math.atan2(-(b.x - o.x), -(b.z - o.z));
+    for (const off of [0, 0.5, -0.5, 1.0, -1.0, 1.6, -1.6]) {
+      const yaw = away + off, fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+      const g = withStatic(() => groundBelow(b.x + fx * 2.5, b.z + fz * 2.5, r, b.y + CONFIG.move.stepUp, b.y + CONFIG.move.stepUp));
+      if (g.c && g.y > b.y - 0.7 && !inEnvelope(b.x + fx * 2.5, b.z + fz * 2.5, true)) return { yaw, o };
+    }
+    return { yaw: away, o };
+  }
+  return null;
+}
+// A bot that has stood within campRadius for campLimit s moves to another node nearby, then carries on.
+function relocate(b) {
+  const B = b.brain, AI = CONFIG.ai;
+  let opts = NAV.stop.filter((id) => { const P = WAYPOINTS.nodes[id], d = Math.hypot(P[0] - b.x, P[2] - b.z); return d >= AI.relocateMin && d <= AI.relocateMax && Math.abs(P[1] - b.y) < 1 && !SPAWN_NODES.has(id); });
+  if (!opts.length) opts = NAV.stop.filter((id) => { const P = WAYPOINTS.nodes[id], d = Math.hypot(P[0] - b.x, P[1] - b.y, P[2] - b.z); return d >= 3 && d <= 20 && id !== b.lastNode && !SPAWN_NODES.has(id); });   // perches: any reachable node near
+  for (let k = 0; k < 6 && opts.length; k++) {
+    const id = opts.splice(Math.floor(brnd() * opts.length), 1)[0];
+    if (pathFromHere(b, id)) { B.relocating = true; B.relocUntil = game.time + 5; B.atCover = false; setState(b, 'advance'); return true; }
+  }
+  resumePlan(b); return false;
+}
+// 16.11 liveness: may this bot stand still right now?
+function stillAllowed(b) {
+  const B = b.brain, AI = CONFIG.ai, now = game.time;
+  if (B.phase === 'hold' && B.state === 'hold' && !pushTime(b)) return true;
+  if ((B.state === 'cover' || B.state === 'retreat') && B.atCover && (B.vis || now - Math.max(B.lastSeenT, B.coverT) <= AI.retreatCalm)) return true;
+  if (now - B.activeT <= AI.activeWindow) return true;           // fired, scoped, reloaded or re-aimed at a visible target lately
+  if ((b.botState === 'wait_cross' || b.botState === 'wait_ride') && b.waitT <= AI.waitMax) return true;
+  if (B.lookUntil > now || B.throwT > 0) return true;
+  return false;
+}
+function forceMove(b) {
+  const B = b.brain;
+  if (B.phase === 'push' || B.phase === 'hunt' || match.timeLeft <= CONFIG.ai.huntLast) startHunt(b); else startPush(b);
+}
+function livenessCheck(b, dt) {
+  const B = b.brain, AI = CONFIG.ai;
+  if (Math.hypot(b.x - b.idleX, b.y - (b.idleY || 0), b.z - b.idleZ) > AI.idleMove) { b.idleX = b.x; b.idleY = b.y; b.idleZ = b.z; b.idleT = 0; }
+  if (Math.hypot(b.x - b.campX, b.y - (b.campY || 0), b.z - b.campZ) > AI.campRadius) { b.campX = b.x; b.campY = b.y; b.campZ = b.z; b.campT = 0; }
+  b.waitT = b.botState === 'wait_cross' || b.botState === 'wait_ride' ? (b.waitT || 0) + dt : 0;
+  if (match.phase !== 'live' || b.dead || !B) { b.idleT = 0; b.campT = 0; return; }
+  if (b.botState === 'wait_cross' && b.waitT > AI.waitMax) {       // a crossing closed too long: another way, avoiding this edge
+    const e = b.edges[b.pi - 1], res = e ? astar(b.lastNode, b.goal, { cross: true, avoid: { [e.key]: 1 } }) : null;
+    if (res && pathFromHere(b, b.goal, { res })) b.waitT = 0;
+  }
+  b.campT += dt;
+  if (stillAllowed(b)) b.idleT = 0; else b.idleT += dt;
+  if (b.idleT > AI.idleLimit) {
+    idleLog.push({ bot: b.id, name: b.name, state: B.state, move: b.botState, phase: B.phase, pos: [+b.x.toFixed(2), +b.y.toFixed(2), +b.z.toFixed(2)],
+      seconds: +b.idleT.toFixed(2), round: match.round, time: +game.time.toFixed(2) });
+    if (idleLog.length > CONFIG.match.idleLogMax) idleLog.shift();
+    b.idleT = 0; forceMove(b);
+  } else if (b.campT > AI.campLimit && !(B.phase === 'hold' && B.state === 'hold' && !pushTime(b)) && !b.climbing && !b.riding && b.botState !== 'wait_ride') {
+    b.campT = 0; relocate(b);
+  }
+}
+// Out of this weapon's engage range (16.11): walk toward the target instead of firing (or keep the hold before push time).
+function closeIn(b, T) {
+  const B = b.brain;
+  if (B.phase === 'hold' && !pushTime(b)) return false;
+  if (B.closeIn && game.time - B.closeIn < CONFIG.ai.closeReplan && b.pi < b.path.length) return true;
+  B.closeIn = game.time;
+  const goal = nearestNode(T.x, T.y, T.z);
+  if (goal && goal !== b.lastNode && pathFromHere(b, goal)) { setState(b, 'advance'); return true; }
+  return false;
+}
 // ---- the brain tick: returns true when it set this tick's input itself (the navigation does not run) ----
 function brainTick(b, dt) {
-  const B = b.brain, I = b.input, AI = CONFIG.ai, D = diffP();
+  const B = b.brain, I = b.input, AI = CONFIG.ai, D = diffP(), now = game.time;
   if (matchFrozen()) { b.botState = 'freeze'; return true; }
   if (B.throwT > 0) {                            // a grenade throw in progress: aim, hold, release
-    B.throwT--; b.yaw = B.throwYaw; b.pitch = B.throwPitch; I.grenade = B.throwT > 0; b.botState = B.state;
+    B.throwT--; b.yaw = B.throwYaw; b.pitch = B.throwPitch; I.grenade = B.throwT > 0; b.botState = B.state; B.activeT = now;
     return true;
   }
   // movement sub-states keep the navigation (strings, rides, crossings, launches): no stopping on a string or the track
   if (b.climbing || b.riding || b.crossing || (b.ride && b.ride.phase !== 'wait') || b.launched || actorInEnvelope(b)) return false;
-  AIX.tick = Math.round(game.time * CONFIG.sim.hz);
-  const every = Math.max(1, Math.round(CONFIG.sim.hz / AI.losHz));
-  if ((AIX.tick + b.slotP) % every === 0) perceive(b);
-  const T = B.target && !B.target.dead ? B.target : null;
+  // a visible grenade nearby: sprint away until clear
+  const every = Math.max(1, Math.round(CONFIG.sim.hz / AI.losHz)), tick = Math.round(now * CONFIG.sim.hz), myTick = (tick + b.slotP) % every === 0;
+  if (myTick && grenadesLive.length) { const G = grenadeThreat(b); if (G) { B.flee = G.o; B.fleeYaw = G.yaw; } }
+  if (B.flee) {
+    const o = B.flee;
+    if (grenadesLive.indexOf(o) < 0 || Math.hypot(o.x - b.x, o.z - b.z) > AI.fleeDist) B.flee = null;
+    else { b.yaw = B.fleeYaw; I.forward = true; I.sprint = true; b.botState = 'flee'; B.activeT = now; return true; }
+  }
+  if (myTick) perceive(b);
+  let T = B.target && !B.target.dead ? B.target : null;
   if (!T) { B.target = null; B.vis = false; }
-  const now = game.time;
-  // retreat below the difficulty's health, once per life
   const hp = b === player ? player.health : b.hp;            // the autoplayed player keeps its health in .health
+  // hit or near miss, in any state: turn to the source and look now; no line of sight still starts engage on its position
+  if (B.alertT > (B.alertSeen || -1)) {
+    B.alertSeen = B.alertT;
+    const S = B.alertSrc;
+    if (S && !S.dead && !(T && B.vis)) {
+      aimAt(b, S.x, S.y + 1.2, S.z); perceive(b); T = B.target && !B.target.dead ? B.target : null;
+      if (!(T && B.vis)) {
+        B.target = S; T = S; B.mem = B.mem || { x: 0, y: 0, z: 0, t: 0, who: null }; B.mem.x = S.x; B.mem.y = S.y; B.mem.z = S.z; B.mem.t = now; B.mem.who = S.id;
+        B.lastSeenT = now; B.engageT = 0; B.reactT = D.reaction;
+        if (hp < D.retreat) { if (!startRetreat(b)) goCover(b, S); } else { stopMoving(b); setState(b, 'engage'); }
+      }
+    }
+  }
+  // a gunshot heard with no target: stop and look that way for a moment
+  if (!T && B.heard && B.heard.t > (B.heardSeen || -1)) { B.heardSeen = B.heard.t; B.lookUntil = now + AI.lookTime; }
+  if (!T && B.lookUntil > now) { aimAt(b, B.heard.x, B.heard.y + 1.2, B.heard.z); b.botState = B.state; return true; }
+  // retreat below the difficulty's health, once per life
   if (!B.retreated && hp < D.retreat && hp > 0 && B.state !== 'retreat') startRetreat(b);
-  // hunt in the last 30 s
+  // hunt in the last huntLast s
   if (match.timeLeft <= AI.huntLast && B.phase !== 'hunt' && B.state !== 'retreat') startHunt(b);
+  if (B.relocating && now < B.relocUntil) { b.botState = 'move'; return false; }       // moving off a spot it held too long
+  if (B.rideWanted && B.phase === 'push' && B.state === 'advance' && !(T && B.vis) && !(b.ride) && myTick && Math.floor(now * 0.5) !== B.rideCheck) {
+    B.rideCheck = Math.floor(now * 0.5);          // every 2 s on the way: is a deck due now?
+    if (!b.edges.some((e, k) => e.kind === 'ride' && k >= b.pi - 1)) tryRide(b);
+  }
   if (T && B.vis) {
-    const d = Math.hypot(T.x - b.x, T.z - b.z);
+    B.activeT = now;
+    const d = Math.hypot(T.x - b.x, T.y - b.y, T.z - b.z);
     if ((B.state === 'cover' || B.state === 'retreat') && !B.atCover && d > 8) { b.botState = B.state; return false; }   // still running to cover
+    // beyond this weapon's engage range: close in (or keep holding before push time); never fire there
+    chooseWeapon(b, d);
+    const R = AI.engageRange[b.arsenal.current] || 1e9;
+    if (d > R) { if (closeIn(b, T)) { b.botState = 'move'; return false; } aimAt(b, T.x, T.y + 1.2, T.z); b.botState = 'engage'; return true; }
+    B.closeIn = null;
     if (B.state === 'cover' && B.atCover) return peek(b, T, dt, true);
     if (B.state === 'retreat' && B.atCover) { I.crouch = false; B.calmT = 0; return engage(b, T, dt, true); }
     // go to cover when hurt recently, or when the target is not in the open (only its head shows, or it is crouched)
     if (B.state === 'engage' && (now - B.lastHurtT < 0.6 || !B.visBody || T.crouching) && b.arsenal.current !== 'sniper' && goCover(b, T)) return false;
+    if (B.state !== 'engage') { stopMoving(b); }
     b.botState = 'engage';
     return engage(b, T, dt, false);
   }
-  // target lost: keep watching where it was for a moment, maybe a grenade, maybe a flank
+  // target lost: keep watching where it was for lostAfter s (maybe a grenade), then go to its last known position
   if (B.mem && B.state === 'engage' && now - B.lastSeenT < AI.lostAfter) {
-    aimAt(b, B.mem.x, B.mem.y + 1.2, B.mem.z); tryGrenade(b); b.botState = 'engage';
+    aimAt(b, B.mem.x, B.mem.y + 1.2, B.mem.z); tryGrenade(b); b.botState = 'engage'; B.activeT = now;
     return true;
   }
-  if (B.state === 'engage') { tryGrenade(b); if (B.throwT > 0) return true; resumePlan(b); return false; }
+  if (B.state === 'engage') {
+    tryGrenade(b); if (B.throwT > 0) return true;
+    const goal = B.mem ? nearestNode(B.mem.x, B.mem.y, B.mem.z) : null;
+    if (goal && goal !== b.lastNode && pathFromHere(b, goal)) { B.chasing = true; setState(b, 'advance'); return false; }
+    resumePlan(b); return false;
+  }
   if (B.state === 'cover' && B.atCover) {
     if (B.mem) tryGrenade(b);
-    if (now - B.lastSeenT > AI.coverLeave && now - B.lastHurtT > AI.coverLeave) { resumePlan(b); return false; }
+    if (now - Math.max(B.lastSeenT, B.coverT) > AI.retreatCalm && now - B.lastHurtT > AI.retreatCalm) { resumePlan(b); return false; }
     return peek(b, null, dt, true);
   }
   if (B.state === 'retreat' && B.atCover) {
@@ -3619,9 +3827,9 @@ function brainTick(b, dt) {
   if (B.mem && B.state !== 'flank' && B.state !== 'retreat' && now - B.mem.t < AI.memory && now - B.lastSeenT > AI.flankAfter && now > B.flankCool && !closestTo(b, B.mem)) {
     if (startFlank(b)) return false;
   }
-  // hold: wait at the hold node until 40 s into the round or the team leads in soldiers alive, then push
-  if (B.phase === 'hold') {
-    if (match.liveT >= AI.holdUntil || teamLeads(b.team)) { B.rideWaitT += dt; if (startPush(b)) return false; }
+  // hold: wait at the hold node until holdUntil into the round or the team leads in soldiers alive, then push
+  if (B.phase === 'hold' && B.state === 'hold') {
+    if (pushTime(b)) { startPush(b); return false; }
     brainIdle(b, dt); b.botState = 'hold';
     return true;
   }
@@ -3633,7 +3841,7 @@ function peek(b, T, dt, atCover) {               // crouch in cover; stand to fi
   B.peekT -= dt;
   if (B.peekT <= 0) { B.peekStand = !B.peekStand; B.peekT = B.peekStand ? lerp(AI.peekStand[0], AI.peekStand[1], brnd()) : lerp(AI.peekCrouch[0], AI.peekCrouch[1], brnd()); }
   b.botState = 'cover';
-  if (B.peekStand && T) { engage(b, T, dt, true); I.crouch = b.arsenal.current === 'sniper'; return true; }
+  if (B.peekStand && T) { engage(b, T, dt, true); return true; }      // snipers too stand to fire (16.11)
   I.crouch = true;
   if (B.mem) aimAt(b, B.mem.x, B.mem.y + 1.2, B.mem.z);
   maybeTacticalReload(b);
@@ -3663,7 +3871,7 @@ function separateSoldiers() {
   }
 }
 // ---- soldier models (DESIGN 16.2): one InstancedMesh of boxes for every part of every soldier, one for the chevrons ----
-const SOLD = { mesh: null, chev: null, parts: 4 };
+const SOLD = { mesh: null, chev: null, parts: 5 };      // base, body, head, gun, raised arms (climbing only)
 function soldierMeshes() { return [SOLD.mesh, SOLD.chev, TRAIN.vis && TRAIN.vis.mesh, TRAIN.vis && TRAIN.vis.wheelMesh]; }
 function buildSoldiers(scene) {
   const n = CONFIG.bot.max, K = CONFIG.soldier;
@@ -3679,23 +3887,30 @@ function buildSoldiers(scene) {
   for (let i = 0; i < n; i++) fxPut(SOLD.chev, i, 0, -50, 0, 0, 0, 0);
   SOLD.chev.frustumCulled = false; scene.add(SOLD.chev);
 }
-function paintSoldier(b) {
+const _tint = new THREE.Color(), _grey = new THREE.Color();
+function paintSoldier(b, k) {                    // k: 0 living colours .. 1 a body tinted bodyTint toward grey
   if (!SOLD.mesh) return;
-  const K = CONFIG.target, main = b.team === 'green' ? K.green : K.tan, dark = b.team === 'green' ? K.greenDark : K.tanDark, i = b.slot * SOLD.parts;
-  SOLD.mesh.setColorAt(i, _fx.c.set(dark)); SOLD.mesh.setColorAt(i + 1, _fx.c.set(main)); SOLD.mesh.setColorAt(i + 2, _fx.c.set(main));
-  SOLD.mesh.setColorAt(i + 3, _fx.c.set(CONFIG.soldier.gunColor));
+  const K = CONFIG.target, S = CONFIG.soldier, main = b.team === 'green' ? K.green : K.tan, dark = b.team === 'green' ? K.greenDark : K.tanDark, i = b.slot * SOLD.parts, f = (k || 0) * S.bodyTint;
+  _grey.set(S.bodyGrey);
+  const put = (j, hex) => SOLD.mesh.setColorAt(i + j, _tint.set(hex).lerp(_grey, f));
+  put(0, dark); put(1, main); put(2, main); SOLD.mesh.setColorAt(i + 3, _tint.set(S.gunColor)); put(4, main);
   SOLD.mesh.instanceColor.needsUpdate = true;
+  b.tintWas = k || 0;
 }
 const _sm = { root: new THREE.Matrix4(), m: new THREE.Matrix4(), t: new THREE.Matrix4(), q: new THREE.Quaternion(), v: new THREE.Vector3(), s: new THREE.Vector3(), e: new THREE.Euler() };
+function hideSoldierSlot(slot) { const i0 = slot * SOLD.parts; for (let i = 0; i < SOLD.parts; i++) fxPut(SOLD.mesh, i0 + i, 0, -50, 0, 0, 0, 0); }
 function updateSoldierVisuals(alpha, realDt) {
   if (!SOLD.mesh) return;
-  const K = CONFIG.soldier, m = SOLD.mesh, S = _sm;
-  const showMe = match.active && player.slot === CONFIG.bot.max && (viewSubject() !== player || !!game.view);
-  if (!showMe) { const i0 = CONFIG.bot.max * SOLD.parts; for (let i = 0; i < SOLD.parts; i++) fxPut(m, i0 + i, 0, -50, 0, 0, 0, 0); }
+  const K = CONFIG.soldier, m = SOLD.mesh, S = _sm, V = viewSubject();
+  const showMe = match.active && player.slot === CONFIG.bot.max && (V !== player || !!game.view);
+  if (!showMe) hideSoldierSlot(CONFIG.bot.max);
   for (const b of showMe ? bots.concat(player) : bots) {
+    if (b === V && b !== player && !game.view) { hideSoldierSlot(b.slot); continue; }      // spectating: the watched bot's own model is hidden
     const x = lerp(b.px, b.x, alpha), y = lerp(b.py, b.y, alpha), z = lerp(b.pz, b.z, alpha), base = b.slot * SOLD.parts;
-    let yaw = b.yaw, back = 0;
-    if (b.climbing) { yaw = Math.atan2(-b.climbing.ex, -b.climbing.ez); back = 0.3; }   // face the surface the string hangs by, flat against the string
+    if (Math.abs((b.tintWas || 0) - b.tip) > 0.02 || (b.tip === 0 && b.tintWas) || (b.tip === 1 && b.tintWas !== 1)) paintSoldier(b, b.tip);   // bodies grey as they tip
+    let yaw = b.yaw, back = 0, lean = 0;
+    const climb = !!b.climbing && !b.dead;
+    if (climb) { yaw = Math.atan2(-b.climbing.ex, -b.climbing.ez); back = K.climbBack; lean = -K.climbTilt; }   // face the surface, flat against the string
     b.ryaw = b.ryaw + wrapAngle(yaw - b.ryaw) * Math.min(1, (realDt || 1 / 60) * 14);
     const speed = Math.hypot(b.vx, b.vz), walking = b.onGround && speed > 0.5 && !b.dead;
     const bob = walking ? Math.abs(Math.sin(b.bob)) * K.bob : 0, roll = walking ? Math.sin(b.bob) * 0.04 : 0;
@@ -3703,6 +3918,7 @@ function updateSoldierVisuals(alpha, realDt) {
     S.q.setFromEuler(S.e.set(0, b.ryaw, 0));
     S.root.compose(S.v.set(x, y, z), S.q, S.s.set(1, 1, 1));
     if (back) S.root.multiply(S.t.makeTranslation(0, 0, back));
+    if (lean) S.root.multiply(S.m.makeRotationX(lean));
     if (b.tip > 0) { const hz = K.base[2] / 2; S.root.multiply(S.t.makeTranslation(0, 0, hz)).multiply(S.m.makeRotationX(b.tip * Math.PI / 2)).multiply(S.t.makeTranslation(0, 0, -hz)); }
     if (roll) S.root.multiply(S.m.makeRotationZ(roll));
     const bodyH = b.crouching ? K.crouchBody : K.body[1], by = K.base[1] + bob;
@@ -3711,13 +3927,15 @@ function updateSoldierVisuals(alpha, realDt) {
       S.m.compose(S.v.set(px, py, pz), S.q, S.s.set(sx, sy, sz));
       m.setMatrixAt(base + k, S.t.multiplyMatrices(S.root, S.m));
     };
-    put(0, 0, K.base[1] / 2, 0, K.base[0], K.base[1], K.base[2]);
+    if (climb) fxPut(m, base, 0, -50, 0, 0, 0, 0); else put(0, 0, K.base[1] / 2, 0, K.base[0], K.base[1], K.base[2]);
     put(1, 0, by + bodyH / 2, 0, K.body[0], bodyH, K.body[2]);
     put(2, 0, by + bodyH + K.head / 2, 0, K.head, K.head, K.head);
-    // gun: held at the right side, pitched with the aim; slung down along the body while climbing
-    const gp = b.climbing ? -1.3 : clamp(b.pitch, -1.2, 1.2), gy = by + bodyH - (K.body[1] - K.gunAt[1]);
+    // gun: held at the right side, pitched with the aim; slung down along the body while climbing; a body's gun lies along it (flat)
+    const gp = climb ? -1.3 : b.tip > 0 ? lerp(clamp(b.pitch, -1.2, 1.2), -Math.PI / 2, b.tip) : clamp(b.pitch, -1.2, 1.2), gy = by + bodyH - (K.body[1] - K.gunAt[1]);
     const gl = K.gun[2], cz = K.gunAt[2] - Math.cos(gp) * gl / 2, cy = gy + Math.sin(gp) * gl / 2;
     put(3, K.gunAt[0], cy, cz, K.gun[0], K.gun[1], gl, gp);
+    // arms raised to the string while climbing, otherwise hidden
+    if (climb) { const A = K.arms; put(4, 0, by + bodyH - 0.1 + A[1] / 2, -K.body[2] / 2 + A[2] / 2 - 0.02, A[0], A[1], A[2]); } else fxPut(m, base + 4, 0, -50, 0, 0, 0, 0);
   }
   m.instanceMatrix.needsUpdate = true;
   // chevrons over living teammates (Green), billboarded toward the camera
@@ -3743,7 +3961,7 @@ const game = { phase: 'title', time: 0, timeScale: 1, pointerLock: false, debug:
 const match = { active: false, phase: 'title', round: 0, score: { green: 0, tan: 0 }, timeLeft: 0, t: 0, liveT: 0, difficulty: 'regular', seed: 1,
   autoplay: false, replays: 0, rounds: [], kills: [], soldiers: [], stats: null, laneUse: null, highGround: null, winner: null, spec: null, alive: { green: 0, tan: 0 },
   teamMem: { green: { x: 0, y: 0, z: 0, t: -99 }, tan: { x: 0, y: 0, z: 0, t: -99 } }, roundKills: [], stuck0: 0, rescue0: 0, pick: 'rifle', endReason: '' };
-const killFeed = [], callouts = [], botLog = [], dmgArcs = [];
+const killFeed = [], callouts = [], botLog = [], dmgArcs = [], idleLog = [];   // idleLog: 16.11 liveness, every entry is a bug
 function matchFrozen() { return match.active && match.phase !== 'live'; }
 function countAlive() { let g = 0, t = 0; for (const s of match.soldiers) if (!s.dead) { if (s.team === 'green') g++; else t++; } match.alive.green = g; match.alive.tan = t; }
 function newLane() { return { west: 0, centre: 0, east: 0, bed: 0, desk: 0, shelves: 0 }; }
@@ -3751,11 +3969,12 @@ function startMatch(opts = {}) {
   const diff = CONFIG.difficulty[opts.difficulty] ? opts.difficulty : settings.difficulty;
   removeBots(); nav.on = false;
   const seed = opts.seed === undefined ? (Date.now() & 0xffffff) : opts.seed;
+  resetMatchWorld();                             // 16.11 / R3-3: match clock, train, bot numbering, grenades and RNG reset every start
   seedBots(seed); arsenal.seed = (seed * 2654435761) >>> 0;
   Object.assign(match, { active: true, phase: 'freeze', round: 0, score: { green: 0, tan: 0 }, difficulty: diff, seed, autoplay: !!opts.autoplay, replays: 0, rounds: [],
-    kills: [], winner: null, spec: null, roundKills: [], stuck0: stuckLog.length, rescue0: trainRescueLog.length, endReason: '', t0: game.time,
+    kills: [], winner: null, spec: null, roundKills: [], stuck0: stuckLog.length, rescue0: trainRescueLog.length, idle0: idleLog.length, endReason: '', t0: game.time,
     stats: { shots: { green: 0, tan: 0 }, hits: 0, headHits: 0, kills: 0, headKills: 0, grenades: { green: 0, tan: 0 }, rides: { green: 0, tan: 0 },
-      crossings: { green: 0, tan: 0 }, rideTries: 0, envTime: 0 },
+      crossings: { green: 0, tan: 0 }, rideTries: 0, rideGiveUps: 0, rideAtWait: 0, envTime: 0 },
     laneUse: { green: newLane(), tan: newLane() }, highGround: { green: 0, tan: 0 } });
   killFeed.length = 0; callouts.length = 0; botLog.length = 0; dmgArcs.length = 0;
   const p = player;
@@ -3772,6 +3991,15 @@ function startMatch(opts = {}) {
   beginRound();
   return true;
 }
+// Everything the simulation reads from earlier play goes back to its start, so a seed gives the same match every time in one page.
+function resetMatchWorld() {
+  game.time = 0; accumulator = 0;
+  poseTrain(0);
+  for (const c of TRAIN.cars) { c.px = c.x; c.pz = c.z; c.pfx = c.fx; c.pfz = c.fz; c.plx = c.lx; c.plz = c.lz; c.pyaw = c.yaw; c.vx = c.vz = 0; c.claim = null; c.joint = null; }
+  grenadesLive.length = 0; botSeq = 0;
+  for (const k in keys) delete keys[k];
+  for (const k of INPUT_NAMES) vinput[k] = false;
+}
 function rolesFor(team, n) {                     // seeded shuffle; with four soldiers the Centre role is always filled
   const R = ['west', 'bed', 'centre', 'high', 'east'];
   for (let i = R.length - 1; i > 0; i--) { const j = Math.floor(brnd() * (i + 1)); const t = R[i]; R[i] = R[j]; R[j] = t; }
@@ -3785,6 +4013,7 @@ function resetSoldier(s, pos, yaw) {
   if (s.arsenal) resetArsenal(s.arsenal);
   const n = nearestNode(pos[0], pos[1], pos[2]); s.lastNode = n; s.path = [n]; s.edges = []; s.pi = 1; s.goal = n;
   s.ride = null; s.crossing = false; s.evade = null; s.stuckT = 0; s.stuckRef = Infinity; s.stuckEp = null; s.stuckCarry = 0; s.sprintMove = false;
+  s.hitCalled = false; s.lastCallout = undefined; s.idleX = s.campX = pos[0]; s.idleZ = s.campZ = pos[2]; s.idleT = s.campT = s.waitT = 0;
   if (s.input) for (const k of INPUT_NAMES) s.input[k] = false;
   updateHitVolumes(s);
 }
@@ -3793,6 +4022,8 @@ function beginRound() {
   match.round++; match.phase = 'freeze'; match.t = M.freeze; match.timeLeft = M.roundTime; match.liveT = 0; match.roundKills = []; match.spec = null;
   grenadesLive.length = 0; for (const c of TRAIN.cars) c.claim = null;
   match.teamMem.green.t = match.teamMem.tan.t = -99;
+  match.visit = { green: new Float64Array(NAV.ids.length).fill(-1e9), tan: new Float64Array(NAV.ids.length).fill(-1e9) };
+  match.roundDamage = { green: 0, tan: 0 };
   const greens = bots.filter((b) => b.team === 'green'), tans = bots.filter((b) => b.team === 'tan');
   resetSoldier(player, M.playerSpawn.green, M.playerSpawn.green[3]);
   greens.forEach((b, i) => resetSoldier(b, M.botSpawns.green[i], Math.PI));
@@ -3816,7 +4047,7 @@ function endRound(winner, reason) {
   const M = CONFIG.match;
   const entry = { round: match.round, winner, reason, duration: +match.liveT.toFixed(2), kills: match.roundKills.length, killList: match.roundKills.slice(),
     alive: { green: match.alive.green, tan: match.alive.tan } };
-  if (winner) { match.score[winner]++; match.replays = 0; } else match.replays++;
+  if (winner) { match.score[winner]++; match.replays = 0; } else if (reason === 'draw') match.replays = 0; else match.replays++;
   match.rounds.push(entry); match.lastRound = entry;
   match.phase = 'roundEnd'; match.t = M.roundEnd;
   sfx('stinger_round_end');
@@ -3829,6 +4060,9 @@ function decideAtTime() {                        // 0:00: more standing wins; eq
   if (match.replays >= CONFIG.match.maxReplays) {
     const hg = totalHealth('green'), ht = totalHealth('tan');
     if (hg !== ht) return endRound(hg > ht ? 'green' : 'tan', 'health');
+    const dg = match.roundDamage.green, dtn = match.roundDamage.tan;        // 16.11 (R3-4): then more damage dealt this round
+    if (Math.abs(dg - dtn) > 1e-6) return endRound(dg > dtn ? 'green' : 'tan', 'damage');
+    return endRound(null, 'draw');                                          // awarded to neither; the next round is a normal one
   }
   return endRound(null, 'replay');
 }
@@ -3836,13 +4070,15 @@ function onSoldierKilled(v, attacker, weapon, head) {
   if (!match.active) return;
   v.deaths = (v.deaths || 0) + 1;
   if (attacker && attacker !== v) attacker.kills = (attacker.kills || 0) + 1;
-  const k = { round: match.round, time: +game.time.toFixed(2), killer: attacker ? attacker.name : null, killerTeam: attacker ? attacker.team : null,
-    weapon: weapon || 'world', victim: v.name, victimTeam: v.team, head: !!head, self: attacker === v };
+  const k = { round: match.round, time: +game.time.toFixed(2), live: +match.liveT.toFixed(2), killer: attacker ? attacker.name : null, killerTeam: attacker ? attacker.team : null,
+    weapon: weapon || 'world', victim: v.name, victimTeam: v.team, head: !!head, self: attacker === v,
+    vpos: [+v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)], kpos: attacker ? [+attacker.x.toFixed(2), +attacker.y.toFixed(2), +attacker.z.toFixed(2)] : null,
+    dist: attacker ? +Math.hypot(attacker.x - v.x, attacker.y - v.y, attacker.z - v.z).toFixed(2) : null, lane: regionOf(v.x, v.y, v.z)[3] };
   match.kills.push(k); match.roundKills.push(k); killFeed.push(k); if (killFeed.length > 50) killFeed.shift();
   if (match.stats) { match.stats.kills++; if (head) match.stats.headKills++; }
   if (v === player) { player.deadT = 0; player.crouching = false; }
-  if (v.team === 'green' && v !== player) { v.lastCallout = -99; postCallout(v, "I'm down"); }
-  if (attacker && attacker.team === 'green' && attacker !== v) { attacker.lastCallout = Math.min(attacker.lastCallout || -99, game.time - CONFIG.match.calloutGap); postCallout(attacker, 'Enemy down'); }
+  if (v.team === 'green' && v !== player) postCallout(v, "I'm down");
+  if (attacker && attacker.team === 'green' && attacker !== v) postCallout(attacker, 'Enemy down');
   countAlive();
   if (match.alive.tan === 1) { const g = match.soldiers.find((s) => s.team === 'green' && !s.dead && s !== player); if (g) postCallout(g, 'Last one'); }
   for (const s of match.soldiers) if (s.brain && s.brain.target === v) { s.brain.target = null; s.brain.vis = false; }
@@ -3924,11 +4160,12 @@ function matchReport(errs, wall) {
   const S = match.stats;
   return { winner: match.winner, score: Object.assign({}, match.score), difficulty: match.difficulty, seed: match.seed, autoplay: match.autoplay,
     rounds: match.rounds.map((r) => ({ round: r.round, winner: r.winner, reason: r.reason, duration: r.duration, kills: r.kills, alive: r.alive })),
-    stuckLog: stuckLog.slice(match.stuck0), trainRescueLog: trainRescueLog.slice(match.rescue0), laneUse: JSON.parse(JSON.stringify(match.laneUse)),
+    stuckLog: stuckLog.slice(match.stuck0), trainRescueLog: trainRescueLog.slice(match.rescue0), idleLog: idleLog.slice(match.idle0),
+    kills: match.kills.map((k) => ({ round: k.round, live: k.live, killerTeam: k.killerTeam, victimTeam: k.victimTeam, weapon: k.weapon, head: k.head, dist: k.dist, lane: k.lane, kpos: k.kpos, vpos: k.vpos })), laneUse: JSON.parse(JSON.stringify(match.laneUse)),
     highGroundTime: Object.assign({}, match.highGround), errors: errs || [], simSeconds: +(game.time - match.t0).toFixed(1), wallSeconds: wall !== undefined ? +(wall / 1000).toFixed(2) : null,
     stats: { kills: S.kills, headKills: S.headKills, headshotKillShare: S.kills ? +(S.headKills / S.kills).toFixed(3) : 0, hits: S.hits, headHits: S.headHits,
       headshotHitShare: S.hits ? +(S.headHits / S.hits).toFixed(3) : 0, shots: S.shots, grenades: S.grenades, rides: S.rides, rideTries: S.rideTries,
-      crossings: S.crossings, envelopeSeconds: +S.envTime.toFixed(2) },
+      rideGiveUps: S.rideGiveUps, rideAtWait: S.rideAtWait, crossings: S.crossings, envelopeSeconds: +S.envTime.toFixed(2) },
     soldiers: match.soldiers.map((s) => ({ name: s.name, team: s.team, kills: s.kills || 0, deaths: s.deaths || 0, role: s.role || null })),
     finished: match.phase === 'matchEnd' };
 }
@@ -4018,9 +4255,10 @@ function pickPrimary(w) {
 function cyclePick() { const L = ['rifle', 'smg', 'sniper']; return pickPrimary(L[(L.indexOf(match.pick) + 1) % 3]); }
 const TEAM_NAME = { green: 'GREEN', tan: 'TAN' };
 const REASONS = { eliminated: (w) => (w === 'green' ? 'Tan eliminated' : 'Green eliminated'), time: () => 'More soldiers standing at 0:00',
-  health: () => 'More total health after three replays', replay: () => 'Equal at 0:00: this round is replayed', skipped: () => 'Round skipped' };
+  health: () => 'More total health after three replays', damage: () => 'Equal health: more damage dealt this round',
+  draw: () => 'Equal in every way: no point, the next round is a normal one', replay: () => 'Equal at 0:00: this round is replayed', skipped: () => 'Round skipped' };
 function showRoundEnd(r) {
-  $('reTitle').textContent = r.winner ? TEAM_NAME[r.winner] + ' WINS THE ROUND' : 'ROUND REPLAYED';
+  $('reTitle').textContent = r.winner ? TEAM_NAME[r.winner] + ' WINS THE ROUND' : r.reason === 'draw' ? 'ROUND DRAWN' : 'ROUND REPLAYED';
   $('reTitle').style.color = r.winner ? teamColor(r.winner) : '#FFFFFF';
   $('reHow').textContent = (REASONS[r.reason] || (() => r.reason))(r.winner);
   $('reScore').textContent = 'GREEN ' + match.score.green + ' - ' + match.score.tan + ' TAN';
@@ -4222,7 +4460,7 @@ const _look = new THREE.Vector3();
 
 function applyLiveConfig() {      // CONFIG.camera and CONFIG.fog are re-read every frame, so hook changes show on the next render
   const C = CONFIG.camera, F = CONFIG.fog;
-  const W = CONFIG.weapons[arsenal.current], k = arsenal.scope * arsenal.scope * (3 - 2 * arsenal.scope);
+  const SA = viewSubject().arsenal || arsenal, W = CONFIG.weapons[SA.current], k = SA.scope * SA.scope * (3 - 2 * SA.scope);
   const fov = W.scopeFov && !game.view ? lerp(C.fovVertical, W.scopeFov, k) : C.fovVertical;        // sniper scope narrows the view
   if (camera.fov !== fov || camera.near !== C.near || camera.far !== C.far) {
     camera.fov = fov; camera.near = C.near; camera.far = C.far;
@@ -4447,7 +4685,7 @@ function init() {
     startMatch: (opts) => startMatch(Object.assign({ pointerLock: false }, opts)),
     runMatch: (opts) => runMatch(opts),
     setGodMode: (on) => { game.god = !!on; return game.god; },
-    botLog, killFeed, callouts,
+    botLog, killFeed, callouts, idleLog,
     matchReport: () => matchReport([], undefined),
     spectateNext: () => spectateNext(),
     pickPrimary: (w) => pickPrimary(w),
