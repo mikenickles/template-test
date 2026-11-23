@@ -1,0 +1,340 @@
+{
+ "inventory": {
+  "list": [
+   {
+    "scene": 0,
+    "type": "Mesh",
+    "inst": 0,
+    "tris": 4708,
+    "mat": "MeshLambertMaterial",
+    "cast": true,
+    "recv": true,
+    "visible": true,
+    "blend": 1,
+    "transparent": false
+   },
+   {
+    "scene": 0,
+    "type": "Mesh",
+    "inst": 473,
+    "tris": 5676,
+    "mat": "MeshLambertMaterial",
+    "cast": true,
+    "recv": true,
+    "visible": true,
+    "blend": 1,
+    "transparent": false
+   },
+   {
+    "scene": 0,
+    "type": "Mesh",
+    "inst": 0,
+    "tris": 2,
+    "mat": "MeshLambertMaterial",
+    "cast": false,
+    "recv": true,
+    "visible": true,
+    "blend": 1,
+    "transparent": false
+   },
+   {
+    "scene": 0,
+    "light": "HemisphereLight",
+    "intensity": 3,
+    "cast": false,
+    "map": 0
+   },
+   {
+    "scene": 0,
+    "light": "DirectionalLight",
+    "intensity": 3,
+    "cast": true,
+    "map": 2048
+   },
+   {
+    "scene": 0,
+    "type": "Mesh",
+    "inst": 284,
+    "tris": 3408,
+    "mat": "MeshBasicMaterial",
+    "cast": false,
+    "recv": false,
+    "visible": true,
+    "blend": 1,
+    "transparent": false
+   },
+   {
+    "scene": 0,
+    "type": "Mesh",
+    "inst": 24,
+    "tris": 288,
+    "mat": "MeshBasicMaterial",
+    "cast": false,
+    "recv": false,
+    "visible": true,
+    "blend": 2,
+    "transparent": true
+   },
+   {
+    "scene": 0,
+    "type": "Line",
+    "inst": 0,
+    "tris": 0,
+    "mat": "LineBasicMaterial",
+    "cast": false,
+    "recv": false,
+    "visible": false,
+    "blend": 1,
+    "transparent": false
+   },
+   {
+    "scene": 0,
+    "type": "Mesh",
+    "inst": 63,
+    "tris": 756,
+    "mat": "MeshPhongMaterial",
+    "cast": true,
+    "recv": true,
+    "visible": true,
+    "blend": 1,
+    "transparent": false
+   },
+   {
+    "scene": 1,
+    "type": "Mesh",
+    "inst": 0,
+    "tris": 84,
+    "mat": "MeshBasicMaterial",
+    "cast": false,
+    "recv": false,
+    "visible": true,
+    "blend": 1,
+    "transparent": false
+   },
+   {
+    "scene": 1,
+    "type": "Mesh",
+    "inst": 0,
+    "tris": 60,
+    "mat": "MeshBasicMaterial",
+    "cast": false,
+    "recv": false,
+    "visible": false,
+    "blend": 1,
+    "transparent": false
+   },
+   {
+    "scene": 1,
+    "type": "Mesh",
+    "inst": 0,
+    "tris": 96,
+    "mat": "MeshBasicMaterial",
+    "cast": false,
+    "recv": false,
+    "visible": false,
+    "blend": 1,
+    "transparent": false
+   },
+   {
+    "scene": 1,
+    "type": "Mesh",
+    "inst": 0,
+    "tris": 36,
+    "mat": "MeshBasicMaterial",
+    "cast": false,
+    "recv": false,
+    "visible": false,
+    "blend": 1,
+    "transparent": false
+   },
+   {
+    "scene": 1,
+    "type": "Mesh",
+    "inst": 0,
+    "tris": 8,
+    "mat": "MeshBasicMaterial",
+    "cast": false,
+    "recv": false,
+    "visible": false,
+    "blend": 2,
+    "transparent": true
+   }
+  ],
+  "memory": {
+   "geometries": 6,
+   "textures": 2
+  },
+  "programs": 11,
+  "autoReset": false,
+  "tex": [
+   [
+    "texImage2D",
+    2048,
+    2048
+   ],
+   [
+    "texStorage2D",
+    512,
+    1024
+   ]
+  ],
+  "colliders": 358,
+  "targets": 21
+ },
+ "fullAuto": {
+  "glCallsMax": 12,
+  "glTrisMax": 26054,
+  "reportedCalls": 12,
+  "reportedTris": 26054,
+  "msRender": 123.9,
+  "msStepPerTick": 0.0767,
+  "peak": {
+   "particles": 22,
+   "casings": 21,
+   "decals": 60
+  },
+  "caps": {
+   "particles": 192,
+   "casings": 24,
+   "decals": 64
+  }
+ },
+ "grenade": {
+  "aimingCalls": 11,
+  "aimingLineSegs": 0,
+  "burstCallsMax": 10,
+  "burstTrisMax": 26062
+ },
+ "allDown": {
+  "down": 21,
+  "of": 21
+ },
+ "states": [
+  {
+   "label": "idle, rifle, Green spawn",
+   "glCalls": 10,
+   "glTris": 26062,
+   "glLines": 0,
+   "per": {
+    "fbo1": "3 calls / 11140 tris",
+    "screen": "7 calls / 14922 tris"
+   },
+   "reportedCalls": 10,
+   "reportedTris": 26062,
+   "ms": 138.2
+  },
+  {
+   "label": "named view spawn_green (no viewmodel)",
+   "glCalls": 9,
+   "glTris": 25978,
+   "glLines": 0,
+   "per": {
+    "fbo1": "3 calls / 11140 tris",
+    "screen": "6 calls / 14838 tris"
+   },
+   "reportedCalls": 9,
+   "reportedTris": 25978,
+   "ms": 132.3
+  },
+  {
+   "label": "named view bed_top (no viewmodel)",
+   "glCalls": 9,
+   "glTris": 25978,
+   "glLines": 0,
+   "per": {
+    "fbo1": "3 calls / 11140 tris",
+    "screen": "6 calls / 14838 tris"
+   },
+   "reportedCalls": 9,
+   "reportedTris": 25978,
+   "ms": 122.2
+  },
+  {
+   "label": "named view west_lane (no viewmodel)",
+   "glCalls": 9,
+   "glTris": 25978,
+   "glLines": 0,
+   "per": {
+    "fbo1": "3 calls / 11140 tris",
+    "screen": "6 calls / 14838 tris"
+   },
+   "reportedCalls": 9,
+   "reportedTris": 25978,
+   "ms": 152.1
+  },
+  {
+   "label": "named view shelf_top (no viewmodel)",
+   "glCalls": 9,
+   "glTris": 25978,
+   "glLines": 0,
+   "per": {
+    "fbo1": "3 calls / 11140 tris",
+    "screen": "6 calls / 14838 tris"
+   },
+   "reportedCalls": 9,
+   "reportedTris": 25978,
+   "ms": 138.5
+  },
+  {
+   "label": "after the burst, decals at 64, same spot",
+   "glCalls": 10,
+   "glTris": 26038,
+   "glLines": 0,
+   "per": {
+    "fbo1": "3 calls / 11140 tris",
+    "screen": "7 calls / 14898 tris"
+   },
+   "reportedCalls": 10,
+   "reportedTris": 26038,
+   "ms": 120.6
+  },
+  {
+   "label": "all dummies down (21 of 21), Green spawn",
+   "glCalls": 10,
+   "glTris": 26062,
+   "glLines": 0,
+   "per": {
+    "fbo1": "3 calls / 11140 tris",
+    "screen": "7 calls / 14922 tris"
+   },
+   "reportedCalls": 10,
+   "reportedTris": 26062,
+   "ms": 136.6
+  }
+ ],
+ "split": {
+  "baseline": 138,
+  "dummies hidden": 133.3,
+  "fx meshes hidden": 133.1
+ },
+ "pool": {
+  "fired": 500,
+  "loopTicks": 3161,
+  "before": {
+   "sceneObjects": 17,
+   "geometries": 9,
+   "textures": 2,
+   "programs": 14,
+   "domNodes": 73,
+   "shotLog": 150,
+   "audioLog": 200,
+   "grenadesLive": 0,
+   "heapMB": 9.5
+  },
+  "after": {
+   "sceneObjects": 17,
+   "geometries": 11,
+   "textures": 2,
+   "programs": 14,
+   "domNodes": 73,
+   "shotLog": 200,
+   "audioLog": 200,
+   "grenadesLive": 0,
+   "heapMB": 9.5
+  },
+  "wallMs": 199
+ },
+ "fileSizeBytes": 136532,
+ "errors": [],
+ "blocked": []
+}

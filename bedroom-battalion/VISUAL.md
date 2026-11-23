@@ -1,3 +1,189 @@
+# Round 2 (gunplay)
+
+**Verdict: PASS.** Every required piece of juice is drawn, pooled and inside the budget (12 real draw calls at
+worst while firing, of 200), the HUD is legible at both sizes, and Green dummies read at every distance the room
+allows. The pass comes with three look problems to fix: the grenade burst is close to invisible, Tan reads
+markedly worse than Green at range, and wood and fabric impacts cannot be seen on their own surfaces.
+
+Scripts are `tests/visual_r2_*.cjs`, screenshots are `screenshots/round2/visual_*.png` (66 files). Rendering is
+software (SwiftShader), so **milliseconds are relative cost only**. `index.html` was not edited. Where a test
+changed a `CONFIG` value to isolate something, it says so and the value was restored.
+
+## Budget
+
+| Item | Round 1 | Round 2 | Limit |
+| --- | --- | --- | --- |
+| Draw calls, idle with a gun up (WebGL level) | 5 | **10** (7 main + 3 shadow) | under 200 |
+| Draw calls, full-auto fire | | **12** at worst | |
+| Draw calls, grenade aim / burst | | 11 / 10 | |
+| Draw calls, all 21 dummies down | | 10 | |
+| Draw calls, named view (no viewmodel) | 5 | 9 | |
+| Game's own counter vs WebGL count | 3 vs 5 | **equal in every state** (10, 12, 9) | |
+| Triangles, main pass / with shadow pass | 10,362 / 20,722 | 14,922 / **26,062** | none set |
+| Shadow lights / map | 1 / 2048 | 1 / 2048 | 1 / 2048 or less |
+| Textures / shader programs | 2 / 7 | 2 / 14 | |
+| `index.html` | 85,035 bytes | **136,532 bytes** | under 400 KB |
+| External requests / console errors | 1 / 0 | 1 / 0 | 1 / 0 |
+| `render()` at 1280x720, idle at spawn | 122 ms | 138 ms | relative only |
+| `render()` during full-auto fire | | 124 ms (no extra cost) | |
+| `step(1/60)` idle / firing | 0.005 ms | 0.005 / 0.077 ms | |
+
+- What the 10 calls are: static mesh, instanced boxes, floor, effects pool (284 instances), tracer pool (24),
+  dummies (63 instances), viewmodel; the shadow pass repeats static, instanced and dummies. Firing adds the
+  muzzle flash; aiming a grenade adds the arc line.
+- Draw calls and triangles do not move with the number of live particles, casings or decals, because every
+  pooled instance is always drawn.
+- **Pooling holds.** Across 500 shots with all four guns, with grenades thrown throughout: scene objects 17 to 17, textures 2 to
+  2, programs 14 to 14, DOM nodes 73 to 73, JS heap 9.5 to 9.5 MB, no live grenades left. Geometries went 9 to 11
+  only because two gun models were drawn for the first time. `shotLog` and `audioLog` stay capped at 200.
+- Caps: decals 64 live after 64, 65 and 100 wall shots. Casings peaked at 21 of 24 with the SMG, and all were
+  gone 2 s after firing stopped. Particles peaked at 22 of 192 in full-auto fire.
+- Cost split at the spawn (pieces hidden in the test): dummies about 3 %, effects pools about 3 %. Shadows are
+  still the dominant cost, as in round 1.
+
+### Headroom for round 3
+
+190 draw calls are free today. If the 10 soldiers go into the dummies' instanced mesh (or one like it) they add
+0 to 2 calls; ten separate meshes add 20; ten soldiers of six loose limbs add 120. The train as instanced boxes
+adds 2, as five merged cars 10. A sensible round 3 lands between 14 and 45 calls. File size grew 51 KB this
+round; 263 KB is left for two more rounds.
+
+## Findings, most severe first
+
+### 1. Major: the grenade burst is close to invisible, and the thrown grenade blocks the view
+- From 14 units the burst is a handful of 3 px dots for about 10 ticks and nothing on the burst tick itself
+  (`visual_fx_grenade_flight_burst.png`, lower row). It is 58 particles of 0.09 to 0.1 units and no flash.
+- On the throw tick the grenade body is a red block about a fifth of the screen high, in front of the gun, and
+  it stays large for 3 ticks (same file, first three frames).
+- **Fix:** add a burst flash (one additive instance scaled to 2 to 3 units for 3 to 4 ticks, from the tracer
+  pool) and make the burst particles 0.25 to 0.3 units. Start the grenade 1.2 units in front of the eye
+  rather than 0.5, or do not draw it for its first 3 ticks. Not tried.
+
+### 2. Major: Tan reads much worse than Green, and stops reading near 100 units against pale backgrounds
+569 views with a clear line to a dummy, camera aimed at the body, body colour compared with the pixels just
+beside it (`visual_r2_teams.cjs`). "Under 15" means hard to pick out at a glance.
+
+| Team | Distance | Views | Body size, px | dE to background, median | 10th percentile | Views under dE 15 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Green | 10 | 85 | 23 x 84 | 64.9 | 60.9 | 0 % |
+| Green | 30 | 121 | 8 x 28 | 65.6 | 60.0 | 0 % |
+| Green | 60 | 64 | 4 x 14 | 57.2 | 53.2 | 0 % |
+| Green | 100 | 20 | 2.3 x 8 | 39.9 | 38.4 | 0 % |
+| Green | 150 | 2 | 1.6 x 6 | 17.4 | 16.3 | 0 % |
+| Tan | 10 | 79 | 23 x 84 | 39.8 | 30.8 | 0 % |
+| Tan | 30 | 113 | 8 x 28 | 37.8 | 30.2 | 1 % |
+| Tan | 60 | 63 | 4 x 14 | 32.8 | 26.4 | 2 % |
+| Tan | 100 | 20 | 2.3 x 8 | 22.8 | 11.4 | 10 % |
+| Tan | 150 | 2 | 1.6 x 6 | 9.0 | 9.0 | 100 % |
+
+- Green never stops reading by colour. It is limited by size: under 3 px wide beyond 100 units unscoped.
+- Tan reads to 60 units, is unreliable at 100 (a quarter of the views against walls and shelves are under 15)
+  and is gone at 150. Worst cases at 60 units or less: Tan on tall shelf L1 against the wall and the yellow
+  string (dE 10.2), Tan on the tunnel roof against the bed side (dE 14.4).
+- By background, up to 60 units: Tan on shelf 30.8, on bed 29.6, on wall 34.1, on floor 36.8, on desk 39.6,
+  in front of its own red fort 56.9. Green is 60 or more on everything.
+- Sun: a sunlit Tan body renders `#FFD57D` (red channel clipped) against `#CBA86A` in shade. Green goes from
+  `#2A933C` to `#3ABA48`. Neither loses contrast in the beam.
+- Haze: the same Green body is `#2A933C` at 10 units, `#459D51` at 60 and `#73B074` at 100. Tan goes `#CBA86A`,
+  `#CFB078`, `#D6BD90`, which is drifting straight toward the haze colour `#E6DCCB` and the pale walls.
+- Evidence: `visual_team_green_floor_b.png` and `visual_team_tan_floor_b.png` (10, 30, 60 units, enlarged).
+- **Fix (lead):** Tan needs a darker or more saturated value to survive the haze, for example `#D9A441` with
+  shadow `#A87A2C`, or a dark outline or helmet band on both teams. Not tried.
+
+**Shelf sniping is workable; haze is not the limit.** From the tall shelf L3 edge the five visible Green dummies
+are 102 to 127 units away, dE 31 to 46, and 2 x 7 px unscoped but 7 x 25 px in the scope
+(`visual_team_shelf_view_unscoped.png`, `visual_team_shelf_view_scoped.png`). From Green's small shelf the Tan
+dummies at 108 to 138 units are only dE 19 to 21, so Tan's snipers get clearer targets than Green's. That adds
+to the known tall-shelf advantage.
+
+### 3. Medium: wood and fabric impacts cannot be seen on their own surfaces
+Pistol shot from 2 to 7 units with kick, shake, flash and tracer switched off in the test, so only the
+particles and the decal change the frame (`visual_r2_fx.cjs`):
+
+| Surface | Particles vs background | dE while particles live | Read as |
+| --- | --- | --- | --- |
+| wood (floor) | `#6E4A2D` on `#754928` | 4 to 5 | invisible; only the decal shows |
+| fabric (bed side) | `#EBE5DA` on `#D4C8B6` | 7 to 11 | faint |
+| card (tunnel) | `#B0A286` on `#8C8F90` | 15 to 21 | visible, tan flecks |
+| metal (mug) | white on `#8C8F90` | 15 to 21 | visible but 4 specks for 0.16 s |
+| plastic (fort) | `#9A997A` on `#2A61AD` | 47 to 67 | clear yellow sparks |
+| book (stairs) | `#DACEBC` on `#E87918` | 61 to 69 | clear pale flecks |
+
+- The six surfaces differ in colour, speed and life as specified, but on screen four of them are "a few small
+  squares". Only plastic (wide, fast, yellow) and book (pale on orange) are told apart at a glance. Strips:
+  `visual_fx_impact_wood.png` and the five others.
+- **Fix:** wood chips to a light splinter colour such as `#D9B98A`, fabric puffs larger (0.2) and whiter, metal
+  sparks 8 instead of 4 with life 0.25. Not tried.
+
+### 4. Medium: muzzle flash problems
+- The sniper's flash sits well below the muzzle (`visual_fx_flash_sniper.png`, `visual_vm_sniper_flash.png`).
+  The gun model rotates up with its kick but the flash is placed without that rotation. Rifle, SMG and pistol
+  flashes are on the muzzle (`visual_fx_flash_rifle.png`).
+- The flash lasts 2 rendered frames, not a time: it is counted down in `renderViewmodel`. That is 33 ms at
+  60 fps and 14 ms at 144 fps. Measured: visible on 2 successive renders with no sim tick between.
+- **Fix:** make the flash a child of the gun mesh, and time it in sim ticks or seconds.
+
+### 5. Medium: HUD details
+What works (`visual_hud_idle_720.png`, `visual_hud_idle_1080.png` and the others):
+- Crosshair ticks are centred and widen with spread. Gap in px at 720p, still / after a burst / walking / in
+  the air: rifle 4 / 18 / 6 / 12, SMG 12 / 31 / 17 / 35, sniper unscoped 25 / 25 / 37 / 74, pistol 3 / 3 / 4 / 9.
+  At 1080p the gaps scale by 1.5.
+- Hit marker is a white X, kill marker is red and larger (30 px bars against 18). Both show while scoped.
+- Weapon name, magazine / reserve, grenade count and health sit in the corners at both sizes and do not
+  overlap the viewmodel. `RELOADING` is appended to the name.
+- Scope: dark vignette with a thin cross, health and ammo still readable (`visual_hud_scope_720.png`).
+
+What does not:
+- The yellow weapon name is weak on pale backgrounds: `RIFLE` over the wall in `visual_hud_bright_window_720.png`
+  and `SNIPER` over the shelf in `visual_team_shelf_view_unscoped.png`. White with the existing shadow would do.
+- Damage numbers spawn on the hit point, so they sit on top of the crosshair and on each other: `26` covers the
+  hit marker in `visual_hud_hit_720.png`, and `32`, `32`, `15` pile up in `visual_hud_bloom_smg_720.png`.
+  Offset them 20 px up and give each a small sideways drift.
+- The grenade arc is a 1 px line, 358 pixels in the whole frame, yellow on cream walls
+  (`visual_fx_arc_pale.png`, `visual_hud_grenade_aim_720.png`). WebGL lines cannot be widened; draw it as dots
+  from the effects pool or add a landing marker.
+- HUD sizes are still fixed pixels (carried from round 1).
+
+### 6. Minor: `bed_top` has its eye inside a dummy
+- Confirmed. The eye (27, 19.6, 80) is inside the head of `target.12` at (27, 18, 80), whose head spans y 19.35
+  to 19.8. The lower third of `visual_bed_top.png` is the inside of the dummy.
+- **Proposed eye: (31, 19.6, 80)**, same target. It is the `m.bed.e` node at the bed edge, the dummy is behind
+  the camera, and the floor, chair, desk and both shelves are in frame (`visual_bed_top_proposed_a.png`).
+- `desk_top` and `west_lane` use the new eyes from 15.5 and are no longer blocked (`visual_desk_top.png`,
+  `visual_west_lane.png`). The table in DESIGN section 10 still lists the old eyes.
+
+### 7. Minor items
+- **Decals** are 0.13-unit dark squares, identical on every surface. At point-blank range one is a black tile
+  (`visual_vm_sniper_flash.png`). No z-fighting from 12, 30 or 60 units in the two-eye test, and none at a
+  grazing angle (`visual_fx_decals_grazing.png`). Suggest 0.08 and a surface-tinted colour.
+- **Tracer** is 0.035 wide and starts beside the eye, so in the scope it is a thick pale beam across the lower
+  right (`visual_hud_kill_720.png`). Hide or thin it while scoped.
+- **SMG and pistol viewmodels** look alike from the first-person angle: a dark block with a yellow tip
+  (`visual_vm_smg.png`, `visual_vm_pistol.png`). The rifle (yellow magazine, wood stock) and sniper (scope block,
+  long barrel) are distinct at a glance. Give the SMG a visible magazine or a different accent colour.
+- **Viewmodels do not clip.** They are drawn in their own pass after a depth clear, so pressing into a wall
+  changes nothing (`visual_vm_rifle_wall.png`, `visual_vm_sniper_wall.png`). They are unlit with baked face
+  shades and are not fogged, which is correct for something at arm's length.
+- **Kill sequence** works: the dummy tips in 0.25 s, lies flat, stands again at 3 s (`visual_fx_kill.png`). The
+  8 plastic chips are too small to notice at 6 units.
+- **Casings** are bright and easy to see in flight (`visual_fx_rifle_auto.png`); they vanish at 1.4 s rather
+  than fading.
+
+## Carry-overs from round 1
+
+| Item | Result | Evidence |
+| --- | --- | --- |
+| Skirting and door frame 0.3 thick | Fixed | Touching the wall, skirting, frame and door all still render (`visual_carry_skirting_touch.png`, `visual_carry_door_yaw06.png`) |
+| Counters include the shadow pass | Fixed | Reported equals WebGL count in every state measured |
+| Named views `west_lane`, `desk_top` | Fixed | Finding 6 |
+| Crayons turned north-south | Fixed | Colliders `55.7..57` and `63..64.3` by `29..38`, mirrored; slits clear (`visual_carry_crayons_fort.png`) |
+| Bed top blue, pillows visible, underside darker | Fixed | Bed top `#3C558A` shade, `#4E6A9F` sun, no clipping. Pillow vs bed dE 64 (was 9). Underside `#5B5349`, dE 25 from the floor (`visual_carry_bed_top.png`, `visual_under_bed.png`) |
+| Desk apron panels | Present | Colliders `desk.apron.n` and `.s` at `95..95.5`, y 17 to 24.5 (`visual_carry_apron.png`) |
+
+Hard rules rechecked: one file, one URL in the source and one external request, no other asset or library.
+
+---
+
 # VISUAL.md: round 1 (graybox)
 
 **Verdict: PASS.** Every object in DESIGN.md sections 3 to 7 is drawn in its graybox category colour, with no
