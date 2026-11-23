@@ -55,29 +55,32 @@ const CONFIG = {
             eyeLerp: 7,          // u/s the eye moves between stand and crouch height
             stepSmooth: 16 },    // 1/s decay of the camera offset that hides step-up pops
   move: { walk: 5, sprint: 7, crouch: 2.5,
-          groundAccelTime: 0.10, groundStopTime: 0.08, airControl: 0.25,
+          groundAccelTime: 0.10, groundStopTime: 0.08, airControl: 0.12,
           gravity: 22, jumpVel: 7.8, stepUp: 0.65, maxSlopeDeg: 50, slopeSpeedKeep: true,
           airStep: 0.2,          // ledge height forgiven while airborne
           jumpBuffer: 0.12, coyote: 0.08 },
-  climb: { speed: 3.5, grabRadius: 0.8, exitDist: 1, snapSpeed: 6, regrab: 0.45, stringHalfWidth: 0.11 },
+  climb: { speed: 5.5, grabRadius: 0.8, exitDist: 1, snapSpeed: 6, regrab: 0.45, stringHalfWidth: 0.11,
+           topRegrab: 0.5,      // s the string just topped out cannot be grabbed again
+           drawAbove: 2 },      // strings are drawn this far above their top surface so they show from on top
   fall: { safe: 10, perUnit: 5 },
   spring: { launchVel: [-4.5, 31, 0] },
-  camera: { fovVertical: 75, near: 0.05, far: 400 },
-  fog: { near: 30, far: 330 },
+  camera: { fovVertical: 75, near: 0.05, far: 400 },   // read live every frame
+  fog: { near: 10, far: 220 },                      // read live every frame, like camera
   sim: { hz: 60, maxStepsPerFrame: 15 },
   input: { sensitivity: 0.0022, pitchLimit: 1.54 },
   room: { x: 120, y: 90, z: 160, wall: 2, outY: -5 },
-  light: { sunDir: [1, -1, 0.15], sunIntensity: 2.4, hemiIntensity: 3.4,
+  light: { sunDir: [1, -1, 0.15], sunIntensity: 3.0, hemiIntensity: 3.0,
            shadowMap: 2048, shadowBias: -0.0005, shadowNormalBias: 0.02, shadowRadius: 2 },
   floor: { plank: 3.2, gap: 0.12, texPlanks: 4, texLength: 25.6 },
+  route: { lap: 1.5, lapThick: 0.05 },             // route colour lapped onto the surface at every ramp, bridge and stair head
   track: { cx: 60, xWest: 43, xEast: 77, z0: 52.5, z1: 107.5, radius: 17, gauge: 3.2, sleeperGap: 2,
            height: 0.3, sleeperLen: 4.4, sleeperWid: 0.7, railWid: 0.28 },
   spawn: { green: [60, 0, 20, Math.PI], tan: [60, 0, 140, 0] },
   nav: { arrive: 0.3, arriveY: 0.75, stuckTime: 2.5, timeout: 120, sweepStep: 0.1 },
   color: {
     haze: '#E6DCCB', wall: '#BFD3E0', trim: '#F2EFE6', ceiling: '#F5F2EA', plank: '#7A4E2E', plankGap: '#4A2E1A',
-    sun: '#FFE2B0', hemiSky: '#FFF1D6', hemiGround: '#B08D6A',
-    bed: '#C79A5E', blanket: '#3D5A99', sheet: '#E8EEF5', desk: '#8FA3B5', shelf: '#EFE9DD',
+    sun: '#FFE2B0', hemiSky: '#FFF8EC', hemiGround: '#D8CFC4',
+    bed: '#E9E4DA', blanket: '#3D5A99', sheet: '#E8EEF5', desk: '#8FA3B5', shelf: '#EFE9DD',
     fortGreen: '#2F6FD0', fortTan: '#D43C2E', ruin: '#7B4BB5',
     route: '#FF8A1F', string: '#FFD21F', cover: '#9AA3AD', spare: '#B9BEC6', track: '#4B5058', sleeper: '#3A3E45',
     hud: '#FFFFFF', accent: '#FFD21F', danger: '#E0281F'
@@ -274,7 +277,7 @@ function cyl(id, x, z, r, y0, y1, color, surface) {
 }
 function climbString(id, x, z, y0, y1, ex, ez) {
   const w = CONFIG.climb.stringHalfWidth;
-  vbox(x - w, x + w, z - w, z + w, y0, y1, CONFIG.color.string);
+  vbox(x - w, x + w, z - w, z + w, y0, y1 + CONFIG.climb.drawAbove, CONFIG.color.string);      // collider still ends at y1
   vbox(Math.min(x, x + ex * 0.7) - w, Math.max(x, x + ex * 0.7) + w, Math.min(z, z + ez * 0.7) - w, Math.max(z, z + ez * 0.7) + w, y1 - 0.02, y1 + 0.1, CONFIG.color.string);
   const c = addCollider({ id, kind: 'string', surface: 'fabric', x, z, ex, ez, x0: x - w, x1: x + w, y0, y1, z0: z - w, z1: z + w });
   STRINGS.push(c);
@@ -286,6 +289,7 @@ function stairs(id, x0, x1, zFoot, dir, n, rise, depth) {       // book stairs: 
     ibox(id + '.' + i, x0, x1, Math.min(za, zb), Math.max(za, zb), 0, rise * i, CONFIG.color.route, 'book');
   }
 }
+function lap(x0, x1, z0, z1, y) { vbox(x0, x1, z0, z1, y, y + CONFIG.route.lapThick, CONFIG.color.route); }   // visual only
 const mz = (z0, z1, mirror) => (mirror ? [160 - z1, 160 - z0] : [z0, z1]);     // north-south mirror rule
 function boxNS(id, x0, x1, z0, z1, y0, y1, color, surface) {    // object that exists on both halves
   box('n.' + id, x0, x1, z0, z1, y0, y1, color, surface);
@@ -385,6 +389,7 @@ function buildWorld(scene, renderer) {
   box('desk.notebook', 99, 111, 74, 86, 26, 26.4, G, 'book');
   for (let k = 0; k < 3; k++) box('desk.books.' + k, 111 + 0.6 * k, 119 - 0.6 * k, 86 + 0.6 * k, 93 - 0.6 * k, 26 + 1.2 * k, 27.2 + 1.2 * k, G, 'book');
   cyl('desk.pencilcup', 115.5, 98, 2.6, 26, 35, G, 'metal');
+  cyl('chair.stopper.n', 92.45, 73.3, 0.5, 17, 18, G, 'wood'); cyl('chair.stopper.s', 92.2, 86.7, 0.5, 17, 18, G, 'wood');   // seat stoppers
   boxNS('desk.eraser', 104, 108, 66, 68, 0, 1.2, G, 'plastic');
   cyl('desk.paperball', 108, 80, 2.5, 0, 4.5, G, 'card');
 
@@ -398,6 +403,7 @@ function buildWorld(scene, renderer) {
   box('s.tall.landing', 103.5, 108, 116, 122.1, 0, 20, RT, 'book');
   stairs('n.small.books', 103.5, 108, 9, 1, 34, 20 / 34, 0.85);                                   // route small_stairs
   box('n.small.landing', 103.5, 108, 37.9, 44, 0, 20, RT, 'book');
+  box('s.tall.guard', 108, 108.6, 122.1, 151, 0, 19, G, 'book'); box('n.small.guard', 108, 108.6, 9, 37.9, 0, 19, G, 'book');   // stair guards
   climbString('s.tall.str.L2a', 107.6, 130, 20, 40, 1, 0); climbString('s.tall.str.L2b', 107.6, 146, 20, 40, 1, 0);
   climbString('s.tall.str.L3a', 107.6, 136, 40, 60, 1, 0); climbString('s.tall.str.L3b', 107.6, 152, 40, 60, 1, 0);
   climbString('n.small.str.L2a', 107.6, 30, 20, 40, 1, 0); climbString('n.small.str.L2b', 107.6, 14, 20, 40, 1, 0);
@@ -406,6 +412,15 @@ function buildWorld(scene, renderer) {
   cyl('s.tall.L3.trophy', 115, 128, 2.5, 60, 69, G, 'metal'); box('s.tall.L3.books', 112, 119, 142, 149, 60, 61.2, G, 'book');
   box('n.small.L1.books', 114, 119.5, 18, 26, 20, 27, G, 'book'); cyl('n.small.L1.pot', 115, 36, 2, 20, 24, G, 'plastic');
   box('n.small.L2.books', 112, 119, 20, 27, 40, 41.2, G, 'book'); box('n.small.L2.clock', 113, 118, 34, 37, 40, 44, G, 'metal');
+
+  // ---- 4.4 route colour lapped 1.5 onto the surface each ramp, bridge and stair head reaches ----
+  const LP = CONFIG.route.lap;
+  lap(20, 32, 45, 45 + LP, 18); lap(22, 30, 115 - LP, 115, 18);                        // blanket slope, bed book stairs
+  lap(86, 92, 73, 73 + LP, 17); lap(86, 92, 87 - LP, 87, 17);                          // skateboard, chair book stairs
+  lap(95.5, 95.5 + LP, 64, 67, 26); lap(95.5, 95.5 + LP, 93, 96, 26);                  // ruler ramps onto the desk
+  lap(110, 113, 55, 55 + LP, 26); lap(110, 113, 44 - LP, 44, 20);                      // ruler bridge north: desk end, shelf end
+  lap(110, 113, 105 - LP, 105, 26); lap(110, 113, 116, 116 + LP, 20);                  // ruler bridge south
+  lap(108, 108 + LP, 117.2, 122.1, 20); lap(108, 108 + LP, 37.9, 42.8, 20);            // shelf book stairs onto L1
 
   // ---- 5. forts and ruin ----
   buildFort('n', false, C.fortGreen);
@@ -431,7 +446,8 @@ function buildWorld(scene, renderer) {
   // ---- 6. floor cover ----
   boxNS('W-a.1', 37, 40, 28, 31, 0, 3, G, 'wood'); boxNS('W-a.2', 37, 40, 31, 34, 0, 6, G, 'wood'); boxNS('W-a.3', 34, 37, 31, 34, 0, 3, G, 'wood');
   boxNS('W-b.car', 33, 36, 56, 62, 0, 2.2, G, 'plastic');
-  boxNS('C-a.crayon1', 50, 59, 30, 30.9, 0, 0.9, G, 'plastic'); boxNS('C-a.crayon2', 62, 71, 31.5, 32.4, 0, 0.9, G, 'plastic');
+  boxNS('W-c', 33, 36, 69, 72, 0, 3, G, 'wood');
+  boxNS('C-a.crayon1', 50, 59, 30, 31.3, 0, 1.3, G, 'plastic'); boxNS('C-a.crayon2', 62, 71, 31.5, 32.8, 0, 1.3, G, 'plastic');   // jumbo crayons
   boxNS('C-b.car', 52, 55, 43, 49, 0, 2.2, G, 'plastic');
   box('n.C-c.truck.bed', 63, 68, 44, 51, 0, 3.6, G, 'plastic'); box('n.C-c.truck.cab', 63, 68, 51, 54, 0, 5, G, 'plastic');
   box('s.C-c.marble.ramp', 63, 68, 106, 113, 0, 4, G, 'plastic'); box('s.C-c.marble.tower', 63, 68, 113, 116, 0, 8, G, 'plastic');
@@ -445,6 +461,7 @@ function buildWorld(scene, renderer) {
   box('n.C-f.block', 53, 56, 67, 70, 0, 6, G, 'wood'); box('s.C-f.block', 64, 67, 90, 93, 0, 6, G, 'wood');
   boxNS('E-a.1', 80, 83, 30, 33, 0, 6, G, 'wood'); boxNS('E-a.2', 83, 86, 30, 33, 0, 3, G, 'wood'); boxNS('E-a.3', 80, 83, 33, 36, 0, 3, G, 'wood');
   boxNS('E-b.car', 110, 116, 46, 49, 0, 2.2, G, 'plastic');
+  box('n.E-c', 79.5, 82.5, 44, 47, 0, 3, G, 'wood');
   box('tunnel.wall.w', 72.6, 73.6, 68, 92, 0, 6.8, G, 'card'); box('tunnel.wall.e', 80.4, 81.4, 68, 92, 0, 6.8, G, 'card');
   box('tunnel.roof', 72.6, 81.4, 68, 92, 6.8, 8, G, 'card');
 
@@ -626,6 +643,12 @@ function pushCircleCyl(pos, r, c) {
   pos.x = c.x + _n.x * rr; pos.z = c.z + _n.z * rr;
   return true;
 }
+// Push the circle out of the part of one collider inside the band (yLo, yHi). Normal left in _n.
+function pushOutOf(pos, r, c, yLo, yHi) {
+  if (c.kind === 'cyl') return c.y1 > yLo && c.y0 < yHi && pushCircleCyl(pos, r, c);
+  return blockRect(c, yLo, yHi, _R) && pushCircleRect(pos, r, _R);
+}
+function slideVelocity(vel) { const d = vel.vx * _n.x + vel.vz * _n.z; if (d < 0) { vel.vx -= d * _n.x; vel.vz -= d * _n.z; } }
 // Wall pass: push the circle out of everything taller than the step threshold and lower than the head.
 function resolveWalls(pos, r, feet, height, grounded, vel) {
   const M = CONFIG.move, head = feet + height, thr = grounded ? M.stepUp : M.airStep;
@@ -634,16 +657,8 @@ function resolveWalls(pos, r, feet, height, grounded, vel) {
     const list = near(pos.x, pos.z, r + 0.05);
     for (let k = 0; k < list.length; k++) {
       const c = list[k];
-      let pushed = false;
-      if (c.kind === 'cyl') { if (c.y1 > feet + thr && c.y0 < head) pushed = pushCircleCyl(pos, r, c); }
-      else {
-        const lo = c.kind === 'ramp' ? feet + (c.steep ? 0.02 : M.stepUp) : feet + thr;
-        if (blockRect(c, lo, head, _R)) pushed = pushCircleRect(pos, r, _R);
-      }
-      if (pushed) {
-        hit = true;
-        if (vel && grounded) { const d = vel.vx * _n.x + vel.vz * _n.z; if (d < 0) { vel.vx -= d * _n.x; vel.vz -= d * _n.z; } }
-      }
+      const lo = c.kind === 'ramp' ? feet + (c.steep ? 0.02 : M.stepUp) : feet + thr;
+      if (pushOutOf(pos, r, c, lo, head)) { hit = true; if (vel && grounded) slideVelocity(vel); }
     }
     if (!hit) break;
   }
@@ -733,7 +748,7 @@ const player = {
   onGround: true, ground: null, surface: 'wood', crouching: false,
   climbing: null, climbNeedRelease: false, grabCooldown: 0,
   health: CONFIG.player.health, peakY: 0, coyote: 0, jumpBuf: 0, jumpHeld: false,
-  launched: false, launchX: 0, launchZ: 0, warped: false,
+  launched: false, launchX: 0, launchZ: 0, warped: false, fwdLock: false, noGrab: null, noGrabT: 0,
   stepOff: 0, pstepOff: 0, moved: 0, safe: { x: 60, y: 0, z: 20 }
 };
 const damageLog = [];
@@ -747,7 +762,7 @@ function placePlayer(x, y, z, yaw, pitch) {
   if (yaw !== undefined && yaw !== null) p.yaw = wrapAngle(yaw);
   if (pitch !== undefined && pitch !== null) p.pitch = clamp(pitch, -CONFIG.input.pitchLimit, CONFIG.input.pitchLimit);
   p.climbing = null; p.launched = false; p.stepOff = p.pstepOff = 0; p.peakY = y; p.coyote = 0; p.jumpBuf = 0; p.moved = 0;
-  p.warped = true;
+  p.warped = true; p.fwdLock = false; p.noGrab = null; p.noGrabT = 0;
   const g = groundBelow(x, z, P.radius, y + 0.05, y + 0.05);
   p.onGround = g.c !== null && y - g.y < 0.05;
   p.ground = p.onGround ? g.c : null;
@@ -772,15 +787,15 @@ function land(p, g) {
   p.y = g.y; p.vy = 0; p.onGround = true; p.ground = g.c; p.launched = false;
   if (fall > F.safe) hurtPlayer((fall - F.safe) * F.perUnit, 'fall', { height: fall });
 }
-function releaseString(p, cooldown) { p.climbing = null; p.grabCooldown = cooldown; p.climbNeedRelease = false; }
+function releaseString(p, cooldown) { p.climbing = null; p.grabCooldown = cooldown; p.climbNeedRelease = false; p.coyote = 0; }   // never a free jump
 
 function tryGrabString(p, wx, wz) {
   const K = CONFIG.climb;
   for (const s of STRINGS) {
-    if (p.y < s.y0 - 0.05 || p.y > s.y1 + 0.05) continue;
+    if (p.y < s.y0 - 0.05 || p.y > s.y1 + 0.05 || (s === p.noGrab && p.noGrabT > 0)) continue;
     const dx = s.x - p.x, dz = s.z - p.z, d = Math.hypot(dx, dz);
     if (d > K.grabRadius || (d > 0.05 && dx * wx + dz * wz <= 0)) continue;       // must be walking into it
-    p.climbing = s; p.vx = p.vy = p.vz = 0; p.onGround = false; p.ground = null; p.launched = false;
+    p.climbing = s; p.vx = p.vy = p.vz = 0; p.onGround = false; p.ground = null; p.launched = false; p.coyote = 0;
     p.climbNeedRelease = inp.forward && p.y > s.y1 - 0.3;     // grabbed from the top: forward must be re-pressed to exit again
     return true;
   }
@@ -797,7 +812,8 @@ function tickClimb(p, dt) {
   p.y = clamp(p.y + p.vy * dt, s.y0, s.y1);
   const ex = s.x + s.ex * K.exitDist, ez = s.z + s.ez * K.exitDist;
   if (dir > 0 && p.y >= s.y1) {                                    // top: placed on the surface along the exit direction
-    releaseString(p, 0);       // no re-grab delay here: walking back at the string hangs you on it instead of off the edge
+    releaseString(p, 0);
+    p.fwdLock = inp.forward; p.noGrab = s; p.noGrabT = K.topRegrab;      // holding forward leaves you standing on the surface
     p.x = ex; p.z = ez; p.y = s.y1; p.vy = 0;
     const g = groundBelow(ex, ez, r, s.y1 + 0.05, s.y1 + 0.05);
     if (g.c && s.y1 - g.y < 0.05) { p.onGround = true; p.ground = g.c; } else p.peakY = p.y;
@@ -812,9 +828,15 @@ function tickClimb(p, dt) {
   }
 }
 
+// True when the ground found is a step up that the player has no head room to take.
+function stepRefused(p, x, z, g) {
+  return g.c !== null && g.y > p.y + 0.02 && !volumeFree(x, z, CONFIG.player.radius, g.y + CONFIG.move.stepUp, g.y + p.height);
+}
 function tickPlayer(dt) {
   const p = player, M = CONFIG.move, P = CONFIG.player, r = P.radius;
   readInput(inp);
+  if (p.fwdLock) { if (inp.forward) inp.forward = false; else p.fwdLock = false; }   // after topping out a string, forward must be released
+  p.noGrabT = Math.max(0, p.noGrabT - dt);
   p.warped = false;
   p.px = p.x; p.py = p.y; p.pz = p.z; p.peye = p.eye; p.pstepOff = p.stepOff;
   p.grabCooldown = Math.max(0, p.grabCooldown - dt);
@@ -867,9 +889,27 @@ function tickPlayer(dt) {
       if (p.onGround) {
         // ground follow: step up, step down, ramps (horizontal speed is not reduced on slopes)
         let g = groundBelow(nx, nz, r, p.y + M.stepUp, p.y + M.stepUp);
-        if (g.y > p.y + 0.02 && !volumeFree(nx, nz, r, g.y + M.stepUp, g.y + p.height)) {      // no head room on the step
-          nx = p.x; nz = p.z; p.vx = p.vz = 0;
-          g = groundBelow(nx, nz, r, p.y + M.stepUp, p.y + M.stepUp);
+        if (stepRefused(p, nx, nz, g)) {
+          // No head room on the step. It must act as a wall to slide along, never cancel the move.
+          // 1) slide along whatever takes the head room: resolve walls as if already standing on the step
+          _pos.x = nx; _pos.z = nz;
+          resolveWalls(_pos, r, g.y, p.height, true, p);
+          resolveWalls(_pos, r, p.y, p.height, true, p);
+          g = groundBelow(_pos.x, _pos.z, r, p.y + M.stepUp, p.y + M.stepUp);
+          if (stepRefused(p, _pos.x, _pos.z, g)) {
+            // 2) otherwise the step itself is the wall
+            _pos.x = nx; _pos.z = nz;
+            for (let k = 0; k < 3 && stepRefused(p, _pos.x, _pos.z, g); k++) {
+              if (pushOutOf(_pos, r, g.c, p.y + 0.02, p.y + p.height)) slideVelocity(p);
+              resolveWalls(_pos, r, p.y, p.height, true, p);
+              g = groundBelow(_pos.x, _pos.z, r, p.y + M.stepUp, p.y + M.stepUp);
+            }
+            if (stepRefused(p, _pos.x, _pos.z, g)) {      // boxed in on every side: hold position this tick, keep the velocity
+              _pos.x = p.x; _pos.z = p.z;
+              g = groundBelow(p.x, p.z, r, p.y + 0.02, p.y + M.stepUp);
+            }
+          }
+          nx = _pos.x; nz = _pos.z;
         }
         if (g.c && g.y >= p.y - M.stepUp) {
           const d = g.y - p.y;
@@ -976,7 +1016,7 @@ function buildWaypoints() {
     add('ramp', `${h}.f.rampfoot>${h}.f.tower`);
     // edges shared by both halves of 9.2, 9.3 and 9.4
     add('walk', `${h}.f.wdoor>${h}.w.1 ${h}.ub.n>${h}.ub.1 ${h}.ub.1>${h}.ub.2 ${h}.ub.2>${h}.ub.e ${h}.ub.2>m.ub ${h}.ub.e>m.ub ${h}.ub.e>${h}.w.4
-      ${h}.w.1>${h}.w.2 ${h}.w.2>${h}.w.3 ${h}.w.3>${h}.w.x ${h}.w.x>${h}.w.4 ${h}.w.4>${h}.w.5 ${h}.w.5>${h}.ub.e ${h}.bed.b>m.bed
+      ${h}.w.1>${h}.w.2 ${h}.w.2>${h}.w.3 ${h}.w.3>${h}.w.x ${h}.w.x>${h}.w.4 ${h}.w.4>${h}.w.5 ${h}.bed.b>m.bed
       ${h}.c.2>${h}.c.3 ${h}.c.3>${h}.c.4 ${h}.c.4>${h}.c.5 ${h}.c.3>${h}.c.x ${h}.c.x>${h}.c.w ${h}.c.w>m.c.w ${h}.c.4>${h}.c.y ${h}.c.y>${h}.c.e ${h}.c.e>m.c.e
       ${h}.f.edoor>${h}.e.1 ${h}.e.1>${h}.e.2 ${h}.e.2>${h}.e.3w ${h}.e.3w>${h}.e.3 ${h}.e.3w>${h}.e.x ${h}.e.x>${h}.e.6 ${h}.e.6>m.e.w ${h}.e.2>${h}.e.4
       ${h}.e.4>${h}.e.5 ${h}.e.5>m.e ${h}.seat>m.seat ${h}.seat>${h}.rul.foot m.seat>${h}.rul.foot ${h}.rul.top>${h}.desk.w ${h}.desk.w>${h}.desk.1 ${h}.desk.w>m.desk`);
@@ -1002,6 +1042,8 @@ function buildWaypoints() {
   add('drop', 'm.seat>m.tunnel.top', true);
 }
 // One node list per route in DESIGN.md section 4.4
+// Edge removed in round 1 pass 2: w.5 - ub.e (both halves). Cover block W-c (33..36, 69..72 and its mirror) sits on that leg, and
+// no move of ub.e and w.5 within the 2 unit allowance clears it without blocking ub.e - m.ub. w.5 still reaches ub.e through w.4.
 const ROUTES = {
   bed_blanket: ['n.w.1', 'n.w.ramp', 'n.bed.end', 'n.bed.b'],
   bed_books: ['s.bs.app', 's.bs.foot', 's.bed.end', 's.bed.d'],
@@ -1175,8 +1217,17 @@ let renderer, camera, scene;
 let lastFrame = 0, accumulator = 0;
 const _look = new THREE.Vector3();
 
+function applyLiveConfig() {      // CONFIG.camera and CONFIG.fog are re-read every frame, so hook changes show on the next render
+  const C = CONFIG.camera, F = CONFIG.fog;
+  if (camera.fov !== C.fovVertical || camera.near !== C.near || camera.far !== C.far) {
+    camera.fov = C.fovVertical; camera.near = C.near; camera.far = C.far;
+    camera.updateProjectionMatrix();
+  }
+  scene.fog.near = F.near; scene.fog.far = F.far;
+}
 function renderFrame(alpha) {
   const p = player;
+  applyLiveConfig();
   if (game.view) {
     const v = VIEWS[game.view];
     camera.position.set(v[0][0], v[0][1], v[0][2]);
@@ -1252,7 +1303,7 @@ function walkPath(ids, opts = {}) {
       if (t >= timeout || sinceBest > NV.stuckTime) { stuckAt = ids[i]; break outer; }
       for (const k of INPUT_NAMES) vinput[k] = false;
       if (p.climbing) { const s = p.climbing; if (Math.abs(B[1] - s.y1) < Math.abs(B[1] - s.y0)) vinput.forward = true; else vinput.back = true; }
-      else if (p.launched) { /* ride the launch with no input */ }
+      else if (p.launched || p.fwdLock) { /* ride the launch with no input; release forward after topping out a string */ }
       else {
         if (str && dy > 1) aim(str.x, str.z); else aim(B[0], B[2]);
         vinput.forward = true; vinput.sprint = sprint;
