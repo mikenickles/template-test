@@ -973,3 +973,8 @@ materials. Load time must stay short: report the time from page load to `__game.
 From round 1 and 2: sun shadows reaching most of the floor; under the bed darker; the ceiling light visible against the
 ceiling; cover colour distinct from the desk colour; the window warm again; the bed book-stairs head not hidden by pillow
 P2; decals not like tiles. From round 3: `soldier.bodyTint` 0.7; refresh the two stale code section banners.
+
+### 17.11 Lead decisions after 4A (2026-11-23)
+- Ball, globe and pillow colliders stay as they are (colliders are frozen this round). These three are accepted exceptions to the 0.15 visual-fit rule. Possible collider reshape → LATER.md, round 5 at the earliest.
+- bed_top render cost is 2.70x of the 3x limit. 4B art must leave room there: soldiers instanced or merged per team, small effects pooled. If the worst view goes over 3x, the builder cuts a 4A detail before a 4B one.
+- 4A weak spots (flat ceiling, soft fort bricks, faint dust, hot shelf board, cushion-like pillows) wait for the visual tester's 4A notes and are fixed together with the 4B list.
