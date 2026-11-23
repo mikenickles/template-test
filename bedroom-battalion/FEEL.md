@@ -1,3 +1,142 @@
+# Round 2 (gunplay)
+
+**Gate "every weapon is satisfying within 10 seconds and clearly different": FAIL.** Rifle, sniper and pistol pass on the evidence; the SMG and the grenade do not. The SMG has no range at which it beats the rifle, and the grenade cannot kill a full-health target and bursts as a puff about one unit wide for a seven-unit blast. Both are number-and-effect fixes, not redesigns.
+
+| Weapon | Verdict | Why |
+| --- | --- | --- |
+| Rifle | **PASS** | Clear cadence, strong feedback, rewards bursts and taps. Too good up close (it is also the best close-range gun). |
+| SMG | **FAIL** | Slower to kill than the rifle at 10 units (0.40 s against 0.30 s) and at every range beyond; useless past 20. Its shot is also the quietest sound in the fight. |
+| Sniper | **PASS** | Unmistakably different: one scoped head shot at any range, 1.3 s bolt rhythm, big kick, and climbing pays. Targets get small and pale past 120 units. |
+| Pistol | **PASS, with a flaw** | A proper sidearm at 10 to 30 units. But fired at a steady pace it out-ranges the rifle past about 110 units. |
+| Grenade | **FAIL** | Arc preview is accurate and the fuse is fair, but the best measured hit was 87 damage, the burst is tiny, and it cannot reach any perch. |
+
+How this was judged: headless through `window.__game` with fixed stepping; over 10,000 scripted engagements against the dummies with the game's own spread and recoil; frame-by-frame captures; every sound rendered offline from the game's own layer table and measured. Scripts are `tests/feel_r2_*.cjs`, pictures `screenshots/round2/feel_*.png`. No console errors in any run. `index.html` was not touched. Other testers' files were not read.
+
+Two things the numbers below cannot settle: whether the shots have punch (needs ears), and whether the recoil is pleasant to control (needs a mouse). Both are flagged where they matter.
+
+## 1. Time to kill
+
+Median seconds from first shot to the dummy tipping over, 30 trials per cell, perfect aim put back on the target every tick, so recoil control is assumed and spread is real (`feel_r2_ttk.cjs`, `feel_r2_long.cjs`). "--" means no kill inside 6 s. Long-range rows are from perches.
+
+Body shots, standing:
+
+| | 10 u | 30 u | 60 u | 86 to 99 u | 121 to 138 u |
+| --- | --- | --- | --- | --- | --- |
+| Rifle, held | 0.30 | 0.60 | 2.40 (40 % kill) | | |
+| Rifle, 3-shot bursts | 0.53 | 0.63 | 0.73 | 1.7 to 2.8 | 3.4 to 4.3 (75 % kill) |
+| Rifle, taps | 0.70 | 0.70 | 0.70 | 1.4 to 2.1 | 2.3 to 3.5 |
+| SMG, held | 0.40 | 2.33 (20 % kill) | -- | | |
+| SMG, 5-shot bursts | 0.65 | 1.82 | -- | -- | -- |
+| Pistol, fastest clicking | 0.55 | 3.43 | 3.45 (53 % kill) | | |
+| Pistol, paced | 1.20 | 1.20 | 1.20 | 1.6 to 2.0 | 2.0 to 2.4 |
+| Sniper, scoped | 1.30 | 1.30 | 1.30 | 1.30 | 1.30 |
+| Sniper, unscoped | 1.30 | 3.90 (7 % kill) | 2.60 (10 % kill) | | |
+
+Other stances and zones:
+
+- Head shots: scoped sniper kills in one shot at every range tested (10 to 138 units, 100 %). Rifle taps to the head 0.23 s at 10 and 30 units, 1.17 s at 60. Paced pistol 0.40 s at 10 and 30, 0.80 s at 60. SMG held 0.27 s at 10, 7 % kills at 30.
+- Crouching (spread x0.6) is a large help: rifle held at 60 units goes from 40 % to 100 % kills in 0.40 s; SMG bursts at 30 go from 1.82 s to 1.23 s.
+- Strafing (spread x1.5): rifle held at 10 units is unchanged at 0.30 s; SMG held at 10 gets worse, 0.60 s with 69 % of shots hitting. Rifle taps still kill at 60 units in 0.93 s. SMG held cannot kill at 30 while moving (5-shot bursts: 60 % kills, 3.0 s).
+- No recoil control at all (aim once, hold): everything still kills at 10 units; at 30 units the rifle manages 47 %, pistol 17 %, SMG 0 %.
+
+Who is best where:
+
+| Range | Clearly best | Clearly wrong |
+| --- | --- | --- |
+| 0 to 15 u | Rifle (should be the SMG) | Unscoped sniper for anyone who misses the first shot |
+| 15 to 60 u | Rifle, in bursts or taps | SMG |
+| 60 to 100 u | Sniper for heads; rifle taps for bodies | SMG, pistol spam |
+| 100 u and beyond | Sniper | SMG; and the rifle is slower here than the paced pistol |
+
+## 2. Findings, most harmful first
+
+### 1. The SMG has no job (gate)
+- Evidence: table above. 16 damage at 900 rpm is 240 damage per second against the rifle's 260, with nearly three times the base spread (1.4 against 0.5 degrees), faster bloom to a wider maximum, and falloff starting at 25 units. Standing or strafing, at 10 or 20 units, the rifle kills sooner (`feel_r2_trials.cjs`, block A: rifle 0.30 s at 10 and 20 units, moving or not; SMG 0.40 / 0.53 s at 10 and 1.00 / 1.47 s at 20).
+- Tried live through `__game.CONFIG`:
+
+| SMG setting | 10 u stand | 10 u strafe | 20 u stand | 20 u strafe | 30 u bursts |
+| --- | --- | --- | --- | --- | --- |
+| Now | 0.40 | 0.53 | 1.00 | 1.47 (57 % kill) | 1.95 |
+| damage 20 | 0.27 | 0.27 | 0.33 | 1.20 | 1.43 |
+| damage 20, spread 1.0, bloom 0.20, spreadMax 3.5 | 0.27 | 0.27 | 0.27 | 0.47 | 1.13 |
+| Rifle for reference | 0.30 | 0.30 | 0.30 | 0.30 | 0.63 |
+
+- Change: `weapons.smg.damage 16 -> 20`, `spread 1.4 -> 1.0`, `bloom 0.30 -> 0.20`, `spreadMax 4.5 -> 3.5`. That makes it the fastest gun to 20 units standing and still clearly wrong at 30 and beyond. It is still behind the rifle while strafing at 20 units because the moving multiplier (1.5) is shared; to give the SMG its natural role, add a per-weapon moving multiplier (SMG 1.1, rifle 1.8, sniper 2.0) in place of the single `gun.spreadMult.move`. The second half is a small code change and is untested.
+
+### 2. The grenade does not pay off (gate)
+- It cannot kill a full-health target on level ground. Damage is 110 x (1 - distance / 7) measured to a point 0.9 above the target's feet from 0.1 above the burst, so the ceiling is 97. Measured: thrown level from 12 and 15 units it burst 1.8 and 1.2 units from the dummy for 79 and 87 damage; 4.2 to 4.8 units away gave 43 and 33 (`feel_r2_grenade.cjs`).
+- The burst is far smaller than the blast. Seen from 9 units to the side it is a scatter of dots about one unit across that is gone in a quarter of a second (`feel_cmp_burst.png`); the damage radius is 7. A player cannot learn the radius from what they see, and it does not look like the strongest thing in the game.
+- The arc preview is accurate (the line ends where the grenade comes to rest and bursts: `feel_cmp_grenade_level.png`, `_bounce_wall.png`, `_at_dummy.png`) but it is a one-pixel line with no landing marker, hard to pick out against the floor.
+- It cannot reach high ground. At speed 18 the highest it rises is 8.7 units (75 degree lob); the tunnel top is 8, the chair 17, the bed 18, the desk 26. Every lob at the bed, desk, chair and tunnel top landed back on the floor. Tried `grenade.speed` 24 and 30: 24 still misses the tunnel top, 30 reaches it but overshoots the level throw (0 damage at 12 and 15 units) (`feel_r2_misc.cjs`).
+- What works: fuse 1.98 s from release, holding does not cook it; three bounces with a sound each, at rest about 1.1 s after a level throw; level carry 13.8 units, 25.4 at 35 degrees; a wall blocks the blast (dummy behind the Tan slit took 0); self-damage is real (88 at your feet, 62 off a wall 2 units ahead, 68 straight up, 0 for a normal throw); you can fire 0.03 s after throwing.
+- Change: `grenade.damage 110 -> 140` (tried live: 100 and 111 at those same two throws, so a good throw kills and a near miss does 55 to 70). Make the burst read at its real size: a flash or ring that expands to about half the radius, and at least `burstParticles 44 -> 90` with particle speed about 18 instead of the 9 in code. Draw the arc thicker with a dot where it ends. Leave the speed at 18 and accept that grenades are a floor and downhill tool; that is a design choice for the lead, and it makes perches safer than they already are.
+
+### 3. Recoil never comes all the way back (gun feel)
+- What: each shot kicks the view up and only 60 % returns. A single rifle tap leaves the aim 0.36 degrees high, a 3-round burst 1.08 degrees, a full magazine 10.8 degrees after resting (12.1 at the last shot). SMG 8.8 degrees after a magazine, pistol 6.7 after 12 shots, sniper 1.4 per shot (`feel_r2_handling.cjs`).
+- Why it hurts: tapping is the right way to use the rifle at range, and the game walks the aim off the target between taps. At 60 units the third uncorrected tap is already over the dummy's head. Measured with no correction by the player (`feel_r2_trials.cjs`, block B): rifle taps at 60 units kill 43 % of the time, 3-round bursts at 30 units 83 %.
+- Tried live: `gun.recoilReturn` 0.8 gives 93 % and 100 % for those two; 1.0 gives 100 % and 100 %.
+- Change: `gun.recoilReturn 0.6 -> 0.8`. Sustained fire still climbs (the kick is unchanged), bursts and taps come back near where they started. Whether the remaining climb feels good needs a mouse.
+
+### 4. The pistol out-ranges the rifle, and punishes its own fire rate (gun feel)
+- Out-ranging: pistol base spread 0.35 degrees is tighter than the rifle's 0.5 and its falloff floor is the same 70 %. Paced pistol against rifle taps, body shots from perches: 2.0 s against 1.4 s at 96 units, 2.0 s against 2.3 s at 121, 2.0 s against 3.5 s at 135, 2.4 s against 3.5 s at 138, with twice the hit rate (61 to 72 % against 31 to 39 %).
+- Fire rate: bloom is 0.9 per shot with a 0.25 s recovery delay, and the minimum interval is 0.18 s, so clicking fast never lets it recover: spread is 2.15 degrees on the third shot and at the 3.0 maximum from the fourth. Fast clicking hits 28 % at 30 units. The useful pace is one shot every 0.4 s, less than half the advertised rate.
+- Tried live (`feel_r2_trials.cjs`, block C): `spread 0.6, bloom 0.6, recoverDelay 0.12, falloff [30, 70, 0.5]` gives fast clicking 0.73 s at 30 units (78 % hits), paced 0.70 s at 30 and 1.40 s at 60 against the rifle's 0.70 s at 60.
+- Change: those four pistol values. It stays the best thing to pull out when the primary is empty and stops being a long gun.
+
+### 5. Sound levels: the SMG is nearly silent, the sniper can clip, some footsteps are inaudible (gate, needs ears)
+All four shots are measurably different, rendered offline from `CONFIG.audio.sounds` with the same graph the game builds (`feel_r2_audio.cjs`):
+
+| Shot | Length | Loudness (50 ms rms) | Peak | Spectral centre | Below 300 Hz | Above 3 kHz |
+| --- | --- | --- | --- | --- | --- | --- |
+| Rifle | 86 ms | 0.169 | 0.83 | 1.5 kHz | 37 % | 14 % |
+| SMG | 36 ms | 0.056 | 0.40 | 1.9 kHz | 16 % | 23 % |
+| Sniper | 439 ms | 0.557 | 1.96 | 120 Hz | 96 % | 0 % |
+| Pistol | 46 ms | 0.163 | 1.06 | 9.7 kHz | 4 % | 79 % |
+
+- SMG: about 10 dB under the rifle and quieter than the hit tick that plays on the same tick (0.067). On a hit, the tick is the louder sound. Change: SMG layer gains `0.55 -> 0.9` and `0.3 -> 0.5`.
+- Sniper: raw peak 1.96 is 0.98 after the 0.5 master, and a kill tone (0.34 raw) on the same tick takes it over full scale with nothing to limit it. Change: sniper layer gains `1.0 -> 0.8` and `0.9 -> 0.7`, or put a compressor before the output.
+- Pistol: 79 % of its energy is above 3 kHz and 4 % below 300 Hz. On paper that is a hiss with no body. Suggested: add a short low layer (square 180 to 70 Hz, 0.05 s, gain 0.4). A human ear has to decide.
+- Footsteps: wood 0.043, metal 0.036, plastic 0.018, card 0.009, book 0.008, fabric 0.004; jump 0.007. Fabric, book and card steps are 13 to 20 dB under wood and will not be heard, which matters on the bed, stairs and tunnel. Change: fabric gain `0.2 -> 0.8`, book `0.22 -> 0.7`, card `0.25 -> 0.7`, jump `0.15 -> 0.5`.
+- Order and timing are right: every shot has its sound on the same tick; hit or kill follows on that tick; shot gaps are 0.100, 0.067, 0.183 and 1.300 s; bolt at 0.42 s after each sniper shot; dry click and reload start together; wood steps every 0.35 s at a sprint.
+
+### 6. Holding the trigger through an empty magazine does nothing (gun feel)
+- With the rifle, holding fire past the 30th shot gives no click and no reload; it stays silent until the button is released and pressed again (`feel_r2_handling.cjs`, "holdThroughEmpty rifle": never resumed in 7 s). The pistol reloads because it is clicked. This is the spec as written ("on a fire press") but it will read as a jam.
+- Change: on an automatic weapon, play the dry click and start the reload on the tick the magazine empties while fire is held.
+
+### 7. Sniper at extreme range: small, pale targets (pillar 5)
+- Climbing does pay: from the fort gate 2 of 21 dummies are in view; from the desk edges 11 and 12, bed east edge 14, tall shelf top 11 (eight of them beyond 80 units), small shelf top 12, fort tower 11 (`feel_r2_long.cjs`). Scoped shots from all of them killed 100 % of the time, body in 1.3 s, head at once.
+- At 135 units through the 25 degree scope a dummy is about 10 by 22 pixels at 720p and washed toward the haze colour (`feel_long_tallshelf_135u_scoped.png`); at 99 units a Tan dummy against the floor is readable but small (`feel_long_tower_99u_scoped.png`). Green holds up better against the haze than Tan will.
+- Tried `scopeFov` 18: the same dummy is about 40 % larger and easier to pick out (`feel_cmp_scope_fov.png`).
+- Change: `weapons.sniper.scopeFov 25 -> 20`. Scoped sensitivity scales with it automatically.
+
+### 8. Smaller things
+- Tracers start at one fixed point ahead of the eye for every gun. It lines up with the rifle's muzzle; for the SMG, pistol and sniper the tracer begins away from the muzzle flash (`feel_cmp_flash.png`).
+- All four tracers look the same. A thicker, longer-lived sniper tracer (width 0.035 to 0.07, life 0.08 to 0.2) would help it read as the heavy shot.
+- Wood chips are brown on a brown floor and nearly invisible (`feel_cmp_impacts.png`, first frame); fabric, book, card, plastic and metal read fine.
+- The rifle is at full spread (3.0 degrees) by the eighth shot of a spray and the pistol by its fourth. That is what makes bursts matter and is fine for the rifle; see finding 4 for the pistol.
+- Round 1 item still open: the head of the bed book stairs is still hidden behind pillow P2 from the bed (`feel_cmp_r1_leftovers.png`, bottom middle).
+
+## 3. What already works (do not break)
+
+- Cadence is exact: 600, 900 and 327 rpm and a 1.3 s bolt, to the tick.
+- The crosshair gap is the true spread radius in pixels in every stance (rifle 4.1 px standing, 3 crouched, 6.1 moving, 12.3 in the air, 24.6 at full bloom; SMG 11.5 to 36.9). Shots land inside it by construction.
+- The hit is unmistakable at 10 units: white X on the crosshair, a damage number over the target, plastic sparks, and a tick. The kill is distinct: larger red X, red number, chips, a different longer tone, and the dummy tips flat within a quarter of a second (`feel_cmp_closeups.png`, `feel_cmp_kill.png`).
+- Muzzle flash is there for two drawn frames on all four guns, with a casing and a tracer (`feel_cmp_flash.png`). Note for anyone capturing it headless: the page's own draw loop uses up the two frames between hook calls, so `feel_r2_flash.cjs` stops that loop on the test side to see them.
+- The four guns are distinct in the hand: long rifle with a yellow magazine, stubby SMG with a yellow muzzle, long sniper with a scope block, small pistol (`feel_cmp_viewmodels.png`). The sniper's view kick is visibly the largest (`feel_cmp_shot_sniper.png`).
+- Movement interplay is snappy: firing is blocked while sprinting and on a string, and the first shot comes one tick (0.017 s) after letting go of sprint, at moving spread. Switch to first shot: pistol 0.27 s, SMG 0.37 s, rifle 0.47 s, sniper 0.70 s. Reloads 2.2, 2.0, 1.4 and 3.0 s as specified; switching cancels a reload; a full magazine ignores R.
+- Sniper handling: scope in 0.2 s and out 0.2 s; after a shot the scope is half down by 0.1 s and fully back at 0.7 s; next shot at 1.28 s, scoped; scoped spread 0.05 degrees; scoped sensitivity is one third of normal, matching the zoom.
+- Round 1 leftovers: the crayons no longer mask the firing slits (both slits show the lane and its dummies); the bed top is blanket blue with the pillows clearly separate; the bear descent is free again at a walk and at a sprint (0 damage, 4.6 and 5.2 s) (`feel_cmp_r1_leftovers.png`, `feel_r2_misc.cjs`).
+
+## 4. Only a human can confirm
+
+- Punch: whether each shot sounds and feels strong. The measurements say distinct, not good.
+- Recoil under the hand: the test players either correct perfectly or not at all. Real control sits between, so real times to kill sit between the two sets of numbers.
+- Whether the screen shake (rifle 0.004, sniper 0.022) and viewmodel kick are felt or just seen.
+- Scoped tracking at one-third sensitivity, and whether the 0.5 s scope drop after each shot is rhythm or annoyance.
+- Whether 0.30 s to kill at close range is too fast to react to once bots shoot back.
+
+---
+
 # FEEL.md: round 1 (graybox)
 
 **Gate "the room feels huge": PASS, narrowly.** From the side lanes and from every perch the player-eye pictures read as a toy soldier in a bedroom (desk, chair, shelves, door and bed are recognisable and run off the top of the frame), and crossing takes 20 to 32 s. It is weakest exactly where a round starts: at the spawn and down the centre lane the furniture tops sit only 25 to 29 degrees above the horizon, the haze adds almost no depth, and the middle of the floor reads as "person among grey crates".
