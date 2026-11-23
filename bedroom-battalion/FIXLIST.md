@@ -1,3 +1,20 @@
+# Round 4A early notes (visual tester, on snapshots/index_r4a.html) — fix during 4B
+
+1. **R4A-1 Render headroom.** The worst views are at 2.7–2.8x of the 3x limit (spawn_tan, bed_top, firefight overview), so 4B has no room. The cost is pixel fill, mostly from the sunbeam (it covers about 25 % of the frame looking across it), and nothing is frustum-culled. Fix: cap the sunbeam's screen coverage or fill cost, and split the merged static mesh into 6–8 spatial chunks so off-screen parts are culled. Target under 2.5x on the 4A views before 4B art goes in.
+2. **R4A-2 Over-bright.** 17.4 % of the bed_top frame clips to white (round 3: 0 %) and the spawn views 5.5 %. Sunlit walls show loud white stripes. Fix: sun intensity to about 2.4 or exposure to about 0.85, halve the wall stripe contrast, and tone down the shelf board and sheet whites. Target under 2 % clipped in every named view.
+3. **R4A-3 Tan on the sunlit floor.** The orange-brown planks drop Tan to median dE 28.9 (round 3: 34). Crouched Tan at 60 units: 10th percentile 18.3, worst view 16.4. Fix: make the planks browner and less orange; don't change the team colours. Target Tan median dE ≥ 32.
+4. **R4A-4 Art vs colliders.**
+   - The marble sits 0.82 above the walkable top of the marble tower, so a soldier stands inside it.
+   - One brick on the east wall of the north fort sticks out 1.0.
+   - The yo-yo sticks out 0.85, the ruin sills 0.7, and the edge of tall shelf L3 0.51.
+   
+   Fix the art, not the colliders.
+5. **R4A-5 Style weak spots.**
+   - Fort bricks look like soft cushions, with studs that can't be seen from spawn. Fix: crisper bevel and edge highlight, bigger studs.
+   - The skateboard route has no orange cap.
+   - The dust motes can't be seen at 1280x720.
+   - The ceiling is flat. Fix: a subtle texture or gradient.
+
 # FIXLIST.md: round 3, pass 1
 
 Merged from the "# Round 3" sections of BUGS.md, FEEL.md and VISUAL.md. At most 5 items. Numbers and rules are in DESIGN.md 16.11.

@@ -10,8 +10,8 @@ function captureThree() {      // three.js announces renderer and scenes to devt
   t.addEventListener('observe', (e) => { const o = e.detail; if (o && o.isScene) window.__three.scenes.push(o); else if (o && o.shadowMap) window.__three.renderer = o; });
   window.__THREE_DEVTOOLS__ = t;
 }
-async function open({ width = 1280, height = 720, probe = false } = {}) {
-  const h = await launch({ width, height });
+async function open({ width = 1280, height = 720, probe = false, file } = {}) {
+  const h = await launch(file ? { width, height, file } : { width, height });      // file: another build (round 4A snapshot, round 3 baseline)
   if (probe) { await h.page.addInitScript(glProbe); await h.page.addInitScript(captureThree); await h.page.reload();
     await h.page.waitForFunction(() => window.__game && window.__game.ready, null, { timeout: 30000 }); }
   await h.page.evaluate(() => { __game.start({ pointerLock: false }); __game.setTimeScale(0); __game.step(1); });   // let the draw animation finish

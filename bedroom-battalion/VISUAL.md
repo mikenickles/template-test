@@ -1,3 +1,163 @@
+# Round 4A (early): world art pass
+
+Tested on the frozen copy `snapshots/index_r4a.html`. `index.html` (4B work in progress) was neither tested nor edited.
+The round 3 baseline is `git show c90ee3c:bedroom-battalion/index.html`.
+
+**Verdict: on track.** The room now reads as one toy-scale world:
+- toon and Lambert plastic, bevelled toys and canvas detail everywhere;
+- the sun reaches 77 % of the open floor (3.8 % in round 3);
+- the under-bed space is properly dark;
+- colliders are unchanged.
+
+Every 17.9 limit holds. The tight one is render cost: 2.2 to 2.8 times round 3, against a 3x limit, which leaves little
+room for 4B.
+
+Before 4B adds to it, three things need work: render-cost headroom, over-bright frames (17 % of `bed_top` clips to
+white), and Tan against the now-orange sunlit floor.
+
+Scripts: `tests/visual_r4a_budget.cjs`, `visual_r4a_look.cjs` and `visual_r4a_fit.cjs`, plus
+`visual_r3_teams.cjs` re-run on the snapshot (`VIS_FILE=../snapshots/index_r4a.html DISTS=20,60`). Shared helpers
+(`visual_r2_lib.cjs`, `visual_r3_lib.cjs`) now take another build's path. Screenshots: `screenshots/round4/visual_4a_*.png`.
+Rendering is software (SwiftShader) on a shared machine, so **milliseconds show relative cost only**. Every render-cost
+figure is a 4A / round 3 ratio, measured twice with the builds interleaved (r3, 4A, r3, 4A).
+
+## Budget (17.9), measured
+
+| Item | Round 3 | 4A | Limit |
+| --- | --- | --- | --- |
+| Draw calls, any named view (main + shadow) | 14 | **23** (17 + 6) | under 200 (aim under 120) |
+| Draw calls, full firefight: overview / soldier's eye | 16 / 17 | **25 / 26** | |
+| Main-pass triangles, named views / firefight | 17,470 / 18,194 | **95,512 / 96,236** | under 350,000 |
+| Shadow lights / map | 1 / 2048 | 1 / 2048 | 1 / 2048 or less |
+| Canvas textures (with mipmaps) | 512 x 1024 | 2048 x 2048, 1024 x 2048, 64 x 64, 3 x 1: **about 34 MB** | 2048 max, under 64 MB |
+| Shader programs at load / after a full match | 15 / 15 | **22 / 22** | under 40, all at load |
+| Collider list (360 colliders, digest of ids, kinds, bounds and surfaces) | `7b3cc4b4` | **`7b3cc4b4`, identical** | unchanged |
+| Load to `__game.ready` | 1.5 / 1.6 s | 3.1 / 3.3 s (2.1x) | report |
+| Console errors | 0 | 0 | 0 |
+
+**Render cost, 4A / round 3** (median of 9 renders per view, two interleaved runs):
+
+| View | Ratio | View | Ratio | View | Ratio |
+| --- | --- | --- | --- | --- | --- |
+| spawn_green | 2.13 / 1.74 | spawn_tan | **2.77** / 2.23 | bed_top | 2.43 / **2.71** |
+| desk_top | 2.23 / 2.05 | shelf_top | 2.39 / 2.46 | floor_centre | 2.32 / 2.36 |
+| under_bed | 1.45 / 1.47 | east_lane | 2.10 / 1.99 | west_lane | 1.92 / 1.94 |
+| firefight, overview | **2.64 / 2.74** | firefight, eye | 1.55 / 1.56 | | |
+
+- Every named view has the same 23 calls and 95,512 triangles. Nothing is frustum culled: the whole room is drawn from
+  every angle, so the "worst view" is simply the most pixel-heavy one.
+
+## Findings, most severe first
+
+### 1. Medium (budget): render cost leaves about 10 % for 4B
+- **Measured:** `spawn_tan`, `bed_top` and the firefight overview run at 2.6 to 2.8x round 3, against the 3x limit.
+- **Cause:** the cost is fill, not draw calls. In a view across the sunbeam, the beam and dust change 25 % of the
+  frame's pixels by a mean 35 levels (`visual_4a_beam.png`, right); `under_bed`, where the beam is not in view, is only
+  1.45x.
+- **Fix:**
+  - cap the sunbeam's screen coverage: fewer stacked layers, or fade its opacity out as the camera gets inside it;
+  - split the merged static mesh into 6 to 8 spatial chunks with `frustumCulled` on, so views facing a wall skip half
+    the room;
+  - keep the 4B soldiers in one instanced mesh per team, as the lead already noted.
+- **Re-check:** no view above 2.5x before 4B lands.
+
+### 2. Medium (look): over-bright frames and loud wall stripes
+- **Measured:** clipped pixels (at least two channels at 253 or above) are **17.4 % of `bed_top`**, 5.5 to 5.8 % of both
+  spawns, 4.9 % of `floor_centre` and 4.1 % of `west_lane`; round 3 had 0 %.
+- **Where it clips** (`visual_4a_views_1.png`, right column):
+  - the sunlit back walls and shelf boards;
+  - the sheet;
+  - the beam behind the cover blocks.
+- **Wall stripes:** the faint vertical wall texture reads as strong white stripes in the sun, which looks busy next to
+  the flat toys.
+- **Fix:**
+  - lower the sun on the walls: sun intensity 3.0 → about 2.4, or tone-mapping exposure about 0.85, re-checked against
+    the floor shadows;
+  - halve the wall stripe contrast;
+  - drop the shelf-board and sheet whites to about `#EDE6D8`;
+  - **target:** under 2 % of any named view clipped.
+
+### 3. Medium (pillar 5): Tan against the sunlit floor
+Measured with the round 3 method on the snapshot: real autoplay match, each body against the same pixel with that
+soldier hidden, 526 views at 20 and 60 units. The soldiers are still the round 3 blocks.
+
+| | 20 u | 60 u | Round 3 (30 / 60 u) |
+| --- | --- | --- | --- |
+| Green living, median (under 15) | 77.7 (4 %) | 79.3 (1 %) | 66.7 / 60.9 |
+| Tan living | 44.7 (0 %) | 50.7 (0 %) | 42.5 / 46.2 |
+| Tan crouched, median / 10th percentile | 41.4 / 24.2 | **33.4 / 18.3** | |
+| Tan body (tipped) | 42.8 | **19.9** | |
+| Green body | 41.9 | 39.6 | |
+
+- **Green and Tan are still easy to pick out at 20 and 60 units.** Green improved, because the cooler walls and the warm
+  floor both contrast with it. Green's few views under 15 are views against another Green soldier.
+- **The weak case is Tan on the floor.** The floor in the sun is now an orange-brown (`#B5732B`), and Tan on the floor has
+  a median of 28.9 (34 in round 3). The worst view is a crouched Tan at 60 units on sunlit floor, dE 16.4.
+- **Fix:** take some saturation out of the sunlit plank tone, toward brown rather than orange (for example plank base
+  `#6E4A30`), which also helps finding 2. In 4B, give the Tan soldier its full shading and sheen, and keep `bodyTint` at 0.7.
+- **Re-check:** Tan crouched at 60 units, 10th percentile 20 or more.
+
+### 4. Minor: collider fit
+**Method:** for every box collider, a ray down onto the top centre and four rays onto the side centres. Each ray is cast
+against the collider list and against the rendered opaque meshes, using three.js Raycaster on the live scene.
+
+**Result:** 1,273 exposed faces; 1,230 had art within 1 unit of the collider face (the other 43 have another object in
+front). **1,209 of those 1,230 fit within 0.15 (98.3 %).** Outside it:
+
+| Collider (face) | Art vs collider | Meaning | Fix |
+| --- | --- | --- | --- |
+| `s.C-d.ball` (all sides) | art 0.6 past | bullets pass through the visible ball | accepted (17.11) |
+| `s.tall.L2.globe` (sides) | art 0.16 short | | accepted (17.11) |
+| `s.C-c.marble.tower` (top) | a marble 0.82 high sits on the walkable top | you stand inside the marble (`visual_4a_fit_s_C_c_marble_tower.png`) | move the marble to a ledge or the floor |
+| `n.fort.wall.e1` (south face) | art 1.0 past | a visible brick you can shoot or walk through | trim the brick or the bevel to the collider (check the Tan mirror too) |
+| `desk.yoyo.body` (south face) | 0.85 past | | shrink the disc radius to the collider |
+| `ruin.w.sill`, `ruin.e.sill` (south faces) | 0.7 past | bullets pass the visible sill lip | trim the lip |
+| `s.tall.L3` (west face) | 0.51 past | board edge overhang | trim to the collider |
+| `n.small.L1.pot`, `n.small.L2.clock`, `desk.lamp.post` (tops) | 0.2 to 0.41 above | rim and decor over a standable top (`visual_4a_fit_n_small_L1_pot.png`) | acceptable as decor; list them in the changelog per 17.1 |
+| `bed.spring`, `desk.paperball` | 0.15 to 0.16 short | | borderline, no action |
+
+Standing tests on the four worst tops: feet stayed at the collider top every time (ruin platform 1.2, lamp base 27.2,
+marble tower 8, pot 24). The collider is right; only the art differs.
+
+### 5. Minor (style)
+- **Fort bricks read soft.** Big rounded bevels make the fort walls look like cushions from eye level, and the studs are
+  not visible from the spawns (`visual_4a_views_1.png`, spawn rows). Fix: bevel at the specified 3 % rather than about
+  10 %, and a slightly darker stud top so the studs read at 20 units.
+- **Skateboard route accent.** The skateboard deck is red with no orange route cap (`visual_4a_views_3.png`, `east_lane`).
+  It is still distinctive, but it breaks the "orange-capped route parts" rule that the book stairs follow. Fix: an orange
+  edge strip on the deck's top edge, as on the stairs.
+- **Dust motes** were not visible in any screenshot at 1280 x 720. Only the beam reads. Fix: fewer, larger and brighter
+  motes, inside the beam only.
+- **Ceiling.** The ceiling is still a flat plane (the lead already noted this).
+
+## What works (evidence)
+
+- **Style.** One consistent toy world (`visual_4a_views_1` to `_3.png`, round 3 left, 4A right):
+  - bevelled alphabet blocks with letters;
+  - book stacks with coloured spines and orange route caps;
+  - the blanket with weave and stitched seams;
+  - the window with a painted garden that glows warm;
+  - toy cars and bus, a two-tone ball, dominoes with pips;
+  - the toy box in kraft.
+
+  Materials are toon or Lambert throughout, with Phong only on soldiers and glossy plastic.
+- **Scale.** Next to a 1.8-unit soldier, the books, blocks, ball and bus are clearly giant, and every named view now has
+  a far-to-near read: shelves and the window far, toys mid, planks near. That is a big step up from the grey crates of
+  round 3.
+- **Light.**
+  - Sun shadows now cross the floor: 1,849 of 2,396 open floor points are lit, 77.2 % (round 3: 3.8 %).
+  - Contact shadows show under cover and blocks.
+  - Under the bed is dark: luminance 39 against 90 for open floor in shade (round 3: 142, brighter than open floor).
+    Under the desk is 49.
+  - Fog stays 20 / 320 with haze `#D6DEE8`.
+- **Routes.** Book stairs, rulers with markings, yo-yo and shelf strings in yellow, and the P2 orange ribbon on the
+  pillow all read (`visual_4a_routes.png`: book stairs, ruler, skateboard, yo-yo string, tall shelf string, shoelace,
+  spring pad, P2 ribbon). Three of those close-ups landed too close to the object; the named views carry the rest.
+- **Cover against furniture.** Cover is now toys in strong colours, against painted wood and cream furniture. The round 1
+  "cover grey matches the desk" problem is gone.
+
+---
+
 # Round 3 (match)
 
 **Verdict: PASS.** A full firefight with all ten soldiers and the train in view costs at most 17 real draw calls,

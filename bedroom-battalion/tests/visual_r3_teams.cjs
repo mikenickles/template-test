@@ -7,7 +7,7 @@
 // units for living vs dead shape. Usage: node visual_r3_teams.cjs [seed]
 const fs = require('fs'); const path = require('path');
 const { open, dE, hex } = require('./visual_r3_lib.cjs');
-const DIST = [10, 30, 60, 100, 150], SEED = +(process.argv[2] || 11);
+const DIST = process.env.DISTS ? process.env.DISTS.split(',').map(Number) : [10, 30, 60, 100, 150], SEED = +(process.argv[2] || 11);      // DISTS=20,60 for the round 4A check
 const CAP = { dead: 16, crouch: 18, ride: 8, climb: 8, moving: 16, still: 10, bed: 10, desk: 10, shelf: 10, train: 8 };
 const cls = (id) => !id ? 'none' : id === 'room.floor' ? 'floor' : /^room\.wall|^room\.ceil/.test(id) ? 'wall' : /^bed\.|^bear|^bucket/.test(id) ? 'bed' : /^desk\.|^chair\./.test(id) ? 'desk' : /train|car\./.test(id) ? 'train' : /fort/.test(id) ? 'fort' : /tall|small/.test(id) ? 'shelf' : /^ruin/.test(id) ? 'ruin' : /^bot|^player|soldier/.test(id) ? 'soldier' : 'cover';
 (async () => {
@@ -70,7 +70,7 @@ const cls = (id) => !id ? 'none' : id === 'room.floor' ? 'floor' : /^room\.wall|
     }
     if (it % 40 === 0) console.log('t', simT, 'got', JSON.stringify(got), 'views', rows.length, Math.round((Date.now() - t0) / 1000) + 's');
   }
-  fs.writeFileSync(path.resolve(__dirname, 'visual_r3_teams_result.json'), JSON.stringify({ rows, sil }));
+  fs.writeFileSync(path.resolve(__dirname, process.env.RESULT || 'visual_r3_teams_result.json'), JSON.stringify({ rows, sil }));
   // ---- report ----
   const med = (a) => { a = a.slice().sort((x, y) => x - y); return a.length ? a[a.length >> 1] : null; };
   const pct = (a, q) => { a = a.slice().sort((x, y) => x - y); return a.length ? a[Math.floor((a.length - 1) * q)] : null; };

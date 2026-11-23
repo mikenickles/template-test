@@ -7,7 +7,7 @@ const path = require('path'); const fs = require('fs');
 const { open: open2, dE, hex } = require('./visual_r2_lib.cjs');
 const SHOTS = path.resolve(__dirname, '..', 'screenshots', 'round3');
 async function open(opts = {}) {
-  const h = await open2(Object.assign({ probe: true }, opts));
+  const h = await open2(Object.assign({ probe: true }, process.env.VIS_FILE ? { file: path.resolve(process.env.VIS_FILE) } : {}, opts));      // VIS_FILE picks another build
   await install(h.page);
   h.save = (file, url) => { fs.mkdirSync(SHOTS, { recursive: true }); fs.writeFileSync(path.resolve(SHOTS, file), Buffer.from(url.split(',')[1], 'base64')); };
   h.snap = async (file) => { for (let k = 0; k < 3; k++) { try { await h.page.evaluate(() => __game.render()); await h.page.waitForTimeout(150); return await h.shot('round3/' + file); } catch (e) { if (k === 2) throw e; } } };   // retried: the shared machine is slow
@@ -17,13 +17,12 @@ async function install(page) {
   await page.evaluate(() => {
     const S = window.__three.scenes[0];
     const R = window.__r3 = {};
-    R.sold = S.children.find((c) => c.isInstancedMesh && c.material.type === 'MeshPhongMaterial' && c.count % 11 === 0 && c.count !== 63); R.np = R.sold.count / 11;      // parts per soldier: 4 (round 3) or 5 (arms added in the fix pass)
+    R.sold = S.children.find((c) => c.isInstancedMesh && c.material.type === 'MeshPhongMaterial' && c.count % 11 === 0 && c.count !== 63); R.np = R.sold ? R.sold.count / 11 : 0;      // parts per soldier: 4 (round 3) or 5 (arms added in the fix pass)
     R.chev = S.children.find((c) => c.isInstancedMesh && c.count === 10);
     R.trainBoxes = S.children.find((c) => c.isInstancedMesh && c.count === 62);
     R.wheels = S.children.find((c) => c.isInstancedMesh && c.count === 40);
     R.sun = S.children.find((c) => c.isDirectionalLight);
-    R.hide = new Set(); const zero = R.sold.matrix.clone().makeScale(0, 0, 0), orig = R.sold.setMatrixAt.bind(R.sold);
-    R.sold.setMatrixAt = (i, m) => orig(i, R.hide.has(i) ? zero : m);
+    R.hide = new Set(); if (R.sold) { const zero = R.sold.matrix.clone().makeScale(0, 0, 0), orig = R.sold.setMatrixAt.bind(R.sold); R.sold.setMatrixAt = (i, m) => orig(i, R.hide.has(i) ? zero : m); }
     R.cam = (eye, at) => { __game.views.probe = [eye, at]; __game.setView('probe'); };
     R.gl = () => document.getElementById('view').getContext('webgl2');
     R.rd = (dx, dy, n) => { const gl = R.gl(), W = gl.drawingBufferWidth, H = gl.drawingBufferHeight, b = new Uint8Array(n * n * 4);
@@ -31,7 +30,7 @@ async function install(page) {
       const ch = [[], [], []]; for (let i = 0; i < n * n; i++) for (let k = 0; k < 3; k++) ch[k].push(b[i * 4 + k]); return ch.map((a) => { a.sort((x, y) => x - y); return a[a.length >> 1]; }); };
     R.full = () => { const gl = R.gl(), W = gl.drawingBufferWidth, H = gl.drawingBufferHeight, b = new Uint8Array(W * H * 4); gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, b); return b; };
     // world centre of each soldier part from the live instance matrices: slot k, part p (0 base, 1 body, 2 head, 3 gun)
-    const m4 = R.sold.matrix.clone(), v = new (Object.getPrototypeOf(R.sun.position).constructor)();
+    const m4 = R.sun.matrix.clone(), v = new (Object.getPrototypeOf(R.sun.position).constructor)();
     R.part = (k, p) => { R.sold.getMatrixAt(k * R.np + p, m4); v.setFromMatrixPosition(m4); const e = m4.elements; return { x: v.x, y: v.y, z: v.z, sy: Math.hypot(e[4], e[5], e[6]), upY: e[5] / (Math.hypot(e[4], e[5], e[6]) || 1) }; };
     R.slotOf = (pos) => { let best = -1, bd = 1e9; for (let k = 0; k < 11; k++) { const b = R.part(k, 0); const d = Math.hypot(b.x - pos[0], b.z - pos[2]) + Math.abs(b.y - pos[1]) * 0.3; if (d < bd) { bd = d; best = k; } } return bd < 2 ? best : -1; };
     // silhouette of slot k from the current probe view: pixels that change when its four instances are hidden
