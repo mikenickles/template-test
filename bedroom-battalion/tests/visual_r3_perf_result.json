@@ -1,7 +1,7 @@
 {
  "load": {
   "sceneObjects": 24,
-  "geometries": 9,
+  "geometries": 12,
   "textures": 2,
   "programs": 15,
   "domNodes": 150,
@@ -15,7 +15,7 @@
    0,
    "Mesh",
    1,
-   4720,
+   4732,
    "Lambert",
    "cast",
    ""
@@ -119,7 +119,7 @@
   [
    0,
    "Mesh",
-   44,
+   55,
    12,
    "Phong",
    "cast",
@@ -191,28 +191,39 @@
  ],
  "firsts": {
   "firstMatchFrame": {
-   "ms": 146.8,
+   "ms": 145.6,
    "programs": 15
   },
-  "baselineMs": 141.8,
-  "firstDeath": {
-   "atSim": 12.6,
-   "ms": 162.7,
+  "baselineMs": 158.8,
+  "firstBurst": {
+   "atSim": 21.2,
+   "ms": 155.5,
    "next": [
-    149.7,
-    179.4,
-    145
+    193.2,
+    124.3,
+    164.3
    ],
    "programsBefore": 15,
    "programsAfter": 15
   },
-  "firstBurst": {
-   "atSim": 34.1,
-   "ms": 507.9,
+  "firstDeath": {
+   "atSim": 22.1,
+   "ms": 163.1,
    "next": [
-    155.8,
-    148,
-    182
+    151.2,
+    149.8,
+    173.2
+   ],
+   "programsBefore": 15,
+   "programsAfter": 15
+  },
+  "firstRoundEnd": {
+   "atSim": 73.3,
+   "ms": 164.9,
+   "next": [
+    150,
+    141.5,
+    160.2
    ],
    "programsBefore": 15,
    "programsAfter": 15
@@ -225,10 +236,10 @@
     "fbo1": 5,
     "screen": 11
    },
-   "tris": 31554,
+   "tris": 31842,
    "ms": {
-    "median": 146.4,
-    "p95": 278.1
+    "median": 147.5,
+    "p95": 185.3
    }
   },
   "eye": {
@@ -237,94 +248,94 @@
     "fbo1": 5,
     "screen": 12
    },
-   "tris": 31650,
+   "tris": 31926,
    "ms": {
-    "median": 153.4,
-    "p95": 245.8
+    "median": 189.5,
+    "p95": 284.5
    }
   },
   "aliveAtMax": {
-   "green": 5,
-   "tan": 3
+   "green": 3,
+   "tan": 1
   },
   "grenadeFrames": 10
  },
  "afterMatch1Start": {
   "sceneObjects": 24,
-  "geometries": 12,
+  "geometries": 14,
   "textures": 2,
   "programs": 15,
   "domNodes": 150,
   "heapMB": 15.4,
   "killFeed": 0,
   "shotLog": 200,
-  "botLog": 182
+  "botLog": 166
  },
  "matches": [
   {
    "match": 1,
-   "simSeconds": 821,
-   "score": {
-    "green": 5,
-    "tan": 2
-   },
-   "winner": "green",
-   "wallS": 5,
-   "after": {
-    "sceneObjects": 24,
-    "geometries": 13,
-    "textures": 2,
-    "programs": 15,
-    "domNodes": 196,
-    "heapMB": 15.4,
-    "killFeed": 0,
-    "shotLog": 200,
-    "botLog": 875
-   }
-  },
-  {
-   "match": 2,
-   "simSeconds": 1075,
+   "simSeconds": 595,
    "score": {
     "green": 3,
     "tan": 5
    },
    "winner": "tan",
-   "wallS": 11,
+   "wallS": 3,
    "after": {
     "sceneObjects": 24,
-    "geometries": 14,
+    "geometries": 16,
     "textures": 2,
     "programs": 15,
-    "domNodes": 196,
+    "domNodes": 200,
     "heapMB": 15.4,
-    "killFeed": 0,
+    "killFeed": 1,
     "shotLog": 200,
-    "botLog": 1044
+    "botLog": 749
+   }
+  },
+  {
+   "match": 2,
+   "simSeconds": 781,
+   "score": {
+    "green": 4,
+    "tan": 5
+   },
+   "winner": "tan",
+   "wallS": 5,
+   "after": {
+    "sceneObjects": 24,
+    "geometries": 16,
+    "textures": 2,
+    "programs": 15,
+    "domNodes": 200,
+    "heapMB": 15.4,
+    "killFeed": 1,
+    "shotLog": 200,
+    "botLog": 774
    }
   },
   {
    "match": 3,
-   "simSeconds": 505,
+   "simSeconds": 684,
    "score": {
-    "green": 5,
-    "tan": 0
+    "green": 3,
+    "tan": 5
    },
-   "winner": "green",
-   "wallS": 3,
+   "winner": "tan",
+   "wallS": 10,
    "after": {
     "sceneObjects": 24,
-    "geometries": 14,
+    "geometries": 16,
     "textures": 2,
     "programs": 15,
-    "domNodes": 201,
+    "domNodes": 200,
     "heapMB": 15.4,
     "killFeed": 1,
     "shotLog": 200,
-    "botLog": 691
+    "botLog": 651
    }
   }
  ],
- "fileSizeBytes": 306871,
+ "fileSizeBytes": 326450,
  "errors": []
 }

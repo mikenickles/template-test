@@ -237,6 +237,78 @@ See the budget section. **Fix:** draw the burst sphere once at load at opacity 0
 - In the first HUD run, `pause()` straight after `rematch()` did not show the menu (the app phase was not `playing`).
   In a fresh match it works. This is noted for the bug tester, not confirmed as a bug.
 
+## Round 3 re-check
+
+**Verdict: PASS.** All five findings are fixed except bodies against crouched Tan soldiers, which is only partly fixed.
+- Spectating now shows a proper viewmodel and none of the watched bot's own model.
+- Guns on bodies lie flat.
+- Climbers hug the string.
+- The train z-fighting is gone, and the red wheels sit on the rails.
+- The first burst no longer uploads geometry.
+- The new toy box reads as cardboard.
+
+**Partly fixed:** the 50 % grey tint makes Green bodies clearly different from living Green, but Tan bodies are only dE
+13 to 16 from a crouched Tan soldier. The budget is unchanged at 16 / 17 draw calls in a full firefight and 326 KB.
+
+New scripts: `tests/visual_r3_recheck.cjs`. Re-runs: `visual_r3_train2.cjs` (`PFX=visual_re_`), `visual_r3_burst.cjs`
+and `visual_r3_perf.cjs`; `visual_r3_lib.cjs` now handles the fifth soldier part (arms). Screenshots:
+`screenshots/round3/visual_re_*.png` (6). The machine was still shared and heavily loaded, so milliseconds are noisier
+than before (single frames reached 900 to 1,150 ms). `index.html` was not edited.
+
+### Budget (`visual_r3_perf.cjs`)
+
+| Item | Round 3 | Re-check | Target |
+| --- | --- | --- | --- |
+| Draw calls, full firefight, overview / own eye (shadow pass included) | 16 / 17 | **16 / 17** (5 shadow) | under 40 |
+| Triangles at peak | 31,650 | 31,926 | |
+| Shader programs at load and after first burst, death and round end | 15 | **15** throughout | |
+| Leaks, three matches with rematch | flat | **flat**: scene objects 24, textures 2, programs 15, heap 15.4 MB. DOM nodes 150 at load, then 200 after each match (the match-end table). Geometries 12 at load, 16 after each match | |
+| `index.html` | 306,871 | **326,450 bytes** (101,058 gzipped) | under 400 KB |
+| Console errors | 0 | 0 | 0 |
+
+- **Size.** The bots section grew from 82 to 97 KB (the 16.11 behaviour work); comments are now 40 KB. That leaves 74 KB
+  for round 4 art, or about 114 KB if comments are stripped.
+- **First death and first round-end frames** are within noise of the frames around them (163 and 165 ms against a
+  159 ms baseline).
+
+### Items
+
+| # | Finding | Status | Evidence |
+| --- | --- | --- | --- |
+| 3 | Spectating draws the bot's own model | **Fixed** | Four bots watched, with SMG, sniper and rifle. Hiding each watched bot's own instances changes 0, 0, 0 and 1 px (was 2 % of the frame). The viewmodel for its weapon is drawn and matches the HUD weapon name (`visual_re_spectate.png`: SMG, sniper, rifle, rifle). Nearby teammates were not in arm's reach in these frames |
+| 2 | Body's gun upright | **Fixed** | Over 51 bodies the gun's long axis has a vertical component of median 0.01 and at most 0.13 (0 is flat). The guns lie with the body (`visual_re_bodies.png`, top middle) |
+| 1 | Body looks like a living soldier | **Partly** | Table below. Green bodies are dE 20 to 25 from crouched living Green; Tan bodies only 11 to 16. Silhouettes with the sun off (no shadow in the diff) are still alike: body 26 x 24 px (height / width 0.75), crouched 22 x 20 px (0.89) |
+| 6 | Climbing pose | **Fixed** | From the side the body leans into the string with the string in front of it; from below it reads as a figure clinging to the string. The base plate no longer shows (`visual_re_climb.png`: side, below, side, below). The arms part is small at this size |
+| 4 | Z-fighting on the engine rear trim and gondola door posts | **Fixed** | The difference images show only edge lines; the filled triangle on the engine rear and the slivers on the door posts are gone. Changed px: engine rear oblique 9,433 → 3,305, door posts 8,559 → 1,936, both edge-only. Baseline 0 (`visual_re_train_zfight.png`) |
+| 5 | Wheels hidden and in the rails | **Fixed** | The red wheels now show below the car body, sitting on the rails, from the floor (`visual_re_train_close.png`, second and third frames) |
+| 7 | First-burst upload | **Fixed** | Geometries stay at 12 through the first burst (they went 9 to 10 before). The first-burst frame is 184 ms against a 210 ms median on one fresh page; on the other page every frame around the burst was inflated by load (178 to 446 ms). No spike is separable from the noise |
+| new | East-lane toy box | **Correct** | Collider `m.E-d.toybox` at `81.4..85, 78.5..81.5`, h 2.5, surface card. It renders `#815D3A` on its north face and `#8C663F` on top: dE 5.6 and 3.0 from the cardboard palette colour, a kraft-brown box under the chair (`visual_re_toybox.png`). Against the rendered Tan body (`#C5924A`) it is dE 29 and 25, the same margin the palette gives cardboard against Tan (31). It is not confusable at a glance, but it is the closest thing to Tan in the east lane |
+
+**Bodies against crouched living soldiers** (real autoplay matches, 4 directions per distance, eye level):
+
+| Team | Distance | Body colour | Crouched colour | Body vs crouched dE | Body vs behind | Crouched vs behind |
+| --- | --- | --- | --- | --- | --- | --- |
+| Green | 10 | `#558C54` | `#2A933C` | 22 | 49 | 67 |
+| Green | 30 | `#578B58` | `#2A933D` | 24.5 | 45 | 66 |
+| Green | 60 | `#5B955E` | `#329744` | 20 | 55 | 62 |
+| Green | 100 | `#6CA371` (n 1) | `#48A05A` | 16 | 39 | 54 |
+| Tan | 10 | `#AD895A` | `#C5924A` | **15.8** | 27 | 35 |
+| Tan | 30 | `#B48B59` | `#C5924A` | **13.0** | 33 | 48 |
+| Tan | 60 | `#C09967` (n 1) | `#C69651` | **11.3** | 35 | 41 |
+
+- Tinting 50 % toward `#8C8C8C` moves Tan less than Green. Tan is already close to that grey's lightness, so the mix
+  mainly loses a little saturation.
+- **Suggested fix:** raise `soldier.bodyTint` to 0.7. On flat colours that takes Tan's body-vs-living difference from
+  24 to 34.5, and Green's to 44.5, while the Tan body stays dE 30 from the floor and 20 from cardboard. Rendered
+  differences have come out at about 0.55 to 0.65 of the flat values, so expect about 20 rendered.
+- If that is still too close, also drop the body's lightness. Do not tint toward a darker grey such as `#6E6E6E`: it
+  pulls Tan bodies to within dE 13 of cardboard.
+- Re-check: Tan body vs crouched Tan of dE 20 or more at 30 units.
+
+### New findings
+
+- None of note. The section banners for 10 and 11 still say "stub" and "round 1" (carried note).
+
 ---
 
 # Round 2 (gunplay)
