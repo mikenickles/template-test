@@ -51,7 +51,7 @@
   #title .sub { font-size: 1rem; letter-spacing: 0.4rem; color: var(--accent); margin-bottom: 1.2rem; text-shadow: 0 0.12rem 0 var(--ink); }
   #title .go { margin: 0.6rem 0 1.2rem; }
   #title .card { padding: 1.1rem 1.6rem 0.9rem; margin-top: 0.4rem; --stud: var(--crayonR); }
-  #title .keys { font-size: 0.85rem; line-height: 1.75; opacity: .95; text-shadow: 0 1px 0 rgba(0,0,0,.6); }
+  #title .keys { font-size: 1rem; line-height: 1.75; opacity: .95; text-shadow: 0 1px 0 rgba(0,0,0,.6); }
   #title b { color: var(--accent); font-weight: 800; }
   #mbar { position: absolute; left: 50%; top: 1rem; transform: translateX(-50%); text-align: center; display: none; padding: 0.35rem 1.2rem 0.45rem; --stud: var(--crayonY); }
   #mtime { font-size: 1.9rem; font-weight: 800; letter-spacing: 0.12rem; line-height: 1.05; }
@@ -219,7 +219,7 @@ const CONFIG = {
             numbers: 12, numberLife: 0.8, numberRise: 1.4, numberAbove: 0.35, numberClear: 34, numberGap: 2 },   // px kept clear round the crosshair
   fx: { particles: 192, casings: 24, decals: 64, tracers: 24, tracerLife: 0.08, tracerWidth: 0.035, tracerColor: '#FFE7A0', tracerScopeMin: 3,   // per-weapon tracerWidth / tracerLife override
         casingColor: '#D9A93A', casingLife: 1.4, casingSize: [0.03, 0.03, 0.08], decalColor: '#2A2420', decalSize: 0.13,
-        decalSizes: { wood: 0.2, plastic: 0.14, fabric: 0.24, book: 0.18, card: 0.2, metal: 0.12 }, scorches: 8, scorchSize: 3.2, scorchReach: 2.5, decalLift: { fabric: 0.13, book: 0.05 },   // 17.7
+        decalSizes: { wood: 0.4, plastic: 0.28, fabric: 0.48, book: 0.36, card: 0.4, metal: 0.26 },   // R4-5: twice the 4B size scorches: 8, scorchSize: 3.2, scorchReach: 2.5, decalLift: { fabric: 0.13, book: 0.05 },   // 17.7
         flashColor: '#FFE27A',
         impactMinDE: 30,   // an impact colour closer than this (CIE76) to the colour of the face it hit uses its alt colour
         impact: {    // particles by surface: count, speed, gravity, life, size; alt is used on surfaces too close to color
@@ -229,7 +229,7 @@ const CONFIG = {
           book:    { color: '#F4EFE2', n: 6, speed: 3, g: 6, life: 0.6, size: 0.075 },
           card:    { color: '#D9C7A3', n: 6, speed: 2.6, g: 6, life: 0.6, size: 0.08 },
           metal:   { color: '#FFFFFF', n: 4, speed: 11, g: 8, life: 0.16, size: 0.04 } } },
-  viewmodel: { fov: 55, pos: [0.21, -0.2, -0.46], kickDecay: 16, swayAmp: 0.008, swayFreq: 9, reloadDip: 0.2, drawDrop: 0.45,
+  viewmodel: { fov: 55, pos: [0.21, -0.2, -0.46], kickDecay: 16, swayAmp: 0.008, swayFreq: 9, reloadDip: 0.1, reloadTilt: 0.25, drawDrop: 0.45,
     body: '#3A4048', dark: '#23272D', accent: '#F2C230', wood: '#8A5A32',
     light: { dir: [-0.35, 0.75, 0.55], ambient: 0.5, diffuse: 0.55, top: 0.12, spec: 0.22, shine: 24 },   // 4B: baked into the viewmodel colours
     models: { rifle: { muzzle: -0.62 }, smg: { muzzle: -0.36 }, sniper: { muzzle: -0.9 }, pistol: { muzzle: -0.22, dy: 0.05 } },   // dy: 17.12 follow-up, the pistol and its hands sit higher   // 4B: models are built in vmGun; the muzzle is in model space
@@ -239,7 +239,7 @@ const CONFIG = {
   audio: { master: 0.5, stride: 2.4, landAir: 0.12, impactRange: 45,
     reverb: { seconds: 2.6, decay: 3.0, wet: 0.8, rumble: 0.3,                    // 17.8: a synthesized room impulse; send per sound
               send: { shot_sniper: 0.35, grenade_pop: 0.6, train_whistle: 0.4, train_clack: 0.2, stinger_round_start: 0.3, stinger_round_end: 0.3, jingle_win: 0.25, jingle_lose: 0.25, creak_room: 0.7, creak_bed: 0.5, clatter: 0.15, land: 0.1 } },
-    ambience: { tone: 0.035, toneCut: 220, creakMin: 18, creakMax: 45 },
+    ambience: { tone: 0.035, toneCut: 220, creakMin: 18, creakMax: 45, shotQuiet: 5 }, pan: 0.85, botSteps: { range: 25, vol: 0.6 },   // R4-3
     sounds: {   // layers: k 'n' noise through a filter or 'o' oscillator; f to f1 Hz over d seconds, gain g, start at
       shot_rifle:  [{ k: 'n', t: 'bandpass', f: 1500, f1: 500, q: 0.8, d: 0.16, g: 0.9 }, { k: 'o', t: 'square', f: 190, f1: 60, d: 0.09, g: 0.45 }, { k: 'n', t: 'highpass', f: 4000, d: 0.03, g: 0.5 }],
       shot_smg:    [{ k: 'n', t: 'bandpass', f: 2800, f1: 1500, q: 1.2, d: 0.055, g: 1.3 }, { k: 'o', t: 'triangle', f: 430, f1: 210, d: 0.04, g: 0.75 }],
@@ -284,8 +284,8 @@ const CONFIG = {
       hit_metal:   [{ k: 'o', t: 'sine', f: 2400, f1: 2200, d: 0.12, g: 0.15 }, { k: 'n', t: 'highpass', f: 4000, d: 0.02, g: 0.2 }],
       clatter:     [{ k: 'n', t: 'bandpass', f: 2600, q: 3, d: 0.04, g: 0.5 }, { k: 'o', t: 'triangle', f: 900, f1: 600, d: 0.05, g: 0.2 }, { k: 'n', t: 'bandpass', f: 3100, q: 3, d: 0.035, g: 0.4, at: 0.07 },
                     { k: 'n', t: 'bandpass', f: 2200, q: 3, d: 0.03, g: 0.3, at: 0.13 }, { k: 'n', t: 'bandpass', f: 2900, q: 3, d: 0.025, g: 0.2, at: 0.2 }],
-      creak_room:  [{ k: 'o', t: 'sawtooth', f: 62, f1: 47, d: 1.4, g: 0.1 }, { k: 'n', t: 'bandpass', f: 300, f1: 170, q: 6, d: 1.2, g: 0.28 }, { k: 'o', t: 'square', f: 31, f1: 27, d: 1.1, g: 0.04 }],
-      creak_bed:   [{ k: 'o', t: 'sawtooth', f: 140, f1: 112, d: 0.8, g: 0.07 }, { k: 'n', t: 'bandpass', f: 900, f1: 600, q: 8, d: 0.7, g: 0.22 }, { k: 'n', t: 'bandpass', f: 760, f1: 640, q: 8, d: 0.5, g: 0.15, at: 0.55 }],
+      creak_room:  [{ k: 'o', t: 'sawtooth', f: 62, f1: 47, d: 1.4, g: 0.035 }, { k: 'n', t: 'bandpass', f: 300, f1: 170, q: 6, d: 1.2, g: 0.11 }, { k: 'o', t: 'square', f: 31, f1: 27, d: 1.1, g: 0.02 }],   // R4-3: halved
+      creak_bed:   [{ k: 'o', t: 'sawtooth', f: 140, f1: 112, d: 0.8, g: 0.035 }, { k: 'n', t: 'bandpass', f: 900, f1: 600, q: 8, d: 0.7, g: 0.11 }, { k: 'n', t: 'bandpass', f: 760, f1: 640, q: 8, d: 0.5, g: 0.075, at: 0.55 }],
       // ---- round 3: train (played through sfxAt with distance attenuation and doppler) ----
       train_clack:   [{ k: 'n', t: 'bandpass', f: 1400, q: 3, d: 0.035, g: 0.5 }, { k: 'o', t: 'square', f: 180, f1: 120, d: 0.03, g: 0.25 }],
       train_whistle: [{ k: 'o', t: 'triangle', f: 880, f1: 860, d: 0.55, g: 0.35 }, { k: 'o', t: 'triangle', f: 1108, f1: 1090, d: 0.55, g: 0.25 },
@@ -383,30 +383,33 @@ const CONFIG = {
          vao: { band: 1.2, floor: 0.72, underBed: 0.42, underDesk: 0.72, underChair: 0.82 },        // vertex-colour occlusion
          ao: { contact: 0.38, margin: 0.5, marginK: 0.12, maxMargin: 2.2, underBed: 0.62, underBedEdge: 3, underDesk: 0.32, underDeskEdge: 4,
                underChair: 0.22, edge: 0.2, edgeWidth: 4, wallFoot: 3, corner: 0.18, cornerWidth: 5 },                    // contact shadow decals
+         routeEdge: 0.3,
+         outline: { px: 1.4, shade: 0.55 }, deadGrey: '#7E8288', climbPull: 0.16,     // R4-1 outline, R4-2 dead tint, R4-5 climber fit
          chunks: [3, 4], ceiling: { grid: 8, centre: 1.06, edge: 0.84 },                                                    // R4A-1: static art split 3 x 4 over the room for culling
          titleCam: { centre: [60, 0, 80], radius: 36, squash: 1.25, height: 27, bob: 4, speed: 0.035, look: [60, 5, 80] },   // 4B title drift
-         train: { bodyY: 0.75, wheelR: 0.38, crank: 0.16, cupola: 1.1 },              // round 4B toy consist
+         train: { bodyY: 0.75, wheelR: 0.38, crank: 0.16, cupola: 1.1,
+                  colors: { flatbed: '#1F8A8A', gondola: '#C2185B', trim: '#F0F0F0' } },     // R4-1: art overrides of train.colors (no yellow or orange)              // round 4B toy consist
          beam: { on: true, window: [36, 74, 58, 102], soft: 3, strength: 0.009, fade: 0.3, max: 0.22 },       // window y0 y1 z0 z1
          dust: { on: true, count: 420, inBeam: 0.8, size: 0.3, color: '#E8D3A8', dim: 0.05 },     // R4A-5: bigger and brighter in the beam
          palette: {
            blanketStitch: '#9DB4E8', sheetStripe: '#8FA9D6', blanketEnd: 97,
-           fortGreen: ['#2F6FD0', '#F0F0F0', '#8C97A6'], fortTan: ['#D43C2E', '#F0F0F0', '#8C97A6'], ruin: ['#F08A2A', '#7B4BB5', '#F0F0F0'],
+           fortGreen: ['#2F6FD0', '#F0F0F0', '#8C97A6'], fortTan: ['#D43C2E', '#F0F0F0', '#8C97A6'], ruin: ['#7B4BB5', '#F0F0F0', '#1F8A8A'],   // R4-1: no orange
            blocks: ['#D43C2E', '#2F6FD0', '#7B4BB5', '#1F8A8A', '#C2185B'],      // 17.12: no yellow or orange (Tan readability)
-           books: ['#C0392B', '#2E6DB4', '#8E44AD', '#E67E22', '#34495E'], pages: '#E6DECB', bookBand: '#F2C230',
+           books: ['#C0392B', '#2E6DB4', '#8E44AD', '#1F8A8A', '#34495E'], pages: '#E6DECB', bookBand: '#F2C230',
            cardEdge: '#6E4F33', rail: '#6B7480', sleeper: '#5A3B22', railJoint: '#4B5058',
-           ruler: '#F2C230', deck: '#E0281F', wheel: '#34495E', grip: '#3A404B', truck: '#9AA3AD',
+           ruler: '#7FB8E0', deck: '#E0281F', wheel: '#34495E', grip: '#3A404B', truck: '#9AA3AD',
            spring: '#E0281F', springCoil: '#B9BEC6', springBase: '#4B5058', domino: '#F4EFE2', dominoPip: '#1F2228',
-           bear: '#C08A8E', bearPad: '#E8C9C3', eye: '#1F2228', sockA: '#7B4BB5', sockB: '#F08A2A', sockToe: '#F4EFE2', dust: '#8E9095', shoeLid: '#34495E',
-           bucket: '#2E6DB4', bucketIn: '#14223A', bucketHandle: '#F2C230',
+           bear: '#C08A8E', bearPad: '#E8C9C3', eye: '#1F2228', sockA: '#7B4BB5', sockB: '#1F8A8A', sockToe: '#F4EFE2', dust: '#8E9095', shoeLid: '#34495E',
+           bucket: '#2E6DB4', bucketIn: '#14223A', bucketHandle: '#F0F0F0',
            lamp: '#C0392B', lampTrim: '#F2C230', lampInside: '#FFF3D6', mug: '#F4EFE2', mugBand: '#2E6DB4', coffee: '#4A2E1A',
            pencilCup: '#8E44AD', pencils: ['#F2C230', '#D43C2E', '#2F6FD0', '#F08A2A', '#7B4BB5', '#F2C230'], pencilWood: '#EAD6C2',
            notebookCover: '#2E6DB4', eraserA: '#F29BB0', eraserB: '#6C9BD2', paper: '#F4F2EC', tack: '#D43C2E',
-           yoyo: '#E0281F', yoyoAxle: '#F2C230', aglet: '#D8DEE6',
-           piggy: '#F2A7B8', globeSea: '#3E7CC0', globeLand: '#F2E6C8', globeStand: '#34495E', trophy: '#F2C230', trophyBase: '#34495E',
-           pot: '#C86B3C', soil: '#4A2E1A', leaf: '#2F6F7A', clock: '#D43C2E', bell: '#B9BEC6',
-           cars: ['#F2C230', '#7B4BB5', '#2E6DB4'], carGlass: '#BFD3E0', carTrim: '#34495E', tyre: '#2B2F36', hub: '#D8DEE6', bumper: '#9AA3AD',
-           truckBed: '#F08A2A', truckCab: '#F2C230', load: '#9AA3AD', marbles: ['#2E6DB4', '#E0281F', '#F2C230'], gameBox: '#2E6DB4', gameBoxSide: '#F4EFE2',
-           ball: ['#E0281F', '#F2C230'], crayons: ['#D43C2E', '#2F6FD0', '#7B4BB5', '#F08A2A'], crate: '#C0392B', crateTrim: '#F4EFE2',
+           yoyo: '#E0281F', yoyoAxle: '#F0F0F0', aglet: '#D8DEE6',
+           piggy: '#F2A7B8', globeSea: '#3E7CC0', globeLand: '#F2E6C8', globeStand: '#34495E', trophy: '#C9CED6', trophyBase: '#34495E',
+           pot: '#2E6DB4', soil: '#4A2E1A', leaf: '#2F6F7A', clock: '#D43C2E', bell: '#B9BEC6',
+           cars: ['#C2185B', '#7B4BB5', '#2E6DB4'], carGlass: '#BFD3E0', carTrim: '#34495E', tyre: '#2B2F36', hub: '#D8DEE6', bumper: '#9AA3AD',
+           truckBed: '#2E6DB4', truckCab: '#D43C2E', load: '#9AA3AD', marbles: ['#2E6DB4', '#E0281F', '#F0F0F0'], gameBox: '#2E6DB4', gameBoxSide: '#F4EFE2',
+           ball: ['#E0281F', '#F0F0F0'], crayons: ['#D43C2E', '#2F6FD0', '#7B4BB5', '#1F8A8A'], crate: '#C0392B', crateTrim: '#F4EFE2',
            knob: '#F2C230', cord: '#F4EFE2', lampShade: '#FFF3D6', lampRim: '#C9B98F',
            skyTop: '#9FC3E8', skyLow: '#FFE9C2', hill: '#B8C9A8', fence: '#F4EFE2', trunk: '#8A6A55', leaves: '#7FA392', bush: '#93AE9C',
            flowerA: '#F29BB0', flowerB: '#F2C230', lawn: '#A9BE9A', pillow: '#EEF2F8' } },
@@ -474,34 +477,52 @@ function audioUnlock() {
       const buf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), d = buf.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
       audio.noise = buf; audio.ctx = ctx;
-      try {                                        // 17.8 room reverb: decaying stereo noise as the impulse
-        const R = CONFIG.audio.reverb, len = Math.floor(R.seconds * ctx.sampleRate), ir = ctx.createBuffer(2, len, ctx.sampleRate);
-        for (let ch = 0; ch < 2; ch++) { const d2 = ir.getChannelData(ch); for (let i = 0; i < len; i++) d2[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, R.decay); }
-        audio.verb = ctx.createConvolver(); audio.verb.buffer = ir; const wet = ctx.createGain(); wet.gain.value = R.wet; audio.verb.connect(wet); wet.connect(audio.out);
-      } catch (err) { audio.verb = null; }
+      audio.verb = makeVerb(ctx, audio.out);
     }
     if (audio.ctx.state === 'suspended') { const r = audio.ctx.resume(); if (r && r.catch) r.catch(() => {}); }
   } catch (err) { audio.failed = true; audio.ctx = null; }
 }
-// vol scales every layer's gain; pitch scales every frequency (doppler); delay starts the whole sound later (s)
-function sfx(name, vol = 1, pitch = 1, delay = 0) {
-  if (Array.isArray(delay)) { for (let i = 0; i < delay.length; i++) sfxPlay(name, vol, pitch, delay[i], i === 0); return; }
-  sfxPlay(name, vol, pitch, delay, true);
+function makeVerb(ctx, out) {                       // 17.8 room reverb: decaying stereo noise as the impulse
+  try {
+    const R = CONFIG.audio.reverb, len = Math.floor(R.seconds * ctx.sampleRate), ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d2 = ir.getChannelData(ch); for (let i = 0; i < len; i++) d2[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, R.decay); }
+    const v = ctx.createConvolver(); v.buffer = ir; const wet = ctx.createGain(); wet.gain.value = R.wet; v.connect(wet); wet.connect(out); return v;
+  } catch (err) { return null; }
 }
-function sfxPlay(name, vol, pitch, delay, log) {
+// R4-3 proof: render sound events offline (no speakers, no user gesture) and measure each channel. events: [{name, at: [x,y,z]} | {name, vol}]
+async function audioOffline(events, seconds = 1.5) {
+  const OC = window.OfflineAudioContext || window.webkitOfflineAudioContext; if (!OC) return null;
+  const sr = 44100, ctx = new OC(2, Math.ceil(sr * seconds), sr), save = { ctx: audio.ctx, out: audio.out, noise: audio.noise, verb: audio.verb };
+  audio.ctx = ctx; audio.offline = true; audio.out = ctx.createGain(); audio.out.gain.value = CONFIG.audio.master; audio.out.connect(ctx.destination);
+  const nb = ctx.createBuffer(1, sr, sr), nd = nb.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1; audio.noise = nb; audio.verb = makeVerb(ctx, audio.out);
+  try { for (const ev of events) { if (ev.at) sfxAt(ev.name, ev.at[0], ev.at[1], ev.at[2], 0, 0, 0, ev.vol || 1); else sfx(ev.name, ev.vol || 1, ev.pitch || 1); } }
+  finally { Object.assign(audio, save); audio.offline = false; }
+  const buf = await ctx.startRendering(), m = (ch) => { const d = buf.getChannelData(ch), W = Math.round(sr * 0.05); let s2 = 0, pk = 0, w2 = 0, wmax = 0; for (let i = 0; i < d.length; i++) { s2 += d[i] * d[i]; pk = Math.max(pk, Math.abs(d[i])); w2 += d[i] * d[i]; if (i >= W) w2 -= d[i - W] * d[i - W]; if (i >= W - 1) wmax = Math.max(wmax, w2); }
+    return { rms: +Math.sqrt(s2 / d.length).toFixed(5), peak: +pk.toFixed(4), loud50ms: +Math.sqrt(wmax / W).toFixed(5) }; };   // loud50ms: the loudest 50 ms
+  return { L: m(0), R: m(1) };
+}
+// vol scales every layer's gain; pitch scales every frequency (doppler); delay starts the whole sound later (s)
+function sfx(name, vol = 1, pitch = 1, delay = 0, pan = 0) {
+  if (Array.isArray(delay)) { for (let i = 0; i < delay.length; i++) sfxPlay(name, vol, pitch, delay[i], i === 0, pan); return; }
+  sfxPlay(name, vol, pitch, delay, true, pan);
+}
+function sfxPlay(name, vol, pitch, delay, log, pan) {
+  if (name.startsWith('shot_')) audio.lastShot = performance.now() / 1000;      // R4-3: creaks keep clear of gunfire
   if (log) {                                     // the later hits of one event (delay list) are not logged again
     audioLog.push({ name, time: +game.time.toFixed(3) });
     if (audioLog.length > 200) audioLog.shift();
   }
   const ctx = audio.ctx, layers = CONFIG.audio.sounds[name];
-  if (!ctx || ctx.state !== 'running' || !layers || !(vol > 1e-4)) return;
+  if (!ctx || (ctx.state !== 'running' && !audio.offline) || !layers || !(vol > 1e-4)) return;
   try {
     audio.out.gain.value = CONFIG.audio.master;
     const send = audio.verb ? CONFIG.audio.reverb.send[name] || 0 : 0;
+    let dest = audio.out;
+    if (pan && ctx.createStereoPanner) { const pn = ctx.createStereoPanner(); pn.pan.value = clamp(pan, -1, 1); pn.connect(audio.out); dest = pn; }   // R4-3
     for (const L of layers) {
       const t0 = ctx.currentTime + (L.at || 0) + delay, t1 = t0 + L.d, env = ctx.createGain();
       env.gain.setValueAtTime(Math.max(0.0009, L.g * vol), t0); env.gain.exponentialRampToValueAtTime(0.0008, t1);
-      env.connect(audio.out);
+      env.connect(dest);
       if (send > 0) { const sg = ctx.createGain(); sg.gain.value = send; env.connect(sg); sg.connect(audio.verb); }
       let src;
       if (L.k === 'n') {
@@ -527,7 +548,14 @@ function dopplerAt(x, z, vx, vz) {
   const vs = (vx * dx + vz * dz) / d, vl = (p.vx * dx + p.vz * dz) / d;                 // source toward / listener away along the line
   return clamp((c - vl) / (c - vs), 0.8, 1.25);
 }
-function sfxAt(name, x, y, z, vx, vz, delay) { sfx(name, listenerGain(x, y, z, CONFIG.train.audioRef), dopplerAt(x, z, vx, vz), delay || 0); }
+// R4-3: a world sound is panned by where it is across the camera (its right axis): -1 hard left, +1 hard right
+const _pan = new THREE.Vector3();
+function panAt(x, y, z) {
+  if (!camera) return 0;
+  const e = camera.matrixWorld.elements, dx = x - e[12], dy = y - e[13], dz = z - e[14], l = Math.hypot(dx, dy, dz);
+  return l < 0.5 ? 0 : (dx * e[0] + dy * e[1] + dz * e[2]) / l * CONFIG.audio.pan;
+}
+function sfxAt(name, x, y, z, vx, vz, delay, vol = 1) { sfx(name, vol * listenerGain(x, y, z, CONFIG.train.audioRef), dopplerAt(x, z, vx, vz), delay || 0, panAt(x, y, z)); }
 // Train rumble: one looping low noise plus a low hum, whose gain and pitch follow the nearest car each frame.
 const rumble = { src: null, hum: null, gain: null, filter: null, g: 0, rate: 1, started: false };
 function updateRumble() {
@@ -571,6 +599,8 @@ function updateAmbience(realDt) {
       ambience.next = ambience.t + A.creakMin * 0.5 + Math.random() * (A.creakMax - A.creakMin) * 0.5;
       audioLog.push({ name: 'room_tone', time: +game.time.toFixed(3) }); if (audioLog.length > 200) audioLog.shift();
     }
+    const sinceShot = performance.now() / 1000 - (audio.lastShot || -99);
+    if (ambience.t >= ambience.next && sinceShot < A.shotQuiet) ambience.next = ambience.t + A.shotQuiet - sinceShot;   // R4-3: never within 5 s of a gunshot
     if (ambience.t >= ambience.next) {
       sfx(Math.random() < 0.6 ? 'creak_room' : 'creak_bed', 0.6 + Math.random() * 0.4, 0.9 + Math.random() * 0.2);
       ambience.next = ambience.t + A.creakMin + Math.random() * (A.creakMax - A.creakMin);
@@ -1614,6 +1644,13 @@ function bookStairs(mb, s, rnd) {
   }
 }
 
+// R4-4: narrow orange route strips along both side edges of a z-axis ramp (and its foot when foot is true), lying on its top
+function routeEdges(mb, c, w, foot) {
+  const h = (z) => c.h0 + (c.h1 - c.h0) * (z - c.z0) / (c.z1 - c.z0), e = 0.04, RT = CONFIG.color.route;
+  const strip = (x0, x1, z0, z1) => hexa(mb, [[x0, h(z0) - 0.02, z0], [x1, h(z0) - 0.02, z0], [x1, h(z1) - 0.02, z1], [x0, h(z1) - 0.02, z1], [x0, h(z0) + e, z0], [x1, h(z0) + e, z0], [x1, h(z1) + e, z1], [x0, h(z1) + e, z1]], { col: RT, skip: { ny: 1 } });
+  strip(c.x0, c.x0 + w, c.z0, c.z1); strip(c.x1 - w, c.x1, c.z0, c.z1);
+  if (foot) { const zf = c.h0 < c.h1 ? c.z0 : c.z1 - 0.6; strip(c.x0, c.x1, Math.max(c.z0, zf), Math.min(c.z1, zf + 0.6)); }
+}
 // ---- brickwork for forts and the ruin (DESIGN 17.4): courses about 1.1 high, bricks about 2.4 long with staggered joints, bevelled,
 //      palette colour with slight variation; studs on every top face nobody stands under ----
 function brickColor(pal, rnd) { const r = rnd(), base = r < CONFIG.art.brickMain ? pal[0] : r < CONFIG.art.brickMain + (1 - CONFIG.art.brickMain) / 2 ? pal[1] : pal[2]; return shade(base, 1 + (rnd() - 0.5) * 2 * CONFIG.art.brickVary); }
@@ -1741,6 +1778,7 @@ function artBed(M, rnd) {
     hexa(pt, Pp, { col: '#FFFFFF', tile: T.blanket, skip: { ny: 1 } });
   }
   hexa(pt, rampPoints(COL('bed.blanket')), { col: '#FFFFFF', tile: T.blanket, skip: { ny: 1 } });           // the blanket slope route
+  routeEdges(pt, COL('bed.blanket'), CONFIG.art.routeEdge, true);                                         // R4-4: orange foot and side edges
   // pillows: three soft terraces each, the top one plump
   for (const p of ['p1', 'p2']) for (let k = 0; k < 3; k++) {
     const c = COL('bed.pillow.' + p + '.' + k);
@@ -1863,6 +1901,7 @@ function artDesk(M, rnd) {
   }
   paintCollider('chair.skate', P.deck, P.grip);
   for (const [x0, x1, z0, z1, y] of LAPS) bev(ty, x0, x1, y - 0.02, y + 0.05, z0, z1, { col: CONFIG.color.route, skip: { ny: 1 } }, 0.02);   // R4A-5: every route head keeps its orange lap
+  routeEdges(ty, sk, CONFIG.art.routeEdge);                                                                   // R4-4: orange side edges along the deck
   { const t = sk.thickness, h = (z) => sk.h0 + (sk.h1 - sk.h0) * (z - sk.z0) / (sk.z1 - sk.z0);              // orange nose and tail caps on the skateboard
     for (const [za, zb] of [[sk.z0, sk.z0 + 0.8], [sk.z1 - 0.8, sk.z1]]) hexa(ty, [[sk.x0, h(za) - t, za], [sk.x1, h(za) - t, za], [sk.x1, h(zb) - t, zb], [sk.x0, h(zb) - t, zb], [sk.x0, h(za) + 0.04, za], [sk.x1, h(za) + 0.04, za], [sk.x1, h(zb) + 0.04, zb], [sk.x0, h(zb) + 0.04, zb]], { col: CONFIG.color.route }); }
   for (const id of ['desk.ruler.n', 'desk.ruler.s', 'desk.bridge.n', 'desk.bridge.s']) { hexa(ty, rampPoints(COL(id)), { col: { py: '#FFFFFF', side: P.ruler }, tile: { py: T.ruler, side: T.plastic } }); paintCollider(id, P.ruler); }
@@ -2191,7 +2230,8 @@ void main() {
   vec3 p = position + vec3(sin(t * 0.11 + s) * 1.6 + sin(t * 0.37 + s * 3.0) * 0.4, sin(t * 0.07 + s * 2.0) * 1.2 - 0.6 * fract(t * 0.01 + seed), cos(t * 0.09 + s * 1.7) * 1.6);
   vB = mix(uDim, 1.0, inBeam(p)) * (0.6 + 0.4 * sin(t * 1.3 + s * 5.0));
   vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_Position = projectionMatrix * mv;
-  gl_PointSize = clamp(uSize * uScale / max(0.5, -mv.z), 2.0, 12.0);
+  gl_PointSize = clamp(uSize * uScale / max(0.5, -mv.z), 1.0, 3.0);          // R4-5: at most 3 px
+  vB *= smoothstep(0.4, 2.0, -mv.z);                                          // and gone within 2 units of the camera
 }`,
     fragmentShader: 'uniform vec3 uColor; varying float vB; void main() { float r = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.1, r) * vB; gl_FragColor = vec4(uColor * a, 1.0); }',
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false });
@@ -2847,7 +2887,7 @@ function tickTrain(dt) {
 //      material), moved by its matrix each frame; wheels and the engine's side rods are two InstancedMeshes. Car geometry faces -z
 //      like the soldiers: front (u+) at z -, left (v+) at x -. The bottom 0.5 of each collider is the chassis, bogies and wheels. ----
 function trainCarGeometry(type) {
-  const T = CONFIG.train, C = T.colors, A = CONFIG.art.train, hl = T.carLen / 2, hw = T.carWid / 2, mb = new MB('train.' + type, false), col = C[type];
+  const T = CONFIG.train, A = CONFIG.art.train, C = Object.assign({}, T.colors, A.colors), hl = T.carLen / 2, hw = T.carWid / 2, mb = new MB('train.' + type, false), col = C[type];
   const B = (u0, u1, y0, y1, v0, v1, spec, b) => bev(mb, -v1, -v0, y0, y1, -u1, -u0, typeof spec === 'string' ? { col: spec, tile: ART.tiles.plastic } : spec, b);
   const yb = A.bodyY;
   B(-hl + 0.3, hl - 0.3, 0.42, yb, -T.frameHalf, T.frameHalf, C.dark, 0.06);                               // chassis
@@ -3662,7 +3702,7 @@ function decalAtlas() {
   cell(2, () => { for (let k = 0; k < 40; k++) { g.fillStyle = r() < 0.5 ? 'rgba(25,25,40,0.22)' : 'rgba(255,255,255,0.25)'; g.beginPath(); g.arc((r() - 0.5) * 60, (r() - 0.5) * 60, 4 + r() * 10, 0, 7); g.fill(); } blob(9, 10, 0.5, 'rgba(20,20,30,0.7)'); });   // fabric: a fuzzy scuff
   cell(3, () => { soft(46, 'rgba(244,239,226,0.85)', 'rgba(244,239,226,0)'); blob(15, 9, 0.45, 'rgba(40,30,24,0.95)'); });     // book: torn pages round a hole
   cell(4, () => { soft(48, 'rgba(110,79,51,0.6)', 'rgba(110,79,51,0)'); g.strokeStyle = 'rgba(217,199,163,0.9)'; g.lineWidth = 3; for (let k = 0; k < 9; k++) { const a = r() * 7; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a) * 26, Math.sin(a) * 26); g.stroke(); } blob(12, 9, 0.4, 'rgba(40,28,18,1)'); });   // card
-  cell(5, () => { soft(30, 'rgba(255,255,255,0.7)', 'rgba(255,255,255,0)'); blob(7, 10, 0.2, 'rgba(70,74,80,0.9)'); });            // metal nick
+  cell(5, () => { soft(44, 'rgba(255,255,255,0.85)', 'rgba(255,255,255,0)'); g.strokeStyle = 'rgba(40,44,52,0.9)'; g.lineWidth = 4; g.beginPath(); g.arc(0, 0, 16, 0, 7); g.stroke(); blob(11, 10, 0.25, 'rgba(30,32,38,1)'); });   // metal nick: bright scuff, dark ring and dent (R4-5)
   cell(6, () => { soft(62, 'rgba(20,16,12,0.85)', 'rgba(20,16,12,0)'); for (let k = 0; k < 14; k++) { const a = r() * 7; g.fillStyle = 'rgba(15,12,10,0.6)'; g.beginPath(); g.ellipse(Math.cos(a) * 30, Math.sin(a) * 30, 18, 6, a, 0, 7); g.fill(); } });   // scorch
   return canvasTexture(cv, 'impact decals', { aniso: 1 });
 }
@@ -3865,7 +3905,7 @@ function poseViewmodel(p = player) {      // places the current gun model of sol
   const g = vm.guns[A.current], sp = Math.min(1, Math.hypot(p.vx, p.vz) / CONFIG.move.sprint) * (p.onGround ? 1 : 0.2), t = game.time * V.swayFreq;
   const rl = A.reloadT > 0 ? Math.sin(Math.PI * (1 - A.reloadT / W.reload)) : 0, dr = A.drawT > 0 ? A.drawT / W.draw : 0, aim = A.gAim ? 1 : 0;
   g.position.set(V.pos[0] + Math.sin(t) * V.swayAmp * sp, V.pos[1] + (V.models[A.current].dy || 0) + Math.abs(Math.cos(t)) * V.swayAmp * sp - rl * V.reloadDip - (dr + aim) * V.drawDrop, V.pos[2] + A.kick);
-  g.rotation.set(A.kick * 1.4 - rl * 0.5 - dr * 0.8, 0, rl * 0.35);
+  g.rotation.set(A.kick * 1.4 - rl * V.reloadTilt - dr * 0.8, 0, rl * 0.35 * V.reloadTilt / 0.5);   // R4-5: a partial dip, about half the gun stays on screen
   return g;
 }
 // World point that appears on screen where the viewmodel's muzzle is: the muzzle in viewmodel space is projected with the
@@ -3886,14 +3926,14 @@ function muzzleWorld(out) {
 function precompileEffects() {
   const show = [fx.arc, fx.sphere, vm.flash, vm.hand, fx.targetMesh, ...Object.values(vm.guns), ...soldierMeshes()].filter(Boolean), was = show.map((o) => o.visible);
   for (const o of show) o.visible = true;
-  for (const k of SOLD.names) SOLD.parts[k].mesh.count = 1;            // 4B: compile the soldier parts (and their shadow depth) at load
+  for (const k of SOLD.names) { SOLD.parts[k].mesh.count = 1; if (SOLD.parts[k].outline) SOLD.parts[k].outline.count = 1; }   // compile the soldier parts, outlines and shadow depth at load
   renderer.compile(scene, camera); renderer.compile(vm.scene, vm.cam);
   // 16.11: also upload the burst sphere's geometry (compile does not), drawn once at load at opacity 0
   const op = fx.sphere.material.opacity; fx.sphere.material.opacity = 0; fx.sphere.position.set(60, 2, 40); fx.sphere.scale.set(1, 1, 1);
   camera.position.set(60, 2, 30); camera.lookAt(60, 2, 40); renderer.render(scene, camera);
   fx.sphere.material.opacity = op;
   show.forEach((o, i) => { o.visible = was[i]; });
-  for (const k of SOLD.names) { SOLD.parts[k].mesh.count = 0; SOLD.parts[k].mesh.visible = false; }
+  for (const k of SOLD.names) { const P = SOLD.parts[k]; P.mesh.count = 0; P.mesh.visible = false; if (P.outline) { P.outline.count = 0; P.outline.visible = false; } }
 }
 function renderViewmodel() {                    // the player's gun, or while spectating the watched bot's (16.11)
   const P = viewSubject(), A = P.arsenal || arsenal, V = CONFIG.viewmodel;
@@ -4645,6 +4685,10 @@ function driveSoldier(b, dt, armed) {
   moveActor(b, b.input, dt);
   b.tip = approach(b.tip, b.dead ? 1 : 0, dt / CONFIG.soldier.tipTime);                 // rigid tip-over, as the dummies
   if (b.onGround && !b.dead) b.bob += b.moved / CONFIG.soldier.stride * Math.PI;          // walk bob follows distance walked
+  if (b.onGround && !b.dead && b !== player) {                                                // R4-3: enemy (and friendly) footsteps, panned, within range
+    b.stepDist = (b.stepDist || 0) + b.moved;
+    if (b.stepDist >= CONFIG.audio.stride) { b.stepDist = 0; const BS = CONFIG.audio.botSteps; if (Math.hypot(b.x - player.x, b.y - player.y, b.z - player.z) <= BS.range) sfxAt('step_' + (b.surface || 'wood'), b.x, b.y, b.z, 0, 0, 0, BS.vol); }
+  }
   if (b.groundWas && b.onGround && !b.climbing && b.input.forward && b.moved < 0.3 * Math.max(b.speedWas, 1) * dt) b.blocked++; else if (b.onGround) b.blocked = 0;
   if (!b.dead) {
     if (nav.on && actorInEnvelope(b) && !b.riding && !b.crossing && !(b.ride && b.ride.phase !== 'wait')) {
@@ -5353,7 +5397,39 @@ function soldierPart(mb, name) {                   // standing coordinates: feet
     arm(RS, [0.22, 1.04, -0.2], [px + 0.02, py - 0.07, pz + 0.08]); arm(LS, [-0.2, 1.04, -0.2], [px - 0.04, py - 0.07, pz + 0.06]);
   }
 }
-function soldierGeometry(name) { const mb = new MB('sold.' + name, false); soldierPart(mb, name); const g = mb.geometry(); g.deleteAttribute('atile'); g.deleteAttribute('uv'); return g; }
+function soldierGeometry(name) {
+  const mb = new MB('sold.' + name, false); soldierPart(mb, name); const g = mb.geometry(); g.deleteAttribute('atile'); g.deleteAttribute('uv');
+  // R4-1: a smoothed normal per position for the outline (the faceted normals would split the hull at every edge)
+  const P = g.attributes.position, N = g.attributes.normal, acc = new Map(), key = (i) => Math.round(P.getX(i) * 500) + ',' + Math.round(P.getY(i) * 500) + ',' + Math.round(P.getZ(i) * 500);
+  for (let i = 0; i < P.count; i++) { const k = key(i); let a = acc.get(k); if (!a) acc.set(k, a = [0, 0, 0]); a[0] += N.getX(i); a[1] += N.getY(i); a[2] += N.getZ(i); }
+  const on = new Float32Array(P.count * 3);
+  for (let i = 0; i < P.count; i++) { const a = acc.get(key(i)), l = Math.hypot(a[0], a[1], a[2]) || 1; on[i * 3] = a[0] / l; on[i * 3 + 1] = a[1] / l; on[i * 3 + 2] = a[2] / l; }
+  g.setAttribute('oN', new THREE.BufferAttribute(on, 3));
+  return g;
+}
+// R4-1 outline: the body parts drawn again as an inverted hull pushed out a fixed number of pixels in screen space, so the dark
+// team-shade line stays visible at 60 units. Visual only: hit volumes are untouched. Shares the part's instance matrices.
+function soldierOutlineMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uPx: { value: CONFIG.art.outline.px }, uRes: { value: new THREE.Vector2(1280, 720) } }]),
+    vertexShader: `attribute vec3 oN; uniform float uPx; uniform vec2 uRes; varying vec3 vC;
+#include <fog_pars_vertex>
+void main() {
+  mat4 im = instanceMatrix; vec4 wp = modelMatrix * im * vec4(position, 1.0);
+  vec4 mvPosition = viewMatrix * wp; vec4 cp = projectionMatrix * mvPosition;
+  vec3 wn = normalize(mat3(modelMatrix * im) * oN); vec4 cn = projectionMatrix * viewMatrix * vec4(wp.xyz + wn * 0.05, 1.0);
+  vec2 d = cn.xy / cn.w - cp.xy / cp.w; float l = length(d);
+  if (l > 1e-6) cp.xy += d / l * uPx * 2.0 / uRes * cp.w;
+  gl_Position = cp; vC = instanceColor;
+#include <fog_vertex>
+}`,
+    fragmentShader: `varying vec3 vC;
+#include <fog_pars_fragment>
+void main() { gl_FragColor = vec4(vC, 1.0);
+#include <fog_fragment>
+}`,
+    side: THREE.BackSide, fog: true });
+}
 function buildSoldiers(scene) {
   const n = CONFIG.bot.max + 1, K = CONFIG.soldier;
   const mat = new THREE.MeshPhongMaterial({ color: 0xffffff, vertexColors: true, shininess: K.shininess, specular: new THREE.Color(K.specular) });
@@ -5361,7 +5437,13 @@ function buildSoldiers(scene) {
     const m = new THREE.InstancedMesh(soldierGeometry(name), mat, n);
     for (let i = 0; i < n; i++) { fxPut(m, i, 0, -50, 0, 0, 0, 0); m.setColorAt(i, _fx.c.set('#ffffff')); }
     m.count = 0; m.visible = false; m.castShadow = m.receiveShadow = true; m.frustumCulled = false; m.name = 'soldier.' + name;
-    scene.add(m); SOLD.parts[name] = { mesh: m, n: 0 };
+    SOLD.parts[name] = { mesh: m, n: 0 }; scene.add(m);
+    if (/^legs|^upper$/.test(name)) {                // R4-1: body parts get the outline; the base, arms and guns do not
+      const o = new THREE.InstancedMesh(m.geometry, SOLD.outlineMat || (SOLD.outlineMat = soldierOutlineMaterial()), n);
+      o.instanceMatrix = m.instanceMatrix; for (let i = 0; i < n; i++) o.setColorAt(i, _fx.c.set('#000000'));
+      o.count = 0; o.visible = false; o.frustumCulled = false; o.castShadow = false; o.name = 'soldier.outline.' + name;
+      scene.add(o); SOLD.parts[name].outline = o;
+    }
   }
   const g = new THREE.BufferGeometry(), w = 0.36, P = [];      // a downward chevron in the xy plane, unit size
   const quad = (a, b2, c, d) => P.push(...a, ...b2, ...c, ...a, ...c, ...d);
@@ -5372,12 +5454,12 @@ function buildSoldiers(scene) {
   for (let i = 0; i < n - 1; i++) fxPut(SOLD.chev, i, 0, -50, 0, 0, 0, 0);
   SOLD.chev.frustumCulled = false; scene.add(SOLD.chev);
 }
-function soldierMeshes() { return [...SOLD.names.map((k) => SOLD.parts[k] && SOLD.parts[k].mesh), SOLD.chev, ...(TRAIN.vis ? TRAIN.vis.meshes : [])]; }
+function soldierMeshes() { return [...SOLD.names.map((k) => SOLD.parts[k] && SOLD.parts[k].mesh), ...SOLD.names.map((k) => SOLD.parts[k] && SOLD.parts[k].outline).filter(Boolean), SOLD.chev, ...(TRAIN.vis ? TRAIN.vis.meshes : [])]; }
 function paintSoldier() {}                         // colours are written per frame now (team plastic, greyed as a body tips)
 function hideSoldierSlot() {}
 // Pose matrices relative to the soldier's root (standing coordinates): where the upper body sits, and the arms' shoulder pivot
 const _sm = { root: new THREE.Matrix4(), up: new THREE.Matrix4(), arm: new THREE.Matrix4(), m: new THREE.Matrix4(), t: new THREE.Matrix4(), w: new THREE.Matrix4(),
-  q: new THREE.Quaternion(), v: new THREE.Vector3(), s: new THREE.Vector3(), e: new THREE.Euler(), c: new THREE.Color(), cd: new THREE.Color(), g: new THREE.Color() };
+  q: new THREE.Quaternion(), v: new THREE.Vector3(), s: new THREE.Vector3(), e: new THREE.Euler(), c: new THREE.Color(), cd: new THREE.Color(), g: new THREE.Color(), co: new THREE.Color() };
 function soldierPose(b) {                          // 'stand' | 'kneel' | 'scoped' | 'climb'
   if (b.climbing && !b.dead) return 'climb';
   if (b.crouching) return 'kneel';
@@ -5392,7 +5474,7 @@ function upperPose(out, pose) {
   else out.identity();
   return out;
 }
-function sPut(name, mat, col) { const P = SOLD.parts[name]; if (P.n >= P.mesh.instanceMatrix.count) return; P.mesh.setMatrixAt(P.n, mat); P.mesh.setColorAt(P.n, col); P.n++; }
+function sPut(name, mat, col) { const P = SOLD.parts[name]; if (P.n >= P.mesh.instanceMatrix.count) return; P.mesh.setMatrixAt(P.n, mat); P.mesh.setColorAt(P.n, col); if (P.outline) P.outline.setColorAt(P.n, _sm.co); P.n++; }
 function updateSoldierVisuals(alpha, realDt) {
   if (!SOLD.parts.upper) return;
   const K = CONFIG.soldier, S = _sm, V = viewSubject(), sh = K.shoulder;
@@ -5403,7 +5485,7 @@ function updateSoldierVisuals(alpha, realDt) {
     if (b === V && b !== player && !game.view) continue;              // spectating: the watched bot's own model is hidden
     const x = lerp(b.px, b.x, alpha), y = lerp(b.py, b.y, alpha), z = lerp(b.pz, b.z, alpha), pose = soldierPose(b);
     let yaw = b.yaw, back = 0, lean = 0;
-    if (pose === 'climb') { yaw = Math.atan2(-b.climbing.ex, -b.climbing.ez); back = K.climbBack; lean = -K.climbTilt; }
+    if (pose === 'climb') { yaw = Math.atan2(-b.climbing.ex, -b.climbing.ez); back = K.climbBack - CONFIG.art.climbPull; lean = -K.climbTilt; }   // R4-5: pulled in to fit
     b.ryaw = b.ryaw + wrapAngle(yaw - b.ryaw) * Math.min(1, (realDt || 1 / 60) * 14);
     const moving = b.onGround && Math.hypot(b.vx, b.vz) > 0.5 && !b.dead && pose !== 'climb';
     const hop = moving ? Math.abs(Math.sin(b.bob)) * K.hop : 0;        // 17.5: no base while moving, a small toy hop instead
@@ -5414,8 +5496,9 @@ function updateSoldierVisuals(alpha, realDt) {
     if (moving) S.root.multiply(S.m.makeRotationX(-Math.sin(b.bob * 2) * 0.05));
     if (b.tip > 0) { const hz = K.base[2] / 2; S.root.multiply(S.t.makeTranslation(0, 0, hz)).multiply(S.m.makeRotationX(b.tip * Math.PI / 2)).multiply(S.t.makeTranslation(0, 0, -hz)); }
     // colour: team plastic, toward grey by bodyTint as a body tips (17.5: 0.7); the base a shade darker
-    S.c.set(b.team === 'green' ? CONFIG.target.green : CONFIG.target.tan).lerp(S.g.set(K.bodyGrey), (b.tip || 0) * K.bodyTint);
+    S.c.set(b.team === 'green' ? CONFIG.target.green : CONFIG.target.tan).lerp(S.g.set(CONFIG.art.deadGrey), (b.tip || 0) * K.bodyTint);   // R4-2: cool grey
     S.cd.copy(S.c).multiplyScalar(K.baseShade);
+    S.co.set(b.team === 'green' ? CONFIG.target.greenDark : CONFIG.target.tanDark).lerp(S.g, (b.tip || 0) * K.bodyTint).multiplyScalar(CONFIG.art.outline.shade);
     if (!moving && pose !== 'climb') sPut('base', S.root, S.cd);
     sPut(pose === 'kneel' ? 'legsKneel' : pose === 'climb' ? 'legsClimb' : 'legsStand', S.root, S.c);
     upperPose(S.up, pose);
@@ -5427,7 +5510,9 @@ function updateSoldierVisuals(alpha, realDt) {
       S.w.multiply(S.arm); sPut('arms_' + (SOLD.parts['arms_' + wpn] ? wpn : 'rifle'), S.w, S.c);
     }
   }
-  for (const k of SOLD.names) { const P = SOLD.parts[k], m = P.mesh; m.count = P.n; m.visible = P.n > 0; if (P.n) { m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; } }
+  for (const k of SOLD.names) { const P = SOLD.parts[k], m = P.mesh; m.count = P.n; m.visible = P.n > 0; if (P.n) { m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; }
+    if (P.outline) { P.outline.count = P.n; P.outline.visible = P.n > 0; if (P.n) P.outline.instanceColor.needsUpdate = true; } }
+  if (SOLD.outlineMat) SOLD.outlineMat.uniforms.uRes.value.set(renderer.domElement.width, renderer.domElement.height);
   // chevrons over living teammates (Green), billboarded toward the camera
   const C = K.chevron, ch = SOLD.chev;
   for (let i = 0; i < CONFIG.bot.max; i++) {
@@ -5451,7 +5536,7 @@ function soldierFit() {
     for (const [name, M] of parts) {
       if (pose === 'climb' && name === 'base') continue;
       const P = SOLD.parts[name].mesh.geometry.attributes.position; let mx = 0, over = 0, far = null;
-      for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i); if (M) v.applyMatrix4(M); if (pose === 'climb') v.z += K.climbBack; const d = dist(v, B); if (d > mx) { mx = d; far = [+v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)]; } if (d > 0.15) over++; }
+      for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i); if (M) v.applyMatrix4(M); if (pose === 'climb') v.z += K.climbBack - CONFIG.art.climbPull; const d = dist(v, B); if (d > mx) { mx = d; far = [+v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2)]; } if (d > 0.15) over++; }
       out[pose + '.' + name] = { maxOut: +mx.toFixed(3), vertsOver015: over, of: P.count, farthest: far };
     }
   }
@@ -5882,7 +5967,7 @@ function updateWeaponHUD() {
 function updateHUD(realDt) {
   const p = player, S = hudSubject(), h = Math.ceil(S === player ? p.health : S.hp);
   updateMatchHUD();
-  if (h !== ui.lastHealth) { ui.lastHealth = h; ui.health.textContent = h; ui.healthBox.className = h <= 30 ? 'low' : ''; }
+  if (h !== ui.lastHealth) { ui.lastHealth = h; ui.health.textContent = h; ui.healthBox.classList.toggle('low', h <= 30); }   // R4-5: keep the brick panel class
   ui.hint.style.display = p.climbing ? 'block' : 'none';
   ui.hud.style.visibility = game.view || game.phase === 'title' ? 'hidden' : 'visible';
   updateWeaponHUD();
@@ -6194,6 +6279,7 @@ function init() {
     setDebug: (on) => setDebug(on),
     colliders: COLLIDERS,
     colliderHash: () => colliderHash(),
+    audioOffline: (ev, sec) => audioOffline(ev, sec),
     soldierFit: () => soldierFit(),
     artDebug: (o = {}) => {                       // test-only: hide art meshes by name ('art.paint', ...) or turn the shadow map off, to cost them
       for (const m of ART.meshes) m.visible = !(o.hide || []).includes(m.name);
