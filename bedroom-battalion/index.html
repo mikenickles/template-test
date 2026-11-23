@@ -157,14 +157,20 @@ const CONFIG = {
                 [-0.024, 0.024, -0.12, -0.03, 0.0, 0.06, 'dark'], [-0.027, 0.027, -0.07, 0.03, 0.14, 0.36, 'wood']] },
       pistol: { muzzle: -0.22, boxes: [[-0.022, 0.022, -0.005, 0.045, -0.22, 0.03, 'body'], [-0.02, 0.02, -0.12, -0.005, -0.03, 0.03, 'dark'],
                 [-0.023, 0.023, 0.0, 0.03, -0.22, -0.19, 'accent']] }
-    } },
+    },
+    // round 3: a green plastic hand holding the red firecracker, shown while a grenade is aimed (the gun drops out of view)
+    hand: '#2FA84A', handDark: '#1F7A36', grenade: '#E0281F', fuse: '#FFD21F', handPos: [0.2, -0.19, -0.42], handRise: 0.12,
+    handBoxes: [[-0.035, 0.035, -0.06, 0.0, -0.03, 0.05, 'hand'], [-0.03, 0.03, -0.11, -0.06, -0.025, 0.04, 'handDark'],
+                [-0.045, -0.032, -0.05, 0.0, -0.04, 0.0, 'hand'],                                    // thumb
+                [-0.026, 0.026, 0.0, 0.085, -0.03, 0.022, 'grenade'], [-0.004, 0.004, 0.085, 0.115, -0.006, 0.002, 'fuse']] },
   audio: { master: 0.5, stride: 2.4, landAir: 0.12,
     sounds: {   // layers: k 'n' noise through a filter or 'o' oscillator; f to f1 Hz over d seconds, gain g, start at
       shot_rifle:  [{ k: 'n', t: 'bandpass', f: 1500, f1: 500, q: 0.8, d: 0.16, g: 0.9 }, { k: 'o', t: 'square', f: 190, f1: 60, d: 0.09, g: 0.45 }, { k: 'n', t: 'highpass', f: 4000, d: 0.03, g: 0.5 }],
       shot_smg:    [{ k: 'n', t: 'bandpass', f: 2800, f1: 1500, q: 1.2, d: 0.055, g: 1.3 }, { k: 'o', t: 'triangle', f: 430, f1: 210, d: 0.04, g: 0.75 }],
       shot_sniper: [{ k: 'o', t: 'sine', f: 110, f1: 30, d: 0.55, g: 0.6 }, { k: 'n', t: 'lowpass', f: 900, f1: 140, d: 0.7, g: 0.55 }, { k: 'n', t: 'highpass', f: 3000, d: 0.05, g: 0.7 },
                     { k: 'n', t: 'bandpass', f: 420, q: 0.6, d: 1.2, g: 0.22, at: 0.1 }],
-      shot_pistol: [{ k: 'n', t: 'highpass', f: 2200, d: 0.07, g: 0.75 }, { k: 'o', t: 'square', f: 540, f1: 160, d: 0.05, g: 0.4 }],
+      shot_pistol: [{ k: 'n', t: 'highpass', f: 2200, d: 0.07, g: 0.75 }, { k: 'o', t: 'square', f: 540, f1: 160, d: 0.05, g: 0.4 },
+                    { k: 'o', t: 'triangle', f: 230, f1: 70, d: 0.09, g: 0.6 }, { k: 'n', t: 'lowpass', f: 1100, f1: 260, d: 0.1, g: 0.55 }],   // round 3: low body under the crack
       dry:         [{ k: 'o', t: 'square', f: 1400, d: 0.02, g: 0.2 }, { k: 'n', t: 'highpass', f: 5000, d: 0.015, g: 0.25 }],
       reload_rifle:  [{ k: 'n', t: 'bandpass', f: 900, q: 2, d: 0.06, g: 0.5 }, { k: 'o', t: 'square', f: 300, f1: 200, d: 0.05, g: 0.3, at: 1.25 }, { k: 'n', t: 'bandpass', f: 1300, q: 2, d: 0.05, g: 0.5, at: 1.25 }, { k: 'n', t: 'bandpass', f: 2000, q: 1.5, d: 0.09, g: 0.5, at: 1.9 }],
       reload_smg:    [{ k: 'n', t: 'bandpass', f: 1500, q: 2, d: 0.04, g: 0.45 }, { k: 'n', t: 'bandpass', f: 1900, q: 2, d: 0.04, g: 0.45, at: 1.1 }, { k: 'o', t: 'triangle', f: 700, f1: 500, d: 0.04, g: 0.3, at: 1.7 }],
@@ -183,9 +189,43 @@ const CONFIG = {
       step_book:    [{ k: 'n', t: 'bandpass', f: 700, q: 1, d: 0.05, g: 0.75 }],
       step_card:    [{ k: 'n', t: 'bandpass', f: 400, q: 0.7, d: 0.07, g: 0.75 }],
       step_metal:   [{ k: 'o', t: 'sine', f: 1500, f1: 1300, d: 0.08, g: 0.12 }, { k: 'n', t: 'highpass', f: 3000, d: 0.02, g: 0.12 }],
-      jump:        [{ k: 'n', t: 'lowpass', f: 600, f1: 1000, d: 0.08, g: 0.15 }],
-      land:        [{ k: 'o', t: 'sine', f: 120, f1: 50, d: 0.12, g: 0.4 }, { k: 'n', t: 'lowpass', f: 400, d: 0.08, g: 0.3 }]
+      jump:        [{ k: 'n', t: 'lowpass', f: 600, f1: 1000, d: 0.08, g: 0.5 }],      // round 3: gain 0.15 to 0.5 (was nearly silent)
+      land:        [{ k: 'o', t: 'sine', f: 120, f1: 50, d: 0.12, g: 0.4 }, { k: 'n', t: 'lowpass', f: 400, d: 0.08, g: 0.3 }],
+      // ---- round 3: train (played through sfxAt with distance attenuation and doppler) ----
+      train_clack:   [{ k: 'n', t: 'bandpass', f: 1400, q: 3, d: 0.035, g: 0.5 }, { k: 'o', t: 'square', f: 180, f1: 120, d: 0.03, g: 0.25 }],
+      train_whistle: [{ k: 'o', t: 'triangle', f: 880, f1: 860, d: 0.55, g: 0.35 }, { k: 'o', t: 'triangle', f: 1108, f1: 1090, d: 0.55, g: 0.25 },
+                      { k: 'n', t: 'bandpass', f: 2200, q: 4, d: 0.5, g: 0.12 }, { k: 'o', t: 'triangle', f: 880, f1: 820, d: 0.7, g: 0.3, at: 0.62 },
+                      { k: 'o', t: 'triangle', f: 1108, f1: 1040, d: 0.7, g: 0.22, at: 0.62 }]
     } },
+  // ---- round 3A: train, soldiers, bot movement (DESIGN.md section 16) ----
+  train: { speed: 4, s0: 30,               // s of the engine front at time 0; s = s0 + speed * time, so the timing is learnable
+           carLen: 12, carWid: 4, gap: 1.5, bottom: 0.25, deck: 1.2, roof: 5, cab: 6, cabLen: 4,
+           consist: ['engine', 'boxcar', 'flatbed', 'gondola', 'caboose'],
+           cargo: 3, gondolaWall: 2.4, gondolaDoor: 3, wallThick: 0.3,
+           rescueTime: 0.3,                // both push exits blocked this long: placed outside the envelope and logged
+           pushEps: 0.02, bandEps: 0.03,   // pushed this far clear; parts lower than feet + bandEps do not push
+           envCell: 0.25, envStep: 0.1, envBox: [36, 84, 28, 132], envBand: [13.5, 19.5],   // swept-envelope grid (x0, x1, z0, z1)
+           crossLook: 3, crossMargin: 2,   // a cross edge starts only if no car reaches it within crossLook s (margin in units of track)
+           whistleZ: 80, jointGap: 6, axles: [-4.7, -3.3, 3.3, 4.7],      // wheel axles along each car; a clack per axle per rail joint
+           clackDelays: [0, 0.35, 2.0, 2.35],   // = (lead axle - each axle) / speed: one logged clack event per car per joint plays all four axles
+           rumbleGain: 0.35, rumbleRef: 6, clackRange: 45, soundSpeed: 60, audioRef: 5,   // distance attenuation ref / doppler sound speed
+           colors: { engine: '#1F4FA8', boxcar: '#D43C2E', flatbed: '#F2C230', gondola: '#F08A2A', caboose: '#7B4BB5',
+                     trim: '#F2C230', wheel: '#D43C2E', dark: '#2B2F36', cargo: '#2F6FD0', window: '#BFD3E0' },
+           grenadeGrip: 0.35,             // tangential speed relative to a car kept on a bounce, so a grenade picks up most of the car's velocity
+           surface: 'metal' },
+  soldier: { body: [0.8, 1.3, 0.5], crouchBody: 0.7, head: 0.45, base: [1.0, 0.05, 0.8], gun: [0.1, 0.12, 0.75], gunAt: [0.32, 1.05, -0.18],
+             gunColor: '#3A4048', tipTime: 0.25, chips: 8, bob: 0.06, stride: 1.2,
+             chevron: { range: 60, above: 0.55, size: 0.32, losHz: 10 } },
+  bot: { max: 10, hp: 100, arrive: 0.3, arriveY: 0.75, sprintCross: true,
+         costClimb: 1.5, costRamp: 1.2, costJump: 4, costCross: 2, waitCost: 5, maxWait: 8,     // A* edge costs (DESIGN 16.3); waitCost per s of waiting
+         stuckProgress: 0.5, stuckJump: 1.5, stuckStrafe: 2.5, strafeTime: 0.5, stuckRepath: 3.5, stuckPlace: 6,
+         rideCapacity: 1, rideSpot: { flatbed: -3.75, gondola: 0 },    // where a rider stands on each deck car (along the car)
+         rideLead: { flatbed: 0.5, gondola: 0.35 }, rideTol: 0.45, runUp: 0.1,   // boarding: start when the spot is this many s from the bot
+         rideTimeout: 30, envelopeExit: 0.6 },
+  rides: {   // DESIGN 16.3 ride edges: one way, in the train's direction of travel
+    'ride.w': { a: 'w.ride.w', b: 'n.c.x', wait: [46.5, 0, 104], boardZ: 104, offZ: 58, step: [46.5, 0, 56], dir: -1, x: 43 },
+    'ride.e': { a: 'w.ride.e', b: 's.c.y', wait: [73.5, 0, 56], boardZ: 56, offZ: 98, step: [74.0, 0, 100], dir: 1, x: 77 } },
+  navTest: { pRoute: 0.2, pEdge: 0.35, pRide: 1 },
   color: {
     haze: '#D6DEE8', wall: '#BFD3E0', trim: '#F2EFE6', ceiling: '#F5F2EA', plank: '#7A4E2E', plankGap: '#4A2E1A',
     sun: '#FFE2B0', hemiSky: '#FFF8EC', hemiGround: '#D8CFC4',
@@ -195,7 +235,7 @@ const CONFIG = {
     hud: '#FFFFFF', accent: '#FFD21F', danger: '#E0281F'
   },
   debug: { box: '#00E5FF', ramp: '#FF4DFF', cyl: '#B6FF00', string: '#FFD21F', pad: '#FF3030', shell: '#FFFFFF',
-           edge: { walk: '#FFFFFF', ramp: '#FF8A1F', jump: '#FF4DFF', climb: '#FFD21F', launch: '#FF3030', cross: '#00E5FF', drop: '#4D7CFF' } }
+           edge: { walk: '#FFFFFF', ramp: '#FF8A1F', jump: '#FF4DFF', climb: '#FFD21F', launch: '#FF3030', cross: '#00E5FF', drop: '#4D7CFF', ride: '#00FF88' } }
 };
 
 // Named views for screenshots (DESIGN.md section 10): [eye, lookAt]
@@ -252,33 +292,75 @@ function audioUnlock() {
     if (audio.ctx.state === 'suspended') { const r = audio.ctx.resume(); if (r && r.catch) r.catch(() => {}); }
   } catch (err) { audio.failed = true; audio.ctx = null; }
 }
-function sfx(name) {
-  audioLog.push({ name, time: +game.time.toFixed(3) });
-  if (audioLog.length > 200) audioLog.shift();
+// vol scales every layer's gain; pitch scales every frequency (doppler); delay starts the whole sound later (s)
+function sfx(name, vol = 1, pitch = 1, delay = 0) {
+  if (Array.isArray(delay)) { for (let i = 0; i < delay.length; i++) sfxPlay(name, vol, pitch, delay[i], i === 0); return; }
+  sfxPlay(name, vol, pitch, delay, true);
+}
+function sfxPlay(name, vol, pitch, delay, log) {
+  if (log) {                                     // the later hits of one event (delay list) are not logged again
+    audioLog.push({ name, time: +game.time.toFixed(3) });
+    if (audioLog.length > 200) audioLog.shift();
+  }
   const ctx = audio.ctx, layers = CONFIG.audio.sounds[name];
-  if (!ctx || ctx.state !== 'running' || !layers) return;
+  if (!ctx || ctx.state !== 'running' || !layers || !(vol > 1e-4)) return;
   try {
     audio.out.gain.value = CONFIG.audio.master;
     for (const L of layers) {
-      const t0 = ctx.currentTime + (L.at || 0), t1 = t0 + L.d, env = ctx.createGain();
-      env.gain.setValueAtTime(L.g, t0); env.gain.exponentialRampToValueAtTime(0.0008, t1);
+      const t0 = ctx.currentTime + (L.at || 0) + delay, t1 = t0 + L.d, env = ctx.createGain();
+      env.gain.setValueAtTime(Math.max(0.0009, L.g * vol), t0); env.gain.exponentialRampToValueAtTime(0.0008, t1);
       env.connect(audio.out);
       let src;
       if (L.k === 'n') {
         src = ctx.createBufferSource(); src.buffer = audio.noise; src.loop = true;
         const f = ctx.createBiquadFilter(); f.type = L.t; f.Q.value = L.q || 0.7;
-        f.frequency.setValueAtTime(L.f, t0); if (L.f1) f.frequency.exponentialRampToValueAtTime(L.f1, t1);
+        f.frequency.setValueAtTime(L.f * pitch, t0); if (L.f1) f.frequency.exponentialRampToValueAtTime(L.f1 * pitch, t1);
         src.connect(f); f.connect(env);
         src.start(t0, Math.random() * 0.5);
       } else {
         src = ctx.createOscillator(); src.type = L.t;
-        src.frequency.setValueAtTime(L.f, t0); if (L.f1) src.frequency.exponentialRampToValueAtTime(L.f1, t1);
+        src.frequency.setValueAtTime(L.f * pitch, t0); if (L.f1) src.frequency.exponentialRampToValueAtTime(L.f1 * pitch, t1);
         src.connect(env);
         src.start(t0);
       }
       src.stop(t1 + 0.02);
     }
   } catch (err) { /* audio is optional: never let it break the game */ }
+}
+// A sound at a world point, heard from the player: inverse-distance attenuation, and a slight doppler from the source velocity.
+function listenerGain(x, y, z, ref) { const p = player, d = Math.hypot(x - p.x, y - p.y - p.eye, z - p.z); return d <= ref ? 1 : ref / d; }
+function dopplerAt(x, z, vx, vz) {
+  const p = player, dx = p.x - x, dz = p.z - z, d = Math.hypot(dx, dz) || 1, c = CONFIG.train.soundSpeed;
+  const vs = (vx * dx + vz * dz) / d, vl = (p.vx * dx + p.vz * dz) / d;                 // source toward / listener away along the line
+  return clamp((c - vl) / (c - vs), 0.8, 1.25);
+}
+function sfxAt(name, x, y, z, vx, vz, delay) { sfx(name, listenerGain(x, y, z, CONFIG.train.audioRef), dopplerAt(x, z, vx, vz), delay || 0); }
+// Train rumble: one looping low noise plus a low hum, whose gain and pitch follow the nearest car each frame.
+const rumble = { src: null, hum: null, gain: null, filter: null, g: 0, rate: 1, started: false };
+function updateRumble() {
+  const T = CONFIG.train;
+  let best = Infinity, bc = null;
+  for (const c of TRAIN.cars) { const d = Math.hypot(c.x - player.x, 2.5 - player.y - player.eye, c.z - player.z); if (d < best) { best = d; bc = c; } }
+  rumble.g = bc ? T.rumbleGain * Math.min(1, T.rumbleRef / Math.max(best, 1e-3)) : 0;
+  rumble.rate = bc ? dopplerAt(bc.x, bc.z, bc.vx, bc.vz) : 1;
+  const ctx = audio.ctx;
+  if (!ctx || ctx.state !== 'running') return;
+  try {
+    if (!rumble.started) {
+      rumble.started = true;
+      rumble.gain = ctx.createGain(); rumble.gain.gain.value = 0; rumble.gain.connect(audio.out);
+      rumble.filter = ctx.createBiquadFilter(); rumble.filter.type = 'lowpass'; rumble.filter.frequency.value = 170; rumble.filter.Q.value = 0.9;
+      rumble.src = ctx.createBufferSource(); rumble.src.buffer = audio.noise; rumble.src.loop = true;
+      rumble.src.connect(rumble.filter); rumble.filter.connect(rumble.gain); rumble.src.start();
+      rumble.hum = ctx.createOscillator(); rumble.hum.type = 'sine'; rumble.hum.frequency.value = 46;
+      const hg = ctx.createGain(); hg.gain.value = 0.5; rumble.hum.connect(hg); hg.connect(rumble.gain); rumble.hum.start();
+      audioLog.push({ name: 'train_rumble', time: +game.time.toFixed(3) }); if (audioLog.length > 200) audioLog.shift();
+    }
+    const t = ctx.currentTime;
+    rumble.gain.gain.setTargetAtTime(rumble.g, t, 0.08);
+    rumble.src.playbackRate.setTargetAtTime(rumble.rate, t, 0.08);
+    rumble.hum.frequency.setTargetAtTime(46 * rumble.rate, t, 0.08);
+  } catch (err) { /* audio is optional */ }
 }
 // footsteps by surface, jump and land, from the player's state after each tick
 const moveAudio = { ground: true, air: 0, dist: 0 };
@@ -644,7 +726,9 @@ function buildWorld(scene, renderer) {
   boxNS('W-a.1', 37, 40, 28, 31, 0, 3, G, 'wood'); boxNS('W-a.2', 37, 40, 31, 34, 0, 6, G, 'wood'); boxNS('W-a.3', 34, 37, 31, 34, 0, 3, G, 'wood');
   boxNS('W-b.car', 33, 36, 56, 62, 0, 2.2, G, 'plastic');
   boxNS('W-c', 33, 36, 69, 72, 0, 3, G, 'wood');
-  boxNS('C-a.crayon1', 55.7, 57, 29, 38, 0, 1.3, G, 'plastic'); boxNS('C-a.crayon2', 63, 64.3, 29, 38, 0, 1.3, G, 'plastic');   // jumbo crayons, north-south
+  // jumbo crayons, north-south. Round 3: DESIGN gives z 28..33.5, but that corner is at radius 19.24 from the curve centre, inside the
+  // 19.5 band DESIGN 16.1 keeps clear, and 0.35 from the swept path, so a soldier (0.8 wide) is wedged there. Ending at 33.0 puts it at 19.73.
+  boxNS('C-a.crayon1', 55.7, 57, 28, 33, 0, 1.3, G, 'plastic'); boxNS('C-a.crayon2', 63, 64.3, 28, 33, 0, 1.3, G, 'plastic');
   boxNS('C-b.car', 52, 55, 43, 49, 0, 2.2, G, 'plastic');
   box('n.C-c.truck.bed', 63, 68, 44, 51, 0, 3.6, G, 'plastic'); box('n.C-c.truck.cab', 63, 68, 51, 54, 0, 5, G, 'plastic');
   box('s.C-c.marble.ramp', 63, 68, 106, 113, 0, 4, G, 'plastic'); box('s.C-c.marble.tower', 63, 68, 113, 116, 0, 8, G, 'plastic');
@@ -659,8 +743,8 @@ function buildWorld(scene, renderer) {
   boxNS('E-a.1', 80, 83, 30, 33, 0, 6, G, 'wood'); boxNS('E-a.2', 83, 86, 30, 33, 0, 3, G, 'wood'); boxNS('E-a.3', 80, 83, 33, 36, 0, 3, G, 'wood');
   boxNS('E-b.car', 110, 116, 46, 49, 0, 2.2, G, 'plastic');
   box('n.E-c', 79.5, 82.5, 44, 47, 0, 3, G, 'wood');
-  box('tunnel.wall.w', 72.6, 73.6, 68, 92, 0, 6.8, G, 'card'); box('tunnel.wall.e', 80.4, 81.4, 68, 92, 0, 6.8, G, 'card');
-  box('tunnel.roof', 72.6, 81.4, 68, 92, 6.8, 8, G, 'card');
+  box('tunnel.wall.w', 72.6, 73.6, 68, 92, 0, 6.5, G, 'card'); box('tunnel.wall.e', 80.4, 81.4, 68, 92, 0, 6.5, G, 'card');
+  box('tunnel.roof', 72.6, 81.4, 68, 92, 6.5, 8, G, 'card');      // round 3: underside 6.5, so a rider standing on a 5-high roof is scraped off
 
   // ---- 7. train track (visual only in round 1: no collider, no bumps) ----
   const TK = CONFIG.track, seg = TRACK.length / Math.round(TRACK.length / TK.sleeperGap), a = {}, b = {};
@@ -769,6 +853,15 @@ let queryStamp = 0;
 const _R = { x0: 0, x1: 0, z0: 0, z1: 0 };
 const _n = { x: 0, z: 0 };
 const _g = { y: -Infinity, c: null };
+// ---- round 3: train parts are oriented boxes (local u along the car, v to its left) that join these queries while TQ.on,
+//      so soldiers stand on, ride and bump into the cars. Static-only callers (validateWaypoints, trainClearance, push exits) turn it off.
+const TQ = { on: true, walls: true };          // walls: off for a soldier whose train push is blocked (the push logic owns that overlap)
+const _L = { x: 0, z: 0 }, _LR = { x0: 0, x1: 0, z0: 0, z1: 0 };
+function carNear(car, x, z, r) { const dx = x - car.x, dz = z - car.z, R = car.rad + r; return dx * dx + dz * dz < R * R; }
+function toCar(car, x, z) { const dx = x - car.x, dz = z - car.z; _L.x = dx * car.fx + dz * car.fz; _L.z = dx * car.lx + dz * car.lz; return _L; }
+function partRect(P) { _LR.x0 = P.u0; _LR.x1 = P.u1; _LR.z0 = P.v0; _LR.z1 = P.v1; return _LR; }
+function circleOverPart(P, u, v, r) { const du = u - clamp(u, P.u0, P.u1), dv = v - clamp(v, P.v0, P.v1); return du * du + dv * dv < r * r; }
+function withStatic(fn) { const was = TQ.on; TQ.on = false; try { return fn(); } finally { TQ.on = was; } }
 
 function buildGrid() {
   const R = CONFIG.room;
@@ -858,6 +951,17 @@ function resolveWalls(pos, r, feet, height, grounded, vel) {
       const lo = c.kind === 'ramp' ? feet + (c.steep ? 0.02 : M.stepUp) : feet + thr;
       if (pushOutOf(pos, r, c, lo, head)) { hit = true; if (vel && grounded) slideVelocity(vel); }
     }
+    if (TQ.on && TQ.walls) for (const car of TRAIN.cars) {
+      if (!carNear(car, pos.x, pos.z, r + 0.05)) continue;
+      for (const P of car.parts) {
+        if (P.y1 <= feet + thr || P.y0 >= head) continue;
+        toCar(car, pos.x, pos.z);
+        if (!pushCircleRect(_L, r, partRect(P))) continue;
+        pos.x = car.x + _L.x * car.fx + _L.z * car.lx; pos.z = car.z + _L.x * car.fz + _L.z * car.lz;
+        const nu = _n.x, nv = _n.z; _n.x = nu * car.fx + nv * car.lx; _n.z = nu * car.fz + nv * car.lz;
+        hit = true; if (vel && grounded) slideVelocity(vel);
+      }
+    }
     if (!hit) break;
   }
 }
@@ -879,6 +983,12 @@ function groundBelow(x, z, r, yMaxBox, yMaxRamp) {
     }
     if (y > _g.y) { _g.y = y; _g.c = c; }
   }
+  if (TQ.on) for (const car of TRAIN.cars) {
+    if (!carNear(car, x, z, r)) continue;
+    toCar(car, x, z);
+    const u = _L.x, v = _L.z;
+    for (const P of car.parts) if (P.y1 <= yMaxBox && P.y1 > _g.y && circleOverPart(P, u, v, rs)) { _g.y = P.y1; _g.c = P; }
+  }
   return _g;
 }
 // Lowest underside between the old and new head height (swept, so fast launches cannot tunnel).
@@ -898,6 +1008,12 @@ function ceilingAbove(x, z, r, headOld, headNew) {
     }
     if (under >= headOld - 0.02 && under < headNew && under < best) best = under;
   }
+  if (TQ.on) for (const car of TRAIN.cars) {
+    if (!carNear(car, x, z, r)) continue;
+    toCar(car, x, z);
+    const u = _L.x, v = _L.z;
+    for (const P of car.parts) if (P.y0 >= headOld - 0.02 && P.y0 < headNew && P.y0 < best && circleOverPart(P, u, v, rs)) best = P.y0;
+  }
   return best;
 }
 // First solid that intersects the cylinder (x, z, r) x (yLo, yHi), or null.
@@ -908,12 +1024,18 @@ function firstBlocker(x, z, r, yLo, yHi) {
     if (c.kind === 'cyl') { if (c.y1 > yLo && c.y0 < yHi && circleOverCyl(x, z, rs, c)) return c; }
     else if (blockRect(c, yLo, yHi, _R) && circleOverRect(x, z, rs, _R)) return c;
   }
+  if (TQ.on) for (const car of TRAIN.cars) {
+    if (!carNear(car, x, z, r)) continue;
+    toCar(car, x, z);
+    const u = _L.x, v = _L.z;
+    for (const P of car.parts) if (P.y1 > yLo && P.y0 < yHi && circleOverPart(P, u, v, rs)) return P;
+  }
   return null;
 }
 const volumeFree = (x, z, r, yLo, yHi) => firstBlocker(x, z, r, yLo, yHi) === null;
 
 // ---- hitscan: rays against the collider list (never the visual meshes) and the target hit volumes --------------
-const RH = { t: 0, c: null, target: null, zone: null, nx: 0, ny: 1, nz: 0 };
+const RH = { t: 0, c: null, target: null, soldier: null, zone: null, nx: 0, ny: 1, nz: 0 };
 const _rp = { t: 0, n: null };
 function boxPlanes(x0, x1, y0, y1, z0, z1) {      // half-spaces n . p <= d
   return [[-1, 0, 0, -x0], [1, 0, 0, x1], [0, -1, 0, -y0], [0, 1, 0, y1], [0, 0, -1, -z0], [0, 0, 1, z1]];
@@ -969,7 +1091,7 @@ const RC = { x: 0, y: 0, z: 0 };
 // Nearest hit along a unit direction within maxDist. Fills RH and returns true on a hit.
 function raycastWorld(ox, oy, oz, dx, dy, dz, maxDist, withTargets) {
   let best = maxDist, found = false;
-  RH.c = null; RH.target = null; RH.zone = null;
+  RH.c = null; RH.target = null; RH.soldier = null; RH.zone = null;
   for (let i = 0; i < COLLIDERS.length; i++) {
     const c = COLLIDERS[i];
     if (c.kind === 'string') continue;
@@ -978,13 +1100,33 @@ function raycastWorld(ox, oy, oz, dx, dy, dz, maxDist, withTargets) {
     else { t = rayPlanes(ox, oy, oz, dx, dy, dz, c._planes, best); if (t < 0) continue; RH.nx = _rp.n[0]; RH.ny = _rp.n[1]; RH.nz = _rp.n[2]; }
     best = t; found = true; RH.c = c; RH.target = null; RH.zone = null;
   }
-  if (withTargets) for (let i = 0; i < targets.length; i++) {
+  if (TQ.on) for (const car of TRAIN.cars) {          // train cars stop bullets and bounce grenades
+    const qx = ox - car.x, qz = oz - car.z;
+    const ou = qx * car.fx + qz * car.fz, ov = qx * car.lx + qz * car.lz, du = dx * car.fx + dz * car.fz, dv = dx * car.lx + dz * car.lz;
+    for (const P of car.parts) {
+      const t = rayPlanes(ou, oy, ov, du, dy, dv, P.planes, best);
+      if (t < 0) continue;
+      const n = _rp.n;
+      best = t; found = true; RH.c = P; RH.target = null; RH.zone = null;
+      RH.nx = n[0] * car.fx + n[2] * car.lx; RH.ny = n[1]; RH.nz = n[0] * car.fz + n[2] * car.lz;
+    }
+  }
+  if (withTargets && game.range) for (let i = 0; i < targets.length; i++) {
     const T = targets[i];
     if (T.down) continue;
     for (let z = 0; z < 2; z++) {
       const t = rayPlanes(ox, oy, oz, dx, dy, dz, z ? T.headPlanes : T.bodyPlanes, best);
       if (t < 0) continue;
       best = t; found = true; RH.c = null; RH.target = T; RH.zone = z ? 'head' : 'body'; RH.nx = _rp.n[0]; RH.ny = _rp.n[1]; RH.nz = _rp.n[2];
+    }
+  }
+  if (withTargets) for (let i = 0; i < bots.length; i++) {       // soldier hit volumes (head and body), never the visual mesh
+    const b = bots[i];
+    if (b.dead || b === withTargets) continue;
+    for (let z = 0; z < 2; z++) {
+      const t = rayPlanes(ox, oy, oz, dx, dy, dz, z ? b.headPlanes : b.bodyPlanes, best);
+      if (t < 0) continue;
+      best = t; found = true; RH.c = null; RH.target = null; RH.soldier = b; RH.zone = z ? 'head' : 'body'; RH.nx = _rp.n[0]; RH.ny = _rp.n[1]; RH.nz = _rp.n[2];
     }
   }
   RH.t = best;
@@ -1012,8 +1154,354 @@ function trackPoint(s, out = {}) {
   out.x = t.cx + t.radius * Math.cos(a); out.z = t.z1 + t.radius * Math.sin(a); out.tx = -Math.sin(a); out.tz = Math.cos(a);
   return out;
 }
-const train = { active: false };                 // stub
-function tickTrain(dt) { /* round 3 */ }
+// ---- round 3A train (DESIGN 7 and 16.1): engine + 4 cars, constant speed, oriented-box colliders, ride, push, audio ----
+// Every car has its front and rear on the centre line: the front sits at a fixed track distance behind the engine front and the
+// rear is the point exactly carLen behind it in a straight line, so every car front moves at exactly train.speed.
+const TRAIN = { s: 0, sRaw: 0, cars: [], whistles: 0, whistleLog: [], env: null, envR: null, envNx: 0, envNz: 0, vis: null, wheels: null, rpose: [] };
+const trainRescueLog = [];                       // every time push-never-kill had to place a soldier: a tester counts each as a bug
+const trainStats = { pushes: 0, side: 0, ahead: 0, blocked: 0, rescues: 0, byState: {} };
+const ACTORS = [];                               // the player and every bot body: everything the train carries and pushes
+const trainHeadS = (time) => CONFIG.train.s0 + CONFIG.train.speed * time;
+const _tpA = {}, _tpB = {};
+function rearS(sF, len) {                        // track distance of the point exactly len behind sF in a straight line
+  trackPoint(sF, _tpA);
+  let lo = sF - len * 1.08, hi = sF - len;
+  for (let i = 0; i < 16; i++) { const m = (lo + hi) / 2; trackPoint(m, _tpB); if (Math.hypot(_tpB.x - _tpA.x, _tpB.z - _tpA.z) > len) lo = m; else hi = m; }
+  return (lo + hi) / 2;
+}
+function poseCar(o, sF) {
+  const L = CONFIG.train.carLen, sR = rearS(sF, L);
+  trackPoint(sF, _tpA); trackPoint(sR, _tpB);
+  let fx = _tpA.x - _tpB.x, fz = _tpA.z - _tpB.z;
+  const l = Math.hypot(fx, fz) || 1; fx /= l; fz /= l;
+  o.x = (_tpA.x + _tpB.x) / 2; o.z = (_tpA.z + _tpB.z) / 2; o.fx = fx; o.fz = fz; o.lx = fz; o.lz = -fx;
+  o.yaw = Math.atan2(-fx, -fz); o.sF = sF; o.sR = sR;
+  return o;
+}
+function buildTrainCars() {
+  const T = CONFIG.train, hl = T.carLen / 2, hw = T.carWid / 2, b = T.bottom;
+  T.consist.forEach((type, i) => {
+    const car = { i, type, x: 0, z: 0, fx: 0, fz: -1, lx: -1, lz: 0, yaw: 0, px: 0, pz: 0, pfx: 0, pfz: -1, plx: -1, plz: 0, pyaw: 0, vx: 0, vz: 0,
+      sF: 0, sR: 0, rad: Math.hypot(hl, hw) + 0.05, parts: [], deck: type === 'flatbed' || type === 'gondola', claim: null, joint: null };
+    const P = (name, u0, u1, v0, v1, y0, y1) => car.parts.push({ id: 'train.' + i + '.' + type + '.' + name, kind: 'train', train: true, surface: T.surface,
+      color: T.colors[type], car, u0, u1, v0, v1, y0, y1, planes: boxPlanes(u0, u1, y0, y1, v0, v1), steep: false });
+    if (type === 'engine') { P('hood', -hl, hl - T.cabLen, -hw, hw, b, T.roof); P('cab', hl - T.cabLen, hl, -hw, hw, b, T.cab); }
+    else if (type === 'flatbed') { const c = T.cargo / 2; P('deck', -hl, hl, -hw, hw, b, T.deck); P('cargo', -c, c, -c, c, T.deck, T.deck + T.cargo); }
+    else if (type === 'gondola') {
+      const d = T.gondolaDoor / 2, w = T.wallThick, y1 = T.gondolaWall;
+      P('deck', -hl, hl, -hw, hw, b, T.deck);
+      for (const sd of [1, -1]) {                // side walls with a door gap in the middle of each side, and two end walls
+        const v0 = sd > 0 ? hw - w : -hw, v1 = sd > 0 ? hw : -hw + w;
+        P('wall' + (sd > 0 ? 'L' : 'R') + '1', -hl, -d, v0, v1, T.deck, y1); P('wall' + (sd > 0 ? 'L' : 'R') + '2', d, hl, v0, v1, T.deck, y1);
+        P('end' + (sd > 0 ? 'F' : 'B'), sd > 0 ? hl - w : -hl, sd > 0 ? hl : -hl + w, -hw + w, hw - w, T.deck, y1);
+      }
+    } else P('body', -hl, hl, -hw, hw, b, T.roof);
+    TRAIN.cars.push(car);
+  });
+}
+function poseTrain(time) {                       // pose every car at a simulation time (no velocity)
+  const T = CONFIG.train;
+  TRAIN.sRaw = trainHeadS(time); TRAIN.s = ((TRAIN.sRaw % TRACK.length) + TRACK.length) % TRACK.length;
+  for (let i = 0; i < TRAIN.cars.length; i++) poseCar(TRAIN.cars[i], TRAIN.sRaw - i * (T.carLen + T.gap));
+}
+function carPointVel(car, x, z, out) {           // velocity of the car's material point now at (x, z), from this tick's motion
+  const dx = x - car.x, dz = z - car.z, u = dx * car.fx + dz * car.fz, v = dx * car.lx + dz * car.lz;
+  const ox = car.px + u * car.pfx + v * car.plx, oz = car.pz + u * car.pfz + v * car.plz;
+  out.x = (x - ox) / DT; out.z = (z - oz) / DT;
+  return out;
+}
+const _cv = { x: 0, z: 0 };
+function carryActor(a, dt) {                     // a soldier standing on a car moves with it, and turns with it on the curves
+  const car = a.ground.car, dx = a.x - car.px, dz = a.z - car.pz;
+  const u = dx * car.pfx + dz * car.pfz, v = dx * car.plx + dz * car.plz;
+  const nx = car.x + u * car.fx + v * car.lx, nz = car.z + u * car.fz + v * car.lz;
+  a.carryVx = (nx - a.x) / dt; a.carryVz = (nz - a.z) / dt;
+  a.x = nx; a.z = nz;
+  a.yaw = wrapAngle(a.yaw + wrapAngle(car.yaw - car.pyaw));
+}
+// Velocity frames: on a car, vx / vz are relative to the car. Stepping or jumping off keeps the car's velocity; landing on one drops it.
+function trainGroundChange(a, gWas) {
+  const gNow = a.onGround ? a.ground : null, cw = gWas && gWas.train ? gWas.car : null, cn = gNow && gNow.train ? gNow.car : null;
+  if (cw === cn) return;
+  if (cw) { a.vx += a.carryVx || 0; a.vz += a.carryVz || 0; }
+  if (cn) { carPointVel(cn, a.x, a.z, _cv); a.vx -= _cv.x; a.vz -= _cv.z; a.carryVx = _cv.x; a.carryVz = _cv.z; }
+}
+function trainOverlap(a, skipCar) {              // the first car whose parts overlap the soldier's body, or null; local u, v in _L
+  const T = CONFIG.train, r = CONFIG.player.radius, head = a.y + a.height;
+  const feet = a.y + (a.onGround ? 0 : CONFIG.move.airStep - T.bandEps);    // airborne, parts within airStep of the feet are mantled (as the wall pass)
+  for (const car of TRAIN.cars) {
+    if (car === skipCar || !carNear(car, a.x, a.z, r)) continue;
+    toCar(car, a.x, a.z);
+    const u = _L.x, v = _L.z;
+    for (const P of car.parts) if (P.y1 > feet + T.bandEps && P.y0 < head && circleOverPart(P, u, v, r - 1e-4)) return car;
+  }
+  return null;
+}
+function pushSpotFree(a, x, z) {                 // in the room, clear of static geometry (low steps allowed) and of every car
+  const r = CONFIG.player.radius, R = CONFIG.room, T = CONFIG.train;
+  if (x < r || x > R.x - r || z < r || z > R.z - r) return false;
+  if (withStatic(() => firstBlocker(x, z, r, a.y + CONFIG.move.stepUp, a.y + a.height)) !== null) return false;
+  for (const car of TRAIN.cars) {
+    if (!carNear(car, x, z, r)) continue;
+    toCar(car, x, z);
+    const u = _L.x, v = _L.z;
+    for (const P of car.parts) if (P.y1 > a.y + T.bandEps && P.y0 < a.y + a.height && circleOverPart(P, u, v, r - 1e-3)) return false;
+  }
+  return true;
+}
+function pushPathFree(a, x, z) {                 // the push may not carry a soldier through static geometry on the way
+  const r = CONFIG.player.radius, n = Math.ceil(Math.hypot(x - a.x, z - a.z) / 0.1);
+  for (let i = 1; i < n; i++) {
+    const t = i / n, px = lerp(a.x, x, t), pz = lerp(a.z, z, t);
+    if (withStatic(() => firstBlocker(px, pz, r, a.y + CONFIG.move.stepUp, a.y + a.height)) !== null) return false;
+  }
+  return pushSpotFree(a, x, z);
+}
+function pushTo(a, x, z, nx, nz) { a.x = x; a.z = z; const vn = a.vx * nx + a.vz * nz; if (vn < 0) { a.vx -= vn * nx; a.vz -= vn * nz; } }
+// Push, never kill (DESIGN 16.1): out along the car's sideways axis toward the soldier's side; if static geometry blocks that,
+// ahead of the car along the track; if both stay blocked for rescueTime, the nearest free spot outside the envelope, logged.
+function trainPush(a, dt) {
+  const T = CONFIG.train, r = CONFIG.player.radius;
+  if (a.climbing) return null;
+  const ride = a.onGround && a.ground && a.ground.train ? a.ground.car : null;
+  const car = trainOverlap(a, ride);
+  if (!car) { a.wedgeT = 0; return null; }
+  const hu = _L.x, hv = _L.z, hw = T.carWid / 2 + r + T.pushEps, hl = T.carLen / 2 + r + T.pushEps;
+  trainStats.pushes++; a.trainHits = (a.trainHits || 0) + 1;
+  a.lastHit = { time: +game.time.toFixed(3), car: car.type, state: a.botState || null, u: +hu.toFixed(2), v: +hv.toFixed(2), feet: +a.y.toFixed(2), vy: +a.vy.toFixed(2) };
+  if (nav.on && (a.botState === 'wait_cross' || a.botState === 'wait_ride')) nav.hitWhileWaiting++;      // must stay 0
+  const sk = a.dead ? 'dead' : a.botState || 'player'; trainStats.byState[sk] = (trainStats.byState[sk] || 0) + 1;
+  const side = hv > 0.01 ? 1 : hv < -0.01 ? -1 : 0;
+  for (const sd of side ? [side] : [1, -1]) {
+    const tx = car.x + hu * car.fx + sd * hw * car.lx, tz = car.z + hu * car.fz + sd * hw * car.lz;
+    if (pushPathFree(a, tx, tz)) { pushTo(a, tx, tz, sd * car.lx, sd * car.lz); a.wedgeT = 0; trainStats.side++; return 'side'; }
+  }
+  const ax = car.x + hl * car.fx + hv * car.lx, az = car.z + hl * car.fz + hv * car.lz;
+  if (pushPathFree(a, ax, az)) {
+    pushTo(a, ax, az, car.fx, car.fz); a.wedgeT = 0; trainStats.ahead++;
+    if (a.vx * car.fx + a.vz * car.fz < T.speed) { const k = T.speed - (a.vx * car.fx + a.vz * car.fz); a.vx += k * car.fx; a.vz += k * car.fz; }   // moves with the car front
+    return 'ahead';
+  }
+  a.wedgeT = (a.wedgeT || 0) + dt; trainStats.blocked++;
+  if (a.wedgeT >= T.rescueTime - 1e-9) { rescueFromTrain(a, car); a.wedgeT = 0; return 'rescue'; }
+  return 'blocked';
+}
+function rescueFromTrain(a, car) {
+  const r = CONFIG.player.radius, from = [+a.x.toFixed(3), +a.y.toFixed(3), +a.z.toFixed(3)];
+  for (let rad = 0.5; rad <= 16; rad += 0.25) {
+    for (let k = 0; k < 24; k++) {
+      const an = (k / 24) * Math.PI * 2, x = a.x + Math.cos(an) * rad, z = a.z + Math.sin(an) * rad;
+      if (inEnvelope(x, z, true)) continue;
+      const g = withStatic(() => groundBelow(x, z, r, a.y + CONFIG.move.stepUp, a.y + CONFIG.move.stepUp));
+      if (!g.c) continue;
+      const y = g.y;
+      if (!pushSpotFree({ y, height: a.height }, x, z)) continue;
+      placeActor(a, x, y, z);
+      if (!a.dead) trainRescueLog.push({ who: a.id || 'player', from, to: [+x.toFixed(3), +y.toFixed(3), +z.toFixed(3)], car: car.type, time: +game.time.toFixed(3) });
+      trainStats.rescues++;
+      return true;
+    }
+  }
+  return false;
+}
+// The swept envelope as two grids over the track area: exact car footprint, and that footprint dilated by envelopeExit
+// (where a soldier's body could be touched). Built once by sweeping one car round the whole oval.
+function buildEnvelope() {
+  const T = CONFIG.train, c = T.envCell, [x0, x1, z0, z1] = T.envBox, nx = Math.ceil((x1 - x0) / c), nz = Math.ceil((z1 - z0) / c);
+  const env = new Uint8Array(nx * nz), envR = new Uint8Array(nx * nz), o = {}, hl = T.carLen / 2, hw = T.carWid / 2, d = CONFIG.bot.envelopeExit;
+  for (let s = 0; s < TRACK.length; s += T.envStep) {
+    poseCar(o, s);
+    const ex = Math.abs(o.fx) * (hl + d) + Math.abs(o.lx) * (hw + d), ez = Math.abs(o.fz) * (hl + d) + Math.abs(o.lz) * (hw + d);
+    const i0 = Math.max(0, Math.floor((o.x - ex - x0) / c)), i1 = Math.min(nx - 1, Math.floor((o.x + ex - x0) / c));
+    const j0 = Math.max(0, Math.floor((o.z - ez - z0) / c)), j1 = Math.min(nz - 1, Math.floor((o.z + ez - z0) / c));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const k = j * nx + i;
+      if (env[k] && envR[k]) continue;
+      const px = x0 + (i + 0.5) * c - o.x, pz = z0 + (j + 0.5) * c - o.z, u = px * o.fx + pz * o.fz, v = px * o.lx + pz * o.lz;
+      const du = Math.max(0, Math.abs(u) - hl), dv = Math.max(0, Math.abs(v) - hw);
+      if (du === 0 && dv === 0) env[k] = 1;
+      if (du * du + dv * dv <= d * d) envR[k] = 1;
+    }
+  }
+  TRAIN.env = env; TRAIN.envR = envR; TRAIN.envNx = nx; TRAIN.envNz = nz;
+}
+function inEnvelope(x, z, dilated) {             // plan test only; callers check height (the train is under 6.5 high)
+  const T = CONFIG.train, c = T.envCell, i = Math.floor((x - T.envBox[0]) / c), j = Math.floor((z - T.envBox[2]) / c);
+  if (i < 0 || j < 0 || i >= TRAIN.envNx || j >= TRAIN.envNz) return false;
+  return (dilated ? TRAIN.envR : TRAIN.env)[j * TRAIN.envNx + i] === 1;
+}
+const actorInEnvelope = (a) => a.y < CONFIG.train.cab + 0.5 && inEnvelope(a.x, a.z, true);
+// Static colliders inside the train's swept path (car footprint swept round the oval, car height 0.25..6). opts.band uses the
+// DESIGN 16.1 band instead (radius 13.5..19.5 round each curve centre, 2 either side of the straights).
+function trainClearance(opts = {}) {
+  const T = CONFIG.train, K = CONFIG.track, out = [], hl = T.carLen / 2, hw = T.carWid / 2, o = {};
+  const cand = COLLIDERS.filter((c) => c.kind !== 'string' && c.y1 > T.bottom && c.y0 < T.cab &&
+    c.x1 > T.envBox[0] && c.x0 < T.envBox[1] && c.z1 > T.envBox[2] && c.z0 < T.envBox[3]);
+  const add = (c, x, z, why) => out.push({ id: c.id, kind: c.kind, at: [+x.toFixed(2), +z.toFixed(2)], by: why });
+  if (opts.band) {
+    const [rIn, rOut] = T.envBand;
+    const inBand = (x, z) => {
+      if (z >= K.z0 && z <= K.z1) return Math.abs(x - K.xWest) < hw || Math.abs(x - K.xEast) < hw;
+      const d = Math.hypot(x - K.cx, z - (z < K.z0 ? K.z0 : K.z1));
+      return d > rIn && d < rOut;
+    };
+    for (const c of cand) {
+      let hit = null;
+      if (c.kind === 'cyl') { for (let k = 0; k < 64 && !hit; k++) for (const f of [0.33, 0.66, 1]) { const a = k / 64 * Math.PI * 2, x = c.x + Math.cos(a) * c.r * f, z = c.z + Math.sin(a) * c.r * f; if (inBand(x, z)) { hit = [x, z]; break; } } }
+      else for (let x = c.x0; x <= c.x1 + 1e-9 && !hit; x += Math.min(0.1, c.x1 - c.x0 || 0.1)) for (let z = c.z0; z <= c.z1 + 1e-9; z += Math.min(0.1, c.z1 - c.z0 || 0.1)) if (inBand(x, z)) { hit = [x, z]; break; }
+      if (hit) add(c, hit[0], hit[1], 'band');
+    }
+    return out;
+  }
+  const seen = new Set();
+  for (let s = 0; s < TRACK.length; s += T.envStep / 2) {
+    poseCar(o, s);
+    const ex = Math.abs(o.fx) * hl + Math.abs(o.lx) * hw, ez = Math.abs(o.fz) * hl + Math.abs(o.lz) * hw;
+    for (const c of cand) {
+      if (seen.has(c) || c.x0 > o.x + ex || c.x1 < o.x - ex || c.z0 > o.z + ez || c.z1 < o.z - ez) continue;
+      let hit = false;
+      if (c.kind === 'cyl') { const px = c.x - o.x, pz = c.z - o.z, u = px * o.fx + pz * o.fz, v = px * o.lx + pz * o.lz; hit = Math.hypot(Math.max(0, Math.abs(u) - hl), Math.max(0, Math.abs(v) - hw)) < c.r; }
+      else {                                     // separating axis test: the car rectangle against the collider's plan rectangle
+        const cx = (c.x0 + c.x1) / 2 - o.x, cz = (c.z0 + c.z1) / 2 - o.z, hx = (c.x1 - c.x0) / 2, hz = (c.z1 - c.z0) / 2;
+        hit = Math.abs(cx) < hx + ex && Math.abs(cz) < hz + ez &&
+          Math.abs(cx * o.fx + cz * o.fz) < hl + hx * Math.abs(o.fx) + hz * Math.abs(o.fz) &&
+          Math.abs(cx * o.lx + cz * o.lz) < hw + hx * Math.abs(o.lx) + hz * Math.abs(o.lz);
+      }
+      if (hit) { seen.add(c); add(c, o.x, o.z, 'swept at s ' + s.toFixed(1)); }
+    }
+  }
+  return out;
+}
+// How far the nearest static collider is from the swept footprint (for the changelog: tightest gaps by the track).
+function trainGaps(limit = 1.5) {
+  const T = CONFIG.train, hl = T.carLen / 2, hw = T.carWid / 2, o = {}, best = new Map();
+  const cand = COLLIDERS.filter((c) => c.kind !== 'string' && c.y1 > T.bottom && c.y0 < T.cab && c.x1 > T.envBox[0] - 2 && c.x0 < T.envBox[1] + 2 && c.z1 > T.envBox[2] - 2 && c.z0 < T.envBox[3] + 2);
+  for (let s = 0; s < TRACK.length; s += T.envStep) {
+    poseCar(o, s);
+    for (const c of cand) {
+      let d;
+      if (c.kind === 'cyl') { const px = c.x - o.x, pz = c.z - o.z, u = px * o.fx + pz * o.fz, v = px * o.lx + pz * o.lz; d = Math.hypot(Math.max(0, Math.abs(u) - hl), Math.max(0, Math.abs(v) - hw)) - c.r; }
+      else {                                     // distance from the car rectangle's corners and the box's corners (approximate)
+        d = Infinity;
+        for (const [ux, vx] of [[hl, hw], [hl, -hw], [-hl, hw], [-hl, -hw], [0, hw], [0, -hw], [hl, 0], [-hl, 0], [hl / 2, hw], [-hl / 2, hw], [hl / 2, -hw], [-hl / 2, -hw]]) {
+          const x = o.x + ux * o.fx + vx * o.lx, z = o.z + ux * o.fz + vx * o.lz;
+          d = Math.min(d, Math.hypot(x - clamp(x, c.x0, c.x1), z - clamp(z, c.z0, c.z1)));
+        }
+        for (const [x, z] of [[c.x0, c.z0], [c.x1, c.z0], [c.x0, c.z1], [c.x1, c.z1]]) {
+          const px = x - o.x, pz = z - o.z, u = px * o.fx + pz * o.fz, v = px * o.lx + pz * o.lz;
+          d = Math.min(d, Math.hypot(Math.max(0, Math.abs(u) - hl), Math.max(0, Math.abs(v) - hw)));
+        }
+      }
+      if (d < limit && (!best.has(c.id) || d < best.get(c.id))) best.set(c.id, d);
+    }
+  }
+  return [...best].sort((a, b) => a[1] - b[1]).map(([id, d]) => ({ id, gap: +d.toFixed(3) }));
+}
+function tickTrain(dt) {
+  const T = CONFIG.train;
+  for (const c of TRAIN.cars) { c.px = c.x; c.pz = c.z; c.pfx = c.fx; c.pfz = c.fz; c.plx = c.lx; c.plz = c.lz; c.pyaw = c.yaw; }
+  poseTrain(game.time + dt);                     // s is deterministic from time
+  for (const c of TRAIN.cars) { c.vx = (c.x - c.px) / dt; c.vz = (c.z - c.pz) / dt; }
+  for (const a of ACTORS) if (a.onGround && a.ground && a.ground.train) carryActor(a, dt);
+  for (const a of ACTORS) trainPush(a, dt);
+  // whistle: the engine's centre passes z = whistleZ on either straight
+  const e = TRAIN.cars[0], K = CONFIG.track;
+  if ((Math.abs(e.x - K.xWest) < 0.5 && e.pz > T.whistleZ && e.z <= T.whistleZ) || (Math.abs(e.x - K.xEast) < 0.5 && e.pz < T.whistleZ && e.z >= T.whistleZ)) {
+    TRAIN.whistles++; TRAIN.whistleLog.push({ time: +(game.time + dt).toFixed(3), side: e.x < 60 ? 'west' : 'east' });
+    if (TRAIN.whistleLog.length > 100) TRAIN.whistleLog.shift();
+    sfxAt('train_whistle', e.x + e.fx * 5, 5.5, e.z + e.fz * 5, e.vx, e.vz);
+  }
+  // wheel clacks: when a car's leading axle crosses a rail joint, that car's axles click over it one after another
+  const ax = T.axles, lead = ax[ax.length - 1];
+  for (const c of TRAIN.cars) {
+    const sLead = c.sR + (lead + T.carLen / 2) / T.carLen * (c.sF - c.sR), j = Math.floor(sLead / T.jointGap);
+    if (c.joint !== null && j !== c.joint) {
+      const x = c.x + lead * c.fx, z = c.z + lead * c.fz;
+      if (Math.hypot(x - player.x, z - player.z) < T.clackRange) sfx('train_clack', listenerGain(x, 0.4, z, T.audioRef), dopplerAt(x, z, c.vx, c.vz), T.clackDelays);
+    }
+    c.joint = j;
+  }
+}
+// ---- train visuals: one InstancedMesh of boxes and one of wheels for the whole consist (posed each frame) ----
+function trainVisualBoxes(type) {            // [u0, u1, y0, y1, v0, v1, colour]; local u along the car, v to its left
+  const T = CONFIG.train, C = T.colors, hl = T.carLen / 2, hw = T.carWid / 2, col = C[type], B = [], t = 0.04;
+  const add = (u0, u1, y0, y1, v0, v1, c) => B.push([u0, u1, y0, y1, v0, v1, c]);
+  add(-hl + 0.2, hl - 0.2, 0.5, 0.75, -hw + 0.3, hw - 0.3, C.dark);                                  // underframe
+  for (const u of [-4, 4]) add(u - 1.05, u + 1.05, 0.25, 0.62, -hw + 0.15, hw - 0.15, C.dark);      // bogies
+  add(hl, hl + 0.5, 0.55, 0.85, -0.25, 0.25, C.dark); add(-hl - 0.5, -hl, 0.55, 0.85, -0.25, 0.25, C.dark);   // couplers
+  if (type === 'engine') {
+    const cu = hl - T.cabLen;
+    add(-hl, cu, 0.75, T.roof, -hw, hw, col); add(cu, hl, 0.75, T.cab, -hw, hw, col);
+    for (const sd of [1, -1]) {
+      add(-hl, hl, 2.6, 3.0, sd > 0 ? hw : -hw - t, sd > 0 ? hw + t : -hw, C.trim);                 // yellow stripe
+      add(cu + 0.6, hl - 0.6, 4.2, 5.4, sd > 0 ? hw : -hw - t, sd > 0 ? hw + t : -hw, C.window);    // cab side windows
+    }
+    add(hl, hl + t, 4.2, 5.4, -hw + 0.4, hw - 0.4, C.window); add(hl, hl + t, 1.6, 2.2, -0.5, 0.5, C.trim);   // windscreen, headlight
+    add(-hl, -hl + 0.04, 3.2, 4.6, -1.2, 1.2, C.trim);
+  } else if (type === 'flatbed') {
+    const c = T.cargo / 2;
+    add(-hl, hl, 0.75, T.deck, -hw, hw, col); add(-c, c, T.deck, T.deck + T.cargo, -c, c, C.cargo);
+    add(-c - t, c + t, T.deck + T.cargo - 0.35, T.deck + T.cargo - 0.2, -c - t, c + t, C.trim);
+  } else if (type === 'gondola') {
+    const d = T.gondolaDoor / 2, w = T.wallThick, y1 = T.gondolaWall;
+    add(-hl, hl, 0.75, T.deck, -hw, hw, col);
+    for (const sd of [1, -1]) {
+      const v0 = sd > 0 ? hw - w : -hw, v1 = sd > 0 ? hw : -hw + w;
+      add(-hl, -d, T.deck, y1, v0, v1, col); add(d, hl, T.deck, y1, v0, v1, col);
+      add(-d - 0.3, -d, T.deck, y1 + 0.05, v0 - t, v1 + t, C.trim); add(d, d + 0.3, T.deck, y1 + 0.05, v0 - t, v1 + t, C.trim);   // door posts
+      add(sd > 0 ? hl - w : -hl, sd > 0 ? hl : -hl + w, T.deck, y1, -hw + w, hw - w, col);
+    }
+  } else {
+    add(-hl, hl, 0.75, T.roof, -hw, hw, col);
+    add(-hl, hl, T.roof, T.roof + t, -0.45, 0.45, C.trim);                                           // roof walkway
+    for (const sd of [1, -1]) {
+      const v0 = sd > 0 ? hw : -hw - t, v1 = sd > 0 ? hw + t : -hw;
+      if (type === 'boxcar') { add(-1.6, 1.6, 1.0, 4.4, v0, v1, C.dark); add(-hl, hl, 4.55, 4.75, v0, v1, C.trim); }
+      else { add(-3.4, -1.6, 3.0, 4.1, v0, v1, C.window); add(1.6, 3.4, 3.0, 4.1, v0, v1, C.window); add(-hl, hl, 1.9, 2.15, v0, v1, C.trim); }
+    }
+  }
+  return B;
+}
+function buildTrainVisuals(scene) {
+  const T = CONFIG.train, boxes = [], wheels = [];
+  TRAIN.cars.forEach((car) => {
+    for (const b of trainVisualBoxes(car.type)) boxes.push({ car, b });
+    for (const u of T.axles) for (const sd of [1, -1]) wheels.push({ car, u, v: sd * CONFIG.track.gauge / 2 });
+  });
+  const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+  const bm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat, boxes.length);
+  const wg = new THREE.CylinderGeometry(0.38, 0.38, 0.22, 12); wg.rotateZ(Math.PI / 2);
+  const wm = new THREE.InstancedMesh(wg, new THREE.MeshLambertMaterial({ color: 0xffffff }), wheels.length);
+  const col = new THREE.Color();
+  boxes.forEach((o, i) => bm.setColorAt(i, col.set(o.b[6])));
+  wheels.forEach((o, i) => wm.setColorAt(i, col.set(T.colors.wheel)));
+  for (const m of [bm, wm]) { m.castShadow = m.receiveShadow = true; m.frustumCulled = false; m.instanceColor.needsUpdate = true; scene.add(m); }
+  TRAIN.vis = { mesh: bm, boxes, wheelMesh: wm, wheels };
+  TRAIN.rpose = TRAIN.cars.map(() => ({}));
+  updateTrainVisuals(game.time);
+}
+const _tv = { m: new THREE.Matrix4(), r: new THREE.Matrix4(), q: new THREE.Quaternion(), v: new THREE.Vector3(), s: new THREE.Vector3(), up: new THREE.Vector3(0, 1, 0) };
+function updateTrainVisuals(time) {              // pose at the render time, so the train moves smoothly between ticks
+  const V = TRAIN.vis, T = CONFIG.train;
+  if (!V) return;
+  const head = trainHeadS(time);
+  TRAIN.rpose.forEach((o, i) => poseCar(o, head - i * (T.carLen + T.gap)));
+  V.boxes.forEach((o, i) => {
+    const P = TRAIN.rpose[o.car.i], b = o.b, uc = (b[0] + b[1]) / 2, vc = (b[4] + b[5]) / 2;
+    _tv.q.setFromAxisAngle(_tv.up, P.yaw);
+    _tv.v.set(P.x + uc * P.fx + vc * P.lx, (b[2] + b[3]) / 2, P.z + uc * P.fz + vc * P.lz);
+    V.mesh.setMatrixAt(i, _tv.m.compose(_tv.v, _tv.q, _tv.s.set(b[5] - b[4], b[3] - b[2], b[1] - b[0])));
+  });
+  const spin = -(head % 1000) / 0.38;
+  V.wheels.forEach((o, i) => {
+    const P = TRAIN.rpose[o.car.i];
+    _tv.q.setFromAxisAngle(_tv.up, P.yaw);
+    _tv.r.makeRotationX(spin);
+    _tv.m.compose(_tv.v.set(P.x + o.u * P.fx + o.v * P.lx, 0.38, P.z + o.u * P.fz + o.v * P.lz), _tv.q, _tv.s.set(1, 1, 1)).multiply(_tv.r);
+    V.wheelMesh.setMatrixAt(i, _tv.m);
+  });
+  V.mesh.instanceMatrix.needsUpdate = true; V.wheelMesh.instanceMatrix.needsUpdate = true;
+}
 
 // =====================================================================================================
 // 8. PLAYER  (movement and collision, DESIGN.md sections 2, 4.4 and 8)
@@ -1026,25 +1514,29 @@ const player = {
   climbing: null, climbNeedRelease: false, grabCooldown: 0,
   health: CONFIG.player.health, peakY: 0, coyote: 0, jumpBuf: 0, jumpHeld: false,
   launched: false, launchX: 0, launchZ: 0, warped: false, sprinting: false, fwdLock: false, noGrab: null, noGrabT: 0,
-  stepOff: 0, pstepOff: 0, moved: 0, safe: { x: 60, y: 0, z: 20 }
+  stepOff: 0, pstepOff: 0, moved: 0, safe: { x: 60, y: 0, z: 20 }, carryVx: 0, carryVz: 0, wedgeT: 0, id: 'player'
 };
+ACTORS.push(player);
 const damageLog = [];
 const rescueLog = [];        // every time the fall-out safety net fired: {from, to, time}
 const _pos = { x: 0, z: 0 };
 
-function placePlayer(x, y, z, yaw, pitch) {
-  const p = player, P = CONFIG.player;
+// Every soldier (the player and each bot) is an actor with the fields above, moved by the same controller (moveActor).
+function savePrev(p) { p.px = p.x; p.py = p.y; p.pz = p.z; p.peye = p.eye; p.pstepOff = p.stepOff; }
+function placePlayer(x, y, z, yaw, pitch) { placeActor(player, x, y, z, yaw, pitch); }
+function placeActor(p, x, y, z, yaw, pitch) {
+  const P = CONFIG.player;
   p.x = p.px = x; p.y = p.py = y; p.z = p.pz = z;
   p.vx = p.vy = p.vz = 0;
   if (yaw !== undefined && yaw !== null) p.yaw = wrapAngle(yaw);
   if (pitch !== undefined && pitch !== null) p.pitch = clamp(pitch, -CONFIG.input.pitchLimit, CONFIG.input.pitchLimit);
   p.climbing = null; p.launched = false; p.stepOff = p.pstepOff = 0; p.peakY = y; p.coyote = 0; p.jumpBuf = 0; p.moved = 0;
-  p.warped = true; p.fwdLock = false; p.noGrab = null; p.noGrabT = 0;
+  p.warped = true; p.fwdLock = false; p.noGrab = null; p.noGrabT = 0; p.wedgeT = 0; p.carryVx = p.carryVz = 0;
   const g = groundBelow(x, z, P.radius, y + 0.05, y + 0.05);
   p.onGround = g.c !== null && y - g.y < 0.05;
   p.ground = p.onGround ? g.c : null;
   p.surface = p.ground ? p.ground.surface : null;
-  if (p.onGround) { p.safe.x = x; p.safe.y = y; p.safe.z = z; }
+  if (p.onGround && !p.ground.train) { p.safe.x = x; p.safe.y = y; p.safe.z = z; }
 }
 function respawnPlayer() {
   const s = CONFIG.spawn.green;
@@ -1059,15 +1551,16 @@ function hurtPlayer(amount, cause, extra) {
   damageLog.push(Object.assign({ amount, cause, time: game.time }, extra));
   if (p.health <= 0) respawnPlayer();          // round 1 placeholder: back to the Green spawn at full health
 }
+function hurtActor(p, amount, cause, extra) { if (p === player) hurtPlayer(amount, cause, extra); else hurtBot(p, amount, cause, extra); }
 function leaveGround(p) { p.onGround = false; p.ground = null; p.peakY = p.y; }
 function land(p, g) {
   const fall = p.peakY - g.y, F = CONFIG.fall;
   p.y = g.y; p.vy = 0; p.onGround = true; p.ground = g.c; p.launched = false;
-  if (fall > F.safe) hurtPlayer((fall - F.safe) * F.perUnit, 'fall', { height: fall });
+  if (fall > F.safe) hurtActor(p, (fall - F.safe) * F.perUnit, 'fall', { height: fall });
 }
 function releaseString(p, cooldown) { p.climbing = null; p.grabCooldown = cooldown; p.climbNeedRelease = false; p.coyote = 0; }   // never a free jump
 
-function tryGrabString(p, wx, wz) {
+function tryGrabString(p, wx, wz, I) {
   const K = CONFIG.climb;
   if (!p.onGround && p.vy < -K.maxGrabFall) return false;        // falling too fast to catch a string
   for (const s of STRINGS) {
@@ -1075,24 +1568,24 @@ function tryGrabString(p, wx, wz) {
     const dx = s.x - p.x, dz = s.z - p.z, d = Math.hypot(dx, dz);
     if (d > K.grabRadius || (d > 0.05 && dx * wx + dz * wz <= 0)) continue;       // must be walking into it
     p.climbing = s; p.vx = p.vy = p.vz = 0; p.onGround = false; p.ground = null; p.launched = false; p.coyote = 0;
-    p.climbNeedRelease = inp.forward && p.y > s.y1 - 0.3;     // grabbed from the top: forward must be re-pressed to exit again
+    p.climbNeedRelease = I.forward && p.y > s.y1 - 0.3;       // grabbed from the top: forward must be re-pressed to exit again
     return true;
   }
   return false;
 }
-function tickClimb(p, dt) {
+function tickClimb(p, I, dt) {
   const s = p.climbing, K = CONFIG.climb, r = CONFIG.player.radius;
   const dx = s.x - p.x, dz = s.z - p.z, d = Math.hypot(dx, dz), m = K.snapSpeed * dt;
   if (d <= m) { p.x = s.x; p.z = s.z; } else { p.x += (dx / d) * m; p.z += (dz / d) * m; }
-  if (!inp.forward) p.climbNeedRelease = false;
-  const dir = (inp.forward && !p.climbNeedRelease ? 1 : 0) - (inp.back ? 1 : 0);
+  if (!I.forward) p.climbNeedRelease = false;
+  const dir = (I.forward && !p.climbNeedRelease ? 1 : 0) - (I.back ? 1 : 0);
   p.vx = p.vz = 0; p.vy = dir * K.speed;
   if (p.jumpBuf > 0) { p.jumpBuf = 0; p.vy = 0; releaseString(p, K.regrab); p.peakY = p.y; return; }      // jump lets go
   p.y = clamp(p.y + p.vy * dt, s.y0, s.y1);
   const ex = s.x + s.ex * K.exitDist, ez = s.z + s.ez * K.exitDist;
   if (dir > 0 && p.y >= s.y1) {                                    // top: placed on the surface along the exit direction
     releaseString(p, 0);
-    p.fwdLock = inp.forward; p.noGrab = s; p.noGrabT = K.topRegrab;      // holding forward leaves you standing on the surface
+    p.fwdLock = I.forward; p.noGrab = s; p.noGrabT = K.topRegrab;        // holding forward leaves you standing on the surface
     p.x = ex; p.z = ez; p.y = s.y1; p.vy = 0;
     const g = groundBelow(ex, ez, r, s.y1 + 0.05, s.y1 + 0.05);
     if (g.c && s.y1 - g.y < 0.05) { p.onGround = true; p.ground = g.c; } else p.peakY = p.y;
@@ -1111,34 +1604,39 @@ function tickClimb(p, dt) {
 function stepRefused(p, x, z, g) {
   return g.c !== null && g.y > p.y + 0.02 && !volumeFree(x, z, CONFIG.player.radius, g.y + CONFIG.move.stepUp, g.y + p.height);
 }
-function tickPlayer(dt) {
-  const p = player, M = CONFIG.move, P = CONFIG.player, r = P.radius;
-  readInput(inp);
-  if (p.fwdLock) { if (inp.forward) inp.forward = false; else p.fwdLock = false; }   // after topping out a string, forward must be released
+function tickPlayer(dt) { readInput(inp); moveActor(player, inp, dt); }
+// The movement controller (round 1), shared by the player and the bots: p is the actor, I its (real or virtual) input this tick.
+function moveActor(p, I, dt) {
+  TQ.walls = !(p.wedgeT > 0);
+  try { moveActorInner(p, I, dt); } finally { TQ.walls = true; }
+}
+function moveActorInner(p, I, dt) {
+  const M = CONFIG.move, P = CONFIG.player, r = P.radius;
+  const gWas = p.onGround ? p.ground : null;
+  if (p.fwdLock) { if (I.forward) I.forward = false; else p.fwdLock = false; }   // after topping out a string, forward must be released
   p.noGrabT = Math.max(0, p.noGrabT - dt);
   p.warped = false; p.sprinting = false;
-  p.px = p.x; p.py = p.y; p.pz = p.z; p.peye = p.eye; p.pstepOff = p.stepOff;
   p.grabCooldown = Math.max(0, p.grabCooldown - dt);
-  if (inp.jump && !p.jumpHeld) p.jumpBuf = M.jumpBuffer; else p.jumpBuf = Math.max(0, p.jumpBuf - dt);
-  p.jumpHeld = inp.jump;
+  if (I.jump && !p.jumpHeld) p.jumpBuf = M.jumpBuffer; else p.jumpBuf = Math.max(0, p.jumpBuf - dt);
+  p.jumpHeld = I.jump;
 
   // crouch: standing up needs head room
-  if (inp.crouch) p.crouching = true;
+  if (I.crouch) p.crouching = true;
   else if (p.crouching && volumeFree(p.x, p.z, r, p.y + (p.onGround ? M.stepUp : M.airStep), p.y + P.height)) p.crouching = false;
   p.height = p.crouching ? P.crouchHeight : P.height;
   p.eye = approach(p.eye, p.crouching ? P.crouchEye : P.eye, P.eyeLerp * dt);
   p.stepOff *= Math.exp(-P.stepSmooth * dt);
   if (Math.abs(p.stepOff) < 1e-3) p.stepOff = 0;
 
-  if (p.climbing) tickClimb(p, dt);
+  if (p.climbing) tickClimb(p, I, dt);
   else {
     // wish direction from input and yaw (yaw 0 faces north, positive turns left)
     const sy = Math.sin(p.yaw), cy = Math.cos(p.yaw);
-    const f = (inp.forward ? 1 : 0) - (inp.back ? 1 : 0), s = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
+    const f = (I.forward ? 1 : 0) - (I.back ? 1 : 0), s = (I.right ? 1 : 0) - (I.left ? 1 : 0);
     let wx = -sy * f + cy * s, wz = -cy * f - sy * s;
     const wl = Math.hypot(wx, wz), has = wl > 0;
     if (has) { wx /= wl; wz /= wl; }
-    const sprinting = inp.sprint && f > 0 && !p.crouching;       // sprint only forward
+    const sprinting = I.sprint && f > 0 && !p.crouching;         // sprint only forward
     p.sprinting = sprinting && p.onGround;
     const speed = p.crouching ? M.crouch : sprinting ? M.sprint : M.walk;
     if (p.onGround || has) {
@@ -1159,7 +1657,7 @@ function tickPlayer(dt) {
       p.vy = M.jumpVel; p.coyote = 0; p.jumpBuf = 0;
     }
 
-    if (has && p.grabCooldown <= 0 && tryGrabString(p, wx, wz)) { /* now climbing; moves from the next tick */ }
+    if (has && p.grabCooldown <= 0 && tryGrabString(p, wx, wz, I)) { /* now climbing; moves from the next tick */ }
     else {
       // horizontal move, then walls
       _pos.x = p.x + p.vx * dt; _pos.z = p.z + p.vz * dt;
@@ -1225,9 +1723,10 @@ function tickPlayer(dt) {
   // safety net: leaving the room box or dropping below y -5 puts the player back on the last good ground
   const R = CONFIG.room;
   if (p.x < 0 || p.x > R.x || p.z < 0 || p.z > R.z || p.y < R.outY || p.y > R.y || !Number.isFinite(p.x + p.y + p.z)) {
-    rescueLog.push({ from: [p.x, p.y, p.z], to: [p.safe.x, p.safe.y, p.safe.z], time: game.time });
-    placePlayer(p.safe.x, p.safe.y, p.safe.z);
-  } else if (p.onGround && p.ground && p.ground.kind !== 'pad') { p.safe.x = p.x; p.safe.y = p.y; p.safe.z = p.z; }
+    rescueLog.push({ who: p.id, from: [p.x, p.y, p.z], to: [p.safe.x, p.safe.y, p.safe.z], time: game.time });
+    placeActor(p, p.safe.x, p.safe.y, p.safe.z);
+  } else if (p.onGround && p.ground && p.ground.kind !== 'pad' && !p.ground.train) { p.safe.x = p.x; p.safe.y = p.y; p.safe.z = p.z; }
+  trainGroundChange(p, gWas);
 }
 
 // =====================================================================================================
@@ -1324,17 +1823,24 @@ function fireShot() {
     killed = damageTarget(T, dmg, RH.zone, hx, hy, hz);
     spawnBurst(hx, hy, hz, RH.nx, RH.ny, RH.nz, CONFIG.fx.impact.plastic, T.team === 'green' ? CONFIG.target.green : CONFIG.target.tan, 3);
     A.hitT = killed ? G.killMarkTime : G.hitMarkTime; A.hitKill = killed;
+  } else if (hit && RH.soldier) {
+    const b = RH.soldier, dmg = W.damage * falloffFactor(W, dist) * (RH.zone === 'head' ? G.headMult : 1), zone = RH.zone;
+    const res = damageSoldier(b, dmg, zone, player);
+    e.hit = b.id; e.zone = zone; e.damage = +res.dealt.toFixed(2); e.kind = 'soldier'; e.surface = 'plastic';
+    killed = res.killed;
+    spawnBurst(hx, hy, hz, RH.nx, RH.ny, RH.nz, CONFIG.fx.impact.plastic, b.team === 'green' ? CONFIG.target.green : CONFIG.target.tan, 3);
+    if (res.dealt > 0) { A.hitT = killed ? G.killMarkTime : G.hitMarkTime; A.hitKill = killed; }
   } else if (hit) {
     const c = RH.c;
     e.hit = c.id; e.kind = c.kind; e.surface = c.surface;
     const IK = CONFIG.fx.impact[c.surface] || CONFIG.fx.impact.wood;
     spawnBurst(hx, hy, hz, RH.nx, RH.ny, RH.nz, IK, impactColor(IK, c, RH.ny));
-    spawnDecal(hx, hy, hz, RH.nx, RH.ny, RH.nz);
+    if (!c.train) spawnDecal(hx, hy, hz, RH.nx, RH.ny, RH.nz);       // decals are static: none on the moving cars
   }
   logShot(e);
   spawnCasing(ox + B.rx * 0.34 + B.fx * 0.8, oy - 0.22 + B.fy * 0.8, oz + B.rz * 0.34 + B.fz * 0.8, B.rx * 2.6 + p.vx, 2.2, B.rz * 2.6 + p.vz, p.y);
   sfx('shot_' + name);
-  if (e.kind === 'target') sfx(killed ? 'kill' : 'hit');
+  if (e.kind === 'target' || (e.kind === 'soldier' && e.damage > 0)) sfx(killed ? 'kill' : 'hit');
   // recoil: the view kicks, then 60 % of the kick returns over 0.25 s
   const up = W.kickUp * DEG, side = (rnd() * 2 - 1) * W.kickSide * DEG;
   p.pitch = clamp(p.pitch + up, -L, L); p.yaw = wrapAngle(p.yaw + side);
@@ -1345,10 +1851,9 @@ function fireShot() {
   A.sinceShot = 0; A.kick += W.vmKick; A.flash = G.flashTime; A.dryHeld = false; A.shake = Math.max(A.shake, W.shake); A.lastFire = game.time;
   if (W.scopeDrop) { A.scopeLock = W.scopeDrop; A.boltT = W.boltSound; }
   A.cool = (W.auto ? Math.max(A.cool, -DT) : 0) + W.interval;       // automatic fire keeps exact cadence across ticks
-  // tracer: from the current gun's muzzle after the kick; through the scope it starts tracerScopeMin along the shot (or is not drawn)
-  const tl = Math.min(dist, G.tracerLen), F = CONFIG.fx;
-  if (A.scope > 0.6) { if (tl > F.tracerScopeMin) spawnTracer(ox + dx * F.tracerScopeMin, oy + dy * F.tracerScopeMin, oz + dz * F.tracerScopeMin, ox + dx * tl, oy + dy * tl, oz + dz * tl, W); }
-  else { muzzleWorld(_mw); spawnTracer(_mw.x, _mw.y, _mw.z, ox + dx * tl, oy + dy * tl, oz + dz * tl, W); }
+  // tracer: from the current gun's muzzle after the kick; none at all while scoped (round 3 carry-over 1)
+  const tl = Math.min(dist, G.tracerLen);
+  if (A.scope <= 0.6) { muzzleWorld(_mw); spawnTracer(_mw.x, _mw.y, _mw.z, ox + dx * tl, oy + dy * tl, oz + dz * tl, W); }
   return e;
 }
 // One trigger pull (pressed = a new press this tick). Returns the shot record, or null if nothing was fired.
@@ -1397,7 +1902,7 @@ function tickWeapons(dt) {
   A.scope = approach(A.scope, wantScope ? 1 : 0, dt / (W.scopeIn || 0.2));
   if (A.press > 0 || (W.auto && inp.fire)) pullTrigger(pressed);
   else if (A.cool < 0) A.cool = 0;
-  tickGrenades(dt); tickTargets(dt); tickFx(dt);
+  tickGrenades(dt); if (game.range) tickTargets(dt); tickFx(dt);
 }
 
 // ---- grenade (toy firecracker) -------------------------------------------------------------------------------
@@ -1416,6 +1921,10 @@ function grenadeStart(out) {
 }
 function insideRoom(x, y, z) { const R = CONFIG.room, m = CONFIG.grenade.body; return x > -m && x < R.x + m && y > -m && y < R.y + m && z > -m && z < R.z + m; }   // room box, body-radius tolerance
 function grenadeStep(o, dt, silent) {
+  if (o.car) {                                   // resting on a car: carried with it (local position kept)
+    const c = o.car; o.x = c.x + o.cu * c.fx + o.cv * c.lx; o.z = c.z + o.cu * c.fz + o.cv * c.lz; o.vx = c.vx; o.vz = c.vz; o.vy = 0;
+    return;
+  }
   if (o.rest) return;
   const K = CONFIG.grenade;
   o.vy -= CONFIG.move.gravity * dt;
@@ -1423,16 +1932,46 @@ function grenadeStep(o, dt, silent) {
   if (len < 1e-7) return;
   const dx = o.vx / sp, dy = o.vy / sp, dz = o.vz / sp;
   if (raycastWorld(o.x, o.y, o.z, dx, dy, dz, len + K.body, false)) {
-    const adv = Math.max(0, RH.t - K.body), nx = RH.nx, ny = RH.ny, nz = RH.nz;
+    const adv = Math.max(0, RH.t - K.body), nx = RH.nx, ny = RH.ny, nz = RH.nz, car = RH.c && RH.c.train ? RH.c.car : null;
     o.x += dx * adv; o.y += dy * adv; o.z += dz * adv;
-    const vn = o.vx * nx + o.vy * ny + o.vz * nz;
+    let cvx = 0, cvz = 0;                        // a moving car: bounce in its frame, then add its velocity back (the grenade picks it up)
+    if (car) { carPointVel(car, o.x, o.z, _cv); cvx = _cv.x; cvz = _cv.z; }
+    const rx = o.vx - cvx, rz = o.vz - cvz, vn = rx * nx + o.vy * ny + rz * nz;
     if (vn < 0) {
-      const tx = (o.vx - vn * nx) * K.friction, ty = (o.vy - vn * ny) * K.friction, tz = (o.vz - vn * nz) * K.friction, b = -vn * K.restitution;
-      o.vx = tx + b * nx; o.vy = ty + b * ny; o.vz = tz + b * nz;
+      const fr = car ? CONFIG.train.grenadeGrip : K.friction;
+      const tx = (rx - vn * nx) * fr, ty = (o.vy - vn * ny) * fr, tz = (rz - vn * nz) * fr, b = -vn * K.restitution;
+      o.vx = tx + b * nx + cvx; o.vy = ty + b * ny; o.vz = tz + b * nz + cvz;
       if (!silent && -vn > K.bounceSound) sfx('grenade_bounce');
-      if (ny > 0.7 && Math.hypot(o.vx, o.vy, o.vz) < K.restSpeed) { o.vx = o.vy = o.vz = 0; o.rest = true; }
+      if (car) o.trainBounces = (o.trainBounces || 0) + 1;
+      if (ny > 0.7 && Math.hypot(o.vx - cvx, o.vy, o.vz - cvz) < K.restSpeed) {
+        o.vx = cvx; o.vy = 0; o.vz = cvz; o.rest = true;
+        if (car) { const px = o.x - car.x, pz = o.z - car.z; o.car = car; o.cu = px * car.fx + pz * car.fz; o.cv = px * car.lx + pz * car.lz; }
+      }
     }
   } else { o.x += o.vx * dt; o.y += o.vy * dt; o.z += o.vz * dt; }
+}
+// A car that drives into a grenade lying in its path knocks it out through the nearest face, with the car's velocity.
+function grenadeTrainPush(o) {
+  if (o.car) return;
+  const K = CONFIG.grenade, m = K.body;
+  for (const car of TRAIN.cars) {
+    if (!carNear(car, o.x, o.z, m)) continue;
+    toCar(car, o.x, o.z);
+    const u = _L.x, v = _L.z;
+    for (const P of car.parts) {
+      if (o.y < P.y0 - m || o.y > P.y1 + m || u < P.u0 - m || u > P.u1 + m || v < P.v0 - m || v > P.v1 + m) continue;
+      const d = [u - (P.u0 - m), (P.u1 + m) - u, v - (P.v0 - m), (P.v1 + m) - v, (P.y1 + m) - o.y];
+      const k = d.indexOf(Math.min(...d));
+      let nu = 0, nv = 0, ny = 0, nu2 = u, nv2 = v;
+      if (k === 0) { nu = -1; nu2 = P.u0 - m - 0.01; } else if (k === 1) { nu = 1; nu2 = P.u1 + m + 0.01; }
+      else if (k === 2) { nv = -1; nv2 = P.v0 - m - 0.01; } else if (k === 3) { nv = 1; nv2 = P.v1 + m + 0.01; } else { ny = 1; o.y = P.y1 + m + 0.01; }
+      o.x = car.x + nu2 * car.fx + nv2 * car.lx; o.z = car.z + nu2 * car.fz + nv2 * car.lz;
+      carPointVel(car, o.x, o.z, _cv);
+      const wx = nu * car.fx + nv * car.lx, wz = nu * car.fz + nv * car.lz;
+      o.vx = _cv.x + wx * 1.5; o.vz = _cv.z + wz * 1.5; o.vy = ny ? 0 : 1.5; o.rest = false; o.trainBounces = (o.trainBounces || 0) + 1;
+      return;
+    }
+  }
 }
 function throwGrenadeNow() {
   const A = arsenal;
@@ -1456,7 +1995,15 @@ function burstGrenade(o) {
   const B = fx.blasts[fx.blastNext]; fx.blastNext = (fx.blastNext + 1) % fx.blasts.length;
   B.x = bx; B.y = by; B.z = bz; B.t = 0; B.on = true;           // flash sphere and light, animated in tickFx
   let any = false;
-  for (const T of targets) {
+  for (const b of bots) {                        // soldiers: linear falloff, blocked by colliders; never teammates
+    if (b.dead) continue;
+    const dmg = blastDamage(bx, by, bz, b.x, b.y + 0.9, b.z);
+    if (dmg <= 0) continue;
+    const d = Math.hypot(b.x - bx, b.y + 0.9 - by, b.z - bz), res = damageSoldier(b, dmg, 'blast', player);
+    logShot({ weapon: 'grenade', hit: b.id, zone: 'blast', damage: +res.dealt.toFixed(2), distance: +d.toFixed(3), kind: 'soldier', surface: 'plastic', spread: 0 });
+    if (res.dealt > 0) { any = true; arsenal.hitT = res.killed ? CONFIG.gun.killMarkTime : CONFIG.gun.hitMarkTime; arsenal.hitKill = res.killed; sfx(res.killed ? 'kill' : 'hit'); }
+  }
+  if (game.range) for (const T of targets) {
     if (T.down) continue;
     const dmg = blastDamage(bx, by, bz, T.x, T.y + 0.9, T.z);
     if (dmg <= 0) continue;
@@ -1475,6 +2022,7 @@ function burstGrenade(o) {
 function tickGrenades(dt) {
   for (let i = grenadesLive.length - 1; i >= 0; i--) {
     const o = grenadesLive[i];
+    grenadeTrainPush(o);
     grenadeStep(o, dt, false);
     if (!insideRoom(o.x, o.y, o.z) || !Number.isFinite(o.x + o.y + o.z)) { grenadesLive.splice(i, 1); grenadeLog.removed++; continue; }   // left the room: removed
     o.fuse -= dt;
@@ -1500,6 +2048,7 @@ function buildTargets(scene) {
     m.setColorAt(i * 3, c.set(dark)); m.setColorAt(i * 3 + 1, c.set(main)); m.setColorAt(i * 3 + 2, c.set(main));
   });
   m.castShadow = m.receiveShadow = true; m.frustumCulled = false;
+  m.visible = game.range;                        // round 3: dummies are out of play; __game.range(true) brings them back for tests
   fx.targetMesh = m; scene.add(m);
   // damage numbers: a small pool of HUD labels projected from the world each frame
   for (let i = 0; i < K.numbers; i++) { const el = document.createElement('div'); el.className = 'dmg'; ui.hud.appendChild(el); fx.numbers.push({ el, life: 0, x: 0, y: 0, z: 0 }); }
@@ -1534,6 +2083,7 @@ function damageTarget(T, dmg, zone, x, y, z) {
   spawnBurst(T.x, T.y + 1, T.z, 0, 1, 0, CONFIG.fx.impact.plastic, T.team === 'green' ? K.green : K.tan, K.chips);
   return true;
 }
+function setRange(on) { game.range = !!on; fx.targetMesh.visible = game.range; if (game.range) resetTargets(); return game.range; }
 function resetTargets() { for (const T of targets) { T.hp = CONFIG.target.hp; T.down = false; T.downT = 0; T.tip = 0; T.tipWas = -1; } tickTargets(0); return true; }
 
 // ---- pooled, instanced effects: two draw calls for every particle, casing, decal, grenade and tracer ------------
@@ -1697,28 +2247,30 @@ function updateArc() {          // called per render frame while the grenade is 
 }
 
 // ---- viewmodels: one blocky toy gun per weapon, drawn in its own pass over the world ------------------------------
-const vm = { scene: null, cam: null, guns: {}, flash: null };
+const vm = { scene: null, cam: null, guns: {}, flash: null, hand: null };
+function boxModel(boxes) {      // merged boxes [x0, x1, y0, y1, z0, z1, colour key] with baked face shading (+x -x +y -y +z -z), so no light is needed
+  const V = CONFIG.viewmodel, shade = [0.8, 0.8, 1.0, 0.55, 0.7, 0.7], pos = [], col = [], idx = [];
+  for (const b of boxes) {
+    const g = new THREE.BoxGeometry(b[1] - b[0], b[3] - b[2], b[5] - b[4]), p = g.attributes.position, base = pos.length / 3, c = rgb(V[b[6]]);
+    for (let i = 0; i < p.count; i++) {
+      pos.push(p.getX(i) + (b[0] + b[1]) / 2, p.getY(i) + (b[2] + b[3]) / 2, p.getZ(i) + (b[4] + b[5]) / 2);
+      const s = shade[Math.floor(i / 4)]; col.push(c[0] * s, c[1] * s, c[2] * s);
+    }
+    for (let i = 0; i < g.index.count; i++) idx.push(g.index.getX(i) + base);
+    g.dispose();
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.setIndex(idx);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true }));
+  mesh.frustumCulled = false; mesh.visible = false;
+  return mesh;
+}
 function buildViewmodels() {
-  const V = CONFIG.viewmodel, shade = [0.8, 0.8, 1.0, 0.55, 0.7, 0.7];      // +x -x +y -y +z -z baked, so no light is needed
+  const V = CONFIG.viewmodel;
   vm.scene = new THREE.Scene();
   vm.cam = new THREE.PerspectiveCamera(V.fov, 1, 0.01, 10);
-  for (const name in V.models) {
-    const M = V.models[name], pos = [], col = [], idx = [];
-    for (const b of M.boxes) {
-      const g = new THREE.BoxGeometry(b[1] - b[0], b[3] - b[2], b[5] - b[4]), p = g.attributes.position, base = pos.length / 3, c = rgb(V[b[6]]);
-      for (let i = 0; i < p.count; i++) {
-        pos.push(p.getX(i) + (b[0] + b[1]) / 2, p.getY(i) + (b[2] + b[3]) / 2, p.getZ(i) + (b[4] + b[5]) / 2);
-        const s = shade[Math.floor(i / 4)]; col.push(c[0] * s, c[1] * s, c[2] * s);
-      }
-      for (let i = 0; i < g.index.count; i++) idx.push(g.index.getX(i) + base);
-      g.dispose();
-    }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.setIndex(idx);
-    const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true }));
-    mesh.frustumCulled = false; mesh.visible = false;
-    vm.guns[name] = mesh; vm.scene.add(mesh);
-  }
+  for (const name in V.models) { vm.guns[name] = boxModel(V.models[name].boxes); vm.scene.add(vm.guns[name]); }
+  vm.hand = boxModel(V.handBoxes); vm.scene.add(vm.hand);     // round 3: hand and grenade while a grenade is aimed
   const fg = new THREE.BufferGeometry(), a = 0.07, P = [];
   for (const [ux, uy] of [[1, 0], [0, 1], [0.7, 0.7], [0.7, -0.7]]) P.push(-ux * a, -uy * a, 0, ux * a, uy * a, 0, 0, 0, -a * 2.2, -ux * a * 0.3, -uy * a * 0.3, 0, ux * a * 0.3, uy * a * 0.3, 0, 0, 0, a);
   fg.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
@@ -1749,7 +2301,7 @@ function muzzleWorld(out) {
 }
 // Compile every effect's shader at load (DESIGN 15.7), so the first shot, grenade aim and burst do not hitch.
 function precompileEffects() {
-  const show = [fx.arc, fx.sphere, vm.flash, ...Object.values(vm.guns)], was = show.map((o) => o.visible);
+  const show = [fx.arc, fx.sphere, vm.flash, vm.hand, fx.targetMesh, ...Object.values(vm.guns), ...soldierMeshes()].filter(Boolean), was = show.map((o) => o.visible);
   for (const o of show) o.visible = true;
   renderer.compile(scene, camera); renderer.compile(vm.scene, vm.cam);
   show.forEach((o, i) => { o.visible = was[i]; });
@@ -1758,6 +2310,12 @@ function renderViewmodel() {
   const A = arsenal, V = CONFIG.viewmodel;
   if (game.view || A.scope > 0.6) return;
   for (const k in vm.guns) vm.guns[k].visible = k === A.current;
+  vm.hand.visible = A.gAim;
+  if (A.gAim) {                                  // the gun drops away (poseViewmodel) and the hand rises with the firecracker
+    const k = Math.min(1, A.gHold / 0.15), hp = V.handPos;
+    vm.hand.position.set(hp[0], hp[1] - (1 - k) * V.handRise, hp[2]);
+    vm.hand.rotation.set(0.25 + 0.15 * k, -0.2, 0.15);
+  }
   const g = poseViewmodel();
   vm.flash.visible = A.flash > 0;      // A.flash is a time (gun.flashTime), counted down in tickWeapons
   if (A.flash > 0) {
@@ -1855,6 +2413,12 @@ function buildWaypoints() {
   add('ramp', 'n.ss.foot>n.ss.top n.desk.br>n.ss1.s s.ts.foot>s.ts.top s.desk.br>s.ts1.n');
   add('climb', 'n.ss1.b>n.ss2.b n.ss1.c>n.ss2.c n.yy.foot>n.desk.n s.ts1.b>s.ts2.b s.ts1.c>s.ts2.c s.ts2.d>s.ts3.d s.ts2.e>s.ts3.e s.sl.foot>s.desk.s');
   add('drop', 'm.seat>m.tunnel.top', true);
+  // round 3A: the tunnel top was a dead end (nothing left it), so a bot that took tunnel_drop could never leave. Two drops off its sides.
+  add('drop', 'm.tunnel.top>m.c.e m.tunnel.top>m.e.w', true);
+  // round 3A ride edges (DESIGN 16.3): a wait node beside each straight, linked by a walk edge; one-way ride edges in the train's direction
+  for (const id in CONFIG.rides) N[CONFIG.rides[id].a] = CONFIG.rides[id].wait.slice();
+  add('walk', 'w.ride.w>s.c.x w.ride.e>n.c.y');
+  for (const id in CONFIG.rides) E.push({ a: CONFIG.rides[id].a, b: CONFIG.rides[id].b, kind: 'ride', oneWay: true, ride: id });
 }
 // One node list per route in DESIGN.md section 4.4
 // Edge removed in round 1 pass 2: w.5 - ub.e (both halves). Cover block W-c (33..36, 69..72 and its mirror) sits on that leg, and
@@ -1881,7 +2445,8 @@ function findEdge(a, b) {
   return null;
 }
 // Sweeps the standing player capsule along every walk and cross edge. Returns the blocked ones.
-function validateWaypoints() {
+function validateWaypoints() { return withStatic(validateStatic); }      // static geometry only: a passing train is not a blocked edge
+function validateStatic() {
   const P = CONFIG.player, M = CONFIG.move, NV = CONFIG.nav, r = P.radius, out = [];
   for (const e of WAYPOINTS.edges) {
     if (e.kind !== 'walk' && e.kind !== 'cross') continue;
@@ -1904,16 +2469,626 @@ function validateWaypoints() {
   }
   return out;
 }
-const bots = [];                                 // stub
-function tickBots(dt) { /* round 3 */ }
+// ---- round 3A bots (DESIGN 16.2, 16.3): soldiers that drive the player's movement controller through virtual input ----
+const bots = [];
+const stuckLog = [];                             // every stuck placement: a tester counts each as a bug
+const botRng = { s: 0x2545F491 };
+function brnd() {                                // seeded (mulberry32), so a seed reproduces every bot decision
+  let t = (botRng.s += 0x6D2B79F5);
+  t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+function seedBots(n) { botRng.s = (n >>> 0) || 1; return botRng.s; }
+const modL = (v) => ((v % TRACK.length) + TRACK.length) % TRACK.length;
+function trackS(x, z) {                          // track distance of the centre-line point nearest (x, z)
+  const t = CONFIG.track, St = TRACK.straight, A = TRACK.arc;
+  if (z >= t.z0 && z <= t.z1) return x < t.cx ? t.z1 - z : St + A + (z - t.z0);
+  if (z < t.z0) return St + t.radius * clamp(Math.atan2(t.z0 - z, t.cx - x), 0, Math.PI);
+  return 2 * St + A + t.radius * clamp(Math.atan2(z - t.z1, x - t.cx), 0, Math.PI);
+}
+// ---- navigation graph: adjacency with A* costs, strongly connected core, cross-edge track ranges ----
+const NAV = { ids: [], index: {}, pos: [], adj: [], main: null, stop: [], cache: new Map(), g: null, f: null, came: null, cameL: null, mark: null, heap: null, stamp: 0 };
+function edgeCost(e, len) {
+  const B = CONFIG.bot;
+  return e.kind === 'climb' ? len * B.costClimb : e.kind === 'ramp' ? len * B.costRamp : e.kind === 'jump' ? len + B.costJump : e.kind === 'cross' ? len + B.costCross : len;
+}
+function buildNav() {
+  const N = WAYPOINTS.nodes, ids = NAV.ids = Object.keys(N), n = ids.length;
+  ids.forEach((id, i) => { NAV.index[id] = i; NAV.pos[i] = N[id]; NAV.adj[i] = []; });
+  const d3 = (A, B) => Math.hypot(B[0] - A[0], B[1] - A[1], B[2] - A[2]);
+  for (const e of WAYPOINTS.edges) {
+    const A = N[e.a], B = N[e.b];
+    e.key = e.a + '>' + e.b; e.len = d3(A, B);
+    if (e.kind === 'ride') { const R = CONFIG.rides[e.ride]; e.cost = d3(R.wait, R.step) + d3(R.step, B); R.sBoard = trackS(R.x, R.boardZ); }
+    else e.cost = edgeCost(e, e.len);
+    if (e.kind === 'cross') {                    // the stretch of track this crossing passes over (unwrapped round its first point)
+      let lo = Infinity, hi = -Infinity, ref = null;
+      const k = Math.ceil(Math.hypot(B[0] - A[0], B[2] - A[2]) / 0.2);
+      for (let i = 0; i <= k; i++) {
+        const x = lerp(A[0], B[0], i / k), z = lerp(A[2], B[2], i / k);
+        if (!inEnvelope(x, z, true)) continue;
+        let sv = trackS(x, z); if (ref === null) ref = sv; else sv = ref + ((sv - ref + TRACK.length * 1.5) % TRACK.length) - TRACK.length / 2;
+        lo = Math.min(lo, sv); hi = Math.max(hi, sv);
+      }
+      e.sRange = ref === null ? null : [lo, hi];
+    }
+    NAV.adj[NAV.index[e.a]].push({ to: NAV.index[e.b], e, fwd: true });
+    if (!e.oneWay) NAV.adj[NAV.index[e.b]].push({ to: NAV.index[e.a], e, fwd: false });
+  }
+  // strongly connected core (Kosaraju): bots only pick destinations from it, so every trip has a way back
+  const seen = new Uint8Array(n), order = [], radj = ids.map(() => []);
+  NAV.adj.forEach((L, i) => L.forEach((l) => radj[l.to].push(i)));
+  for (let s = 0; s < n; s++) {
+    if (seen[s]) continue;
+    const st = [[s, 0]]; seen[s] = 1;
+    while (st.length) { const top = st[st.length - 1], L = NAV.adj[top[0]]; if (top[1] < L.length) { const t = L[top[1]++].to; if (!seen[t]) { seen[t] = 1; st.push([t, 0]); } } else { order.push(top[0]); st.pop(); } }
+  }
+  const comp = new Int32Array(n).fill(-1); let nc = 0;
+  for (let k = n - 1; k >= 0; k--) {
+    const s = order[k]; if (comp[s] >= 0) continue;
+    const st = [s]; comp[s] = nc;
+    while (st.length) { const u = st.pop(); for (const v of radj[u]) if (comp[v] < 0) { comp[v] = nc; st.push(v); } }
+    nc++;
+  }
+  const size = new Array(nc).fill(0); comp.forEach((c) => size[c]++);
+  const big = size.indexOf(Math.max(...size));
+  NAV.main = new Uint8Array(n); comp.forEach((c, i) => { if (c === big) NAV.main[i] = 1; });
+  NAV.outside = ids.filter((id, i) => !NAV.main[i]);
+  // nodes a bot may stop at: in the core and outside the train envelope
+  NAV.stop = ids.filter((id, i) => NAV.main[i] && !onPadXZ(N[id][0], N[id][2]) && !(N[id][1] < CONFIG.train.cab + 0.5 && inEnvelope(N[id][0], N[id][2], true)));
+  NAV.g = new Float64Array(n); NAV.f = new Float64Array(n); NAV.came = new Int32Array(n); NAV.cameL = new Array(n); NAV.mark = new Int32Array(n); NAV.closed = new Int32Array(n);
+  NAV.heap = new Int32Array(n * 8);
+}
+// Seconds from time t until the ride spot of the next unclaimed deck car passes the boarding point (wraps once a lap).
+const _deck = { car: null };
+function deckWait(rid, t, ignoreClaims) {
+  const R = CONFIG.rides[rid], T = CONFIG.train, head = trainHeadS(t);
+  let best = Infinity; _deck.car = null;
+  for (const car of TRAIN.cars) {
+    if (!car.deck || (car.claim && !ignoreClaims)) continue;
+    const sSpot = head - car.i * (T.carLen + T.gap) - T.carLen / 2 + CONFIG.bot.rideSpot[car.type];
+    const w = modL(R.sBoard - sSpot) / T.speed;
+    if (w < best) { best = w; _deck.car = car; }
+  }
+  return best;
+}
+// A* over the waypoint graph (DESIGN 16.3 costs). opts.ride: also consider ride edges, costed with the expected deck wait at the
+// estimated arrival time; a ride whose wait would pass bot.maxWait is not used. Paths without rides are cached.
+function astar(fromId, toId, opts = {}) {
+  const s = NAV.index[fromId], goal = NAV.index[toId];
+  if (s === undefined || goal === undefined) return null;
+  const ride = !!opts.ride, key = s * 4096 + goal;
+  if (!ride && NAV.cache.has(key)) return NAV.cache.get(key);
+  const P = NAV.pos, G = P[goal], g = NAV.g, f = NAV.f, mark = NAV.mark, closed = NAV.closed, heap = NAV.heap, stamp = ++NAV.stamp;
+  const h = (i) => Math.hypot(P[i][0] - G[0], P[i][1] - G[1], P[i][2] - G[2]);
+  const t0 = opts.time !== undefined ? opts.time : game.time, spd = CONFIG.move.walk, B = CONFIG.bot;
+  let hn = 0;
+  const push = (i) => { let k = hn++; heap[k] = i; while (k > 0) { const pk = (k - 1) >> 1; if (f[heap[pk]] <= f[heap[k]]) break; const t = heap[pk]; heap[pk] = heap[k]; heap[k] = t; k = pk; } };
+  const pop = () => { const top = heap[0]; heap[0] = heap[--hn]; let k = 0; for (;;) { const l = 2 * k + 1, r = l + 1; let m = k; if (l < hn && f[heap[l]] < f[heap[m]]) m = l; if (r < hn && f[heap[r]] < f[heap[m]]) m = r; if (m === k) break; const t = heap[m]; heap[m] = heap[k]; heap[k] = t; k = m; } return top; };
+  mark[s] = stamp; g[s] = 0; f[s] = h(s); NAV.came[s] = -1; NAV.cameL[s] = null; push(s);
+  let found = false;
+  while (hn > 0) {
+    const u = pop();
+    if (closed[u] === stamp) continue;
+    closed[u] = stamp;
+    if (u === goal) { found = true; break; }
+    for (const L of NAV.adj[u]) {
+      let c = L.e.cost;
+      if (L.e.kind === 'ride') {
+        if (!ride || (opts.avoid && opts.avoid[L.e.ride])) continue;
+        const w = deckWait(L.e.ride, t0 + g[u] / spd);
+        if (w > B.maxWait) continue;
+        c += w * B.waitCost;
+      }
+      const v = L.to, ng = g[u] + c;
+      if (mark[v] === stamp && ng >= g[v]) continue;
+      if (closed[v] === stamp) continue;
+      mark[v] = stamp; g[v] = ng; f[v] = ng + h(v); NAV.came[v] = u; NAV.cameL[v] = L;
+      if (hn < heap.length) push(v);
+    }
+  }
+  let res = null;
+  if (found) {
+    const nodes = [], edges = [];
+    for (let v = goal; v !== -1; v = NAV.came[v]) { nodes.push(NAV.ids[v]); if (NAV.cameL[v]) edges.push(NAV.cameL[v].e); }
+    nodes.reverse(); edges.reverse();
+    res = { nodes, edges, cost: g[goal] };
+  }
+  if (!ride) NAV.cache.set(key, res);
+  return res;
+}
+// ---- bots ----
+let botSeq = 0;
+const BOT_SPAWNS = { green: [[52, 0, 13], [56, 0, 20], [64, 0, 20], [68, 0, 18]], tan: [[52, 0, 147], [56, 0, 140], [64, 0, 140], [68, 0, 142]] };
+const nav = { on: false };                       // nav test statistics (reset by startNavTest)
+function resetNavStats(seed) {
+  Object.assign(nav, { on: false, seed, t0: game.time, edgeUse: {}, kindUse: {}, routeUse: {}, rides: { 'ride.w': 0, 'ride.e': 0 }, rideStarts: 0, rideBoards: 0,
+    rideAborts: 0, rideGiveUps: 0, crossUse: {}, crossTotal: 0, crossWaits: 0, crossWaitTime: 0, envTime: 0, envTimeByBot: {}, evades: 0, repaths: 0,
+    stuckJumps: 0, stuckStrafes: 0, stuckRepaths: 0, tasks: { route: 0, edge: 0, random: 0, ride: 0 }, noPath: 0, pushes0: trainStats.pushes, hitWhileWaiting: 0,
+    rescues0: trainRescueLog.length, stuck0: stuckLog.length });
+}
+function newBotInput() { const o = {}; for (const k of INPUT_NAMES) o[k] = false; return o; }
+function spawnBot(team, nodeId, opts = {}) {
+  if (bots.length >= CONFIG.bot.max) return false;
+  team = team === 'green' ? 'green' : 'tan';
+  let pos;
+  if (nodeId && WAYPOINTS.nodes[nodeId]) pos = WAYPOINTS.nodes[nodeId];
+  else { const S = BOT_SPAWNS[team]; pos = S[bots.filter((b) => b.team === team).length % S.length]; nodeId = nearestNode(pos[0], pos[1], pos[2]); }
+  const slot = [...Array(CONFIG.bot.max).keys()].find((k) => !bots.some((b) => b.slot === k));
+  const P = CONFIG.player, n = bots.filter((b) => b.team === team).length + 1;
+  const b = {
+    id: 'bot.' + (++botSeq), name: (team === 'green' ? 'Green ' : 'Tan ') + n, team, slot, weapon: 'rifle',
+    x: pos[0], y: pos[1], z: pos[2], vx: 0, vy: 0, vz: 0, yaw: team === 'green' ? Math.PI : 0, pitch: 0, px: pos[0], py: pos[1], pz: pos[2],
+    height: P.height, eye: P.eye, peye: P.eye, onGround: true, ground: null, surface: null, crouching: false,
+    climbing: null, climbNeedRelease: false, grabCooldown: 0, health: CONFIG.bot.hp, hp: CONFIG.bot.hp, peakY: pos[1], coyote: 0, jumpBuf: 0, jumpHeld: false,
+    launched: false, launchX: 0, launchZ: 0, warped: false, sprinting: false, fwdLock: false, noGrab: null, noGrabT: 0,
+    stepOff: 0, pstepOff: 0, moved: 0, safe: { x: pos[0], y: pos[1], z: pos[2] }, carryVx: 0, carryVz: 0, wedgeT: 0,
+    input: newBotInput(), dead: false, deadT: 0, tip: 0, botState: 'idle', navTest: !!opts.navTest,
+    path: [nodeId], edges: [], pi: 1, lastNode: nodeId, goal: nodeId, task: null, ride: null, crossing: false, evade: null,
+    blocked: 0, speedWas: 0, groundWas: true, stuckT: 0, stuckRef: Infinity, stuckStage: 0, strafeT: 0, strafeDir: 1, jumpNow: false, hist: [nodeId],
+    avoid: {}, avoidT: 0, bob: 0, ryaw: 0, losT: 0, chevron: false, trainHits: 0,
+    bodyPlanes: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+    headPlanes: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+  };
+  b.ryaw = b.yaw;
+  placeActor(b, pos[0], pos[1], pos[2]);
+  bots.push(b); ACTORS.push(b);
+  updateHitVolumes(b);
+  paintSoldier(b);
+  return b.id;
+}
+function removeBots() {
+  for (const b of bots) { const i = ACTORS.indexOf(b); if (i >= 0) ACTORS.splice(i, 1); }
+  for (const c of TRAIN.cars) c.claim = null;
+  bots.length = 0; nav.on = false;
+  if (SOLD.mesh) { for (let i = 0; i < SOLD.mesh.count; i++) fxPut(SOLD.mesh, i, 0, -50, 0, 0, 0, 0); SOLD.mesh.instanceMatrix.needsUpdate = true; }
+  return true;
+}
+function nearestNode(x, y, z, filter) {
+  let best = null, bd = Infinity;
+  for (const id of NAV.stop) { if (filter && !filter(id)) continue; const P = WAYPOINTS.nodes[id], d = Math.hypot(P[0] - x, (P[1] - y) * 2, P[2] - z); if (d < bd) { bd = d; best = id; } }
+  return best;
+}
+const nodeXYZ = (id) => WAYPOINTS.nodes[id];
+function setPath(b, res, goal) {                 // res: {nodes, edges} from A*; the bot is at (or next to) res.nodes[0]
+  if (!res) { b.path = [b.lastNode]; b.edges = []; b.pi = 1; nav.noPath = (nav.noPath || 0) + 1; return false; }
+  b.path = res.nodes.slice(); b.edges = res.edges.slice(); b.pi = 1; b.goal = goal || res.nodes[res.nodes.length - 1];
+  b.stuckT = 0; b.stuckRef = Infinity; b.stuckStage = 0; b.crossing = false;
+  return true;
+}
+function appendPath(a, b2) { if (!a || !b2) return null; return { nodes: a.nodes.concat(b2.nodes.slice(1)), edges: a.edges.concat(b2.edges), cost: (a.cost || 0) + (b2.cost || 0) }; }
+function botGoto(id, nodeId, opts = {}) {
+  const b = bots.find((o) => o.id === id);
+  if (!b || b.dead || !WAYPOINTS.nodes[nodeId]) return false;
+  b.task = { type: 'goto' };
+  if (opts.via && CONFIG.rides[opts.via]) {      // force a ride edge on the way: to its wait node, the ride, then on to nodeId
+    const R = CONFIG.rides[opts.via], e = WAYPOINTS.edges.find((x) => x.ride === opts.via);
+    const to = b.lastNode === R.a ? { nodes: [R.a], edges: [], cost: 0 } : astar(b.lastNode, R.a, { ride: false }), after = astar(R.b, nodeId, { ride: false });
+    const ok = setPath(b, appendPath(appendPath(to, { nodes: [R.a, R.b], edges: [e], cost: e.cost }), after), nodeId);
+    return ok ? b.path.slice() : false;
+  }
+  const ok = setPath(b, astar(b.lastNode, nodeId, { ride: opts.ride !== false }), nodeId);
+  return ok ? b.path.slice() : false;
+}
+// Repath from the nearest node the bot can walk straight to (static sweep), toward its goal.
+function segmentWalkable(x0, y0, z0, x1, z1) {
+  const r = CONFIG.player.radius, M = CONFIG.move, n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, z1 - z0) / 0.25));
+  let y = y0;
+  return withStatic(() => {
+    for (let i = 1; i <= n; i++) {
+      const x = lerp(x0, x1, i / n), z = lerp(z0, z1, i / n), g = groundBelow(x, z, r, y + M.stepUp, y + M.stepUp);
+      if (!g.c) return false;
+      if (g.y < y - M.stepUp - 0.01) return false;
+      y = g.y;
+      if (firstBlocker(x, z, r, y + M.stepUp, y + CONFIG.player.height)) return false;
+    }
+    return true;
+  });
+}
+function botRepath(b, why) {
+  const goal = b.goal || b.lastNode;
+  const cands = NAV.stop.map((id) => { const P = WAYPOINTS.nodes[id]; return [id, Math.hypot(P[0] - b.x, (P[1] - b.y) * 3, P[2] - b.z)]; }).sort((u, v) => u[1] - v[1]).slice(0, 10);
+  let start = null;
+  for (const [id] of cands) { const P = WAYPOINTS.nodes[id]; if (Math.abs(P[1] - b.y) < 0.8 && segmentWalkable(b.x, b.y, b.z, P[0], P[2])) { start = id; break; } }
+  if (!start) start = cands.length ? cands[0][0] : b.lastNode;
+  const rest = astar(start, goal, { ride: false }) || astar(start, nearestNode(b.x, b.y, b.z), { ride: false });
+  nav.repaths = (nav.repaths || 0) + 1;
+  const pseudo = { a: '@', b: start, kind: 'walk', key: '(repath)>' + start, pseudo: true, oneWay: true };
+  b.ride = null; b.crossing = false;
+  if (!rest) { b.path = ['@', start]; b.edges = [pseudo]; b.pi = 1; return; }
+  b.path = ['@'].concat(rest.nodes); b.edges = [pseudo].concat(rest.edges); b.pi = 1;
+  b.stuckRef = Infinity;
+}
+function hurtBot(b, amount, cause) { damageSoldier(b, amount, cause, null); }
+// Damage from the player's gun or grenade (or the world when attacker is null). Teammates take none.
+function damageSoldier(b, dmg, zone, attacker) {
+  if (b.dead) return { dealt: 0, killed: false };
+  const atk = attacker === player ? 'green' : attacker ? attacker.team : null;
+  if (atk && atk === b.team) return { dealt: 0, killed: false, friendly: true };
+  b.hp = Math.max(0, b.hp - dmg); b.health = b.hp;
+  if (zone !== 'fall') spawnNumber(b.x, b.y + 1.85 + CONFIG.target.numberAbove, b.z, dmg, zone === 'head', b.hp <= 0);
+  if (b.hp > 0) return { dealt: dmg, killed: false };
+  killSoldier(b);
+  return { dealt: dmg, killed: true };
+}
+function killSoldier(b) {
+  b.dead = true; b.botState = 'dead'; b.deadT = 0; b.hp = 0; b.health = 0; b.crouching = false;
+  for (const k of INPUT_NAMES) b.input[k] = false;
+  for (const c of TRAIN.cars) if (c.claim === b.id) c.claim = null;
+  b.ride = null; b.evade = null; b.crossing = false;
+  spawnBurst(b.x, b.y + 1, b.z, 0, 1, 0, CONFIG.fx.impact.plastic, b.team === 'green' ? CONFIG.target.green : CONFIG.target.tan, CONFIG.soldier.chips);
+}
+// Oriented hit volumes (body, head) from the bot's position, yaw and stance. Arrays are reused: no allocation per tick.
+function setOBox(P, cx, cz, fx, fz, hd, hw, y0, y1) {
+  const lx = fz, lz = -fx, cf = cx * fx + cz * fz, cl = cx * lx + cz * lz, S = (k, a, b2, c, d) => { const p = P[k]; p[0] = a; p[1] = b2; p[2] = c; p[3] = d; };
+  S(0, fx, 0, fz, cf + hd); S(1, -fx, 0, -fz, -cf + hd); S(2, lx, 0, lz, cl + hw); S(3, -lx, 0, -lz, -cl + hw); S(4, 0, 1, 0, y1); S(5, 0, -1, 0, -y0);
+}
+function updateHitVolumes(b) {
+  const K = CONFIG.soldier, fx = -Math.sin(b.yaw), fz = -Math.cos(b.yaw), bodyH = b.crouching ? K.crouchBody : K.body[1], top = b.y + K.base[1] + bodyH;
+  setOBox(b.bodyPlanes, b.x, b.z, fx, fz, K.body[2] / 2, K.body[0] / 2, b.y, top);
+  setOBox(b.headPlanes, b.x, b.z, fx, fz, K.head / 2, K.head / 2, top, top + K.head);
+}
+const onPadXZ = (x, z) => COLLIDERS.some((c) => c.kind === 'pad' && x > c.x0 && x < c.x1 && z > c.z0 && z < c.z1);
+function botArrived(b, B, nextEdge) {
+  if (b.launched && ((nextEdge && nextEdge.kind === 'launch') || onPadXZ(B[0], B[2]))) return true;     // the pad fired: node done (as walkPath)
+  if (b.climbing || !b.onGround) return false;
+  return Math.hypot(B[0] - b.x, B[2] - b.z) < CONFIG.bot.arrive && Math.abs(B[1] - b.y) < CONFIG.bot.arriveY;
+}
+function botReached(b) {
+  const e = b.edges[b.pi - 1], id = b.path[b.pi];
+  if (e && !e.pseudo) {
+    const dk = (e.a === b.path[b.pi - 1] ? e.a + '>' + e.b : e.b + '>' + e.a);
+    if (nav.edgeUse) { nav.edgeUse[dk] = (nav.edgeUse[dk] || 0) + 1; nav.kindUse[e.kind] = (nav.kindUse[e.kind] || 0) + 1; }
+    if (e.kind === 'cross' && nav.crossUse) { nav.crossUse[e.key] = (nav.crossUse[e.key] || 0) + 1; nav.crossTotal++; }
+    if (e.kind === 'ride' && nav.rides) nav.rides[e.ride]++;
+  }
+  if (e && b.stuckEp === e.key) { b.stuckEp = null; b.stuckCarry = 0; }              // got through the edge it once stalled on
+  b.crossing = false; b.ride = null; b.lastNode = id; b.pi++;
+  b.hist.push(id); if (b.hist.length > 12) b.hist.shift();
+  if (nav.routeUse) for (const rid in ROUTES) {
+    const R = ROUTES[rid], H = b.hist;
+    if (H.length < R.length) continue;
+    let ok = true; for (let k = 0; k < R.length && ok; k++) ok = H[H.length - R.length + k] === R[k];
+    if (ok) nav.routeUse[rid] = (nav.routeUse[rid] || 0) + 1;
+  }
+  b.stuckT = 0; b.stuckRef = Infinity; b.stuckStage = 0;
+}
+// Cross edges start only if no car reaches the crossing within crossLook s (and the train has passed).
+function crossSafe(e) {
+  if (!e.sRange) return true;
+  const T = CONFIG.train, last = TRAIN.cars[TRAIN.cars.length - 1], lo = last.sR - T.crossMargin, hi = TRAIN.sRaw + T.speed * T.crossLook + T.crossMargin;
+  const c0 = lo + modL(e.sRange[0] - lo), c1 = c0 + (e.sRange[1] - e.sRange[0]);
+  return !(c0 <= hi || c1 >= lo + TRACK.length);
+}
+function holdAt(b, P) { if (Math.hypot(P[0] - b.x, P[2] - b.z) > 0.6) { aimYaw(b, P[0], P[2]); b.input.forward = true; } }
+// Leave the envelope by the shortest way: the nearest point outside it with ground at this level and a clear straight line.
+function startEvade(b) {
+  const r = CONFIG.player.radius;
+  for (let rad = 0.25; rad <= 8; rad += 0.25) {
+    let best = null, bd = Infinity;
+    for (let k = 0; k < 32; k++) {
+      const a = k / 32 * Math.PI * 2, x = b.x + Math.cos(a) * rad, z = b.z + Math.sin(a) * rad;
+      if (inEnvelope(x, z, true) || x < 1 || x > 119 || z < 1 || z > 159) continue;
+      const g = withStatic(() => groundBelow(x, z, r, b.y + CONFIG.move.stepUp, b.y + CONFIG.move.stepUp));
+      if (!g.c || g.y < b.y - 1.5) continue;
+      if (!segmentWalkable(b.x, b.y, b.z, x, z)) continue;
+      const d = rad; if (d < bd) { bd = d; best = [x, z]; }
+    }
+    if (best) { b.evade = { x: best[0], z: best[1], t: 0 }; nav.evades = (nav.evades || 0) + 1; return; }
+  }
+  b.evade = { x: b.x + (b.x < 60 ? -4 : 4), z: b.z, t: 0 };
+}
+function botEvade(b, dt) {
+  const E = b.evade, I = b.input;
+  b.botState = 'evade'; E.t += dt;
+  if (!actorInEnvelope(b)) { b.evade = null; botRepath(b, 'evade'); return; }
+  if (E.t > 3) { startEvade(b); return; }
+  aimYaw(b, E.x, E.z); I.forward = true; I.sprint = true;
+}
+// Ride edges (DESIGN 16.3): wait, board a deck with a run and a jump, ride, step off, walk to the edge's end node.
+const _spot = [0, 0];
+function spotWorld(car, ahead) { const u = CONFIG.bot.rideSpot[car.type] + (ahead || 0); _spot[0] = car.x + u * car.fx; _spot[1] = car.z + u * car.fz; return _spot; }
+function botRideAbort(b, e, st, why) {
+  if (st.car && st.car.claim === b.id) st.car.claim = null;
+  nav.rideAborts = (nav.rideAborts || 0) + 1; b.lastAbort = why;
+  b.avoid[e.ride] = game.time + 20; b.ride = null; botRepath(b, 'ride ' + why);
+}
+function botRide(b, e, dt) {
+  const R = CONFIG.rides[e.ride], RB = CONFIG.bot, I = b.input;
+  const st = b.ride || (b.ride = { phase: 'wait', car: null, t: 0, jumped: false });
+  st.t += dt;
+  const onCar = b.onGround && b.ground && b.ground.train ? b.ground.car : null;
+  if (st.phase === 'wait') {
+    b.botState = 'wait_ride'; b.stuckT = 0;
+    holdAt(b, R.wait);
+    if (!b.input.forward) aimYaw(b, R.x, b.z);
+    const w = deckWait(e.ride, game.time), car = _deck.car;
+    if (!car || w > RB.maxWait) { nav.rideGiveUps = (nav.rideGiveUps || 0) + 1; b.avoid[e.ride] = game.time + 20; b.ride = null; botRepath(b, 'ride wait'); return; }
+    if (w <= RB.rideLead[car.type] && Math.hypot(R.wait[0] - b.x, R.wait[2] - b.z) < 0.7 && b.onGround) {
+      st.phase = 'board'; st.car = car; st.t = 0; car.claim = b.id; nav.rideStarts = (nav.rideStarts || 0) + 1;
+    } else return;
+  }
+  const car = st.car;
+  if (st.phase === 'board') {
+    b.botState = 'board';
+    const lead = Math.max(0, RB.rideLead[car.type] - st.t + 0.1), sp = spotWorld(car, CONFIG.train.speed * lead);
+    aimYaw(b, R.x, sp[1]);
+    const toTrack = Math.atan2(-(R.x - b.x), 0), d = wrapAngle(b.yaw - toTrack);   // keep the run within 35 degrees of straight across
+    if (Math.abs(d) > 0.6) b.yaw = wrapAngle(toTrack + Math.sign(d) * 0.6);
+    I.forward = true;
+    if (!st.jumped && st.t >= RB.runUp && b.onGround) { I.jump = true; st.jumped = true; }
+    if (onCar === car) { st.phase = 'ride'; st.t = 0; nav.rideBoards = (nav.rideBoards || 0) + 1; return; }
+    if ((st.jumped && b.onGround && !onCar && st.t > 0.3) || st.t > 2.5 || (onCar && onCar !== car)) botRideAbort(b, e, st, 'missed the deck');
+    return;
+  }
+  if (st.phase === 'ride') {
+    b.botState = 'ride'; b.stuckT = 0;
+    if (onCar !== car) { if (!b.onGround) return; botRideAbort(b, e, st, 'fell off'); return; }
+    const sp = spotWorld(car);
+    if (Math.hypot(sp[0] - b.x, sp[1] - b.z) > 0.35) { aimYaw(b, sp[0], sp[1]); I.forward = true; }
+    else aimYaw(b, b.x + car.lx * (R.dir > 0 ? 1 : -1), b.z + car.lz * (R.dir > 0 ? 1 : -1));
+    if (R.dir * (car.z - R.offZ) >= 0 && Math.abs(car.x - R.x) < 0.5) { st.phase = 'alight'; st.t = 0; }
+    else if (st.t > RB.rideTimeout) botRideAbort(b, e, st, 'ride timeout');
+    return;
+  }
+  if (st.phase === 'alight') {
+    b.botState = 'alight';
+    aimYaw(b, R.step[0], R.step[2]); I.forward = true;
+    if (b.onGround && !onCar) {
+      if (car.claim === b.id) car.claim = null;
+      if (Math.hypot(R.step[0] - b.x, R.step[2] - b.z) < 0.6 || !actorInEnvelope(b)) { st.phase = 'walk'; st.t = 0; }
+    }
+    if (st.t > 6) botRideAbort(b, e, st, 'alight timeout');
+    return;
+  }
+  // walk: from the step-off point to the edge's end node, as an ordinary walk
+  b.botState = 'move';
+  if (steerTo(b, I, nodeXYZ(e.b), 'walk', null, false, b.blocked)) b.blocked = 0;
+  botStuck(b, dt, nodeXYZ(e.b));
+}
+// DESIGN 16.3 stuck handling: no 0.5 of progress toward the next node in 1.5 s: jump; 2.5 s: strafe 0.5 s; 3.5 s: repath from the
+// nearest reachable node; 6 s: placed at the last reached node and logged in stuckLog.
+// A repath does not wipe the slate: back on the edge it stalled on, the time already spent there counts (carry), so a bot that
+// stalls on the same edge again goes straight on to the logged placement instead of looping jump, strafe, repath for ever.
+function botStuck(b, dt, B) {
+  const RB = CONFIG.bot, d = Math.hypot(B[0] - b.x, B[2] - b.z) + Math.abs(B[1] - b.y), e = b.edges[b.pi - 1];
+  const carry = b.stuckEp && e && e.key === b.stuckEp ? b.stuckCarry : 0;
+  if (b.launched) { b.stuckRef = d; b.stuckT = 0; b.stuckStage = 0; return; }          // a spring launch is progress by definition
+  if (!b.onGround && !b.climbing && b.stuckT + carry >= RB.stuckRepath - 1e-9) return;   // decide repath and placement from the ground
+  if (b.stuckRef === Infinity || b.stuckRef - d >= RB.stuckProgress) { b.stuckRef = d; b.stuckT = 0; b.stuckStage = 0; return; }
+  b.stuckT += dt;
+  const T = b.stuckT + carry;
+  if (carry && T < RB.stuckPlace) return;                                             // already climbed the ladder on this edge
+  if (T >= RB.stuckPlace) {
+    const e = b.edges[b.pi - 1], P = nodeXYZ(b.lastNode) || [b.x, b.y, b.z];
+    stuckLog.push({ bot: b.id, name: b.name, pos: [+b.x.toFixed(2), +b.y.toFixed(2), +b.z.toFixed(2)], node: b.path[b.pi], from: b.lastNode,
+      edge: e ? e.key : null, kind: e ? e.kind : null, time: +game.time.toFixed(2) });
+    placeActor(b, P[0], P[1], P[2]);
+    b.stuckT = 0; b.stuckStage = 0; b.stuckRef = Infinity; b.stuckEp = null; b.stuckCarry = 0;
+    const goal = b.goal; setPath(b, astar(b.lastNode, goal, { ride: false }), goal);
+  } else if (b.stuckT >= RB.stuckRepath && b.stuckStage < 3) {
+    nav.stuckRepaths = (nav.stuckRepaths || 0) + 1;
+    if (e && !e.pseudo) { b.stuckEp = e.key; b.stuckCarry = b.stuckT; }
+    botRepath(b, 'stuck'); b.stuckT = 0; b.stuckStage = 0;
+  }
+  else if (b.stuckT >= RB.stuckStrafe && b.stuckStage < 2) { b.stuckStage = 2; b.strafeT = RB.strafeTime; b.strafeDir = brnd() < 0.5 ? -1 : 1; nav.stuckStrafes = (nav.stuckStrafes || 0) + 1; }
+  else if (b.stuckT >= RB.stuckJump && b.stuckStage < 1) { b.stuckStage = 1; b.jumpNow = true; nav.stuckJumps = (nav.stuckJumps || 0) + 1; }
+}
+function botThink(b, dt) {
+  const I = b.input;
+  for (let k = 0; k < INPUT_NAMES.length; k++) I[INPUT_NAMES[k]] = false;
+  if (b.strafeT > 0) b.strafeT -= dt;
+  const riding = !!(b.ride && b.ride.phase !== 'wait' && b.ride.phase !== 'walk');
+  b.riding = riding;
+  if (!b.evade && !riding && !b.crossing && !b.climbing && actorInEnvelope(b)) startEvade(b);     // never stand on the track
+  if (b.evade) { botEvade(b, dt); return; }
+  for (let guard = 0; guard < 4; guard++) {
+    if (b.pi >= b.path.length) { if (b.navTest) navNextTask(b); if (b.pi >= b.path.length) { b.botState = 'idle'; b.node = b.lastNode; b.nextNode = null; b.edge = null; return; } }
+    if (!botArrived(b, nodeXYZ(b.path[b.pi]), b.edges[b.pi])) break;
+    botReached(b);
+  }
+  const e = b.edges[b.pi - 1], B = nodeXYZ(b.path[b.pi]), A = nodeXYZ(b.path[b.pi - 1]);
+  b.node = b.path[b.pi - 1]; b.nextNode = b.path[b.pi]; b.edge = e;
+  if (e.kind === 'ride') { botRide(b, e, dt); return; }
+  if (e.kind === 'cross' && !b.crossing) {
+    if (!crossSafe(e)) { if (b.botState !== 'wait_cross') nav.crossWaits = (nav.crossWaits || 0) + 1; b.botState = 'wait_cross'; nav.crossWaitTime = (nav.crossWaitTime || 0) + dt; if (A) holdAt(b, A); b.stuckT = 0; b.stuckRef = Infinity; return; }
+    b.crossing = true;
+  }
+  b.botState = b.climbing ? 'climb' : b.crossing ? 'cross' : 'move';
+  const str = e.kind === 'climb' ? (e.str || (e.str = stringForEdge(A, B))) : null;
+  if (steerTo(b, I, B, e.kind, str, b.crossing && CONFIG.bot.sprintCross, b.blocked)) b.blocked = 0;
+  if (b.strafeT > 0 && !b.climbing) { I.left = b.strafeDir < 0; I.right = b.strafeDir > 0; }
+  if (b.jumpNow) { I.jump = true; b.jumpNow = false; }
+  botStuck(b, dt, B);
+}
+// ---- nav test (3A): bots walk forever between nodes picked so every edge kind, route, ride and crossing gets used ----
+function navNextTask(b) {
+  const T = CONFIG.navTest, here = b.lastNode, RB = CONFIG.bot;
+  for (const k in b.avoid) if (b.avoid[k] < game.time) delete b.avoid[k];
+  const rids = Object.keys(CONFIG.rides); if (brnd() < 0.5) rids.reverse();
+  for (const rid of rids) {                      // a ride, when this bot would reach the wait node with a deck coming soon
+    if (b.avoid[rid]) continue;
+    const R = CONFIG.rides[rid], to = here === R.a ? { nodes: [here], edges: [], cost: 0 } : astar(here, R.a, { ride: false });
+    if (!to || to.cost > 120) continue;
+    const arrive = game.time + to.cost / CONFIG.move.walk + 1, w = deckWait(rid, arrive);
+    if (w > 0.6 && w < RB.maxWait - 1.5 && brnd() < T.pRide) {
+      const e = WAYPOINTS.edges.find((x) => x.ride === rid), dest = NAV.stop[Math.floor(brnd() * NAV.stop.length)];
+      const after = astar(R.b, dest, { ride: false });
+      const path = appendPath(appendPath(to, { nodes: [R.a, R.b], edges: [e], cost: e.cost }), after || { nodes: [R.b], edges: [], cost: 0 });
+      nav.tasks.ride++; b.task = { type: 'ride', ride: rid };
+      setPath(b, path, path.nodes[path.nodes.length - 1]); return;
+    }
+  }
+  const r = brnd();
+  if (r < T.pRoute) {                            // the least used route in DESIGN 4.4, walked node by node
+    let best = null, bu = Infinity;
+    for (const rid in ROUTES) { const u = (nav.routeUse[rid] || 0) + brnd() * 0.5; if (u < bu) { bu = u; best = rid; } }
+    const R = ROUTES[best], to = astar(here, R[0], { ride: false });
+    if (to) {
+      const edges = []; for (let i = 1; i < R.length; i++) edges.push(findEdge(R[i - 1], R[i]));
+      nav.tasks.route++; b.task = { type: 'route', route: best };
+      setPath(b, appendPath(to, { nodes: R.slice(), edges, cost: 0 }), R[R.length - 1]); return;
+    }
+  } else if (r < T.pRoute + T.pEdge) {           // the least used edge direction (rides excluded: they are timed above)
+    let best = null, bu = Infinity;
+    for (const e of WAYPOINTS.edges) {
+      if (e.kind === 'ride') continue;
+      for (const fwd of e.oneWay ? [true] : [true, false]) {
+        const a = fwd ? e.a : e.b, c = fwd ? e.b : e.a, idx = NAV.index[a];
+        if (!NAV.main[idx] || !NAV.main[NAV.index[c]]) continue;
+        const u = (nav.edgeUse[a + '>' + c] || 0) + brnd() * 0.9;
+        if (u < bu) { bu = u; best = [a, c, e]; }
+      }
+    }
+    const to = astar(here, best[0], { ride: false });
+    if (to) {
+      nav.tasks.edge++; b.task = { type: 'edge', edge: best[0] + '>' + best[1] };
+      setPath(b, appendPath(to, { nodes: [best[0], best[1]], edges: [best[2]], cost: 0 }), best[1]); return;
+    }
+  }
+  const dest = NAV.stop[Math.floor(brnd() * NAV.stop.length)];
+  nav.tasks.random++; b.task = { type: 'random' };
+  setPath(b, astar(here, dest, { ride: true, avoid: b.avoid }), dest);
+}
+function startNavTest(opts = {}) {
+  const n = clamp(Math.round(opts.bots || 10), 1, CONFIG.bot.max), seed = opts.seed === undefined ? 1 : opts.seed;
+  removeBots(); seedBots(seed); resetNavStats(seed); nav.on = true;
+  if (game.phase !== 'playing') startGame({ pointerLock: false });
+  const starts = NAV.stop.filter((id) => WAYPOINTS.nodes[id][1] === 0);
+  for (let i = 0; i < n; i++) {
+    const node = starts[Math.floor(brnd() * starts.length)];
+    const id = spawnBot(i % 2 ? 'tan' : 'green', node, { navTest: true });
+    const b = bots.find((o) => o.id === id); b.pi = 1; b.path = [node]; b.edges = [];
+  }
+  return bots.map((b) => b.id);
+}
+function navStats() {
+  const kinds = ['walk', 'ramp', 'jump', 'climb', 'launch', 'cross', 'drop', 'ride'], unusedEdges = [], unusedCross = [];
+  for (const e of WAYPOINTS.edges) {
+    if (e.kind === 'ride') continue;
+    const dirs = e.oneWay ? [[e.a, e.b]] : [[e.a, e.b], [e.b, e.a]];
+    if (!dirs.some(([a, c]) => nav.edgeUse && nav.edgeUse[a + '>' + c])) unusedEdges.push(e.key);
+    if (e.kind === 'cross' && !(nav.crossUse && nav.crossUse[e.key])) unusedCross.push(e.key);
+  }
+  const unusedDirections = [];
+  for (const e of WAYPOINTS.edges) { if (e.kind === 'ride') continue; for (const [a, c] of e.oneWay ? [[e.a, e.b]] : [[e.a, e.b], [e.b, e.a]]) if (!(nav.edgeUse && nav.edgeUse[a + '>' + c])) unusedDirections.push(a + '>' + c); }
+  const botRescues = trainRescueLog.slice(nav.rescues0 || 0).filter((r) => r.who !== 'player');
+  return {
+    simSeconds: +(game.time - (nav.t0 || 0)).toFixed(1), seed: nav.seed, bots: bots.length, tasks: nav.tasks,
+    kindUse: nav.kindUse, unusedKinds: kinds.filter((k) => !(nav.kindUse && nav.kindUse[k])),
+    routeUse: nav.routeUse, unusedRoutes: Object.keys(ROUTES).filter((r) => !(nav.routeUse && nav.routeUse[r])),
+    rides: nav.rides, rideStarts: nav.rideStarts, rideBoards: nav.rideBoards, rideAborts: nav.rideAborts, rideGiveUps: nav.rideGiveUps,
+    crossUse: nav.crossUse, crossTotal: nav.crossTotal, crossWaits: nav.crossWaits, crossWaitSeconds: +(nav.crossWaitTime || 0).toFixed(1), unusedCross,
+    edgeUse: nav.edgeUse, edgesTotal: WAYPOINTS.edges.filter((e) => e.kind !== 'ride').length, unusedEdges, unusedDirections,
+    stuck: stuckLog.length - (nav.stuck0 || 0), stuckLog: stuckLog.slice(nav.stuck0 || 0), rescues: botRescues.length, rescueLog: botRescues,
+    envelopeSeconds: +(nav.envTime || 0).toFixed(2), envelopeByBot: nav.envTimeByBot, evades: nav.evades, repaths: nav.repaths,
+    stuckJumps: nav.stuckJumps, stuckStrafes: nav.stuckStrafes, stuckRepaths: nav.stuckRepaths,
+    trainPushes: trainStats.pushes - (nav.pushes0 || 0), hitWhileWaiting: nav.hitWhileWaiting, noPath: nav.noPath, dead: bots.filter((b) => b.dead).length
+  };
+}
+function tickBots(dt) {
+  for (let i = 0; i < bots.length; i++) {
+    const b = bots[i];
+    if (b.dead) { for (let k = 0; k < INPUT_NAMES.length; k++) b.input[INPUT_NAMES[k]] = false; b.deadT += dt; }
+    else botThink(b, dt);
+    b.speedWas = Math.hypot(b.vx, b.vz); b.groundWas = b.onGround;
+    moveActor(b, b.input, dt);
+    b.tip = approach(b.tip, b.dead ? 1 : 0, dt / CONFIG.soldier.tipTime);                 // rigid tip-over, as the dummies
+    if (b.onGround && !b.dead) b.bob += b.moved / CONFIG.soldier.stride * Math.PI;          // walk bob follows distance walked
+    if (b.groundWas && b.onGround && !b.climbing && b.input.forward && b.moved < 0.3 * Math.max(b.speedWas, 1) * dt) b.blocked++; else if (b.onGround) b.blocked = 0;
+    if (!b.dead) {
+      if (nav.on && actorInEnvelope(b) && !b.riding && !b.crossing && !(b.ride && b.ride.phase !== 'wait')) {
+        nav.envTime += dt; nav.envTimeByBot[b.id] = (nav.envTimeByBot[b.id] || 0) + dt;
+      }
+      updateHitVolumes(b);
+    }
+  }
+  // teammate chevrons: line of sight from the player's eye, checked at chevron.losHz per bot (staggered)
+  const C = CONFIG.soldier.chevron, every = Math.max(1, Math.round(CONFIG.sim.hz / C.losHz)), tick = Math.round(game.time * CONFIG.sim.hz);
+  for (let i = 0; i < bots.length; i++) {
+    const b = bots[i];
+    if (b.team !== 'green' || b.dead) { b.chevron = false; continue; }
+    if ((tick + i) % every) continue;
+    const ex = player.x, ey = player.y + player.eye, ez = player.z, hx = b.x - ex, hy = b.y + 1.65 - ey, hz = b.z - ez, d = Math.hypot(hx, hy, hz);
+    b.chevron = d <= C.range && (d < 0.5 || !raycastWorld(ex, ey, ez, hx / d, hy / d, hz / d, d - 0.3, false));
+  }
+}
+// ---- soldier models (DESIGN 16.2): one InstancedMesh of boxes for every part of every soldier, one for the chevrons ----
+const SOLD = { mesh: null, chev: null, parts: 4 };
+function soldierMeshes() { return [SOLD.mesh, SOLD.chev, TRAIN.vis && TRAIN.vis.mesh, TRAIN.vis && TRAIN.vis.wheelMesh]; }
+function buildSoldiers(scene) {
+  const n = CONFIG.bot.max, K = CONFIG.soldier;
+  SOLD.mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 90, specular: 0x444444 }), n * SOLD.parts);
+  for (let i = 0; i < SOLD.mesh.count; i++) { fxPut(SOLD.mesh, i, 0, -50, 0, 0, 0, 0); SOLD.mesh.setColorAt(i, _fx.c.set('#ffffff')); }
+  SOLD.mesh.castShadow = SOLD.mesh.receiveShadow = true; SOLD.mesh.frustumCulled = false; scene.add(SOLD.mesh);
+  const g = new THREE.BufferGeometry(), w = 0.36, P = [];      // a downward chevron in the xy plane, unit size
+  const quad = (a, b2, c, d) => P.push(...a, ...b2, ...c, ...a, ...c, ...d);
+  quad([-0.5, 0.45, 0], [-0.5 + w, 0.45, 0], [0, -0.05 + w * 0.2, 0], [0, -0.45, 0]);
+  quad([0, -0.45, 0], [0, -0.05 + w * 0.2, 0], [0.5 - w, 0.45, 0], [0.5, 0.45, 0]);
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  SOLD.chev = new THREE.InstancedMesh(g, new THREE.MeshBasicMaterial({ color: CONFIG.target.green, side: THREE.DoubleSide, fog: false }), n);
+  for (let i = 0; i < n; i++) fxPut(SOLD.chev, i, 0, -50, 0, 0, 0, 0);
+  SOLD.chev.frustumCulled = false; scene.add(SOLD.chev);
+}
+function paintSoldier(b) {
+  if (!SOLD.mesh) return;
+  const K = CONFIG.target, main = b.team === 'green' ? K.green : K.tan, dark = b.team === 'green' ? K.greenDark : K.tanDark, i = b.slot * SOLD.parts;
+  SOLD.mesh.setColorAt(i, _fx.c.set(dark)); SOLD.mesh.setColorAt(i + 1, _fx.c.set(main)); SOLD.mesh.setColorAt(i + 2, _fx.c.set(main));
+  SOLD.mesh.setColorAt(i + 3, _fx.c.set(CONFIG.soldier.gunColor));
+  SOLD.mesh.instanceColor.needsUpdate = true;
+}
+const _sm = { root: new THREE.Matrix4(), m: new THREE.Matrix4(), t: new THREE.Matrix4(), q: new THREE.Quaternion(), v: new THREE.Vector3(), s: new THREE.Vector3(), e: new THREE.Euler() };
+function updateSoldierVisuals(alpha, realDt) {
+  if (!SOLD.mesh) return;
+  const K = CONFIG.soldier, m = SOLD.mesh, S = _sm;
+  for (const b of bots) {
+    const x = lerp(b.px, b.x, alpha), y = lerp(b.py, b.y, alpha), z = lerp(b.pz, b.z, alpha), base = b.slot * SOLD.parts;
+    let yaw = b.yaw, back = 0;
+    if (b.climbing) { yaw = Math.atan2(-b.climbing.ex, -b.climbing.ez); back = 0.3; }   // face the surface the string hangs by, flat against the string
+    b.ryaw = b.ryaw + wrapAngle(yaw - b.ryaw) * Math.min(1, (realDt || 1 / 60) * 14);
+    const speed = Math.hypot(b.vx, b.vz), walking = b.onGround && speed > 0.5 && !b.dead;
+    const bob = walking ? Math.abs(Math.sin(b.bob)) * K.bob : 0, roll = walking ? Math.sin(b.bob) * 0.04 : 0;
+    // root: feet position, yaw, then the rigid tip backwards about the back edge of the base
+    S.q.setFromEuler(S.e.set(0, b.ryaw, 0));
+    S.root.compose(S.v.set(x, y, z), S.q, S.s.set(1, 1, 1));
+    if (back) S.root.multiply(S.t.makeTranslation(0, 0, back));
+    if (b.tip > 0) { const hz = K.base[2] / 2; S.root.multiply(S.t.makeTranslation(0, 0, hz)).multiply(S.m.makeRotationX(b.tip * Math.PI / 2)).multiply(S.t.makeTranslation(0, 0, -hz)); }
+    if (roll) S.root.multiply(S.m.makeRotationZ(roll));
+    const bodyH = b.crouching ? K.crouchBody : K.body[1], by = K.base[1] + bob;
+    const put = (k, px, py, pz, sx, sy, sz, rx) => {
+      S.q.setFromEuler(S.e.set(rx || 0, 0, 0));
+      S.m.compose(S.v.set(px, py, pz), S.q, S.s.set(sx, sy, sz));
+      m.setMatrixAt(base + k, S.t.multiplyMatrices(S.root, S.m));
+    };
+    put(0, 0, K.base[1] / 2, 0, K.base[0], K.base[1], K.base[2]);
+    put(1, 0, by + bodyH / 2, 0, K.body[0], bodyH, K.body[2]);
+    put(2, 0, by + bodyH + K.head / 2, 0, K.head, K.head, K.head);
+    // gun: held at the right side, pitched with the aim; slung down along the body while climbing
+    const gp = b.climbing ? -1.3 : clamp(b.pitch, -1.2, 1.2), gy = by + bodyH - (K.body[1] - K.gunAt[1]);
+    const gl = K.gun[2], cz = K.gunAt[2] - Math.cos(gp) * gl / 2, cy = gy + Math.sin(gp) * gl / 2;
+    put(3, K.gunAt[0], cy, cz, K.gun[0], K.gun[1], gl, gp);
+  }
+  m.instanceMatrix.needsUpdate = true;
+  // chevrons over living teammates (Green), billboarded toward the camera
+  const C = K.chevron, ch = SOLD.chev;
+  for (let i = 0; i < CONFIG.bot.max; i++) {
+    const b = bots.find((o) => o.slot === i);
+    if (!b || !b.chevron || b.dead || game.view) { fxPut(ch, i, 0, -50, 0, 0, 0, 0); continue; }
+    const x = lerp(b.px, b.x, alpha), y = lerp(b.py, b.y, alpha) + K.base[1] + K.body[1] + K.head + C.above, z = lerp(b.pz, b.z, alpha);
+    S.q.setFromEuler(S.e.set(0, Math.atan2(camera.position.x - x, camera.position.z - z), 0));
+    ch.setMatrixAt(i, S.m.compose(S.v.set(x, y, z), S.q, S.s.set(C.size, C.size * 0.7, C.size)));
+  }
+  ch.instanceMatrix.needsUpdate = true;
+}
 
 // =====================================================================================================
 // 11. MATCH RULES  (stub: rounds, scoring, freeze time and rematch arrive in round 3)
 // =====================================================================================================
 const game = { phase: 'title', time: 0, timeScale: 1, pointerLock: false, debug: false, view: null,
-  fps: 0, drawCalls: 0, triangles: 0, ready: false };
-function tickMatch(dt) { /* round 3 */ }
+  fps: 0, drawCalls: 0, triangles: 0, ready: false, range: false };
+function tickMatch(dt) { /* round 3B */ }
 function simTick() {
+  for (let i = 0; i < ACTORS.length; i++) savePrev(ACTORS[i]);     // before the train carries riders, so rendering interpolates the carry too
   tickTrain(DT); tickPlayer(DT); tickMoveAudio(); tickWeapons(DT); tickBots(DT); tickMatch(DT);
   game.time += DT;
 }
@@ -2091,11 +3266,13 @@ function applyLiveConfig() {      // CONFIG.camera and CONFIG.fog are re-read ev
   }
   scene.fog.near = F.near; scene.fog.far = F.far;
 }
-function renderFrame(alpha) {
+function renderFrame(alpha, realDt) {
   const p = player;
   renderer.info.reset();           // autoReset is off so the counters cover the shadow pass and the viewmodel pass
   applyLiveConfig();
   updateArc();
+  updateTrainVisuals(game.time - (1 - alpha) * DT);
+  updateRumble();
   if (game.view) {
     const v = VIEWS[game.view];
     camera.position.set(v[0][0], v[0][1], v[0][2]);
@@ -2105,6 +3282,7 @@ function renderFrame(alpha) {
     const sh = arsenal.shake;
     camera.rotation.set(p.pitch + (Math.random() - 0.5) * 2 * sh, p.yaw + (Math.random() - 0.5) * 2 * sh, (Math.random() - 0.5) * sh, 'YXZ');
   }
+  updateSoldierVisuals(alpha, realDt);
   renderer.render(scene, camera);
   renderViewmodel();
   game.drawCalls = renderer.info.render.calls;
@@ -2123,7 +3301,7 @@ function frame(now) {
     if (accumulator >= DT) accumulator = 0;          // drop the backlog rather than spiral
     alpha = accumulator / DT;
   }
-  renderFrame(alpha);
+  renderFrame(alpha, real);
   updateHUD(real);
 }
 function onResize() {
@@ -2145,6 +3323,17 @@ function stringForEdge(A, B) {
   }
   return best;
 }
+// One tick of steering along an edge toward node B with virtual input I (shared by walkPath and the bots). Returns true when it
+// pressed jump (the caller resets its blocked count).
+function aimYaw(p, x, z) { if (Math.hypot(x - p.x, z - p.z) > 1e-3) p.yaw = Math.atan2(-(x - p.x), -(z - p.z)); }
+function steerTo(p, I, B, kind, str, sprint, blocked) {
+  if (p.climbing) { const s = p.climbing; if (Math.abs(B[1] - s.y1) < Math.abs(B[1] - s.y0)) I.forward = true; else I.back = true; return false; }
+  if (p.launched || p.fwdLock) return false;      // ride the launch with no input; release forward after topping out a string
+  if (str && Math.abs(B[1] - p.y) > 1) aimYaw(p, str.x, str.z); else aimYaw(p, B[0], B[2]);
+  I.forward = true; I.sprint = sprint;
+  if (kind === 'jump' && p.onGround && blocked >= 2) { I.jump = true; return true; }
+  return false;
+}
 function walkPath(ids, opts = {}) {
   const NV = CONFIG.nav, N = WAYPOINTS.nodes, p = player;
   const sprint = !!opts.sprint, timeout = opts.timeout || NV.timeout;
@@ -2153,6 +3342,8 @@ function walkPath(ids, opts = {}) {
   for (const id of ids) if (!N[id]) return fail('unknown node ' + id);
   for (let i = 1; i < ids.length; i++) {
     if (!findEdge(ids[i - 1], ids[i]) && WAYPOINTS.edges.some((e) => e.oneWay && e.a === ids[i] && e.b === ids[i - 1])) return fail('edge ' + ids[i] + ' > ' + ids[i - 1] + ' is one way; it cannot be driven backward');
+    const fe = findEdge(ids[i - 1], ids[i]);
+    if (fe && fe.kind === 'ride') return fail('edge ' + ids[i - 1] + ' > ' + ids[i] + ' is a ride edge; only bots drive those (spawnBot, botGoto)');
   }
   if (game.phase !== 'playing') startGame({ pointerLock: false });
   const first = N[ids[0]];
@@ -2160,7 +3351,6 @@ function walkPath(ids, opts = {}) {
   const saved = Object.assign({}, vinput);
   const reached = [ids[0]];
   let t = 0, stuckAt = null, blocked = 0;
-  const aim = (x, z) => { if (Math.hypot(x - p.x, z - p.z) > 1e-3) p.yaw = Math.atan2(-(x - p.x), -(z - p.z)); };
   outer:
   for (let i = 1; i < ids.length; i++) {
     const B = N[ids[i]], A = N[ids[i - 1]];
@@ -2176,13 +3366,7 @@ function walkPath(ids, opts = {}) {
       if (p.launched && (onPad || (nextEdge && nextEdge.kind === 'launch'))) break;                  // the pad fired: node done
       if (t >= timeout || sinceBest > NV.stuckTime) { stuckAt = ids[i]; break outer; }
       for (const k of INPUT_NAMES) vinput[k] = false;
-      if (p.climbing) { const s = p.climbing; if (Math.abs(B[1] - s.y1) < Math.abs(B[1] - s.y0)) vinput.forward = true; else vinput.back = true; }
-      else if (p.launched || p.fwdLock) { /* ride the launch with no input; release forward after topping out a string */ }
-      else {
-        if (str && dy > 1) aim(str.x, str.z); else aim(B[0], B[2]);
-        vinput.forward = true; vinput.sprint = sprint;
-        if (kind === 'jump' && p.onGround && blocked >= 2) { vinput.jump = true; blocked = 0; }
-      }
+      if (steerTo(p, vinput, B, kind, str, sprint, blocked)) blocked = 0;
       const speedWas = Math.hypot(p.vx, p.vz), groundWas = p.onGround;
       simTick(); t += DT;
       if (groundWas && p.onGround && !p.climbing && vinput.forward && p.moved < 0.3 * Math.max(speedWas, 1) * DT) blocked++; else if (p.onGround) blocked = 0;
@@ -2212,9 +3396,16 @@ function init() {
   buildWorld(scene, renderer);
   buildLights(scene);
   buildGrid();
+  buildTrainCars();
+  poseTrain(0);
+  for (const c of TRAIN.cars) { c.px = c.x; c.pz = c.z; c.pfx = c.fx; c.pfz = c.fz; c.plx = c.lx; c.plz = c.lz; c.pyaw = c.yaw; }
+  buildEnvelope();
   buildWaypoints();
+  buildNav();
   buildFx(scene);
   buildTargets(scene);
+  buildTrainVisuals(scene);
+  buildSoldiers(scene);
   buildViewmodels();
   respawnPlayer();
   initInput(canvas);
@@ -2234,7 +3425,17 @@ function init() {
           crouching: p.crouching, climbing: !!p.climbing, health: p.health, surface: p.surface },
         weapon: (() => { const A = arsenal, g = A.guns[A.current]; return { name: A.current, mag: g.mag, reserve: g.reserve, spread: currentSpread(),
           reloading: A.reloadT > 0, scoped: A.scope >= 0.999, scope: A.scope, drawing: A.drawT > 0, grenades: A.grenades, fov: camera.fov }; })(),
-        targets: targets.map((T) => ({ id: T.id, hp: T.hp, down: T.down, pos: [T.x, T.y, T.z], team: T.team })),
+        targets: game.range ? targets.map((T) => ({ id: T.id, hp: T.hp, down: T.down, pos: [T.x, T.y, T.z], team: T.team })) : [],
+        train: { s: +TRAIN.s.toFixed(4), speed: CONFIG.train.speed, lap: +(TRACK.length / CONFIG.train.speed).toFixed(3), length: +TRACK.length.toFixed(3),
+          whistles: TRAIN.whistles, rumble: { gain: +rumble.g.toFixed(4), rate: +rumble.rate.toFixed(4) },
+          cars: TRAIN.cars.map((c) => ({ type: c.type, pos: [+c.x.toFixed(3), 0, +c.z.toFixed(3)], yaw: +c.yaw.toFixed(4), vel: [+c.vx.toFixed(3), +c.vz.toFixed(3)],
+            sFront: +modL(c.sF).toFixed(3), claim: c.claim })) },
+        riding: player.onGround && player.ground && player.ground.train ? player.ground.id : null,
+        bots: bots.map((b) => ({ id: b.id, name: b.name, team: b.team, pos: [b.x, b.y, b.z], hp: b.hp, state: b.botState, node: b.node || b.lastNode,
+          nextNode: b.nextNode || null, edge: b.edge ? b.edge.key : null, edgeKind: b.edge ? b.edge.kind : null, path: b.path.slice(b.pi),
+          riding: b.onGround && b.ground && b.ground.train ? b.ground.car.type : null, ridePhase: b.ride ? b.ride.phase : null, climbing: !!b.climbing,
+          weapon: b.weapon, stuckTime: +b.stuckT.toFixed(3), dead: b.dead, crouching: b.crouching, yaw: b.yaw, task: b.task, chevron: b.chevron,
+          inEnvelope: actorInEnvelope(b) })),
         fps: game.fps, drawCalls: game.drawCalls, triangles: game.triangles };
     },
     teleport: (x, y, z, yaw, pitch) => { placePlayer(x, y, z, yaw, pitch); return true; },
@@ -2258,8 +3459,8 @@ function init() {
     routes: ROUTES,
     walkPath,
     validateWaypoints,
-    spawnBot: () => false,          // round 3
-    skipRound: () => false,         // round 3
+    spawnBot: (team, nodeId) => spawnBot(team, nodeId),
+    skipRound: () => false,         // round 3B
     setTimeScale: (n) => { game.timeScale = Math.max(0, +n || 0); return game.timeScale; },
     damageLog,
     rescueLog,
@@ -2291,7 +3492,35 @@ function init() {
     shotLog,
     audioLog,
     resetTargets: () => resetTargets(),
-    grenades: grenadesLive
+    grenades: grenadesLive,
+    // ---- round 3A (DESIGN.md 16.7) ----
+    trainClearance: (opts) => trainClearance(opts),
+    trainRescueLog,
+    startNavTest: (opts) => startNavTest(opts),
+    navStats: () => navStats(),
+    stuckLog,
+    range: (on) => setRange(on),
+    seed: (n) => seedBots(n),
+    // extras for testing
+    botGoto: (id, nodeId, opts) => botGoto(id, nodeId, opts),
+    removeBots: () => removeBots(),
+    stopNavTest: () => { nav.on = false; for (const b of bots) b.navTest = false; return true; },
+    killBot: (id) => { const b = bots.find((o) => o.id === id); if (!b || b.dead) return false; killSoldier(b); return true; },
+    trainGaps: (limit) => trainGaps(limit),
+    // test-only static blocks (collider only, no visual) to build wedges beside the track; removed again with removeTestBlocks
+    addTestBlock: (x0, x1, z0, z1, h) => { const c = cbox('test.block.' + COLLIDERS.length, x0, x1, z0, z1, 0, h || 3, 'card'); c.color = CONFIG.color.cover; c.test = true; buildGrid(); return c.id; },
+    removeTestBlocks: () => { for (let i = COLLIDERS.length - 1; i >= 0; i--) if (COLLIDERS[i].test) COLLIDERS.splice(i, 1); buildGrid(); return true; },
+    trainStats,
+    trainWhistles: TRAIN.whistleLog,
+    fxStats: () => ({ tracers: fx.tracers.filter((t) => t.life > 0).length, particles: fx.parts.filter((q) => q.life > 0).length, handVisible: vm.hand.visible }),
+    inEnvelope: (x, z, dilated) => inEnvelope(x, z, dilated !== false),
+    trackS: (x, z) => trackS(x, z),
+    trackPoint: (s) => trackPoint(s, {}),
+    trainAt: (t) => { const o = []; const T = CONFIG.train; for (let i = 0; i < T.consist.length; i++) { const c = poseCar({}, trainHeadS(t) - i * (T.carLen + T.gap)); o.push({ type: T.consist[i], x: c.x, z: c.z, yaw: c.yaw }); } return o; },
+    deckWait: (rid, t) => { const w = deckWait(rid, t === undefined ? game.time : t, true); return { wait: w, car: _deck.car ? _deck.car.type : null }; },
+    astar: (a, b, opts) => { const r = astar(a, b, opts); return r ? { nodes: r.nodes, kinds: r.edges.map((e) => e.kind), cost: r.cost } : null; },
+    nav: () => ({ stop: NAV.stop.length, nodes: NAV.ids.length, notStronglyConnected: NAV.outside }),
+    bots
   };
   lastFrame = performance.now();
   renderFrame(1);

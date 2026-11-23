@@ -493,3 +493,199 @@ bursts at (112.68, 0.02, 80.6), dummy 21 keeps 100); 245 random throws, 0 starte
 
 Re-test: feel tester, SMG by range (strafing at 30 and 40 especially) and the new gains; visual tester, Tan with the new fog,
 first-use hitches, tracers; bug tester, R2-7 and the seat edge, routes.
+
+## Round 3A: train, soldiers and bot movement (DESIGN.md 16.1, 16.2, 16.3, 16.7 3A list, 16.8, 16.9)
+
+`index.html` is now 233,131 bytes (was 148,119). No combat, roles, match rules, weapon pick, HUD or menus yet. New scripts, all in
+`tests/`: `builder_r3a_player.cjs` (lap, whistles, boarding, deck and roof laps, tunnel scrape, pushes, wedges),
+`builder_r3a_nav.cjs` (30 minute nav test per seed), `builder_r3a_checks.cjs` (bullets, grenade, soldiers, carry-overs, draw calls,
+sim cost), `builder_r3a_regress.cjs` (routes, `validateWaypoints`, every edge), `builder_r3a_audio.cjs` (real click, Web Audio
+starts), `builder_r3a_stuck.cjs` (stuck ladder, leaving the envelope), `builder_r3a_seed.cjs`, `builder_r3a_range.cjs`,
+`builder_r3a_longrender.cjs`, `builder_r3a_smoke.cjs`, `builder_r3a_navquick.cjs`, `builder_r3a_shots.cjs`, `builder_r3a_climbshot.cjs`.
+Screenshots: `screenshots/round3/builder_r3a_*.png`.
+
+### What was built
+
+- **Train** (section 7 of the code). Engine, boxcar, flatbed, gondola, caboose. Every car front sits a fixed 13.5 of track behind
+  the one ahead and moves at exactly 4 u/s. The rear is the centre-line point exactly 12 behind in a straight line, so front and rear
+  are both on the centre line. `s = s0 + 4 * time` (`CONFIG.train.s0` 30), so the timing is learnable and identical every run. The
+  train runs whatever the game phase.
+  Colliders are oriented boxes (local u along the car, v to its left). Engine: hood (top 5) plus cab (top 6). Boxcar and caboose:
+  body (top 5). Flatbed: deck (top 1.2) plus a 3 x 3 x 3 cargo block. Gondola: deck plus walls to 2.4 with a 3-wide door in the middle
+  of each side. The parts join the existing wall, ground, ceiling, blocker and ray queries while `TQ.on`. Static-only callers turn it
+  off: `validateWaypoints`, `trainClearance` and the push exit tests.
+- **Riding.** A soldier standing on a car is carried by the car's motion each tick, before moving, and turns with it (yaw follow).
+  On a car the velocity is relative to the car. Stepping or jumping off adds the car's point velocity; landing on a car removes it.
+  The interpolation snapshot is taken before the carry, so riders render smoothly.
+- **Push, never kill** (`trainPush`). The soldier goes sideways out along the car's v axis toward their side. If static geometry blocks
+  that spot or the straight path to it, they go ahead of the car's front. If both stay blocked for 0.3 s, they are placed at the nearest
+  free spot outside the swept envelope and logged in `trainRescueLog`. While a soldier is in a blocked push, the wall pass leaves out
+  car walls (the push logic owns that overlap), so a car can never shove a soldier through a thin wall.
+  No damage from the train in any case. Dead bodies are pushed too, but never logged.
+- **Tunnel scrape** comes out of the existing wall pass. A standing roof rider's head band hits the roof's front face at z 68, so they
+  slide back along the car and fall into the gap behind it, keeping the train's speed. The next car pushes them sideways into the
+  tunnel's side clearance.
+- **Bullets** stop at car parts (raycast in car space). Impacts use the car colour; no decals on cars (decals are static).
+  **Grenades** bounce in the car's frame and keep its velocity. Tangential speed relative to the car is kept at `train.grenadeGrip`
+  0.35, so a side hit picks up about 65 % of the car's speed. A grenade that comes to rest on a car rides with it. A car that drives
+  into a grenade knocks it out through the nearest face.
+- **Swept envelope.** One car is swept round the oval (step 0.1) into two 0.25 grids: the exact footprint, and the footprint dilated by
+  0.6 (a soldier's body plus the cell size). `trainClearance()` sweeps every static collider against the real car rectangles.
+  `trainClearance({band: true})` checks DESIGN's nominal band instead (13.5..19.5 round each curve centre, 2 either side of the straights).
+- **Train audio.** A looping rumble (low noise and a 46 Hz hum) whose gain follows the nearest car (inverse distance) and whose pitch
+  follows doppler (fake sound speed 60). Wheel clacks: when a car's leading axle crosses a rail joint (every 6), that car's four axles
+  click in turn: one logged `train_clack` event with four hits, within 45 units of the player. `train_whistle` when the engine's centre
+  passes z 80 on either straight. `sfx` now takes volume, pitch and delay (one value or a list).
+- **Soldiers.** The dummy blockout (base, body, head) plus a blocky gun in team colour (glossy Phong). One InstancedMesh holds every
+  part of every soldier (4 instances each), plus one chevron mesh. Animation: walk bob and sway from distance walked; crouch lowers the
+  body and head (code path only, bots never crouch in 3A); the gun pitches with `pitch`; on a string the soldier faces the surface,
+  sits flat against the string, gun slung down.
+  Death is a rigid tip backwards about the back edge of the base (0.25 s) with plastic chips. Bodies stay and block neither movement
+  nor bullets. Hit volumes are oriented head and body boxes, updated each tick with no allocation, and used by bullets and grenades.
+  A green chevron over living Green bots within 60 units with line of sight, checked at 10 Hz per bot, staggered.
+  The 21 dummies are out of play and hidden; `__game.range(true)` brings them back (hit volumes, drawing, state).
+- **Bots** (section 10). Each bot is an actor with the player's fields, moved by the same controller. `tickPlayer` became
+  `moveActor(actor, input, dt)`; the player calls it with the real input. Steering is the shared `steerTo` that `walkPath` now also
+  uses. A* runs over the waypoint graph with DESIGN costs (length; climb x1.5, ramp x1.2, jump +4, cross +2; launch and drop one way).
+  It uses typed arrays and a binary heap; paths without ride edges are cached. Ride edges (one way) are costed as the walking length
+  plus the expected deck wait x 5 at the estimated arrival, and skipped when the wait passes 8 s.
+  Strings and launches work exactly as in `walkPath`. A cross edge starts only if no car will reach that stretch of track within 3 s
+  (track range of the crossing, train span, 2-unit margin). Bots sprint across. A bot inside the dilated envelope that is not riding,
+  crossing or climbing walks to the nearest point outside it at once.
+- **Ride edges** `ride.w` and `ride.e`, with wait nodes `w.ride.w` (46.5, 0, 104) and `w.ride.e` (73.5, 0, 56), linked by walk edges
+  to `s.c.x` and `n.c.y`.
+  Phases: wait at the node (leave if the next unclaimed deck is more than 8 s away); board (run for 0.1 s and jump across, timed so
+  the deck's ride spot passes the bot: flatbed 3.75 behind the cargo block, gondola centre through the door); ride to the spot; step
+  off when the deck centre passes z 58 / 98, toward (46.5, 0, 56) / (74, 0, 100); walk to `n.c.x` / `s.c.y`. One bot per deck car per
+  pass (`car.claim`).
+- **Stuck ladder** as DESIGN 16.3: 1.5 s jump, 2.5 s strafe 0.5 s, 3.5 s repath from the nearest node reachable in a straight line,
+  6 s placed at the last reached node and logged. If a repath leads back onto the edge it stalled on, the time already spent counts,
+  so a second stall there goes straight on to the logged placement instead of looping. A spring launch counts as progress.
+- **Nav test**: `startNavTest({bots, seed})` spawns bots on random floor nodes, alternating teams. Each task is one of:
+  - a timed ride, when the bot would reach a wait node with a deck under 8 s away;
+  - the least used route in 4.4, walked node by node;
+  - the least used edge direction;
+  - a random stop node.
+
+  `navStats()` reports per-edge-direction counts, kind counts, route counts, rides, crossings, waits, stuck and rescue counts, envelope
+  seconds, evades, repaths, train contacts and contacts while waiting. Stop nodes exclude the pad and anything in the envelope.
+  Bot randomness comes from `seed(n)`: the same seed on two fresh page loads gave identical bot positions after 300 s.
+- **Hook** (16.7 3A): `state().train {s, speed, lap, length, whistles, rumble, cars [{type, pos, yaw, vel, sFront, claim}]}`,
+  `trainClearance()`, `trainRescueLog`, `state().bots [{id, name, team, pos, hp, state, node, nextNode, edge, edgeKind, path, riding,
+  ridePhase, climbing, weapon, stuckTime, dead, crouching, yaw, task, chevron, inEnvelope}]`, `spawnBot(team, nodeId)`, `startNavTest`,
+  `navStats`, `stuckLog`, `range(on)`, `seed(n)`, and `state().riding` for the player.
+  Extras: `botGoto(id, node, {ride, via})` (`via: 'ride.w'` forces a ride), `removeBots`, `stopNavTest`, `killBot`, `bots`,
+  `trainGaps`, `trainStats`, `trainWhistles`, `fxStats`, `inEnvelope`, `trackS`, `trackPoint`, `trainAt(t)`, `deckWait(ride, t)`,
+  `astar`, `nav()`, and the test-only `addTestBlock(x0, x1, z0, z1, h)` / `removeTestBlocks()` (collider only) for building wedges.
+- **Carry-overs (16.8).**
+  1. No tracer at all while scoped.
+  2. Pistol shot gains a low body (triangle 230 to 70 Hz, g 0.6; lowpass noise 1100 to 260, g 0.55); jump gain 0.5.
+  3. A green hand holding the red firecracker with a yellow fuse rises while a grenade is aimed (the gun still drops).
+  4. Crayons shortened: see deviation 1.
+  5. Tunnel roof `6.5..8`, walls `0..6.5`.
+
+### Measured
+
+| Check | Result |
+| --- | --- |
+| Console | `errors` empty on load, through 2 x 30 simulated minutes of nav test, through 5 minutes rendering every 0.5 s, and with a real click (audio running) |
+| `trainClearance()` | `[]`. `{band: true}` also `[]` with the crayons at z 33 (four crayons inside the band at DESIGN's z 33.5). Tightest gaps to the swept path: crayons 0.845, `n.E-c` 1.31, tunnel walls 1.40 |
+| Lap | 54.217 s measured at 1/60 s resolution (216.814 / 4 = 54.204) |
+| Whistles | 5 in 120 s, at 0.87, 27.97, 55.07, 82.17, 109.27 s, alternating west and east: twice a lap |
+| Board a flatbed from the floor (forward 0.1 s, jump) | riding `train.2.flatbed.deck`, health 100 |
+| Full lap on the deck, no input | still riding at the end, never left the car, yaw turned 1 full turn, damage 0 |
+| Jump off a riding deck | world velocity (0, -4) = car velocity |
+| Full lap crouched on the boxcar roof (through the tunnel) | still riding, never left, damage 0 |
+| Standing on boxcar roof / engine cab / caboose into the tunnel | stopped at z 67.6, scraped off, then (boxcar and engine) pushed sideways to (79.42, 0, 69.73) in the side clearance; caboose rider ends behind the train. Damage 0, no rescue; walked 7.3 units away afterwards |
+| On the track ahead of the train | west straight: 1 side push. 1.2 off centre: 1 push to its own side. North curve: 55 side pushes. South curve outer side: 55. In the tunnel: 1 push into the side clearance (x 79.42). Tunnel, 1.5 west: 1 push to x 74.58. All damage 0, no rescues |
+| Against each crayon's track-side face | not touched (0 pushes) |
+| Wedge: test block right beside the straight | pushed ahead 51 ticks, then out sideways just past the block; damage 0, no rescue |
+| Wedge: closed box of test blocks (both sides and ahead blocked) | 99 ahead pushes, then blocked 18 ticks (0.3 s), then 1 `trainRescueLog` entry placing the player outside the envelope. This is the forced fallback case; the real map produced none |
+| `trainRescueLog` | 1 entry, from the closed test box only |
+| Bullets | rifle shot at a passing boxcar hits `train.1.boxcar.body` at 5.0 and the Tan bot behind keeps 100; after the train passes, the same shot hits the bot for 26 |
+| Soldiers | sniper headshot 180, bot down and tipped; the next shot through the body hits the shoebox behind it; a Green bot takes 0 from the player |
+| Grenade off a moving boxcar | velocity (-17.99, -4.69, 0) before, (8.1, -1.77, -2.6) after; car (0, -4) |
+| Nav test, 10 bots, 30 simulated minutes, seed 1 | kinds: walk 5675, ramp 621, climb 264, drop 208, jump 156, launch 26, cross 322, ride 53. 340 of 340 edge directions used, the least used 6 times. All 18 routes used, 11 to 36 times each. Rides: `ride.w` 23, `ride.e` 30, 0 aborts, 26 give-ups (deck claimed or wait over 8 s). Crossings by edge 18 to 81. Stuck 0. Train rescues 0. Envelope seconds while not riding or crossing 0. Train contacts with bots 0; while waiting 0. Deaths 0. 5.2 s wall time |
+| Same, seed 2 | kinds: walk 5757, ramp 579, climb 245, drop 186, jump 137, launch 23, cross 334, ride 61. 340 of 340 directions, least used 6. Routes 12 to 29 each. Rides 30 / 31, 0 aborts, 31 give-ups. Crossings 25 to 80 each. Stuck 0, rescues 0, envelope 0 s, train contacts 0, deaths 0 |
+| Stuck ladder (test wall across `n.c.3 > n.c.4`) | jump at 1.5 s, strafe at 2.5, repath at 3.5. Back on the same edge it stalls again; at 6 s total stall it is placed at `n.c.3`, with one `stuckLog` entry |
+| Bot put on the west straight (train far) | sprints out the east side in 0.4 s, 0 train contacts |
+| Draw calls | 15 with 10 soldiers and the whole train in view; 17 while firing the rifle; 14 at `spawn_green`. 30,902 triangles. Software rendering |
+| Sim cost per tick (software headless, relative only) | 0.011 ms with no bots, 0.051 ms with the 10-bot nav test |
+| Audio (real click, Web Audio prototypes wrapped) | 157 sources started over one whistle and train pass, 0 thrown errors. Rumble gain 0.35 beside the train, 0.028 at (110, 150); pitch 0.95 to 1.06. Pistol shot starts 4 sources, jump and land 11 |
+| Routes | all 18 ok walking and sprinting, same times and end heights as round 2, no damage. `validateWaypoints()` `[]`. All 338 single-edge walks (every non-ride edge in each allowed direction) ok. `walkPath` refuses a ride edge with an error |
+
+Screenshots looked at:
+- `builder_r3a_train_floor.png`: engine coming up the west straight (cab and windscreen at the front, yellow stripe, headlight),
+  boxcar and flatbed behind.
+- `builder_r3a_bot_riding.png`: a Tan bot standing on the flatbed behind the blue cargo block, with the gondola and caboose behind.
+- `builder_r3a_bot_group.png`: Green and Tan bots walking up the west lane with guns in hand; small green chevrons over the Green ones only.
+- `builder_r3a_roof_into_tunnel.png`: the roof rider's view of the tunnel face.
+- `builder_r3a_grenade_hand.png`: the hand and firecracker at the lower right with the arc preview.
+- `builder_r3a_soldier_down.png`: a tipped soldier lying rigid.
+- `builder_r3a_bot_climbing.png`: a bot on a shelf string.
+
+### Waypoints and DESIGN items done differently, and why
+
+1. **Crayons C-a end at z 33, not 33.5** (mirrored: from z 127). At 33.5 the near corner is at radius 19.24 from the curve centre.
+   That is inside the 13.5..19.5 band DESIGN 16.1 says no static collider may sit in, and only 0.35 from the true swept path, narrower
+   than a soldier (0.8). Measured at 33.5: two of three soldiers standing there were wedged and logged in `trainRescueLog`. At 33.0
+   the corner is at 19.73 and the gap is 0.845: nobody standing there is touched.
+2. **New drop edges `m.tunnel.top > m.c.e` and `m.tunnel.top > m.e.w`.** The tunnel top had no way out, so a bot that took
+   `tunnel_drop` could never leave. Both drops are 8, under the safe 10.
+3. **Wait nodes and ride edges added as DESIGN 16.3** (`w.ride.w`, `w.ride.e`, edges kind `ride`, one way). No existing node moved.
+4. **Engine cab at the front** (diesel style). With the taller cab behind the hood, a standing hood rider scraped by the tunnel roof
+   would be squeezed between the roof edge and the cab. Cab first, the rider drops from cab to hood and slides off the back.
+5. **Gondola end walls** added (same 2.4 height), so a rider cannot walk off the end into the gap. Doors stay 3 wide in each side.
+6. **One InstancedMesh for every soldier part**, not one per part: 2 draw calls with shadows instead of 8.
+7. **Car spacing is fixed along the track** (fronts 13.5 apart), so every car moves at exactly 4 u/s. The gap is 1.5 on the straights
+   and about 1.24 on the curves, where the inner corners of neighbouring cars overlap slightly (visual only).
+8. **Push band for airborne soldiers** ignores parts within `move.airStep` of the feet, matching the wall pass that lets an airborne
+   soldier mantle a 0.2 ledge. Before this, every boarding bot registered a 0.1 "push" as it rose past the deck edge.
+9. **Friendly fire is already off** for the player's bullets and grenades against Green bots (16.4 lists it for 3B). It was one line
+   and testing deaths needed a rule.
+10. **Clack logging**: one `train_clack` audioLog entry per car per rail joint, only within 45 units. Near the track that is about
+    3.3 entries a second, so the 200-entry `audioLog` holds about one minute. Scan it at least once a minute, or count whistles with
+    `state().train.whistles` and `__game.trainWhistles`.
+
+### Design problems found (for the lead)
+
+- **Ride edges are never cheaper than walking.** Riding `ride.w` costs about 50 plus the wait x 5; walking the west lane from `s.c.x`
+  to `n.c.x` costs about 52. So plain A* (`astar(..., {ride: true})`) picks the ride only when a deck is under about 0.4 s away. The
+  nav test forces timed ride tasks. In 3B a role that should ride needs to ask for it (`botGoto(id, node, {via: 'ride.w'})`), or the
+  costs need changing.
+- **Cross edges block for a long time.** The train spans about 66 of the 217 units of track; add 12 for the 3 s look-ahead and margins,
+  and a crossing is closed about 38 % of the time. Bots waited 157 times for 1,571 s in 30 minutes (seed 1), about 10 s per wait.
+- **Ride throughput is low.** Two deck cars, one rider each, about 2 rides per lap per edge at most (53 and 61 per 30 minutes with 10 bots).
+
+### Known weak spots
+
+- Soldiers do not collide with each other or with the player; bots walk through each other at shared nodes and wait spots.
+- Bots never crouch or sprint (except across the track) in 3A; the crouch animation path has not been seen in a screenshot.
+- The gondola boarding is timing-based (run 0.1 s, jump). It boarded 116 times in the two nav runs with 0 misses, but has not been
+  tried with lag or with other soldiers in the door.
+- Rumble pitch steps when the nearest car changes (0.95 to 1.06 within a pass). Nobody has listened to the train sounds.
+- Chevron line of sight is refreshed at 10 Hz, so a chevron can lag a tenth of a second behind a corner.
+- `updateSoldierVisuals` allocates a small closure per soldier per rendered frame (render only, not the simulation).
+- `addTestBlock` colliders have no visual and exist only for wedge tests.
+
+### What to re-test
+
+- **Bug tester:**
+  - push and ride everywhere on the oval, standing, crouching and jumping;
+  - the tunnel scrape from every car, the side clearance, and jumping on and off moving cars;
+  - grenades on and against cars; bullets through the car gaps;
+  - `trainRescueLog` must stay empty on the real map;
+  - the nav test on more seeds, including `stuckLog`;
+  - the new drop edges; walking into a moving car from the side and the end;
+  - dummies only with `range(true)`.
+- **Feel tester:**
+  - lap timing and whistle as a cue;
+  - boarding a deck from the floor (jump timing);
+  - riding the curves (yaw follow);
+  - the scrape; cross waits from a bot's point of view;
+  - pistol body and jump gain.
+- **Visual tester:**
+  - train palette and readability, car overlap on the curves;
+  - soldiers at range (Green against Tan), the tip-over, chevrons;
+  - the grenade hand;
+  - draw calls with 10 soldiers and the train in view.

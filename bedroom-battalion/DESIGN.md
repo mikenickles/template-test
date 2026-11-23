@@ -544,7 +544,7 @@ zone, damage, distance), `audioLog` (last 200 sound events by name, logged even 
 2. Draw-call and triangle counters include the shadow pass (`renderer.info.autoReset = false`, manual reset per frame).
 3. `player.stepSmooth` lowered to 9 to calm the camera on book stairs.
 4. Named views: `west_lane` eye (42, 1.6, 24); `desk_top` eye (97.5, 27.6, 66).
-5. Jumbo crayons C-a turned north-south so they stop masking the firing slits: `55.7..57, 28..33.5` and `63..64.3, 28..33.5`, h 1.3, mirrored (round 3: shortened from z 29..38 so they clear the train's swept path on the curve).
+5. Jumbo crayons C-a turned north-south so they stop masking the firing slits: `55.7..57, 28..33` and `63..64.3, 28..33`, h 1.3, mirrored (round 3: shortened from z 29..38 so they clear the train's swept path on the curve with a 0.85 gap).
 6. Graybox bed top drawn in blanket blue `#3D5A99` (sides stay `#E9E4DA`), pillows keep their pale colour; bed underside darkened.
 7. Bear head pulled back to `6..14, 39..45` so the body gives a 4-deep ledge on the way down.
 8. Desk apron: panels `95.5..96, 64..75, 17..24.5` and `95.5..96, 85..96, 17..24.5` close the drop under the desk top beside each ruler. They sit outside the ruler footprint (`92.5..95.5`) so every ruler lane still reaches the top.
@@ -783,3 +783,17 @@ shelves. All bot randomness comes from the seeded generator so a seed reproduces
 Ten soldiers and the train must stay inside the budget: target under 40 draw calls including shadows during a full
 firefight. Bot logic must cost little: line-of-sight raycasts throttled and staggered, paths cached, no per-tick allocation.
 `runMatch` on a full match must finish in a few minutes headless.
+
+### 16.10 Lead decisions after 3A (override 16.1 to 16.4 where they differ)
+
+1. Crayons end at z 33.0 (and 127.0 mirrored), as the builder chose: 33.5 left a 0.35 gap to the swept path and caused rescues.
+2. The tunnel top gets two one-way `drop` edges to m.c.e and m.e.w (8 units, within safe fall height), as the builder added.
+3. Riding is a tactic, not a shortcut: at the given speeds it is never faster than walking. In 3B a Centre-role bot takes its
+   team's ride edge (ride.e for Green, ride.w for Tan) in about 35 % of rounds when the expected wait is under 6 s, as moving
+   cover into the enemy half. Other bots ride only as a flank when the route cost including the wait is within 15 % of walking.
+4. Crossing window: a bot starts a `cross` edge when no car will reach the crossing point within 1.5 s (was 3 s), which is the
+   time to cross the 4-unit envelope plus margin. A* adds the expected wait at a closed crossing to the edge cost, so a bot
+   that would wait long picks another lane.
+5. Soldiers get soft separation: soldiers (including the player) push apart gently when closer than 0.9, never through walls,
+   so bots do not stack on one node. Bodies of eliminated soldiers do not collide.
+6. Bots crouch in cover and while scoped as snipers (16.4 already says so); the crouch pose must be visible.
