@@ -1,3 +1,129 @@
+# Round 4 (art pass): regression and new systems
+
+**Gameplay is unchanged.** On the same inputs, the 4B snapshot plays exactly like round 3, to the millisecond:
+- the colliders' shapes and positions, waypoints, routes, hit volumes and every gameplay CONFIG section are identical;
+- all 68 route legs take the same time;
+- three nav tests give identical bot positions after 300 s;
+- nine `runMatch` seeds give identical matches.
+
+No blocker or major bug. 2 minor findings plus notes. Console errors and warnings: none in any run.
+
+Build tested: `snapshots/index_r4b.html` (476,185 bytes, commit 8886603). Round 3 reference: `git show
+c90ee3c:bedroom-battalion/index.html` (326,450 bytes). Load time to `__game.ready`: about 0.4 s for round 3 and 0.4 to
+0.6 s for 4B in my runs (the build reports 1.40 s since page start).
+
+## Regression table
+
+| Check | Round 3 (c90ee3c) | Round 4B (8886603) | Same? |
+| --- | --- | --- | --- |
+| `colliderHash()` algorithm on `__game.colliders` (the hook does not exist in round 3, so I ran the 4B FNV-1a over the same fields) | `ff03369f` | `ff03369f` (and `colliderHash()` returns `ff03369f`) | yes |
+| Collider geometry, kind, surface and ids, 360 colliders (my own digest) | `a1d4c111dc3e` | `a1d4c111dc3e` | yes. Only the colour fields changed (`color`, `colorTop`, `colorBottom`), and `colliderHash()` ignores them |
+| Waypoint nodes / edges / routes | `d8c1418a` / `6fc63fde` / `729e39cd` | the same | yes |
+| Hit volumes: 2,100-ray grid at a standing soldier from four sides, plus the 21 range dummies | 216 head, 952 body | 216 head, 952 body, the grid identical ray for ray | yes |
+| CONFIG `player, move, climb, fall, spring, sim, input, room, route, track, spawn, nav, gun, weapons, grenade, target, train, bot, rides, navTest, difficulty, ai, match, roles, regions` | | | all identical |
+| CONFIG `soldier` | | `bodyTint` 0.5 to 0.7 (17.10), new `hop`, `shininess`, `specular`, `baseShade`, `shoulder`, `poses` | visual only |
+| CONFIG `light, fx, viewmodel, audio, color, art` | | changed | visual and audio |
+| `validateWaypoints()` / `trainClearance()` | `[]` / `[]` | `[]` / `[]` | yes |
+| 18 routes, up and down, walk and sprint (68 legs, `walkPath` plus my end check) | 68 ok | 68 ok, every time identical to the millisecond | yes |
+| Raw-input gate (`bug_04_gate_manual.cjs`) | | 82 of 82 | |
+| Nav test, 10 bots, seeds 11 / 23 / 37, 300 s | 0 stuck, 0 rescues | bot positions after 300 s identical to 0.01 | yes |
+| `runMatch`, seeds 600 to 602 on each difficulty (9 matches) | | identical winner, score, every round's reason, length and kills, and the kill/death table. 0 stuck, 0 idle, 0 train rescues, 0 errors. Wall time 1.6 to 4.3 s against 1.7 to 4.0 s | yes |
+| Stepped matches with my liveness detector (16.11), seeds 801 and 802 per difficulty | | 6 matches: 0 stationary 37 s+, 1 pause of 15 s (Recruit seed 801, like R3-7/R3-8), `idleLog` / `stuckLog` / `trainRescueLog` empty, `runMatch` identical to the stepped match every time | as round 3 |
+| Train riding, every car type | | 18 of 18 rides as in 3A: drift 0.001, yaw follows exactly, no damage | yes |
+
+## Findings
+
+### R4-1. MINOR: the climbing pose draws the torso up to 0.29 outside the soldier's hit volume
+
+`__game.soldierFit()` on the 4B snapshot reports:
+- `climb.upper`: maxOut 0.292, with 412 of 2,928 vertices more than 0.15 outside.
+- `climb.arms_climb`: 0.321, with 264 vertices outside.
+- `climb.legsClimb`: 0.18.
+- Standing and kneeling bodies are within 0.14.
+
+17.1 asks every shootable visual to sit within 0.15 of its hit volume. A climbing soldier, pressed flat against the
+string with arms up, is drawn up to 0.3 toward the string from where its hit volume is. Shots at the drawn edge of a
+climber can miss.
+
+The arms and gun in hand also stick out a long way. Arms with rifle: up to 0.51 standing and 0.59 kneeling. Arms with
+sniper: up to 0.80. Arms with pistol and SMG: 0.22 to 0.41. If held guns count as decoration with no gameplay meaning,
+this part is acceptable; that is for you to decide. Repro: `__game.start({pointerLock:false}); __game.soldierFit()`.
+
+### R4-2. MINOR (test hook, still open from R3-9): `start()` after `runMatch` leaves the player dead
+
+`__game.runMatch({difficulty:'regular', seed:1}); __game.start({pointerLock:false})`: the player has 0 hp, `dead` is
+true, and the match phase is still `matchEnd`, so `walkPath` fails. This was already open as R3-9 and was expected to stay
+open in a frozen-gameplay round. Quit to title first and it works.
+
+## New art systems (what passed)
+
+- **Culling and popping** (`bug_r4_04_popping.cjs` + `.py`):
+  - The camera turned through 360 degrees in 1.5-degree steps at five spots (west lane, bed top, desk top, top shelf,
+    ruin), and stayed still while the train passed on the west straight and the north curve: 1,920 frames.
+  - Each frame was aligned with the previous one (best shift within 8 px) and the changed pixels counted.
+  - No frame showed a jump in changed pixels, so nothing popped in or out.
+  - Separately, rays at the train from beside the track hit a drawn car every time a car collider was hit.
+- **Collider sweep** (`bug_r4_03_cull_sweep.cjs`): 6,783 rays from 864 camera poses. About 1 % of collider hits had no
+  drawn mesh along the same ray. I checked these by rendering the frame: the object was drawn. They come from the
+  test-only `sceneRaycast`, which never reports instanced meshes (blocks, soldiers), and from rounded art edges inside the
+  collider box. The ball and globe are the accepted 17.11 exceptions. So culling is not hiding anything, but
+  `sceneRaycast` cannot be used to check instanced art.
+- **Soldiers** (`bug_r4_05_soldiers_vm.cjs`), checked on rendered pixels at each soldier's projected chest and head:
+  - Standing soldiers show their team colour.
+  - Two seconds after death the head point shows background and the chest reads grey, so bodies tip over and grey out.
+  - At the next round's freeze every Green is standing and green again.
+  - After `removeBots()`, and after a full `runMatch` then quit and free play, the frame matches the empty-room frame
+    (0 and 177 changed pixels; the 177 are the wider sniper crosshair). No ghost or floating parts.
+- **Decals:** 3,000 SMG shots on wood, fabric, plastic, book and card plus 40 grenade bursts. The decal ring index
+  never passed 63 (pool 64) and the scorch index stayed under 8 (pool 8). Geometries went 65 to 66, textures 6 and
+  shader programs 25 did not change.
+- **Viewmodel:** the four weapons are clearly distinct in the lower-right region (5,280 to 9,871 px differ pairwise).
+  Reloading changes it, scoping hides it, and switching through three weapons mid-fire leaves the drawn gun hidden during
+  the draw. While spectating, the HUD and the viewmodel show the watched bot's SMG (40/120).
+- **Menus and flow** (`bug_r4_06_flow_leaks.cjs`, real mouse and keyboard): three cycles of title, Play, Esc, Resume,
+  10 s of play, match end, Enter rematch, match end and Esc to title.
+  - Event listeners on window, document and canvas stayed the same in every cycle.
+  - JS heap stayed between 8.4 and 8.9 MB, DOM nodes at 416 to 420, and geometries, textures and programs at 64, 6 and 25.
+  - Each single key press, wheel notch and G press acts once.
+  - Losing pointer lock pauses the game. A click on the canvas does not resume; the Resume button does, which matches
+    the builder's deferred note about browsers refusing an immediate re-lock.
+  - Resizing (640x360, 1280x720, 960x540, 1280x400, 500x800) keeps the canvas at the window size. HUD text scales from
+    22 px up to 29 px at 1280x720 and stays at 22 px on smaller windows (a lower clamp).
+- **Audio** (`bug_r4_07_audio.cjs`, the page's AudioContext instrumented before load):
+  - With no user gesture, no context is created and there are no errors; `audioLog` still fills.
+  - After a real click and 150 s of a Veteran autoplay firefight: 4,153 sources started, and live sources (started minus
+    ended) stayed between 15 and 59 with no upward trend. 12,985 nodes were created, and one context and one convolver
+    for the whole run.
+  - Pause and Resume keep the context running, and sounds continue after the resume.
+  - With AudioContext missing there are no errors.
+  - Browser memory stayed flat at about 490 MB over the run.
+- **Soak** (`bug_r4_08_soak.cjs`): three full autoplay matches in one page (Recruit, Regular, Veteran), with a frame
+  rendered every simulated second.
+  - JS heap after GC: 6.4 MB at the title, 8.3 after the first round, then flat between 9.0 and 9.4 MB to the end.
+  - Geometries grew from 63 to 69 during the first match and then stayed at 69. Textures stayed at 6 and programs at 25
+    (17.9 limit: 40).
+  - DOM nodes rose from 330 to about 420 at the first match end (the end table) and then stayed flat. JS listeners
+    stayed at 53.
+  - Draw calls were 79 at the spawn (main and shadow pass), and canvas textures total 32.7 MB.
+
+## Notes (not counted)
+
+- The 1 % `sceneRaycast` misses above are not a game bug. The test hook cannot see instanced meshes, so testers should
+  not use it on blocks or soldiers.
+- R3-7 and R3-8 (pauses of 14 to 25 s at a crossing or in engage) still occur, as expected with gameplay frozen.
+- When I ran several headless browsers in parallel, the machine ran out of memory and a renderer was killed. Run alone,
+  a real-time match with audio holds steady at about 490 MB, so this was my test load, not a leak.
+
+## Scripts
+
+New (`tests/`): `bug_r4_01_frozen.cjs <r3 build>`, `bug_r4_02_same_play.cjs <r3 build>`, `bug_r4_03_cull_sweep.cjs`,
+`bug_r4_04_popping.cjs` + `bug_r4_04_popping.py`, `bug_r4_05_soldiers_vm.cjs`, `bug_r4_06_flow_leaks.cjs`,
+`bug_r4_07_audio.cjs`, `bug_r4_08_soak.cjs`. All take the build file as an argument and default to the 4B snapshot. The
+round 3 reference build comes from `git show c90ee3c:bedroom-battalion/index.html`. Every loop has a tick, frame or time
+limit.
+
+---
+
 # Round 3 (bot combat, match rules, HUD and menus): the gate
 
 **Gate: FAIL on all three difficulties.** Every match finishes with a 5-point winner and nothing blocks play. But my own

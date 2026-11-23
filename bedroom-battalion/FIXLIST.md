@@ -1,3 +1,45 @@
+# Round 4 fix pass (from bug, feel and visual reports on snapshots/index_r4b.html)
+
+Gate status: the visual tester passes on one condition (item 1). The bug tester found gameplay identical to round 3 and no blockers. The feel tester found scale better but enemy readability worse. Item 1 is the gate blocker.
+
+1. **R4-1 Enemy readability (blocker).**
+   - **Problem:**
+     - The new army man is about half the on-screen size of the round 3 figure (444 against 891 px at 20, 40 against 92 at 60).
+     - Rendered in sun, Tan almost disappears against yellow and orange cover. The yellow cars `n.W-b.car` and `s.W-b.car` are at dE 10.3, cover `s.W-c` at 11.9, the truck cab at 17.8 and the sunlit orange ruin, crayon and gondola at 20.8.
+     - Against letter blocks it was dE 9 to 13 at 40 to 60, before the follow-up recolour. Under the bed and in the sunbeam it dropped to 9 to 18.
+   - **Fix:**
+     - (a) Apply the 17.12 rule to *rendered* colour, sunlit and shaded. Recolour every yellow or orange cover, toy and lane prop (car bodies, truck cab, s.W-c, ruin bricks, crayons, gondola) to non-Tan hues, using the 4B-follow-up palette.
+     - (b) Give soldier bodies a thin dark outline in the team's dark shade (inverted hull about 1.04x, instanced, not on the gun). It must not enlarge the hit volumes, which stay frozen.
+   - **Target:**
+     - Tan and Green dE ≥ 20 against the background at 40 and 60 units in every lane, the sunbeam and under the bed.
+     - No cover colour within dE 25 of Tan as rendered.
+     - Render cost stays under 2.5x.
+2. **R4-2 Dead bodies.**
+   - Guns and arms stay upright on tipped-over bodies (regression). Apply the tip-over rotation to every soldier part.
+   - Dead Tan is only dE 12 from a kneeling live Tan at 20. Tint dead bodies toward cool grey `#7E8288`, keeping bodyTint 0.7 as the mix amount.
+   - **Target:** dead is at least dE 25 from a live soldier of the same team in the same pose and light.
+3. **R4-3 Audio direction.**
+   - Add stereo panning (a StereoPanner or an equal-power HRTF-less panner) in `sfxAt`.
+   - Play bot footsteps through `sfxAt` within 25 units at volume 0.6, with a per-surface sound.
+   - Halve the creak gains and skip creaks within 5 s of any gunshot.
+   - **Target:** offline render shows the left/right difference for a shot at ±60°, and an enemy rifle at 30 is louder than any creak.
+4. **R4-4 Route accents.** The blanket slope lost its orange accent; it is blue with letter blocks in front. Add orange caps along its foot and side edges. Check the skateboard: the feel tester saw it red, the visual tester saw the cap pass. Make its edges clearly orange.
+
+   Route orange is an accent strip, not a large surface, so it is exempt from item 1 (a). Keep each strip narrow.
+5. **R4-5 Small polish.**
+   - **Climber fit:** the climber's upper body is drawn 0.18 to 0.29 outside its hit volume. Pull the art in to within 0.15. Held guns and arms are decoration and exempt (17.13).
+   - **Dust:** cap the motes at about 3 px and fade them out within about 2 units of the camera.
+   - **Decals:** about twice the current size, and make the metal mark visible.
+   - **HUD:** give health the same dark panel as ammo, and set the title controls text to 1rem.
+   - **Reload:** dip the gun only part way, so about half stays on screen.
+   - **Optional,** only if cheap: crisper brick studs from spawn and a less plain ceiling. Otherwise round 5.
+
+Not fixed this round:
+- R4-2b `start()` after `runMatch` (the open R3-9, test hook only) → round 5.
+- Pointer-lock resume by clicking → round 5, already on the list.
+- HUD minimum text size → round 5.
+- The caboose cupola sits 1.2 above its roof collider; this is decoration, accepted.
+
 # Round 4A early notes (visual tester, on snapshots/index_r4a.html) — fix during 4B
 
 1. **R4A-1 Render headroom.** The worst views are at 2.7–2.8x of the 3x limit (spawn_tan, bed_top, firefight overview), so 4B has no room. The cost is pixel fill, mostly from the sunbeam (it covers about 25 % of the frame looking across it), and nothing is frustum-culled. Fix: cap the sunbeam's screen coverage or fill cost, and split the merged static mesh into 6–8 spatial chunks so off-screen parts are culled. Target under 2.5x on the 4A views before 4B art goes in.

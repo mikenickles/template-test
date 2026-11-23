@@ -984,3 +984,11 @@ P2; decals not like tiles. From round 3: `soldier.bodyTint` 0.7; refresh the two
 - No aim-down-sights for rifle, SMG or pistol. This holds the round 2 design (only the sniper scopes); viewmodels stay at hip.
 - Yellow letter blocks (`#F2C230`) are the closest room colour to Tan. In the fix pass, recolour them away from Tan, keeping red/blue/green primaries and no yellow or orange. No cover or floor surface may be within dE 25 of Tan `#D9A75A`.
 - There is no carpet in the room, so "carpet" in the impact list means fabric (the blanket and the rug, if any).
+
+### 17.13 Lead decisions after the Round 4 test pass (2026-11-23)
+- The Tan-distance rule (17.12) applies to colours as rendered in sun and in shade, not only to palette values. Yellow and orange leave all cover, toys and lane props. Orange stays only as the narrow route-accent strips.
+- Soldiers get a thin dark team-shade outline (visual only; hit volumes frozen).
+- Held guns and arms are decoration and are exempt from the 0.15 fit rule, as they were in round 3. The body, head, legs and base are not exempt.
+- Dead soldiers tint toward cool grey `#7E8288`.
+- Sound is stereo-panned; enemy footsteps are audible within 25 units.
+- Heap: the bug tester measured the JS heap flat at about 9 MB, while the visual tester saw about 150 MB of process memory. Both are flat. The visual tester reports process memory in the re-check.
