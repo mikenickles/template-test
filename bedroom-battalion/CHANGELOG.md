@@ -983,3 +983,281 @@ Screenshots looked at (`screenshots/round3/`):
 - Shot-in-the-back reaction was built but not measured with a script in this pass.
 - First-burst frame time was not measured (headless software rendering).
 - The tester's "enemy in view, never fired" fires for rifles beyond 90 units and SMGs beyond 40 by design of the engage ranges.
+
+## Round 4A: the world art pass (DESIGN.md 17.1 to 17.4, 17.6, 17.9, 17.10)
+
+The world's visuals were rebuilt; colliders, waypoints and hit volumes were not touched. The 4B items (soldiers, guns,
+viewmodels, train, effects, HUD, menus, audio) were not started.
+
+New scripts:
+- `tests/builder_r4a_budget.cjs`: hashes, load time, cost per view and in a firefight, main-pass triangles, growth. Runs on any build.
+- `tests/builder_r4a_fit.cjs`: the 17.1 fit check in both directions.
+- `tests/builder_r4a_shots.cjs`: screenshots.
+- `tests/builder_r4a_regress.cjs`: matches plus the hash before and after.
+
+### What was built
+
+- **`__game.colliderHash()`.** An FNV-1a hash of every collider's id, kind, surface, bounds and shape numbers, in list order;
+  colours and test blocks are left out. It was added first and gave `ff03369f` on the round 3 build.
+- **Shared helpers** (new section 5b, `ART`):
+  - **Seeded rng.** Art never touches the match rng.
+  - **Canvas tile atlas.** One 2048 canvas holds 100 tiles, packed tallest first. Each tile has a wrapped 8 px margin.
+  - **Atlas shader patch.** `atlasMaterial` uses fract() and textureGrad, so a tile repeats inside the atlas without seams.
+  - **Mesh builder** (`MB`). Vertex-colour AO and transforms. Its shapes:
+    - a 44-triangle chamfered box (`bev`) whose bevel strips can take a joint colour;
+    - a cube-sphere rounded box (`soft`);
+    - lathes, ellipsoids, hexahedra and oriented quads.
+  - **Toon gradient.** 3 steps.
+  - **Instancing helper.**
+  - **Soft contact-shadow decals.** 9-slice, with fog-aware blending.
+- **Materials.** One model per family:
+  - Lambert: room, furniture, fabric, books, card.
+  - Toon: toys, bricks, routes made of plastic.
+  - Basic: the window view and the bulbs.
+  - Lambert, separate: the floor, with its own repeating 1024 x 2048 plank texture.
+- **17.3 room.**
+  - Painted walls with a faint brush texture. Skirting with a rounded bead.
+  - A door with six raised panels, a frame and a round knob.
+  - The window with frame, sill, glazing bars and a painted warm outside view (sky, sun glow, hill, fence, tree, bushes, flowers).
+  - The ceiling light: a cord, a drum shade with a darker rim and a glowing diffuser.
+  - Planks in five tones with grain, knots and dark gaps.
+- **17.3 bed.**
+  - Painted frame and legs; a dark underside.
+  - A rounded mattress in the striped sheet.
+  - A quilted blanket over the top: diamond quilting, puffed diamonds, small stitches. It has a hem roll, and wavy drapes down the
+    east side and the north end.
+  - The ridges and the blanket slope in the same fabric.
+  - Pillows: three soft terraces each, the top one plump.
+  - Under the bed: shoebox with a lid, a striped sock, grey dust bunnies.
+  - A rose-pink plush bear (seams, muzzle, button eyes, ears, arms, paw pads).
+  - A squarish blue pail on its side, with a rim, a dark opening and a handle lying on the floor.
+  - Spare grey statues.
+- **17.3 desk, chair, shelves.**
+  - Painted wood with soft edges.
+  - Lamp: base, post, shade and a glowing bulb.
+  - Mug with a band and a handle. Pencil cup with six pencils. Three stacked books. Open notebook with ruled lines.
+  - Two-tone erasers. A crumpled paper ball. Push-pin seat stoppers.
+  - Shelves:
+    - boards and posts;
+    - upright books in rows;
+    - flat books;
+    - a globe on a stand;
+    - a chunky gold trophy;
+    - a pink piggy bank (snout, ears, legs, slot);
+    - a plant pot with leaves;
+    - an alarm clock with a face, bells and feet.
+- **17.4 toys, forts, routes, cover.**
+  - **Forts and ruin.** Brickwork in about 1.1 courses with staggered 2.4 bricks, palette colours (72 % main) with ±5 %
+    variation, and dark joints. 235 instanced studs sit on open tops; the slit sills are left plain so the slits read.
+  - **Blocks.** Alphabet blocks with a letter on each face (40 letter tiles).
+  - **Cars.** Three toy cars, as chunky vans filling their colliders: painted windows, bumpers, wheels. A dump truck with a load.
+    A framed marble run with three marbles. A board game box with an abstract lid.
+  - **Ball.** Two-tone gores.
+  - **Crayons and dominoes.** Rounded-square crayons with wrappers and a short tip. Ivory dominoes with pips.
+  - **East-lane crate.** A red painted crate with slats.
+  - **Tunnel.** Corrugated card with darker cut ends and flaps.
+  - **Track.** Wooden sleepers, steel rails with a head and a foot, and joint plates, all in one InstancedMesh.
+  - **Routes:**
+    - **Book stairs:** each layer is one long book, so every riser is a spine, with an orange cap on each step edge.
+    - **Landings:** stacks of books.
+    - **Stair guards:** rows of tall upright books.
+    - **Under the rulers:** book stacks topped to the slope.
+    - **Rulers and bridges:** markings.
+    - **Skateboard:** red deck with grip, trucks and wheels.
+    - **Strings:** yellow twisted strings. The shoelace is braided, with aglets. The yo-yo has two halves with its own string on
+      the floor.
+    - **Spring pad:** a squashed jack-in-the-box spring with a red pad and yellow chevrons.
+- **17.6 light and atmosphere.**
+  - **Sun.** The room shell no longer casts shadows (`art.shellShadow` false), so the sun lights the whole floor, and furniture,
+    forts and toys throw long shadows across it. The shadow camera stays fitted to the room; one 2048 map.
+  - **Tone mapping.** Neutral (Khronos), exposure 1, sRGB output, set once in `init`. Fog and the haze colour are unchanged.
+  - **Sunbeam.** Not a light: the window prism swept along the sun to the floor. A shader measures how far each view ray
+    travels through the beam, with soft edges and the part inside the bed removed, and draws it additively.
+  - **Dust.** One Points object of 420 motes; 80 % start in the beam and are brighter there. They drift in the vertex shader.
+  - **Fake ambient occlusion.**
+    - A dark band at floor contact in the vertex colours, and darker vertices under the bed, the desk and the chair.
+    - 1,602 soft decal quads: contact patches under everything on the floor, bed, desk and shelves; a strong patch under the bed
+      and a lighter one under the desk; the floor along the walls; the foot of the walls; the four vertical corners.
+- **17.10 carry-overs.**
+  - **Sun shadows** reach most of the floor.
+  - **Under the bed** is darker.
+  - **The ceiling light** glows against the ceiling.
+  - **Cover colours:** cover objects now have their own toy colours, none like the desk.
+  - **The window** is warm.
+  - **The bed book stairs:** an orange route ribbon runs over pillow P2 from its north foot to its south foot, with two chevrons
+    pointing south. It can be seen from anywhere on the bed.
+  - **Stale banners:** the section banners for 5, 7, 10 and 11 are refreshed.
+- **Hook.**
+  - `renderInfo()`: programs, textures, geometries, calls and triangles, plus the art stats: textures with estimated MB, tiles,
+    triangles per mesh and family, load phases.
+  - `artGeometry()`: art positions, used by the fit check.
+  - `artDebug()`: test only. Hides meshes, sets anisotropy, or toggles the shadow map, for costing.
+- **Colours.** All art numbers and colours are in `CONFIG.art` (palette in `CONFIG.art.palette`). Impact colours follow the
+  art: `collider.color` is updated per object; this is not part of the hash.
+
+### Measured
+
+| Check | Result |
+| --- | --- |
+| `colliderHash()` | `ff03369f` on round 3 (HEAD~2) and on this build, before and after four full matches. Same 360 colliders. Waypoint hash `4f69a238` and hit-volume hash `a2308d9c` identical to round 3 |
+| Routes | all 18 ok walking and sprinting, same times as round 3, 0 damage. `validateWaypoints()` `[]`. 342 single-edge walks ok |
+| startNavTest, 10 bots, 10 minutes, seeds 1 and 2 | every kind, route, crossing and all 344 edge directions used; 0 stuck, 0 rescues, 0 envelope seconds, 0 train pushes, 0 no-path |
+| runMatch autoplay: recruit 1, regular 1, regular 2, veteran 2 | Tan 5-3 (8 rounds), Tan 5-2 (7, the same result as round 3's R3-3 check), Green 5-3 (10), Tan 5-3 (8). All finished; stuck 0, idle 0, rescues 0, errors 0 in each |
+| Console errors | `[]` in every script |
+| File size | 434,951 bytes (round 3: 326,450) |
+
+Budget (17.9). Both builds were measured in the same session, back to back, with SwiftShader at 1280 x 720. The render cost is the
+median of 12 frames, each forced to finish with a 1-pixel readPixels.
+
+| View | Draw calls r3 / r4 (shadow pass included) | Triangles, all passes r3 / r4 | Main-pass triangles r4 | Software ms r3 / r4 | Ratio |
+| --- | --- | --- | --- | --- | --- |
+| spawn_green | 14 / 23 | 31,202 / 167,818 | 95,512 | 151.0 / 275.2 | 1.82 |
+| spawn_tan | 14 / 23 | 31,202 / 167,818 | 95,512 | 143.4 / 307.0 | 2.14 |
+| bed_top | 14 / 23 | 31,202 / 167,818 | 95,512 | 131.4 / 354.2 | 2.70 |
+| desk_top | 14 / 23 | 31,202 / 167,818 | 95,512 | 123.2 / 285.7 | 2.32 |
+| shelf_top | 14 / 23 | 31,202 / 167,818 | 95,512 | 131.7 / 310.4 | 2.36 |
+| floor_centre | 14 / 23 | 31,202 / 167,818 | 95,512 | 146.4 / 338.4 | 2.31 |
+| under_bed | 14 / 23 | 31,202 / 167,818 | 95,512 | 134.5 / 206.1 | 1.53 |
+| east_lane | 14 / 23 | 31,202 / 167,818 | 95,512 | 143.1 / 286.1 | 2.00 |
+| west_lane | 14 / 23 | 31,202 / 167,818 | 95,512 | 154.1 / 286.0 | 1.86 |
+| Firefight, regular seed 21, 120 frames | max 15 / 24, mean 14.9 / 23.9 | max 31,286 / 167,902 | max 95,596 | median 159.0 / 288.1 (p90 175.6 / 324.5) | 1.81 |
+
+Notes on the budget:
+- Every mesh is drawn in every view (`frustumCulled` false, as in round 3), so the counts do not change with the view.
+- **Shadow casters:** 1 light, 2048 map.
+- **Textures** (4 canvas textures and the 3-pixel toon gradient):
+
+  | Texture | Size | Estimated MB with mips |
+  | --- | --- | --- |
+  | Atlas | 2048 x 2048 | 21.3 |
+  | Floor planks | 1024 x 2048 | 10.7 |
+  | Contact shadow | 64 x 64 | 0.02 |
+  | Total | | 32.0 (limit 64) |
+
+  The largest texture is 2048.
+- **Shader programs:** 22 at load and 22 after the firefight frames and a full `runMatch`. All are compiled at load by
+  `precompileEffects`.
+- **Load time,** navigation start to `__game.ready` (in-page setter, median of 5 reloads): round 3 450 ms, round 4A 1,002 ms.
+  - Inside `init`: world plus art 217 ms (art builder 217 ms on its own run), shader compile 384 ms, ready at 680 ms.
+- **Growth over three regular matches:** programs 22 and textures 5 throughout. Geometries go 20, 21, 22, 22 as effect meshes are
+  first drawn, then stay flat. JS heap 29.8 MB at every reading; Chrome rounds this figure, so it is only a rough check. The art
+  adds no per-frame allocation: `updateArt` writes two uniforms.
+- **Cost found on the way:** anisotropic filtering on the atlas cost 100 to 200 ms a frame in software rendering, so the atlas uses
+  1 (`art.atlasAniso`); the floor keeps 8. Drawing objects before the shell (renderOrder) and the 44-triangle bevel (was 108)
+  halved the art's triangles.
+
+**Fit (17.1)**, measured by `builder_r4a_fit.cjs`:
+- **Reverse check:** 30,169 points were sampled on every exposed collider face, and a ray along the normal must meet art
+  within 0.15. 173 miss (0.6 %):
+  - globe 64 of 65 and ball 56 of 65 (see the list below);
+  - the four crayons 12 of 125 each, at the corners of the tip-end face, up to 0.54 inside;
+  - the two low ruin stubs 2 of 100 each, rays landing exactly on a brick joint line;
+  - the paper ball 1 of 65, at 0.16.
+- **Forward check:** 2,421 of 32,537 art vertices are more than 0.15 from every collider. Every cluster is listed below.
+
+Visual parts more than 0.15 outside their collider, and why each is harmless:
+
+| Part | Out by | Why harmless |
+| --- | --- | --- |
+| Desk lamp shade, arm and bulb | up to 6.3 | y 39.8 to 46, 12 to 18 above the desk top: above head height |
+| Pencils in the pencil cup | up to 5.6 | y 38 to 40.6 on the desk: above head height |
+| Ceiling light (cord, shade, diffuser) | 5.6 | at y 84 to 90 |
+| Plant leaves on the small shelf L1 | 4.4 | y 24.6 to 28.4, 4.6 or more above the shelf board: above head height there |
+| Shoelace aglet and all string tops | 2 to 3 | strings are drawn 2 above their top surface by design since round 1 (DESIGN 4.4) |
+| Tunnel flaps | 2.2 | y 9 to 9.9, on top of an 8-high roof |
+| Door frame, panels and knob | 0.32 (knob 2.05 at y 36) | door is visual only since round 1; trim is thinner than the player radius, the knob is above head height |
+| Window sill and frame | 1.5 | y 34.5 and up |
+| Skirting and its bead | 0.36 | thinner than the player radius (0.4), so the camera never enters it; shots stop on the wall behind |
+| Skateboard trucks and wheels | 1.1 | under the deck: at the top end above head height, at the bottom end where the deck is too low to walk under |
+| Mug handle | 1.0 | faces the wall, at the desk's back edge |
+| Trophy handles | 1.0 | on the top shelf L3, 5 to 7 above the board |
+| Bear ears | 0.85 | on top of the head (y 15.3 to 15.9), at its back corners |
+| Alarm clock bells | 0.85 | y 44.3 to 44.8, above head height on L2 |
+| Marbles on the marble run | 0.84 | on top of the 4 and 8 high blocks, which no route reaches |
+| Ball | 0.6 | DESIGN 6 gives a sphere r 4 over a cylinder collider r 3.4, as in rounds 1 to 3. The sphere bulges 0.6 past the cylinder at mid height, and the cylinder's top and bottom rims stand out from the sphere (the 56 reverse misses) |
+| Globe | (reverse only) | a sphere on a stand inside a cylinder collider r 4, y 40 to 50, on the tall shelf L2 against the wall |
+| Piggy snout | 0.55 | y 24.5 on L1, above head height there |
+| Bucket handle and shoelace end on the floor | 0.22 to 0.31 | lying flat on the floor, below the 0.65 step-up; nothing collides with them |
+| Track (rails, sleepers, joint plates) | 0.3 | the track has never had a collider (DESIGN 7) |
+
+### Screenshots looked at (`screenshots/round4/builder_r4a_*.png`)
+
+The nine named views:
+
+| View | Reads well | Weak |
+| --- | --- | --- |
+| spawn_green | Blue and white brick slits frame the lane. Planks with grain and gaps. The red and blue crayons, the train and the toys are distinct down the lane; the bed's quilt and the window view are at the top right | the far ceiling is a flat beige |
+| spawn_tan | The red Tan fort with white and grey bricks and dark joints, the purple caboose, the crayons, the bed's sheet and blanket on the left | none noted |
+| bed_top | The desk, chair, lamp and pencil cup; both shelves with book stairs, upright books, globe and trophy; strings; the tunnel box | the blanket in the foreground is a large plain blue area |
+| desk_top | The window glows warm with tree, fence and flowers; a soft sunbeam falls from it. The quilt and its hem drape, the dark space under the bed, the floor toys and track. Sun shadows on the floor | the chair back fills the left third |
+| shelf_top | Window, door with panels and knob, the bed with P2's orange ribbon and the book stairs, the sunbeam | the shelf board in front is very bright in the sun |
+| floor_centre | Orange, purple and white ruin bricks with joints, the ball, blocks, the tunnel's card | eye level hides the studs |
+| under_bed | Dark floor and a dark underside; dust bunnies, the striped sock, shoebox, bear and blanket slope at the end | the underside's wood grain is still visible |
+| east_lane | The skateboard (red sides, grip), the chair's book stairs, the desk legs, a letter block and the yo-yo string | none noted |
+| west_lane | Letter blocks, purple and yellow cars with wheels and windows, the quilted blanket slope, the bear's face, the window | none noted |
+
+The extra views:
+
+| View | Reads well | Weak |
+| --- | --- | --- |
+| Sunbeam with dust (`sunbeam_dust`) | Whole room: the beam shows as a warm shaft from the window, the toys throw shadows east | at 1280 x 720 the dust motes are only faint dots |
+| Under the bed (`under_bed_side`) | It is clearly dark compared with the lit floor outside | none noted |
+| Desk top (`desk_top_close`) | Lamp, banded mug with handle, three books with spines and pages, notebook | the ruled lines are lost at this grazing angle |
+| Fort close up (`fort_close`) | Blue, white and grey stud bricks, studs on the tops, the red crayon | the bricks look soft rather than crisp plastic at this distance |
+| Ruin | Bricks, dominoes with pips, the game box lid | none noted |
+| Floor toys (`floor_toys`) | Letter blocks, game box, cars, track and ruin bricks | none noted |
+| Ceiling light | Reads as a glowing round fitting | the ceiling is a flat beige-grey |
+| Tunnel and track (`tunnel_track`) | Corrugated ends and flaps, sleepers and rails, dominoes, a tall book landing | none noted |
+| Firefight | A green soldier stands out cleanly against the red crate and the books; nothing in the world is green or tan | none noted |
+| Bed pillows | P2's orange ribbon is visible from the middle of the bed, over the pillow | none noted |
+
+### Done differently, and why
+
+- **The sun lights the whole room.** Walls and ceiling do not cast, so the sun is not limited to the window. The beam volume and the
+  window carry the "through the window" look. With the walls casting, only about 4 % of the floor could ever be lit.
+- **Neutral tone mapping.** The sun now reaches pale surfaces everywhere, so highlights roll off instead of clipping. Mid colours
+  are unchanged.
+- **Shapes made to fill their box colliders** (17.1):
+  - Cars are chunky vans.
+  - The tipped bucket is a squarish pail.
+  - Crayons are rounded-square with a short blunt tip.
+  - The trophy is a chunky barrel cup.
+  - The piggy bank is a soft box with a snout, ears and legs.
+  - Soft edges keep a radius of 0.36 or less (0.15 from the outline). Soft boxes resting on a surface sink their rounded bottom
+    edge below it.
+- **Pillows stay three soft terraces** (top one plump). A smooth dome over the stepped collider would miss it by about 0.3.
+- **The skateboard's top is red grip, not black.** It keeps the route readable. The deck sides are red.
+- **The spare soldiers are rounded grey statues.** 17.3 asks for the 17.5 soldier model, which is round 4B.
+- **`soldier.bodyTint` 0.7 is left for 4B.** The coordinator's 4A carry-over list does not include it.
+- **The atlas uses anisotropy 1** for the software render cost (above).
+- **Graybox visuals are still generated** by the round 1 helpers, then dropped. This keeps `buildWorld`'s collider code
+  byte-for-byte as it was.
+
+### Design problems (for the lead)
+
+- **The ball and the globe have cylinder colliders under round shapes** (DESIGN 4.3 and 6). They are the two large misfits
+  against 17.1. Changing their colliders is a gameplay change for a later round.
+- **The stepped pillow colliders cannot look plump** within 0.15.
+- **4B will add the soldier and train art and the effects** on top of 23 to 24 draw calls and 1.5 to 2.7x round 3's software
+  render cost. That leaves room under the 3x limit, but not much in the bed_top view (2.70x).
+
+### Known weak spots
+
+- Nothing was measured on real hardware. All costs are SwiftShader numbers.
+- The ceiling is a flat colour; the beam is subtle in small screenshots; the dust is faint.
+- The forts' bricks read soft (toon shading on bevelled boxes) rather than crisp plastic.
+- The paper ball and the crayon tips miss the fit by a little (above).
+- The geometry count grows by 2 the first time effects are drawn, then stays flat.
+
+### What to re-test
+
+- **Bug tester:** `colliderHash()` against round 3; routes, nav and matches; shooting the edges of objects; the fit list above.
+- **Visual tester:**
+  - style consistency across all views;
+  - the sunbeam, dust and contact shadows;
+  - the window, the ceiling light and the under-bed darkness;
+  - P2's ribbon;
+  - team colours against the new world;
+  - the budget numbers.
+- **Feel tester:** whether routes still read at a glance (book stairs, rulers, skateboard, strings, spring pad, P2), and whether
+  the busier world hides soldiers.
