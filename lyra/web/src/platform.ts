@@ -254,6 +254,7 @@ export async function createPlatform(): Promise<Platform> {
   const files = isNative ? nativeFiles : isDesktop ? desktopFiles : webFiles;
   return {
     SQL,
+    version: __LYRA_VERSION__,
     blobs: files,
     texts: files,
     secrets: isNative ? nativeSecrets : isDesktop ? deskSecrets! : webSecrets,

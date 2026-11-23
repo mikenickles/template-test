@@ -73,6 +73,18 @@ const ready: Promise<Lyra> = createPlatform().then(async (p) => {
   // right after loading another device's data, its running workers stay with that device
   const lyra = await Lyra.start(p, { resumeWorkers: !state.justPulled });
   sync = new Sync(lyra, new DriveSyncRemote(p.google), p.texts, p.secrets, state);
+  // (0.63.3) what only this device knows, for Tomo's own setup (it can answer "is Keep watch on?")
+  lyra.deviceFacts = async () => {
+    const st = sync.state;
+    const bg = await background.state().catch(() => null);
+    const facts = [
+      `This device: ${isNative ? "the Android phone app" : isDesktop ? "the Windows app" : "a web preview"} ("${st.deviceName}").`,
+      `Sync between devices: ${st.enabled ? `on${st.lastSync ? `, last synced ${st.lastSync.slice(0, 16).replace("T", " ")}` : ""}${st.lastError ? ` (last problem: ${st.lastError})` : ""}` : "off"}. Home base: ${st.home ? "this device" : st.homeBeat ? `"${st.homeBeat.deviceName}"` : "none"} (it runs routines and checks for every device). Settings › Backup and sync.`,
+    ];
+    if (bg) facts.push(isNative ? `Keep watch (checks with the app closed): ${bg.on ? `on, every ${bg.every ?? 15} minutes` : "off"}. Settings › Notifications.` : `Runs in the tray when closed: ${bg.on ? "on" : "off"}; opens at sign-in: ${bg.atLogin ? "on" : "off"}.`);
+    facts.push(`On this device only: text size ${localStorage.getItem("lyra.textSize") ?? "regular"}, avatar size ${localStorage.getItem("lyra.avatarSize") ?? "regular"}, gentle motion ${localStorage.getItem("lyra.ambient") === "off" ? "off" : "on"}, sounds ${localStorage.getItem("lyra.sounds") === "on" ? "on" : "off"}, haptics ${localStorage.getItem("lyra.haptics") === "off" ? "off" : "on"}, tokens under each reply ${localStorage.getItem("lyra.showTokens") === "on" ? "shown" : "hidden"} (Settings › You and Settings › Usage).`);
+    return facts;
+  };
   if (isDesktop) sync.onSnapshot = (bytes, info) => void keepBackupCopy(autoName(info.savedAt), bytes).catch(() => {});
   await sync.started();
   // Save to disk whenever the app leaves the screen.

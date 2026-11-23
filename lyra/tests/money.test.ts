@@ -142,3 +142,18 @@ describe("money connections in Tomo", () => {
     expect(pastTense("Checking your accounts")).toBe("Checked your accounts");
   });
 });
+
+describe("Tomo knows its own setup (0.63.3)", () => {
+  it("puts the models, connections and switches in the prompt", async () => {
+    const provider = new FakeProvider([say("You picked it for light jobs.")]);
+    const lyra = await Lyra.start(platform({ provider, version: "9.9.9" }));
+    lyra.deviceFacts = async () => ["Keep watch (checks with the app closed): on, every 15 minutes."];
+    await lyra.chat("which model do you use for light tasks?", noop);
+    const sys = JSON.stringify(provider.requests[0].system);
+    expect(sys).toContain("## Your setup");
+    expect(sys).toContain("Background model for light jobs");
+    expect(sys).toContain("Keep watch (checks with the app closed): on");
+    expect(sys).toContain("Tomo 9.9.9");
+    expect(sys).toContain("Bank accounts: not connected");
+  });
+});

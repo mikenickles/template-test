@@ -122,6 +122,8 @@ export interface Platform {
   notices?: NoticeSource & { access(): Promise<boolean> };
   /** (0.56) Lyra's extension in the user's own browser, through the Windows app: open and read pages. */
   browser?: BrowserLink & { listen(on: boolean): Promise<void> };
+  /** (0.63.3) the app's version, for Tomo's own setup */
+  version?: string;
   /** (0.63) a request made natively, past the web view's CORS (SimpleFIN); plain fetch when missing */
   http?: Http;
   /** The phone's messaging app: opens a text ready to send (Android only). */
@@ -1796,6 +1798,7 @@ export class Lyra {
           webSearch: this.webSearch,
           earlier: this.chatSummary(channelId) ?? undefined,
           preview: opts.preview?.slice(0, 400),
+          setup: await this.setupSummary().catch(() => undefined),
         },
         clean,
         emit,
@@ -2496,6 +2499,43 @@ export class Lyra {
   /** which money connections this device holds (their secrets never sync) */
   money = { bank: false, ynab: false };
   readonly bankCache: BankCache;
+
+  /** (0.63.3) things only the app knows about this device (Keep watch, sync, display), for "Your setup" */
+  deviceFacts?: () => Promise<string[]>;
+
+  /**
+   * (0.63.3) Tomo's own setup, in plain lines, so it can answer questions about itself and say
+   * where each thing is changed: models, connections, switches, heads-ups, and this device.
+   */
+  async setupSummary(): Promise<string> {
+    const s = this.state();
+    const on = (b: boolean | null | undefined) => (b ? "on" : "off");
+    const main = s.choice;
+    const prov = s.providers.find((p) => p.id === main.provider)?.label ?? main.provider;
+    let quick = "";
+    try {
+      const q = await this.quickChoice();
+      const set = s.backgroundModel || "auto";
+      quick = set === "same" ? "the same model as chat" : `${q.model}${set === "auto" ? " (picked automatically to pair with the main model)" : " (picked by the user)"}`;
+    } catch {
+      quick = s.backgroundModel;
+    }
+    const conns = s.connectors.map((c) => `${c.label}: ${c.state === "connected" ? `connected${c.account ? ` (${c.account})` : ""}` : c.state === "unavailable" ? "not available on this device" : c.state === "error" ? "needs reconnecting" : "not connected"}`);
+    const p = s.proactive;
+    const device = (await this.deviceFacts?.().catch(() => [] as string[])) ?? [];
+    return [
+      `- AI model for chat, tasks, voice and dashboards: ${main.provider === "fake" ? "the practice model (no real AI yet; an API key is needed)" : `${main.model} from ${prov}`}. Changed in Settings › AI model.`,
+      `- Background model for light jobs (memory tidy-up, learning how ${s.userName} talks, inbox scans, chat summaries, the first look of "news" routines and heads-ups): ${main.provider === "fake" ? "the practice model" : quick}. Settings › AI model › Background model.`,
+      `- Web search: ${on(s.webSearch)} (Settings › AI model). Keys saved for: ${(["anthropic", "openai", "gemini"] as const).filter((k) => s.keys[k]).join(", ") || "none"}.`,
+      `- Connections (the Tomo page, opened by tapping Tomo's face): ${conns.join("; ")}.`,
+      `- Approval switches on the Tomo page (each action still waits for a tap on its card): write emails ${on(s.actions.email)}, add/change events ${on(s.actions.event)}, organize mail ${on(s.actions.archive)}, change Drive files ${on(s.actions.file)}${s.actions.text !== null ? `, texts ${on(s.actions.text)}` : ""}${s.browser !== null ? `, use the browser ${on(s.browser)}` : ""}${s.contacts !== null ? `, phone contacts ${on(s.contacts)}` : ""}${s.notices !== null ? `, phone notifications ${on(s.notices)}` : ""}.`,
+      `- Heads-ups: ${p.level}${p.level !== "off" ? ` (every ${p.level === "active" ? "hour" : "4 hours"})` : ""}, quiet hours ${p.quietStart}–${p.quietEnd}, check-ins ${on(p.checkIns)}, mail watch ${on(p.mailWatch)}. Settings › Notifications. Phone notifications ${on(s.notifications)}.`,
+      `- Life admin inbox scans ${on(this.lifeAdminOn)}, weekly memory tidy-up ${on(this.tidyOn)}, talk like ${s.userName} ${on(s.mirror)} (Settings › You).`,
+      `- Look: ${s.theme === "paper" ? "Quiet" : s.theme} look, ${s.accent} accent, ${s.bubbles} message bubbles; app lock ${on(s.appLock)}; weather for ${s.weatherPlace?.name ?? "no place set"}; live voice "${s.liveVoice}".`,
+      ...device.map((d) => `- ${d}`),
+      `- The app: Tomo${this.p.version ? ` ${this.p.version}` : ""}, Android phone app and Windows app; updates come from the "Lyra Updates" folder in ${s.userName}'s Drive (Settings › About).`,
+    ].join("\n");
+  }
 
   /** native request when the platform has one (SimpleFIN doesn't answer web views), else fetch */
   get http(): Http {

@@ -151,6 +151,8 @@ export interface TurnContext {
   earlier?: { upTo: number; text: string };
   /** (0.62) what the composer chip showed while the user typed (core/intent.ts intentHint) */
   preview?: string;
+  /** (0.63.3) Tomo's own settings, in plain lines (Lyra.setupSummary) */
+  setup?: string;
 }
 
 const MAIN = "main";
@@ -970,6 +972,7 @@ export async function runTurn(
       talk: ctx.workspace.talk?.(),
       earlier: ctx.earlier?.text,
       preview: ctx.preview,
+      setup: ctx.setup,
       lifeAdmin: !!ctx.workspace.lifeAdmin?.connected(),
       model: ctx.provider.id === "fake" ? undefined : ctx.provider.model,
       music: ctx.connectors.status().some((c) => c.id === "spotify" && c.state === "connected")
