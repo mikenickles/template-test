@@ -11,6 +11,7 @@ const SEED = +(process.argv[2] || 5), THROWS = +(process.argv[3] || 2500), SECT 
   await page.evaluate(installR2);
   const out = await page.evaluate(({ SEED, THROWS, SECT }) => {
     const G = __game, DT = 1 / 60, out = {}, K = G.CONFIG.grenade, DMG = 140;
+    if (typeof G.range === 'function') G.range(true);   // round 3: the dummies are only in play with range(true)
     const r3 = (a) => a.map((v) => +(+v).toFixed(3));
     const prep = () => { G.clearInput(); G.give('health'); G.give('grenade'); G.give('ammo'); G.resetTargets(); G.shotLog.length = 0; G.audioLog.length = 0; G.damageLog.length = 0; G.rescueLog.length = 0; };
     const outside = (o) => !Number.isFinite(o.x + o.y + o.z) || o.x < 0 || o.x > 120 || o.z < 0 || o.z > 160 || o.y < 0 || o.y > 90;

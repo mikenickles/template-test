@@ -7,6 +7,7 @@ const { boot } = require('./bug_lib.cjs');
   const { browser, page, errors } = await boot();
   const out = await page.evaluate(() => {
     const G = __game, out = {};
+    if (typeof G.range === 'function') G.range(true);   // round 3: dummies only with range(true)
     const cols = G.colliders.filter((c) => c.kind !== 'string');
     // ---- my own point-in-solid, with a coarse grid ----
     const CELL = 4, NX = 32, NZ = 42, grid = Array.from({ length: NX * NZ }, () => []);

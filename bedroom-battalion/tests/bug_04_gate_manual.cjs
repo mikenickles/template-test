@@ -89,18 +89,18 @@ const { boot } = require('./bug_lib.cjs');
     run('small_bridge', 'down (L1 to desk)', [110.5, 20, 40], [['go', 111.5, 42.5, 20], ['go', 111.5, 56.5, 26], ['go', 107, 57.5, 26]]);
     // ---- tunnel drop ----
     run('tunnel_drop', 'down (one way)', [89, 17, 74.5], [['go', 91, 80, 17], ['off', 77, 80, 8]]);
-    run('tunnel roof', 'down (step off the roof to the floor)', [77, 8, 80], [['off', 77, 100, 0]]);
+    run('tunnel roof', 'down (step off the roof to the floor, east side, away from the train)', [77, 8, 80], [['off', 84, 80, 0]]);
 
     // ---- whole climbs from the Green spawn point, one continuous drive, no teleports ----
     const whole = (name, steps) => run(name, 'spawn to top', [60, 0, 20], steps);
     whole('WHOLE bed via blanket', [['go', 60, 28, 0], ['go', 42, 24, 0], ['go', 26, 23.5, 0], ['go', 26, 47, 18], ['go', 27, 80, 18]]);
-    whole('WHOLE desk via skateboard', [['go', 60, 28, 0], ['go', 78, 30, 0], ['go', 89, 48.5, 0], ['go', 89, 74.5, 17], ['go', 94, 76.5, 17], ['go', 94, 64.3, 26, 0.5], ['go', 97, 64.3, 26], ['go', 97.5, 80, 26]]);
+    whole('WHOLE desk via skateboard', [['go', 60, 27, 0], ['go', 78, 27, 0], ['go', 89, 48.5, 0], ['go', 89, 74.5, 17], ['go', 94, 76.5, 17], ['go', 94, 64.3, 26, 0.5], ['go', 97, 64.3, 26], ['go', 97.5, 80, 26]]);
     whole('WHOLE top shelf via desk_yoyo, desk, tall_bridge, L2_a, L3_a, then all the way back down by strings and stairs',
-      [['go', 60, 28, 0], ['go', 78, 30, 0], ['go', 100, 46, 0], ['go', 107, 52, 0], ['grab', 107, 54.5], ['climb', 26], ['go', 104, 66, 26], ['go', 104, 94, 26], ['go', 107, 102.5, 26],
+      [['go', 60, 27, 0], ['go', 78, 27, 0], ['go', 100, 46, 0], ['go', 107, 52, 0], ['grab', 107, 54.5], ['climb', 26], ['go', 104, 66, 26], ['go', 104, 94, 26], ['go', 107, 102.5, 26],
         ['go', 111.5, 103.5, 26], ['go', 111.5, 117.5, 20], ['go', 110.5, 130, 20], ['grab', 107.6, 130], ['climb', 40], ['go', 110.5, 130, 40], ['go', 110.5, 136, 40], ['grab', 107.6, 136], ['climb', 60], ['go', 110.5, 136, 60],
         ['go', 110.5, 152, 60], ['grab', 107.6, 152], ['descend', 40], ['go', 110.5, 146, 40], ['grab', 107.6, 146], ['descend', 20], ['go', 110.5, 120, 20], ['go', 105.7, 120, 20], ['go', 105.7, 152.5, 0], ['go', 100, 153, 0]]);
     whole('WHOLE top shelf via tall_stairs, L2_b, L3_b',
-      [['go', 60, 28, 0], ['go', 78, 30, 0], ['go', 84, 60, 0], ['go', 83.2, 100, 0], ['go', 90, 134, 0], ['go', 100, 153, 0], ['go', 105.7, 152.5, 0], ['go', 105.7, 120, 20], ['go', 110.5, 120, 20], ['go', 110.5, 146, 20],
+      [['go', 60, 27, 0], ['go', 78, 27, 0], ['go', 84, 60, 0], ['go', 83.2, 100, 0], ['go', 90, 134, 0], ['go', 100, 153, 0], ['go', 105.7, 152.5, 0], ['go', 105.7, 120, 20], ['go', 110.5, 120, 20], ['go', 110.5, 146, 20],
         ['grab', 107.6, 146], ['climb', 40], ['go', 110.5, 146, 40], ['go', 110.5, 152, 40], ['grab', 107.6, 152], ['climb', 60], ['go', 110.5, 152, 60]]);
     return rows;
   });

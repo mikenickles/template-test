@@ -1,3 +1,131 @@
+# Round 3A (train, soldiers, bot movement; early pass)
+
+**No blocker or major bug. In 54,000 bot-seconds of nav test there were 0 stuck bots and 0 rescues by my own
+detection, and no `trainRescueLog` or `stuckLog` entry in any run.**
+Findings: 0 blocker, 0 major, 2 minor.
+
+Build tested: the frozen copy `snapshots/index_r3a.html` (233,131 bytes, unchanged during testing), opened with the
+harness `file` option. I did not test `index.html`. Console errors and warnings: none in any run, including three
+30-minute nav runs and six ways of breaking audio. Items 3 to 6 of DESIGN 16.10 belong to 3B and were not expected.
+
+## Findings
+
+### R3A-1. MINOR (test hook): `__game.raycast` throws when the first thing on the ray is a soldier
+
+```js
+const id = __game.spawnBot('green', 'n.c.3'); __game.step(0.5);       // bot stands at (59, 0, 52)
+__game.raycast([59, 1.6, 60], [0, 0, -1])
+// TypeError: Cannot read properties of null (reading 'id')   (at Object.raycast)
+```
+
+- `fire()` along the same line works: it hits `bot.1`, zone `head`, kind `soldier`, 60 damage. `raycast` at a range
+  dummy works (`target.5`, body) and so does `raycast` at a train car (`train.1.boxcar.body`). Only a soldier hit throws.
+- Expected: `{id: 'bot.1', kind: 'soldier', zone, distance, point}`, as for dummies. This matters for 3B testing (line of
+  sight, aim). Script: `tests/bug_r3a_05_soldiers_carry.cjs` (`raycastAtSoldier`).
+
+### R3A-2. MINOR (pre-existing, player too): going down a string from its top, the body is inside the board for 3 ticks
+
+```js
+const id = __game.spawnBot('green', 's.desk.s'); __game.step(0.1); __game.botGoto(id, 's.sl.foot');
+// ticks 30 to 33: climbing at (107, 25.9 .. 25.6, 104.8 .. 105.1); at y 25.63, z 105.11 the body overlaps desk.top
+// (x 95..120, z 55..105, y 24.5..26) by more than 5 cm. The bot then climbs down normally and arrives (5.4 s).
+```
+
+- This happens on every descent of every string (yo-yo, shoelace, all six shelf strings), for both the bot and the player.
+  Driving the player down the shoelace by hand gives the same 3 ticks, and the round-2 build gives the same result,
+  so it is old behaviour that the bots now expose. In a 30-minute nav run it adds up to 455 to 520 ticks.
+- The grab puts you on the string while your body is still over the board, and then you slide out while sinking. Fix
+  it by moving the body out to the string line before sinking it. Climbing up and walking off the top is clean.
+  Script: `tests/bug_r3a_03_nav.cjs` ("static-solid ticks"), probe repeated in `tests/bug_r3a_04_bots_player.cjs` A.
+
+## Not counted, for the lead
+
+- **Crossing waits:** bots wait up to about 20 s at a closed crossing. That is 3 s of look-ahead plus the train's
+  67-unit length at 4 u/s, which follows 16.3 as written. It adds up to about 10 % of bot time (1,761 s of waiting in
+  18,000 bot-seconds), and every stationary period over 12 s that I detected was a `wait_cross`. 16.10 item 4 (3B)
+  addresses this.
+- **Soldiers pass through each other and the player:** a bot's route timing is identical with or without the player
+  standing on the wait node, a crossing, a string foot or top, the ruler, a door, the gate, a stair foot or the tunnel
+  top. 16.10 item 5 (soft separation) is for 3B. Ride capacity still holds at one bot per deck with four bots forced
+  onto the same ride.
+- **The train blocks grenades:** 4 of 2,000 random grenade bursts did no damage although my static line of sight was
+  clear. All four lines crossed the track, so the train in between is the likely cause, which is correct (16.1).
+- **One-tick overlaps:** while being pushed, the player overlaps a car box by up to 0.10 for single ticks (51 ticks in
+  502 push runs, 32 ticks in 171,595 fuzz ticks). It is never visible and never gets worse.
+
+## Train (`bug_r3a_01_train.cjs`, `bug_r3a_02_push.cjs`)
+
+| Check | Result |
+| --- | --- |
+| Lap timing | `s = 30 + 4t` to 1.5e-4 over two laps; lap 54.204 s, length 216.814. One 1 s step equals 60 ticks. `trainAt(t)` matches the live train to 5e-4. Teleports, a death and holding the player on the track do not shift it |
+| Whistles | 2 per lap, 27.1 s apart, each when the engine centre passes z 80 (west at 0.883 s, east at 27.983 s, then every lap) |
+| Clearance | `trainClearance()` is `[]`. My own sweep of every static collider (y 0.25 to 6) against the swept envelope (2 either side of the straights, radius 13.5 to 19.5 on the curves) found nothing. The closest objects are the crayons, 0.30 outside the edge (z 33.0 / 127.0, per 16.10 item 1) |
+| Riding | Engine hood (5), cab (6), boxcar (5), flatbed deck (1.2) at both ends, cargo block top (4.2), gondola deck at the middle and end (1.2), caboose (5); standing and crouched; 25 s across the north curve. Drift in the car frame is at most 0.001, yaw follows the car exactly (0.00 degrees error), no air ticks, `state().riding` names the part, no damage. Jumping straight up keeps the car's velocity (for example 0.27, 4.00 against 0.19, 4.00) and you land back on the car. Jumping off sideways lands on the floor outside the envelope with no damage, except from the gondola, whose 2.4 walls keep you on the deck |
+| Tunnel | Standing on the engine hood, cab, boxcar roof (front and rear) and caboose roof: scraped off at the tunnel mouth (z 67.6), dropped into the gap and pushed into the side clearance (x 74.58 or 79.42), never inside a car or a wall, no damage, no rescue, and you can walk out. Crouched on any roof (head 6.2), on the cargo top (head 6.0) or on a deck: rides through |
+| Push | 352 runs: 11 track points (both straights, both curves, tunnel mouth and inside) x 4 lateral offsets x 8 inputs (idle, walk toward, walk away, walk across, sprint toward, jumping, crouched, crouch-walking). 0 damage, 0 `trainRescueLog`, 0 room rescues, never inside a static solid, never out of the room. Idle, crouched and jumping players always end up on the side they started on |
+| Wedging | Every spot where a static solid is within 1.5 of the envelope edge: both crayon pairs, both toy cars, block E-c, both tunnel walls every 3 units. Standing and crouched; idle in the envelope, walking into the object, and standing in the gap: 150 runs, 0 damage, 0 rescues of either kind, 0 car overlaps, 0 static overlaps |
+| Bullets | Rifle shots at every car at y 0.6, 1, 3 and 5.5 stop on the car (`train.N.part`, surface metal). Above the gondola's 2.4 wall the shot passes over, which is correct |
+| Grenades | Landing on the gondola deck and the boxcar, engine and caboose roofs, the grenade rides with the car's velocity (0, -4) until it bursts. Grenades bounce off car sides. None left the room. A burst on the deck you are riding: own-grenade damage only, no train damage or rescue |
+
+## Bots (`bug_r3a_03_nav.cjs`, `bug_r3a_04_bots_player.cjs`)
+
+- **Nav test**, 10 bots, seeds 11, 23 and 37, 1,800 s each, with my own checks every tick:
+  - Stuck (less than 1 unit of movement in 12 s, other than at a crossing): 0. Teleports of more than 1.5 in a tick: 0.
+  - Out of the room: 0. Car overlaps over 0.10: 0. Health lost: 0.
+  - Inside the envelope while not riding or crossing: only while boarding a deck.
+  - Inside a static solid: only R3A-2.
+  - `stuckLog`, `trainRescueLog` and `rescueLog` stayed empty. `navStats`: 178 rides (0 aborts), 1,063 crossings,
+    every edge, kind, route and crossing used, 0 train pushes, 0 `noPath`.
+  - On a fourth run (seed 11, 600 s) I checked each of the 126 crossing starts against `trainAt`: none began with a
+    car due at the crossing point within 3 s.
+- **Strings:** a bot climbs every string up and down and arrives (4.4 to 5.4 s each).
+- **Crowded rides:** 1, 2 and 4 bots forced onto each ride edge (`botGoto(id, node, {via})`), with and without the
+  player on the wait node. Every bot arrived; there was never more than one bot per deck, no stall, no teleport and no
+  log entry.
+- **`spawnBot` on all 140 nodes:** every bot stands at its node, outside solids, at 100 hp, except `m.pad`, where the
+  spring launches it onto the bed (expected). Each then walked to a random node: 136 of 137 arrived. The one that did
+  not had the pad as its goal and landed on the bed. 0 `stuckLog`.
+- **Soldiers:** `range()` is off by default (0 targets), and `range(true)` brings back all 21 dummies. Pistol on a
+  bot: head 60, body 30, a shot above the head or beside it misses. A killed bot is `dead`, and bullets and the player
+  pass through the body. A teammate chevron shows within 60 units with line of sight, and not on enemies or beyond 60.
+  In 150 random pairs, the chevron agreed with my line of sight (which counts the train's cargo block and gondola walls)
+  every time.
+
+## Carry-overs (16.8)
+
+| # | Result |
+| --- | --- |
+| 1 No tracer while scoped | Fixed: 0 tracers after a scoped sniper shot, 1 after an unscoped sniper or rifle shot (`fxStats()`) |
+| 2 Pistol body, jump gain | Fixed: the pistol now has a triangle 230 to 70 Hz body and a 1100 Hz low-pass layer under the crack; jump gain 0.5 |
+| 3 Hand with grenade | Fixed: the hand is visible on every rendered frame while G is held, and hidden otherwise (`fxStats().handVisible` updates on render) |
+| 4 Crayons | `55.7..57, 28..33` and `63..64.3, 28..33`, mirrored at `127..132`, h 1.3, as DESIGN 15.5 item 5 and 16.10 item 1 |
+| 5 Tunnel roof | Underside 6.5 (`tunnel.roof` y 6.5 to 8); the scrape behaves as above |
+
+## Regression
+
+- `validateWaypoints()` is `[]`. All 18 routes, up and down, walking and sprinting, with my own end checks: 68 of 68
+  legs ok, and the two one-way routes refuse to be driven down.
+- Raw-input gate: 82 of 82. I changed two of my legs because they now meet the train or the moved crayon: the walk
+  from the spawn now passes z 27 instead of z 30, and the tunnel-roof descent steps off the east side. Neither is a bug.
+- Manual lanes: 54 of 443 flagged, the same as round 2.
+- Fuzz with movement, firing and throwing, 1.11 million ticks, and a player fuzz on and around the track, 171,595 ticks
+  of which 927 were riding: never out of the room, 0 rescues, 0 NaN, 0 `trainRescueLog`, no damage except falls and
+  own grenades.
+- Grenades: 35 pressed-against cases and 3,900 face throws are clean as in round 2. 2,000 random throws: 0 born inside
+  a solid, 0 entered a solid, 0 left the room.
+- Hitscan: 5,584 random rays, 0 through a static solid. 92 rays stop on the train, which my static march does not model.
+- State machine: 2,880 action orders, 150,000 ticks of abuse, no invariant broken.
+
+## Scripts
+
+New: `tests/bug_r3a_lib.cjs` (boots the snapshot; my own track, envelope and car-box maths), `bug_r3a_01_train.cjs`,
+`bug_r3a_02_push.cjs` (`P` or `W`), `bug_r3a_03_nav.cjs <seed> <seconds>`, `bug_r3a_04_bots_player.cjs`,
+`bug_r3a_05_soldiers_carry.cjs`. Changed: `bug_04_gate_manual.cjs` (the two legs above); `bug_r2b_01_grenade.cjs` and
+`bug_r2_03_hitscan.cjs` turn on `range(true)` when it exists. I ran the older scripts on the snapshot through the
+harness `file` option. Every loop has a tick limit.
+
+---
+
 # Round 2 (gunplay)
 
 **Nothing blocks the feel gate: all four guns fire, reload and hit exactly to the numbers in DESIGN 12 and 15.1.**
