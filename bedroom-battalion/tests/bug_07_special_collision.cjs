@@ -139,7 +139,7 @@ const { boot } = require('./bug_lib.cjs');
     }
     out.rulerSeatStand = (() => {
       G.clearInput(); G.teleport(91.5, 17, 72.75, YAW.e, 0); G.step(0.2);
-      G.setInput({ forward: true, crouch: true }); while (T.st().x < 94) G.step(1 / 60);
+      G.setInput({ forward: true, crouch: true }); for (let _i = 0; _i < 1500 && (T.st().x < 94); _i++) G.step(1 / 60);   /* tick limit */
       G.clearInput(); G.setInput({ crouch: true }); G.step(0.3);
       const a = { pos: T.pos(), crouching: T.st().crouching, onGround: T.st().onGround };
       G.clearInput(); G.step(1);

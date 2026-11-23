@@ -179,3 +179,50 @@ Also for round 2: both bed ends and both desk ends have a clear line down into t
 ## 5. Scripts
 
 All in `tests/`, run with `node name.cjs`: `feel_scale_shots`, `feel_angles`, `feel_variants` (field of view and fog copies), `feel_mechanics`, `feel_travel`, `feel_routes`, `feel_route_shots`, `feel_cover`, `feel_covermap`, `feel_perches`, `feel_spring_strings`, `feel_tuning`, `feel_ruler_trap`, `feel_chairback`, `feel_proposals`, `feel_checks`, `feel_fort_shots`, `feel_liveconfig`. `feel_dump` and `feel_ids` only list colliders and routes. Helpers: `feel_lib.cjs`, `feel_drive.js`, `feel_los.js`. No console errors or warnings in any run.
+
+---
+
+# Re-check after FIXLIST passes 1 and 2
+
+**Gate "the room feels huge": PASS, more comfortably than before.** The haze now does its job: from the gate the far wall and the far end of the bed fade toward the haze colour, the walls read blue and the ceiling off-white, and the room reads clearly deeper. The spawn and centre-lane read is slightly better for the same reason, but still the weakest part: the same grey boxes fill the frame.
+
+Method as before: fresh player-eye shots (`screenshots/round1/feel_re_*.png`, 37 views plus montages `feel_re_cmp_*.png`; all reviewed except `feel_re_04` and `feel_re_16`, which were rendered but not looked at), and the same scripts re-run on the fixed build. New scripts: `feel_re_shots`, `feel_re_more`, `feel_re_ruler`, `feel_re_ruler2`, `feel_re_bear`, `feel_re_bear2`. No console errors in any run. `index.html` not touched.
+
+## Items asked for
+
+| # | Item | Result | Evidence |
+| --- | --- | --- | --- |
+| 1 | Gate; spawn and centre read | **Pass. Slightly better, not fixed.** | `feel_re_cmp_gate.png`, `feel_re_cmp_gate2.png` (old left, new right). Depth is much better. Spawn view is still 54 % own wall; (60, 50) and the ruin are still crates. |
+| 2 | Far wall paler than near | **Fixed.** | `feel_re_02_gate_across.png`: near east wall is blue-grey, far wall and far bed end are visibly washed toward haze. `CONFIG.camera` and `CONFIG.fog` are now live (`feel_liveconfig.cjs`: picture changes). |
+| 3 | Yo-yo faster than stairs | **Fixed.** | Green spawn to desk north end: 14.9 s by yo-yo against 17.4 s by stairs and bridge (was 17.6 against 17.4). String time 4.7 s (26 u) and 3.65 s (20 u). |
+| 4 | Ways down visible from on top | **Partly.** | Fixed for all eight strings (stubs stand above the surface: `feel_re_d01`, `d02`, `d07`, `d08`, `d09`), both ruler bridges (`d03`, `d04`), both rulers from the desk (`d05`), blanket slope head (`d11`). Not fixed for the bed book stairs: the head strip is behind pillow P2 and cannot be seen from the bed until you stand on the pillow (`feel_re_d16_bed_south_from_mid.png` against `feel_re_d17_bed_south_on_pillow.png`). The blanket strip is also hidden behind ridge R1 from the bed middle (`feel_re_d13`), visible once past it. |
+| 5 | Ruler trap | **Fixed (no falls); the leftover is acceptable.** | `feel_ruler_trap.cjs`: 0 falls, 0 damage in 15 runs; the 9 corner-cutting runs slide and stop. `feel_re_ruler.cjs`: they stop on the seat against the ruler side, or on the skateboard edge against the prop at y 13 to 15.5. Steering one unit west and round reaches the desk 3.0 s later (`feel_re_ruler2.cjs`). Stoppers do not snag normal climbs: straight runs up the skateboard and chair stairs at x 90.5 to 91.9 lose at most 0.15 s. One leftover: from against the prop, steering straight at the ruler foot pins you behind the stopper until you step west. No damage, so not a trap. |
+| 6 | Cover gaps | **Fixed for west and centre, partly for east.** | `feel_cover.cjs`. West lane: longest bare stretch 28.8 -> 11.8 u (9.3 u at the pad), worst point 13 -> 8.2 from cover. Centre: gate stretch 13.5 u -> none over 6. East lane north: 28.5 -> 13.8 u (worst point 10.4 from cover), but the 14.2 u stretch outside each fort east door is unchanged and is just over the 14 u line. |
+| 7 | Made worse | See below. | |
+
+## Times to each high point (sprint, fixed build)
+
+| Target | Green | Tan |
+| --- | --- | --- |
+| Ruin platform | 11.6 s | 11.5 s |
+| Own bed end / bed middle | 9.0 / 13.7 s | 10.1 / 14.25 s |
+| Chair seat / desk middle (ramps) | 13.8 / 18.25 s | 13.8 / 18.2 s |
+| Desk end by string | 14.9 s | 14.9 s |
+| Own shelf L1 / L2 | 14.3 / 20.1 s | 14.3 / 20.1 s |
+| Tall shelf L3 | 33.0 s | 25.3 s |
+| Small shelf L2 | 20.1 s | 27.8 s |
+
+Unchanged fairness picture: equal except Green's 1.1 s lead to its bed end and Tan's taller shelf. Fort to fort is still 20.3 s. All 17 route walks in `feel_routes.cjs` still pass with no speed loss; spring pad 72 of 72 on the bed.
+
+## What the changes made worse
+
+1. **Jumbo crayons mask the firing slits and the gate view.** At 1.3 high and 5 units in front of the wall they cover most of what a standing defender sees through either slit (`feel_re_c04_slit_standing.png`, `feel_re_s01_slit_east_standing.png`: only a strip above the crayon is left), and from the gate two grey slabs fill the bottom third of the frame (`feel_re_02`). They do work as crouch cover (`feel_re_c06`). Suggested: turn them to lie north-south beside the gate path instead of across the slits, about `55.7..57, 29..38` and `63..64.3, 29..38` h 1.3, mirrored. Untested.
+2. **The bed is now pale and its top is blown out.** With the new bed colour and fill light the bed top renders near white; pillows, sheet and the bed surface are hard to tell apart (`feel_re_09_bedtop_across.png`, `feel_re_d16`, `feel_re_d18`), and from the gate the pale slab blends into the hazed wall behind it, so its silhouette is weaker than the old brown one (`feel_re_cmp_gate.png`, top row). Scale cost is small; readability on the bed top is the real loss. For the visual tester and round 2 art: the blanket colour on the bed top should fix it.
+3. **The free way down the bear now costs 25 hp at walking or sprinting speed.** The body ledge under the head is 2 units deep and 6 down; with `airControl` 0.12 you cannot brake onto it, so you overshoot to the floor (`feel_re_bear.cjs`: 25 hp in all six runs; it was free before). It still works at crouch speed or with a short tap (`feel_re_bear2.cjs`). Suggested: pull the bear head back to `6..14, 39..45` so the ledge is 4 deep. The bucket, slope, stairs and both desk ways down are still free.
+4. Smaller: W-c closes the strip between the bed and the spring pad, so a run down the bed side now always ends on the pad unless you step out to x 40 (`feel_spring_strings.cjs`, "accidental": x 35.5 and 36 now launch too). Spring steering along the bed is narrower (z 70 to 90, was 69 to 91), as expected.
+
+## Top remaining issues
+
+1. Spawn and centre-lane scale read: unchanged grey crates at eye level; needs the round 2 art pass on centre cover, and the jumbo crayons moved off the gate and slit sightlines.
+2. Bed: top is blown out and the book-stairs head is hidden behind pillow P2, so the south way down still cannot be found from the bed; move the lap strip or mark the pillow's south edge.
+3. Bear descent now takes 25 hp unless crouch-walked (head to `6..14, 39..45`); plus the deferred stair camera ripple (`stepSmooth` 16).

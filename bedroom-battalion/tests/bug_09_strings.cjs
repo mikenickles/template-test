@@ -29,7 +29,7 @@ const { boot } = require('./bug_lib.cjs');
       }
       const atTop = snap();
       const okTop = topAt !== null && atTop.onGround && Math.abs(atTop.pos[1] - s.y1) < 0.01 && Math.abs(atTop.pos[0] - (s.x + s.ex)) < 0.02 && Math.abs(atTop.pos[2] - (s.z + s.ez)) < 0.02;
-      out.bottom.push({ id: s.id, from: a * 45, sprint, grabbedAt, grabDist, climbSecs: topAt && grabbedAt ? +(topAt - grabbedAt).toFixed(2) : null, expectSecs: +((s.y1 - s.y0) / 3.5).toFixed(2), okTop, atTop: atTop.pos, hp: atTop.hp });
+      out.bottom.push({ id: s.id, from: a * 45, sprint, grabbedAt, grabDist, climbSecs: topAt && grabbedAt ? +(topAt - grabbedAt).toFixed(2) : null, expectSecs: +((s.y1 - s.y0) / G.CONFIG.climb.speed).toFixed(2), okTop, atTop: atTop.pos, hp: atTop.hp });
     }
 
     // ---- B. on the string: W up, S down, nothing holds, W+S holds, A/D do nothing, look around is free, Space lets go ----

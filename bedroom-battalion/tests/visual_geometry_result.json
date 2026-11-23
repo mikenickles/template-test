@@ -1,13 +1,13 @@
 {
- "colliders": 347,
+ "colliders": 356,
  "byKind": {
-  "box": 308,
-  "ramp": 12,
+  "box": 313,
+  "ramp": 14,
   "pad": 1,
-  "cyl": 18,
+  "cyl": 20,
   "string": 8
  },
- "staticTris": 4312,
+ "staticTris": 4684,
  "instances": 473,
  "instancesWithCollider": 149,
  "instancesNoCollider": {
@@ -26,6 +26,110 @@
     162,
     -2,
     0
+   ]
+  },
+  {
+   "id": "desk.yoyo",
+   "kind": "string",
+   "missingCorners": "1/2",
+   "bounds": [
+    106.89,
+    107.11,
+    54.39,
+    54.61,
+    0,
+    26
+   ]
+  },
+  {
+   "id": "desk.lace",
+   "kind": "string",
+   "missingCorners": "1/2",
+   "bounds": [
+    106.89,
+    107.11,
+    105.39,
+    105.61,
+    0,
+    26
+   ]
+  },
+  {
+   "id": "s.tall.str.L2a",
+   "kind": "string",
+   "missingCorners": "1/2",
+   "bounds": [
+    107.49,
+    107.71,
+    129.89,
+    130.11,
+    20,
+    40
+   ]
+  },
+  {
+   "id": "s.tall.str.L2b",
+   "kind": "string",
+   "missingCorners": "1/2",
+   "bounds": [
+    107.49,
+    107.71,
+    145.89,
+    146.11,
+    20,
+    40
+   ]
+  },
+  {
+   "id": "s.tall.str.L3a",
+   "kind": "string",
+   "missingCorners": "1/2",
+   "bounds": [
+    107.49,
+    107.71,
+    135.89,
+    136.11,
+    40,
+    60
+   ]
+  },
+  {
+   "id": "s.tall.str.L3b",
+   "kind": "string",
+   "missingCorners": "1/2",
+   "bounds": [
+    107.49,
+    107.71,
+    151.89,
+    152.11,
+    40,
+    60
+   ]
+  },
+  {
+   "id": "n.small.str.L2a",
+   "kind": "string",
+   "missingCorners": "1/2",
+   "bounds": [
+    107.49,
+    107.71,
+    29.89,
+    30.11,
+    20,
+    40
+   ]
+  },
+  {
+   "id": "n.small.str.L2b",
+   "kind": "string",
+   "missingCorners": "1/2",
+   "bounds": [
+    107.49,
+    107.71,
+    13.89,
+    14.11,
+    20,
+    40
    ]
   },
   {
@@ -109,7 +213,7 @@
   },
   {
    "col": "#FFD21F",
-   "tris": 12,
+   "tris": 22,
    "x": [
     106.89,
     107.11
@@ -119,13 +223,13 @@
     55.31
    ],
    "y": [
-    25.98,
-    26.1
+    0,
+    28
    ]
   },
   {
    "col": "#FFD21F",
-   "tris": 12,
+   "tris": 22,
    "x": [
     106.89,
     107.11
@@ -135,8 +239,8 @@
     105.61
    ],
    "y": [
-    25.98,
-    26.1
+    0,
+    28
    ]
   },
   {
@@ -157,7 +261,7 @@
   },
   {
    "col": "#FFD21F",
-   "tris": 12,
+   "tris": 22,
    "x": [
     107.49,
     108.41
@@ -167,13 +271,13 @@
     130.11
    ],
    "y": [
-    39.98,
-    40.1
+    20,
+    42
    ]
   },
   {
    "col": "#FFD21F",
-   "tris": 12,
+   "tris": 22,
    "x": [
     107.49,
     108.41
@@ -183,13 +287,13 @@
     146.11
    ],
    "y": [
-    39.98,
-    40.1
+    20,
+    42
    ]
   },
   {
    "col": "#FFD21F",
-   "tris": 12,
+   "tris": 22,
    "x": [
     107.49,
     108.41
@@ -199,13 +303,13 @@
     136.11
    ],
    "y": [
-    59.98,
-    60.1
+    40,
+    62
    ]
   },
   {
    "col": "#FFD21F",
-   "tris": 12,
+   "tris": 22,
    "x": [
     107.49,
     108.41
@@ -215,13 +319,13 @@
     152.11
    ],
    "y": [
-    59.98,
-    60.1
+    40,
+    62
    ]
   },
   {
    "col": "#FFD21F",
-   "tris": 12,
+   "tris": 22,
    "x": [
     107.49,
     108.41
@@ -231,13 +335,13 @@
     30.11
    ],
    "y": [
-    39.98,
-    40.1
+    20,
+    42
    ]
   },
   {
    "col": "#FFD21F",
-   "tris": 12,
+   "tris": 22,
    "x": [
     107.49,
     108.41
@@ -247,8 +351,200 @@
     14.11
    ],
    "y": [
-    39.98,
-    40.1
+    20,
+    42
+   ]
+  },
+  {
+   "col": "#FF8A1F",
+   "tris": 10,
+   "x": [
+    20,
+    32
+   ],
+   "z": [
+    45,
+    46.5
+   ],
+   "y": [
+    18,
+    18.05
+   ]
+  },
+  {
+   "col": "#FF8A1F",
+   "tris": 10,
+   "x": [
+    22,
+    30
+   ],
+   "z": [
+    113.5,
+    115
+   ],
+   "y": [
+    18,
+    18.05
+   ]
+  },
+  {
+   "col": "#FF8A1F",
+   "tris": 10,
+   "x": [
+    86,
+    92
+   ],
+   "z": [
+    73,
+    74.5
+   ],
+   "y": [
+    17,
+    17.05
+   ]
+  },
+  {
+   "col": "#FF8A1F",
+   "tris": 10,
+   "x": [
+    86,
+    92
+   ],
+   "z": [
+    85.5,
+    87
+   ],
+   "y": [
+    17,
+    17.05
+   ]
+  },
+  {
+   "col": "#FF8A1F",
+   "tris": 10,
+   "x": [
+    95.5,
+    97
+   ],
+   "z": [
+    64,
+    67
+   ],
+   "y": [
+    26,
+    26.05
+   ]
+  },
+  {
+   "col": "#FF8A1F",
+   "tris": 10,
+   "x": [
+    95.5,
+    97
+   ],
+   "z": [
+    93,
+    96
+   ],
+   "y": [
+    26,
+    26.05
+   ]
+  },
+  {
+   "col": "#FF8A1F",
+   "tris": 10,
+   "x": [
+    110,
+    113
+   ],
+   "z": [
+    55,
+    56.5
+   ],
+   "y": [
+    26,
+    26.05
+   ]
+  },
+  {
+   "col": "#FF8A1F",
+   "tris": 8,
+   "x": [
+    110,
+    113
+   ],
+   "z": [
+    42.5,
+    44
+   ],
+   "y": [
+    20,
+    20.05
+   ]
+  },
+  {
+   "col": "#FF8A1F",
+   "tris": 10,
+   "x": [
+    110,
+    113
+   ],
+   "z": [
+    103.5,
+    105
+   ],
+   "y": [
+    26,
+    26.05
+   ]
+  },
+  {
+   "col": "#FF8A1F",
+   "tris": 8,
+   "x": [
+    110,
+    113
+   ],
+   "z": [
+    116,
+    117.5
+   ],
+   "y": [
+    20,
+    20.05
+   ]
+  },
+  {
+   "col": "#FF8A1F",
+   "tris": 10,
+   "x": [
+    108,
+    109.5
+   ],
+   "z": [
+    117.2,
+    122.1
+   ],
+   "y": [
+    20,
+    20.05
+   ]
+  },
+  {
+   "col": "#FF8A1F",
+   "tris": 10,
+   "x": [
+    108,
+    109.5
+   ],
+   "z": [
+    37.9,
+    42.8
+   ],
+   "y": [
+    20,
+    20.05
    ]
   },
   {
@@ -317,7 +613,7 @@
   }
  ],
  "zFightDifferentColour": {
-  "y=0 facing - #F2EFE6/#C79A5E static/static": {
+  "y=0 facing - #F2EFE6/#E9E4DA static/static": {
    "pairs": 8,
    "area": 3.6,
    "example": [
@@ -344,7 +640,7 @@
     116.56
    ]
   },
-  "x=0 facing - #F2EFE6/#C79A5E static/static": {
+  "x=0 facing - #F2EFE6/#E9E4DA static/static": {
    "pairs": 8,
    "area": 24,
    "example": [
@@ -370,9 +666,45 @@
     1.46,
     116.61
    ]
+  },
+  "z=73 facing - #8FA3B5/#FF8A1F static/static": {
+   "pairs": 1,
+   "area": 0.01,
+   "example": [
+    86.08,
+    17.02,
+    73
+   ]
+  },
+  "z=87 facing + #8FA3B5/#FF8A1F static/static": {
+   "pairs": 1,
+   "area": 0.01,
+   "example": [
+    86.1,
+    17.02,
+    87
+   ]
+  },
+  "y=17 facing - #8FA3B5/#FF8A1F static/static": {
+   "pairs": 5,
+   "area": 0.49,
+   "example": [
+    86.13,
+    17,
+    73.02
+   ]
+  },
+  "y=17 facing - #9AA3AD/#FF8A1F static/static": {
+   "pairs": 11,
+   "area": 0.2,
+   "example": [
+    91.98,
+    17,
+    73.38
+   ]
   }
  },
- "zFightSameColourPairs": 852,
+ "zFightSameColourPairs": 892,
  "zFightSameColour": {
   "x=-0.7 facing + #F2EFE6/#F2EFE6 static/static": {
    "pairs": 4,
@@ -402,38 +734,38 @@
    ]
   },
   "z=54.39 facing - #FFD21F/#FFD21F static/static": {
-   "pairs": 1,
-   "area": 0,
+   "pairs": 3,
+   "area": 0.02,
    "example": [
-    106.99,
-    25.99,
+    107.1,
+    26.04,
     54.39
    ]
   },
   "x=107.11 facing + #FFD21F/#FFD21F static/static": {
-   "pairs": 3,
-   "area": 0,
+   "pairs": 6,
+   "area": 0.04,
    "example": [
     107.11,
-    25.99,
-    54.51
+    26.05,
+    54.6
    ]
   },
   "x=106.89 facing - #FFD21F/#FFD21F static/static": {
-   "pairs": 3,
-   "area": 0,
+   "pairs": 6,
+   "area": 0.04,
    "example": [
     106.89,
-    25.99,
-    54.5
+    26.04,
+    54.4
    ]
   },
   "z=105.61 facing + #FFD21F/#FFD21F static/static": {
-   "pairs": 1,
-   "area": 0,
+   "pairs": 3,
+   "area": 0.02,
    "example": [
-    107.01,
-    25.99,
+    106.9,
+    26.04,
     105.61
    ]
   },
@@ -501,119 +833,119 @@
    ]
   },
   "z=129.89 facing - #FFD21F/#FFD21F static/static": {
-   "pairs": 2,
-   "area": 0,
+   "pairs": 3,
+   "area": 0.02,
    "example": [
-    107.61,
-    39.99,
+    107.7,
+    40.05,
     129.89
    ]
   },
   "z=130.11 facing + #FFD21F/#FFD21F static/static": {
-   "pairs": 1,
-   "area": 0,
+   "pairs": 3,
+   "area": 0.02,
    "example": [
-    107.6,
-    39.99,
+    107.5,
+    40.04,
     130.11
    ]
   },
   "x=107.49 facing - #FFD21F/#FFD21F static/static": {
-   "pairs": 6,
-   "area": 0,
+   "pairs": 18,
+   "area": 0.12,
    "example": [
     107.49,
-    39.99,
-    130.01
+    40.04,
+    129.9
    ]
   },
   "z=145.89 facing - #FFD21F/#FFD21F static/static": {
-   "pairs": 2,
-   "area": 0,
+   "pairs": 3,
+   "area": 0.02,
    "example": [
-    107.61,
-    39.99,
+    107.7,
+    40.05,
     145.89
    ]
   },
   "z=146.11 facing + #FFD21F/#FFD21F static/static": {
-   "pairs": 1,
-   "area": 0,
+   "pairs": 3,
+   "area": 0.02,
    "example": [
-    107.6,
-    39.99,
+    107.5,
+    40.04,
     146.11
    ]
   },
   "z=135.89 facing - #FFD21F/#FFD21F static/static": {
-   "pairs": 2,
-   "area": 0,
+   "pairs": 3,
+   "area": 0.02,
    "example": [
-    107.61,
-    59.99,
+    107.7,
+    60.05,
     135.89
    ]
   },
   "z=136.11 facing + #FFD21F/#FFD21F static/static": {
-   "pairs": 1,
-   "area": 0,
+   "pairs": 3,
+   "area": 0.02,
    "example": [
-    107.6,
-    59.99,
+    107.5,
+    60.04,
     136.11
    ]
   },
   "z=151.89 facing - #FFD21F/#FFD21F static/static": {
-   "pairs": 2,
-   "area": 0,
+   "pairs": 3,
+   "area": 0.02,
    "example": [
-    107.61,
-    59.99,
+    107.7,
+    60.05,
     151.89
    ]
   },
   "z=152.11 facing + #FFD21F/#FFD21F static/static": {
-   "pairs": 1,
-   "area": 0,
+   "pairs": 3,
+   "area": 0.02,
    "example": [
-    107.6,
-    59.99,
+    107.5,
+    60.04,
     152.11
    ]
   },
   "z=29.89 facing - #FFD21F/#FFD21F static/static": {
-   "pairs": 2,
-   "area": 0,
+   "pairs": 3,
+   "area": 0.02,
    "example": [
-    107.61,
-    39.99,
+    107.7,
+    40.05,
     29.89
    ]
   },
   "z=30.11 facing + #FFD21F/#FFD21F static/static": {
-   "pairs": 1,
-   "area": 0,
+   "pairs": 3,
+   "area": 0.02,
    "example": [
-    107.6,
-    39.99,
+    107.5,
+    40.04,
     30.11
    ]
   },
   "z=13.89 facing - #FFD21F/#FFD21F static/static": {
-   "pairs": 2,
-   "area": 0,
+   "pairs": 3,
+   "area": 0.02,
    "example": [
-    107.61,
-    39.99,
+    107.7,
+    40.05,
     13.89
    ]
   },
   "z=14.11 facing + #FFD21F/#FFD21F static/static": {
-   "pairs": 1,
-   "area": 0,
+   "pairs": 3,
+   "area": 0.02,
    "example": [
-    107.6,
-    39.99,
+    107.5,
+    40.04,
     14.11
    ]
   },
@@ -756,7 +1088,7 @@
     26,
     64
    ],
-   "restsOn": "NOTHING"
+   "restsOn": "desk.ruler.n.prop (gap 0.3)"
   },
   {
    "id": "desk.ruler.n",
@@ -786,7 +1118,7 @@
     26,
     96
    ],
-   "restsOn": "NOTHING"
+   "restsOn": "desk.ruler.s.prop (gap 0.3)"
   },
   {
    "id": "desk.bridge.n",
@@ -830,6 +1162,42 @@
   }
  ],
  "interpenetrating": [
+  {
+   "a": "desk.ruler.n",
+   "b": "desk.ruler.n.prop",
+   "overlap": [
+    3,
+    9,
+    9
+   ]
+  },
+  {
+   "a": "desk.ruler.s",
+   "b": "desk.ruler.s.prop",
+   "overlap": [
+    3,
+    9,
+    9
+   ]
+  },
+  {
+   "a": "desk.ruler.n.prop",
+   "b": "chair.stopper.n",
+   "overlap": [
+    0.45,
+    1,
+    0.2
+   ]
+  },
+  {
+   "a": "desk.ruler.s.prop",
+   "b": "chair.stopper.s",
+   "overlap": [
+    0.2,
+    1,
+    0.2
+   ]
+  },
   {
    "a": "s.tall.post.0",
    "b": "s.tall.L1",
@@ -1015,9 +1383,9 @@
   "#F5F2EA": 12,
   "#BFD3E0": 84,
   "#F2EFE6": 276,
-  "#9AA3AD": 2504,
-  "#C79A5E": 60,
-  "#FF8A1F": 1628,
+  "#9AA3AD": 2732,
+  "#E9E4DA": 60,
+  "#FF8A1F": 1772,
   "#3D5A99": 32,
   "#E8EEF5": 72,
   "#B9BEC6": 96,

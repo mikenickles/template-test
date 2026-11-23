@@ -243,3 +243,78 @@ The player was walked into each surface with normal movement (`visual_clip.cjs`)
 | `visual_clip.cjs` | camera clipping at skirting, door, frame and ball; sunbeam footprint scan |
 | `visual_suggest.cjs` | lighting variants and shadow filter cost, applied in the test only |
 | `visual_analyse.py jitter` | compares the jitter pairs |
+
+---
+
+# Re-check (round 1, after FIXLIST passes 1 and 2)
+
+**Verdict: PASS.** The lighting and bed-colour fixes worked as intended, the new geometry is drawn cleanly, and
+the budget is unchanged in draw calls. One new look issue: the sunlit bed top clips to near white and the pillows
+no longer separate from the bed.
+
+Scripts rerun on the fixed build: `visual_colours.cjs`, `visual_geometry.cjs`, `visual_perf.cjs`, plus the new
+`visual_recheck.cjs`. Software rendering again, so milliseconds are relative only. `index.html` was not edited.
+Deferred items (skirting clipping, draw-call counter, blocked views, sun shadow coverage) were not re-tested.
+
+## Budget
+
+| Item | First run | Now | Limit |
+| --- | --- | --- | --- |
+| Draw calls per frame, WebGL level | 5 | **5** (3 main + 2 shadow); 7 with debug | under 200 |
+| Draw calls as `state()` reports | 3 | 3 (deferred) | |
+| Triangles, main pass | 9,990 | **10,362** (4,684 static + 5,676 instanced + 2 floor) | none set |
+| Triangles with shadow pass | 19,978 | 20,722 | |
+| Shadow lights / map | 1 / 2048 | 1 / 2048 | 1 / 2048 or less |
+| Textures / meshes / programs | 2 / 3 / 7 | 2 / 3 / 7 | |
+| `index.html` | 80,336 bytes | **85,035 bytes** | under 400 KB |
+| External requests / console errors | 1 / 0 | 1 / 0 | 1 / 0 |
+| `render()` at 1280x720, software | 107 to 171 ms | 100 to 157 ms (bed_top to west_lane) | relative only |
+| `step(1/60)` | 0.002 to 0.006 ms | 0.005 to 0.008 ms | |
+
+Colliders went from 347 to 356. The new pieces all went into the merged static mesh, so no draw call was added.
+
+## Checks
+
+| # | Check | Result | Evidence |
+| --- | --- | --- | --- |
+| 1 | Walls blue, ceiling off-white | **Fixed** | Walls `#AAAA9B` to `#ADB9BB` (hue 189). Ceiling `#AF8A64` to `#CBC0B0` (saturation 43 % to 13 %). `visual_re_spawn_green.png`, `visual_re_east_lane.png` |
+| 2 | Bed at least dE 20 from both Tan shades; no drift toward Green or Tan | **Fixed** | Bed vs Tan under the same light: top 30.8, side 28.7, sunlit 36.0. Vs Tan shadow side: 38.0, 35.4, 45.4. Closest any surface gets to a Tan shade is the sunlit plank floor at dE 18.8 (dark brown `#995C30`, saturation 69 %); everything else is 24 or more. Closest to Green is dE 45 |
+| 3 | Blown-out surfaces | **Not clean, new finding A** | Bed top in sun `#FFFFE3` (red and green at 255), sunlit pillow `#FFFFFF`. 44 % of `visual_re_bed_top.png` is clipped. No other view clips more than 1.3 % |
+| 4 | Haze | **Fixed** | Same wall point: `#ADB9BB` at 8 units, `#BCC2BF` at 80, `#D9D4C7` at 155 (near vs far dE 7.5 to 14.6). Cover grey at 60 units is `#989A98`, dE 4.5 from close up and dE 14.6 from the wall behind it. The red fort at 117 units is `#D48A7A`, still dE 36 from the wall. `visual_re_spawn_green.png`, `visual_re_spawn_tan.png` |
+| 5 | New geometry drawn, graybox colours, no z-fighting or gaps | **Fixed** | See below |
+| 6 | Budget | **Within budget** | Table above |
+
+### Check 5 detail
+
+- Drawn and collider-matched (`visual_geometry.cjs`): both stair guards, both ruler props, both seat stoppers,
+  W-c on both halves, E-c north, four jumbo crayons at 1.3 high. All are cover grey `#9AA3AD`
+  (rendered `#8C8F90` sides, `#979B9C` tops). Seen in `visual_re_close_guard_tall.png`,
+  `visual_re_close_guard_small_floor.png`, `visual_re_close_chair_props.png`, `visual_re_close_seat_stoppers.png`,
+  `visual_re_close_cover_w_c.png`, `visual_re_close_cover_e_c.png`, `visual_re_close_crayons.png`.
+- Route laps: 12 orange strips (`#FA831B` rendered), 0.05 above the surface, at every ramp, bridge and stair
+  head. Visual only. Seen from the top surface in `visual_re_close_desk_laps.png`.
+- Strings now run 2 units above their top surface and show from above (`visual_re_close_strings_from_L3.png`).
+- Z-fighting: all 9 named views and 13 close-ups rendered from two eyes 0.006 units apart. No view has a single
+  solid 5x5 block of changed pixels, so only edges moved. The geometric check found no visible coplanar overlap
+  between different colours; the new hits are undersides of laps, props and stoppers resting on the seat.
+- The ruler upper ends now rest on the props (gap 0.3, the ruler's thickness), so the "ruler floating beside the
+  desk" note from the first run is closed. The props overlap the stoppers by 0.2 to 0.45 units, same colour, not
+  visible.
+
+## New findings
+
+- **A. Minor: the sunlit bed top clips and the pillows disappear into the bed.** Bed top in sun is `#FFFFE3`
+  and the pillow on it `#FFFFFF` (dE 14). In shade they are `#E4D9C6` and `#E3E3DE` (dE 8.9). In
+  `visual_re_bed_top.png` 44 % of the frame is one clipped pale-yellow surface, and in
+  `visual_re_close_bed_pillows.png` the pillow terraces barely read. The bed top also matches the skirting and
+  door (dE 2.6). Suggest drawing the graybox bed top in the blanket colour `#3D5A99` (it is the blanket in
+  round 4 anyway) and keeping `#E9E4DA` for the frame sides, or dropping sun intensity to about 2.4. Not tried.
+- **B. Minor: the bed underside is now much lighter than the floor** (`#C1B5A4` against `#774A29`), so under the
+  bed reads as a bright room (`visual_re_under_bed.png`). This belongs with the deferred under-bed darkening.
+- **C. Note: haze is strong at overview distances.** From a ceiling corner the far half of the room is heavily
+  washed (`visual_re_close_overview_ne.png`, `visual_re_close_overview_sw.png`). Player views top out near 150
+  units and stay readable, so this only matters for the tall-shelf sniper sightline in later rounds.
+- **D. Carried, unchanged:** cover grey vs desk and chair is still dE 5.3, and the ceiling light fitting is still
+  invisible against the ceiling (dE 0.9).
+
+Screenshots for this re-check: 22 files, `screenshots/round1/visual_re_*.png` (9 named views, 13 close-ups).

@@ -108,7 +108,7 @@ const { boot } = require('./bug_lib.cjs');
     for (const [tag, inp] of [['walk', { forward: true }], ['sprint', { forward: true, sprint: true }], ['crouch-walk', { forward: true, crouch: true }], ['walk to the edge, stop, then walk', null]]) {
       G.clearInput(); T.reset(); G.teleport(91, 17, 80, YAW.w, 0); G.step(0.2);
       if (inp) G.setInput(inp);
-      else { G.setInput({ forward: true }); while (T.st().x > 85.0) G.step(DT); G.clearInput(); G.step(0.5); G.setInput({ forward: true }); }
+      else { G.setInput({ forward: true }); for (let _i = 0; _i < 1500 && (T.st().x > 85.0); _i++) G.step(DT);   /* tick limit */ G.clearInput(); G.step(0.5); G.setInput({ forward: true }); }
       for (let i = 0; i < 600; i++) { G.step(DT); const p = T.st(); if (p.onGround && p.y < 16) break; }
       G.clearInput(); G.step(0.2);
       out.tunnelDrop.push({ tag, landed: T.pos(), dmg: G.damageLog.map((d) => d.amount) });
@@ -129,7 +129,7 @@ const { boot } = require('./bug_lib.cjs');
     out.ceilingTouch = [];
     for (const [name, x, y, z] of [['on tall stairs step 27 at x 108.2, jump into the L1 board', 108.2, null, 128.3], ['on tall stairs step 27 at x 107.9', 107.9, null, 128.3]]) {
       G.clearInput(); T.reset(); G.teleport(x, 30, z, YAW.n, 0);        // drop in from above? no: place on the stair by walking
-      G.teleport(x, 0, 154, YAW.n, 0); G.step(0.2); G.setInput({ forward: true }); while (T.st().z > z) G.step(DT); G.clearInput(); G.step(0.3);
+      G.teleport(x, 0, 154, YAW.n, 0); G.step(0.2); G.setInput({ forward: true }); for (let _i = 0; _i < 1500 && (T.st().z > z); _i++) G.step(DT);   /* tick limit */ G.clearInput(); G.step(0.3);
       const a = T.pos();
       let maxDx = 0, prev = T.st(), maxHead = 0;
       for (let k = 0; k < 6; k++) { G.setInput({ jump: true }); G.step(DT); G.setInput({ jump: false }); for (let i = 0; i < 50; i++) { G.step(DT); const p = T.st(); maxDx = Math.max(maxDx, Math.abs(p.x - prev.x) + Math.abs(p.z - prev.z)); maxHead = Math.max(maxHead, p.y + 1.8); prev = p; } }

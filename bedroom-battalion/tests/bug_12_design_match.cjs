@@ -62,9 +62,11 @@ const EXPECT = [
   B('ruin platform', 57, 63, 77, 83, 0, 1.2), B('ruin pillar', 59, 61, 79, 81, 1.2, 5),
   // 6 floor cover
   ...M([B('W-a block 1', 37, 40, 28, 31, 0, 3), B('W-a block 2', 37, 40, 31, 34, 0, 6), B('W-a block 3', 34, 37, 31, 34, 0, 3), B('W-b toy car', 33, 36, 56, 62, 0, 2.2),
-    B('C-a crayon 1', 50, 59, 30, 30.9, 0, 0.9), B('C-a crayon 2', 62, 71, 31.5, 32.4, 0, 0.9), B('C-b toy car', 52, 55, 43, 49, 0, 2.2),
+    B('W-c block', 33, 36, 69, 72, 0, 3), B('C-a jumbo crayon 1', 50, 59, 30, 31.3, 0, 1.3), B('C-a jumbo crayon 2', 62, 71, 31.5, 32.8, 0, 1.3), B('C-b toy car', 52, 55, 43, 49, 0, 2.2),
     ...[62, 63.9, 65.8, 67.7].map((x) => B('C-e domino x' + x, x, x + 1.6, 63, 63.5, 0, 3.2)),
     B('E-a block 1', 80, 83, 30, 33, 0, 6), B('E-a block 2', 83, 86, 30, 33, 0, 3), B('E-a block 3', 80, 83, 33, 36, 0, 3), B('E-b toy car', 110, 116, 46, 49, 0, 2.2)]),
+  B('E-c block', 79.5, 82.5, 44, 47, 0, 3), B('tall stair guard', 108, 108.6, 122.1, 151, 0, 19), B('small stair guard', 108, 108.6, 9, 37.9, 0, 19),
+  C('seat stopper n', 92.45, 73.3, 0.5, 17, 18), C('seat stopper s', 92.2, 86.7, 0.5, 17, 18),
   B('C-c truck bed', 63, 68, 44, 51, 0, 3.6), B('C-c truck cab', 63, 68, 51, 54, 0, 5), B("C-c' marble ramp", 63, 68, 106, 113, 0, 4), B("C-c' marble tower", 63, 68, 113, 116, 0, 8),
   B('C-d game box', 49, 59, 56, 66, 0, 2.5), C("C-d' ball", 54, 99, 3.4, 0, 8), B('C-f block north', 53, 56, 67, 70, 0, 6), B('C-f block south', 64, 67, 90, 93, 0, 6),
   B('tunnel wall w', 72.6, 73.6, 68, 92, 0, 8), B('tunnel wall e', 80.4, 81.4, 68, 92, 0, 8), B('tunnel roof', 72.6, 81.4, 68, 92, 6.8, 8)
@@ -149,8 +151,8 @@ function parseNodes() {
 
     // CONFIG against section 2
     const K = G.CONFIG, want = [['player.height', 1.8], ['player.eye', 1.6], ['player.crouchHeight', 1.2], ['player.crouchEye', 1.0], ['player.radius', 0.4], ['move.walk', 5], ['move.sprint', 7], ['move.crouch', 2.5],
-      ['move.groundAccelTime', 0.10], ['move.groundStopTime', 0.08], ['move.airControl', 0.25], ['move.gravity', 22], ['move.jumpVel', 7.8], ['move.stepUp', 0.65], ['move.maxSlopeDeg', 50], ['climb.speed', 3.5], ['climb.grabRadius', 0.8],
-      ['fall.safe', 10], ['fall.perUnit', 5], ['spring.launchVel', [-4.5, 31, 0]], ['camera.fovVertical', 75], ['camera.near', 0.05], ['camera.far', 400], ['fog.near', 30], ['fog.far', 330], ['sim.hz', 60]];
+      ['move.groundAccelTime', 0.10], ['move.groundStopTime', 0.08], ['move.airControl', 0.12], ['move.gravity', 22], ['move.jumpVel', 7.8], ['move.stepUp', 0.65], ['move.maxSlopeDeg', 50], ['climb.speed', 5.5], ['climb.grabRadius', 0.8],
+      ['fall.safe', 10], ['fall.perUnit', 5], ['spring.launchVel', [-4.5, 31, 0]], ['camera.fovVertical', 75], ['camera.near', 0.05], ['camera.far', 400], ['fog.near', 10], ['fog.far', 220], ['sim.hz', 60]];
     for (const [key, v] of want) { const got = key.split('.').reduce((o, k) => o && o[k], K); if (JSON.stringify(got) !== JSON.stringify(v)) out.config.push({ key, design: v, build: got }); }
     out.configChecked = want.length;
     // every route's legs have an edge in the graph, and of what kind

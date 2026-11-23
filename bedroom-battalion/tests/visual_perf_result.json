@@ -5,8 +5,8 @@
     "type": "Mesh",
     "instanced": false,
     "count": 1,
-    "verts": 12936,
-    "tris": 4312,
+    "verts": 14052,
+    "tris": 4684,
     "castShadow": true,
     "receiveShadow": true,
     "frustumCulled": false,
@@ -57,14 +57,14 @@
   "lights": [
    {
     "type": "HemisphereLight",
-    "intensity": 3.4,
-    "color": "#fff1d6",
+    "intensity": 3,
+    "color": "#fff8ec",
     "castShadow": false,
-    "ground": "#b08d6a"
+    "ground": "#d8cfc4"
    },
    {
     "type": "DirectionalLight",
-    "intensity": 2.4,
+    "intensity": 3,
     "color": "#ffe2b0",
     "castShadow": true,
     "shadow": {
@@ -115,8 +115,8 @@
    ]
   },
   "fog": {
-   "near": 30,
-   "far": 330,
+   "near": 10,
+   "far": 220,
    "color": "#e6dccb"
   },
   "background": "#e6dccb",
@@ -202,33 +202,33 @@
     "samples": 0
    }
   ],
-  "colliders": 347
+  "colliders": 356
  },
  "views": {
   "spawn_green": {
    "plain": {
     "glCalls": 5,
-    "glTris": 19978,
+    "glTris": 20722,
     "glLines": 0,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 3,
-      "tris": 9990,
+      "tris": 10362,
       "lines": 0,
-      "verts": 29970,
+      "verts": 31086,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 3,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -245,27 +245,27 @@
    },
    "debug": {
     "glCalls": 7,
-    "glTris": 19978,
-    "glLines": 5292,
+    "glTris": 20722,
+    "glLines": 5446,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 5,
-      "tris": 9990,
-      "lines": 5292,
-      "verts": 40554,
+      "tris": 10362,
+      "lines": 5446,
+      "verts": 41978,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 5,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -284,27 +284,27 @@
   "spawn_tan": {
    "plain": {
     "glCalls": 5,
-    "glTris": 19978,
+    "glTris": 20722,
     "glLines": 0,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 3,
-      "tris": 9990,
+      "tris": 10362,
       "lines": 0,
-      "verts": 29970,
+      "verts": 31086,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 3,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -321,27 +321,27 @@
    },
    "debug": {
     "glCalls": 7,
-    "glTris": 19978,
-    "glLines": 5292,
+    "glTris": 20722,
+    "glLines": 5446,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 5,
-      "tris": 9990,
-      "lines": 5292,
-      "verts": 40554,
+      "tris": 10362,
+      "lines": 5446,
+      "verts": 41978,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 5,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -360,27 +360,27 @@
   "bed_top": {
    "plain": {
     "glCalls": 5,
-    "glTris": 19978,
+    "glTris": 20722,
     "glLines": 0,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 3,
-      "tris": 9990,
+      "tris": 10362,
       "lines": 0,
-      "verts": 29970,
+      "verts": 31086,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 3,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -397,27 +397,27 @@
    },
    "debug": {
     "glCalls": 7,
-    "glTris": 19978,
-    "glLines": 5292,
+    "glTris": 20722,
+    "glLines": 5446,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 5,
-      "tris": 9990,
-      "lines": 5292,
-      "verts": 40554,
+      "tris": 10362,
+      "lines": 5446,
+      "verts": 41978,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 5,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -436,27 +436,27 @@
   "desk_top": {
    "plain": {
     "glCalls": 5,
-    "glTris": 19978,
+    "glTris": 20722,
     "glLines": 0,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 3,
-      "tris": 9990,
+      "tris": 10362,
       "lines": 0,
-      "verts": 29970,
+      "verts": 31086,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 3,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -473,27 +473,27 @@
    },
    "debug": {
     "glCalls": 7,
-    "glTris": 19978,
-    "glLines": 5292,
+    "glTris": 20722,
+    "glLines": 5446,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 5,
-      "tris": 9990,
-      "lines": 5292,
-      "verts": 40554,
+      "tris": 10362,
+      "lines": 5446,
+      "verts": 41978,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 5,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -512,27 +512,27 @@
   "shelf_top": {
    "plain": {
     "glCalls": 5,
-    "glTris": 19978,
+    "glTris": 20722,
     "glLines": 0,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 3,
-      "tris": 9990,
+      "tris": 10362,
       "lines": 0,
-      "verts": 29970,
+      "verts": 31086,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 3,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -549,27 +549,27 @@
    },
    "debug": {
     "glCalls": 7,
-    "glTris": 19978,
-    "glLines": 5292,
+    "glTris": 20722,
+    "glLines": 5446,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 5,
-      "tris": 9990,
-      "lines": 5292,
-      "verts": 40554,
+      "tris": 10362,
+      "lines": 5446,
+      "verts": 41978,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 5,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -588,27 +588,27 @@
   "floor_centre": {
    "plain": {
     "glCalls": 5,
-    "glTris": 19978,
+    "glTris": 20722,
     "glLines": 0,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 3,
-      "tris": 9990,
+      "tris": 10362,
       "lines": 0,
-      "verts": 29970,
+      "verts": 31086,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 3,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -625,27 +625,27 @@
    },
    "debug": {
     "glCalls": 7,
-    "glTris": 19978,
-    "glLines": 5292,
+    "glTris": 20722,
+    "glLines": 5446,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 5,
-      "tris": 9990,
-      "lines": 5292,
-      "verts": 40554,
+      "tris": 10362,
+      "lines": 5446,
+      "verts": 41978,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 5,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -664,27 +664,27 @@
   "under_bed": {
    "plain": {
     "glCalls": 5,
-    "glTris": 19978,
+    "glTris": 20722,
     "glLines": 0,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 3,
-      "tris": 9990,
+      "tris": 10362,
       "lines": 0,
-      "verts": 29970,
+      "verts": 31086,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 3,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -701,27 +701,27 @@
    },
    "debug": {
     "glCalls": 7,
-    "glTris": 19978,
-    "glLines": 5292,
+    "glTris": 20722,
+    "glLines": 5446,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 5,
-      "tris": 9990,
-      "lines": 5292,
-      "verts": 40554,
+      "tris": 10362,
+      "lines": 5446,
+      "verts": 41978,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 5,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -740,27 +740,27 @@
   "east_lane": {
    "plain": {
     "glCalls": 5,
-    "glTris": 19978,
+    "glTris": 20722,
     "glLines": 0,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 3,
-      "tris": 9990,
+      "tris": 10362,
       "lines": 0,
-      "verts": 29970,
+      "verts": 31086,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 3,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -777,27 +777,27 @@
    },
    "debug": {
     "glCalls": 7,
-    "glTris": 19978,
-    "glLines": 5292,
+    "glTris": 20722,
+    "glLines": 5446,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 5,
-      "tris": 9990,
-      "lines": 5292,
-      "verts": 40554,
+      "tris": 10362,
+      "lines": 5446,
+      "verts": 41978,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 5,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -816,27 +816,27 @@
   "west_lane": {
    "plain": {
     "glCalls": 5,
-    "glTris": 19978,
+    "glTris": 20722,
     "glLines": 0,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 3,
-      "tris": 9990,
+      "tris": 10362,
       "lines": 0,
-      "verts": 29970,
+      "verts": 31086,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 3,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -853,27 +853,27 @@
    },
    "debug": {
     "glCalls": 7,
-    "glTris": 19978,
-    "glLines": 5292,
+    "glTris": 20722,
+    "glLines": 5446,
     "passes": {
      "fbo1": {
       "calls": 2,
-      "tris": 9988,
+      "tris": 10360,
       "lines": 0,
-      "verts": 29964,
+      "verts": 31080,
       "instanced": 1
      },
      "screen": {
       "calls": 5,
-      "tris": 9990,
-      "lines": 5292,
-      "verts": 40554,
+      "tris": 10362,
+      "lines": 5446,
+      "verts": 41978,
       "instanced": 1
      }
     },
     "reported": {
      "drawCalls": 5,
-     "triangles": 9990
+     "triangles": 10362
     },
     "viewports": [
      [
@@ -892,49 +892,49 @@
  },
  "timing": {
   "spawn_green": {
-   "median": 126.1,
-   "min": 123.3,
-   "max": 127.6
+   "median": 122.2,
+   "min": 119,
+   "max": 130.3
   },
   "spawn_tan": {
-   "median": 128.3,
-   "min": 124.1,
-   "max": 162.4
+   "median": 124.1,
+   "min": 121.8,
+   "max": 145.2
   },
   "bed_top": {
-   "median": 107.1,
-   "min": 101,
-   "max": 110.9
+   "median": 99.5,
+   "min": 97.6,
+   "max": 102.9
   },
   "desk_top": {
-   "median": 122.2,
-   "min": 116,
-   "max": 125.4
+   "median": 112.6,
+   "min": 109.9,
+   "max": 125
   },
   "shelf_top": {
-   "median": 126.4,
-   "min": 122.7,
-   "max": 127.8
+   "median": 121,
+   "min": 117.6,
+   "max": 123.7
   },
   "floor_centre": {
-   "median": 134.9,
-   "min": 130.6,
-   "max": 147.9
+   "median": 127.1,
+   "min": 124.6,
+   "max": 131
   },
   "under_bed": {
-   "median": 131.3,
-   "min": 125.6,
-   "max": 132.9
+   "median": 120.9,
+   "min": 117.1,
+   "max": 140.4
   },
   "east_lane": {
-   "median": 147.6,
-   "min": 145,
-   "max": 150.1
+   "median": 127.3,
+   "min": 123.2,
+   "max": 131.4
   },
   "west_lane": {
-   "median": 171.1,
-   "min": 164.8,
-   "max": 199.1
+   "median": 157,
+   "min": 144.6,
+   "max": 195.8
   }
  },
  "worstView": "west_lane",
@@ -942,125 +942,125 @@
  "breakdown": {
   "west_lane": {
    "baseline": {
-    "median": 157.4,
-    "min": 150.5,
-    "max": 184.3
+    "median": 169,
+    "min": 165.5,
+    "max": 179.3
    },
    "shadowMapFrozen": {
-    "median": 131.4,
-    "min": 127.3,
-    "max": 182.2
+    "median": 146,
+    "min": 141.8,
+    "max": 151.8
    },
    "noShadowSampling": {
-    "median": 59.4,
-    "min": 56.1,
-    "max": 65.3
+    "median": 67.3,
+    "min": 59.7,
+    "max": 73.5
    },
    "noShadowsAtAll": {
-    "median": 37,
-    "min": 36,
-    "max": 37.7
+    "median": 37.8,
+    "min": 36.1,
+    "max": 47.5
    },
    "baselineAgain": {
-    "median": 156.5,
-    "min": 154.3,
-    "max": 162.4
+    "median": 173.7,
+    "min": 165.1,
+    "max": 203.7
    },
    "noFog": {
-    "median": 143.8,
-    "min": 141.3,
-    "max": 148.4
+    "median": 172.2,
+    "min": 155.3,
+    "max": 193.1
    },
    "hide_static": {
-    "median": 55.7,
-    "min": 55.3,
-    "max": 56.5
+    "median": 61.9,
+    "min": 58.6,
+    "max": 70.1
    },
    "hide_instanced": {
-    "median": 143.9,
-    "min": 131.1,
-    "max": 149.8
+    "median": 162,
+    "min": 142.8,
+    "max": 172.5
    },
    "hide_floor": {
-    "median": 133.7,
-    "min": 129.9,
-    "max": 164.2
+    "median": 162.7,
+    "min": 158.4,
+    "max": 177.9
    },
    "debugOn": {
-    "median": 166.2,
-    "min": 153,
-    "max": 176.8
+    "median": 165.9,
+    "min": 159.2,
+    "max": 192.1
    }
   },
   "bed_top": {
    "baseline": {
-    "median": 102.5,
-    "min": 95.3,
-    "max": 142.9
+    "median": 125,
+    "min": 120.5,
+    "max": 129.3
    },
    "shadowMapFrozen": {
-    "median": 77.3,
-    "min": 75.9,
-    "max": 80
+    "median": 97.2,
+    "min": 85.2,
+    "max": 100.2
    },
    "noShadowSampling": {
-    "median": 39.8,
-    "min": 38.1,
-    "max": 42.3
+    "median": 50.7,
+    "min": 44,
+    "max": 59.6
    },
    "noShadowsAtAll": {
-    "median": 19.3,
-    "min": 19.2,
-    "max": 19.6
+    "median": 21.3,
+    "min": 20.8,
+    "max": 25.3
    },
    "baselineAgain": {
-    "median": 95.1,
-    "min": 93.2,
-    "max": 120
+    "median": 119.1,
+    "min": 117.8,
+    "max": 120.3
    },
    "noFog": {
-    "median": 99,
-    "min": 95.4,
-    "max": 104.9
+    "median": 117.2,
+    "min": 104.2,
+    "max": 131.5
    },
    "hide_static": {
-    "median": 57.5,
-    "min": 55.2,
-    "max": 88.7
+    "median": 59.2,
+    "min": 56.6,
+    "max": 66.2
    },
    "hide_instanced": {
-    "median": 92.1,
-    "min": 89.5,
-    "max": 94.2
+    "median": 100.8,
+    "min": 96,
+    "max": 108.8
    },
    "hide_floor": {
-    "median": 105.5,
-    "min": 103.9,
-    "max": 108.3
+    "median": 106,
+    "min": 104,
+    "max": 112.6
    },
    "debugOn": {
-    "median": 109.7,
-    "min": 107.1,
-    "max": 113.2
+    "median": 112.5,
+    "min": 110.2,
+    "max": 115.9
    }
   }
  },
  "sim": {
   "idle at spawn": {
    "ticks": 1200,
-   "msPerTick": 0.0064
+   "msPerTick": 0.0081
   },
   "sprint into fort wall": {
    "ticks": 1200,
-   "msPerTick": 0.0031
+   "msPerTick": 0.0051
   },
   "walk in ruin bricks": {
    "ticks": 1200,
-   "msPerTick": 0.002
+   "msPerTick": 0.0055
   },
   "walk up tall-shelf stairs": {
    "ticks": 1200,
-   "msPerTick": 0.0024
+   "msPerTick": 0.0048
   }
  },
  "errors": [],
@@ -1069,29 +1069,29 @@
   "file:///home/user/template-test/bedroom-battalion/index.html",
   "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
  ],
- "fileSizeBytes": 80336,
+ "fileSizeBytes": 85035,
  "timing1080": {
   "west_lane": {
-   "median": 286,
-   "min": 280,
-   "max": 337.3
+   "median": 299.4,
+   "min": 294.9,
+   "max": 327.3
   },
   "bed_top": {
-   "median": 187.7,
-   "min": 183.8,
-   "max": 194.1
+   "median": 213.6,
+   "min": 193.8,
+   "max": 216.6
   }
  },
  "timing360": {
   "west_lane": {
-   "median": 68.9,
-   "min": 66.8,
-   "max": 84.3
+   "median": 68,
+   "min": 64.5,
+   "max": 71.6
   },
   "bed_top": {
-   "median": 53.5,
+   "median": 55.3,
    "min": 51.1,
-   "max": 55.5
+   "max": 56.8
   }
  }
 }

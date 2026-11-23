@@ -25,7 +25,7 @@ const { boot } = require('./bug_lib.cjs');
     for (const zTurn of [140, 135, 130, 128, 126, 125, 124.5, 124]) for (const sprint of [false, true]) {
       G.clearInput(); T.reset(); G.teleport(105.75, 0, 153, YAW.n, 0); G.step(0.2);
       G.setInput({ forward: true, sprint });
-      while (T.st().z > zTurn) G.step(DT);
+      for (let _i = 0; _i < 1500 && (T.st().z > zTurn); _i++) G.step(DT);   /* tick limit */
       const turnAt = T.pos();
       G.lookAt(110.5, T.st().y + 1.6, 120);                    // look at the spot on L1 you are heading for
       let t = 0, res = 'timeout';
@@ -40,12 +40,12 @@ const { boot } = require('./bug_lib.cjs');
       out['track L1 node (110.5,120) from the stair foot' + (sprint ? ' sprint' : '')] = { r, dmg: G.damageLog.map((d) => +d.amount.toFixed(1)) };
     }
     // same on the small shelf (mirror)
-    G.clearInput(); T.reset(); G.teleport(105.75, 0, 7, YAW.s, 0); G.step(0.2); G.setInput({ forward: true }); while (T.st().z < 34) G.step(DT);
+    G.clearInput(); T.reset(); G.teleport(105.75, 0, 7, YAW.s, 0); G.step(0.2); G.setInput({ forward: true }); for (let _i = 0; _i < 1500 && (T.st().z < 34); _i++) G.step(DT);   /* tick limit */
     G.lookAt(110.5, T.st().y + 1.6, 40); G.step(4); G.clearInput(); out.smallShelfCutCorner = sample();
 
     // fort north wall top, reached properly: up the tower ramp from its foot, then sidestep north
     G.clearInput(); T.reset(); G.teleport(51.5, 0, 9, YAW.e, 0); G.step(0.2);
-    G.setInput({ forward: true }); while (T.st().x < 60.5) G.step(DT); G.clearInput(); G.step(0.2);
+    G.setInput({ forward: true }); for (let _i = 0; _i < 1500 && (T.st().x < 60.5); _i++) G.step(DT);   /* tick limit */ G.clearInput(); G.step(0.2);
     const onRamp = sample();
     G.look(YAW.n, 0); G.setInput({ forward: true }); G.step(0.35); G.clearInput(); G.step(0.3);
     const north = sample();
