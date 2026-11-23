@@ -319,7 +319,7 @@ try {
   await page.getByText("practice model").waitFor();
   check((await page.locator(".bubble").count()) === 1, "channel chat starts empty and holds its own messages");
   await shot("light-9-channel-chat");
-  check((await page.locator(".topbar .channel-head .channel-badge").count()) === 1 && (await page.locator(".topbar .channel-head .avatar").count()) === 0, "a channel's top bar shows the channel's icon, not Tomo's face");
+  check((await page.locator(".topbar .in-channel .avatar").count()) === 1 && (await page.locator(".topbar .channel-head", { hasText: "Rowan" }).count()) === 1, "a channel's top bar keeps Tomo's face on top, with the channel's name under it");
 
   // ---- back to back: a second message while Lyra is still thinking joins the same reply ----
   await page.getByPlaceholder("Message Rowan").fill("take your time: plan dinner friday");

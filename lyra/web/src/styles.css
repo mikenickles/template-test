@@ -10659,3 +10659,9 @@ html[data-ambient="on"] .es-hand { transform-origin: 0% 100%; animation: es-wave
 .intent-picker { position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
 @keyframes chip-up { from { opacity: 0; transform: translateY(6px); } }
 @media (prefers-reduced-motion: reduce) { .intent-chip { animation: none; } }
+
+/* (0.63) channels keep Tomo's face on top: the channel's icon and name sit in the pill */
+.avatar-stack.head-row.in-channel .channel-head { display: inline-flex; flex-direction: row; align-items: center; gap: 5px; color: var(--text); text-decoration: none; }
+.avatar-stack.head-row.in-channel .channel-head svg { color: var(--mark); flex: none; }
+.avatar-stack.head-row.in-channel .head-words > .status-line { justify-content: center; }
+.app:not(.desk) .chat.in-channel .log { padding-top: calc(var(--inset-top) + 150px); }

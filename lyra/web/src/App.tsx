@@ -438,16 +438,18 @@ export function App() {
             </div>
           )}
           {inChat && channel && (
-            <div className="avatar-stack in-channel">
-              <a className="channel-head" href={`#/c/${channel.id}/info`} aria-label={`${channel.name}: channel details`}>
-                <span className="channel-badge head">
-                  <ChannelIcon name={channel.icon} size={26} />
-                </span>
-                <span className="channel-chip">
-                  <span>{channel.name}</span>
-                </span>
+            // (0.63) Tomo's face stays on top in a channel too; the channel's icon and name sit in the pill under it
+            <div className="avatar-stack head-row in-channel">
+              <a className="orb orb-sm" href="#/access" aria-label="Tomo" title="Tomo">
+                <Avatar />
               </a>
-              <StatusLine state={state} />
+              <div className="head-words">
+                <a className="head-name channel-head" href={`#/c/${channel.id}/info`} aria-label={`${channel.name}: channel details`}>
+                  <ChannelIcon name={channel.icon} size={14} />
+                  <span>{channel.name}</span>
+                </a>
+                <StatusLine state={state} />
+              </div>
             </div>
           )}
           {(!inChat || route.name === "docs") && <span />}
