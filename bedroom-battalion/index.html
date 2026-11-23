@@ -86,7 +86,7 @@ const CONFIG = {
   fall: { safe: 10, perUnit: 5 },
   spring: { launchVel: [-4.5, 31, 0] },
   camera: { fovVertical: 75, near: 0.05, far: 400 },   // read live every frame
-  fog: { near: 10, far: 220 },                      // read live every frame, like camera
+  fog: { near: 20, far: 320 },                      // read live every frame, like camera
   sim: { hz: 60, maxStepsPerFrame: 15 },
   input: { sensitivity: 0.0022, pitchLimit: 1.54 },
   room: { x: 120, y: 90, z: 160, wall: 2, outY: -5 },
@@ -106,21 +106,21 @@ const CONFIG = {
     rifle:  { label: 'RIFLE', damage: 26, interval: 60 / 600, auto: true, mag: 30, reserve: 90, reload: 2.2,
               spread: 0.5, bloom: 0.35, spreadMax: 3.0, recover: 7, recoverDelay: 0.16, kickUp: 0.9, kickSide: 0.25,
               falloff: [60, 120, 0.7], draw: 0.45, shake: 0.004, vmKick: 0.05 },
-    smg:    { label: 'SMG', damage: 20, interval: 60 / 900, auto: true, mag: 40, reserve: 120, reload: 2.0,
+    smg:    { label: 'SMG', damage: 25, interval: 60 / 900, auto: true, mag: 40, reserve: 120, reload: 2.0,
               spread: 1.0, bloom: 0.20, spreadMax: 3.5, moveMult: 1.15,      // moveMult replaces gun.spreadMult.move for this gun
               recover: 9, recoverDelay: 0.12, kickUp: 0.55, kickSide: 0.35,
               falloff: [25, 70, 0.45], draw: 0.35, shake: 0.003, vmKick: 0.028 },
     sniper: { label: 'SNIPER', damage: 90, interval: 1.3, auto: false, mag: 5, reserve: 15, reload: 3.0,
               spread: 3.0, scopedSpread: 0.05, scopedMove: 1.5, scopedAir: 4.0, bloom: 0, spreadMax: 3.0, recover: 0, recoverDelay: 0, kickUp: 3.5, kickSide: 0.4,
-              falloff: null, draw: 0.7, shake: 0.022, vmKick: 0.16, scopeFov: 20, scopeIn: 0.2, scopeDrop: 0.5, boltSound: 0.4 },
+              falloff: null, draw: 0.7, shake: 0.022, vmKick: 0.16, tracerWidth: 0.07, tracerLife: 0.2, scopeFov: 20, scopeIn: 0.2, scopeDrop: 0.5, boltSound: 0.4 },
     pistol: { label: 'PISTOL', damage: 30, interval: 0.18, auto: false, mag: 12, reserve: 36, reload: 1.4,
               spread: 0.6, bloom: 0.6, spreadMax: 3.0, recover: 8, recoverDelay: 0.12, kickUp: 1.4, kickSide: 0.2,
               falloff: [30, 70, 0.5], draw: 0.25, shake: 0.005, vmKick: 0.08 }
   },
   grenade: { count: 1, speed: 18, upDeg: 10, restitution: 0.45, friction: 0.8, fuse: 2, damage: 140, radius: 7, body: 0.16,
              restSpeed: 0.7, bounceSound: 1.5, burstParticles: 44, burstShake: 0.05, shakeRange: 40, arcSteps: 60, color: '#E0281F',
-             hideNear: 1.3,                                         // the thrown grenade is not drawn until this far from the eye
-             flashTime: 0.15, flashFade: 0.12, flashColor: '#FFC25A', flashOpacity: 0.55,      // burst sphere grows to the radius
+             hideNear: 2.5,                                         // the thrown grenade is not drawn until this far from the eye
+             flashTime: 0.15, flashFade: 0.12, flashColor: '#FFC25A', flashOpacity: 0.4,      // burst sphere grows to the radius
              ring: 72, ringLife: 0.3, ringSize: 0.3, ringColor: '#FFE27A',                  // particle ring that reaches the radius
              lightIntensity: 220, lightRange: 30, lightTime: 0.18, lightColor: '#FFC870',   // brief point-light flash
              arcDotPx: 5, arcEndPx: 14, arcNear: 2, arcColor: '#FFD21F' },                    // arc preview: dots arcDotPx wide, landing dot arcEndPx, none nearer than arcNear
@@ -130,7 +130,7 @@ const CONFIG = {
                     [100, 0, 94], [38, 0, 96], [60, 1.2, 78], [27, 18, 80], [26, 18, 50], [104, 26, 66], [104, 26, 94],
                     [112, 20, 131], [112, 60, 139], [112, 40, 16], [77, 8, 80], [70.5, 7, 150.5], [66, 0, 137]],
             numbers: 12, numberLife: 0.8, numberRise: 1.4, numberAbove: 0.35, numberClear: 34, numberGap: 2 },   // px kept clear round the crosshair
-  fx: { particles: 192, casings: 24, decals: 64, tracers: 24, tracerLife: 0.08, tracerWidth: 0.035, tracerColor: '#FFE7A0',
+  fx: { particles: 192, casings: 24, decals: 64, tracers: 24, tracerLife: 0.08, tracerWidth: 0.035, tracerColor: '#FFE7A0', tracerScopeMin: 3,   // per-weapon tracerWidth / tracerLife override
         casingColor: '#D9A93A', casingLife: 1.4, casingSize: [0.03, 0.03, 0.08], decalColor: '#2A2420', decalSize: 0.13,
         flashColor: '#FFE27A',
         impactMinDE: 30,   // an impact colour closer than this (CIE76) to the colour of the face it hit uses its alt colour
@@ -161,8 +161,8 @@ const CONFIG = {
   audio: { master: 0.5, stride: 2.4, landAir: 0.12,
     sounds: {   // layers: k 'n' noise through a filter or 'o' oscillator; f to f1 Hz over d seconds, gain g, start at
       shot_rifle:  [{ k: 'n', t: 'bandpass', f: 1500, f1: 500, q: 0.8, d: 0.16, g: 0.9 }, { k: 'o', t: 'square', f: 190, f1: 60, d: 0.09, g: 0.45 }, { k: 'n', t: 'highpass', f: 4000, d: 0.03, g: 0.5 }],
-      shot_smg:    [{ k: 'n', t: 'bandpass', f: 2800, f1: 1500, q: 1.2, d: 0.055, g: 0.9 }, { k: 'o', t: 'triangle', f: 430, f1: 210, d: 0.04, g: 0.5 }],
-      shot_sniper: [{ k: 'o', t: 'sine', f: 110, f1: 30, d: 0.55, g: 0.8 }, { k: 'n', t: 'lowpass', f: 900, f1: 140, d: 0.7, g: 0.7 }, { k: 'n', t: 'highpass', f: 3000, d: 0.05, g: 0.7 },
+      shot_smg:    [{ k: 'n', t: 'bandpass', f: 2800, f1: 1500, q: 1.2, d: 0.055, g: 1.3 }, { k: 'o', t: 'triangle', f: 430, f1: 210, d: 0.04, g: 0.75 }],
+      shot_sniper: [{ k: 'o', t: 'sine', f: 110, f1: 30, d: 0.55, g: 0.6 }, { k: 'n', t: 'lowpass', f: 900, f1: 140, d: 0.7, g: 0.55 }, { k: 'n', t: 'highpass', f: 3000, d: 0.05, g: 0.7 },
                     { k: 'n', t: 'bandpass', f: 420, q: 0.6, d: 1.2, g: 0.22, at: 0.1 }],
       shot_pistol: [{ k: 'n', t: 'highpass', f: 2200, d: 0.07, g: 0.75 }, { k: 'o', t: 'square', f: 540, f1: 160, d: 0.05, g: 0.4 }],
       dry:         [{ k: 'o', t: 'square', f: 1400, d: 0.02, g: 0.2 }, { k: 'n', t: 'highpass', f: 5000, d: 0.015, g: 0.25 }],
@@ -584,6 +584,7 @@ function buildWorld(scene, renderer) {
   box('desk.notebook', 99, 111, 74, 86, 26, 26.4, G, 'book');
   for (let k = 0; k < 3; k++) box('desk.books.' + k, 111 + 0.6 * k, 119 - 0.6 * k, 86 + 0.6 * k, 93 - 0.6 * k, 26 + 1.2 * k, 27.2 + 1.2 * k, G, 'book');
   cyl('desk.pencilcup', 115.5, 98, 2.6, 26, 35, G, 'metal');
+  box('desk.skirt', 96, 96.5, 73, 87, 17, 24.5, C.desk, 'wood');                                 // closes the seat's east edge under the desk
   box('desk.apron.n', 95.5, 96, 64, 75, 17, 24.5, C.desk, 'wood'); box('desk.apron.s', 95.5, 96, 85, 96, 17, 24.5, C.desk, 'wood');   // close the drop beside each ruler
   cyl('chair.stopper.n', 92.45, 73.3, 0.5, 17, 18, G, 'wood'); cyl('chair.stopper.s', 92.2, 86.7, 0.5, 17, 18, G, 'wood');   // seat stoppers
   boxNS('desk.eraser', 104, 108, 66, 68, 0, 1.2, G, 'plastic');
@@ -1331,10 +1332,6 @@ function fireShot() {
     spawnDecal(hx, hy, hz, RH.nx, RH.ny, RH.nz);
   }
   logShot(e);
-  // muzzle effects start beside the eye, where the viewmodel's barrel is
-  const mx = ox + B.rx * 0.2 - B.ux * 0.16 + B.fx * 0.7, my = oy - B.uy * 0.16 + B.fy * 0.7, mz = oz + B.rz * 0.2 - B.uz * 0.16 + B.fz * 0.7;
-  const tl = Math.min(dist, G.tracerLen);
-  spawnTracer(mx, my, mz, ox + dx * tl, oy + dy * tl, oz + dz * tl);
   spawnCasing(ox + B.rx * 0.34 + B.fx * 0.8, oy - 0.22 + B.fy * 0.8, oz + B.rz * 0.34 + B.fz * 0.8, B.rx * 2.6 + p.vx, 2.2, B.rz * 2.6 + p.vz, p.y);
   sfx('shot_' + name);
   if (e.kind === 'target') sfx(killed ? 'kill' : 'hit');
@@ -1348,6 +1345,10 @@ function fireShot() {
   A.sinceShot = 0; A.kick += W.vmKick; A.flash = G.flashTime; A.dryHeld = false; A.shake = Math.max(A.shake, W.shake); A.lastFire = game.time;
   if (W.scopeDrop) { A.scopeLock = W.scopeDrop; A.boltT = W.boltSound; }
   A.cool = (W.auto ? Math.max(A.cool, -DT) : 0) + W.interval;       // automatic fire keeps exact cadence across ticks
+  // tracer: from the current gun's muzzle after the kick; through the scope it starts tracerScopeMin along the shot (or is not drawn)
+  const tl = Math.min(dist, G.tracerLen), F = CONFIG.fx;
+  if (A.scope > 0.6) { if (tl > F.tracerScopeMin) spawnTracer(ox + dx * F.tracerScopeMin, oy + dy * F.tracerScopeMin, oz + dz * F.tracerScopeMin, ox + dx * tl, oy + dy * tl, oz + dz * tl, W); }
+  else { muzzleWorld(_mw); spawnTracer(_mw.x, _mw.y, _mw.z, ox + dx * tl, oy + dy * tl, oz + dz * tl, W); }
   return e;
 }
 // One trigger pull (pressed = a new press this tick). Returns the shot record, or null if nothing was fired.
@@ -1554,7 +1555,7 @@ function buildFx(scene) {
   for (let i = 0; i < F.casings; i++) { fx.casings.push({ life: 0, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, floor: 0, bounced: 0, spin: 0 }); fx.mesh.setColorAt(fx.base.casing + i, _fx.c.set(F.casingColor)); }
   for (let i = 0; i < F.decals; i++) fx.mesh.setColorAt(fx.base.decal + i, _fx.c.set(F.decalColor));
   for (let i = 0; i < 4; i++) fx.mesh.setColorAt(fx.base.grenade + i, _fx.c.set(CONFIG.grenade.color));
-  for (let i = 0; i < F.tracers; i++) fx.tracers.push({ life: 0, x: 0, y: 0, z: 0, len: 0, q: new THREE.Quaternion() });
+  for (let i = 0; i < F.tracers; i++) fx.tracers.push({ life: 0, max: 1, w: 0, x: 0, y: 0, z: 0, len: 0, q: new THREE.Quaternion() });
   // grenade arc preview: a dotted line of small spheres (one instanced draw), sized to stay at least arcDotPx wide, and a landing dot
   const K = CONFIG.grenade, dot = new THREE.IcosahedronGeometry(1, 1);
   fx.arc = new THREE.InstancedMesh(dot, new THREE.MeshBasicMaterial({ color: K.arcColor, fog: false }), K.arcSteps + 1);
@@ -1608,10 +1609,11 @@ function spawnCasing(x, y, z, vx, vy, vz, floor) {
   C.x = x; C.y = y; C.z = z; C.vx = vx * (0.8 + 0.4 * Math.random()); C.vy = vy * (0.8 + 0.4 * Math.random()); C.vz = vz * (0.8 + 0.4 * Math.random());
   C.floor = floor; C.bounced = 0; C.life = CONFIG.fx.casingLife; C.spin = Math.random() * 6;
 }
-function spawnTracer(ax, ay, az, bx, by, bz) {
+function spawnTracer(ax, ay, az, bx, by, bz, W) {
   const k = fx.tracerNext; fx.tracerNext = (k + 1) % fx.tracers.length;
   const T = fx.tracers[k], dx = bx - ax, dy = by - ay, dz = bz - az, len = Math.hypot(dx, dy, dz) || 1;
-  T.x = (ax + bx) / 2; T.y = (ay + by) / 2; T.z = (az + bz) / 2; T.len = len; T.life = CONFIG.fx.tracerLife;
+  T.x = (ax + bx) / 2; T.y = (ay + by) / 2; T.z = (az + bz) / 2; T.len = len;
+  T.life = T.max = (W && W.tracerLife) || CONFIG.fx.tracerLife; T.w = (W && W.tracerWidth) || CONFIG.fx.tracerWidth;
   T.q.setFromUnitVectors(_fx.z, _fx.n.set(dx / len, dy / len, dz / len));
 }
 function spawnNumber(x, y, z, dmg, head, kill) {
@@ -1672,7 +1674,7 @@ function tickFx(dt) {
     if (T.life <= 0) continue;
     T.life -= dt;
     if (T.life <= 0) { fxPut(fx.add, i, 0, -50, 0, 0, 0, 0); }
-    else { fxPut(fx.add, i, T.x, T.y, T.z, F.tracerWidth, F.tracerWidth, T.len, T.q); fx.add.setColorAt(i, _fx.c.set(F.tracerColor).multiplyScalar(T.life / F.tracerLife)); fx.add.instanceColor.needsUpdate = true; }
+    else { fxPut(fx.add, i, T.x, T.y, T.z, T.w, T.w, T.len, T.q); fx.add.setColorAt(i, _fx.c.set(F.tracerColor).multiplyScalar(T.life / T.max)); fx.add.instanceColor.needsUpdate = true; }
     fx.add.instanceMatrix.needsUpdate = true;
   }
   for (const N of fx.numbers) if (N.life > 0) { N.life -= dt; N.y += CONFIG.target.numberRise * dt; }
@@ -1723,14 +1725,40 @@ function buildViewmodels() {
   vm.flash = new THREE.Mesh(fg, new THREE.MeshBasicMaterial({ color: CONFIG.fx.flashColor, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, side: THREE.DoubleSide }));
   vm.flash.frustumCulled = false; vm.flash.visible = false; vm.scene.add(vm.flash);
 }
-function renderViewmodel() {
+function poseViewmodel() {      // places the current gun model (kick, sway, reload dip, draw); returns it
   const A = arsenal, V = CONFIG.viewmodel, W = CONFIG.weapons[A.current], p = player;
-  if (game.view || A.scope > 0.6) return;
-  for (const k in vm.guns) vm.guns[k].visible = k === A.current;
   const g = vm.guns[A.current], sp = Math.min(1, Math.hypot(p.vx, p.vz) / CONFIG.move.sprint) * (p.onGround ? 1 : 0.2), t = game.time * V.swayFreq;
   const rl = A.reloadT > 0 ? Math.sin(Math.PI * (1 - A.reloadT / W.reload)) : 0, dr = A.drawT > 0 ? A.drawT / W.draw : 0, aim = A.gAim ? 1 : 0;
   g.position.set(V.pos[0] + Math.sin(t) * V.swayAmp * sp, V.pos[1] + Math.abs(Math.cos(t)) * V.swayAmp * sp - rl * V.reloadDip - (dr + aim) * V.drawDrop, V.pos[2] + A.kick);
   g.rotation.set(A.kick * 1.4 - rl * 0.5 - dr * 0.8, 0, rl * 0.35);
+  return g;
+}
+// World point that appears on screen where the viewmodel's muzzle is: the muzzle in viewmodel space is projected with the
+// viewmodel camera and put back into the world along the same screen ray, at the muzzle's forward distance.
+const _mw = { x: 0, y: 0, z: 0 }, _mv = new THREE.Vector3();
+function muzzleWorld(out) {
+  const g = poseViewmodel(), p = player;
+  g.updateMatrixWorld();
+  _mv.set(0, 0.01, CONFIG.viewmodel.models[arsenal.current].muzzle).applyMatrix4(g.matrixWorld);
+  const depth = Math.max(0.2, -_mv.z);
+  _mv.project(vm.cam);
+  const ty = Math.tan(camera.fov * DEG / 2), tx = ty * camera.aspect, B = viewBasis(p.yaw, p.pitch);
+  const fx_ = B.fx + _mv.x * tx * B.rx + _mv.y * ty * B.ux, fy_ = B.fy + _mv.y * ty * B.uy, fz_ = B.fz + _mv.x * tx * B.rz + _mv.y * ty * B.uz;
+  out.x = p.x + fx_ * depth; out.y = p.y + p.eye + fy_ * depth; out.z = p.z + fz_ * depth;
+  return out;
+}
+// Compile every effect's shader at load (DESIGN 15.7), so the first shot, grenade aim and burst do not hitch.
+function precompileEffects() {
+  const show = [fx.arc, fx.sphere, vm.flash, ...Object.values(vm.guns)], was = show.map((o) => o.visible);
+  for (const o of show) o.visible = true;
+  renderer.compile(scene, camera); renderer.compile(vm.scene, vm.cam);
+  show.forEach((o, i) => { o.visible = was[i]; });
+}
+function renderViewmodel() {
+  const A = arsenal, V = CONFIG.viewmodel;
+  if (game.view || A.scope > 0.6) return;
+  for (const k in vm.guns) vm.guns[k].visible = k === A.current;
+  const g = poseViewmodel();
   vm.flash.visible = A.flash > 0;      // A.flash is a time (gun.flashTime), counted down in tickWeapons
   if (A.flash > 0) {
     if (vm.flash.parent !== g) g.add(vm.flash);                    // child of the gun, so it follows the kicked muzzle
@@ -2192,6 +2220,7 @@ function init() {
   initInput(canvas);
   onResize();
   window.addEventListener('resize', onResize);
+  precompileEffects();
 
   // ---- window.__game: the test hook (DESIGN.md section 11). Works headless, no pointer lock, no gesture. ----
   window.__game = {

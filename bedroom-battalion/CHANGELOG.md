@@ -451,3 +451,45 @@ run with no errors.
    30.7) and about the same at 100 (21.2 against 22.1). At 10 units it is a little worse against the brown floor (32.6 against
    36.2), because the deeper tan is closer to the floor in lightness. Green is 46 to 67 at the same distances. The visual tester's
    larger view set should decide whether more is needed.
+
+## Round 2, pass 3 (FIXLIST.md "round 2, pass 2", DESIGN 15.7)
+
+Only the five items were touched. `index.html` is now 148,119 bytes. New scripts: `tests/builder_r2b_shaders.cjs` (shader
+programs and burst frame time), `builder_r2b_skirt.cjs` (R2-7 and the angle sweep), `builder_r2b_tracer.cjs` (tracer
+screenshots). `builder_r2b_ttk.cjs` now takes a list of distances.
+
+1. **SMG damage 25 (fixed).** Median time to kill, 60 trials, held trigger, aim put back on the body every tick:
+
+| Range | SMG stand | Rifle stand | SMG strafe | Rifle strafe |
+| --- | --- | --- | --- | --- |
+| 10 | 0.217 s | 0.317 s | 0.217 s | 0.317 s |
+| 20 | 0.217 s | 0.317 s | 0.217 s | 0.417 s |
+| 30 | 1.083 s | 0.617 s | 1.950 s | 2.417 s (95 % kill) |
+| 40 | 2.417 s (85 % kill) | 2.417 s (95 %) | 4.683 s (62 %) | 5.300 s (58 %) |
+
+   Standing, the SMG loses from 30 units. Strafing, it is still ahead of the rifle at 30 and level at 40.
+   DESIGN 15.7 expects it to lose from 30, which holds only for standing.
+2. **Fog 20 / 320 (fixed).** Tan is unchanged.
+3. **Audio and tracers (fixed).** SMG gains 1.3 / 0.75, sniper 0.6 / 0.55. Tracers start at the current gun's muzzle after
+   the kick: the muzzle point in viewmodel space is projected with the viewmodel camera and placed back in the world along the
+   same screen ray. Per-weapon `tracerWidth` / `tracerLife` (sniper 0.07 / 0.2 s). Through the scope the tracer starts
+   `fx.tracerScopeMin` = 3 units along the shot, and none is drawn if the hit is closer than that. Screenshots:
+   `builder_r2b_tracer_rifle.png`, `_sniper.png`, `_sniper_scoped.png`. Seen through the scope almost end-on, the sniper
+   tracer shows as a small bright square at the target.
+4. **Shaders compiled at load (fixed).** `precompileEffects()` makes the arc, burst sphere, muzzle flash and all gun models
+   visible, runs `renderer.compile` on both scenes, and restores them. `hideNear` 2.5, `flashOpacity` 0.4. WebGL
+   `createProgram` count: 14 at load, still 14 after the first shot, aim and burst. A copy without the call goes 11 at load,
+   13 after the shot, 14 after the aim, 16 after the burst. `render()` time, software rendering (relative only): first burst
+   3.5 ms against 1.0 to 1.9 for later ones, and 10.2 ms without the precompile.
+5. **Desk skirt (fixed).** `desk.skirt` `96..96.5, 73..87, 17..24.5`. R2-7 repro ends at (95.6, 17, 75.4), no fall, no damage.
+   Angles 4 to 16 degrees toward the desk, x 94.6 to 95.4, both rulers, walk and sprint (252 runs): 0 falls. Ruler lanes
+   x 92.6 to 95.4: 116 of 116 reach the desk.
+   Not in this item: runs angled 12 to 16 degrees away from the desk walk off the ruler's open west side near its top (92 of
+   252 runs). That geometry is unchanged.
+
+Regression: all 18 routes ok walking and sprinting with no damage; `validateWaypoints()` `[]`; draw calls 10 idle, 12 firing
+any gun, 11 aiming, 12 during a burst; 26,038 triangles; `errors` empty in every script; grenade repros unchanged (east wall
+bursts at (112.68, 0.02, 80.6), dummy 21 keeps 100); 245 random throws, 0 started inside a solid, 0 left the room.
+
+Re-test: feel tester, SMG by range (strafing at 30 and 40 especially) and the new gains; visual tester, Tan with the new fog,
+first-use hitches, tracers; bug tester, R2-7 and the seat edge, routes.

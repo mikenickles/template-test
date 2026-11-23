@@ -3,6 +3,7 @@
 // Usage: node builder_r2b_ttk.cjs [trials=60]
 const { launch } = require('./harness.cjs');
 const N = +(process.argv[2] || 60);
+const DISTS = (process.argv[3] || '10,20,40,60').split(',').map(Number), ITEM4 = !process.argv[3];   // usage: [trials] [distances, skips the pistol rows]
 (async () => {
   const { browser, page, errors } = await launch({ width: 640, height: 360 });
   await page.evaluate(() => {
@@ -86,7 +87,7 @@ const N = +(process.argv[2] || 60);
       }
     };
   });
-  const spots = await page.evaluate(() => { const o = {}; for (const d of [10, 20, 40, 60]) o[d] = TT.findSpot(d); o[100] = TT.findPerch(100); return o; });
+  const spots = await page.evaluate(([DISTS, ITEM4]) => { const o = {}; for (const d of DISTS) o[d] = TT.findSpot(d); if (ITEM4) o[100] = TT.findPerch(100); return o; }, [DISTS, ITEM4]);
   console.log('spots', JSON.stringify(spots));
   const res = {};
   const row = async (label, w, d, strafe, mode) => {
@@ -95,9 +96,9 @@ const N = +(process.argv[2] || 60);
     console.log(label.padEnd(34), JSON.stringify(res[label]));
   };
   console.log('== item 2: median seconds first shot to kill (n=' + N + '), held trigger, perfect aim');
-  for (const d of [10, 20, 40, 60]) for (const strafe of [false, true]) for (const w of ['smg', 'rifle']) await row(`${w} ${d}u ${strafe ? 'strafe' : 'stand'} hold`, w, d, strafe, 'hold');
-  console.log('== item 4: pistol vs rifle at 60 and 100 (standing)');
-  for (const d of [60, 100]) {
+  for (const d of DISTS) for (const strafe of [false, true]) for (const w of ['smg', 'rifle']) await row(`${w} ${d}u ${strafe ? 'strafe' : 'stand'} hold`, w, d, strafe, 'hold');
+  if (ITEM4) console.log('== item 4: pistol vs rifle at 60 and 100 (standing)');
+  if (ITEM4) for (const d of [60, 100]) {
     await row(`rifle ${d}u hold`, 'rifle', d, false, 'hold'); await row(`rifle ${d}u tap`, 'rifle', d, false, 'tap');
     await row(`pistol ${d}u fastest`, 'pistol', d, false, 'hold'); await row(`pistol ${d}u paced`, 'pistol', d, false, 'tap');
   }
