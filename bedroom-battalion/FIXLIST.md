@@ -39,6 +39,40 @@ matches while the builder measured 22 to 20 over 42, so the map is not changed f
 | Rare 5-tick rifle gap (4 in 1,150) | BUGS R3 notes | Round 5 |
 | Bodies sit inside a board for about 3 ticks when descending a string from the top | BUGS R3A-2 | Round 5 |
 
+## Round 3 closed: gate PASSED
+
+Evidence, all on the fixed build (326,450 bytes):
+- Bug tester re-check: PASS on Recruit, Regular and Veteran. 48 stepped matches on fresh seeds plus real-flow matches on
+  each difficulty: 0 bots still for 37 s or more by its own per-tick detection; `idleLog`, `stuckLog`, `trainRescueLog`
+  empty; R3-1 to R3-6 fixed; same seed reproduces a match. 0 blocker, 0 major, 3 minor.
+- Feel tester re-check: a full match is fun on Regular and Veteran and fair enough to close; Recruit beatable.
+  Rounds to time 13 / 5 / 2 %. 0 stuck or idle bots in 138 matches.
+- Visual tester re-check: PASS. 17 draw calls in a full firefight, no leaks, 74 KB left for round 4.
+
+Balance is unresolved but within noise: builder 55-65 (120 matches), feel tester 68-52 (120), bug tester Veteran 12-40 Green.
+Recruit and Veteran disagree between runs; Regular leaned Green in one run only. Settled in round 5 with a 300-seed run.
+
+### Carried into round 4 (art)
+
+| Item | Source |
+| --- | --- |
+| Tan bodies too close to crouched living Tan; `soldier.bodyTint` 0.5 to 0.7 | VISUAL R3 re-check |
+| Two stale code section banners | VISUAL R3 |
+
+### Carried into round 5 (polish and balance)
+
+| Item | Source |
+| --- | --- |
+| 300-seed balance run per difficulty, counted in rounds; Tan wins the bed, Green the west floor | FEEL, BUGS, builder |
+| Under-desk floor-to-floor sniper line (53 early kills); staggered toy boxes and node changes | FEEL R3 re-check 1 |
+| Grenades never hurt alert bots; make the dodge a chance with a reaction delay | FEEL R3 re-check 2 |
+| Bots hardly use cover now (5 % crouched); `ai.coverMin` 3 s with two peeks | FEEL R3 re-check 3 |
+| Bots almost never ride the train (0.2 to 0.3 per match); board during setup | FEEL R3 re-check 4 |
+| Callouts about 10 a minute; drop "Enemy down", gap 6 s | FEEL R3 re-check 5 |
+| R3-7 crossing waits up to 15 s; R3-8 rare 15 to 25 s engage pauses; R3-9 `start()` after a match | BUGS R3 re-check |
+| Veteran early east-lane sniper kills unchanged | FEEL, builder |
+| Fast Resume after Esc in real browsers (pointer-lock cooldown) | builder |
+
 ---
 
 # Round 2, pass 2 fix list (done)

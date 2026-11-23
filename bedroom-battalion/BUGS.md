@@ -130,6 +130,142 @@ flow), `bug_r3_04_rules.cjs`, `bug_r3_05_reaction.cjs`, `bug_r3_06_menus.cjs`, `
 `bug_r3_08_engage_freeze.cjs`, `bug_r3_09_callouts_hud.cjs`. Every loop has a tick or time limit. In my stepped-match
 script, "stationary over 62 s" means at least 37 s without moving 1 unit (a 12 s window plus 25 s).
 
+## Round 3 re-check
+
+**Gate: PASS on Recruit, Regular and Veteran.** Every match ran start to finish with no blocker.
+- None of the frozen bots that failed the gate remain: no bot stood still for 37 s or more (the threshold the first
+  pass failed on) in 48 stepped matches.
+- `idleLog`, `stuckLog` and `trainRescueLog` stayed empty everywhere.
+- Under a stricter rule I used this time, I found 4 shorter pauses of 14 to 25 s in those 48 matches (2 on Recruit,
+  2 on Veteran, none on Regular). Each bot moved on by itself, but 16.11 says these should have been cut short and
+  logged. I report them below as R3-7 and R3-8 (minor) for you to judge.
+
+Findings: R3-1 to R3-6 are all fixed. New: 0 blocker, 0 major, 3 minor. Build tested: `index.html` 326,450 bytes
+(commit e30ad51). Console errors and warnings: none in any run.
+
+### My detection (`bug_r3_01_matches.cjs`, updated for 16.11)
+
+- **Stuck rule:** a living bot moves less than 1 unit in 15 s and fires no shot in those 15 s. Holding in the first
+  22 s of a round does not count.
+- **Seconds visible:** per bot and round, the time an enemy was within the weapon's engage range with my own line of
+  sight, ignoring which way the bot faces.
+- Each match is stepped tick by tick and then replayed with `runMatch` on the same seed for comparison.
+
+| Difficulty | Matches (seeds 401-416) | Stationary 37 s+ | Stationary 15 s+, no shot | Rounds ending on time / replayed (40 `runMatch` more, seeds 501-540) | `idleLog` / `stuckLog` / `trainRescueLog` |
+| --- | --- | --- | --- | --- | --- |
+| Recruit | 16, all finished with a winner; `runMatch` identical every time | 0 | 2 (R3-7, R3-8) | 7 % / 9 % (was 35 % / 8 %) | 0 / 0 / 0 |
+| Regular | 16, same | 0 | 0 | 1 % / 3 % (was 26 % / 8 %) | 0 / 0 / 0 |
+| Veteran | 16, same | 0 | 2 (R3-7, R3-8) | 1 % / 1 % (was 31 % / 11 %) | 0 / 0 / 0 |
+
+- **Never fired with an enemy in range:** 16 cases in 48 matches of a bot that fired no shot in a round while an
+  enemy was in range and line of sight for over 5 s. 13 of those bots were killed in that window. I traced two of the
+  three survivors: they had the enemy behind them, or engaged briefly and moved on. None is frozen.
+- **"Bot never left spawn":** this check from the first pass looks only at the end position. All the cases I traced
+  had left and come back.
+
+### Earlier findings
+
+| # | Status | Evidence |
+| --- | --- | --- |
+| R3-1 sniper engage freeze | **Fixed** | The old repro (Recruit seed 201, 40 s into round 1): both snipers fire 5 shots each in the next 20 s, and they stand to fire. In 48 matches no sniper is stationary for 37 s, and only one is stationary for 15 s (R3-8) |
+| R3-2 idle at enemy spawn, rounds to 0:00 | **Fixed** | Regular seed 1: 7 rounds, all elimination (was 2 of 8 on time at 3 v 1). In 120 `runMatch` matches, 3 % of rounds ended on time (was 32 %) and 5 % were replays (was 9 %) |
+| R3-3 seed does not reproduce | **Fixed** | Same seed 3 times via `runMatch`, 3 times via `startMatch`, and after Quit then a new match with that seed: identical results each time (green 5-3 in 8 rounds, same round lengths). Every start is at time 0 with the train at s 30. Rematch resets the time and train and picks a new seed. In all 48 stepped matches, `runMatch` on the same seed gave the same result |
+| R3-4 health tie | **Fixed** | Three replays at 4 v 4, then a fourth tie with equal health and damage: `draw` (neither side scores) and the replay counter resets to 0. With equal health but 30 damage dealt by Green: `damage`, and Green wins |
+| R3-5 death camera | **Fixed** | Spectating starts 1.517 s after death |
+| R3-6 callouts | **Fixed** | 79 callouts in one Regular match: none from the same bot within 4 s, no region repeated within 8 s, "I'm hit" once per life, lane callouts say "our side" or "their side" |
+
+### New findings
+
+#### R3-7. MINOR: bots wait at a closed crossing for up to about 15 s, and nothing is logged
+
+```js
+__game.startMatch({ difficulty: 'recruit', seed: 411, autoplay: true }); __game.setTimeScale(0);
+// round 5: Tan 4 (SMG) reaches n.c.x (47.3, 0, 54.1) about 35 s in, sits in wait_cross until about 49 s, then re-routes
+// veteran seed 414, round 4: Green 1 waits in wait_cross at the same node for about 15 s (54 s into the round)
+```
+
+16.11 allows a crossing wait of 8 s at most; anything longer should go to `idleLog` and move the bot on. `idleLog` stayed
+empty. Trace with `node tests/bug_r3_11_trace.cjs recruit 411 5 "Tan 4"`.
+
+#### R3-8. MINOR: two bots sat in `engage` for 15 to 25 s without firing or moving, with nothing logged
+
+```js
+// veteran seed 404, round 4: Tan 3 (sniper) at its own spawn (60, 0, 144) in engage from about 85 s to 110 s, no shot
+//   (its shot count stays at 95), then switches to hunt
+// recruit seed 409, round 3: Tan 4 (rifle) at n.w.x (37.9, 0, 57.9) in engage from about 125 s to 140 s, no shot
+```
+
+16.11 allows standing in engage only while firing, scoping, reloading or re-aiming at a visible target within the
+last 2 s; otherwise the bot moves after `lostAfter` (3 s), or `idleLog` records it after 5 s. Neither happened. These
+are the only 2 such pauses in 48 matches. Traces with `bug_r3_11_trace.cjs`.
+
+#### R3-9. MINOR (test hook): `__game.start()` after a match leaves the player dead, so free play cannot move
+
+```js
+__game.runMatch({ difficulty: 'regular', seed: 1 }); __game.start({ pointerLock: false }); __game.setTimeScale(0);
+__game.state().player            // health 0, dead: true; state().match.phase is still 'matchEnd'
+__game.walkPath(['n.e.6', 'm.e.cn', 'm.e.u'])   // ok: false, stuck at the first node; setInput({forward}) does not move
+```
+
+This does not affect the menus (Play starts a match). It does break test scripts that switch from matches to free play
+in one page. Expected: `start()` resets the player and clears the match.
+
+### New behaviour
+
+- **Grenade fleeing** (`bug_r3_10_recheck.cjs` E): I threw 60 grenades at the feet of Tan bots near the track, on the
+  chair seat and on the bed.
+  - 59 of 60 bots switched to `flee`.
+  - None entered the envelope unless it was already crossing.
+  - None fell off a ledge (one stepped 1.8 down from a pillow onto the bed top), none entered a solid, and none looped.
+  - 3 were still hurt; one was cornered on the chair seat.
+- **Hit while climbing** (F): 19 bots shot with a pistol mid-string kept climbing (up or down) and only engaged once
+  off the string. None fell or let go.
+- **Hit while riding:** not tested. Bots ride very rarely now: 29 completed rides in 120 `runMatch` matches, and 89
+  matches had none. My 12-seed search found no Tan rider to shoot. Rides per match are the feel tester's to judge
+  against `rideChance` 0.6.
+- **East-lane box and new nodes:**
+  - The `m.E-d.toybox` collider is at `81.4..85, 78.5..81.5`, h 2.5; `m.e.w` is gone; m.e.cn (84, 0, 75), m.e.u
+    (89, 0, 80) and m.e.cs (84, 0, 85) are linked n.e.6, m.e.cn, m.e.u, m.e.cs, s.e.6. `m.tunnel.top > m.e.u` is now
+    the one-way drop.
+  - `validateWaypoints()` is `[]`.
+  - The player walks the new path both ways, walking and sprinting, ending at the far node with no damage and never
+    inside a solid.
+  - Bots go n.e.6 to s.e.6 and back through it in 6.35 s, and from m.e.u out to either side, with no standstill and no
+    solid ticks. Nothing gets stuck under the chair.
+  - Stepping east off the tunnel roof clears the box.
+
+### Real flow, menus and regression
+
+- **Real-flow matches** (`bug_r3_03_flow.cjs`), each with 0 problems and no console errors:
+  - Recruit with the player killed every round, spectated to a 0-5 loss.
+  - Regular played to a 5-1 win; Veteran played to a 5-4 win.
+  - Every round checked: freeze, key and click pick, live, round end, match end, Enter rematch, Esc to title.
+  - The only body movement was a body on the track pushed 0.4 by the train, and one settling 0.3 as it fell.
+- **Menus** (`bug_r3_06_menus.cjs`): persistence, pause and resume, the Esc-then-click race, Quit then Play, Enter and
+  Esc on the end screen, and `localStorage` throwing are all as before. A new match now starts at time 0.5.
+- **Soft separation:** 28 raised nodes, no one pushed off.
+- **Regression:**
+  - `validateWaypoints()` `[]`; all 18 routes up and down, walking and sprinting: 68 of 68 legs.
+  - Raw-input gate 82 of 82, after re-routing two of my legs around the toy box.
+  - Nav test, seeds 11 and 23, 900 s: 0 stuck, 0 rescues, 0 teleports, 0 car hits, all 174 edges used.
+  - Train push suite: 502 runs, 0 damage, 0 rescues.
+  - Grenade suite: 3,910 face throws and 1,988 random throws, clean.
+  - Fuzz: 671,994 ticks, never out of the room.
+
+### Notes for the lead (not counted)
+
+- **Balance:** Veteran autoplay Green won only 12 of 40 `runMatch` matches (Recruit 24 of 40, Regular 23 of 40).
+  The balance run in FIXLIST covers this.
+- **Still deferred:** R3A-2 (body sinks into the board when descending a string) and R2-9 (head into the desk for one
+  tick) remain as they were.
+
+### Scripts
+
+Updated: `bug_r3_01_matches.cjs` (16.11 stuck rule, engage-range visibility, `idleLog`) and `bug_04_gate_manual.cjs`
+(legs around the toy box). New: `bug_r3_10_recheck.cjs` (repros, determinism, ties, death camera, east lane, grenade
+fleeing, hits mid-climb or mid-ride, callouts; add `R` to the sections to look for riders only) and
+`bug_r3_11_trace.cjs <difficulty> <seed> <round> "<bot>"` (traces one bot; seeds now reproduce).
+
 ---
 
 # Round 3A (train, soldiers, bot movement; early pass)

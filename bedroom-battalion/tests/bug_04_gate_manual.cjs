@@ -89,7 +89,7 @@ const { boot } = require('./bug_lib.cjs');
     run('small_bridge', 'down (L1 to desk)', [110.5, 20, 40], [['go', 111.5, 42.5, 20], ['go', 111.5, 56.5, 26], ['go', 107, 57.5, 26]]);
     // ---- tunnel drop ----
     run('tunnel_drop', 'down (one way)', [89, 17, 74.5], [['go', 91, 80, 17], ['off', 77, 80, 8]]);
-    run('tunnel roof', 'down (step off the roof to the floor, east side, away from the train)', [77, 8, 80], [['off', 84, 80, 0]]);
+    run('tunnel roof', 'down (step off the roof to the floor, east side, away from the train)', [77, 8, 80], [['off', 84, 72, 0]]);   // round 3 fix pass: the toy box sits at 81.4..85, 78.5..81.5
 
     // ---- whole climbs from the Green spawn point, one continuous drive, no teleports ----
     const whole = (name, steps) => run(name, 'spawn to top', [60, 0, 20], steps);
@@ -100,7 +100,7 @@ const { boot } = require('./bug_lib.cjs');
         ['go', 111.5, 103.5, 26], ['go', 111.5, 117.5, 20], ['go', 110.5, 130, 20], ['grab', 107.6, 130], ['climb', 40], ['go', 110.5, 130, 40], ['go', 110.5, 136, 40], ['grab', 107.6, 136], ['climb', 60], ['go', 110.5, 136, 60],
         ['go', 110.5, 152, 60], ['grab', 107.6, 152], ['descend', 40], ['go', 110.5, 146, 40], ['grab', 107.6, 146], ['descend', 20], ['go', 110.5, 120, 20], ['go', 105.7, 120, 20], ['go', 105.7, 152.5, 0], ['go', 100, 153, 0]]);
     whole('WHOLE top shelf via tall_stairs, L2_b, L3_b',
-      [['go', 60, 27, 0], ['go', 78, 27, 0], ['go', 84, 60, 0], ['go', 83.2, 100, 0], ['go', 90, 134, 0], ['go', 100, 153, 0], ['go', 105.7, 152.5, 0], ['go', 105.7, 120, 20], ['go', 110.5, 120, 20], ['go', 110.5, 146, 20],
+      [['go', 60, 27, 0], ['go', 78, 27, 0], ['go', 84, 60, 0], ['go', 84, 75, 0], ['go', 89, 80, 0], ['go', 84, 85, 0], ['go', 83.2, 100, 0], ['go', 90, 134, 0], ['go', 100, 153, 0], ['go', 105.7, 152.5, 0], ['go', 105.7, 120, 20], ['go', 110.5, 120, 20], ['go', 110.5, 146, 20],
         ['grab', 107.6, 146], ['climb', 40], ['go', 110.5, 146, 40], ['go', 110.5, 152, 40], ['grab', 107.6, 152], ['climb', 60], ['go', 110.5, 152, 60]]);
     return rows;
   });
