@@ -89,6 +89,10 @@ const SEED = +(process.argv[2] || 5), THROWS = +(process.argv[3] || 2500), SECT 
       hug('floor, straight down', [60, 0, 100], [60, -9, 100.01]);
       hug('floor, crouched straight down', [60, 0, 100], [60, -9, 100.01], true);
       hug('ceiling: on the tall shelf top? jump-free: standing on L3, straight up', [112, 60, 139], [112, 99, 139.01]);
+      // the ceiling cannot be reached in play (top surface y 60); teleport the head to it and throw while falling
+      hug('ceiling, head at y 90, straight up (teleported, falling)', [60, 88.2, 80], [60, 99, 80.01]);
+      hug('ceiling, head at y 90, 30 deg up into it (teleported, falling)', [60, 88.2, 80], [60, 95, 70]);
+      hug('ceiling corner NE, head at y 90 (teleported)', [119.6, 88.2, 0.4], [130, 95, -10]);
       hug('Green fort front wall from inside, upper wall', [50, 0, 24.1], [50, 2.4, 30]);
       hug('Green fort front wall from inside, low wall (crouched)', [50, 0, 24.1], [50, 0.6, 30], true);
       hug('Tan fort wall from outside toward dummy 21 (crouched)', [66, 0, 133.6], [66, 0.9, 137], true);
@@ -108,6 +112,11 @@ const SEED = +(process.argv[2] || 5), THROWS = +(process.argv[3] || 2500), SECT 
       hug('desk apron from the ruler side', [95.0, 21, 70], [99, 22, 70]);
       // walk into the corner first, then throw into the corner diagonal
       hug('walked into the SW room corner, throw into it', [3, 0, 157], [-5, 1.6, 165], false, Math.atan2(3, -3));
+      // head right at the ceiling: no settle step, one tick of G then release
+      for (const [nm, pitch] of [['ceiling, head at y 90, straight up, no settle', 1.54], ['ceiling, head at y 90, 20 deg up, no settle', 0.35]]) {
+        prep(); G.teleport(60, 88.2, 80, 0, pitch); const r = follow(1 / 60);
+        out.hug.push({ name: nm, ...summary(r) }); G.clearInput(); for (let i = 0; i < 600 && !G.state().player.onGround; i++) G.step(DT); G.step(2.2);
+      }
       hug('walked into the bed leg corner, throw into it', [37, 0, 48], [30, 1.6, 44], false, Math.atan2(1, 1));
     }
     // ---- C. systematic: every box collider face, player pushed against it, throw into it at 5 pitches ----

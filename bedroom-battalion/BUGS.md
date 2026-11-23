@@ -137,6 +137,134 @@ afterwards. A fire press in the last 0.15 s of the draw is buffered and fires, s
 `bug_r2_08_grenade_wall.cjs`, helper `bug_r2_lib.cjs`. Every loop has a tick limit. The Round 1 scripts were re-run
 unchanged apart from `bug_12_design_match.cjs`, which now carries the 15.5 geometry (0 mismatches).
 
+## Round 2 re-check
+
+**Nothing blocks the feel gate: every gun fires, reloads and hits to the 15.6 numbers, and the grenade bursts for 140.**
+Findings: 0 blocker, 0 major, 3 minor (R2-7 to R2-9; small, none in gunplay). All six first-pass findings are fixed.
+
+Build tested: `index.html` 146,098 bytes (commit 3585064), unchanged during testing. Console errors and warnings:
+none in any run, including five ways of breaking audio. The checks for R2-1 to R2-4 were also run on the first-pass
+build (136,532 bytes, commit 3e65f0c), where they fail, so the scripts are known to catch the old bugs.
+
+### Earlier findings
+
+| # | Status | Evidence |
+| --- | --- | --- |
+| R2-1 grenade starts inside what you press against | **Fixed** | 35 pressed-against cases (all four walls, four room corners, floor standing and crouched, ceiling with the head at y 90, fort walls high and low, tunnel wall, bed/desk legs, parapet, stair guard, under the skateboard, bed and desk, ball, shelf post, W-c, chair back, apron): none starts in a solid, none leaves the room. Every box face in the room (313 boxes, 3,880 throws, player walked into the face first, 5 pitches): 0 born inside, 0 entered a solid, 0 left the room (first-pass build: 2,518 born inside, 16 left). Random throws, 4 seeds, 10,343 throws, half after walking into something, a fifth at steep pitch, moving, jumping and crouched: 0 born inside, 0 entered, 0 left, fuse 2.000 s every time, 0 blast results that disagree with my own line of sight. A live grenade moved outside the room box on any side is gone on the next tick with no burst; one moved to a point inside stays |
+| R2-2 switching skips the sniper bolt | **Fixed** | Shot, switch away and back, then press fire every other tick; 83 trials: hook `selectWeapon`, keys 2>1, keys 3>5, key 5 again, wheel two notches (real wheel, pointer locked), grenade hold and throw (hook and real G key), 20 switches in 0.33 s, away for 0.05 to 2 s, switch at 0 to 1.6 s after the shot. Every next shot is at max(shot + 1.3, back + 0.7 draw), equal to the no-switch control to the tick. Mid-reload switch (4 cases): reload cancelled, magazine kept, bolt still respected. First-pass build in the same script: 17 failures, next shot 0.73 s after the first |
+| R2-3 throw not 10 degrees above the view | **Fixed** | Launch angle = view + 10.00 degrees at -80, -45, -22.9, -10, 0, 10, 22.9, 45, 70; at 80 it is 88.8 (straight up caps it). Speed 18.000 |
+| R2-4 apron blocks the desk-side third of each ruler | **Fixed** | Both rulers, walk and sprint, start x 91.6 to 96.4 in 0.1 steps, then turn onto the desk: x 92.2 to 95.4 all reach the ruler top and stand on the desk at y 26 with no damage. x 95.5 to 96.0 stop against the apron end without falling (first-pass build: 95.1 to 95.5 stopped, 95.6 to 96.0 fell). x 91.6 to 92.1 go down the skateboard or chair stairs beside the prop, no damage. Round 1 finding 12's three repros still end on the desk with no damage. See R2-7 for the angled case |
+| R2-5 scoped sniper ignores moving and jumping | **Fixed** | Scoped spread 0.05 still, 0.05 crouched, 1.5 walking, strafing and crouch-walking, 4.0 airborne. Measured cones (150 shots each at the west wall from L3): 0.0 / 1.50 / 3.96 degrees |
+| R2-6 R ignored during a draw | **Fixed** | All four guns, R by 1-tick input and by `reload()`, at 0 / 25 / 50 / 75 / 95 % of the draw: the reload starts on the tick the draw ends (0.467 / 0.367 / 0.700 / 0.267 s). R during a draw with a full magazine does nothing; R then a switch to another gun inside the draw reloads nothing |
+
+### Changed numbers (DESIGN 12, 15.6)
+
+| Check | Result |
+| --- | --- |
+| Damage and falloff | Real shots at 13 ranges from 5 to 136 units, crouched, on clear lines found with `raycast`: every hit matches to the cent. Rifle 26, 70 % at 120+. SMG 20, full to 25, 18.72 at 30.2, 13.9 at 50, 9.0 from 70. Pistol 30, full to 30, 26.27 at 40, 15.0 from 70. Sniper 90 everywhere. Head x2 |
+| Spread by stance (reported) | Rifle 0.5 / crouch 0.3 / walk and strafe 0.75 / sprint 1.25 / air 1.5. SMG 1.0 / 0.6 / **1.15** / 2.5 / 3.0. Pistol 0.6 / 0.36 / 0.9 / 1.5 / 1.8. Sniper 3.0 / 1.8 / 4.5 / 7.5 / 9.0. Only the SMG uses 1.15 for moving. Crouch and moving multiply (rifle 0.45, SMG 0.69) |
+| Measured cones | 150 shots each; the widest shot is within the reported spread to my measuring error (0.015 degrees): rifle 0.49, SMG 1.005 still and 1.14 strafing, pistol 0.60 and 0.91, sniper 2.99 |
+| Bloom | SMG +0.20 per shot, capped at 3.5 on shot 13; rifle +0.35, cap 3.0; pistol +0.6 per shot, and clicking as fast as it fires reaches only 1.8 by shot 10. Recovery waits 0.12 s on the SMG and pistol, 0.16 s on the rifle |
+| Recoil return | One shot of each gun: 80 % of the kick is back at 0.25 s and the rest stays (rifle 0.18, SMG 0.11, pistol 0.28, sniper 0.70 degrees left over). Ten paced rifle taps leave the view 1.8 degrees higher, which is what 0.8 means; feel tester's call |
+| Scope | fov 47.5 at 0.1 s, 20 at 0.25 s, 75 on release. Scoping a pistol does nothing |
+| Grenade damage | 140 x (1 - d / 7) at 7 distances from 1.0 to 3.6 units to the dummy's chest (119.6, 117.9, 93.7, 91.4, 76.4, 76.0, 68.2); a burst within 2.0 of the chest kills a full-health dummy. Cover: the Tan front wall, the truck, the bed (burst underneath, dummy on top) and the tunnel roof all block; inside the fort and on the bed beside the dummy it hits; every cover result agrees with my own line of sight |
+
+### New rules (15.6)
+
+- Held fire through empty, rifle and SMG with reserve: the last round, then one dry click one interval later, the reload
+  starts on that tick with no new press, and with fire still held it fires again the tick the reload ends. With zero
+  reserve: one dry click in 4.5 s of holding, no reload, nothing repeats; a fresh press gives one more dry click.
+  The pistol and sniper fire once per press as before. Random abuse: at most 1 dry click in any second.
+- R buffered during a draw: see R2-6.
+- A grenade outside the room box is removed: see R2-1.
+
+### State machine
+
+- Five actions (fire, reload, switch, scope, grenade press or release, through both the hook and input) in every order,
+  on one tick and on consecutive ticks, from each of four guns: 2,880 combinations. No ammo below 0 or over capacity,
+  no scope on a non-sniper or while reloading, never more than one held grenade, and the gun fires again afterwards
+  every time.
+- Death in the middle of a reload, a draw, a scoped bolt, a grenade aim, held fire on an empty SMG, a buffered R and with
+  a live grenade at the feet: respawn at (60, 0, 20) with full ammo, no reload or draw carried over, grenade count 1,
+  and the gun fires afterwards. With scope still held after respawn the sniper scopes again, which is right.
+- Scope state after a switch mid-bolt: drops on the switch, the pistol never scopes, back on the sniper it stays down
+  through the 0.7 s draw and comes back 0.2 s later if right mouse is still held.
+- 150,000 ticks of random abuse: no invariant broken.
+
+### Hitscan and regression
+
+- Hitscan: 5,584 random rays against my own ray march, 0 through a solid (same two "stopped in thin air" rays on the
+  first-pass build, at the tall landing and the bucket, where my march grid is coarse). 1,910 rays aimed at every
+  collider: same 59 face-touching disagreements as before. Slit, gate, door gap, chair-back gap, crenels still pass shots.
+- Routes: `validateWaypoints()` returns `[]`. All 18 routes in `__game.routes`, up and down, walk and sprint, through
+  `walkPath` with my own end check (within 0.8 and 0.35 of the last node, on the ground, no damage, no rescue): 68 of
+  68 legs ok, and the two one-way routes (`bed_spring`, `tunnel_drop`) refuse to be driven down. The raw-input gate
+  (`bug_04_gate_manual.cjs`) is 82 of 82, including both one-way routes walked down by hand. `bug_03_routes_manual.cjs`
+  flags 54 of 443 lanes against 62 on the first-pass build; the differences are the eight ruler lanes R2-4 fixed (two
+  other rows only changed from stuck to timeout or back).
+- Fuzz with movement, firing, scoping, switching and throwing: 7 seeds, 5.7 million ticks, 30,474 grenades. Player never
+  out of the room, 0 rescues, 0 NaN, ammo always in range, no grenade outside the room, born in or entering a solid.
+  Four of the seven seeds showed one tick with the head inside the desk top: new finding R2-9.
+- Real input (mouse buttons, wheel, R, G, 1 to 5, Esc, resume) and the 24 sounds in 15.2: all as in the first pass.
+
+### New findings
+
+#### R2-7. MINOR: angled into the apron's end from the ruler's desk side, you slide off the seat (35 hp)
+
+```js
+__game.teleport(95.3, 17, 78, -8 * Math.PI / 180, 0); __game.step(0.2);   // on the seat, inside the ruler lane, 8 deg toward the desk
+__game.setInput({ forward: true }); __game.step(4);
+// slides east along the south end of desk.apron.n (z 75.4, x 95.5 -> 96.4), off the seat's east edge: floor, damageLog [35]
+```
+
+- Starting x 95.1 to 95.4 (inside the ruler footprint) at 8 degrees toward the desk falls; at 2 degrees only x 95.4
+  falls, at 12 degrees x 94.9 and up. Same on ruler south (mirrored), walk and sprint.
+- Lanes starting x 96.1 to 96.4 (centre already past the seat edge at x 96) fall straight ahead.
+- Not new: on the first-pass build the same 8-degree run fell from x 94.6 up; moving the apron narrowed it.
+  The seat's east edge is an open drop anyway (`teleport(90, 17, 80, -Math.PI / 2, 0)` and walk east: 35 hp), but here
+  the apron's end steers a player who aimed at the ruler into it.
+- Expected (lead's brief): beside the rulers you may stop against the apron but must not fall. Closing the seat's east
+  edge beside the apron's end, like the two seat stoppers, would do it.
+  Script: `tests/bug_r2b_03_ruler_lanes.cjs`.
+
+#### R2-8. MINOR: a grenade thrown down beside an overhang edge can cut through the edge by about 0.1
+
+```js
+__game.give('grenade'); __game.teleport(55.935, 0, 75.218, 3.045, 0); __game.step(0.3); __game.look(3.045, -0.53);
+__game.setInput({ grenade: true }); __game.step(0.1); __game.setInput({ grenade: false }); __game.step(1 / 60);
+__game.grenades[0]   // starts at (55.667, 1.087, 75.908): below ruin.brick.1 (55.7..58.1, y 1.2..2.4, z 75.7..76.9)
+```
+
+- The eye (55.935, 1.6, 75.218) is outside the brick, the start point is outside it, but the straight line between them
+  passes through the brick's lower near corner (my march enters it at 0.63 of the way). The same in 28 of 3,880
+  face throws, all looking 34 degrees down while level with the bottom edge of the bed slab, desk top, chair seat,
+  chair back or apron (for example falling past the bed side at `teleport(35.45, 6, 80, Math.PI / 2, 0)`, walk 0.25 s,
+  `look(Math.PI / 2, -0.6)`, hold G 3 ticks: the grenade starts under the bed slab), and 1 of 10,343 random throws.
+- Never starts inside a solid and never leaves the room, so it cannot reach anything a player could not. 15.6 says it
+  is "swept to its release point; if anything is in the way it starts at the contact point". Script:
+  `tests/bug_r2b_01_grenade.cjs` (section C prints each case).
+
+#### R2-9. MINOR (cosmetic): sprint-jumping up a ruler beside the apron puts the head 7.6 cm into the desk top for one tick
+
+```js
+__game.teleport(95.1, 17, 78, 0, 0); __game.step(0.2);
+// hold forward + sprint, jump held 2 ticks in every 20, for 5 s: one tick on the ruler at (95.1, 22.776, 67.94), head at
+// 24.576 while the capsule still overlaps the desk top (x >= 95, underside 24.5); the next tick it is pushed to x 94.6
+```
+
+- 1 tick per run at x 95.1 to 95.45 on both rulers, sprint plus jump (once walking with jumps at x 95.45, 1.2 cm). The
+  eye is 0.2 lower, so the camera never enters. New: the first-pass apron (x 95 to 95.5) kept you at x 94.6 there.
+  Seen four times in 5.7 million fuzz ticks. Script: `node tests/bug_r2b_06_apron_drop.cjs head`.
+
+### Scripts
+
+`tests/bug_r2b_01_grenade.cjs` (launch angle, pressed cases, every box face, random throws, removal, damage and
+cover; `node bug_r2b_01_grenade.cjs <seed> <throws> <sections>`), `bug_r2b_02_sniper_bolt.cjs`,
+`bug_r2b_03_ruler_lanes.cjs`, `bug_r2b_04_numbers.cjs`, `bug_r2b_05_rules_state.cjs`, `bug_r2b_06_apron_drop.cjs`,
+`bug_r2b_07_regress.cjs`. Re-run unchanged: `bug_02`, `bug_03`, `bug_04`, `bug_r2_03`, `bug_r2_05`, `bug_r2_06`,
+`bug_r2_07` (seeds 21 to 23). `bug_r2_04` and `bug_r2_08` still expect the old numbers (110 damage, no 10 degrees) and
+are replaced by `bug_r2b_01`. Every loop has a tick limit.
+
 ---
 
 # BUGS.md: round 1 (graybox)
