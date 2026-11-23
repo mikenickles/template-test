@@ -6,13 +6,14 @@ const { open, dE, hex } = require('./visual_r3_lib.cjs');
   const h = await open({ width: 1280, height: 720 }); const p = h.page;
   await p.evaluate(() => {
     const R = window.__r3; R.frames = {};
-    R.grabFollow = (key, pos, side) => { const e = [pos[0] + side[0], pos[1] + side[1], pos[2] + side[2]]; R.cam(e, [pos[0], pos[1] + 0.8, pos[2]]); __game.render(); (R.frames[key] = R.frames[key] || []).push(R.copy()); };
+    R.grabFollow = (key, pos, side) => { const e = [pos[0] + side[0], pos[1] + side[1], pos[2] + side[2]]; R.cam(e, [pos[0], pos[1] + 0.8, pos[2]]); __game.render(); (R.frames[key] = R.frames[key] || []).push(R.copy()); __game.clearView(); };   // a named view hides chevrons, so clear it at once
     // static colliders as AABBs (train cars excluded: they move)
     R.cols = __game.colliders.filter((c) => c.x0 !== undefined && !/train/.test(c.id));
     R.inside = (x, y, z, r) => { for (const c of R.cols) { if (y < c.y0 || y > c.y1) continue; const dx = Math.max(c.x0 - x, 0, x - c.x1), dz = Math.max(c.z0 - z, 0, z - c.z1); if (Math.hypot(dx, dz) < r - 0.12) return c.id; } return null; };
   });
   // ---------- nav test: walk, climb, ride; ground contact and clipping for every bot every 3rd tick ----------
-  const nav = await p.evaluate(() => {
+  const ONLY_MATCH = process.argv[2] === 'match';
+  const nav = ONLY_MATCH ? 'skipped' : await p.evaluate(() => {
     const R = window.__r3; __game.startNavTest({ bots: 10, seed: 4 }); const st = { ticks: 0, grounded: 0, float: [], sink: [], bodyClip: {}, gunClip: 0, gunChecks: 0, ride: { n: 0, worst: 0, types: {} }, got: {} };
     const prevY = {}; const top = { flatbed: [1.2, 4.2], gondola: [1.2], engine: [5, 6], boxcar: [5], caboose: [5] };
     for (let i = 0; i < 60 * 180 && !(st.got.walk >= 8 && st.got.climb >= 8 && st.got.ride >= 8 && i > 60 * 100); i++) {
@@ -55,7 +56,7 @@ const { open, dE, hex } = require('./visual_r3_lib.cjs');
         if (b.brainState === 'engage' && !b.crouching && (st.got.aim || 0) < 1 && i % 30 === 0) { R.grabFollow('pose', b.pos, [Math.sin(b.yaw + 1.3) * 3, 0.4, Math.cos(b.yaw + 1.3) * 3]); st.got.aim = 1; st.aimInfo = [b.name, b.weapon]; }
         if (b.crouching && (st.got.crouch || 0) < 1 && i % 30 === 0) { R.grabFollow('pose', b.pos, [Math.sin(b.yaw + 1.3) * 3, 0.4, Math.cos(b.yaw + 1.3) * 3]); st.got.crouch = 1; st.crouchInfo = [b.name, b.brainState]; } }
       // bodies: record where each body is 0.5 s after death, then check every later tick
-      for (const b of s.bots) { if (!b.dead) continue; const k = R.slotOf(b.pos); const base = k >= 0 ? R.part(k, 0) : null; if (!base) continue;
+      for (const b of s.bots) { if (!b.dead) continue; const base = { x: b.pos[0], y: b.pos[1], z: b.pos[2] };      // the body's own position (the mesh is drawn from it)
         st.deadSince = st.deadSince || {}; if (st.deadSince[b.id] === undefined) st.deadSince[b.id] = i; if (i - st.deadSince[b.id] < 60) continue;
         const B = st.bodies[b.id]; if (!B) st.bodies[b.id] = { t: i, pos: [base.x, base.y, base.z] }; else if (i - B.t > 30) { const d = Math.hypot(base.x - B.pos[0], base.y - B.pos[1], base.z - B.pos[2]); if (d > 0.05) st.bodyMoves.push([b.name, +d.toFixed(2), b.riding, b.pos.map((v) => +v.toFixed(1))]); B.pos = [base.x, base.y, base.z]; B.t = i; } }
       // tip-over sequence: kill the first living Tan bot in the open, 8 frames over 0.4 s
@@ -64,7 +65,7 @@ const { open, dE, hex } = require('./visual_r3_lib.cjs');
     }
     __game.clearView(); st.bodyMoves = st.bodyMoves.slice(0, 8); delete st.deadSince; st.bodiesTracked = Object.keys(st.bodies).length; delete st.bodies; return st; });
   console.log('match', JSON.stringify(m));
-  for (const [key, crop, n] of [['walk', [440, 160, 400, 440], 8], ['climb', [440, 160, 400, 440], 8], ['ride', [340, 160, 600, 440], 4], ['tip', [440, 160, 400, 440], 8], ['pose', [440, 160, 400, 440], 2]]) {
+  for (const [key, crop, n] of (ONLY_MATCH ? [['tip', [440, 160, 400, 440], 8], ['pose', [440, 160, 400, 440], 2]] : [['walk', [440, 160, 400, 440], 8], ['climb', [440, 160, 400, 440], 8], ['ride', [340, 160, 600, 440], 4], ['tip', [440, 160, 400, 440], 8], ['pose', [440, 160, 400, 440], 2]])) {
     const url = await p.evaluate(([key, crop, n]) => { const F = (window.__r3.frames[key] || []).slice(0, n); return F.length ? window.__r3.sheet(F, crop, 0.6) : null; }, [key, crop, n]);
     if (url) h.save(`visual_soldier_${key}.png`, url); console.log('frames', key, url ? 'saved' : 'none');
   }

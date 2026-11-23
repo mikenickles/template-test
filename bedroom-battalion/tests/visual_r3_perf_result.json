@@ -1,0 +1,330 @@
+{
+ "load": {
+  "sceneObjects": 24,
+  "geometries": 9,
+  "textures": 2,
+  "programs": 15,
+  "domNodes": 150,
+  "heapMB": 15.4,
+  "killFeed": 0,
+  "shotLog": 0,
+  "botLog": 0
+ },
+ "inventory": [
+  [
+   0,
+   "Mesh",
+   1,
+   4720,
+   "Lambert",
+   "cast",
+   ""
+  ],
+  [
+   0,
+   "Mesh",
+   473,
+   12,
+   "Lambert",
+   "cast",
+   ""
+  ],
+  [
+   0,
+   "Mesh",
+   1,
+   2,
+   "Lambert",
+   "",
+   ""
+  ],
+  [
+   0,
+   "HemisphereLight",
+   ""
+  ],
+  [
+   0,
+   "DirectionalLight",
+   "cast 2048"
+  ],
+  [
+   0,
+   "Mesh",
+   284,
+   12,
+   "Basic",
+   "",
+   ""
+  ],
+  [
+   0,
+   "Mesh",
+   24,
+   12,
+   "Basic",
+   "",
+   ""
+  ],
+  [
+   0,
+   "Mesh",
+   61,
+   80,
+   "Basic",
+   "",
+   "hidden"
+  ],
+  [
+   0,
+   "Mesh",
+   1,
+   320,
+   "Basic",
+   "",
+   "hidden"
+  ],
+  [
+   0,
+   "PointLight",
+   ""
+  ],
+  [
+   0,
+   "Mesh",
+   63,
+   12,
+   "Phong",
+   "cast",
+   "hidden"
+  ],
+  [
+   0,
+   "Mesh",
+   62,
+   12,
+   "Lambert",
+   "cast",
+   ""
+  ],
+  [
+   0,
+   "Mesh",
+   40,
+   48,
+   "Lambert",
+   "cast",
+   ""
+  ],
+  [
+   0,
+   "Mesh",
+   44,
+   12,
+   "Phong",
+   "cast",
+   ""
+  ],
+  [
+   0,
+   "Mesh",
+   10,
+   4,
+   "Basic",
+   "",
+   ""
+  ],
+  [
+   1,
+   "Mesh",
+   1,
+   84,
+   "Basic",
+   "",
+   ""
+  ],
+  [
+   1,
+   "Mesh",
+   1,
+   84,
+   "Basic",
+   "",
+   "hidden"
+  ],
+  [
+   1,
+   "Mesh",
+   1,
+   96,
+   "Basic",
+   "",
+   "hidden"
+  ],
+  [
+   1,
+   "Mesh",
+   1,
+   36,
+   "Basic",
+   "",
+   "hidden"
+  ],
+  [
+   1,
+   "Mesh",
+   1,
+   60,
+   "Basic",
+   "",
+   "hidden"
+  ],
+  [
+   1,
+   "Mesh",
+   1,
+   8,
+   "Basic",
+   "",
+   "hidden"
+  ]
+ ],
+ "firsts": {
+  "firstMatchFrame": {
+   "ms": 146.8,
+   "programs": 15
+  },
+  "baselineMs": 141.8,
+  "firstDeath": {
+   "atSim": 12.6,
+   "ms": 162.7,
+   "next": [
+    149.7,
+    179.4,
+    145
+   ],
+   "programsBefore": 15,
+   "programsAfter": 15
+  },
+  "firstBurst": {
+   "atSim": 34.1,
+   "ms": 507.9,
+   "next": [
+    155.8,
+    148,
+    182
+   ],
+   "programsBefore": 15,
+   "programsAfter": 15
+  }
+ },
+ "firefight": {
+  "overview": {
+   "max": 16,
+   "per": {
+    "fbo1": 5,
+    "screen": 11
+   },
+   "tris": 31554,
+   "ms": {
+    "median": 146.4,
+    "p95": 278.1
+   }
+  },
+  "eye": {
+   "max": 17,
+   "per": {
+    "fbo1": 5,
+    "screen": 12
+   },
+   "tris": 31650,
+   "ms": {
+    "median": 153.4,
+    "p95": 245.8
+   }
+  },
+  "aliveAtMax": {
+   "green": 5,
+   "tan": 3
+  },
+  "grenadeFrames": 10
+ },
+ "afterMatch1Start": {
+  "sceneObjects": 24,
+  "geometries": 12,
+  "textures": 2,
+  "programs": 15,
+  "domNodes": 150,
+  "heapMB": 15.4,
+  "killFeed": 0,
+  "shotLog": 200,
+  "botLog": 182
+ },
+ "matches": [
+  {
+   "match": 1,
+   "simSeconds": 821,
+   "score": {
+    "green": 5,
+    "tan": 2
+   },
+   "winner": "green",
+   "wallS": 5,
+   "after": {
+    "sceneObjects": 24,
+    "geometries": 13,
+    "textures": 2,
+    "programs": 15,
+    "domNodes": 196,
+    "heapMB": 15.4,
+    "killFeed": 0,
+    "shotLog": 200,
+    "botLog": 875
+   }
+  },
+  {
+   "match": 2,
+   "simSeconds": 1075,
+   "score": {
+    "green": 3,
+    "tan": 5
+   },
+   "winner": "tan",
+   "wallS": 11,
+   "after": {
+    "sceneObjects": 24,
+    "geometries": 14,
+    "textures": 2,
+    "programs": 15,
+    "domNodes": 196,
+    "heapMB": 15.4,
+    "killFeed": 0,
+    "shotLog": 200,
+    "botLog": 1044
+   }
+  },
+  {
+   "match": 3,
+   "simSeconds": 505,
+   "score": {
+    "green": 5,
+    "tan": 0
+   },
+   "winner": "green",
+   "wallS": 3,
+   "after": {
+    "sceneObjects": 24,
+    "geometries": 14,
+    "textures": 2,
+    "programs": 15,
+    "domNodes": 201,
+    "heapMB": 15.4,
+    "killFeed": 1,
+    "shotLog": 200,
+    "botLog": 691
+   }
+  }
+ ],
+ "fileSizeBytes": 306871,
+ "errors": []
+}

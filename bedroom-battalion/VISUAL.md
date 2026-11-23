@@ -1,3 +1,244 @@
+# Round 3 (match)
+
+**Verdict: PASS.** A full firefight with all ten soldiers and the train in view costs at most 17 real draw calls,
+counting the shadow pass, against a target of 40. No new shader compiles during play. Three matches in a row leak
+nothing. Green and Tan are always told apart (dE 51 to 61 between the two teams at every distance). Tan soldiers read
+at every distance against what is behind them, with no view under dE 15 out to 150 units. There are no blockers. Four
+medium look problems need fixing before round 4 art:
+- bodies keep full team colour, so a body is told from a living soldier only by its pose;
+- dead soldiers' guns stand upright out of the body;
+- the spectating view draws the spectated bot's own world model;
+- there is z-fighting on two train trim pieces.
+
+Scripts are `tests/visual_r3_*.cjs` (shared helpers in `visual_r3_lib.cjs`). Screenshots are
+`screenshots/round3/visual_*.png` (16 files). `index.html` was not edited. Rendering is software (SwiftShader). This
+round the machine was shared with the other testers' match runs, so **milliseconds show relative cost only and are
+noisy**: every timing comparison below is made within one page and one run. Soldier positions come from real seeded
+autoplay matches with god mode on. The camera is a custom named view (`__game.views.probe`), so the match is never
+disturbed.
+
+## Budget (`visual_r3_perf.cjs`, `visual_r3_burst.cjs`)
+
+| Item | Round 3 | Limit / target |
+| --- | --- | --- |
+| Draw calls, full firefight, overview camera holding the room, all soldiers and the train (WebGL level) | **16** (11 main + 5 shadow) | under 40 (16.9), under 200 |
+| Draw calls, same firefight from the soldier's own eye (viewmodel pass included) | **17** (12 + 5) | |
+| Triangles at peak, both passes | **31,650** | none set |
+| Shadow lights / map | 1 / 2048 (hemisphere, sun, burst point light) | 1 / 2048 or less |
+| Shader programs at load / after first death, first burst, three matches | **15 / 15 / 15 / 15** | |
+| First grenade burst on a fresh page | **+24 %** frame time (194 against 157 ms, and 193 against 154 ms on a second page); later bursts within 3 % | |
+| `index.html` | **306,871 bytes** (95,006 gzipped) | under 400 KB |
+| Console errors / blocked requests | 0 / 0 in every script | 0 |
+
+- **What the calls are.** Static mesh, instanced boxes, floor, effects pool, tracers, soldiers (one instanced mesh of 44
+  parts for all eleven bodies), chevrons, train boxes (62 instances), train wheels (40), and the viewmodel. The shadow
+  pass repeats the static mesh, instanced boxes, soldiers, train boxes and wheels. The arc, burst sphere and the 21 range
+  dummies are hidden in a match.
+- **Shader compiles.** None occur during play: 15 programs at load and still 15 after the first train view, first death,
+  first grenade burst, round-end screens and three full matches. The first death frame (163 ms against a 142 ms baseline)
+  is within the noise.
+- **First burst still costs one upload.** Geometries go from 9 to 10 on the first burst, which is the burst sphere's
+  first upload; `renderer.compile` compiles shaders but does not upload geometry. Rendering the sphere once at load (opacity 0) would
+  remove it. Minor.
+- **Pooling across three matches with rematch** (render every 2 s of sim):
+
+| | Load | After match 1 | After match 2 | After match 3 |
+| --- | --- | --- | --- | --- |
+| Scene objects | 24 | 24 | 24 | 24 |
+| Geometries | 9 | 13 | 14 | 14 (first uploads, then flat) |
+| Textures / programs | 2 / 15 | 2 / 15 | 2 / 15 | 2 / 15 |
+| DOM nodes | 150 | 196 | 196 | 201 (the match-end table plus one feed line) |
+| JS heap | 15.4 MB | 15.4 | 15.4 | 15.4 |
+
+  `shotLog` stays at 200. `botLog` is cleared at each match start (875, 1,044 and 691 entries at match end).
+- **File size (307 KB).** What takes the space:
+  - by code section, in KB: bots 82, weapons 41, world build 29, config 25, train 25, main loop and hook 19, HUD and menus
+    18, colliders 16, player 14, match 14, CSS 8, audio 6, input 5;
+  - comments are 36 KB and leading indentation is 13 KB.
+
+  **Headroom for round 4: 93 KB.** Canvas-drawn textures and soft shapes from code should fit in 30 to 60 KB. If art
+  needs more, stripping comments or moving the long comment banners to `CHANGELOG.md` frees about 36 KB without touching
+  behaviour.
+
+## Team readability with real soldiers (`visual_r3_teams.cjs`, `visual_r3_cover.cjs`)
+
+Real autoplay matches with seeds 11 and 21: 4,098 views of 270 soldier samples. Every 0.5 s of sim the match was
+frozen and soldiers were sampled by state (moving, still, crouched, dead, climbing) and by place (floor, bed, desk,
+shelves). The camera looked at each body from 10, 30, 60, 100 and 150 units, in 8 directions (16 at 100 and 150), at
+body height and 12 units up. Measure (pass 2): **dE of the body pixel against the same pixel re-rendered with that
+soldier hidden**, which is what is actually behind it. The rounds 1 and 2 side-pixel measure breaks down here, because
+bodies lie sideways and squads stand shoulder to shoulder. 123 views whose centre pixel was another soldier were
+dropped. Pass 1 used the old side-pixel measure, for comparison.
+
+| Team, state | 10 u | 30 u | 60 u | 100 u | 150 u |
+| --- | --- | --- | --- | --- | --- |
+| Green, living: median / 10th pct (under 15) | 67 / 61 (0 %) | 67 / 61 (2 %) | 61 / 50 (1 %) | 53 / 42 (5 %) | no view fitted |
+| Tan, living | 48 / 32 (0 %) | 43 / 33 (0 %) | 46 / 34 (0 %) | 39 / 21 (0 %) | 28 / 27 (0 %, n 18) |
+| Tan crouched | 48 (0 %) | 37 (0 %) | 49 (0 %) | 40 (0 %) | |
+| Green crouched (pass 1, side measure) | 115 | 89 | 107 | 55 | |
+| Tan climbing (on string routes) | 51 | 51 | 46 | 39 | 30 |
+| Green, dead body | 62 | 64 | 60 | 50 | |
+| Green vs Tan body colours | dE 61 | 61 | 59 | 51 | |
+
+- **Green is always told from Tan.** The two teams' rendered body colours differ by dE 51 to 61 at every distance,
+  moving, crouched or dead. By background (60 units or less), the medians are: Tan on floor 34, wall 49, bed 49, shelf
+  43, desk 53; Green 62 or more everywhere. The 100 and 150 unit Tan numbers match the round 2 re-check 2 numbers on the
+  dummies, as they should.
+- **Weakest real cases.**
+  - Green's few views under 15 are almost all against another Green soldier (squads bunched at the fort at round
+    start). That is still a soldier, so it is not a readability failure.
+  - The worst Tan view is a still soldier at 30 units seen from 12 units up against the floor (dE 14.2).
+- **Sun and shade.** Every pass 2 sample happened to be in shade; the sun patch is small (round 4 lighting). In pass 1,
+  sunlit soldiers read far better than shaded ones (Green 125, Tan 97).
+- **Train.**
+  - No soldier was riding when sampled in these matches.
+  - In the nav test, riders were caught on the flatbed and gondola (`visual_soldier_ride.png`). A Tan rider on the yellow
+    flatbed deck renders `#C5924A` on `#EDB92B`, dE 31: the lowest contrast any surface gives Tan, but readable.
+  - Flat palette: Tan is dE 29 from both the flatbed yellow `#F2C230` and the gondola orange `#F08A2A`; Green is 70 and
+    89. Keep this in mind for round 4 car colours.
+- **Crouched in cover.**
+  - Twenty crouched bots in or beside their fort were found in real play and seen from the enemy side at 30 and 60
+    units. All 20 were visible at 30 units (about 250 px, 19 x 20 px box for Tan) and 19 of 20 at 60 units (about 60 px,
+    8 x 10 px).
+  - Tan crouched outside its fort's east door reads clearly against the cream wall and the red fort
+    (`visual_cover_crouched.png`, first row).
+  - A Green bot crouched behind a grey cover block is fully hidden from that side (second row). That is correct cover.
+  - *Not tested:* no bot crouched beside the jumbo crayons in these matches, so crouching behind a crayon was not seen.
+    The silhouette pixel counts include the soldier's shadow, so they overstate visibility slightly.
+
+## Findings, most severe first
+
+### 1. Medium (pillar 5): a body looks like a living soldier in the same colour
+- Bodies keep the full team colours. Medians of the living vs body colour at 10 to 60 units are dE 0 to 16: a body is
+  only darker when its unlit top face is what you see. The only cue is the pose.
+- At 30 units the silhouettes overlap. Standing soldiers are about 18 x 30 px (height / width 1.4 to 1.7). Crouched
+  soldiers are 21 to 24 x 20 px (0.8 to 0.95). Bodies are 16 to 30 x 22 px (0.7 to 1.4, depending on which way they
+  fell). These counts include the shadow; pass 1 and pass 2 of `visual_r3_teams.cjs`.
+- At range a crouched enemy and a body are the same small blob in the same colour. Players will waste shots on bodies
+  and miss crouched enemies.
+- **Fix:** tint bodies about 50 % toward a neutral grey (for example Green body `#5E7A63`, Tan body `#9C8C74`) when they
+  tip, or drop them to the spare-soldier grey `#B9BEC6` blended 40 %. Either way the team stays readable up close, and a
+  body is grey at a glance. Re-check: living vs body dE of 25 or more at 30 units.
+
+### 2. Medium: dead soldiers' guns stand straight up out of the body
+- In the tip-over sequence the body falls flat in 0.25 s, but the gun ends vertical and pokes up out of the body for
+  the rest of the round (`visual_soldier_tip.png`, frames 5 to 8). It reads as a flag on every body.
+- **Fix:** when `tip > 0`, place the gun with the body rotation only (no aim pitch), or lay it beside the body. Bodies
+  then lie flat.
+
+### 3. Medium: the spectating view draws the spectated bot's own world model
+- After the player dies, the camera sits at a Green bot's eye, but that bot's own instances are still drawn. Its
+  world-model gun, a long grey box, comes up from the bottom centre, and the edge of its base plate shows at bottom
+  left. Hiding its four instances in the test changes 2 % of the frame, all of it in the bottom 30 %
+  (`visual_hud_spectate_own_model_720.png`).
+- When the bot is close to teammates, their bodies at arm's length fill a third of the view
+  (`visual_hud_spectate_720.png`, left and bottom green blocks).
+- **Judgement on the builder's note:** the gun at the bottom is not acceptable as it is. It is the world model seen from
+  inside, with no muzzle flash, sway or recoil, and it does not match the HUD's weapon name.
+- **Fix:** while spectating, hide the spectated bot's own instances (as is already done for the player's own slot), and
+  draw the normal viewmodel of the bot's current weapon with its kick and flash. Optionally push the near plane out to
+  about 0.3 while spectating, so teammates at arm's length are cut rather than filling the screen.
+
+### 4. Minor: z-fighting on the engine's rear trim and the gondola door posts
+- Two renders with the eye moved 0.004 units give filled difference blobs, not just edge lines: a solid triangle on
+  the engine's rear yellow trim panel, and slivers on the gondola door posts (`visual_train_zfight.png`: frame then
+  difference x4, rows baseline, engine rear square-on, engine rear oblique, door posts, door posts oblique). The baseline
+  with no camera move changes 0 px.
+- Cause, from `trainVisualBoxes`:
+  - the engine's rear trim box spans `-hl..-hl+0.04`, so its rear face is coplanar with the car body's rear face;
+  - each gondola door post starts exactly at the wall end (`-d-0.3..-d` against the wall ending at `-d`), so their
+    end faces are coplanar.
+- **Fix:** move the rear trim to `-hl-0.04..-hl` (outside, like the side stripes), and start the door posts 0.02 out
+  from the wall ends.
+
+### 5. Minor: train wheels hide in the bogies and sit in the rails
+- The red wheels (radius 0.38, centred at y 0.38 on the rail line ±1.6) are almost entirely inside the dark bogie
+  boxes (±1.85 wide, y 0.25 to 0.62). From the floor they show only as red specks (`visual_train_close.png`, second and
+  third frames). Their bottoms reach y 0, so they pass through the rails (top at 0.3); the bogie bottoms (0.25) also
+  dip into the rails.
+- The palette's red wheels are part of what makes it a toy train.
+- **Fix:** put wheel centres at y 0.68 (sitting on the rail top), keep them at ±1.6, and narrow the bogies to ±1.4 so
+  the wheels show outside them. Or shrink the bogies' height to 0.45 to 0.62.
+
+### 6. Minor: the climbing pose reads as standing in mid-air beside the string
+- On a string the soldier stays fully upright, with the base plate under its feet and the gun hidden. It sits beside the
+  yellow string rather than against it (`visual_soldier_climb.png`, 8 frames up the tall-shelf string).
+- **Fix:** hide the base plate while climbing, tilt the body 10 to 15 degrees into the string, and centre the string
+  in front of the body.
+
+### 7. Minor: first-burst geometry upload
+See the budget section. **Fix:** draw the burst sphere once at load at opacity 0.
+
+### 8. Notes
+- **Section banners are stale.** "11. MATCH RULES (stub: ... arrive in round 3)" and "10. BOTS (round 1 ... Bot AI
+  arrives in round 3)" no longer describe the code. The sections are in the required order.
+
+## The train (`visual_r3_train.cjs`, `visual_r3_train2.cjs`, nav test in `visual_r3_soldiers.cjs`)
+
+- **Reads as a chunky toy train.** Blue engine with a yellow stripe, cab windows and headlight; red boxcar with a dark
+  door; yellow flatbed with a blue 3-unit cargo block; orange gondola with yellow door posts; purple caboose with a roof
+  walkway (`visual_train_close.png`, first frame, which shows the flatbed and cargo with the rest of the consist behind;
+  also `visual_train_zfight.png`). Every car type is a different colour and silhouette.
+- **As cover from the floor.**
+  - From under the bed 25 units away the whole consist is a solid band of strong colours against the brown floor and
+    grey cover (`visual_train_close.png`, fourth frame).
+  - From the east side of the room at 60 units it is mostly hidden behind the desk and cover (fifth frame). It reads
+    as cover wherever it can be seen.
+  - Couplings are 1.5 gaps with a dark coupler bar, and you see through them as gaps, as intended.
+- **Tunnel.** Oriented car boxes were checked against the tunnel colliders over a full lap, 180 car-in-tunnel samples.
+  The tightest point is the engine cab, 0.5 under the roof underside; the walls clear by 1.4 each side. Nothing clips.
+- **Riders.** 322 riding samples in the nav test, 214 on the flatbed and 108 on the gondola. Feet were exactly at deck
+  height (1.2) every time (worst deviation 0.000): no floating or sinking. The rider moves with the car
+  (`visual_soldier_ride.png`, 4 frames).
+
+## Soldiers (`visual_r3_soldiers.cjs`)
+
+- **Poses** (frame sequences):
+  - walk (`visual_soldier_walk.png`): a slight bob and roll, gun held forward;
+  - climb (finding 6);
+  - aim and crouch (`visual_soldier_pose.png`): Green with an SMG engaging, then Tan crouched. The crouch is clearly
+    shorter (body 0.7), with the gun at chest height;
+  - tip-over (`visual_soldier_tip.png`): rigid, 0.25 s, plastic chips, but see finding 2.
+- **Guns in hand.** The gun was inside a static collider in 0 of 10,010 checks.
+- **Clipping.** In the nav test the body circle (radius 0.4) never entered a wall, the bed frame, a desk leg or a fort
+  wall. The only overlaps reported were sloped ramps, strings and the blanket ridges, which an axis-aligned box check
+  counts falsely.
+- **Ground contact.** The raycast below the feet of 7,892 grounded samples found no sinking. It found up to 0.08 to
+  0.18 of floating on the blanket ridge ramps (2 samples). Other flagged samples were rays passing through seat and
+  platform colliders, a limit of the test.
+- **Bodies stay put.** 5 bodies were tracked from 1 s after death to the end of the round, and none moved.
+- **Chevrons** (non-autoplay match, 6,714 checks at 5 Hz):
+  - shown 168 times, all over living Green teammates;
+  - 0 over Tan, 0 over bodies, 0 beyond 60 units;
+  - 0 hidden when a teammate was within 58 units with line of sight;
+  - 1 shown without line of sight, a one-frame lag of the 10 Hz check (Green 3 at 47 units behind the blanket edge).
+
+## HUD and menus (`visual_r3_hud.cjs`, `visual_r3_hud2.cjs`)
+
+| Check | 720 | 1080 | Evidence |
+| --- | --- | --- | --- |
+| Overlaps between HUD blocks (top bar, feed, callouts, picker, banner, ammo, health) | none | none | element rectangles in every state |
+| Off screen or clipped text | none | none | |
+| Title: name, Play, difficulty, sliders, controls | legible | legible | `visual_hud_title_720.png` |
+| Freeze picker with countdown | centred under the crosshair, clear of the top bar | same | `visual_hud_freeze_1080.png` |
+| Top bar: round, timer, score in team colours, 5 pips a side | legible | small (fixed 174 px wide on 1920) | all HUD shots |
+| Kill feed: team colours, HEADSHOT tag, last five | legible on its 45 % dark plate | same | `visual_hud_spectate_720.png` (top right) |
+| Feed text on its plate, worst case over pure white / over the window / over the dark floor | Green dE 77 / 80 / 96; Tan 51 / 56 / 74; white 39 / 46 / 87 | same | computed from the CSS colours |
+| Callouts: green bar, bot name in green | legible | legible | `visual_hud_spectate_720.png` |
+| Damage arcs point at the attacker | **correct**: 6 hits from Tan 1 and Tan 3, arc angle within 0.5 degrees of the attacker's real bearing. Turning 90 degrees right moved every arc 90 degrees left | same | `visual_hud_arcs_720.png` |
+| Spectating banner | legible, bottom centre | same | finding 3 |
+| Round end: winner, how, score | legible | legible | `visual_hud_roundend_720.png` |
+| Match end: winner, score, kills and deaths table, Enter / Esc | legible, team-coloured names | legible | `visual_hud_matchend_720.png` |
+| Pause: Resume, sliders, Quit | legible over a darkened frame | | `visual_hud_pause_720.png` |
+
+- Up to six damage arcs stack on the same side when one attacker fires a burst
+  (`visual_hud_arcs_720.png`, one thick red arc). That reads fine.
+- HUD sizes are still fixed pixels (carried from round 2). At 1080p everything is legible but small.
+- In the first HUD run, `pause()` straight after `rematch()` did not show the menu (the app phase was not `playing`).
+  In a fresh match it works. This is noted for the bug tester, not confirmed as a bug.
+
+---
+
 # Round 2 (gunplay)
 
 **Verdict: PASS.** Every required piece of juice is drawn, pooled and inside the budget (12 real draw calls at

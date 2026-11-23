@@ -12,6 +12,7 @@ const LABEL = { recruit: 'RECRUIT', regular: 'REGULAR', veteran: 'VETERAN' };
 (async () => {
   const { browser, page, errors } = await boot({ width: 960, height: 540 });
   const log = [];
+  page.setDefaultTimeout(5000);
   const ev = (f, a) => page.evaluate(f, a);
   // title: pick difficulty by clicking its label, then Play
   const diffBox = await page.$('#tDiff');
@@ -98,7 +99,15 @@ const LABEL = { recruit: 'RECRUIT', regular: 'REGULAR', veteran: 'VETERAN' };
     if (m.phase !== 'freeze') { log.push(['expected freeze, got', m.phase]); break; }
     const start = await ev((l) => F.roundStartCheck(l), 'round ' + m.round);
     const pick = picks[r % picks.length];
-    if (pick.startsWith('click')) { const n = +pick.slice(5); const items = await page.$$('#picker [data-pick], #picker .opt, #picker div'); let clicked = false; for (const it of items) { const t = (await it.textContent()).trim(); if (t.startsWith(String(n)) && await it.isVisible()) { await it.click(); clicked = true; break; } } if (!clicked) log.push(['could not find picker item', n]); }
+    if (pick.startsWith('click')) {
+      // a real click where the option is drawn (with the pointer locked the click lands wherever the browser sends it)
+      const n = +pick.slice(5), w = { 1: 'rifle', 2: 'smg', 3: 'sniper' }[n];
+      const box = await page.locator(`#picker .opt[data-w="${w}"]`).boundingBox().catch(() => null);
+      const before = await ev(() => __game.state().match.pick);
+      if (box) await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2); else log.push(['picker option has no box', w]);
+      const afterClick = await ev(() => ({ pick: __game.state().match.pick, locked: !!document.pointerLockElement, top: (() => { const e = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2); return e && e.id; })() }));
+      log.push([`click on ${w} option (round ${m.round})`, { box: box && [Math.round(box.x), Math.round(box.y)], before, after: afterClick }]);
+    }
     else await page.keyboard.press(pick);
     const after = await ev(() => ({ pick: __game.state().match.pick, weapon: __game.state().weapon.name }));
     const want = { Digit1: 'rifle', Digit2: 'smg', Digit3: 'sniper', click1: 'rifle', click3: 'sniper' }[pick];
@@ -109,6 +118,7 @@ const LABEL = { recruit: 'RECRUIT', regular: 'REGULAR', veteran: 'VETERAN' };
     const rl = await ev((mode) => F.runPhase(mode, 160), MODE);
     const re = await ev(() => ({ m: __game.state().match, overlay: getComputedStyle(document.querySelector('#roundEnd')).display, text: document.querySelector('#roundEnd').innerText.replace(/\s+/g, ' ') }));
     log.push([`round ${m.round}`, { start, pick, want, picked: after, freeze: rf, liveWeapon: live.weapon, key2InLive: pistol, live: rl, end: { phase: re.m.phase, last: re.m.lastRound, score: re.m.score, alive: re.m.alive, overlay: re.overlay, text: re.text.slice(0, 80) } }]);
+    if (re.m.phase === 'roundEnd') { const nx = await ev(() => F.runPhase('wait', 5)); if (nx.to === 'matchEnd') re.m.phase = 'matchEnd'; else if (nx.to !== 'freeze') log.push(['after round end expected freeze', nx]); else log.push(['round end lasted', nx.secs]); }
     if (re.m.phase === 'matchEnd') {
       const me = await ev(() => ({ m: __game.state().match, overlay: getComputedStyle(document.querySelector('#matchEnd')).display, table: document.querySelector('#meTable').innerText.replace(/\s+/g, ' ').slice(0, 400), report: __game.matchReport && __game.matchReport().soldiers }));
       log.push(['MATCH END', me]);
@@ -125,7 +135,6 @@ const LABEL = { recruit: 'RECRUIT', regular: 'REGULAR', veteran: 'VETERAN' };
       }
       break;
     }
-    if (re.m.phase === 'roundEnd') { const nx = await ev(() => F.runPhase('wait', 5)); if (nx.to !== 'freeze') log.push(['after round end expected freeze', nx]); else log.push(['round end lasted', nx.secs]); }
   }
   const F = await ev(() => ({ problems: F.problems.slice(0, 40), nProblems: F.problems.length, spect: F.spect.slice(0, 20) }));
   for (const l of log) console.log(JSON.stringify(l).slice(0, 1600));
