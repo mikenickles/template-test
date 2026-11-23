@@ -1,3 +1,165 @@
+# Round 3 (match: train, bots, rules)
+
+**Verdict (feel; the gate belongs to the bug tester): a full match is playable and mostly fair, but not yet fun.** Nobody got stuck and the train never needed a rescue in 60 matches. The bots spread over every lane and the perches, take cover, flank and retreat, and the train really is moving cover. Five things hold it back:
+1. Rounds drag: 42 % run the full 2:30 and 10 % end in a replay.
+2. Both sides walk into a long, open east-lane corridor and trade shots there in the first 20 s.
+3. Recruit is about as deadly as Veteran at close range.
+4. A bot that is shot in the back while it walks its route usually keeps walking.
+5. Callouts are frequent and vague.
+
+Each of these has a CONFIG or design change below; three were tried live.
+
+How this was judged: headless through `window.__game` with fixed stepping. That covers 60 instrumented autoplay matches (20 per difficulty, seeds 100 to 119, 510 rounds, about 2,900 kills) sampled at 2 Hz for sightlines and behaviour. It also covers 18 extra `runMatch` games for state changes, 432 one-bot duels against the player, 168 rounds of the player standing at typical spots, live CONFIG trials over 48 matches, train boarding and tunnel trials, and frame sequences. Scripts are `tests/feel_r3_*.cjs` with helper `feel_r3_lib.js`; pictures are `screenshots/round3/feel_*.png`. No console errors in any run. `index.html` was not touched. Other testers' files were not read. I cannot hold a mouse: the duels measure what a bot does to a player who stands, crouches or strafes, not what a person does back.
+
+## Summary for the fix list
+
+| # | Problem | Evidence (short) | Change | Tried live |
+| --- | --- | --- | --- | --- |
+| 1 | Rounds drag; replays | 42 % of rounds reach 0:00, 10 % are replays, median round 140 s; 15 % of rounds have 40 s or more with no shot at all | `ai.holdUntil 40 -> 20`, `ai.huntLast 30 -> 60` | Yes: to-time 43 % -> 16 %, median 141 -> 104 s, replays 6 -> 2 per 96 rounds, 40 s silences 17 -> 11 |
+| 2 | East-lane corridor trades in the first 20 s | 153 of 593 kills in the first 20 s are floor-to-floor east-side kills at over 50 u. Mostly rifles (73) and snipers (52), down the corridor x 81.4 to 85 between the tunnel wall and the chair legs. | Block the corridor at mid-lane: a toy box `81.4..85, 78.5..81.5`, h 2.5, routing the lane under the chair (new nodes about (84, 0, 75), (89, 0, 80), (84, 0, 85) replacing m.e.w) | Partly: a test collider cut these kills from 0.29 to 0.10 to 0.13 per round, but bots got stuck on the old edges (the nodes cannot be added live) |
+| 3 | Recruit is too deadly up close | A Recruit rifle bot does 93 damage per second at 10 u (96 % of shots hit) and first hits 0.72 s after seeing you. That is about 1.8 s to kill a standing player. | `difficulty.recruit`: reaction 1.0, aimAcquire 7, aimSettled 3, settle 2.0, burst [2, 3], burstPause 0.9 | Yes: 51 dps at 10 u, 13 at 30 u, first hit at 1.0 s |
+| 4 | Bots ignore being shot from behind while moving | Shot in the back from 15 u while advancing: only 3, 3 and 2 of 10 bots (Recruit / Regular / Veteran) turned on the player within 5 s; the rest kept walking. Gunfire behind: 4, 1, 2 of 10. Bots do not react to grenades at all. | In advance, push, flank and hunt, being hit or hearing a shot within 15 u should turn the bot to `heard` and start engage (or cover if low). Add a grenade dodge: a bot within the radius of a live grenade sprints away. | No (logic change) |
+| 5 | Callouts are spammy and vague | 9.5 callouts per live minute. 17 % are "I'm hit", 14 % "Enemy down" and 13 % "I'm down". "Enemy east lane / west lane / centre" make up 35 % and do not say which half. | Drop "I'm hit" (the damage arcs and pips show it) or allow it once per life; add "near" / "far" (our half / their half) to lane callouts; `match.calloutGap 4 -> 6` for repeated sightings of the same enemy | No |
+
+Also: Green won 38 of 60 matches (more below); spectating shows the spectated bot's own body; bots fire rifles and SMGs at ranges where they cannot hit.
+
+## 1. Bots as opponents
+
+### One bot against the player (`feel_r3_duel.cjs`, 16 trials per cell, rifle bot held at its spot, player not shooting)
+
+Damage per second over an 8 s window, and the bot's own hit rate. The first hit came about one reaction time after the bot saw the player: Recruit 0.70 s, Regular 0.48 s, Veteran 0.47 s.
+
+| | 10 u stand | 10 u strafe | 30 u stand | 30 u strafe | 30 u crouch | 60 u stand | 60 u strafe | 60 u crouch |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Recruit | 93 dps (96 %) | 84 (85 %) | 37 (35 %) | 14 (17 %) | 27 (23 %) | 11 (13 %) | 5 (6 %) | 0 |
+| Regular | 106 (95 %) | 100 (90 %) | 52 (45 %) | 29 (27 %) | 44 (35 %) | 18 (17 %) | 12 (10 %) | 0 |
+| Veteran | 136 (88 %) | 132 (85 %) | 48 (31 %) | 48 (39 %) | 38 (22 %) | 11 (9 %) | 14 (10 %) | 0 |
+| Recruit, proposed | 51 (88 %) | 40 (64 %) | 13 (20 %) | 6 (14 %) | 11 (15 %) | | | |
+
+- Recruit: a standing beginner dies in about 1.8 s at 10 u and 3.4 s at 30 u. A new player needs about 0.5 s to react, 0.5 s to put the crosshair on and 0.3 to 0.6 s to kill, so close fights are a coin toss. That is not "beatable by a beginner". With the proposed values it is about 3 s at 10 u.
+- Veteran: 1.2 s to kill at 10 u and about 2.6 s at 30 u, with 31 to 39 % of shots hitting at 30 u. That is a real challenge without looking like an aimbot. Keep it.
+- Regular sits in between, and at 30 u it is slightly deadlier than Veteran standing (52 against 48 dps). Veteran always strafes, and its own movement multiplies its aim error by 1.5. That is fine, but it means the presets differ less than the table suggests. Consider `ai.movingMult 1.5 -> 1.3`.
+- Crouching at 60 u was never hit on any difficulty: only the head shows, and the bot switches to cover. Strafing halves the damage at 30 u on Recruit and Regular, so the player has real tools.
+- 100 u: no clear floor line of that length was found, so long range is covered by the match data below (17 % of kills are at 80 u or more, mostly snipers).
+
+### Player standing at typical spots from live start, not shooting (`feel_r3_exposure.cjs`, 4 seeds per cell)
+
+Median seconds to the first hit, and in how many of the 4 rounds the player was hit within 60 s.
+
+| Spot | Recruit | Regular | Veteran |
+| --- | --- | --- | --- |
+| West lane (40, 60) | 8.2 s, 4 of 4 | 7.5 s, 4 of 4 | 5.0 s, 4 of 4 |
+| East lane (83, 60) | 10.8 s, 4 of 4 | 10.6 s, 4 of 4 | 11.4 s, 4 of 4 |
+| Ruin top | 35 s, 4 of 4 (heaviest damage) | 12 s, 3 of 4 | 34 s, 4 of 4 |
+| Desk north | 19 s, 3 of 4 | 28 s, 1 of 4 | 45 s, 1 of 4 |
+| Small shelf L2 | 34 s, 3 of 4 | 16 s, 4 of 4 | 18 s, 4 of 4 |
+| Fort gate | 51 s, 2 of 4 | 47 s, 4 of 4 | 39 s, 2 of 4 |
+| Bed top north (27, 18, 60) | never | never | 58 s, 1 of 4 |
+
+- Contact comes quickly: in the west lane within 5 to 8 s of live, because the west holds n.w.5 and s.w.5 are only 10 units apart, and the east holds are 28 units apart with a clear line.
+- The north end of the bed top is close to untouchable: the player was hit once in 12 rounds. Whether the player can do damage from there was not measured. Watch it as a camping spot.
+
+### Reactions (`feel_r3_duel.cjs`, bot 15 u away facing away from the player, only trials where it had not seen the player)
+
+| Out of 10 | Shot in the back: turned on the player within 5 s | Gunfire behind (missed shot) | Grenade landing behind |
+| --- | --- | --- | --- |
+| Recruit | 3 (3 hit back, median 3.2 s) | 4 | 3 |
+| Regular | 3 (3, 3.0 s) | 1 | 1 |
+| Veteran | 2 (1, 2.7 s) | 2 | 2 |
+
+All 90 bots kept moving along their route. In the code a hit sets the bot's `heard` and `threat`, but only the hold and retreat states look at `heard`. Against a human this will read as dumb: you can follow a bot and shoot it twice before it turns. See fix 4.
+
+## 2. Do bots look robotic?
+
+State changes per round per difficulty (`feel_r3_states.cjs`, 18 matches, from `botLog`):
+
+| Per round | engage | advance | hold | flank | cover | hunt | retreat |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Recruit | 33 | 26 | 8 | 7.7 | 7.2 | 5.5 | 1.9 |
+| Regular | 44 | 40 | 9 | 8.3 | 5.8 | 4.9 | 2.6 |
+| Veteran | 52 | 48 | 9 | 8.5 | 5.5 | 4.9 | 2.1 |
+
+- Good: every tactic in the spec is used: cover with peeking, flanks (about 8 per round), retreats and hunts. In the samples, bots spend 14 to 24 % of their time on the bed, desk or shelves and 14 to 19 % crouched. Lanes are spread: west 22 to 25 %, centre 38 to 39 %, east 18 to 22 %, high ground 18 %. There were no stuck entries and no train rescues.
+- Robotic tells:
+  - **Engage and advance flip back and forth.** The median spell in advance between engagements is 1.2 to 2.1 s, and a bot drops its target after 1.5 s out of sight (`ai.lostAfter`). On screen that is stop, fire, walk, stop. Try `ai.lostAfter 1.5 -> 3` with a short walk toward the last seen position.
+  - **Retreats are long.** The median is 22 to 24 s crouched in one spot (`retreatCalm` 8 s with no damage, and the timer resets on every hit). Try `ai.retreatCalm 8 -> 5`.
+  - **Bots fire far beyond their weapon's useful range.** Shots hit only 7 to 9 % of the time, and 61 % of kills happen at 40 u or more. An SMG bot holding the trigger at 60 u looks like a bot. Suggested per-weapon engage limit: SMG 40, pistol 50, rifle 90. Beyond it the bot advances to cover instead of firing. Untested.
+- Frames (`feel_cmp_fight_*.png`, `feel_cmp_watch_*.png`): at the ranges fights happen, soldiers are about 15 to 25 px tall. I could see Tan soldiers rise over the ruin walls to fire and drop again, and tracer streams, but not judge walk or crouch animation quality. A human should watch a few rounds at Regular in spectate mode.
+
+## 3. Pacing (60 matches, 510 rounds; `feel_r3_matches.cjs`, `feel_r3_analyse.cjs`)
+
+| | Recruit | Regular | Veteran |
+| --- | --- | --- | --- |
+| Rounds ending at 0:00 (time or replay) | 49 % | 39 % | 37 % |
+| Replays | 16 of 172 | 17 of 166 | 17 of 172 |
+| Median round length | 150 s | 138 s | 130 s |
+| First engagement / first kill (median) | 6.4 / 15.9 s | 3.4 / 13.2 s | 2.9 / 14.3 s |
+| Rounds with a 40 s+ stretch without a single shot | 11 % | 20 % | 12 % |
+| Hit rate (all shots) | 7 % | 9 % | 9 % |
+| Kills per match by grenade / rides per match | 0.4 / 0.8 | 2.1 / 0.6 | 2.4 / 0.5 |
+
+Kills by time into the round (all difficulties): 0 to 15 s 325; 15 to 30 s 700; 30 to 40 s 449; 40 to 60 s 608; 60 to 90 s 411; 90 to 120 s 163; 120 to 150 s 235. Fights are front-loaded: after 60 s the survivors lose each other, and only the 30 s hunt brings them back. In rounds that ran to time, 49 of 212 had no kill after 60 s, and the median last kill was at 92 s.
+
+Tried live, Regular, same 12 seeds (`feel_r3_trials.cjs`):
+
+| Variant | Rounds | Median length | To time | Replays | First kill | 40 s+ silences |
+| --- | --- | --- | --- | --- | --- | --- |
+| Now | 96 | 141 s | 43 % | 6 | 14.5 s | 17 |
+| `holdUntil 20`, `huntLast 60` | 92 | 104 s | 16 % | 2 | 14.7 s | 11 |
+
+- Change: `ai.holdUntil 40 -> 20`, `ai.huntLast 30 -> 60`. Rounds then mostly end by elimination in under two minutes. If replays still annoy, decide an equal count at 0:00 by total health at once instead of replaying (16.5 already does that after three replays).
+- The low hit rate is mostly range, not aim: the median kill distance is 48 u. I would not raise bot accuracy; the engage-range limit in section 2 and the earlier push will shorten fights more honestly.
+
+## 4. The train as a feature
+
+- **It is real moving cover.** In 1.03 million enemy-pair samples within 120 u, 81 % were blocked by static geometry, 11 % were clear and 8 % were blocked by the train. Of the lines that no static geometry blocks, the train blocks 43 % (33 % on Recruit, 54 % on Veteran). In `feel_cmp_watch_gate.png` the train closes the whole gate-to-ruin view for several seconds each lap. 17 % of kills happen with the killer or victim within 9 u of a car.
+- **Bots almost never ride.** 0.6 rides per match from 2.6 attempts; riding bots were 0 % of samples. Fine as a tactic, but nobody will learn from the bots that riding exists. Raise `ai.rideChance 0.35 -> 0.6` for Centre and let a bot also take the ride when its wait is under 8 s (`ai.rideMaxWait 6 -> 8`). Untested.
+- **Boarding for the player** (`feel_r3_ride.cjs`): running at the track from 2.5 u off the rail centre and jumping, the flatbed was boarded at 13 of 17 timing offsets, a window of about 3 s, so it is learnable. The gondola worked at 3 of 17 (about 0.75 s, through the door gap). From 4.5 u out the jump never reaches the deck. That is the trap a player will hit: standing back from the train feels safe. A deck stripe or a short "step" plate along the straights would show where to jump from (round 4 art).
+- **Tunnel:** standing on a boxcar roof you are scraped off 3 s in and land on the floor at x 79.4 with no damage. Crouched on the boxcar or caboose roof, or on a deck, you ride through. It matches the spec and is fair. Whether the scrape is a surprise needs a human; a low "duck" sign on the tunnel mouth would help.
+- **Riding view** (`feel_cmp_ride.png`): on the gondola you see mostly the car walls and the cargo ahead, a covered ride with a view over the side, which is good. There is little to shoot from it at the deck's eye height.
+- **Whistle:** it blows every 27.1 s, alternating west and east straight, when the engine passes z 80. It is a reliable rhythm (the train is deterministic), but both whistles sound the same, so it does not tell you which side the train is on. Suggested: a lower pitch on the east straight, or pan it. I cannot judge loudness in the room.
+
+## 5. Map fairness with bots
+
+- Matches: Green 38, Tan 22 over 60 (Recruit 14 to 6, Regular 14 to 6, Veteran 10 to 10). Rounds: Green 253, Tan 207 (elimination rounds 167 to 131, time-decided 86 to 76). On seeds 100 to 111 at Regular the baseline was 11 to 1. This is not only the autoplayed player: Green bots average 5.7 to 5.9 kills per match against Tan's 5.2 on Recruit and Regular. A 38 to 22 split has about a 3 % chance under an even map, so it needs a check on 100+ seeds before blaming the map. The builder measured 22 to 20.
+- By lane (kills by the victim's lane, Green kills / Tan kills): west 452 / 368 (Green's lane), centre 437 / 419, east 404 / 387, bed 92 / 112 (Tan's), desk 41 / 68 (Tan's), shelves 68 / 43 (Green's). Tan's Centre and East roles kill more (348 and 330 against 261 and 248), but Green wins the west by a wider margin.
+- **East-side long lane, confirmed, but it is a floor corridor more than a sniper lane.** Of kills in the first 20 s, 153 of 593 are floor-to-floor kills on the east side at over 50 u (rifle 73, sniper 52, SMG 28; Tan 91, Green 62). Shooters and victims stand at x 81 to 100, 94 % on the floor. Typical pairs are (84, 0, 114) to (85, 0, 46) and (92, 0, 129) to (92, 0, 31). The line runs between the tunnel's east wall (x 80.4 to 81.4, z 68 to 92) and the chair legs (x 85), which leave a 3.6-wide corridor open from fort to fort. The skateboard (z 50 to 73) and the chair book stairs (z 87 to 100) close everything east of x 86.
+  - Fix: close the corridor at the midline with a toy box `81.4..85, 78.5..81.5`, h 2.5, and route the lane under the chair seat (open between the legs at z 74.2 to 85.8). Add nodes at about (84, 0, 75), (89, 0, 80) and (84, 0, 85) to replace m.e.w (83.2, 0, 80).
+  - Tried as a test collider with m.e.w moved to x 88.5: early long east kills dropped from 0.29 to 0.10 to 0.13 per round. But 462 stuck entries appeared, because the two old edges now clip chair leg 0 and the book stairs (`validateWaypoints` flags both). So the result is indicative; the builder must add the nodes.
+  - Cheaper alternative: give the East and High roles a hold node out of the corridor line (n.e.5 (100, 0, 66) / s.e.5) and make the High role path to the desk avoid the x 81 to 85 floor.
+
+## 6. Round flow (`feel_cmp_flow.png`)
+
+- **Freeze (5 s):** the picker is clear: three boxes with 1 / 2 / 3, a one-word role ("all-round", "close range", "long range") and a big countdown. Five seconds is enough to choose; spawn view is your own fort wall, which is fine here.
+- **Death:** the camera tips with the body to the floor with "Eliminated", clear and short (1.5 s).
+- **Spectating has a bug that matters for feel:** the spectated bot's own body is drawn in front of the camera. A tall green slab fills a third of the screen and the green base covers the bottom (`feel_flow_03_spectate.png`). Hide the spectated soldier's own model. The HUD then shows that bot's ammo (once "0 / 0" for a rifle, `feel_flow_04_roundend.png`), which is right if it is out of ammo but looks like a bug. Label it as the bot's.
+- **Round end (4 s):** "TAN WINS THE ROUND / More soldiers standing at 0:00 / GREEN 0 - 1 TAN" is clear and gives the reason.
+- **Match end:** winner, score and a kills / deaths table for all ten soldiers, with Enter rematch and Esc title. Clear. Rematch speed was not timed.
+- **Spawn:** the first deaths can come within 15 s (see section 3), so nobody is killed before they can move. There is no spawn trap.
+
+## 7. Callouts (`feel_r3_analyse.cjs`, 9,865 callouts)
+
+- **Correct:** the region named matched a living Tan's real position in 100 % of enemy callouts, except 6 posted just as the enemy moved or died.
+- **Not very useful:**
+  - "Enemy east lane", "Enemy west lane" and "Enemy centre" are 35 % of all callouts. They cover a whole lane from fort to fort, so they do not say near or far.
+  - "I'm hit" is the single most common callout (1,679). Together with "I'm down" and "Enemy down", status messages are 44 %.
+  - At 9.5 per live minute, the list is rarely empty.
+  - From the bed top, three callouts at once were common in the first 20 s (`feel_cmp_watch_bedtop.png`).
+- Changes:
+  - Drop "I'm hit", or allow it once per life.
+  - Lane callouts get "our side" / "their side" from z: for example "Enemy east lane, our side".
+  - The same bot does not repeat the same region within 8 s.
+  - `calloutMax 3 -> 2`.
+
+## 8. Only a human can confirm
+
+- Whether a bot fight is readable and fair under a mouse: who shot you, from where, and whether the damage arcs are enough.
+- Whether bots look natural moving and peeking at normal range; my frames show them too small to judge.
+- Whether the tunnel scrape and the whistle are learnable without being told.
+- How the north end of the bed top plays as a camping spot.
+
+---
+
 # Round 2 (gunplay)
 
 **Gate "every weapon is satisfying within 10 seconds and clearly different": FAIL.** Rifle, sniper and pistol pass on the evidence; the SMG and the grenade do not. The SMG has no range at which it beats the rifle, and the grenade cannot kill a full-health target and bursts as a puff about one unit wide for a seven-unit blast. Both are number-and-effect fixes, not redesigns.
