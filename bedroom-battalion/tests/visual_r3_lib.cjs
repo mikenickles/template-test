@@ -10,7 +10,7 @@ async function open(opts = {}) {
   const h = await open2(Object.assign({ probe: true }, process.env.VIS_FILE ? { file: path.resolve(process.env.VIS_FILE) } : {}, opts));      // VIS_FILE picks another build
   await install(h.page);
   h.save = (file, url) => { fs.mkdirSync(SHOTS, { recursive: true }); fs.writeFileSync(path.resolve(SHOTS, file), Buffer.from(url.split(',')[1], 'base64')); };
-  h.snap = async (file) => { for (let k = 0; k < 3; k++) { try { await h.page.evaluate(() => __game.render()); await h.page.waitForTimeout(150); return await h.shot('round3/' + file); } catch (e) { if (k === 2) throw e; } } };   // retried: the shared machine is slow
+  h.snap = async (file) => { for (let k = 0; k < 3; k++) { try { await h.page.evaluate(() => __game.render()); await h.page.waitForTimeout(150); return await h.shot((process.env.SHOTDIR || 'round3') + '/' + file); } catch (e) { if (k === 2) throw e; } } };   // retried: the shared machine is slow
   return h;
 }
 async function install(page) {

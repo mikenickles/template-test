@@ -61,7 +61,7 @@ const { open } = require('./visual_r3_lib.cjs');
     out.matches.push(r); console.log('match', JSON.stringify(r));
   }
   out.fileSizeBytes = h.fileSizeBytes; out.errors = h.errors;
-  fs.writeFileSync(path.resolve(__dirname, 'visual_r3_perf_result.json'), JSON.stringify(out, null, 1));
+  fs.writeFileSync(path.resolve(__dirname, process.env.RESULT || 'visual_r3_perf_result.json'), JSON.stringify(out, null, 1));
   console.log('load', JSON.stringify(out.load)); console.log('inventory', JSON.stringify(out.inventory));
   console.log('firsts', JSON.stringify(out.firsts)); console.log('firefight', JSON.stringify(out.firefight));
   console.log('after match 1 start', JSON.stringify(out.afterMatch1Start)); console.log('file', out.fileSizeBytes, 'errors', JSON.stringify(out.errors));

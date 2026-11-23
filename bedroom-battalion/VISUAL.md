@@ -1,3 +1,192 @@
+# Round 4 (full): gate pass
+
+Tested on `snapshots/index_r4b.html` (commit 8886603: 4A, the R4A fixes and 4B). The round 3 baseline is
+`git show c90ee3c:bedroom-battalion/index.html`. `index.html` was not tested or edited.
+
+**Gate verdict: PASS.** Style is consistent and the 17.9 budget holds with a wide margin. World and soldiers read as one
+toy set, and the HUD and menus match it. The worst render cost is 1.84x round 3 against 3x, and the worst view has 83
+draw calls (97 in a firefight) against 200. No shader compiles mid-match. Nothing grows over two full matches.
+
+**One condition, a fix-pass item rather than a blocker:** 17.12 schedules recolouring only the yellow letter blocks. The
+closest colours to Tan in the room are actually the yellow toy cars `n.W-b.car` / `s.W-b.car` (dE 10.3), the toy
+truck cab (17.8) and cover `s.W-c` (11.9). They must be recoloured in the same pass (finding 1).
+
+Scripts: `visual_r4b_check.cjs` (sections `teams`, `poses`, `hitfit`, `guns`, `decals`, `train`) and
+`visual_r4b_outliers.cjs`. I also re-ran `visual_r4a_budget.cjs`, `visual_r4a_look.cjs` and `visual_r4a_fit.cjs`
+(`R4FILE=index_r4b.html`), and `visual_r3_hud.cjs` and `visual_r3_perf.cjs` (`VIS_FILE=…index_r4b.html`).
+Screenshots: `screenshots/round4/visual_4_*.png`.
+
+Rendering is software (SwiftShader) on a heavily shared machine, so **milliseconds show relative cost only**. Render cost
+is always a 4B / round 3 ratio, measured twice with the two builds interleaved. One leak run lost its third match to an
+out-of-memory kill caused by other processes on the machine; see the budget section.
+
+*Housekeeping:* a run of `visual_r3_hud.cjs` (since fixed) saved this round's HUD shots into `screenshots/round3/`,
+overwriting the round 3 HUD screenshots named in the "# Round 3" section. Those round 3 files are gone; the round 4
+images were moved to `screenshots/round4/visual_4_hud_*.png`.
+
+## Budget (17.9), measured
+
+| Item | Round 3 | Round 4 (4B) | Limit | |
+| --- | --- | --- | --- | --- |
+| Draw calls, worst named view (main + shadow) | 14 | **83** (30 + 53, `shelf_top`) | under 200, aim under 120 | pass |
+| Draw calls, firefight with all ten soldiers, train and effects: overview / eye | 16 / 17 | **97 / 93** (60 + 37 / 58 + 35) | | pass |
+| Main-pass triangles, worst view / firefight | 17,470 / 18,194 | **115,018 / 133,490** | under 350,000 | pass |
+| Shadow lights / map | 1 / 2048 | 1 / 2048 | 1 / 2048 or less | pass |
+| Canvas texture memory (2048², 1024 x 2048, 512 x 256, small; with mipmaps) | about 3 MB | **about 34 MB**; largest 2048 | under 64 MB, 2048 max | pass |
+| Shader programs: at load / match start / maximum during a match / after | 15 | **25 / 25 / 25 / 25** | under 40, all at load | pass |
+| Render cost vs round 3, worst named view | 1x | **1.84** (`desk_top`, run 1; run 2 1.31) | 3x (R4A-1 target 2.5x) | pass |
+| Render cost vs round 3, firefight overview / eye | | **1.83 / 1.65** and **1.14 / 1.07** | 3x | pass |
+| Growth over full matches (render every 2 s) | flat | **flat after match 1 and match 2**: scene objects 77, geometries 69, textures 6, programs 25, DOM 205, heap 149.7 MB | none | pass |
+| Load to `__game.ready` | 1.7 / 2.0 s | **3.5 / 4.3 s** (about 2.1x) | report | |
+| Console errors | 0 | 0 | 0 | pass |
+
+- **Render cost per named view** (4B / round 3, two runs):
+
+  | View | Ratio | View | Ratio | View | Ratio |
+  | --- | --- | --- | --- | --- | --- |
+  | spawn_green | 1.24 / 1.40 | spawn_tan | 1.50 / 1.40 | bed_top | 1.56 / 1.63 |
+  | desk_top | 1.84 / 1.31 | shelf_top | 1.36 / 1.16 | floor_centre | 1.26 / 1.37 |
+  | under_bed | 1.19 / 1.11 | east_lane | 1.22 / 1.35 | west_lane | 1.24 / 1.09 |
+
+  The world is now split and culled: calls range from 66 to 83 depending on the view. The beam changes 25 % of the
+  pixels in a view across it, but by a mean of 24 levels, not 35.
+- **Leak check.** The third match of that run was lost: the browser was killed for lack of memory while other testers'
+  runs were on the machine. The two full matches it finished leave every count identical.
+- **Heap.** The JS heap is about 150 MB against 15 MB in round 3. Most of it is geometry and texture buffers. It is flat,
+  but it is the largest new cost: watch it on low-memory laptops.
+
+## R4A re-checks (FIXLIST top)
+
+| Item | Result | Numbers | Evidence |
+| --- | --- | --- | --- |
+| **R4A-1** render headroom | **Pass** | Worst named view 1.84x (was 2.77x), firefight 1.83x (was 2.74x); all under the 2.5x target | table above |
+| **R4A-2** over-bright | **Pass** | Clipped pixels: `bed_top` 0.18 % (was 17.4 %), `desk_top` 0.07 %, `shelf_top` 0.05 %, spawns 0.03 %, `under_bed` 0 %; every view under the 2 % target | `visual_4_views_1.png` to `_3.png` (round 3 left, 4B right) |
+| **R4A-3** Tan on the floor | **Pass on the floor; fails elsewhere** | Tan median against floor **39.2** (target 32 or more; 4A 28.9). The worst background is now the yellow toy cars and yellow cover (finding 1) | `visual_4_tan_vs_block.png` |
+| **R4A-4** art vs colliders | **Pass. Four of my five 4A outliers were my own error** | 98.4 % of 1,234 exposed faces fit within 0.15. The marble tower top is now 0.13 (was 0.82): fixed. Details below | `visual_4_fit_outliers.png` |
+| **R4A-5** style | **Partly** | Skateboard orange cap: pass (`visual_4_views_3.png`, `east_lane`). Dust: visible now, but too big near the camera (finding 4). Bricks: seams now read, but the bevel is still soft and no studs show from the spawns (finding 6). Ceiling: still reads as a plain surface in every named view (finding 7) | |
+
+**R4A-4 detail.** On this build I re-cast the exact rays behind the 4A outliers. Every outlying art hit lands *inside a
+neighbouring object's collider*: the ray grazed that object's bevel. The builder was right that they don't reproduce.
+
+| 4A outlier | Ray (from → direction) | Collider face hit | First art hit | That art belongs to |
+| --- | --- | --- | --- | --- |
+| `n.fort.wall.e1` -1.0 | (73.25, 1.65, 10) → +z | z 13 | z 12 | `n.fort.tower` |
+| `s.fort.wall.e1` -1.2 | (73.25, 1.65, 150) → -z | z 147 | z 148.2 | `s.fort.tower` |
+| `desk.yoyo.body` -0.85 | (111, 0.7, 46.8) → +z | z 49.8 | z 48.95 | `n.E-b.car` |
+| `ruin.w.sill` / `ruin.e.sill` -0.7 | (51.75 / 68.25, 0.6, 75.5) → +z | z 78.5 | z 77.8 | `ruin.w.n` / `ruin.e.n` |
+| `s.tall.L3` -0.51 | (105, 59.5, 136) → +x | x 108 | x 107.49 | string `s.tall.str.L3a` |
+
+The only genuine one was the marble tower top, and it is fixed. Remaining real exceptions are the accepted ball (0.6)
+and globe (0.16), plus decor rims on the pot (0.41), clock (0.3) and lamp post (0.2).
+
+## Findings, most severe first
+
+### 1. Medium (pillar 5, fix-pass condition): yellow toy cars and cover are closer to Tan than the letter blocks
+- **Measured:** real autoplay play, each body against the same pixel with every soldier hidden, 1,313 views. Tan medians
+  are 42.8 / 42.5 / 46.6 at 5 / 20 / 60 units, and Green 67 / 67 / 63. Green and Tan differ from each other by dE 61 to
+  63 at every distance.
+- **But Tan's 10th percentile against cover is only 16.1.** Rendered against rendered Tan (`#B07D27`), the 41
+  floor-standing cover pieces give:
+  - **`n.W-b.car` / `s.W-b.car` `#A57D02`: dE 10.3**;
+  - `n.C-c.truck.cab` `#C49204`: 17.8;
+  - `s.W-c`: 11.9 in play.
+- The yellow letter blocks 17.12 names are not the worst case. A Tan soldier standing in front of the yellow toy bus
+  almost disappears at 5 and 20 units (`visual_4_tan_vs_block.png`).
+- **Fix:** add the W-b toy cars, the truck cab and the yellow W-c pieces to the 17.12 recolour (red, blue or green
+  primaries, as for the blocks). Then enforce the 17.12 rule (no cover or floor surface within dE 25 of Tan) on the
+  *rendered* colours.
+- **Re-check:** Tan against cover, 10th percentile 25 or more.
+
+### 2. Medium (regression): bodies' guns stand straight up again
+- In the 4B soldier, the gun stays vertical when a soldier tips over, for Tan and Green alike (`visual_4_death.png`:
+  frames at 0, 0.1, 0.2, 0.4 and 1.5 s after the kill, Tan row then Green row). This was fixed in round 3 and has come
+  back with the new soldier model.
+- **Fix:** carry the tip rotation through to the arms and gun instances (the `arms_*` meshes), as for the upper body.
+
+### 3. Medium (pillar 5): Tan bodies still close to kneeling Tan
+- `bodyTint` 0.7 gives a Green body dE 33 to 37 from a kneeling living Green, but a Tan body only **12.1** at 20 units
+  and 27 at 5 (Tan body `#9D7234` against kneeling `#B07D26`).
+- **Fix:** keep 0.7 for Green and tint Tan bodies toward a cooler grey (`#7E8288`) so the hue moves, not just the
+  lightness. Or lower the Tan body's lightness by about 15 %.
+- **Re-check:** Tan body vs kneeling Tan, dE 25 or more at 20 units.
+
+### 4. Minor: dust motes look like snow near the camera
+- Near the window the motes are large white discs filling the view (`visual_4_hud_spectate_720.png`, on the bed). In the
+  named views they are small specks (`visual_4_views_1.png`, `bed_top`).
+- **Fix:** clamp the point size by distance (for example at most 3 px), and fade motes within about 3 units of the camera.
+
+### 5. Minor: pistol viewmodel sits low, its hand cut off
+- The rifle, SMG and sniper viewmodels cover 5.1 to 6.2 % of the frame from y 447 to 508 down. The pistol covers 2.3 %,
+  starting at y 507, and its green hand is almost entirely below the screen edge: only a sliver shows
+  (`visual_4_viewmodels.png`, last pair).
+- This confirms the builder's concern.
+- **Fix:** raise the pistol viewmodel by about 0.05 units and move it about 0.02 toward the centre, so the hand shows as
+  it does on the rifle.
+
+### 6. Minor (style): fort bricks still soft, studs not visible from the spawns
+- Brick seams now read, but the bevel still rounds the bricks like cushions, and no studs are visible from either spawn
+  at 1080p (`visual_4_hud_freeze_1080.png`, `visual_4_views_1.png`).
+- **Fix:** bevel at about 3 % of the brick size, and studs about 1.5x larger with a lighter top, so they catch the sun.
+
+### 7. Minor (style): ceiling
+- The ceiling shows only as a plain light surface in the views that include it. I could not see a texture or gradient
+  (`visual_4_views_2.png`, `desk_top`).
+- **Fix:** a soft radial gradient around the ceiling light, or a faint plaster texture, about 5 % contrast.
+
+### 8. Minor: decals are small at any distance, and the metal mark is invisible
+After the particles have died, from 3 units (`visual_4_decals.png`: wood, fabric, plastic, book, card, metal):
+- the plastic dent reads (dE 36.7);
+- the wood splinter, fabric scuff, book and card marks are visible only as 5 to 10 px specks;
+- the metal nick is a single faint pixel.
+
+They no longer look like black tiles (a round 2 fault). The grenade scorch is a clear dark splat (`visual_4_scorch.png`).
+Pooling is correct: 64 marks plus 8 scorches, 65 live after 300 more wall shots.
+
+**Fix:** decal size about 1.5x, and a darker core for wood, book and metal.
+
+### 9. Minor: soldier legs narrower than the body hit volume
+- Art against hit volume, standing soldiers, rays from four sides at three heights:
+  - head within 0.04 everywhere;
+  - upper body within 0.1, except the arms and gun 0.12 to 0.18 past at the front;
+  - **the legs are 0.2 inside the body box** at the sides, so a shot 0.2 beside a leg still hits.
+- **Fix:** none needed for play (hit volumes are frozen). If it matters for feel, widen the leg stance by 0.1 each side.
+
+## What passes (evidence)
+
+- **Soldiers read as classic plastic army men.** They have a helmet, straps, belt, rifle at the shoulder, a moulded
+  sheen and a flat base when still (`visual_4_poses.png`). The sheet shows still, moving (no base), kneeling, climbing
+  (arms up on the string), sniper engaging and a body. Green and Tan stay apart at 5, 20 and 60 units (dE 61 to 63), and
+  Tan on floor, bed, wall, fort and desk is 39 to 57.
+- **Viewmodels are distinct at a glance** (`visual_4_viewmodels.png`, idle and firing):
+  - rifle: yellow magazine and stock;
+  - SMG: short with a yellow magazine;
+  - sniper: long, with a yellow-capped scope;
+  - pistol: short black.
+
+  The hands are green moulded plastic, and the muzzle flash sits at the muzzle. The nearest viewmodel vertex is 0.09 in front
+  of its camera (measured on the last gun drawn, the sniper), so it does not clip into the camera.
+- **Train.** It reads as a toy (`visual_4_train.png`). The engine has a boiler, chimney, yellow trim, red wheels and
+  rods (cab-forward, accepted in 17.12); the caboose has a cupola, the flatbed its cargo and the gondola its trim. Art
+  matches the train colliders within 0.1 on sides and tops (engine, boxcar, flatbed, gondola), except the caboose cupola,
+  which stands 1.2 above the roof collider (decor). The track close-up shows edge lines only in the two-render test.
+- **HUD and menus** (1280 x 720 and 1920 x 1080):
+  - one toy style: rounded dark panels, chunky type, team-coloured score and pips (`visual_4_hud_freeze_1080.png`,
+    `visual_4_hud_matchend_720.png`);
+  - the title over the drifting 3D room (`visual_4_hud_title_720.png`);
+  - sizes scale with the window (the top bar is 206 px wide at 720 and 300 at 1080);
+  - no overlaps, nothing off screen, no clipped text in any state;
+  - damage arcs still point within 0.5 degrees of the attacker's real bearing.
+
+  The coordinator's note about small HUD studs: I could not see studs on the panels at 1280 x 720 at all, so they are
+  too small to matter.
+- **Light.** Sun on 76.8 % of the open floor. Under the bed is dark (luminance 28 against 72 for open floor in shade),
+  and under the desk 34. Fog stays 20 / 320.
+- **Whole-world consistency.** World and soldiers share one look: bright moulded plastic, soft bevels, painted wood and
+  canvas detail. Nothing is photo-like or off-style. The busiest frames are the striped book stairs at close range; the
+  plainest are the ceiling and the large wall planes. Neither breaks the style.
+
+---
+
 # Round 4A (early): world art pass
 
 Tested on the frozen copy `snapshots/index_r4a.html`. `index.html` (4B work in progress) was neither tested nor edited.

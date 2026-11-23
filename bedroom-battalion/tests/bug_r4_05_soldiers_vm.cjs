@@ -37,26 +37,27 @@ const W = 640, H = 360;
   });
   const out = {};
   // ---- A. soldiers ----
-  await ev(() => { const G = __game; G.start({ pointerLock: false }); G.setTimeScale(0); G.removeBots(); G.teleport(60, 0, 38, 0, -0.05); G.look(0, -0.05); G.render(); });
+  await ev(() => { const G = __game; G.start({ pointerLock: false }); G.setTimeScale(0); G.removeBots(); G.teleport(60, 0, 30, 0, -0.08); G.look(0, -0.08); G.render(); });
   await shot('A0_empty');
-  const spots = ['n.c.3', 'n.c.4', 'n.c.2', 'n.c.x', 'n.c.y'];
-  const ids = await ev((spots) => { const G = __game, ids = []; for (const [k, n] of spots.entries()) ids.push(G.spawnBot(k % 2 ? 'tan' : 'green', n)); G.step(0.3); G.teleport(60, 0, 38, 0, -0.05); G.look(0, -0.05); G.render(); return ids; }, spots);
+  const spots = ['n.f.spawn', 'n.f.inw', 'n.f.ine', 'n.f.wdoor', 'n.f.edoor'];
+  const ids = await ev((spots) => { const G = __game, ids = []; for (const [k, n] of spots.entries()) ids.push(G.spawnBot(k % 2 ? 'tan' : 'green', n)); G.step(0.3); G.teleport(60, 0, 30, 0, -0.08); G.look(0, -0.08); G.render(); return ids; }, spots);
   await shot('A1_bots');
   const sample = async () => { const ps = await ev(([W, H]) => __game.state().bots.map((b) => ({ id: b.id, team: b.team, dead: b.dead, chest: PJ([b.pos[0], b.pos[1] + 1.0, b.pos[2]], W, H), head: PJ([b.pos[0], b.pos[1] + 1.65, b.pos[2]], W, H), occluded: (() => { const p = __game.state().player; const o = [p.x, p.y + 1.6, p.z], d = [b.pos[0] - o[0], b.pos[1] + 1.0 - o[1], b.pos[2] - o[2]]; const h = __game.raycast(o, d); return h && h.kind !== 'soldier' && h.distance < Math.hypot(...d) - 0.5; })() })), [W, H]); const res = []; for (const q of ps) res.push({ id: q.id, team: q.team, dead: q.dead, occluded: q.occluded, chest: q.chest && await pixel(...q.chest), head: q.head && await pixel(...q.head) }); return res; };
   out.standing = await sample();
-  await ev((ids) => { const G = __game; G.killBot(ids[0]); G.killBot(ids[1]); G.step(2.5); G.teleport(60, 0, 38, 0, -0.05); G.look(0, -0.05); G.render(); }, ids);
+  await ev((ids) => { const G = __game; G.killBot(ids[0]); G.killBot(ids[1]); G.step(2.5); G.teleport(60, 0, 30, 0, -0.08); G.look(0, -0.08); G.render(); }, ids);
   await shot('A2_two_dead'); out.afterTwoDeaths = await sample();
-  await ev(() => { const G = __game; G.removeBots(); G.step(0.1); G.teleport(60, 0, 38, 0, -0.05); G.look(0, -0.05); G.render(); });
-  await shot('A3_removed'); out.ghostPixelsAfterRemove = await frameDiff('A0_empty', 'A3_removed');
+  await ev(() => { const G = __game; G.removeBots(); G.step(0.1); G.teleport(60, 0, 30, 0, -0.08); G.look(0, -0.08); G.render(); });
+  await shot('A3_removed'); out.ghostPixelsAfterRemove = await regionDiff('A0_empty', 'A3_removed', 0, 0, W, Math.round(H * 0.62));   // above the viewmodel and HUD
   // a match: freeze frame of the Green spawn, then kill some, next round start, then runMatch and back to free play
   await ev(() => { const G = __game; G.startMatch({ difficulty: 'regular', seed: 5, autoplay: false }); G.setTimeScale(0); G.setGodMode(true); G.step(0.5); G.teleport(60, 0, 30, 0, 0); G.look(0, -0.1); G.render(); });
   await shot('A4_freeze_round1');
-  await ev(() => { const G = __game; for (let i = 0; i < 60 * 8 && G.state().match.phase !== 'live'; i++) G.step(1 / 60); for (const b of G.state().bots.filter((q) => q.team === 'green')) G.killBot(b.id); G.step(2.5); G.teleport(60, 0, 30, Math.PI, 0); G.look(Math.PI, -0.15); G.render(); });
+  await ev(() => { const G = __game; for (let i = 0; i < 60 * 8 && G.state().match.phase !== 'live'; i++) G.step(1 / 60); for (const b of G.state().bots.filter((q) => q.team === 'green')) G.killBot(b.id); G.step(2.5); G.teleport(60, 0, 30, 0, -0.08); G.look(0, -0.08); G.render(); });
   await shot('A5_green_bots_dead'); out.deadGreens = (await sample()).filter((q) => q.team === 'green');
-  await ev(() => { const G = __game; G.setRoundTime(0.2); for (let i = 0; i < 60 * 12 && G.state().match.phase !== 'freeze'; i++) G.step(1 / 60); G.step(0.3); G.teleport(60, 0, 30, Math.PI, 0); G.look(Math.PI, -0.15); G.render(); });
+  await ev(() => { const G = __game; G.setRoundTime(0.2); for (let i = 0; i < 60 * 12 && G.state().match.phase !== 'freeze'; i++) G.step(1 / 60); G.step(0.3); G.teleport(60, 0, 30, 0, -0.08); G.look(0, -0.08); G.render(); });
   await shot('A6_round2_freeze'); out.round2Greens = (await sample()).filter((q) => q.team === 'green'); out.round2Phase = await ev(() => __game.state().match);
-  await ev(() => { const G = __game; G.runMatch({ difficulty: 'veteran', seed: 3 }); G.quitToTitle(); G.start({ pointerLock: false }); G.setTimeScale(0); G.removeBots(); G.teleport(60, 0, 38, 0, -0.05); G.look(0, -0.05); G.render(); });
-  await shot('A7_after_match_free'); out.ghostPixelsAfterMatch = await frameDiff('A0_empty', 'A7_after_match_free');
+  await ev(() => { const G = __game; G.runMatch({ difficulty: 'veteran', seed: 3 }); G.quitToTitle(); G.start({ pointerLock: false }); G.setTimeScale(0); G.removeBots(); G.teleport(60, 0, 30, 0, -0.08); G.look(0, -0.08); G.render(); });
+  await shot('A7_after_match_free'); out.ghostPixelsAfterMatch = await regionDiff('A0_empty', 'A7_after_match_free', 0, 0, W, Math.round(H * 0.62));
+  out.botsVisibleControl = await regionDiff('A0_empty', 'A1_bots', 0, 0, W, Math.round(H * 0.62));
   out.playerAfterMatch = await ev(() => { const p = __game.state().player; return { hp: p.health, dead: p.dead, phase: __game.state().match.phase }; });
   // ---- B. decals ----
   out.decals = await ev(() => {
@@ -82,7 +83,7 @@ const W = 640, H = 360;
   out.vm.reloadVsIdle = await regionDiff('C_vm_rifle', 'C_vm_rifle_reloading', ...R);
   out.vm.scopedVsUnscoped = await regionDiff('C_vm_sniper', 'C_vm_sniper_scoped', ...R);
   for (const k of ['standing', 'afterTwoDeaths', 'deadGreens', 'round2Greens']) { console.log(k); for (const q of out[k]) console.log('   ', JSON.stringify(q)); }
-  for (const k of ['ghostPixelsAfterRemove', 'ghostPixelsAfterMatch', 'playerAfterMatch', 'round2Phase', 'decals', 'vm']) console.log(k, JSON.stringify(out[k]));
+  for (const k of ['botsVisibleControl', 'ghostPixelsAfterRemove', 'ghostPixelsAfterMatch', 'playerAfterMatch', 'round2Phase', 'decals', 'vm']) console.log(k, JSON.stringify(out[k]));
   console.log('ERRORS', JSON.stringify(errors));
   await browser.close();
 })().catch((e) => { console.error('SCRIPT FAILED', e); process.exit(1); });

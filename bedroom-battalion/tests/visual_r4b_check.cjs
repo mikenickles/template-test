@@ -21,7 +21,9 @@ const SEC = process.argv[2];
 async function prep(p) {
   await p.evaluate(() => { const R = window.__r3, S = window.__three.scenes[0];
     R.soldiers = []; S.traverse((o) => { if (o.name && /^soldier\./.test(o.name)) R.soldiers.push(o); });
-    R.hideSoldiers = (on) => { R._vis = R._vis || new Map(); for (const m of R.soldiers) { if (on) { R._vis.set(m, m.visible); m.visible = false; } else m.visible = R._vis.get(m); } };
+    // the game sets each soldier mesh's visible and count every frame, so hiding goes through a property wrapper
+    R.hiding = false; for (const m of R.soldiers) { let v = m.visible; Object.defineProperty(m, 'visible', { get() { return R.hiding ? false : v; }, set(x) { v = x; }, configurable: true }); }
+    R.hideSoldiers = (on) => { R.hiding = on; };
     R.vmScene = () => window.__three.scenes.slice().sort((a, b) => a.children.length - b.children.length)[0]; });
 }
 (async () => {
@@ -53,10 +55,10 @@ async function prep(p) {
       if (g.length && t.length) console.log(d + 'u Green', hex(mc(g)), 'Tan', hex(mc(t)), 'dE', dE(mc(g), mc(t)), gb.length > 2 && gk.length ? '| Green body ' + hex(mc(gb)) + ' vs kneeling dE ' + dE(mc(gb), mc(gk)) : '', tb.length > 2 && tk.length ? '| Tan body ' + hex(mc(tb)) + ' vs kneeling dE ' + dE(mc(tb), mc(tk)) : ''); }
     for (const r of ok.filter((r) => r.team === 'tan' && r.cat !== 'body').sort((a, b) => a.de - b.de).slice(0, 6)) console.log(' tan worst', r.cat, r.d + 'u', 'at', JSON.stringify(r.c), 'from', JSON.stringify(r.e), hex(r.px), 'on', hex(r.bg), 'dE', r.de, r.behindId);
     // yellow letter blocks: rendered face colours of block colliders, and dE to rendered soldier colours
-    const blocks = await p.evaluate(() => { const R = window.__r3, out = []; __game.clearView(); for (const c of __game.colliders.filter((o) => /block/i.test(o.id) && o.x1 !== undefined)) { const cx = (c.x0 + c.x1) / 2, cz = (c.z0 + c.z1) / 2, cy = (c.y0 + c.y1) / 2; const e = [c.x1 + 4, cy + 0.5, cz + 1]; const rc = __game.raycast(e, [cx - e[0], cy - e[1], cz - e[2]]); if (!rc || rc.id !== c.id) continue; R.cam(e, [c.x1, cy, cz]); __game.render(); out.push({ id: c.id, px: R.rd(0, 0, 5), pos: [cx, cy, cz] }); } __game.clearView(); return out; });
+    const blocks = await p.evaluate(() => { const R = window.__r3, out = []; __game.clearView(); for (const c of __game.colliders.filter((o) => /^(n|s|m)\./.test(o.id) && o.x1 !== undefined && o.y1 - o.y0 < 6 && o.y0 < 0.5)) { const cx = (c.x0 + c.x1) / 2, cz = (c.z0 + c.z1) / 2, cy = (c.y0 + c.y1) / 2; const e = [c.x1 + 4, cy + 0.5, cz + 1]; const rc = __game.raycast(e, [cx - e[0], cy - e[1], cz - e[2]]); if (!rc || rc.id !== c.id) continue; R.cam(e, [c.x1, cy, cz]); __game.render(); out.push({ id: c.id, px: R.rd(0, 0, 5), pos: [cx, cy, cz] }); } __game.clearView(); return out; });
     const tanCol = mc(ok.filter((r) => r.team === 'tan' && r.cat !== 'body' && r.d <= 20).map((r) => r.px)), grnCol = mc(ok.filter((r) => r.team === 'green' && r.cat !== 'body' && r.d <= 20).map((r) => r.px));
-    const yb = blocks.map((b) => Object.assign(b, { dTan: dE(b.px, tanCol), dGreen: dE(b.px, grnCol) })).sort((a, b) => a.dTan - b.dTan);
-    console.log('blocks measured', yb.length, '| closest to rendered Tan', hex(tanCol) + ':', yb.slice(0, 5).map((b) => b.id + ' ' + hex(b.px) + ' dE ' + b.dTan).join(' | '));
+    const yb = blocks.filter((b) => b.px[0] > 150 && b.px[1] > 110 && b.px[2] < 120).map((b) => Object.assign(b, { dTan: dE(b.px, tanCol), dGreen: dE(b.px, grnCol) })).sort((a, b) => a.dTan - b.dTan);
+    console.log('floor-standing cover pieces measured', blocks.length, '| yellow or orange ones', yb.length, '| closest to rendered Tan', hex(tanCol) + ':', yb.slice(0, 5).map((b) => b.id + ' ' + hex(b.px) + ' dE ' + b.dTan).join(' | '));
     const yt = yb[0]; if (yt) { const url = await p.evaluate(([pos]) => { const R = window.__r3; const id = __game.spawnBot('tan', Object.entries(__game.waypoints.nodes).filter(([k, v]) => v[1] < 0.5).sort((a, b) => Math.hypot(a[1][0] - pos[0], a[1][2] - pos[2]) - Math.hypot(b[1][0] - pos[0], b[1][2] - pos[2]))[0][0]); __game.step(0.1); const s = __game.state().bots.find((b) => b.id === id); const F = [];
       for (const d of [5, 20]) { const dx = s.pos[0] - pos[0], dz = s.pos[2] - pos[2], L = Math.hypot(dx, dz) || 1; R.cam([s.pos[0] + dx / L * d, 1.6, s.pos[2] + dz / L * d], [s.pos[0], 0.8, s.pos[2]]); __game.render(); F.push(R.copy()); } __game.clearView(); __game.removeBots(); return R.sheet(F, [390, 160, 500, 400], 0.6, 2); }, [yt.pos]); save('visual_4_tan_vs_block.png', url); }
   }
@@ -79,9 +81,10 @@ async function prep(p) {
     console.log('base instances drawn: at the end of freeze (all still)', hop.baseCountFreezeEnd, '| first second of live play (all running)', JSON.stringify(hop.baseCountWhileRunning));
   }
   if (SEC === 'hitfit') {
-    const r = await p.evaluate(async () => { const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js'); const R = window.__r3, S = window.__three.scenes[0];
+    let r = await p.evaluate(async () => { const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js'); const R = window.__r3, S = window.__three.scenes[0];
       __game.startMatch({ difficulty: 'regular', seed: 61, autoplay: true }); __game.setGodMode(true); __game.setTimeScale(0); __game.step(1.5); __game.render(); S.updateMatrixWorld(true);
-      const K = __game.CONFIG.soldier, rc = new THREE.Raycaster(), meshes = R.soldiers.filter((m) => m.visible && m.count > 0), out = [];
+      const K = __game.CONFIG.soldier, rc = new THREE.Raycaster(), meshes = R.soldiers.filter((m) => m.visible && m.count > 0), out = []; meshes.forEach((m) => { m.boundingSphere = null; m.computeBoundingSphere(); });      // instanced bounds go stale as the count changes
+      window.__hitMeshes = meshes.map((m) => m.name + ':' + m.count);
       for (const b of __game.state().bots) {     // freeze time: everyone standing still at spawn
         const yaw = b.yaw, fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
         for (const [name, y, half] of [['body low', 0.4, [0.4, 0.25]], ['body high', 1.1, [0.4, 0.25]], ['head', 1.58, [0.225, 0.225]]])
@@ -91,7 +94,8 @@ async function prep(p) {
             const hits = rc.intersectObjects(meshes, false).filter((h) => h.distance < 3.4); const art = hits.length ? hits[0].distance : null;
             out.push({ name: b.name, part: name, dir, gap: art === null ? null : +((3 - ext) - art).toFixed(2) });      // positive: art sticks out past the hit box
           } }
-      return out; });
+      return { out, meshes: window.__hitMeshes }; });
+    console.log('soldier meshes raycast', JSON.stringify(r.meshes)); r = r.out;
     for (const part of ['body low', 'body high', 'head']) for (const dir of ['front', 'back', 'right', 'left']) { const a = r.filter((x) => x.part === part && x.dir === dir); const g = a.filter((x) => x.gap !== null).map((x) => x.gap);
       console.log(part.padEnd(9), dir.padEnd(5), 'art past the hit volume (+) / inside it (-): median', med(g), 'range', g.length ? Math.min(...g) + '..' + Math.max(...g) : '-', '| no art on that line', a.length - g.length, 'of', a.length); }
   }
@@ -99,7 +103,7 @@ async function prep(p) {
     const r = await p.evaluate(() => { const R = window.__r3, vm = R.vmScene(), out = [], F = [];
       __game.start({ pointerLock: false }); __game.setTimeScale(0);
       for (const w of ['rifle', 'smg', 'sniper', 'pistol']) { __game.clearView(); __game.give('ammo'); __game.selectWeapon(w); __game.teleport(60, 0, 20, Math.PI, 0); __game.step(1.5); __game.look(Math.PI, 0); __game.render(); const A = R.full(); F.push(R.copy());
-        const vis = []; vm.traverse((o) => { if (o.isMesh && o.visible) { vis.push(o); } }); vis.forEach((o) => (o.visible = false)); __game.render(); const B = R.full(); vis.forEach((o) => (o.visible = true)); __game.render();
+        const st = __game.state().player; R.cam([st.x, st.y + 1.6, st.z], [st.x - Math.sin(Math.PI) * 10, st.y + 1.6, st.z - Math.cos(Math.PI) * 10]); __game.render(); const B = R.full(); __game.clearView(); __game.render();      // a named view draws no viewmodel
         let n = 0, x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1, bottom = 0, right = 0; for (let i = 0; i < 1280 * 720; i++) { const j = i * 4; if (Math.abs(A[j] - B[j]) + Math.abs(A[j + 1] - B[j + 1]) + Math.abs(A[j + 2] - B[j + 2]) > 20) { n++; const x = i % 1280, y = 719 - ((i / 1280) | 0); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); if (y === 719) bottom++; if (x === 1279) right++; } }
         __game.fire(); __game.render(); F.push(R.copy()); __game.step(1);
         out.push({ w, coverPct: +(100 * n / (1280 * 720)).toFixed(1), box: [x0, y0, x1 - x0 + 1, y1 - y0 + 1], topY: y0, bottomEdgePx: bottom, rightEdgePx: right }); }
