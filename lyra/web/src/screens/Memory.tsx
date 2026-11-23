@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { EmptyScene } from "../EmptyScene";
 import { birthdayLabel, type Person } from "../../../core/people";
 import type { Skill } from "../../../core/skills";
 import { api, type Channel, type MemoryView } from "../api";
@@ -126,10 +127,11 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
       {tab === "notes" && (
         <>
           {total === 0 ? (
-            <div className="mem-empty-card">
-              <p className="mem-empty-title">Nothing yet.</p>
-              <p>As you chat, Tomo keeps what will still matter next week: how you like things done, what you're working on, what you're waiting on. Or tell it directly: “remember I'm vegetarian”.</p>
-            </div>
+            <EmptyScene
+              pose="wave"
+              title="Nice to meet you"
+              text="As you chat, Tomo keeps what will still matter next week: how you like things done, what you're working on, what you're waiting on. Or tell it directly: “remember I'm vegetarian”."
+            />
           ) : (
             filled.map((s) => (
               <section className="section" key={s.name}>

@@ -793,13 +793,15 @@ export interface StreamHandlers {
   status(label: string): void;
   memory(note: MemoryNote): void;
   reaction?(emoji: string): void;
+  /** (0.62) a step of the work, for "How I got this" */
+  step?(text: string): void;
   done(message: Message, user?: Message): void;
 }
 
 /** Send a message; Lyra's reply arrives through the handlers as it's written. */
-export async function sendChat(text: string, h: StreamHandlers, channelId: number | null = null, attachments: Attachment[] = []): Promise<void> {
+export async function sendChat(text: string, h: StreamHandlers, channelId: number | null = null, attachments: Attachment[] = [], preview?: string): Promise<void> {
   const lyra = await ready;
-  const { message, user, queued } = await lyra.chat(text, { text: h.text, reset: h.reset, status: h.status, memory: h.memory, reaction: h.reaction }, channelId, attachments);
+  const { message, user, queued } = await lyra.chat(text, { text: h.text, reset: h.reset, status: h.status, memory: h.memory, reaction: h.reaction, step: h.step }, channelId, attachments, { preview });
   h.done(message, user);
   // sent back to back: the first message's send already tells you about this reply
   if (queued) return;

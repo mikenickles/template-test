@@ -176,14 +176,14 @@ try {
   // ---- tasks ----
   await page.goto(`${base}/#/`);
   await page.getByRole("link", { name: "Tasks" }).click();
-  await page.getByText("Nothing on your plate.").waitFor();
+  await page.getByText("Nothing on your plate").waitFor();
   check(true, "tasks tab shows an empty state");
   await page.getByRole("tab", { name: "Life admin" }).click();
   await page.getByText("Connect Gmail to start.").waitFor();
   check(true, "Life admin asks for Gmail first (read-only, explained)");
   await shot("light-45-life-admin-empty");
   await page.getByRole("tab", { name: "Active" }).click();
-  await page.getByText("Nothing on your plate.").waitFor();
+  await page.getByText("Nothing on your plate").waitFor();
   await page.getByRole("button", { name: "New task" }).click();
   await page.getByLabel("Title").fill("Find a plumber for the kitchen leak");
   await page.getByLabel("Details").fill("Before Monday, under $200");
@@ -225,7 +225,7 @@ try {
   await page.mouse.up();
   await shot("light-34-swipe");
   await page.getByRole("button", { name: /^Done: Find a plumber/ }).click();
-  await page.getByText("Nothing on your plate.").waitFor();
+  await page.getByText("Nothing on your plate").waitFor();
   check(true, "swiping a task reveals Later and Done");
   await page.locator(".g-done button", { hasText: "Done" }).click();
   await page.locator(".g-done .task-row", { hasText: "Find a plumber for the kitchen leak" }).waitFor();
@@ -771,8 +771,18 @@ try {
   await page.goto(`${base}/#/`);
   await page.locator(".bubble").first().waitFor();
   await page.getByPlaceholder("Message Tomo").fill("Remind me in 2 minutes to stretch");
+  await page.locator(".intent-chip", { hasText: "Reminder · Today" }).waitFor();
+  await shot("light-31b-intent-chip");
+  check(true, "while typing, a chip shows what Tomo is about to do (a reminder, and when)");
   await page.getByRole("button", { name: "Send" }).click();
   await page.getByText("Okay, I'll remind you.").waitFor();
+  check((await page.locator(".intent-chip").count()) === 0, "the chip goes once the message is sent");
+  await page.getByPlaceholder("Message Tomo").fill("What's on my plate?");
+  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: /How I got this · 1 step/ }).click();
+  await page.locator(".how-got-list", { hasText: "Checked your tasks" }).waitFor();
+  await shot("light-31c-how-i-got-this");
+  check(true, "a reply that looked things up says how, in plain steps you can open");
   await page.locator(".status-pill", { hasText: /Reminder at/ }).waitFor({ timeout: 15_000 });
   check(true, "a reminder set in chat shows as what's next under Tomo's avatar");
   await page.getByPlaceholder("Message Tomo").fill("What's next?");

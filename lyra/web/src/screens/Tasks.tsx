@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { EmptyScene, askTomo } from "../EmptyScene";
 import { createPortal } from "react-dom";
 import { api, onChange, type Channel, type Task, type TaskDetail, type TaskStatus, type WorkerRun } from "../api";
 import { ChannelIcon, CheckCircle, Chevron, Close, File as FileIcon, Pencil, Plus, Search, Star, Stop, Trash } from "../icons";
@@ -328,10 +329,16 @@ export function Tasks({ toast, channels, onCounts, wide = false }: { toast: (m: 
           Loading…
         </div>
       ) : rows.length === 0 ? (
-        <div className="tasks-empty">
-          <p className="tasks-empty-title">{q ? "No open tasks match." : "Nothing on your plate."}</p>
-          {!q && <p>Ask Tomo in chat, or tap + to add one.</p>}
-        </div>
+        q ? (
+          <EmptyScene pose="look" title="No open tasks match." text="Try other words, or look in Done." />
+        ) : (
+          <EmptyScene
+            pose="nap"
+            title="Nothing on your plate"
+            text="Tomo's taking a nap. Ask for something, or tap + to add a task."
+            action={{ label: "Look for loose ends", onClick: () => askTomo("Look through my recent mail and calendar for loose ends I should turn into tasks.") }}
+          />
+        )
       ) : (
         <>
           {groups

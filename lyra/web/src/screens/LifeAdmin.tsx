@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { EmptyScene } from "../EmptyScene";
 import { api, onChange } from "../api";
 import type { AdminItem } from "../../../core/lifeadmin";
 import { describeItem, whenWord } from "../../../core/lifeadmin";
@@ -66,10 +67,11 @@ export function LifeAdmin({ toast }: { toast: (m: string) => void }) {
       </div>
 
       {!v.items.length && !v.scanning && (
-        <div className="tasks-empty">
-          <p className="tasks-empty-title">{v.lastScan ? "Nothing coming up." : "Nothing here yet."}</p>
-          <p>{v.lastScan ? "No bills, renewals, deliveries, trips or return windows in your recent mail." : "Tap Check now, or Tomo will go through your mail later today."}</p>
-        </div>
+        <EmptyScene
+          pose="look"
+          title={v.lastScan ? "Nothing coming up" : "Nothing here yet"}
+          text={v.lastScan ? "No bills, renewals, deliveries, trips or return windows in your recent mail." : "Tap Check now, or Tomo will go through your mail later today."}
+        />
       )}
 
       {GROUPS.map((g) => {

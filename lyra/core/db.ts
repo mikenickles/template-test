@@ -486,6 +486,8 @@ export interface MessageMeta {
   error?: boolean;
   /** Posted by a background worker rather than in reply to a message. */
   worker?: boolean;
+  /** (0.62) what Tomo looked at for this reply, in plain past-tense lines ("How I got this"). */
+  steps?: string[];
   /** Web pages the reply drew on. */
   sources?: { url: string; title: string }[];
   /** Posted by a scheduled routine. */

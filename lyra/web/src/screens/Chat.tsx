@@ -1,4 +1,4 @@
-import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { api, onChange, sendChat, type Channel, type MemoryNote, type Message, type TaskNote } from "../api";
 import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chart, Chevron, Close, File as FileIcon, Minus, Wave, More, Pin, Plus, Spark, Stop, TasksIcon, ThumbDown, ThumbUp } from "../icons";
 import { haptic } from "../haptics";
@@ -23,11 +23,16 @@ import { StarChart, Thinking } from "../LyraMark";
 import { Markdown } from "../markdown";
 import { clock, dayLabel, parse } from "../when";
 import { ask } from "../ask";
+import { HowIGotThis, WorkSteps } from "../HowIGotThis";
+import { IntentChip } from "../IntentChip";
+import { intentHint, readIntent, type Intent } from "../../../core/intent";
 
 interface Pending {
   reply: string;
   status: string;
   notes: MemoryNote[];
+  /** (0.62) what Tomo has looked at so far */
+  steps: string[];
 }
 
 /** First things to say. The inbox one only once mail is connected. */
@@ -65,6 +70,13 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
   const [hasMore, setHasMore] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
   const [input, setInput] = useState("");
+  // (0.62) "it understands before you send": what the box reads as, and a time the user picked on the chip
+  const [chipAt, setChipAt] = useState<Date | null>(null);
+  const read = useMemo(() => readIntent(input), [input]);
+  useEffect(() => {
+    if (!read || read.kind !== "reminder") setChipAt(null);
+  }, [read?.kind, read && read.kind === "reminder" ? read.what : ""]);
+  const intent: Intent | null = read && read.kind === "reminder" && chipAt ? { ...read, at: chipAt } : read;
   const [atBottom, setAtBottom] = useState(true);
   const logRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
@@ -361,6 +373,8 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
 
   const send = async (raw: string, given?: Draft[]) => {
     const files = given ?? drafts;
+    // (0.62) what the chip showed goes along, so the reply does what it said
+    const preview = raw === input && intent ? intentHint(intent) ?? undefined : undefined;
     if (!raw.trim() && !files.length) return;
     // answering one message: only what's typed in the box carries the quote (not a tapped button or a notification's reply)
     const text = replyTo && raw === input && raw.trim() ? withQuote(replyTo.excerpt, raw) : raw.trim();
@@ -411,13 +425,14 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
       channel_id: channelId,
     };
     setMessages((m) => [...(m ?? []), temp]);
-    setPending({ reply: "", status: "", notes: [] });
+    setPending({ reply: "", status: "", notes: [], steps: [] });
     try {
       await sendChat(text, {
         text: (d) => setPending((p) => p && { ...p, reply: p.reply + d, status: "" }),
         reset: (t) => setPending((p) => p && { ...p, reply: t }),
         status: (label) => setPending((p) => p && { ...p, status: label }),
         memory: (note) => setPending((p) => p && { ...p, notes: [...p.notes, note] }),
+        step: (t) => setPending((p) => p && { ...p, steps: [...p.steps, t] }),
         reaction: (emoji) => setMessages((m) => (m ?? []).map((x) => (x.id === temp.id ? { ...x, meta: { ...x.meta, reaction: emoji } } : x))),
         done: (msg, user) => {
           setMessages((m) => {
@@ -427,7 +442,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
           if (msg.meta.tasks?.length) onTasksChanged?.();
           if (!msg.meta.error) sound.reply();
         },
-      }, channelId, files.map(strip));
+      }, channelId, files.map(strip), preview);
     } catch (e) {
       setMessages((m) => (m ?? []).filter((x) => x.id !== temp.id));
       setInput(text);
@@ -774,6 +789,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                       {m.meta.tidy.undone ? "Undone" : "Undo tidy-up"}
                     </button>
                   )}
+                  {!!m.meta.steps?.length && <HowIGotThis steps={m.meta.steps} />}
                   {!!m.meta.sources?.length && <Sources list={m.meta.sources} />}
                   {tokens && m.meta.usage && !(m.meta.feedback || (m.id === lastId && !pending)) && <span className="reply-tokens">{tokenLine(m.meta.usage)}</span>}
                   {m.role === "assistant" && m.id > 0 && !m.meta.error && !!m.content.trim() && (m.meta.feedback || (m.id === lastId && !pending)) && (
@@ -839,7 +855,10 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                   <Markdown text={pending.reply} />
                 </div>
               ) : (
-                <Thinking label={pending.status} />
+                <>
+                  <WorkSteps steps={pending.steps} />
+                  <Thinking label={pending.status} />
+                </>
               )}
               {pending.reply && pending.status && <Thinking label={pending.status} />}
               {!!pending.notes.length && <Notes notes={pending.notes} />}
@@ -891,6 +910,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
         />
       )}
       <div className="composer" ref={composerRef}>
+        {intent && !pending && <IntentChip intent={intent} onTime={setChipAt} />}
         {!atBottom && (
           <button className="ring jump" aria-label="Jump to latest" onClick={() => toBottom(true)}>
             <ArrowDown size={20} />

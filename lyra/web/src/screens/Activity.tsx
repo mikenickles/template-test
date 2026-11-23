@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { EmptyScene } from "../EmptyScene";
 import { api, onChange, type Activity as Item, type ActivityDetail, type ActivityKind } from "../api";
 import { Bell, Calendar, Check, Chevron, Close, Mail, Notebook, Refresh, Spark, Star, TasksIcon, User } from "../icons";
 import { Avatar } from "../LyraMark";
@@ -135,10 +136,7 @@ export function Activity({ toast }: { toast: (m: string) => void }) {
       {items === null ? (
         <p className="hint">Loading…</p>
       ) : items.length === 0 ? (
-        <div className="tasks-empty">
-          <p className="tasks-empty-title">Nothing yet.</p>
-          <p>When Tomo works on a task, runs a routine, checks your mail or gives you a heads-up, it shows here, step by step.</p>
-        </div>
+        <EmptyScene pose="stars" title="All quiet so far" text="When Tomo works on a task, runs a routine, checks your mail or gives you a heads-up, it shows here, step by step." />
       ) : (
         days.map(([day, list]) => {
           const shut = closed.has(day);

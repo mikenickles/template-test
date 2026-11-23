@@ -41,6 +41,8 @@ export interface TurnEmitter {
   memory(note: MemoryNote): void;
   /** Lyra reacted to the user's message with this emoji. */
   reaction?(emoji: string): void;
+  /** (0.62) one plain step of the work, in the past tense ("Searched your mail for "dinner""), for "How I got this". */
+  step?(text: string): void;
 }
 
 /**
@@ -147,6 +149,8 @@ export interface TurnContext {
   webSearch?: boolean;
   /** (0.53) a running summary of this chat up to a message: older messages aren't sent, the summary is */
   earlier?: { upTo: number; text: string };
+  /** (0.62) what the composer chip showed while the user typed (core/intent.ts intentHint) */
+  preview?: string;
 }
 
 const MAIN = "main";
@@ -867,6 +871,13 @@ export async function runTurn(
   let widget: Widget | undefined;
   const skillNotes: { id: number; name: string; kind: "used" | "saved" }[] = [];
   const toolsUsed: { name: string; ok: boolean }[] = [];
+  // (0.62) what Tomo looked at, in plain words, shown as "How I got this" under the reply
+  const steps: string[] = [];
+  const addStep = (line: string | null) => {
+    if (!line || steps.includes(line) || steps.length >= 12) return;
+    steps.push(line);
+    emit.step?.(line);
+  };
   // Once outside content has been read, notebook changes need the user's tap.
   // asked: did the user's own words ask for this kind of thing? Then it's theirs to ask, even after
   // outside content was read; what they didn't ask for waits for their OK.
@@ -926,6 +937,7 @@ export async function runTurn(
     ...(widget ? { widget } : {}),
     ...(skillNotes.length ? { skills: skillNotes } : {}),
     ...(sources.length ? { sources: uniqueSources(sources).slice(0, 8) } : {}),
+    ...(steps.length ? { steps } : {}),
     tools: toolsUsed,
     provider: ctx.provider.id,
     model: ctx.provider.model,
@@ -957,6 +969,7 @@ export async function runTurn(
       skills: ctx.workspace.skills?.index(),
       talk: ctx.workspace.talk?.(),
       earlier: ctx.earlier?.text,
+      preview: ctx.preview,
       lifeAdmin: !!ctx.workspace.lifeAdmin?.connected(),
       model: ctx.provider.id === "fake" ? undefined : ctx.provider.model,
       music: ctx.connectors.status().some((c) => c.id === "spotify" && c.state === "connected")
@@ -1004,7 +1017,10 @@ export async function runTurn(
       let result: Awaited<ReturnType<typeof ctx.provider.generate>>;
       try {
         result = await ctx.provider.generate(
-          { system, messages, tools, signal: stepAbort.signal, webSearch: !!ctx.webSearch, onStatus: (l) => emit.status(l) },
+          { system, messages, tools, signal: stepAbort.signal, webSearch: !!ctx.webSearch, onStatus: (l) => {
+            emit.status(l);
+            addStep(pastTense(l));
+          } },
           (d) => {
             if (!started) {
               // a new piece: anything before it that was only narration leaves the screen now
@@ -1056,6 +1072,7 @@ export async function runTurn(
 
       const results: Part[] = [];
       for (const call of calls) {
+        addStep(stepLine(call.name, call.input, ctx));
         if (call.name === "more_tools") {
           const asked = (Array.isArray(call.input.names) ? call.input.names : [call.input.names]).map((n) => String(n ?? "").trim());
           const added = extras.filter((t) => asked.includes(t.name) && !tools.some((x) => x.name === t.name));
@@ -1482,6 +1499,49 @@ export function doneLine(calls: { name: string; input: Record<string, unknown> }
 }
 
 /** Tools that only look things up: what Lyra says alongside one was said before Lyra had the answer. */
+/** (0.62) "Searching your mail" → "Searched your mail", for a step with nothing more specific to say. */
+export function pastTense(label: string): string | null {
+  const PAST: [RegExp, string][] = [
+    [/^Searching\b/, "Searched"], [/^Checking\b/, "Checked"], [/^Reading\b/, "Read"], [/^Looking at\b/, "Looked at"],
+    [/^Opening\b/, "Opened"], [/^Clicking\b/, "Clicked"], [/^Typing\b/, "Typed"], [/^Picking\b/, "Picked"], [/^Going back\b/, "Went back"],
+  ];
+  for (const [re, to] of PAST) if (re.test(label)) return label.replace(re, to);
+  return null;
+}
+
+/** (0.62) one plain line for a lookup the model made, or null for tools that aren't lookups (cards, memory, reactions…). */
+export function stepLine(name: string, input: Record<string, unknown>, ctx: { connectors: { owns(n: string): boolean; label(n: string): string } }): string | null {
+  const str = (k: string) => String(input[k] ?? "").trim().replace(/\s+/g, " ").slice(0, 60);
+  const quoted = (v: string) => (v ? ` for “${v}”` : "");
+  const day = (iso: string) => {
+    const d = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T12:00:00`) : null;
+    return d && !isNaN(+d) ? d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "";
+  };
+  switch (name) {
+    case "gmail__search_mail": return str("query") ? `Searched your mail${quoted(str("query"))}` : "Looked at your latest mail";
+    case "gmail__read_thread": return "Read an email thread";
+    case "calendar__list_events": {
+      const from = day(str("from")), to = day(str("to"));
+      const when = from ? (to && to !== from ? ` from ${from} to ${to}` : ` for ${from}`) : "";
+      return `Checked your calendar${when}${str("query") ? `, looking for “${str("query")}”` : ""}`;
+    }
+    case "drive__search_files": return str("query") ? `Searched your files${quoted(str("query"))}` : "Looked at your recent files";
+    case "drive__read_file": return "Read a file in your Drive";
+    case "browser__open_page": {
+      try { return `Opened ${new URL(str("url")).hostname.replace(/^www\./, "")}`; } catch { return "Opened a page"; }
+    }
+    case "look_up_person": return str("name") ? `Looked up ${str("name")}` : null;
+    case "find_contact": return str("name") ? `Looked for ${str("name")} in your contacts` : null;
+    case "life_admin": return "Checked your bills, subscriptions and deliveries";
+    case "list_tasks": return "Checked your tasks";
+    case "list_routines": return "Checked your routines";
+    case "read_doc": return "Read one of your docs";
+    case "read_channel": return str("channel") ? `Read the ${str("channel")} chat` : null;
+    case "use_skill": return str("name") ? `Followed your “${str("name")}” skill` : null;
+  }
+  return ctx.connectors.owns(name) ? pastTense(ctx.connectors.label(name)) : null;
+}
+
 const LOOKUPS = new Set(["life_admin", "read_doc", "read_channel", "list_tasks", "list_routines", "look_up_person", "find_contact", "use_skill"]);
 
 /** Do these two pieces say the same thing? (An answer written again after a tool was refused.) */

@@ -45,6 +45,29 @@ const DONE: Record<string, string> = {
   file_replaced: "Replaced",
 };
 
+/** (0.62) one word for the ink stamp on a done card */
+const STAMP: Record<string, string> = {
+  drafted: "Saved", added_songs: "Added", accepted: "Yes", declined: "No", tentative: "Maybe", opened: "Opened", made: "Made",
+  mail_inbox: "Back", mail_trash: "Trashed", mail_read: "Read", mail_unread: "Unread", mail_unlabel: "Unlabelled",
+  file_created: "Made", file_trashed: "Trashed",
+};
+function stampWord(did: string): string {
+  return STAMP[did] ?? (DONE[did] ?? "Done").split(" ")[0];
+}
+
+/** (0.62) the ink stamp on a card you okayed: the word and the time, thumped on when it's fresh */
+function Stamp({ a }: { a: ActionRow }) {
+  if (a.status !== "done" || a.result?.undone) return null;
+  const at = a.result?.at ? new Date(a.result.at) : null;
+  const fresh = !!at && Date.now() - at.getTime() < 5000;
+  return (
+    <div className={`done-stamp${fresh ? " fresh" : ""}`} aria-hidden="true">
+      {stampWord(a.result?.did ?? "")}
+      {at && <small>{at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</small>}
+    </div>
+  );
+}
+
 export function ActionCards({ ids, toast }: { ids: number[]; toast: (m: string) => void }) {
   return (
     <div className="actions-cards">
@@ -122,6 +145,7 @@ function ActionCard({ id, toast }: { id: number; toast: (m: string) => void }) {
 
   return (
     <div className={`action-card ${a.status}`} aria-label={email ? "Email for your OK" : "Event for your OK"} role="group">
+      <Stamp a={a} />
       <div className="action-head">
         <span className="action-kind">
           {email ? <Mail size={16} /> : <Calendar size={16} />}
@@ -245,6 +269,7 @@ function PlaylistCard({ a, setA, toast }: { a: ActionRow; setA: (r: ActionRow) =
   const shown = all ? p.tracks : p.tracks.slice(0, 8);
   return (
     <div className={`action-card ${a.status}`} aria-label="Playlist for your OK" role="group">
+      <Stamp a={a} />
       <div className="action-head">
         <span className="action-kind">
           <Music size={16} />
@@ -513,6 +538,7 @@ function SimpleCard({ a, setA, toast }: { a: ActionRow; setA: (r: ActionRow) => 
 
   return (
     <div className={`action-card ${a.status}`} aria-label={label} role="group">
+      <Stamp a={a} />
       <div className="action-head">
         <span className="action-kind">
           {icon}

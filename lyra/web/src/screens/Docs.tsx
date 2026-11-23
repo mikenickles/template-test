@@ -2,6 +2,7 @@
 // edit, share and save to Google Docs) and dashboards (numbers and status at a glance,
 // drawn from data by the app, with Refresh when Lyra knows how to rebuild one).
 import { useCallback, useEffect, useState } from "react";
+import { EmptyScene, askTomo } from "../EmptyScene";
 import { checkDashboard, describeDashboard, type Dashboard } from "../../../core/dashboard";
 import type { Doc } from "../../../core/docs";
 import { api, onChange } from "../api";
@@ -91,7 +92,12 @@ export function Docs({ toast }: { toast: (m: string) => void }) {
           ))}
         </div>
       ) : (
-        <p className="mem-empty">{docs.length ? (filter === "dashboard" ? "No dashboards yet. Ask Tomo for one in chat." : "No docs yet.") : "Nothing here yet."}</p>
+        <EmptyScene
+          pose="read"
+          title={docs.length ? (filter === "dashboard" ? "No dashboards yet" : "No docs yet") : "Your shelf is empty"}
+          text={filter === "dashboard" ? "Dashboards track things for you, like spending or workouts, and keep themselves up to date." : "Plans, notes and research Tomo writes for you end up here."}
+          action={{ label: filter === "dashboard" ? "Ask for a dashboard" : "Ask Tomo to write something", onClick: () => askTomo(filter === "dashboard" ? "What dashboard could you make for me?" : "What could you write up for me?") }}
+        />
       )}
     </div>
   );

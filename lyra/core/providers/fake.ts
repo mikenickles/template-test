@@ -82,6 +82,8 @@ export class FakeProvider implements ModelProvider {
       if (result.name === "set_reminder") return say("Okay, I'll remind you.");
       if (result.name === "suggest_replies") return say("Here are a couple of next steps.");
       if (result.name === "forget") return say("Done, that's gone.");
+      // (0.62) "what's on my plate?": the tasks look-up, then an answer (shows "How I got this")
+      if (result.name === "list_tasks") return say(/No tasks/.test(result.content) ? "Your list is clear right now." : "Here's what's open on your list.");
       if (result.name === "propose_email" || result.name === "propose_event") return say("It's ready for you to check.");
       if (result.name === "write_doc" || result.name === "update_doc") return say("It's in your Artifacts.");
       if (result.name === "make_dashboard" || result.name === "update_dashboard") return say("Your dashboard is in Artifacts (practice numbers: add an API key for real ones).");
@@ -185,7 +187,9 @@ export class FakeProvider implements ModelProvider {
     const dash = text.match(/^(?:make|build) (?:me )?a dashboard (?:called|about|for|of) (.+)$/i);
     if (dash && has("make_dashboard"))
       return call("make_dashboard", { title: dash[1], subtitle: "Practice numbers", blocks: practiceBlocks(0), refresh: "Practice: make up new example numbers." });
-    // "show me a table": the practice model answers with one (made-up rows), to see how tables look in chat
+    // (0.62) "what's on my plate?": look first, so the reply has steps to show
+    if (/^what'?s on my plate\??$/i.test(text.trim()) && has("list_tasks")) return call("list_tasks", {});
+        // "show me a table": the practice model answers with one (made-up rows), to see how tables look in chat
     if (/\btable\b/i.test(text))
       return say("Here's a practice table (made-up rows):\n\n| Plan | Price | Notes |\n| --- | --- | --- |\n| Basic | $8 a month | One device |\n| Family | $15 a month | Up to **five** people |\n| Yearly | $80 a year | Two months free |\n\nI'd pick Family.");
     // "make a doc called Packing list": the practice model can write a doc

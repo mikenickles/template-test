@@ -154,6 +154,8 @@ check(mailChanges.length === 0 && (await trashCard.getByText("Your energy bill i
 await page.screenshot({ path: join(shots, "desktop-15-mail-change.png") });
 await trashCard.getByRole("button", { name: "Move to trash 1" }).click();
 await trashCard.getByText(/^In the trash ·/).waitFor();
+check((await trashCard.locator(".done-stamp").textContent())?.startsWith("Trashed"), "a card you okayed gets an ink stamp with what was done");
+await page.screenshot({ path: join(shots, "desktop-15b-done-stamp.png") });
 await trashCard.getByRole("button", { name: "Undo" }).click();
 await trashCard.getByText(/^Undone ·/).waitFor();
 check(mailChanges.join(",") === "trash,untrash", "tapping trashes it once, and Undo restores it");
@@ -308,7 +310,7 @@ check(true, "playback control is its own switch");
     check(await stepCard.getByText("Happy birthday").isVisible(), "the card shows the site, the button and what Tomo filled in");
     await page.screenshot({ path: join(shots, "desktop-20-browser-card.png") });
     await stepCard.getByRole("button", { name: /Press "Place order"/ }).click();
-    await stepCard.getByText(/Pressed/).waitFor({ timeout: 30_000 });
+    await stepCard.locator(".action-state", { hasText: /Pressed/ }).waitFor({ timeout: 30_000 });
     check(orders.length === 1 && orders[0] === "note=Happy birthday", "after the tap, Tomo presses it and the order goes through once");
     await page.screenshot({ path: join(shots, "desktop-21-browser-done.png") });
   } finally {

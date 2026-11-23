@@ -1709,6 +1709,7 @@ export class Lyra {
     emit: TurnEmitter,
     channelId: number | null = null,
     attachments: Attachment[] = [],
+    opts: { preview?: string } = {},
   ): Promise<{ message: StoredMessage; user: StoredMessage; queued?: boolean }> {
     const clean = text.trim();
     if (!clean && !attachments.length) throw new Error("Say something first.");
@@ -1760,6 +1761,7 @@ export class Lyra {
           timeZone: this.p.timeZone,
           webSearch: this.webSearch,
           earlier: this.chatSummary(channelId) ?? undefined,
+          preview: opts.preview?.slice(0, 400),
         },
         clean,
         emit,
