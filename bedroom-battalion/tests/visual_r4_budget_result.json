@@ -1,0 +1,886 @@
+[
+ {
+  "tag": "r3",
+  "loadMs": 1988,
+  "atLoad": {
+   "programs": 15,
+   "textures": 2
+  },
+  "colliders": {
+   "n": 360,
+   "digest": "7b3cc4b4"
+  },
+  "views": {
+   "spawn_green": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 148
+   },
+   "spawn_tan": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 151.5
+   },
+   "bed_top": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 149.4
+   },
+   "desk_top": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 141.5
+   },
+   "shelf_top": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 167.8
+   },
+   "floor_centre": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 157.7
+   },
+   "under_bed": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 132.9
+   },
+   "east_lane": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 149.8
+   },
+   "west_lane": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 148.1
+   }
+  },
+  "fight": {
+   "overview": {
+    "max": 16,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      11,
+      18110
+     ]
+    },
+    "tris": 18110,
+    "ms": 130.9
+   },
+   "eye": {
+    "max": 17,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      12,
+      18194
+     ]
+    },
+    "tris": 18194,
+    "ms": 163
+   },
+   "afterMatch": {
+    "programsAtMatchStart": 15,
+    "programsMaxDuringMatch": 15,
+    "heapMBEveryMinute": [
+     15.4,
+     15.4,
+     15.4,
+     15.4,
+     15.4,
+     15.4
+    ],
+    "simSeconds": 329,
+    "programs": 15,
+    "textures": 2,
+    "geometries": 15,
+    "matchEnded": true
+   }
+  },
+  "textures": [
+   [
+    2048,
+    2048,
+    0
+   ],
+   [
+    512,
+    1024,
+    11
+   ]
+  ],
+  "errors": []
+ },
+ {
+  "tag": "r4a",
+  "loadMs": 4271,
+  "atLoad": {
+   "programs": 25,
+   "textures": 6
+  },
+  "colliders": {
+   "n": 360,
+   "digest": "7b3cc4b4"
+  },
+  "views": {
+   "spawn_green": {
+    "calls": 82,
+    "tris": 206406,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      52,
+      114864
+     ]
+    },
+    "ms": 183.4
+   },
+   "spawn_tan": {
+    "calls": 82,
+    "tris": 206406,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      52,
+      114864
+     ]
+    },
+    "ms": 226.6
+   },
+   "bed_top": {
+    "calls": 76,
+    "tris": 196061,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      46,
+      104519
+     ]
+    },
+    "ms": 233.6
+   },
+   "desk_top": {
+    "calls": 78,
+    "tris": 190243,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      48,
+      98701
+     ]
+    },
+    "ms": 260.9
+   },
+   "shelf_top": {
+    "calls": 83,
+    "tris": 206560,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      53,
+      115018
+     ]
+    },
+    "ms": 227.4
+   },
+   "floor_centre": {
+    "calls": 75,
+    "tris": 189214,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      45,
+      97672
+     ]
+    },
+    "ms": 199.4
+   },
+   "under_bed": {
+    "calls": 66,
+    "tris": 166255,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      36,
+      74713
+     ]
+    },
+    "ms": 157.9
+   },
+   "east_lane": {
+    "calls": 79,
+    "tris": 198405,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      49,
+      106863
+     ]
+    },
+    "ms": 183.5
+   },
+   "west_lane": {
+    "calls": 80,
+    "tris": 198880,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      50,
+      107338
+     ]
+    },
+    "ms": 183
+   }
+  },
+  "fight": {
+   "overview": {
+    "max": 97,
+    "per": {
+     "fbo1": [
+      37,
+      109286
+     ],
+     "screen": [
+      60,
+      132762
+     ]
+    },
+    "tris": 133490,
+    "ms": 239.3
+   },
+   "eye": {
+    "max": 93,
+    "per": {
+     "fbo1": [
+      35,
+      107442
+     ],
+     "screen": [
+      58,
+      131860
+     ]
+    },
+    "tris": 131860,
+    "ms": 186.2
+   },
+   "afterMatch": {
+    "programsAtMatchStart": 25,
+    "programsMaxDuringMatch": 25,
+    "heapMBEveryMinute": [
+     31.6,
+     31.6,
+     31.6,
+     31.6,
+     31.6,
+     31.6
+    ],
+    "simSeconds": 329,
+    "programs": 25,
+    "textures": 6,
+    "geometries": 68,
+    "matchEnded": true
+   }
+  },
+  "textures": [
+   [
+    2048,
+    2048,
+    12
+   ],
+   [
+    2048,
+    2048,
+    0
+   ],
+   [
+    3,
+    1,
+    1
+   ],
+   [
+    1024,
+    2048,
+    12
+   ],
+   [
+    64,
+    64,
+    7
+   ],
+   [
+    512,
+    256,
+    10
+   ]
+  ],
+  "errors": []
+ },
+ {
+  "tag": "r3",
+  "loadMs": 1733,
+  "atLoad": {
+   "programs": 15,
+   "textures": 2
+  },
+  "colliders": {
+   "n": 360,
+   "digest": "7b3cc4b4"
+  },
+  "views": {
+   "spawn_green": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 143
+   },
+   "spawn_tan": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 144.5
+   },
+   "bed_top": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 133.8
+   },
+   "desk_top": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 146.3
+   },
+   "shelf_top": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 152.7
+   },
+   "floor_centre": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 145.9
+   },
+   "under_bed": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 132.1
+   },
+   "east_lane": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 143.4
+   },
+   "west_lane": {
+    "calls": 14,
+    "tris": 31202,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      9,
+      17470
+     ]
+    },
+    "ms": 157.5
+   }
+  },
+  "fight": {
+   "overview": {
+    "max": 16,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      11,
+      18110
+     ]
+    },
+    "tris": 18110,
+    "ms": 136.8
+   },
+   "eye": {
+    "max": 17,
+    "per": {
+     "fbo1": [
+      5,
+      13732
+     ],
+     "screen": [
+      12,
+      18194
+     ]
+    },
+    "tris": 18194,
+    "ms": 165.5
+   },
+   "afterMatch": {
+    "programsAtMatchStart": 15,
+    "programsMaxDuringMatch": 15,
+    "heapMBEveryMinute": [
+     14.5,
+     14.5,
+     14.5,
+     14.5,
+     14.5,
+     14.5
+    ],
+    "simSeconds": 329,
+    "programs": 15,
+    "textures": 2,
+    "geometries": 15,
+    "matchEnded": true
+   }
+  },
+  "textures": [
+   [
+    2048,
+    2048,
+    0
+   ],
+   [
+    512,
+    1024,
+    11
+   ]
+  ],
+  "errors": []
+ },
+ {
+  "tag": "r4a",
+  "loadMs": 3485,
+  "atLoad": {
+   "programs": 25,
+   "textures": 6
+  },
+  "colliders": {
+   "n": 360,
+   "digest": "7b3cc4b4"
+  },
+  "views": {
+   "spawn_green": {
+    "calls": 82,
+    "tris": 206406,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      52,
+      114864
+     ]
+    },
+    "ms": 200.4
+   },
+   "spawn_tan": {
+    "calls": 82,
+    "tris": 206406,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      52,
+      114864
+     ]
+    },
+    "ms": 201.8
+   },
+   "bed_top": {
+    "calls": 76,
+    "tris": 196061,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      46,
+      104519
+     ]
+    },
+    "ms": 217.9
+   },
+   "desk_top": {
+    "calls": 78,
+    "tris": 190243,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      48,
+      98701
+     ]
+    },
+    "ms": 191.2
+   },
+   "shelf_top": {
+    "calls": 83,
+    "tris": 206560,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      53,
+      115018
+     ]
+    },
+    "ms": 176.4
+   },
+   "floor_centre": {
+    "calls": 75,
+    "tris": 189214,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      45,
+      97672
+     ]
+    },
+    "ms": 199.6
+   },
+   "under_bed": {
+    "calls": 66,
+    "tris": 166255,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      36,
+      74713
+     ]
+    },
+    "ms": 146
+   },
+   "east_lane": {
+    "calls": 79,
+    "tris": 198405,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      49,
+      106863
+     ]
+    },
+    "ms": 193.8
+   },
+   "west_lane": {
+    "calls": 80,
+    "tris": 198880,
+    "per": {
+     "fbo1": [
+      30,
+      91542
+     ],
+     "screen": [
+      50,
+      107338
+     ]
+    },
+    "ms": 171.5
+   }
+  },
+  "fight": {
+   "overview": {
+    "max": 97,
+    "per": {
+     "fbo1": [
+      37,
+      109286
+     ],
+     "screen": [
+      60,
+      132762
+     ]
+    },
+    "tris": 133490,
+    "ms": 225.3
+   },
+   "eye": {
+    "max": 93,
+    "per": {
+     "fbo1": [
+      35,
+      107442
+     ],
+     "screen": [
+      58,
+      131860
+     ]
+    },
+    "tris": 131860,
+    "ms": 177.7
+   },
+   "afterMatch": {
+    "programsAtMatchStart": 25,
+    "programsMaxDuringMatch": 25,
+    "heapMBEveryMinute": [
+     45.2,
+     45.2,
+     45.2,
+     45.2,
+     45.2,
+     45.2
+    ],
+    "simSeconds": 329,
+    "programs": 25,
+    "textures": 6,
+    "geometries": 68,
+    "matchEnded": true
+   }
+  },
+  "textures": [
+   [
+    2048,
+    2048,
+    12
+   ],
+   [
+    2048,
+    2048,
+    0
+   ],
+   [
+    3,
+    1,
+    1
+   ],
+   [
+    1024,
+    2048,
+    12
+   ],
+   [
+    64,
+    64,
+    7
+   ],
+   [
+    512,
+    256,
+    10
+   ]
+  ],
+  "errors": []
+ }
+]

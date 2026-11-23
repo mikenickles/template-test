@@ -1,3 +1,118 @@
+# Round 4 (art pass)
+
+**Verdict: scale is clearly better than round 3; readability in a fight is worse.** From the floor, the desk, the bed and under the bed, the room now reads as a real child's bedroom: book spines, letter blocks, a stitched blanket, the window view, and a dark, dusty under-bed. The HUD is easier to read, the title screen sets the mood, and the viewmodels are distinct and stay out of the way. But the enemy soldier is now a slim army man that covers about half the pixels of the round 3 blockout. Against the new letter blocks, the orange toys, the under-bed shadow and the sunbeam, it has less contrast than before. Two route accents were lost, and the audio cannot tell you where an enemy is.
+
+Method: headless through `tests/harness.cjs`, with the round 4B snapshot (`snapshots/index_r4b.html`) and the round 3 file (`git show c90ee3c:bedroom-battalion/index.html`, a scratch copy) run side by side with the same cameras and seeds. Scripts and helper:
+- `feel_r4_contrast.cjs`: soldier pixel area and contrast against six backgrounds at four distances, for both builds.
+- `feel_r4_shots.cjs`: scale, route, viewmodel, HUD, title and kill frames.
+- `feel_r4_audio.cjs`: the 4B sound graph rendered offline, including reverb and room tone.
+- `feel_r4_lib.js`: shared helpers.
+
+Pictures are in `screenshots/round4/feel_*.png`, with r3 on the left and r4b on the right in every `feel_pair_*` and `feel_cmp_*` montage. No console errors on either build. `index.html` and the snapshot were not touched. Fps is not used; the rendering is software.
+
+## Findings, most harmful first
+
+### 1. Enemies are harder to spot (pillar 5) — worse than round 3
+In each view a Tan bot stands at a fixed spot facing the camera, and the frame is rendered with the bot present and with it hidden below the floor. Only pixels inside the soldier's projected box are counted. "Local" is the mean dE76 between the soldier's pixels and what they cover. "Silhouette" is the dE of the soldier's mean colour against the ring of background around it. "Busy" is how varied that ring is.
+
+| Background, distance | Soldier pixels r3 → r4b | Local dE r3 → r4b | Silhouette dE r3 → r4b | Background busyness r3 → r4b |
+| --- | --- | --- | --- | --- |
+| Plain floor, 20 / 40 / 60 u | 891 / 160 / 92 → 444 / 103 / 40 | 55 / 49 / 31 → 52 / 46 / 52 | 47 / 38 / 26 → 49 / 34 / 42 | 22–36 → 35–37 |
+| Letter blocks, 20 / 40 / 60 / 90 u | 423 / 198 / 99 / 47 → 211 / 86 / 38 / 22 | 38 / 35 / 33 / 29 → 23 / 20 / 16 / 16 | 20 / 23 / 24 / 20 → 18 / **9** / 13 / 14 | 21–31 → 31–32 |
+| Under the bed, 20 / 40 / 60 u | 743 / 208 / 89 → 425 / 100 / 42 | 28 / 33 / 32 → 55 / 26 / 26 | 13 / 26 / 27 → 50 / 18 / 17 | 17–28 → 20–30 |
+| Sunbeam, 20 / 40 / 60 u | 845 / 205 / 72 → 451 / 104 / 49 | 44 / 30 / 27 → 35 / 22 / 20 | 24 / 25 / 14 → 25 / 23 / **9** | 26–32 → 31–37 |
+| Quilt (on the bed, from above), 20–90 u | 741 → 417 at 20 u | 44–69 → 46–62 | 42–65 → 45–60 | low in both |
+| Book stairs, 20 / 60 u | 757 / 52 → 432 / 39 | 30 / 25 → 33 / 27 | 12 / 15 → 19 / 17 | 37–51 → 29–44 |
+
+- The soldier has about half the screen area it had at every distance. The army-man shape (thin limbs, narrow torso) is much slimmer than the round 3 box. The hit volumes did not change, so a shot that looks like a near miss can still hit, which is forgiving. But the target is smaller to find.
+- Letter blocks are the worst background. The blocks use orange `#F08A2A` and yellow `#F2C230` faces, and a shaded Tan soldier in front of them nearly merges: silhouette dE 9 at 40 u (`feel_cmp_detect_crops.png`, top row). The kill sequence in front of the orange car and the orange block stack (`feel_cmp_kill_zoom.png`, bottom row) shows the same thing.
+- The sunbeam and under-bed views lose contrast at mid range (60 u silhouette 14 → 9 in the beam; 26–27 → 17–18 under the bed at 40 to 60 u). Close up under the bed the soldier stands out better than before.
+- The quilt and book-stair backgrounds are fine. Tan on blue pops.
+- Fixes:
+  - **Orange and yellow faces:** apply the lead's yellow-block rule (17.12) to orange as well. Remove `#F08A2A` and `#F2C230` from `art.palette.blocks`, and use no orange or yellow faces on any cover or toy in the three lanes. Route caps stay orange; they are thin and sit at route heads.
+  - **Soldier outline:** add a dark outline to soldiers, either an inverted-hull copy scaled about 1.04 in `#3A2A12` for Tan and `#123A1E` for Green, or a darker rim. The silhouette should read at 60 u against busy toys.
+  - **Optional emissive lift:** give soldiers a small emissive lift (about 0.12) so they do not sink into the under-bed shadow and the beam.
+
+### 2. Two climb routes lost their accent colour (pillar 3) — worse than round 3
+- From the west lane, the blanket slope used to be a bright orange ramp. It is now blanket blue, the same as the bed, with letter blocks in front of it (`feel_cmp_routes.png`, top left pair).
+- The skateboard ramp from the east door is now red rather than route orange (top right pair). It still reads as a ramp, but the "orange means you can climb here" rule from rounds 1 to 3 is broken twice.
+- Still clear: the bed book-stairs head (orange caps, now visible from the bed), the spring pad (red and yellow chevrons), and the yellow strings and stubs from the desk.
+- Fix: an orange route cap 0.3 wide along the foot and both side edges of the blanket slope, and orange rails or an orange deck edge on the skateboard. These are visual only, so colliders are unchanged.
+
+### 3. Audio cannot locate an enemy (gun feel / readability) — same as round 3, but now it stands out
+- There is no `PannerNode` or `StereoPanner` anywhere in the graph, so every sound is mono and centred. Enemy shots are distance-attenuated (`audioRef 5 / d`), so you hear how far away a shot is, never which direction.
+- Enemy footsteps are never played; only the player's own steps run through `tickMoveAudio`.
+- Rendered levels after the 0.5 master, as 50 ms RMS:
+
+| Sound | Level | Against room tone |
+| --- | --- | --- |
+| Own rifle | 0.086 | +32 dB |
+| Enemy rifle at 15 / 30 / 60 / 100 u | 0.031 / 0.017 / 0.009 / 0.006 | +23 / +18 / +13 / +9 dB |
+| Room tone | 0.002 | (reference) |
+| Room creak | 0.029 | +23 dB |
+| Bed creak | 0.016 | +17 dB |
+
+- So the room tone buries nothing: even a rifle at 100 u is 9 dB above it.
+- A room creak is louder than an enemy rifle at 30 u and as loud as an SMG at 15 u, and it lasts 1.4 s. It is low (62 Hz plus a 300 Hz band) against shots in the kHz range, so it will not mask the crack. But it can read as "something happened" in a quiet moment, and a player may turn toward it.
+- Fixes:
+  - **Panning:** run `sfxAt` through a `StereoPannerNode` with pan from the listener's yaw, or an HRTF `PannerNode` placed at the source.
+  - **Enemy footsteps:** play bot footsteps through `sfxAt` within 25 u at `vol` 0.6.
+  - **Creaks:** halve the creak gains (`creak_room` layers to 0.05 / 0.14 / 0.02) and skip a creak within 5 s of any gunshot.
+- Reverb: sends exist only on the sniper, grenade, whistle, clacks, stingers and creaks, so the rifle, SMG and pistol stay dry and punchy. The sniper's tail is about 3 % of its peak level 0.3 to 1.3 s after the shot. Whether the room sounds big needs ears.
+
+### 4. Viewmodels: good; reload is still hard to see
+- Each gun reads its role at a glance (`feel_cmp_vm.png`):
+  - Rifle: long and black with a yellow stock.
+  - SMG: short, with a yellow magazine and a hand.
+  - Sniper: long, with a big yellow scope ring.
+  - Pistol: small and black.
+- The green plastic hands tie the guns to your team and add life.
+- Screen cover at 1280×720:
+
+| Gun | r3 | r4b |
+| --- | --- | --- |
+| Rifle | 5.1 % | 5.9 % |
+| SMG | 4.2 % | 5.4 % |
+| Sniper | 5.6 % | 6.3 % |
+| Pistol | 2.6 % | 2.5 % |
+
+  The central strip stays under 0.5 % of its area, so nothing blocks the aim point.
+- Recoil kick and flash read well (`feel_cmp_vm_motion.png`).
+- The scoped sniper view is clean and darker outside the lens, and the far field reads well at fov 20 (`feel_r4b_vm_sniper_scoped.png`).
+- Reload drops the gun completely off screen within 0.5 s (`reloadDip` 0.2, unchanged from round 3). You see only the HUD's "RIFLE RELOADING". Fix: `viewmodel.reloadDip 0.2 -> 0.09`, plus a short tilt and magazine drop so the reload is seen. Untested.
+- Not measured: the hop and base animation on moving soldiers. The hop is 0.1 u, 5 % of the body height, and the hit volumes are unchanged, so it should not affect aiming.
+
+### 5. HUD and menus: better than round 3
+At both 1280×720 and 1920×1080 (`feel_cmp_hud_1280.png`, `feel_cmp_hud_1920.png`, `feel_r4b_hud_live_1920.png`):
+- The score and timer sit in a dark rounded panel, the kill feed is in pills, and ammo has its own panel. All of them now read against the pale walls and the sunbeam, where round 3's bare text was weaker.
+- Health has no panel and is the one element that could still wash out on a bright floor patch. Give it the same dark panel as ammo.
+- The crosshair is unchanged (white with a dark edge) and still reads on orange toys (`feel_cmp_crosshair_1920.png`).
+- The freeze-time picker is as clear as before: three keyed boxes and a countdown.
+- The title screen now shows the 3D room drifting behind a two-tone logo and a green PLAY button, and it sets the toy mood well. The controls text is about 11 px at 1280 wide and hard to read. Fix: `#title .keys` font-size `0.85rem -> 1rem`.
+
+### 6. Scale: clearly better than round 3
+Eye-height pairs (`feel_cmp_scale_a.png`, `feel_cmp_scale_b.png`):
+- **Floor:** book spines, letter blocks, dominoes and the stitched blanket edge give real-world size cues on every side. The old grey crates are now recognisable toys, which fixes the round 1 "person among crates" read.
+- **Looking up at the chair:** the book stack reads as a building.
+- **Desk top:** the window with a tree and fence and the sunlit wall make the room read as huge from up there too.
+- **Bed top:** the stitched quilt and stocked shelves sell scale.
+- **Under the bed:** properly dark, with the toys outside lit, a strong "hiding under furniture" moment.
+- One cost: the fort and ruin bricks and the orange toys are so saturated that the centre lane is now visually loud (see finding 1).
+
+## Fix list, short
+1. Soldier outline (inverted hull about 1.04, dark team shade) and no orange or yellow toy faces in the lanes. Target: silhouette dE of at least 20 against letter blocks at 40–60 u (now 9–13).
+2. Orange route caps on the blanket slope (foot and sides) and the skateboard edges.
+3. Stereo panning in `sfxAt`, and enemy footsteps within 25 u.
+4. Creak gain halved and no creaks within 5 s of gunfire.
+5. `reloadDip 0.2 -> 0.09` with a visible magazine motion; a health panel; title controls font `1rem`.
+
+## Only a human can confirm
+- How the new soldier reads in motion at real frame rates; the hop may help spotting by catching the eye.
+- Whether the room tone, creaks and reverb make the room sound big, or are a nuisance.
+- Whether the green hands feel good under a mouse.
+
+---
+
 # Round 3 (match: train, bots, rules)
 
 **Verdict (feel; the gate belongs to the bug tester): a full match is playable and mostly fair, but not yet fun.** Nobody got stuck and the train never needed a rescue in 60 matches. The bots spread over every lane and the perches, take cover, flank and retreat, and the train really is moving cover. Five things hold it back:
