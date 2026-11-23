@@ -37,7 +37,7 @@ public class LyraWidget extends AppWidgetProvider {
         SharedPreferences p = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.lyra_widget);
         v.setTextViewText(R.id.widget_status, p.getString("status", "Here when you need me"));
-        v.setTextViewText(R.id.widget_detail, p.getString("detail", "Tap to talk to Lyra"));
+        v.setTextViewText(R.id.widget_detail, p.getString("detail", "Tap to talk to Tomo"));
         File f = new File(c.getFilesDir(), AVATAR);
         Bitmap b = f.exists() ? BitmapFactory.decodeFile(f.getPath()) : null;
         if (b != null) v.setImageViewBitmap(R.id.widget_avatar, b);

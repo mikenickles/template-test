@@ -99,7 +99,7 @@ export class SpotifyAuth {
     const scope = j.scope ?? "";
     if (!spotifyGrantIsAllowed(scope)) {
       await this.forget();
-      throw new Error("Spotify granted more than Lyra asked for, so Lyra didn't keep it.");
+      throw new Error("Spotify granted more than Tomo asked for, so Tomo didn't keep it.");
     }
     this.access = { token: j.access_token, expires: Date.now() + Math.max(60, (j.expires_in ?? 3600) - 120) * 1000, scope };
     if (j.refresh_token) await this.secrets.set("spotify.refresh", j.refresh_token);

@@ -20,7 +20,7 @@ function recorder() {
   return { provider, systems };
 }
 
-describe("Lyra's soul", () => {
+describe("Tomo's soul", () => {
   it("is in the chat, worker and routine prompts, with the user's name filled in", async () => {
     const { provider, systems } = recorder();
     const lyra = await Lyra.start(platform({ provider }, memStores()));
@@ -34,7 +34,7 @@ describe("Lyra's soul", () => {
     await lyra.routinesRunner.settle();
     expect(systems).toHaveLength(3);
     for (const s of systems) {
-      expect(s).toContain("You are Lyra: Sam's chief of staff, and their friend.");
+      expect(s).toContain("You are Tomo: Sam's chief of staff, and their friend.");
       expect(s).toContain("## Taking the lead");
       expect(s).toContain("## For errands: write it to be understood at a glance"); // the voice guide is still there
       expect(s).not.toContain("{user}");
@@ -46,7 +46,7 @@ describe("Lyra's soul", () => {
     const first = recorder();
     const lyra = await Lyra.start(platform({ provider: first.provider }, stores));
     expect(lyra.soul()).toEqual({ content: DEFAULT_SOUL, custom: false });
-    await lyra.saveSoul("You are Lyra. Talk to {user} like a pirate.");
+    await lyra.saveSoul("You are Tomo. Talk to {user} like a pirate.");
     await expect(lyra.saveSoul("   ")).rejects.toThrow(/empty/);
 
     const again = recorder();

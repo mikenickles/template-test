@@ -64,19 +64,19 @@ export function Drawer({
     { href: "#/tasks", label: "Tasks", icon: <TasksIcon size={20} />, on: /^(tasks|task|worker-log|routine)$/.test(route), badge: readyCount },
     { href: "#/artifacts", label: "Artifacts", icon: <FileIcon size={20} />, on: route === "docs" || route === "doc" },
     // Memory opens from the Lyra page
-    { href: "#/access", label: "Lyra", icon: <Spark size={20} />, on: route === "access" || route === "soul" || route === "memory" },
+    { href: "#/access", label: "Tomo", icon: <Spark size={20} />, on: route === "access" || route === "soul" || route === "memory" },
     { href: "#/settings", label: "Settings", icon: <Gear size={20} />, on: route === "settings", initial },
   ];
 
   return (
     <nav className={`drawer-panel${docked ? " docked" : ""}`} ref={panel} aria-label="Channels" aria-hidden={!open} inert={!open}>
       {/* Lyra: opens the activity log */}
-      <a className="drawer-head" href="#/activity" aria-label="Lyra: recent activity" onClick={() => !docked && onClose()}>
+      <a className="drawer-head" href="#/activity" aria-label="Tomo: recent activity" onClick={() => !docked && onClose()}>
         <span className="orb drawer-orb">
           <Avatar />
         </span>
         <span className="drawer-name">
-          <span className="drawer-title">Lyra</span>
+          <span className="drawer-title">Tomo</span>
           {status}
         </span>
       </a>
@@ -263,7 +263,7 @@ function SearchResults({ query, onPick }: { query: string; onPick: () => void })
         <li key={h.messageId}>
           <a className="search-hit" href={`${h.channelId === null ? "#/" : `#/c/${h.channelId}`}?m=${h.messageId}`} onClick={onPick}>
             <span className="search-where">
-              {h.channelName ?? "Everything"} · {h.role === "user" ? "You" : "Lyra"}
+              {h.channelName ?? "Everything"} · {h.role === "user" ? "You" : "Tomo"}
               <span>{when(h.at)}</span>
             </span>
             <span className="search-snippet">{h.snippet}</span>

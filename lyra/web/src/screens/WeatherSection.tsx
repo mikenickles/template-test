@@ -42,7 +42,7 @@ export function WeatherSection({ state, setState, toast }: { state: AppState; se
           <div className="item">
             <span className="body">
               <div className="title">{state.weatherPlace.name}</div>
-              <div className="sub">Shown under Lyra's avatar, now and then.</div>
+              <div className="sub">Shown under Tomo's avatar, now and then.</div>
             </span>
             <button className="btn quiet" onClick={() => void pick(null)}>
               Remove

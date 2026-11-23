@@ -320,7 +320,7 @@ function actionTools(allowed: ReturnType<NonNullable<Workspace["actions"]>["allo
     tools.push({
       name: "propose_browser_step",
       description:
-        "Ask the user's OK to press a button or link marked ⚑ on the page in Lyra's browser window (buying, sending, booking, posting, deleting, changing an account), or to send a form (op \"submit\" on a field). It appears as a card showing the site, the button and what you typed; nothing happens until they tap. Only for a step the user asked for; fill in the form first with type_text.",
+        "Ask the user's OK to press a button or link marked ⚑ on the page in Tomo's browser window (buying, sending, booking, posting, deleting, changing an account), or to send a form (op \"submit\" on a field). It appears as a card showing the site, the button and what you typed; nothing happens until they tap. Only for a step the user asked for; fill in the form first with type_text.",
       schema: {
         type: "object",
         properties: {
@@ -647,7 +647,7 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
   tools.push(
     {
       name: "set_reminder",
-      description: "Remind the user of something at a time: a phone notification then (even with Lyra closed) and a message here.",
+      description: "Remind the user of something at a time: a phone notification then (even with Tomo closed) and a message here.",
       schema: {
         type: "object",
         properties: {
@@ -673,7 +673,7 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
     {
       name: "remind_at_place",
       description:
-        "Remind the user when they arrive at a place, or leave one: 'when I get to Costco', 'when I leave work'. It goes off on their phone, even with Lyra closed. place: a saved place's name (Home, Work…) or a name or address to look up near them.",
+        "Remind the user when they arrive at a place, or leave one: 'when I get to Costco', 'when I leave work'. It goes off on their phone, even with Tomo closed. place: a saved place's name (Home, Work…) or a name or address to look up near them.",
       schema: {
         type: "object",
         properties: {
@@ -703,7 +703,7 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
     {
       name: "create_routine",
       description:
-        "Set up a routine: a scheduled check that runs on its own (while Lyra is open or when it next opens) and posts here only when there's news. E.g. a morning brief, a weekly school-mail check, a watch for bills.",
+        "Set up a routine: a scheduled check that runs on its own (while Tomo is open or when it next opens) and posts here only when there's news. E.g. a morning brief, a weekly school-mail check, a watch for bills.",
       schema: {
         type: "object",
         properties: {
@@ -803,7 +803,7 @@ async function digests(ctx: TurnContext): Promise<ChannelDigest[]> {
   for (const c of ctx.workspace.channels()) {
     const recent = listMessages(ctx.db, c.id, 4)
       .filter((m) => !m.meta.error && m.content.trim())
-      .map((m) => `${m.role === "user" ? who(ctx) : "Lyra"}: ${clip(m.content.replace(/\s+/g, " "), 160)}`);
+      .map((m) => `${m.role === "user" ? who(ctx) : "Tomo"}: ${clip(m.content.replace(/\s+/g, " "), 160)}`);
     out.push({ name: c.name, about: c.about, notebook: clip((await ctx.workspace.notebook(c.id)).read(), 1200), recent, lastAt: c.last_at });
   }
   return out;
@@ -1762,7 +1762,7 @@ async function runTool(
     const n = Math.min(Math.max(Number(input.messages) || 12, 1), 40);
     const msgs = listMessages(ctx.db, ch.id, n).filter((m) => !m.meta.error && m.content.trim());
     const book = await ctx.workspace.notebook(ch.id);
-    const lines = msgs.map((m) => `[${m.created_at.slice(0, 16).replace("T", " ")}] ${m.role === "user" ? who(ctx) : "Lyra"}: ${m.content}`);
+    const lines = msgs.map((m) => `[${m.created_at.slice(0, 16).replace("T", " ")}] ${m.role === "user" ? who(ctx) : "Tomo"}: ${m.content}`);
     return {
       content: `Channel: ${ch.name}\nAbout: ${ch.about || "(not set)"}\n\nNotebook:\n${book.read().trim()}\n\nLatest messages (oldest first):\n${lines.join("\n") || "(none yet)"}`,
       isError: false,

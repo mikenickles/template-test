@@ -22,15 +22,15 @@ export function UpdatesSection() {
       case "current":
         return "You're up to date.";
       case "available":
-        return `Lyra ${state.file.version} is in your Drive.`;
+        return `Tomo ${state.file.version} is in your Drive.`;
       case "downloading":
         return `Downloading ${state.file.version}…`;
       case "ready":
-        return `${state.version} is ready. Restart Lyra to use it.`;
+        return `${state.version} is ready. Restart Tomo to use it.`;
       case "needs-full":
         return `${state.version} needs a fresh install: download the Windows zip from the Lyra Updates folder in your Drive.`;
       case "permission":
-        return "Allow Lyra to install apps (the switch Android just opened), then come back and tap Update.";
+        return "Allow Tomo to install apps (the switch Android just opened), then come back and tap Update.";
       case "error":
         return state.message;
       default:
@@ -55,7 +55,7 @@ export function UpdatesSection() {
       <div className="group">
         <div className="item">
           <span className="body">
-            <div className="title">Lyra {version}</div>
+            <div className="title">Tomo {version}</div>
             <div className={`sub${state.kind === "error" ? " bad" : ""}`}>{canUpdate ? sub : "Updates work in the phone and Windows apps."}</div>
           </span>
           {canUpdate && (

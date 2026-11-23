@@ -66,7 +66,7 @@ export function ScheduledSection({ toast }: { toast: (m: string) => void }) {
               <span className="body">
                 <div className="title">{r.text}</div>
                 <div className="sub">
-                  {r.kind === "remind" ? "Reminder" : "Lyra checks back"} · {whenLabel(r.due_at)}
+                  {r.kind === "remind" ? "Reminder" : "Tomo checks back"} · {whenLabel(r.due_at)}
                   {r.channel_name ? ` · ${r.channel_name}` : ""}
                 </div>
               </span>
@@ -122,7 +122,7 @@ export function ScheduledSection({ toast }: { toast: (m: string) => void }) {
             ))}
           </div>
         ) : (
-          <p className="mem-empty">Routines check things on a schedule and post only when there's news. Try a morning brief, or ask Lyra: “every Friday at 4, check for school emails”.</p>
+          <p className="mem-empty">Routines check things on a schedule and post only when there's news. Try a morning brief, or ask Tomo: “every Friday at 4, check for school emails”.</p>
         ))}
       {adding && <AddRoutineDialog toast={toast} onClose={() => setAdding(false)} onAdded={() => (setAdding(false), load())} />}
     </section>
@@ -174,7 +174,7 @@ function AddRoutineDialog({ toast, onClose, onAdded }: { toast: (m: string) => v
           ))}
         </div>
         <p className="hint" style={{ marginLeft: 0 }}>
-          Want something else? Tell Lyra in chat, like “every Sunday evening, tell me what's on next week”, or have one start when something happens: “when Dana emails, tell me right away”, “when I get home, remind me what's due tomorrow”. Any routine can be switched to start that way from its Edit page.
+          Want something else? Tell Tomo in chat, like “every Sunday evening, tell me what's on next week”, or have one start when something happens: “when Dana emails, tell me right away”, “when I get home, remind me what's due tomorrow”. Any routine can be switched to start that way from its Edit page.
         </p>
         <div className="dialog-actions" style={{ gridTemplateColumns: "1fr" }}>
           <button className="btn quiet" onClick={onClose}>
@@ -293,7 +293,7 @@ export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: st
               From (a name, an address, or a word in the subject)
             </label>
             <input id="rt-from" className="field" value={draft.from} placeholder="Dana, or billing@pge.com" autoCapitalize="off" onChange={(e) => setDraft({ ...draft, from: e.target.value })} />
-            <p className="hint">Lyra looks every few minutes, with no AI until something arrives.</p>
+            <p className="hint">Tomo looks every few minutes, with no AI until something arrives.</p>
           </>
         )}
         {draft.start === "place" && (
@@ -327,7 +327,7 @@ export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: st
               Words in the notification (an app, a person, or what it says)
             </label>
             <input id="rt-match" className="field" value={draft.match} placeholder="delivered, or Mom" onChange={(e) => setDraft({ ...draft, match: e.target.value })} />
-            <p className="hint">Works on the phone, with Notifications turned on under “What Lyra can see” on the Lyra page.</p>
+            <p className="hint">Works on the phone, with Notifications turned on under “What Tomo can see” on the Tomo page.</p>
           </>
         )}
         {draft.start === "time" && (
@@ -478,7 +478,7 @@ export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: st
           </div>
         )}
         <p className="hint" style={{ marginLeft: 0 }}>
-          Phones don't let apps think in the background. At each time you'll get a notification; Lyra runs the routine while it's open, or as soon as you open it (within 12 hours).
+          Phones don't let apps think in the background. At each time you'll get a notification; Tomo runs the routine while it's open, or as soon as you open it (within 12 hours).
         </p>
       </section>
 

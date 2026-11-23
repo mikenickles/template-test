@@ -32,7 +32,7 @@ function manual() {
 const tick = () => new Promise((r) => setTimeout(r, 5));
 
 describe("back-to-back messages", () => {
-  it("a message sent while Lyra is still thinking joins the same thought", async () => {
+  it("a message sent while Tomo is still thinking joins the same thought", async () => {
     const m = manual();
     const lyra = await Lyra.start(platform({ provider: m.provider }));
     const text: string[] = [];
@@ -57,7 +57,7 @@ describe("back-to-back messages", () => {
     expect(text.join("")).toBe("Table for six on Friday, got it.");
   });
 
-  it("once Lyra is writing, the reply finishes and then answers what was added, in the same reply", async () => {
+  it("once Tomo is writing, the reply finishes and then answers what was added, in the same reply", async () => {
     const m = manual();
     const lyra = await Lyra.start(platform({ provider: m.provider }));
     const text: string[] = [];
@@ -121,7 +121,7 @@ describe("back-to-back messages", () => {
     expect(r.message.content).toMatch(/Stopped\.$/);
   });
 
-  it("after reading the web, Lyra can't cancel a reminder or replace a doc the user already had", async () => {
+  it("after reading the web, Tomo can't cancel a reminder or replace a doc the user already had", async () => {
     const m = manual();
     const lyra = await Lyra.start(platform({ provider: m.provider }));
     const doc = await lyra.saveDoc(null, { title: "Trip", body: "My own notes" });

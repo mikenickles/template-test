@@ -160,7 +160,7 @@ export function StatusLine({ state, className = "" }: { state: AppState; classNa
     </>
   );
   return (
-    <div className={`status-line ${className}`} role="status" aria-label={item.music ? `Playing: ${item.text}` : `Lyra: ${item.text}`}>
+    <div className={`status-line ${className}`} role="status" aria-label={item.music ? `Playing: ${item.text}` : `Tomo: ${item.text}`}>
       {item.href ? (
         <a key={item.key} className="status-pill" href={item.href}>
           {body}

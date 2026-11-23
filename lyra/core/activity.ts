@@ -227,7 +227,7 @@ export function activityDetail(db: DB, id: string): ActivityDetail | null {
     const r = db.get<{ detail: string }>("SELECT detail FROM activity_log WHERE id = ?", [n]);
     const a = base();
     if (!r || !a) return null;
-    const links = a.kind === "life_admin" ? [{ label: "Open Life admin", href: "#/tasks?admin" }] : a.kind === "style" ? [{ label: "See what Lyra noticed", href: "#/settings/you" }] : [];
+    const links = a.kind === "life_admin" ? [{ label: "Open Life admin", href: "#/tasks?admin" }] : a.kind === "style" ? [{ label: "See what Tomo noticed", href: "#/settings/you" }] : [];
     return { ...a, body: r.detail, steps: [], links };
   }
   return null;

@@ -72,7 +72,7 @@ const TOOLS: ToolDef[] = [
 
 export async function runTidy(provider: ModelProvider, md: string, sections: readonly string[], userName: string, today: string): Promise<TidyResult | null> {
   const user = userName === "you" ? "the user" : userName;
-  const system = `You are Lyra, ${user}'s chief of staff, tidying your own notebook about ${user}. Today is ${today}.
+  const system = `You are Tomo, ${user}'s chief of staff, tidying your own notebook about ${user}. Today is ${today}.
 
 Make it shorter and truer without losing anything that matters:
 - Merge duplicates and notes that say the same thing into one line.

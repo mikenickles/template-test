@@ -168,7 +168,7 @@ public class BackgroundPlugin extends Plugin {
         if (p == null || !enabled(c)) return; // the app isn't running (or this was turned off)
         schedule(c);
         release();
-        wake = c.getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Lyra:tick");
+        wake = c.getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Tomo:tick");
         wake.acquire(WAKE_MAX);
         p.getBridge().executeOnMainThread(() -> p.getBridge().triggerWindowJSEvent("lyraBackgroundTick"));
     }

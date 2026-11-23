@@ -9,7 +9,7 @@ import { SQL } from "./helpers.ts";
 const TZ = "America/Los_Angeles";
 
 describe("the Today view", () => {
-  it("puts what needs you first, then what Lyra said, then what's coming", async () => {
+  it("puts what needs you first, then what Tomo said, then what's coming", async () => {
     const db = await DB.open(SQL);
     const now = new Date();
     const t = createTask(db, { title: "Find a plumber" }, "lyra");
@@ -48,7 +48,7 @@ describe("search and unread", () => {
     expect(searchMessages(db, " ")).toEqual([]);
   });
 
-  it("counts Lyra's messages since you last looked", async () => {
+  it("counts Tomo's messages since you last looked", async () => {
     const db = await DB.open(SQL);
     addMessage(db, "user", "hi");
     addMessage(db, "assistant", "hello");

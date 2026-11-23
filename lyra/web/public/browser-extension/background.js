@@ -66,12 +66,12 @@ async function run(cmd, args) {
   }
   if (cmd === "read") {
     const tab = await currentTab();
-    if (!tab) throw new Error("Lyra's window isn't open. Open a page first.");
+    if (!tab) throw new Error("Tomo's window isn't open. Open a page first.");
     return read(tab.id);
   }
   if (cmd === "click" || cmd === "type" || cmd === "choose" || cmd === "submit") {
     const tab = await currentTab();
-    if (!tab) throw new Error("Lyra's window isn't open. Open a page first.");
+    if (!tab) throw new Error("Tomo's window isn't open. Open a page first.");
     const before = tab.url;
     const [r] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: act, args: [{ op: cmd, ...args }] });
     const out = r && r.result;
@@ -81,7 +81,7 @@ async function run(cmd, args) {
   }
   if (cmd === "back") {
     const tab = await currentTab();
-    if (!tab) throw new Error("Lyra's window isn't open. Open a page first.");
+    if (!tab) throw new Error("Tomo's window isn't open. Open a page first.");
     await chrome.tabs.goBack(tab.id).catch(() => {});
     await settle(tab.id, tab.url);
     return read(tab.id);
@@ -96,7 +96,7 @@ async function run(cmd, args) {
     await chrome.storage.session.remove("win");
     return { closed: true };
   }
-  throw new Error(`Lyra's extension can't do "${cmd}".`);
+  throw new Error(`Tomo's extension can't do "${cmd}".`);
 }
 
 /** Lyra's own window: made once, then its tab is reused. Your own tabs are never touched. */
@@ -175,7 +175,7 @@ function act(step) {
     return { ok: true };
   }
   if (step.op === "type") {
-    if (secret) return { error: "That's a password or card field. Lyra never types there." };
+    if (secret) return { error: "That's a password or card field. Tomo never types there." };
     if (!("value" in el)) return { error: "That isn't a field to type in." };
     el.focus();
     const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
@@ -211,7 +211,7 @@ function act(step) {
     el.dispatchEvent(new Event("change", { bubbles: true }));
     return { ok: true };
   }
-  return { error: "Lyra's extension can't do that." };
+  return { error: "Tomo's extension can't do that." };
 }
 
 async function read(tabId) {

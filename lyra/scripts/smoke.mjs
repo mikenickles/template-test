@@ -44,7 +44,7 @@ try {
   };
 
   await page.goto(base);
-  await page.getByText("I'm Lyra.").waitFor();
+  await page.getByText("I'm Tomo.").waitFor();
   check(true, "app starts on the welcome screen");
   await shot("light-1-welcome");
 
@@ -53,7 +53,7 @@ try {
   check((await page.locator(".settings-home .item").count()) === 7, "settings opens on seven clear areas");
   await shot("light-5-settings");
   await page.getByRole("link", { name: /You and appearance/ }).click();
-  await page.getByLabel("What should Lyra call you?").fill("Sam");
+  await page.getByLabel("What should Tomo call you?").fill("Sam");
   await page.getByRole("button", { name: "Save" }).first().click();
   await page.getByText("Saved", { exact: true }).first().waitFor();
   check(true, "settings saves your name");
@@ -63,7 +63,7 @@ try {
   check((await page.getByRole("radio", { name: "Light" }).getAttribute("aria-checked")) === "true", "heads-ups are on (Light) from the start");
   await page.getByRole("radio", { name: "Active" }).click();
   await page.getByText("Heads-ups: Active").waitFor();
-  check(await page.getByRole("switch", { name: /Check in when it's quiet/ }).isChecked(), "with heads-ups on, Lyra also checks in when things are quiet (on by default)");
+  check(await page.getByRole("switch", { name: /Check in when it's quiet/ }).isChecked(), "with heads-ups on, Tomo also checks in when things are quiet (on by default)");
   await page.getByLabel("Quiet from").fill("22:30");
   await page.getByText("Quiet hours saved").waitFor();
   await shot("light-32-heads-ups");
@@ -91,7 +91,7 @@ try {
   await page.getByRole("radio", { name: /Claude Haiku Test/ }).waitFor();
   check((await page.getByRole("radio").count()) === 2, "adding a key lists the models it can use");
   await page.getByRole("radio", { name: /Claude Sonnet Test/ }).click();
-  await page.getByText("Lyra now uses Claude Sonnet Test").waitFor();
+  await page.getByText("Tomo now uses Claude Sonnet Test").waitFor();
   check((await page.getByRole("radio", { name: /Claude Sonnet Test/ }).getAttribute("aria-checked")) === "true", "tapping a model switches to it, no typing");
   await shot("light-5b-model");
   await page.getByRole("link", { name: "Back" }).click();
@@ -99,12 +99,12 @@ try {
   check(true, "the settings front page shows the model in use");
   await page.getByRole("link", { name: /AI model/ }).click();
   await page.getByRole("button", { name: /Practice/ }).click();
-  await page.getByText("Lyra now uses Practice").waitFor();
+  await page.getByText("Tomo now uses Practice").waitFor();
   await page.goto(`${base}/#/`);
-  await page.getByText("Hi Sam, I'm Lyra.").waitFor();
+  await page.getByText("Hi Sam, I'm Tomo.").waitFor();
   check(true, "greeting uses your name");
 
-  const box = page.getByPlaceholder("Message Lyra");
+  const box = page.getByPlaceholder("Message Tomo");
   await box.fill("Remember that Rowan's party is Sat Nov 14, 10:30 AM to 2 PM");
   await page.getByRole("button", { name: "Send" }).click();
   await page.locator(".note", { hasText: "Rowan's party" }).waitFor();
@@ -125,15 +125,15 @@ try {
 
   check((await page.locator(".drawer-sections a").count()) === 1, "the phone drawer keeps only Settings");
   await page.locator(".topbar a.orb").click({ force: true });
-  await page.getByText("What Lyra can see").waitFor();
-  check(true, "the chat's avatar opens the Lyra page");
+  await page.getByText("What Tomo can see").waitFor();
+  check(true, "the chat's avatar opens the Tomo page");
   check((await page.getByText("Phone app only").count()) === 3, "browser preview says Google connections need the Android app");
-  check(await page.getByText("Lyra's promise").isVisible(), "the Lyra page carries Lyra's promise");
+  check(await page.getByText("Tomo's promise").isVisible(), "the Tomo page carries Tomo's promise");
   await shot("light-3-access");
   // a service opens a sheet with what Lyra can and can't do with it
   await page.locator(".lp-svc", { hasText: "Mail" }).click();
   const svc = page.getByRole("dialog", { name: "Mail" });
-  check(await svc.getByText("Send, delete or change anything on its own").isVisible(), "a service's sheet says what Lyra never does with it");
+  check(await svc.getByText("Send, delete or change anything on its own").isVisible(), "a service's sheet says what Tomo never does with it");
   await svc.getByRole("button", { name: "Close", exact: true }).click();
 
   await page.getByRole("link", { name: "Memory", exact: true }).click();
@@ -143,11 +143,11 @@ try {
   // a note: add it, change it, forget it, right on the page
   await page.getByRole("button", { name: "Add a note" }).click();
   const noteSheet = page.getByRole("dialog", { name: "Add a note" });
-  await noteSheet.getByLabel("What Lyra should know").fill("I'm vegetarian");
+  await noteSheet.getByLabel("What Tomo should know").fill("I'm vegetarian");
   await noteSheet.getByRole("button", { name: "Save" }).click();
   await page.locator(".mem-note", { hasText: "I'm vegetarian" }).click();
   const editSheet = page.getByRole("dialog", { name: "Edit note" });
-  await editSheet.getByLabel("What Lyra should know").fill("I'm vegetarian, but fish is fine");
+  await editSheet.getByLabel("What Tomo should know").fill("I'm vegetarian, but fish is fine");
   await editSheet.getByRole("button", { name: "Projects" }).click();
   await editSheet.getByRole("button", { name: "Save" }).click();
   await page.locator(".section", { hasText: "Projects" }).locator(".mem-note", { hasText: "fish is fine" }).waitFor();
@@ -166,7 +166,7 @@ try {
   await sheet.getByLabel("Name").fill("Dana Ortiz");
   await sheet.getByLabel("Who they are to you").fill("sister");
   await sheet.getByLabel("Email").fill("dana@example.com");
-  await sheet.getByLabel("What Lyra knows (one per line)").fill("Birthday is March 3\nAllergic to cats");
+  await sheet.getByLabel("What Tomo knows (one per line)").fill("Birthday is March 3\nAllergic to cats");
   await sheet.getByRole("button", { name: "Save" }).click();
   await page.locator(".item", { hasText: "Dana Ortiz" }).waitFor();
   check((await page.locator(".item", { hasText: "sister · dana@example.com · 2 notes" }).count()) === 1, "people can be added as cards on the Memory page");
@@ -204,11 +204,11 @@ try {
   await page.getByText("1 of 3 steps").waitFor();
   await shot("light-14-tasks");
   await page.getByRole("link", { name: /Find a plumber/ }).click();
-  await page.getByRole("button", { name: "Hand it to Lyra" }).click();
+  await page.getByRole("button", { name: "Hand it to Tomo" }).click();
   await page.locator(".needs-text", { hasText: "Review the result and mark it done." }).waitFor();
   check(true, "a worker runs the task and hands it back as Ready for you");
   await shot("light-15-task-ready");
-  await page.getByRole("link", { name: /How Lyra worked on it/ }).click();
+  await page.getByRole("link", { name: /How Tomo worked on it/ }).click();
   await page.getByText("Run 1").waitFor();
   check(true, "the worker log shows the run");
   await shot("light-16-worker-log");
@@ -243,7 +243,7 @@ try {
   await page.goto(`${base}/#/access`);
   await page.getByRole("link", { name: /Soul/ }).click();
   await page.getByText("Like a person texting.").waitFor();
-  check(true, "the soul page shows who Lyra is");
+  check(true, "the soul page shows who Tomo is");
   await shot("light-20-soul");
   await page.goto(`${base}/#/`);
 
@@ -271,7 +271,7 @@ try {
   await page.reload();
   const away = page.getByRole("dialog", { name: "While you were away" });
   await away.waitFor();
-  check((await away.locator(".away-item", { hasText: "Morning brief" }).count()) === 1, "coming back after a while shows what Lyra did meanwhile");
+  check((await away.locator(".away-item", { hasText: "Morning brief" }).count()) === 1, "coming back after a while shows what Tomo did meanwhile");
   await shot("light-33-away");
   await away.getByRole("button", { name: "Got it" }).click();
   await away.waitFor({ state: "detached" });
@@ -286,7 +286,7 @@ try {
   await page.getByRole("heading", { name: "Activity" }).waitFor();
   const run = page.locator(".activity-row", { hasText: "Find a plumber" }).first();
   await run.waitFor();
-  check(true, "the Lyra page opens the activity log, with the task Lyra worked on");
+  check(true, "the Tomo page opens the activity log, with the task Tomo worked on");
   await shot("light-46-activity");
   await run.click();
   const actSheet = page.getByRole("dialog", { name: /Find a plumber/ });
@@ -319,14 +319,14 @@ try {
   await page.getByText("practice model").waitFor();
   check((await page.locator(".bubble").count()) === 1, "channel chat starts empty and holds its own messages");
   await shot("light-9-channel-chat");
-  check((await page.locator(".topbar .channel-head .channel-badge").count()) === 1 && (await page.locator(".topbar .channel-head .avatar").count()) === 0, "a channel's top bar shows the channel's icon, not Lyra's face");
+  check((await page.locator(".topbar .channel-head .channel-badge").count()) === 1 && (await page.locator(".topbar .channel-head .avatar").count()) === 0, "a channel's top bar shows the channel's icon, not Tomo's face");
 
   // ---- back to back: a second message while Lyra is still thinking joins the same reply ----
   await page.getByPlaceholder("Message Rowan").fill("take your time: plan dinner friday");
   await page.getByRole("button", { name: "Send" }).click();
   await page.getByRole("button", { name: "Stop" }).waitFor();
   await page.getByPlaceholder("Message Rowan").fill("it's for 6 people");
-  check((await page.getByRole("button", { name: "Send" }).count()) === 1, "you can type and send while Lyra is thinking");
+  check((await page.getByRole("button", { name: "Send" }).count()) === 1, "you can type and send while Tomo is thinking");
   await page.getByRole("button", { name: "Send" }).click();
   await page.locator(".bubble", { hasText: "it's for 6 people" }).waitFor();
   await page.getByText("Got all of it: take your time: plan dinner friday / it's for 6 people").waitFor({ timeout: 10_000 });
@@ -338,11 +338,11 @@ try {
   await page.getByPlaceholder("Message Rowan").fill("save a skill called Party prep: 1. Confirm the headcount\n2. Order the cake\n3. Text the parents");
   await page.getByRole("button", { name: "Send" }).click();
   await page.locator(".skill-chip", { hasText: "Learned Party prep" }).waitFor();
-  check(true, "Lyra learns a skill in chat, shown as a chip");
+  check(true, "Tomo learns a skill in chat, shown as a chip");
   await page.getByPlaceholder("Message Rowan").fill("use my party prep skill");
   await page.getByRole("button", { name: "Send" }).click();
   await page.locator(".skill-chip", { hasText: "Followed Party prep" }).waitFor();
-  check(await page.getByText("Text the parents").last().isVisible(), "Lyra reads a skill's steps and follows them");
+  check(await page.getByText("Text the parents").last().isVisible(), "Tomo reads a skill's steps and follows them");
   await shot("light-40-skill-chat");
   await page.locator(".skill-chip", { hasText: "Followed Party prep" }).click();
   await page.locator(".item", { hasText: "Party prep" }).waitFor();
@@ -358,11 +358,11 @@ try {
 
   // ---- docs: Lyra writes one, you open and edit it ----
   await page.goto(`${base}/#/`);
-  await page.getByPlaceholder("Message Lyra").fill("make a doc called Packing list");
+  await page.getByPlaceholder("Message Tomo").fill("make a doc called Packing list");
   await page.getByRole("button", { name: "Send" }).click();
   await page.locator(".doc-note", { hasText: "Packing list" }).click();
   await page.getByRole("heading", { name: "Packing list" }).waitFor();
-  check(await page.getByText("Second thing").isVisible(), "Lyra writes a doc, shown as a card that opens it");
+  check(await page.getByText("Second thing").isVisible(), "Tomo writes a doc, shown as a card that opens it");
   await shot("light-38-doc");
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   await page.locator(".doc-screen textarea").fill("## Camping\n- Tent\n- Stove");
@@ -390,16 +390,16 @@ try {
 
   // ---- a table in a chat reply ----
   await page.goto(`${base}/#/`);
-  await page.getByPlaceholder("Message Lyra").fill("show me a table of plans");
+  await page.getByPlaceholder("Message Tomo").fill("show me a table of plans");
   await page.getByRole("button", { name: "Send" }).click();
   await page.locator(".chat-table").waitFor();
-  check((await page.locator(".chat-table tbody tr").count()) === 3 && (await page.locator(".chat-table th").count()) === 3, "Lyra can answer with a table in chat");
+  check((await page.locator(".chat-table tbody tr").count()) === 3 && (await page.locator(".chat-table th").count()) === 3, "Tomo can answer with a table in chat");
   await page.waitForTimeout(400);
   await shot("light-48-chat-table");
 
   // ---- dashboards: Lyra makes one, it draws as tiles and charts, Refresh rebuilds it ----
   await page.goto(`${base}/#/`);
-  await page.getByPlaceholder("Message Lyra").fill("make a dashboard called Spending");
+  await page.getByPlaceholder("Message Tomo").fill("make a dashboard called Spending");
   await page.getByRole("button", { name: "Send" }).click();
   await page.locator(".doc-note", { hasText: "Spending" }).click();
   await page.getByRole("heading", { name: "Spending" }).waitFor();
@@ -489,7 +489,7 @@ try {
   check((await page.locator(".bubble").count()) === 6, "main chat keeps its own history");
 
   await page.goto(`${base}/#/c/1/info`);
-  await page.getByText("Lyra saves facts about Rowan here").waitFor();
+  await page.getByText("Tomo saves facts about Rowan here").waitFor();
   await shot("light-11-channel-info");
   check(true, "channel page shows its notebook");
 
@@ -505,9 +505,9 @@ try {
 
   await page.goto(`${base}/#/c/1/info`);
   await page.getByRole("button", { name: "Delete channel" }).click();
-  check(await page.getByRole("alertdialog", { name: /Delete Rowan\?/ }).getByText("Main memory stays as it is.").isVisible(), "deleting asks first, in Lyra's own dialog");
+  check(await page.getByRole("alertdialog", { name: /Delete Rowan\?/ }).getByText("Main memory stays as it is.").isVisible(), "deleting asks first, in Tomo's own dialog");
   await page.getByRole("alertdialog").getByRole("button").last().click();
-  await page.getByText("Hi Sam, I'm Lyra.").or(page.locator(".bubble").first()).waitFor();
+  await page.getByText("Hi Sam, I'm Tomo.").or(page.locator(".bubble").first()).waitFor();
   await page.getByRole("button", { name: "Channels" }).click();
   check((await page.locator(".drawer-panel .star-row", { hasText: "Rowan" }).count()) === 0, "deleting a channel removes it");
   await page.keyboard.press("Escape");
@@ -518,10 +518,10 @@ try {
   await shot("dark-2-chat");
 
   await page.emulateMedia({ colorScheme: "light" });
-  await page.getByPlaceholder("Message Lyra").fill("thanks!");
+  await page.getByPlaceholder("Message Tomo").fill("thanks!");
   await page.getByRole("button", { name: "Send" }).click();
-  await page.getByRole("img", { name: "Lyra reacted ❤️" }).waitFor();
-  check((await page.locator(".bubble").count()) === 7, "Lyra can react to a message, with no text reply");
+  await page.getByRole("img", { name: "Tomo reacted ❤️" }).waitFor();
+  check((await page.locator(".bubble").count()) === 7, "Tomo can react to a message, with no text reply");
   await shot("light-21-reaction");
 
   await page.goto(`${base}/#/settings/you`);
@@ -554,18 +554,18 @@ try {
   await page.getByRole("button", { name: "Learn now" }).click();
   await page.getByText(/few more of your messages/).waitFor();
   check(true, "learning how you talk waits for enough of your messages");
-  await page.getByText("How Lyra talks to you").scrollIntoViewIfNeeded();
+  await page.getByText("How Tomo talks to you").scrollIntoViewIfNeeded();
   await shot("light-42-talk-like-me");
   await mirror.click();
-  await page.getByText("Lyra will keep its own voice").waitFor();
+  await page.getByText("Tomo will keep its own voice").waitFor();
   check(!(await mirror.isChecked()) && (await page.getByText("Nothing learned yet").count()) === 0, "Talk like me can be turned off");
   await mirror.click();
-  await page.getByText("Lyra will talk more like you").waitFor();
+  await page.getByText("Tomo will talk more like you").waitFor();
   await page.goto(`${base}/#/`);
   await page.locator(".bubble").first().waitFor();
   check(
     (await page.locator(".topbar .kit .kit-body").evaluate((el) => getComputedStyle(el).fill)) === (await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--accent").trim().replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)})`))),
-    "Kit, Lyra's face, takes the accent color",
+    "Kit, Tomo's face, takes the accent color",
   );
   await shot("light-23-accent-chat");
   await page.emulateMedia({ colorScheme: "dark" });
@@ -596,7 +596,7 @@ try {
 
   // ---- phase 7: backup, then restore it over a changed chat ----
   await page.goto(`${base}/#/settings/sync`);
-  await page.getByRole("button", { name: /Back up Lyra/ }).click();
+  await page.getByRole("button", { name: /Back up Tomo/ }).click();
   await page.getByLabel("Passphrase").fill("correct horse battery");
   await page.getByLabel("Type it again").fill("correct horse battery");
   await shot("light-26-backup");
@@ -605,7 +605,7 @@ try {
   await download.saveAs(backupPath);
   check(download.suggestedFilename().endsWith(".lyra"), "backup makes an encrypted .lyra file");
   await page.goto(`${base}/#/`);
-  await page.getByPlaceholder("Message Lyra").fill("This one is after the backup");
+  await page.getByPlaceholder("Message Tomo").fill("This one is after the backup");
   await page.getByRole("button", { name: "Send" }).click();
   await page.locator(".bubble", { hasText: "after the backup" }).waitFor();
   await page.goto(`${base}/#/settings/sync`);
@@ -626,7 +626,7 @@ try {
   await page.locator(".bubble").first().waitFor();
   const gap = () => page.locator(".log").evaluate((el) => Math.round(el.scrollHeight - el.scrollTop - el.clientHeight));
   for (const t of ["One more", "And another", "Still going", "Last one"]) {
-    await page.getByPlaceholder("Message Lyra").fill(t);
+    await page.getByPlaceholder("Message Tomo").fill(t);
     await page.getByRole("button", { name: "Send" }).click();
     await page.locator(".bubble", { hasText: t }).waitFor();
     await page.getByText("practice model").last().waitFor();
@@ -672,8 +672,8 @@ try {
   await page.locator(".draft.photo img").waitFor();
   check((await page.locator(".draft").count()) === 2, "a photo and a text file attach to the message box");
   await page.getByLabel("Choose files").setInputFiles([{ name: "song.mp3", mimeType: "audio/mpeg", buffer: Buffer.from("x") }]);
-  await page.getByText("Lyra can't read song.mp3").waitFor();
-  check(true, "a file Lyra can't read is refused with a reason");
+  await page.getByText("Tomo can't read song.mp3").waitFor();
+  check(true, "a file Tomo can't read is refused with a reason");
   await page.getByRole("button", { name: "Remove notes.txt" }).click();
   await page.locator(".draft", { hasText: "notes.txt" }).waitFor({ state: "detached" });
   check((await page.locator(".draft").count()) === 1, "an attachment can be removed before sending");
@@ -681,7 +681,7 @@ try {
   await page.getByRole("button", { name: "Send" }).click();
   await page.locator(".sent-photo").last().waitFor();
   await page.getByText("Got it: flyer.jpg").waitFor();
-  check(true, "a photo sends on its own, and Lyra receives it");
+  check(true, "a photo sends on its own, and Tomo receives it");
   const sentSize = await page.locator(".sent-photo").last().evaluate((el) => el.naturalWidth);
   check(sentSize > 0 && sentSize <= 320, "the chat keeps a small thumbnail, not the full photo");
   await shot("light-30-photo-sent");
@@ -732,7 +732,7 @@ try {
   await page.goto(`${base}/#/`);
   await page.reload();
   await page.locator(".bubble").first().waitFor();
-  await page.getByRole("button", { name: "Talk with Lyra" }).click();
+  await page.getByRole("button", { name: "Talk with Tomo" }).click();
   await page.getByText("Add an OpenAI API key in Settings").waitFor();
   check((await page.locator(".voice").count()) === 0, "live voice asks for an OpenAI key first, and doesn't start a call without one");
   await page.goto(`${base}/#/settings/model`);
@@ -741,26 +741,26 @@ try {
   await page.locator(".provider", { has: page.locator("#key-openai") }).getByRole("button", { name: "Save" }).click();
   await page.getByText("Key saved").waitFor();
   await page.getByRole("button", { name: /Practice/ }).click();
-  await page.getByText("Lyra now uses Practice").waitFor();
-  await page.getByLabel("Lyra's voice").selectOption("cedar");
+  await page.getByText("Tomo now uses Practice").waitFor();
+  await page.getByLabel("Tomo's voice").selectOption("cedar");
   await page.getByText("Voice set to cedar").waitFor();
   await page.goto(`${base}/#/`);
   await page.locator(".bubble").first().waitFor();
   const before8 = await page.locator(".bubble").count();
-  await page.getByRole("button", { name: "Talk with Lyra" }).click();
-  await page.getByRole("dialog", { name: "Live voice with Lyra" }).waitFor();
+  await page.getByRole("button", { name: "Talk with Tomo" }).click();
+  await page.getByRole("dialog", { name: "Live voice with Tomo" }).waitFor();
   await page.getByText("Doing well, thanks.").waitFor();
   check(true, "a live call connects and shows what's being said");
   await shot("light-31-voice");
   // the delegated question went through Lyra's engine, and the answer went back for that delegation
   await page.waitForFunction(() => window.__live.got.some((e) => e.type === "session.instructions.append" && e.delegation_id === "dlg_1"));
   const live = await page.evaluate(() => ({ auth: window.__live.auth, model: window.__live.body.session.model, voice: window.__live.body.session.audio.output.voice, told: window.__live.body.session.instructions.includes("chief of staff"), back: window.__live.got.find((e) => e.delegation_id === "dlg_1").content }));
-  check(live.model === "gpt-live-1" && live.voice === "cedar" && live.told && live.auth === "Bearer sk-live-smoke", "the call starts GPT-Live with Lyra's character and the chosen voice");
-  check(live.back.includes("practice model"), "a request that needs Lyra's tools is done by the engine and handed back to be spoken");
+  check(live.model === "gpt-live-1" && live.voice === "cedar" && live.told && live.auth === "Bearer sk-live-smoke", "the call starts GPT-Live with Tomo's character and the chosen voice");
+  check(live.back.includes("practice model"), "a request that needs Tomo's tools is done by the engine and handed back to be spoken");
   await page.getByRole("button", { name: "Mute" }).click();
   await page.getByText("Muted", { exact: true }).waitFor();
   await page.getByRole("button", { name: "End", exact: true }).click();
-  await page.getByRole("dialog", { name: "Live voice with Lyra" }).waitFor({ state: "detached" });
+  await page.getByRole("dialog", { name: "Live voice with Tomo" }).waitFor({ state: "detached" });
   await page.locator(".bubble", { hasText: "What's on my list?" }).waitFor();
   check((await page.locator(".bubble", { hasText: "How are you today?" }).count()) === 1 && (await page.locator(".bubble").count()) === before8 + 2, "the conversation is saved in the chat as text, once");
   await page.goto(`${base}/#/settings/usage`);
@@ -770,12 +770,12 @@ try {
   // ---- proactive: reminders and suggested next steps ----
   await page.goto(`${base}/#/`);
   await page.locator(".bubble").first().waitFor();
-  await page.getByPlaceholder("Message Lyra").fill("Remind me in 2 minutes to stretch");
+  await page.getByPlaceholder("Message Tomo").fill("Remind me in 2 minutes to stretch");
   await page.getByRole("button", { name: "Send" }).click();
   await page.getByText("Okay, I'll remind you.").waitFor();
   await page.locator(".status-pill", { hasText: /Reminder at/ }).waitFor({ timeout: 15_000 });
-  check(true, "a reminder set in chat shows as what's next under Lyra's avatar");
-  await page.getByPlaceholder("Message Lyra").fill("What's next?");
+  check(true, "a reminder set in chat shows as what's next under Tomo's avatar");
+  await page.getByPlaceholder("Message Tomo").fill("What's next?");
   await page.getByRole("button", { name: "Send" }).click();
   await page.getByRole("button", { name: "Remind me Friday" }).waitFor();
   await shot("light-32-suggestions");
@@ -815,7 +815,7 @@ try {
   check(true, "picking a city for the weather");
   await page.goto(`${base}/#/`);
   await page.locator(".status-pill", { hasText: "58° · Partly cloudy" }).waitFor({ timeout: 20_000 });
-  check(true, "the weather shows under Lyra's avatar");
+  check(true, "the weather shows under Tomo's avatar");
   const statuses = await page.locator(".status-text").allTextContents();
   check(statuses.every((t) => [...t].length <= 24), "the status always fits, never cut off");
   await shot("light-27-status");

@@ -58,9 +58,9 @@ export function QuickCapture({ mode, onSend, onClose }: { mode: "quick" | "memo"
   return (
     <div className="dialog-layer sheet-layer capture-layer" role="presentation">
       <button className="dialog-scrim" aria-label="Close" tabIndex={-1} onClick={onClose} />
-      <div className="sheet capture" role="dialog" aria-modal="true" aria-label={mode === "memo" ? "Voice memo" : "Tell Lyra"}>
+      <div className="sheet capture" role="dialog" aria-modal="true" aria-label={mode === "memo" ? "Voice memo" : "Tell Tomo"}>
         <div className="capture-top">
-          <span className="capture-title">{mode === "memo" ? "Voice memo" : "Tell Lyra"}</span>
+          <span className="capture-title">{mode === "memo" ? "Voice memo" : "Tell Tomo"}</span>
           <button className="ring" aria-label="Cancel" onClick={onClose}>
             <Close size={18} />
           </button>
@@ -79,7 +79,7 @@ export function QuickCapture({ mode, onSend, onClose }: { mode: "quick" | "memo"
             value={text}
             autoFocus={state === "typing"}
             rows={4}
-            placeholder={mode === "memo" ? "What's on your mind? Lyra will sort it into tasks and reminders." : "Remind me to call the dentist tomorrow"}
+            placeholder={mode === "memo" ? "What's on your mind? Tomo will sort it into tasks and reminders." : "Remind me to call the dentist tomorrow"}
             onChange={(e) => setText(e.target.value)}
           />
         ) : (

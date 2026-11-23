@@ -389,9 +389,9 @@ function routinePrompt(r: RoutineJob, d: RoutineDeps, search: boolean, memory: s
   const now = new Date().toLocaleString("en-US", { timeZone: tz, dateStyle: "full", timeStyle: "short" });
   const last = r.last_run_at ? new Date(r.last_run_at).toLocaleString("en-US", { timeZone: tz, dateStyle: "medium", timeStyle: "short" }) : "never";
   // stable part first (cached across runs), then what changes
-  return `You are Lyra, ${user}'s personal chief of staff and friend. ${own ? `This isn't a reply to anything: you're reaching out to ${user} on your own.` : `You're running one of your scheduled routines for ${user}.`} What you post lands in your chat with them, so write it as you, the way you'd text them.
+  return `You are Tomo, ${user}'s personal chief of staff and friend. ${own ? `This isn't a reply to anything: you're reaching out to ${user} on your own.` : `You're running one of your scheduled routines for ${user}.`} What you post lands in your chat with them, so write it as you, the way you'd text them.
 
-# How Lyra writes the message
+# How Tomo writes the message
 ${character(d.soul?.(), VOICE, user)}${SYSTEM_SPLIT}Right now is ${now} (${tz}).
 ${calendarAhead(new Date(), tz)}
 
@@ -414,7 +414,7 @@ ${search ? "- You can search the web for news and current facts." : "- You can't
 - You can't send, reply, pay, book, delete or change anything. If something needs doing, say what ${user} should do.
 - Never make things up. If a source couldn't be checked (not connected, error), say so in a few words.
 ${skillsBrief(d.workspace)}${d.workspace.talk?.() ?? ""}
-# What Lyra knows about ${user}
+# What Tomo knows about ${user}
 <memory>
 ${neutralize(memory.trim())}
 </memory>${notebook ? `\n\n<channel_notebook>\n${neutralize(notebook.trim())}\n</channel_notebook>` : ""}
@@ -426,7 +426,7 @@ ${tasks.trim() ? neutralize(tasks) : "(none)"}`;
 function finishTools(mode: PostMode, withTriage = false): ToolDef[] {
   const post: ToolDef = {
     name: "post",
-    description: `Post the message to the user's chat, written the way Lyra texts: warm, short, the point up front.${withTriage ? ` For an inbox triage, also pass triage: it shows as a card. ${TRIAGE_GUIDE}` : ""}`,
+    description: `Post the message to the user's chat, written the way Tomo texts: warm, short, the point up front.${withTriage ? ` For an inbox triage, also pass triage: it shows as a card. ${TRIAGE_GUIDE}` : ""}`,
     schema: {
       type: "object",
       properties: {
@@ -454,7 +454,7 @@ function finishTools(mode: PostMode, withTriage = false): ToolDef[] {
 }
 
 /** What the main model is told when a background check found something to post. */
-const HANDOFF = "Not posted yet: this is worth telling the user. Write the message now, in your own words and following how Lyra writes, and call post with it (and options, if any). Don't look anything up again unless you need to.";
+const HANDOFF = "Not posted yet: this is worth telling the user. Write the message now, in your own words and following how Tomo writes, and call post with it (and options, if any). Don't look anything up again unless you need to.";
 
 export class Routines {
   private queue: Promise<void> = Promise.resolve();
@@ -489,7 +489,7 @@ export class Routines {
       if (late > CATCH_UP_HOURS * 3600_000) {
         this.d.db.run("INSERT INTO routine_runs (routine_id, status, ended_at, note) VALUES (?, 'missed', strftime('%Y-%m-%dT%H:%M:%fZ','now'), ?)", [
           r.id,
-          "Lyra wasn't open around this time.",
+          "Tomo wasn't open around this time.",
         ]);
         this.d.onEvent({ type: "routine", routineId: r.id });
         continue;

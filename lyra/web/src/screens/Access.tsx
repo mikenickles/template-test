@@ -19,9 +19,9 @@ const ICONS: Record<ServiceId, ReactNode> = { gmail: <Mail />, calendar: <Calend
 const NAMES: Record<GoogleId, string> = { gmail: "Gmail", calendar: "Google Calendar", drive: "Google Drive" };
 const SHORT: Record<ServiceId, string> = { gmail: "Mail", calendar: "Calendar", drive: "Files", contacts: "Contacts", notices: "Notifications", spotify: "Spotify", browser: "Browser" };
 const PROMISE: Record<GoogleId, string> = {
-  gmail: "Lyra can now read your mail. It can't send, delete or change anything on its own.",
-  calendar: "Lyra can now see your schedule. It can't add, change or answer events on its own.",
-  drive: "Lyra can now find and read your files. It can't change, share or delete them.",
+  gmail: "Tomo can now read your mail. It can't send, delete or change anything on its own.",
+  calendar: "Tomo can now see your schedule. It can't add, change or answer events on its own.",
+  drive: "Tomo can now find and read your files. It can't change, share or delete them.",
 };
 
 /** What each service lets Lyra do, and what it never does, for the sheet. */
@@ -103,7 +103,7 @@ export function Access({ state, setState, toast }: { state: AppState; setState: 
   };
 
   const disconnect = async (id: GoogleId) => {
-    if (!(await ask(`Disconnect ${NAMES[id]}? Lyra will stop being able to use it.`))) return;
+    if (!(await ask(`Disconnect ${NAMES[id]}? Tomo will stop being able to use it.`))) return;
     try {
       setState(await api.disconnectGoogle(id));
       setNotice(null);
@@ -139,28 +139,28 @@ export function Access({ state, setState, toast }: { state: AppState; setState: 
           <Avatar />
           <i className="lp-dot" aria-hidden="true" />
         </span>
-        <h1 className="lp-name">Lyra</h1>
+        <h1 className="lp-name">Tomo</h1>
         <p className="lp-status">Your chief of staff · here for you</p>
       </div>
 
       {/* (0.54) the two places you go most, big; a number only once there is one */}
-      <nav className="lp-big" aria-label="Lyra">
+      <nav className="lp-big" aria-label="Tomo">
         <a className="lp-big-card" href="#/memory" aria-label="Memory">
           <span className="c">
             <Notebook />
           </span>
           <span className="n">Memory</span>
-          <span className="s">{counts?.remembered ? `${counts.remembered} thing${counts.remembered === 1 ? "" : "s"} remembered` : "What Lyra knows"}</span>
+          <span className="s">{counts?.remembered ? `${counts.remembered} thing${counts.remembered === 1 ? "" : "s"} remembered` : "What Tomo knows"}</span>
         </a>
         <a className="lp-big-card" href="#/activity" aria-label="Activity">
           <span className="c">
             <Pulse />
           </span>
           <span className="n">Activity</span>
-          <span className="s">{counts?.done ? `${counts.done} done this week` : "What Lyra's been doing"}</span>
+          <span className="s">{counts?.done ? `${counts.done} done this week` : "What Tomo's been doing"}</span>
         </a>
       </nav>
-      <nav className="lp-small" aria-label="More about Lyra">
+      <nav className="lp-small" aria-label="More about Tomo">
         <a className="lp-chip" href="#/memory?skills">
           <Bulb size={16} /> Skills
         </a>
@@ -185,7 +185,7 @@ export function Access({ state, setState, toast }: { state: AppState; setState: 
 
       <section className="section">
         <h2 className="section-label">
-          What Lyra can see {connected > 0 && <span className="count">{connected}</span>}
+          What Tomo can see {connected > 0 && <span className="count">{connected}</span>}
         </h2>
         {account && <p className="lp-account">Google · {account} · read only</p>}
         <div className="lp-grid">
@@ -215,7 +215,7 @@ export function Access({ state, setState, toast }: { state: AppState; setState: 
       <div className="lp-promise">
         <h3>
           <Shield size={20} />
-          Lyra's promise
+          Tomo's promise
         </h3>
         <ul>
           <li>
@@ -362,7 +362,7 @@ function ServiceSheet({
                 className="switch"
                 checked={!!state.contacts}
                 disabled={busy}
-                onChange={(e) => void run(() => api.allowContacts(e.target.checked), e.target.checked ? "Lyra can look up your contacts" : "Contacts off")}
+                onChange={(e) => void run(() => api.allowContacts(e.target.checked), e.target.checked ? "Tomo can look up your contacts" : "Contacts off")}
               />
             </label>
           </div>
@@ -373,7 +373,7 @@ function ServiceSheet({
             <label className="item">
               <span className="body">
                 <div className="title">Show what's playing</div>
-                <div className="sub">The song shows under Lyra's avatar, and its headphones glow.</div>
+                <div className="sub">The song shows under Tomo's avatar, and its headphones glow.</div>
               </span>
               <input
                 type="checkbox"
@@ -381,7 +381,7 @@ function ServiceSheet({
                 className="switch"
                 checked={spotify.nowPlaying}
                 disabled={busy}
-                onChange={(e) => void run(() => api.showNowPlaying(e.target.checked), e.target.checked ? "Lyra shows what's playing" : "Now playing: off")}
+                onChange={(e) => void run(() => api.showNowPlaying(e.target.checked), e.target.checked ? "Tomo shows what's playing" : "Now playing: off")}
               />
             </label>
             <label className="item">
@@ -395,7 +395,7 @@ function ServiceSheet({
                 className="switch"
                 checked={spotify.playback}
                 disabled={busy}
-                onChange={(e) => void run(() => api.allowSpotify("playback", e.target.checked), e.target.checked ? "Lyra can control playback" : "Playback control off")}
+                onChange={(e) => void run(() => api.allowSpotify("playback", e.target.checked), e.target.checked ? "Tomo can control playback" : "Playback control off")}
               />
             </label>
           </div>
@@ -491,7 +491,7 @@ function WithYourOk({
       sub: linked("gmail") ? "Goes only when you tap Send" : "Connect Mail first",
       ready: linked("gmail"),
       checked: state.actions.email,
-      set: (on: boolean) => flip("email", () => api.allowActions("email", on), on ? "Lyra can write emails for your OK" : "Write emails: off"),
+      set: (on: boolean) => flip("email", () => api.allowActions("email", on), on ? "Tomo can write emails for your OK" : "Write emails: off"),
     },
     {
       kind: "event",
@@ -500,7 +500,7 @@ function WithYourOk({
       sub: linked("calendar") ? "Add, move, change, answer or remove events, only when you tap" : "Connect Calendar first",
       ready: linked("calendar"),
       checked: state.actions.event,
-      set: (on: boolean) => flip("event", () => api.allowActions("event", on), on ? "Lyra can change your calendar with your OK" : "Calendar changes: off"),
+      set: (on: boolean) => flip("event", () => api.allowActions("event", on), on ? "Tomo can change your calendar with your OK" : "Calendar changes: off"),
     },
     {
       kind: "archive",
@@ -509,7 +509,7 @@ function WithYourOk({
       sub: linked("gmail") ? "Archive, trash, label, star or mark read, only when you tap" : "Connect Mail first",
       ready: linked("gmail"),
       checked: state.actions.archive,
-      set: (on: boolean) => flip("archive", () => api.allowActions("archive", on), on ? "Lyra can organize your mail with your OK" : "Organize your mail: off"),
+      set: (on: boolean) => flip("archive", () => api.allowActions("archive", on), on ? "Tomo can organize your mail with your OK" : "Organize your mail: off"),
     },
     {
       kind: "drive",
@@ -518,7 +518,7 @@ function WithYourOk({
       sub: linked("drive") ? "Create, rename, move, edit or trash files in Drive, only when you tap" : "Connect Files first",
       ready: linked("drive"),
       checked: !!state.actions.file,
-      set: (on: boolean) => flip("drive", () => api.allowActions("drive", on), on ? "Lyra can change your Drive files with your OK" : "Change your files: off"),
+      set: (on: boolean) => flip("drive", () => api.allowActions("drive", on), on ? "Tomo can change your Drive files with your OK" : "Change your files: off"),
     },
     ...(state.actions.text !== null
       ? [
@@ -529,7 +529,7 @@ function WithYourOk({
             sub: "Opens Messages with the text ready; you send it",
             ready: true,
             checked: !!state.actions.text,
-            set: (on: boolean) => flip("text", () => api.allowActions("text", on), on ? "Lyra can write texts for you to send" : "Write texts: off"),
+            set: (on: boolean) => flip("text", () => api.allowActions("text", on), on ? "Tomo can write texts for you to send" : "Write texts: off"),
           },
         ]
       : []),
@@ -542,7 +542,7 @@ function WithYourOk({
             sub: spotify.connected ? "Made only when you tap Add" : "Connect Spotify first",
             ready: spotify.connected,
             checked: spotify.playlists,
-            set: (on: boolean) => flip("playlists", () => api.allowSpotify("playlists", on), on ? "Lyra can make playlists for your OK" : "Playlists off"),
+            set: (on: boolean) => flip("playlists", () => api.allowSpotify("playlists", on), on ? "Tomo can make playlists for your OK" : "Playlists off"),
           },
         ]
       : []),
@@ -589,7 +589,7 @@ function BrowserPanel({ state, setState, toast }: { state: AppState; setState: (
     setBusy(true);
     try {
       setState(await api.allowBrowser(on));
-      toast(on ? "Lyra is waiting for your browser" : "Lyra won't use your browser");
+      toast(on ? "Tomo is waiting for your browser" : "Tomo won't use your browser");
     } catch (e) {
       toast((e as Error).message);
     } finally {
@@ -608,8 +608,8 @@ function BrowserPanel({ state, setState, toast }: { state: AppState; setState: (
       <div className="group lp-sheet-group">
         <label className="item">
           <span className="body">
-            <div className="title">Let Lyra use your browser</div>
-            <div className="sub">{state.browser ? (status?.connected ? "Connected" : "Waiting for the extension…") : "Off: the extension can't reach Lyra"}</div>
+            <div className="title">Let Tomo use your browser</div>
+            <div className="sub">{state.browser ? (status?.connected ? "Connected" : "Waiting for the extension…") : "Off: the extension can't reach Tomo"}</div>
           </span>
           <input type="checkbox" role="switch" className="switch" checked={!!state.browser} disabled={busy} onChange={(e) => void flip(e.target.checked)} />
         </label>
@@ -626,11 +626,11 @@ function BrowserPanel({ state, setState, toast }: { state: AppState; setState: (
             In Vivaldi, go to <b>vivaldi://extensions</b> (in Chrome, chrome://extensions) and turn on <b>Developer mode</b>.
           </li>
           <li>
-            Click <b>Load unpacked</b> and pick that folder. It connects by itself while Lyra and your browser are both open.
+            Click <b>Load unpacked</b> and pick that folder. It connects by itself while Tomo and your browser are both open.
           </li>
         </ol>
       )}
-      {state.browser && status?.connected && <p className="hint">Lyra opens pages in its own window there, reads them, and can click, search and fill in forms. Before anything that sends, buys or books, it shows you a card first. Your own tabs are left alone. Try “find the cheapest flight to Denver on Kayak for next Friday”.</p>}
+      {state.browser && status?.connected && <p className="hint">Tomo opens pages in its own window there, reads them, and can click, search and fill in forms. Before anything that sends, buys or books, it shows you a card first. Your own tabs are left alone. Try “find the cheapest flight to Denver on Kayak for next Friday”.</p>}
     </>
   );
 }
@@ -650,7 +650,7 @@ function NoticesPanel({ state, setState, toast }: { state: AppState; setState: (
       try {
         if (await notices.access()) {
           setState(await api.allowNotices(true));
-          toast("Lyra can read your notifications");
+          toast("Tomo can read your notifications");
           setAsked(false);
         }
       } catch (e) {
@@ -664,15 +664,15 @@ function NoticesPanel({ state, setState, toast }: { state: AppState; setState: (
   if (!state.notices)
     return (
       <div className="lp-notice-setup">
-        <p className="hint">Android asks you to turn this on yourself: find <b>Lyra</b> on the next screen and switch it on, then come back.</p>
+        <p className="hint">Android asks you to turn this on yourself: find <b>Tomo</b> on the next screen and switch it on, then come back.</p>
         <button className="btn ink lp-wide" onClick={() => void notices.open().then(() => setAsked(true))}>
           Turn on in Android settings
         </button>
         {asked && (
           <p className="hint">
-            Greyed out, or Android says it's a restricted setting? Lyra was installed from a file, so Android wants one more step: open{" "}
+            Greyed out, or Android says it's a restricted setting? Tomo was installed from a file, so Android wants one more step: open{" "}
             <button className="link-btn inline" onClick={() => void notices.appInfo()}>
-              App info for Lyra
+              App info for Tomo
             </button>
             , tap ⋮ at the top, choose <b>Allow restricted settings</b>, then try again.
           </p>
@@ -684,7 +684,7 @@ function NoticesPanel({ state, setState, toast }: { state: AppState; setState: (
     <>
       {apps && apps.length > 0 && (
         <>
-          <p className="sub-label lp-sub">Apps Lyra reads</p>
+          <p className="sub-label lp-sub">Apps Tomo reads</p>
           <div className="group lp-sheet-group lp-apps">
             {apps.map((a) => (
               <label className="item" key={a.pkg}>
@@ -723,7 +723,7 @@ function NoticesPanel({ state, setState, toast }: { state: AppState; setState: (
           className="btn quiet lp-bad"
           onClick={async () => {
             setState(await api.allowNotices(false));
-            toast("Lyra won't read notifications. You can also turn access off in Android settings.");
+            toast("Tomo won't read notifications. You can also turn access off in Android settings.");
           }}
         >
           Turn off

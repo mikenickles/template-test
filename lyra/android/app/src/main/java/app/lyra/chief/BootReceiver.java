@@ -30,8 +30,8 @@ public class BootReceiver extends BroadcastReceiver {
         PendingIntent tap = PendingIntent.getActivity(c, 1, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         NotificationCompat.Builder b = new NotificationCompat.Builder(c, KeepWatchService.CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_lyra)
-            .setContentTitle(Intent.ACTION_BOOT_COMPLETED.equals(a) ? "Your phone restarted" : "Lyra updated")
-            .setContentText("Tap to let Lyra keep watch again.")
+            .setContentTitle(Intent.ACTION_BOOT_COMPLETED.equals(a) ? "Your phone restarted" : "Tomo updated")
+            .setContentText("Tap to let Tomo keep watch again.")
             .setContentIntent(tap)
             .setAutoCancel(true)
             .setSilent(true)

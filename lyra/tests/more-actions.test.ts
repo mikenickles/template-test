@@ -255,7 +255,7 @@ describe("removing an event", () => {
 });
 
 describe("live progress", () => {
-  it("lists the tasks being worked, with Lyra's latest step and the checklist so far", async () => {
+  it("lists the tasks being worked, with Tomo's latest step and the checklist so far", async () => {
     const lyra = await Lyra.start(platform({ timeZone: TZ }));
     const db = (lyra as unknown as { db: DB }).db;
     const t = createTask(db, { title: "Find a plumber", brief: "" }, "you");

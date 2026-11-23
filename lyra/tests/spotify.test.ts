@@ -103,7 +103,7 @@ describe("Spotify", () => {
   it("refuses a grant wider than asked for", async () => {
     const s = fakeSpotify({ grant: "user-read-playback-state user-follow-modify" });
     const lyra = await Lyra.start(platform({ oauth: s.oauth, fetch: s.fetch }));
-    await expect(lyra.connectSpotify(CLIENT)).rejects.toThrow(/more than Lyra asked for/);
+    await expect(lyra.connectSpotify(CLIENT)).rejects.toThrow(/more than Tomo asked for/);
     expect(lyra.state().connectors.find((c) => c.id === "spotify")!.state).toBe("not_connected");
   });
 

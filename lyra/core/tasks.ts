@@ -167,7 +167,7 @@ export function createTask(db: DB, input: NewTask, who: Who): TaskRow {
     input.kind === "research" ? "research" : "task",
   ])!;
   for (const s of (input.steps ?? []).slice(0, 30)) addStep(db, row.id, s, false);
-  log(db, row.id, who, who === "you" ? "You added this task." : "Lyra added this task.");
+  log(db, row.id, who, who === "you" ? "You added this task." : "Tomo added this task.");
   return getTask(db, row.id)!;
 }
 
@@ -182,7 +182,7 @@ export interface TaskPatch {
 export function updateTask(db: DB, id: number, patch: TaskPatch, who: Who): TaskRow {
   const t = getTask(db, id);
   if (!t) throw new Error("That task no longer exists.");
-  const by = who === "you" ? "You" : who === "lyra" ? "Lyra" : "The worker";
+  const by = who === "you" ? "You" : who === "lyra" ? "Tomo" : "The worker";
   if (patch.title !== undefined) {
     const title = oneLine(patch.title, 120);
     if (!title) throw new Error("Give the task a title.");
@@ -223,7 +223,7 @@ export function addStep(db: DB, taskId: number, text: string, logIt = true, who:
   const pos = (db.get<{ p: number | null }>("SELECT MAX(position) AS p FROM task_steps WHERE task_id = ?", [taskId])?.p ?? 0) + 1;
   const step = db.run<Step>("INSERT INTO task_steps (task_id, position, text) VALUES (?, ?, ?) RETURNING *", [taskId, pos, clean])!;
   if (logIt) {
-    log(db, taskId, who, `${who === "you" ? "You" : "Lyra"} added a step: ${clean}`);
+    log(db, taskId, who, `${who === "you" ? "You" : "Tomo"} added a step: ${clean}`);
     touch(db, taskId);
   }
   return step;
@@ -234,7 +234,7 @@ export function setStepDone(db: DB, stepId: number, done: boolean, who: Who): St
   if (!s) throw new Error("That step no longer exists.");
   if (!!s.done !== done) {
     db.run("UPDATE task_steps SET done = ? WHERE id = ?", [done ? 1 : 0, stepId]);
-    log(db, s.task_id, who, `${who === "you" ? "You" : who === "lyra" ? "Lyra" : "The worker"} ${done ? "finished" : "reopened"}: ${s.text}`);
+    log(db, s.task_id, who, `${who === "you" ? "You" : who === "lyra" ? "Tomo" : "The worker"} ${done ? "finished" : "reopened"}: ${s.text}`);
     touch(db, s.task_id);
   }
   return db.get<Step>("SELECT * FROM task_steps WHERE id = ?", [stepId])!;
@@ -266,6 +266,6 @@ export function snoozeTask(db: DB, id: number, until: Date | null, who: Who = "y
   if (!t) throw new Error("That task no longer exists.");
   if (until && Number.isNaN(until.getTime())) throw new Error("That time doesn't look right.");
   db.run("UPDATE tasks SET snoozed_until = ? WHERE id = ?", [until ? until.toISOString() : null, id]);
-  if (until) log(db, id, who, `${who === "you" ? "You" : "Lyra"} put it off until later.`);
+  if (until) log(db, id, who, `${who === "you" ? "You" : "Tomo"} put it off until later.`);
   return getTask(db, id)!;
 }

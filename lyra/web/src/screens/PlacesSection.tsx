@@ -43,9 +43,9 @@ export function PlacesSection({ toast }: { toast: (m: string) => void }) {
 
   const accessText =
     access === "always"
-      ? "All the time: place reminders work with Lyra closed."
+      ? "All the time: place reminders work with Tomo closed."
       : access === "while-open"
-        ? "Only while Lyra is open. Place reminders need “Allow all the time”."
+        ? "Only while Tomo is open. Place reminders need “Allow all the time”."
         : "Off. Turn it on for place reminders and leave-now nudges.";
 
   return (
@@ -79,7 +79,7 @@ export function PlacesSection({ toast }: { toast: (m: string) => void }) {
             onChange={(e) => {
               const on = e.target.checked;
               setLeaveNow(on);
-              void run(() => api.setLeaveNow(on), on ? "Lyra will tell you when to leave" : "Leave-now nudges off");
+              void run(() => api.setLeaveNow(on), on ? "Tomo will tell you when to leave" : "Leave-now nudges off");
             }}
           />
         </label>

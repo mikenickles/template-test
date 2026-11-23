@@ -170,7 +170,7 @@ describe("emails and events need the user's tap", () => {
   });
 });
 
-describe("checking what Lyra proposes", () => {
+describe("checking what Tomo proposes", () => {
   it("refuses bad addresses and keeps headers to one line", () => {
     expect(() => checkEmail({ to: ["not an address"], subject: "x", body: "y" })).toThrow(/isn't an email address/);
     expect(() => checkEmail({ to: [], body: "y" })).toThrow(/Who is it to/);

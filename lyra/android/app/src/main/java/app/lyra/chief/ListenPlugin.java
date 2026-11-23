@@ -105,7 +105,7 @@ public class ListenPlugin extends Plugin {
     @PermissionCallback
     private void micAnswered(PluginCall call) {
         if (getPermissionState("mic") != PermissionState.GRANTED) {
-            call.reject("Lyra needs the microphone to hear you. You can allow it in Android's settings for Lyra.");
+            call.reject("Tomo needs the microphone to hear you. You can allow it in Android's settings for Tomo.");
             return;
         }
         begin(call);
@@ -203,7 +203,7 @@ public class ListenPlugin extends Plugin {
                 return;
             }
             JSObject o = new JSObject();
-            o.put("error", code == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS ? "Lyra needs the microphone." : code == SpeechRecognizer.ERROR_NETWORK || code == SpeechRecognizer.ERROR_NETWORK_TIMEOUT ? "Speech recognition needs the internet on this phone." : "Didn't catch that. Try again.");
+            o.put("error", code == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS ? "Tomo needs the microphone." : code == SpeechRecognizer.ERROR_NETWORK || code == SpeechRecognizer.ERROR_NETWORK_TIMEOUT ? "Speech recognition needs the internet on this phone." : "Didn't catch that. Try again.");
             notifyListeners("words", o);
         }
     };

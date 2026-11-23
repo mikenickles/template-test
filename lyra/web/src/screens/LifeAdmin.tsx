@@ -46,7 +46,7 @@ export function LifeAdmin({ toast }: { toast: (m: string) => void }) {
     return (
       <div className="tasks-empty">
         <p className="tasks-empty-title">Connect Gmail to start.</p>
-        <p>Lyra goes through your mail once a day for bills, subscriptions, packages, trips and return windows, and tells you before anything's due. Read-only: Lyra never pays, cancels or replies.</p>
+        <p>Tomo goes through your mail once a day for bills, subscriptions, packages, trips and return windows, and tells you before anything's due. Read-only: Tomo never pays, cancels or replies.</p>
         <a className="btn quiet" href="#/access">
           Connections
         </a>
@@ -68,7 +68,7 @@ export function LifeAdmin({ toast }: { toast: (m: string) => void }) {
       {!v.items.length && !v.scanning && (
         <div className="tasks-empty">
           <p className="tasks-empty-title">{v.lastScan ? "Nothing coming up." : "Nothing here yet."}</p>
-          <p>{v.lastScan ? "No bills, renewals, deliveries, trips or return windows in your recent mail." : "Tap Check now, or Lyra will go through your mail later today."}</p>
+          <p>{v.lastScan ? "No bills, renewals, deliveries, trips or return windows in your recent mail." : "Tap Check now, or Tomo will go through your mail later today."}</p>
         </div>
       )}
 
@@ -136,14 +136,14 @@ export function LifeAdmin({ toast }: { toast: (m: string) => void }) {
       <label className="item admin-switch">
         <span className="body">
           <div className="title">Check my mail every day</div>
-          <div className="sub">Read-only. Lyra never pays, cancels or replies; heads-ups come a few days before anything's due.</div>
+          <div className="sub">Read-only. Tomo never pays, cancels or replies; heads-ups come a few days before anything's due.</div>
         </span>
         <input
           type="checkbox"
           role="switch"
           className="switch"
           checked={v.on}
-          onChange={(e) => void api.setLifeAdmin(e.target.checked).then(() => toast(e.target.checked ? "Lyra will check every day" : "Daily check off"))}
+          onChange={(e) => void api.setLifeAdmin(e.target.checked).then(() => toast(e.target.checked ? "Tomo will check every day" : "Daily check off"))}
         />
       </label>
     </div>

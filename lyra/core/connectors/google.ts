@@ -57,7 +57,7 @@ export function grantIsAllowed(scopes: string[] | string, required: string): boo
 
 
 export class NeedsConsentError extends Error {
-  constructor(message = "Google needs you to approve Lyra again.") {
+  constructor(message = "Google needs you to approve Tomo again.") {
     super(message);
   }
 }
@@ -89,7 +89,7 @@ export class TokenSource {
   async get(): Promise<string> {
     if (this.token && this.token.expires > Date.now()) return this.token.value;
     const r = await this.auth.authorize(this.scopes, false);
-    if (!grantIsAllowed(r.grantedScopes, this.scopes[0])) throw new Error("The Google grant includes more than Lyra asked for, so Lyra won't use it.");
+    if (!grantIsAllowed(r.grantedScopes, this.scopes[0])) throw new Error("The Google grant includes more than Tomo asked for, so Tomo won't use it.");
     this.token = { value: r.accessToken, expires: Date.now() + 45 * 60_000 };
     return r.accessToken;
   }

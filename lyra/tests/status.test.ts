@@ -58,7 +58,7 @@ describe("the home-screen widget", () => {
     expect(next.status).toMatch(/^Morning brief at 4/);
     const idle = widgetWords({ working: [], ready: 0, upcoming: [] }, now);
     for (const s of [next.status, idle.status]) fits(s);
-    expect(idle.detail).toBe("Tap to talk to Lyra");
+    expect(idle.detail).toBe("Tap to talk to Tomo");
     expect(widgetWords({ working: [], ready: 0, upcoming: [], latest: { label: "Heads-up", text: "Dana is waiting" } }, now).detail).toBe("Heads-up: Dana is waiting");
   });
 });

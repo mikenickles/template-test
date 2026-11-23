@@ -108,7 +108,7 @@ export function Activity({ toast }: { toast: (m: string) => void }) {
         </span>
         <span>
           <h1 className="activity-name">Activity</h1>
-          <p className="activity-status">{working ? `Lyra is working on ${working === 1 ? "something" : `${working} things`}` : "What Lyra's been doing for you"}</p>
+          <p className="activity-status">{working ? `Tomo is working on ${working === 1 ? "something" : `${working} things`}` : "What Tomo's been doing for you"}</p>
         </span>
       </div>
 
@@ -137,7 +137,7 @@ export function Activity({ toast }: { toast: (m: string) => void }) {
       ) : items.length === 0 ? (
         <div className="tasks-empty">
           <p className="tasks-empty-title">Nothing yet.</p>
-          <p>When Lyra works on a task, runs a routine, checks your mail or gives you a heads-up, it shows here, step by step.</p>
+          <p>When Tomo works on a task, runs a routine, checks your mail or gives you a heads-up, it shows here, step by step.</p>
         </div>
       ) : (
         days.map(([day, list]) => {

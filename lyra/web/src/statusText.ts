@@ -54,5 +54,5 @@ export function widgetWords(
 ): { status: string; detail: string } {
   const next = upNext(d.upcoming, now);
   const status = d.working.length ? workingText(d.working[0].title, d.working.length) : d.ready ? readyText(d.ready) : (next ?? fit("Here when you need me", "Here for you"));
-  return { status, detail: d.latest ? `${d.latest.label}: ${d.latest.text}` : "Tap to talk to Lyra" };
+  return { status, detail: d.latest ? `${d.latest.label}: ${d.latest.text}` : "Tap to talk to Tomo" };
 }

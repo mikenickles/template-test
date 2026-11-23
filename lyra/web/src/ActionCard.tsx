@@ -461,7 +461,7 @@ function SimpleCard({ a, setA, toast }: { a: ActionRow; setA: (r: ActionRow) => 
         <div className="action-title">{b.op === "submit" ? `Send the form at "${b.label}"` : `Press "${b.label}"`}</div>
         {b.title && <div className="action-sub">{b.title}</div>}
         {b.typed.length > 0 && (
-          <ul className="browser-typed" aria-label="What Lyra filled in">
+          <ul className="browser-typed" aria-label="What Tomo filled in">
             {b.typed.map((t) => (
               <li key={t.label}>
                 <span className="action-sub">{t.label}</span>
@@ -470,7 +470,7 @@ function SimpleCard({ a, setA, toast }: { a: ActionRow; setA: (r: ActionRow) => 
             ))}
           </ul>
         )}
-        {open && <div className="action-sub">Lyra presses it in its own browser window. Check the window first if you like.</div>}
+        {open && <div className="action-sub">Tomo presses it in its own browser window. Check the window first if you like.</div>}
         {a.status === "done" && a.result?.title && <div className="action-sub">Now on: {String(a.result.title)}</div>}
       </>
     );

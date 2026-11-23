@@ -17,7 +17,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 
 /**
- * "Share to Lyra" from other apps: text, links, photos and PDFs. What was shared
+ * "Share to Tomo" from other apps: text, links, photos and PDFs. What was shared
  * waits here until the app asks for it with take(); nothing is sent anywhere
  * until the user presses Send in the chat.
  */

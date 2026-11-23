@@ -10,7 +10,7 @@ const say = (text: string): GenerateResult => ({ parts: [{ type: "text", text }]
 describe("long chats keep a running summary (0.53)", () => {
   it("folds older messages into a summary, then sends the summary and only the newer messages", async () => {
     const main = new FakeProvider(Array.from({ length: 30 }, (_, i) => say(`Answer ${i}`)));
-    const quick = new FakeProvider([say("- Sam is planning Rowan's party for Saturday the 21st.\n- Lyra said it would find a bakery.")]);
+    const quick = new FakeProvider([say("- Sam is planning Rowan's party for Saturday the 21st.\n- Tomo said it would find a bakery.")]);
     const lyra = await Lyra.start(platform({ provider: main, quickProvider: quick }));
     // 14 exchanges = 28 messages: 16 older ones past the 12 newest
     for (let i = 0; i < 14; i++) await lyra.chat(`Message ${i} about the party`, noop);
@@ -23,7 +23,7 @@ describe("long chats keep a running summary (0.53)", () => {
     await lyra.chat("what's left?", noop);
     const last = main.requests.at(-1)!;
     expect(last.system).toContain("## Earlier in this chat");
-    expect(last.system).toContain("Lyra said it would find a bakery");
+    expect(last.system).toContain("Tomo said it would find a bakery");
     const sent = JSON.stringify(last.messages);
     expect(sent).not.toContain("Message 0 about the party");
     expect(sent).toContain("Message 13 about the party");

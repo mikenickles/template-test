@@ -19,7 +19,7 @@ const build = join(root, "build");
 const stage = join(build, "desktop-app");
 const out = join(build, "desktop");
 
-console.log(`Building Lyra ${version} for ${platform} ${arches.join(", ")}`);
+console.log(`Building Tomo ${version} for ${platform} ${arches.join(", ")}`);
 execFileSync(process.execPath, [join(root, "node_modules/vite/bin/vite.js"), "build"], { cwd: root, stdio: "inherit" });
 
 rmSync(stage, { recursive: true, force: true });
@@ -28,7 +28,8 @@ for (const f of ["main.cjs", "preload.cjs", "icon.png"]) cpSync(join(root, "desk
 cpSync(join(root, "web/dist"), join(stage, "dist"), { recursive: true });
 writeFileSync(
   join(stage, "package.json"),
-  JSON.stringify({ name: "lyra", productName: "Lyra", version, description: "Lyra, your chief of staff", main: "main.cjs", author: "Lyra" }, null, 2),
+  // productName stays "Lyra": it names the folder the app keeps its data in (renaming it would lose that data)
+  JSON.stringify({ name: "lyra", productName: "Lyra", version, description: "Tomo, your chief of staff", main: "main.cjs", author: "Tomo" }, null, 2),
 );
 if (args["stage-only"] !== undefined) {
   console.log(`Staged at ${stage}`);
@@ -55,7 +56,7 @@ for (const arch of arches) {
     asar: true,
     overwrite: true,
     prune: false,
-    win32metadata: { CompanyName: "Lyra", FileDescription: "Lyra", ProductName: "Lyra", InternalName: "Lyra", OriginalFilename: "Lyra.exe" },
+    win32metadata: { CompanyName: "Tomo", FileDescription: "Tomo", ProductName: "Tomo", InternalName: "Lyra", OriginalFilename: "Lyra.exe" },
   });
   const zip = join(out, `Lyra-${version}-${platform === "win32" ? "win" : platform}-${arch}.zip`);
   rmSync(zip, { force: true });

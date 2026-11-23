@@ -40,10 +40,10 @@ export function Soul({ toast, userName }: { toast: (m: string) => void; userName
           </div>
         </div>
         <label htmlFor="soul-file" className="sr-only">
-          Lyra's soul
+          Tomo's soul
         </label>
         <textarea id="soul-file" className="editor" value={draft} onChange={(e) => setDraft(e.target.value)} spellCheck />
-        <p className="hint">Write {"{user}"} where your name should go. Changes apply from Lyra's next reply.</p>
+        <p className="hint">Write {"{user}"} where your name should go. Changes apply from Tomo's next reply.</p>
       </div>
     );
 
@@ -55,10 +55,10 @@ export function Soul({ toast, userName }: { toast: (m: string) => void; userName
           Edit
         </button>
       </div>
-      <p className="page-sub">Who Lyra is and how it talks to you. {soul.custom ? "Edited by you." : "The original."}</p>
+      <p className="page-sub">Who Tomo is and how it talks to you. {soul.custom ? "Edited by you." : "The original."}</p>
       {soul.custom && (
         <p className="hint">
-          Lyra's built-in character changes with updates (the latest makes Lyra more of a friend, and quicker to take the lead). Because you've edited yours, Lyra is still using your version. Reset to the original below to get the new one; you can edit again after.
+          Tomo's built-in character changes with updates (the latest makes Tomo more of a friend, and quicker to take the lead). Because you've edited yours, Tomo is still using your version. Reset to the original below to get the new one; you can edit again after.
         </p>
       )}
       <div className="soul-doc">
@@ -78,7 +78,7 @@ export function Soul({ toast, userName }: { toast: (m: string) => void; userName
       </div>
       {soul.custom && (
         <section className="section">
-          <button className="btn quiet" disabled={busy} onClick={() => void ask("Go back to Lyra's original soul? Your edits are removed.").then<unknown>((ok) => ok && run(() => api.resetSoul(), "Back to the original"))}>
+          <button className="btn quiet" disabled={busy} onClick={() => void ask("Go back to Tomo's original soul? Your edits are removed.").then<unknown>((ok) => ok && run(() => api.resetSoul(), "Back to the original"))}>
             Reset to the original
           </button>
         </section>

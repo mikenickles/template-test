@@ -118,7 +118,7 @@ export function checkUrl(raw: string): string {
     throw new Error("That isn't a web address.");
   }
   if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error("Only web pages (http or https).");
-  if (u.username || u.password) throw new Error("Lyra doesn't open addresses with a name or password in them.");
+  if (u.username || u.password) throw new Error("Tomo doesn't open addresses with a name or password in them.");
   return u.toString();
 }
 
@@ -142,7 +142,7 @@ function describeControl(c: BrowserControl): string {
   const what =
     c.kind === "field" ? `${c.type && c.type !== "text" ? `${c.type} ` : ""}field` : c.kind === "select" ? `choice of ${(c.options ?? []).slice(0, 8).join(" / ")}` : c.kind;
   const label = c.label ? `"${c.label}"` : "(no label)";
-  if (c.secret) return `[${c.ref}] ${label} ${what}: private, Lyra never types here`;
+  if (c.secret) return `[${c.ref}] ${label} ${what}: private, Tomo never types here`;
   const flag = (c.kind === "link" || c.kind === "button") && needsOk(c) ? " ⚑" : "";
   const form = c.kind === "field" && c.form ? (c.form.search ? " (search: Enter is fine)" : " (Enter would send the form ⚑)") : "";
   const to = c.kind === "link" && c.href ? ` → ${c.href.slice(0, 160)}` : "";
@@ -150,10 +150,10 @@ function describeControl(c: BrowserControl): string {
 }
 
 export const NOT_CONNECTED =
-  "Lyra's extension isn't connected. Tell the user to open their browser (with Lyra's extension added) while Lyra is open on the computer; the Lyra page has the steps.";
+  "Tomo's extension isn't connected. Tell the user to open their browser (with Tomo's extension added) while Tomo is open on the computer; the Tomo page has the steps.";
 
-const OLD_APP = "Update Lyra on this computer (the full Windows install from the Lyra Updates folder) so it can click and type in the browser.";
-const OLD_EXTENSION = "Lyra's extension needs a reload to click and type: in the browser's extensions page, press reload on Lyra. Tell the user.";
+const OLD_APP = "Update Tomo on this computer (the full Windows install from the Lyra Updates folder) so it can click and type in the browser.";
+const OLD_EXTENSION = "Tomo's extension needs a reload to click and type: in the browser's extensions page, press reload on Tomo. Tell the user.";
 
 /** The control a step is about, from the page as Lyra last saw it. */
 function controlFor(session: BrowserSession, ref: number): BrowserControl {
@@ -184,7 +184,7 @@ export function createBrowserServer(link: BrowserLink, session = new BrowserSess
     {
       title: "Open a page",
       description:
-        "Open a web page in Lyra's own window in the user's browser, where they're signed in to their sites, and read it: its title, text and links. Use it for pages that need their sign-in (their accounts, orders, bookings) or that web search can't read. It only reads; nothing is clicked or sent. Only open what the user asked about.",
+        "Open a web page in Tomo's own window in the user's browser, where they're signed in to their sites, and read it: its title, text and links. Use it for pages that need their sign-in (their accounts, orders, bookings) or that web search can't read. It only reads; nothing is clicked or sent. Only open what the user asked about.",
       inputSchema: { url: z.string().describe("The page's address, https://...") },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
@@ -194,7 +194,7 @@ export function createBrowserServer(link: BrowserLink, session = new BrowserSess
     "read_page",
     {
       title: "Read the page again",
-      description: "Read the page open in Lyra's browser window again, e.g. after it finished loading more.",
+      description: "Read the page open in Tomo's browser window again, e.g. after it finished loading more.",
       inputSchema: {},
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
@@ -209,7 +209,7 @@ export function createBrowserServer(link: BrowserLink, session = new BrowserSess
     {
       title: "Click",
       description:
-        "Click a link or button on the page in Lyra's browser window, by its [number] from the last read. Fine for following links, opening details, next pages, filters, 'show more', adding to a cart. Things marked ⚑ (they could send, buy, book, post, delete or change something) are refused here: use propose_browser_step for those. Returns the page after the click.",
+        "Click a link or button on the page in Tomo's browser window, by its [number] from the last read. Fine for following links, opening details, next pages, filters, 'show more', adding to a cart. Things marked ⚑ (they could send, buy, book, post, delete or change something) are refused here: use propose_browser_step for those. Returns the page after the click.",
       inputSchema: { ref: z.number().int().describe("The [number] of the link or button") },
       annotations: { openWorldHint: true },
     },
@@ -236,7 +236,7 @@ export function createBrowserServer(link: BrowserLink, session = new BrowserSess
     async ({ ref, text: words, enter }) => {
       const c = controlFor(session, ref);
       if (c.kind !== "field") throw new Error(`[${ref}] isn't a field to type in.`);
-      if (c.secret) throw new Error("That's a password or card field. Lyra never types those: the user fills it in themselves.");
+      if (c.secret) throw new Error("That's a password or card field. Tomo never types those: the user fills it in themselves.");
       if (enter && needsOk(c, "submit")) throw new Error(PROPOSE_HINT(c, "submit"));
       const r = await act({ op: "type", ref, label: c.label, text: words, enter: !!enter });
       session.note(session.page?.url ?? "", c.label || `field ${ref}`, words);
@@ -263,7 +263,7 @@ export function createBrowserServer(link: BrowserLink, session = new BrowserSess
     "go_back",
     {
       title: "Go back",
-      description: "Go back one page in Lyra's browser window.",
+      description: "Go back one page in Tomo's browser window.",
       inputSchema: {},
       annotations: { openWorldHint: true },
     },

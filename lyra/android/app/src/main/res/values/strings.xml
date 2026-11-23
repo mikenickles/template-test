@@ -1,14 +1,14 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Lyra</string>
-    <string name="title_activity_main">Lyra</string>
+    <string name="app_name">Tomo</string>
+    <string name="title_activity_main">Tomo</string>
     <string name="package_name">app.lyra.chief</string>
     <string name="custom_url_scheme">app.lyra.chief</string>
-    <string name="widget_description">What Lyra is doing, what\'s ready for you, and what\'s next</string>
+    <string name="widget_description">What Tomo is doing, what\'s ready for you, and what\'s next</string>
     <string name="shortcut_tasks">Tasks</string>
     <string name="shortcut_tasks_long">Your tasks</string>
     <string name="shortcut_memo">Voice memo</string>
     <string name="shortcut_memo_long">Record a voice memo</string>
-    <string name="shortcut_talk">Talk to Lyra</string>
-    <string name="shortcut_talk_long">Talk to Lyra</string>
+    <string name="shortcut_talk">Talk to Tomo</string>
+    <string name="shortcut_talk_long">Talk to Tomo</string>
 </resources>

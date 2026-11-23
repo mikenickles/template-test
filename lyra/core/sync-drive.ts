@@ -28,7 +28,7 @@ export class DriveSyncRemote implements SyncRemote {
   /** Ask for the sync permission (shows Google's screen if needed). */
   static async connect(auth: GoogleAuth): Promise<void> {
     const r = await auth.authorize([DRIVE_APPDATA], true);
-    if (!r.grantedScopes.includes(DRIVE_APPDATA)) throw new Error("Google didn't allow Lyra's sync folder.");
+    if (!r.grantedScopes.includes(DRIVE_APPDATA)) throw new Error("Google didn't allow Tomo's sync folder.");
   }
 
   private async call(url: string, init: RequestInit = {}, retried = false): Promise<Response> {
@@ -40,7 +40,7 @@ export class DriveSyncRemote implements SyncRemote {
     }
     if (!r.ok) {
       const detail = await r.text().catch(() => "");
-      if (r.status === 403 && /insufficient|scope/i.test(detail)) throw new Error("Lyra needs permission for its sync folder. Turn sync off and on to approve it.");
+      if (r.status === 403 && /insufficient|scope/i.test(detail)) throw new Error("Tomo needs permission for its sync folder. Turn sync off and on to approve it.");
       throw new Error(`Google Drive said ${r.status}. ${detail.slice(0, 160)}`);
     }
     return r;
@@ -119,7 +119,7 @@ export class DriveSyncRemote implements SyncRemote {
   }
 
   async upload(bytes: Uint8Array, info: Omit<SnapshotInfo, "id">): Promise<SnapshotInfo> {
-    if (bytes.length > MAX_BYTES) throw new Error("Lyra's data has grown too big to sync in one go. Make a backup instead for now.");
+    if (bytes.length > MAX_BYTES) throw new Error("Tomo's data has grown too big to sync in one go. Make a backup instead for now.");
     const meta = {
       name: `lyra-${info.kind ?? "snapshot"}-${info.rev}.lyra`,
       parents: ["appDataFolder"],

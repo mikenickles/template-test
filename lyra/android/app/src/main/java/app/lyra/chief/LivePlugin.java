@@ -34,12 +34,12 @@ public class LivePlugin extends Plugin {
         }
         NotificationManager nm = c.getSystemService(NotificationManager.class);
         if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CHANNEL) == null) {
-            NotificationChannel ch = new NotificationChannel(CHANNEL, "Lyra at work", NotificationManager.IMPORTANCE_LOW);
-            ch.setDescription("What Lyra is working on right now, updated as it goes.");
+            NotificationChannel ch = new NotificationChannel(CHANNEL, "Tomo at work", NotificationManager.IMPORTANCE_LOW);
+            ch.setDescription("What Tomo is working on right now, updated as it goes.");
             ch.setShowBadge(false);
             nm.createNotificationChannel(ch);
         }
-        String title = call.getString("title", "Lyra is working");
+        String title = call.getString("title", "Tomo is working");
         String text = call.getString("text", "");
         int done = call.getInt("done", 0);
         int total = call.getInt("total", 0);

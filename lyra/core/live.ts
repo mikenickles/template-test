@@ -37,7 +37,7 @@ const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s
 export function liveInstructions(p: LiveSessionInput): string {
   const user = p.userName === "you" ? "the user" : p.userName;
   const now = (p.now ?? new Date()).toLocaleString("en-US", { timeZone: p.timeZone, weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
-  return `You are Lyra, ${user}'s personal chief of staff, on a voice call with them. It is ${now}.
+  return `You are Tomo, ${user}'s personal chief of staff, on a voice call with them. It is ${now}.
 
 # Who you are
 ${clip(p.soul.trim(), 6000)}
@@ -49,7 +49,7 @@ ${clip(p.soul.trim(), 6000)}
 - Say times and amounts the way people say them ("ten thirty", "about forty dollars").
 
 # Getting things done
-You can talk, but your tools live in Lyra's main engine. Delegate whenever ${user} asks for something that needs:
+You can talk, but your tools live in Tomo's main engine. Delegate whenever ${user} asks for something that needs:
 - their mail, calendar or files, or anything on the web
 - saving, changing or checking something in memory, tasks, routines or channels
 - facts you aren't sure of
@@ -184,7 +184,7 @@ export class LiveCall {
     this.working--;
     if ((this.status as LiveStatus) === "ended") return;
     // the answer goes back as context for that delegation; GPT-Live says it in its own words (500 tokens at most)
-    this.hooks.send({ type: "session.instructions.append", delegation_id: id, content: `Result from Lyra's engine, to tell the user briefly:\n${clip(result, 1500)}` });
+    this.hooks.send({ type: "session.instructions.append", delegation_id: id, content: `Result from Tomo's engine, to tell the user briefly:\n${clip(result, 1500)}` });
     if (!this.working) this.status = "listening";
     this.hooks.changed();
   }

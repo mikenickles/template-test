@@ -95,7 +95,7 @@ describe("triggers: routines that start when something happens", () => {
     await expect(lyra.createRoutine({ name: "Home", instructions: "Say what's due tonight.", times: "", trigger: { kind: "place", place: "home", on: "arrive" } })).rejects.toThrow(/isn't a saved place/);
     await lyra.savePlace("Home", { lat: 38.58, lng: -121.49 });
     const home = await lyra.createRoutine({ name: "Home", instructions: "Say what's due tonight.", times: "", trigger: { kind: "place", place: "home", on: "arrive" } });
-    expect(lyra.placeTriggers()).toEqual([{ id: PLACE_TRIGGER_BASE + home.id, text: "Lyra is on it: Home", place: "Home", lat: 38.58, lng: -121.49, radius: 150, on: "arrive" }]);
+    expect(lyra.placeTriggers()).toEqual([{ id: PLACE_TRIGGER_BASE + home.id, text: "Tomo is on it: Home", place: "Home", lat: 38.58, lng: -121.49, radius: 150, on: "arrive" }]);
     lyra.placeTriggersFired([PLACE_TRIGGER_BASE + home.id, 7]);
     await settle(lyra);
     expect(provider.requests[0].system).toContain("The user just arrived at Home.");
@@ -151,7 +151,7 @@ describe("widgets under a reply", () => {
 });
 
 describe("Today at a glance", () => {
-  it("lists what's left on the calendar today and tomorrow morning, and counts what Lyra did", async () => {
+  it("lists what's left on the calendar today and tomorrow morning, and counts what Tomo did", async () => {
     const g = google();
     const auth = fakeGoogle([CALENDAR_READONLY]);
     auth.consented = true;

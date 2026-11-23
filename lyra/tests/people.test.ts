@@ -27,7 +27,7 @@ describe("people cards", () => {
     expect(() => rememberPerson(db, { name: "Lee", email: "not an email" })).toThrow(/isn't an email/);
   });
 
-  it("Lyra saves people from chat, looks them up, and won't change a card after reading mail", async () => {
+  it("Tomo saves people from chat, looks them up, and won't change a card after reading mail", async () => {
     const provider = new FakeProvider([
       // a quick action: the reply is written from what was saved, with no second call
       call("remember_person", { name: "Ms. Patel", relation: "Rowan's teacher", email: "patel@school.org" }),
@@ -73,7 +73,7 @@ describe("people cards", () => {
 });
 
 describe("the weekly memory tidy-up", () => {
-  const MD = "# Lyra memory\n\n## Rules\n- Short replies\n- Keep it short\n\n## People\n- Dana is my sister\n\n## Projects\n\n## Open loops\n- Waiting on plumber quote\n\n## My own section\n- untouched\n";
+  const MD = "# Tomo memory\n\n## Rules\n- Short replies\n- Keep it short\n\n## People\n- Dana is my sister\n\n## Projects\n\n## Open loops\n- Waiting on plumber quote\n\n## My own section\n- untouched\n";
 
   it("only shrinks known sections, keeps the rest of the file, and won't remove most of it", () => {
     const r = applyTidy(MD, ["Rules", "People", "Projects", "Open loops"], { Rules: ["Short replies"] }, ["Merged two rules about short replies"]);
@@ -89,7 +89,7 @@ describe("the weekly memory tidy-up", () => {
     const provider = new FakeProvider([call("tidy_memory", { sections: { Rules: ["Short replies"] }, changes: ["Merged two rules about short replies"] })]);
     const lyra = await Lyra.start(platform({ provider }));
     const loops = Array.from({ length: 12 }, (_, i) => `- Loop ${i}`).join("\n");
-    await lyra.saveMemory(`# Lyra memory\n\n## Rules\n- Keep it short\n- Short replies please\n\n## People\n\n## Projects\n\n## Open loops\n${loops}\n`);
+    await lyra.saveMemory(`# Tomo memory\n\n## Rules\n- Keep it short\n- Short replies please\n\n## People\n\n## Projects\n\n## Open loops\n${loops}\n`);
     const tomorrow = (h: number) => new Date(localToDate(`${new Intl.DateTimeFormat("sv-SE", { timeZone: LA }).format(new Date())} ${h}:00`, LA)!.getTime() + 86_400_000);
     expect(lyra.tickTidy(tomorrow(23))).toBe(false);
     expect(lyra.tickTidy(tomorrow(11))).toBe(true);

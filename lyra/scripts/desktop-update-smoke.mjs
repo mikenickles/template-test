@@ -57,22 +57,22 @@ const launch = async () => {
 const running = (page) => page.evaluate(() => window.lyraDesktop.updates.info().then((i) => i.runningVersion));
 
 let { app, page } = await launch();
-await page.getByText("I'm Lyra.").waitFor({ timeout: 20_000 });
+await page.getByText("I'm Tomo.").waitFor({ timeout: 20_000 });
 const before = await running(page);
 await page.goto("app://lyra/index.html#/access");
 await page.locator(".lp-svc", { hasText: "Files" }).click();
 await page.getByText("Google Drive is connected").waitFor();
 await page.goto("app://lyra/index.html#/settings/about");
 await page.locator("section", { hasText: "Updates" }).getByRole("button", { name: "Check" }).click();
-await page.getByText(`Lyra ${NEW} is in your Drive.`).waitFor();
+await page.getByText(`Tomo ${NEW} is in your Drive.`).waitFor();
 check(true, "finds a newer version in the Lyra Updates folder");
 await page.locator("section", { hasText: "Updates" }).getByRole("button", { name: "Update" }).click();
-await page.getByText(`${NEW} is ready. Restart Lyra to use it.`).waitFor({ timeout: 20_000 });
+await page.getByText(`${NEW} is ready. Restart Tomo to use it.`).waitFor({ timeout: 20_000 });
 check(true, "downloads and installs it, ready on restart");
 await app.close();
 
 ({ app, page } = await launch());
-await page.getByText("I'm Lyra.").waitFor({ timeout: 20_000 });
+await page.getByText("I'm Tomo.").waitFor({ timeout: 20_000 });
 check((await running(page)) === NEW && before !== NEW, `after a restart it runs the new version (${before} → ${NEW})`);
 await page.waitForTimeout(500); // the app reports it started fine
 const current = join(home, ".config", "Lyra", "app-packs", "current.json");
@@ -82,7 +82,7 @@ await app.close();
 // a pack that crashed before saying it started: the next start goes back to the built-in code
 writeFileSync(current, JSON.stringify({ version: NEW, minShell: 1, trial: true, tried: true }));
 ({ app, page } = await launch());
-await page.getByText("I'm Lyra.").waitFor({ timeout: 20_000 });
+await page.getByText("I'm Tomo.").waitFor({ timeout: 20_000 });
 check((await running(page)) === before, "a pack that never finished starting is rolled back");
 await app.close();
 console.log("\nDesktop updates OK");

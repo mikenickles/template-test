@@ -112,7 +112,7 @@ export class Connectors {
       let text = blocks.map((b) => (b.type === "text" ? b.text : `[${b.type} left out]`)).join("\n");
       if (res.isError && text.includes(AUTH_EXPIRED)) {
         this.errors.set(spec.id, "The Google sign-in needs renewing. Tap to reconnect.");
-        return { content: `${spec.label} sign-in expired. Tell the user to reconnect it from Lyra's access page.`, isError: true };
+        return { content: `${spec.label} sign-in expired. Tell the user to reconnect it from Tomo's access page.`, isError: true };
       }
       this.errors.delete(spec.id);
       if (text.length > MAX_RESULT_CHARS) text = `${text.slice(0, MAX_RESULT_CHARS)}\n[…cut for length]`;

@@ -44,7 +44,7 @@ export function SyncSection({ toast }: { toast: (m: string) => void }) {
     setBusy(true);
     try {
       const r = await syncApi.now();
-      toast(r === "pushed" ? "Synced" : r === "up-to-date" ? "Already up to date" : r === "conflict" ? "Lyra changed on both devices" : r === "busy" ? "Lyra's busy. It'll sync in a moment." : "Synced");
+      toast(r === "pushed" ? "Synced" : r === "up-to-date" ? "Already up to date" : r === "conflict" ? "Tomo changed on both devices" : r === "busy" ? "Tomo's busy. It'll sync in a moment." : "Synced");
     } catch (e) {
       toast((e as Error).message);
     } finally {
@@ -83,9 +83,9 @@ export function SyncSection({ toast }: { toast: (m: string) => void }) {
             {isDesktop && (
               <label className="item">
                 <span className="body">
-                  <div className="title">Make this computer Lyra's home base</div>
+                  <div className="title">Make this computer Tomo's home base</div>
                   <div className="sub">
-                    For a computer that's always on. Lyra's routines, heads-ups and mail checks run here instead of on your phone, so they happen on time whatever your phone is doing. If this computer goes quiet for half an hour, your phone takes over until it's back.
+                    For a computer that's always on. Tomo's routines, heads-ups and mail checks run here instead of on your phone, so they happen on time whatever your phone is doing. If this computer goes quiet for half an hour, your phone takes over until it's back.
                   </div>
                 </span>
                 <input
@@ -100,7 +100,7 @@ export function SyncSection({ toast }: { toast: (m: string) => void }) {
                     void syncApi
                       .setHome(on)
                       .then(
-                        (r) => toast(on ? (r.headsUpsOn ? "This computer is Lyra's home base. Heads-ups turned on." : "This computer is Lyra's home base") : "Your phone does the background work again"),
+                        (r) => toast(on ? (r.headsUpsOn ? "This computer is Tomo's home base. Heads-ups turned on." : "This computer is Tomo's home base") : "Your phone does the background work again"),
                         (err) => toast((err as Error).message),
                       )
                       .finally(() => setBusy(false));
@@ -113,7 +113,7 @@ export function SyncSection({ toast }: { toast: (m: string) => void }) {
                 <span className="body">
                   <div className="title bad">This computer can't do the whole job yet</div>
                   <div className="sub">
-                    API keys and Google connections stay on each device, so the home base needs its own. Missing here: {s.homeGaps.join("; ")}. Until then Lyra's heads-ups and mail checks won't happen, and your phone won't do them either.
+                    API keys and Google connections stay on each device, so the home base needs its own. Missing here: {s.homeGaps.join("; ")}. Until then Tomo's heads-ups and mail checks won't happen, and your phone won't do them either.
                   </div>
                 </span>
               </div>
@@ -125,14 +125,14 @@ export function SyncSection({ toast }: { toast: (m: string) => void }) {
                   <div className={`sub${push.error ? " bad" : ""}`}>
                     {s.home
                       ? !push.canSend
-                        ? "Lyra's news reaches your phone within seconds, even with Lyra closed there. Needs a free Firebase project of your own, set up once (about ten minutes)."
+                        ? "Tomo's news reaches your phone within seconds, even with Tomo closed there. Needs a free Firebase project of your own, set up once (about ten minutes)."
                         : push.devices.length
                           ? `On. Reaches ${push.devices.map((d) => d.name).join(", ")}.`
-                          : "Set up. Now open Lyra on your phone once, so it signs up."
+                          : "Set up. Now open Tomo on your phone once, so it signs up."
                       : push.error
                         ? `This device couldn't sign up: ${push.error}`
                         : push.devices.some((d) => d.id === push.thisDevice)
-                          ? "On. Your home base rings this phone when Lyra has something."
+                          ? "On. Your home base rings this phone when Tomo has something."
                           : isDesktop
                             ? "Set up on your home base."
                             : "Signing up… (needs notifications allowed)"}
@@ -146,7 +146,7 @@ export function SyncSection({ toast }: { toast: (m: string) => void }) {
                 {s.home && push.canSend && push.devices.length > 0 && (
                   <button
                     className="btn quiet"
-                    onClick={() => void syncApi.testPush().then((n) => toast(n ? "Sent. Check your phone." : "Couldn't reach your phone. Open Lyra there once, then try again."), (e) => toast((e as Error).message))}
+                    onClick={() => void syncApi.testPush().then((n) => toast(n ? "Sent. Check your phone." : "Couldn't reach your phone. Open Tomo there once, then try again."), (e) => toast((e as Error).message))}
                   >
                     Test
                   </button>
@@ -166,7 +166,7 @@ export function SyncSection({ toast }: { toast: (m: string) => void }) {
                   <div className="title">Home base · {s.homeBase.name}</div>
                   <div className={`sub${s.homeBase.fresh ? "" : " bad"}`}>
                     {s.homeBase.fresh
-                      ? `Doing Lyra's routines and heads-ups. Last heard from ${ago(parse(s.homeBase.at))}.`
+                      ? `Doing Tomo's routines and heads-ups. Last heard from ${ago(parse(s.homeBase.at))}.`
                       : `Not heard from since ${ago(parse(s.homeBase.at))}, so ${isDesktop ? "your phone" : "this phone"} is doing the background work until it's back.`}
                   </div>
                 </span>
@@ -200,7 +200,7 @@ export function SyncSection({ toast }: { toast: (m: string) => void }) {
           ? s.homeBase?.fresh
             ? `Routines and heads-ups run on ${s.homeBase.name}, so nothing is posted twice.`
             : "Routines run on your phone while sync is on, so nothing is posted twice."
-          : "Encrypted with your sync passphrase before it leaves this device. Google only stores scrambled data in a hidden Lyra folder, and Lyra can't see your other Drive files through it."}
+          : "Encrypted with your sync passphrase before it leaves this device. Google only stores scrambled data in a hidden Tomo folder, and Tomo can't see your other Drive files through it."}
       </p>
       {setup && <SyncSetupDialog existing={setup.existing} toast={toast} onClose={() => setSetup(null)} />}
       {pushSetup && <PushSetupDialog toast={toast} onClose={() => setPushSetup(false)} />}
@@ -226,7 +226,7 @@ function PushSetupDialog({ toast, onClose }: { toast: (m: string) => void; onClo
     setError("");
     try {
       await syncApi.setupPush(services.text, account.text);
-      toast("Push is set up. Open Lyra on your phone once.");
+      toast("Push is set up. Open Tomo on your phone once.");
       onClose();
     } catch (e) {
       setError((e as Error).message);
@@ -250,7 +250,7 @@ function PushSetupDialog({ toast, onClose }: { toast: (m: string) => void; onClo
         <h2 id="pu-title" className="dialog-title">
           Ring my phone
         </h2>
-        <p className="dialog-text">Lyra has no server, so this uses Google's push service through a free Firebase project that only you own. Once, on this computer:</p>
+        <p className="dialog-text">Tomo has no server, so this uses Google's push service through a free Firebase project that only you own. Once, on this computer:</p>
         <ol className="push-steps">
           <li>
             Open <b>console.firebase.google.com</b> and create a project (any name; Analytics can stay off).
@@ -271,7 +271,7 @@ function PushSetupDialog({ toast, onClose }: { toast: (m: string) => void; onClo
           <span>Service account key{account ? ` · ${account.name}` : ""}</span>
           <input type="file" accept=".json,application/json" aria-label="Service account key" onChange={pick(setAccount)} />
         </label>
-        <p className="hint">The key stays on this computer, stored like your API keys. Your phone gets only the app's public settings, through sync. A notification carries one line: the title and the first line of what Lyra posted.</p>
+        <p className="hint">The key stays on this computer, stored like your API keys. Your phone gets only the app's public settings, through sync. A notification carries one line: the title and the first line of what Tomo posted.</p>
         {error && (
           <p className="hint bad" role="alert">
             {error}
@@ -301,7 +301,7 @@ function SyncSetupDialog({ existing, toast, onClose }: { existing?: SnapshotInfo
 
   const go = async () => {
     if (!ok || busy) return;
-    if (joining && !(await ask(`This replaces what Lyra has on this device with what's synced from ${existing!.deviceName}. Continue?`))) return;
+    if (joining && !(await ask(`This replaces what Tomo has on this device with what's synced from ${existing!.deviceName}. Continue?`))) return;
     setBusy(true);
     setError(null);
     try {
@@ -334,7 +334,7 @@ function SyncSetupDialog({ existing, toast, onClose }: { existing?: SnapshotInfo
         </h2>
         <p className="dialog-text">
           {joining
-            ? `Lyra is already syncing from ${existing!.deviceName}. Enter the sync passphrase you chose there.`
+            ? `Tomo is already syncing from ${existing!.deviceName}. Enter the sync passphrase you chose there.`
             : "Choose a sync passphrase. Every device uses the same one, and nobody can read the synced copy without it. If you forget it, your devices keep working, but a new one can't join."}
         </p>
         <div className="float-field">
@@ -394,7 +394,7 @@ export function SyncConflict() {
       <div className="dialog-scrim" />
       <div className="dialog" role="alertdialog" aria-modal="true" aria-labelledby="cf-title">
         <h2 id="cf-title" className="dialog-title">
-          Lyra changed on both devices
+          Tomo changed on both devices
         </h2>
         <p className="dialog-text">
           While they were apart, things changed here and on {other} ({ago(parse(s.conflict.savedAt))}). Pick which version to keep. The other is saved in Drive just in case.
@@ -463,7 +463,7 @@ export function GoogleSetupSection({ toast }: { toast: (m: string) => void }) {
               <b>APIs &amp; Services → Credentials → Create credentials → OAuth client ID</b>.
             </li>
             <li>
-              Application type <b>Desktop app</b>, name it "Lyra for Windows", and create it.
+              Application type <b>Desktop app</b>, name it "Tomo for Windows", and create it.
             </li>
             <li>Copy the client ID and client secret here.</li>
           </ol>

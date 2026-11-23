@@ -167,7 +167,7 @@ export interface RebuildDeps {
 /** Ask the model to rebuild the dashboard from its instructions. Returns the new one, or null. */
 export async function rebuildDashboard(d: RebuildDeps): Promise<{ dashboard: Dashboard; title?: string; outside: boolean } | null> {
   const user = d.userName === "you" ? "the user" : d.userName;
-  const system = `You are Lyra, ${user}'s chief of staff, refreshing one of their dashboards with fresh data. Today is ${d.today}.
+  const system = `You are Tomo, ${user}'s chief of staff, refreshing one of their dashboards with fresh data. Today is ${d.today}.
 
 The dashboard: ${d.title}
 How it's made (written when ${user} asked for it):

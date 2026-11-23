@@ -92,7 +92,7 @@ public class GoogleAuthPlugin extends Plugin {
                 }
                 // The user has to approve on Google's screen.
                 if (!interactive || result.getPendingIntent() == null) {
-                    call.reject("Google needs you to approve Lyra again.", "NEEDS_CONSENT");
+                    call.reject("Google needs you to approve Tomo again.", "NEEDS_CONSENT");
                     return;
                 }
                 if (pending != null) {

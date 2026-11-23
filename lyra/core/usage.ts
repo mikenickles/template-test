@@ -102,7 +102,7 @@ export function recentCalls(db: DB, limit = 50): UsageCall[] {
   return db.all<UsageCall>("SELECT * FROM usage_log ORDER BY id DESC LIMIT ?", [Math.min(200, limit)]);
 }
 
-const JOB_NAMES: Record<UsageSource, string> = { chat: "Chat", worker: "Task", routine: "Routine", proactive: "Lyra on its own", voice: "Voice" };
+const JOB_NAMES: Record<UsageSource, string> = { chat: "Chat", worker: "Task", routine: "Routine", proactive: "Tomo on its own", voice: "Voice" };
 
 /** A provider that writes down what each call used: by day and model, and as its own line with what it was for. */
 export function metered(provider: ModelProvider, source: UsageSource, db: DB, timeZone?: string, job?: string, tally?: UsageTally): ModelProvider {

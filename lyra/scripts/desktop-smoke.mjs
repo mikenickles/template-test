@@ -29,8 +29,8 @@ let page = await app.firstWindow();
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("console", (m) => m.type() === "error" && /Content Security Policy|Refused to/.test(m.text()) && errors.push(m.text()));
-await page.getByText("I'm Lyra.").waitFor({ timeout: 20_000 });
-check(page.url().startsWith("app://lyra/"), "the app loads from inside Lyra (app://)");
+await page.getByText("I'm Tomo.").waitFor({ timeout: 20_000 });
+check(page.url().startsWith("app://lyra/"), "the app loads from inside Tomo (app://)");
 check(await page.evaluate(() => !!window.lyraDesktop && typeof window.require === "undefined"), "desktop bridge present, no Node in the page");
 check(await page.evaluate(() => window.isSecureContext && !!crypto.subtle), "secure context (encryption works)");
 
@@ -50,7 +50,7 @@ check(true, "Settings shows the desktop Google setup");
 await page.getByText("Turn on sync").waitFor();
 await page.screenshot({ path: join(shots, "desktop-1-settings.png") });
 await page.goto("app://lyra/index.html#/settings/you");
-await page.getByLabel("What should Lyra call you?").fill("Mike");
+await page.getByLabel("What should Tomo call you?").fill("Mike");
 await page.getByRole("button", { name: "Save" }).first().click();
 await page.getByText("Saved", { exact: true }).first().waitFor();
 await page.route("https://api.anthropic.com/v1/models**", (r) => r.fulfill({ json: { data: [{ id: "claude-test", display_name: "Claude Test" }] } }));
@@ -66,9 +66,9 @@ await page.getByText("Key saved").waitFor({ timeout: 8000 }).catch(async (e) => 
 await page.getByRole("radio", { name: /Claude Test/ }).waitFor();
 check(true, "the model list loads on the computer (allowed by the security policy)");
 await page.getByRole("button", { name: /Practice/ }).click();
-await page.getByText("Lyra now uses Practice").waitFor();
+await page.getByText("Tomo now uses Practice").waitFor();
 await page.goto("app://lyra/index.html#/");
-await page.getByPlaceholder("Message Lyra").fill("Hello from the laptop");
+await page.getByPlaceholder("Message Tomo").fill("Hello from the laptop");
 await page.getByRole("button", { name: "Send" }).click();
 await page.locator(".bubble", { hasText: "Hello from the laptop" }).waitFor();
 await page.locator(".row.user", { hasText: "Hello from the laptop" }).hover();
@@ -122,15 +122,15 @@ await page.goto("app://lyra/index.html#/access");
 await page.locator(".lp-svc", { hasText: "Mail" }).click();
 await page.getByText("Gmail is connected").waitFor();
 await page.getByRole("switch", { name: /Write emails/ }).click();
-await page.getByText("Lyra can write emails for your OK").waitFor();
+await page.getByText("Tomo can write emails for your OK").waitFor();
 await page.screenshot({ path: join(shots, "desktop-7-with-your-ok.png") });
 await page.goto("app://lyra/index.html#/");
-await page.getByPlaceholder("Message Lyra").fill("email dana@example.com saying Yes, Friday works.");
+await page.getByPlaceholder("Message Tomo").fill("email dana@example.com saying Yes, Friday works.");
 await page.getByRole("button", { name: "Send" }).click();
 const card = page.getByRole("group", { name: "Email for your OK" });
 await card.waitFor();
 await page.waitForTimeout(500);
-check(sent.length === 0 && (await card.getByText("dana@example.com").isVisible()), "Lyra's email shows as a card with who it goes to, and nothing is sent yet");
+check(sent.length === 0 && (await card.getByText("dana@example.com").isVisible()), "Tomo's email shows as a card with who it goes to, and nothing is sent yet");
 await card.getByRole("button", { name: "Edit" }).click();
 await card.getByLabel("Message").fill("Yes, Friday works. See you then!");
 await page.screenshot({ path: join(shots, "desktop-8-email-card.png") });
@@ -144,9 +144,9 @@ check((await card.getByRole("button", { name: "Send", exact: true }).count()) ==
 // ---- 0.55: organize mail with your OK: trash a thread, then Undo ----
 await page.goto("app://lyra/index.html#/access");
 await page.getByRole("switch", { name: /Organize your mail/ }).click();
-await page.getByText("Lyra can organize your mail with your OK").waitFor();
+await page.getByText("Tomo can organize your mail with your OK").waitFor();
 await page.goto("app://lyra/index.html#/");
-await page.getByPlaceholder("Message Lyra").fill("trash the bill email");
+await page.getByPlaceholder("Message Tomo").fill("trash the bill email");
 await page.getByRole("button", { name: "Send" }).click();
 const trashCard = page.getByRole("group", { name: "Mail change for your OK" });
 await trashCard.waitFor();
@@ -191,19 +191,19 @@ await page.locator(".admin-item", { hasText: "PG&E" }).waitFor({ state: "detache
 check(true, "marking a bill paid takes it off the list");
 await page.goto("app://lyra/index.html#/");
 
-await page.getByPlaceholder("Message Lyra").fill("go through my inbox");
+await page.getByPlaceholder("Message Tomo").fill("go through my inbox");
 await page.getByRole("button", { name: "Send" }).click();
 const triage = page.getByRole("region", { name: "Inbox triage" });
 await triage.waitFor();
-check((await triage.getByText("Needs you · 1").count()) === 1 && (await triage.getByRole("link", { name: "Open in Gmail" }).count()) === 2, "asking Lyra to go through the inbox shows a triage card");
+check((await triage.getByText("Needs you · 1").count()) === 1 && (await triage.getByRole("link", { name: "Open in Gmail" }).count()) === 2, "asking Tomo to go through the inbox shows a triage card");
 await triage.getByRole("button", { name: /Newsletters and promos/ }).click();
 await page.screenshot({ path: join(shots, "desktop-10-triage.png") });
 
 // ---- skills: teach one, then use it by name ----
-await page.getByPlaceholder("Message Lyra").fill("save a skill called Weekly review: 1. Look back at the week\n2. Plan Monday");
+await page.getByPlaceholder("Message Tomo").fill("save a skill called Weekly review: 1. Look back at the week\n2. Plan Monday");
 await page.getByRole("button", { name: "Send" }).click();
 await page.locator(".skill-chip", { hasText: "Learned Weekly review" }).waitFor();
-await page.getByPlaceholder("Message Lyra").fill("use my weekly review skill");
+await page.getByPlaceholder("Message Tomo").fill("use my weekly review skill");
 await page.getByRole("button", { name: "Send" }).click();
 await page.locator(".skill-chip", { hasText: "Followed Weekly review" }).waitFor();
 check(await page.getByText("Plan Monday").last().isVisible(), "a skill taught in chat is followed when asked for");
@@ -232,7 +232,7 @@ await page.getByText("Spotify connected").waitFor();
 check(/^http:\/\/127\.0\.0\.1:\d+\/spotify$/.test(spotifyAsked), "Spotify sign-in comes back through 127.0.0.1 on this computer");
 check(await spotifySheet.getByText("Spotify · Sam").isVisible(), "Spotify shows as connected, look-only");
 await page.getByRole("switch", { name: /Control playback/ }).click();
-await page.getByText("Lyra can control playback").waitFor();
+await page.getByText("Tomo can control playback").waitFor();
 await page.screenshot({ path: join(shots, "desktop-9-spotify.png") });
 check(true, "playback control is its own switch");
 
@@ -261,7 +261,7 @@ check(true, "playback control is its own switch");
   await page.keyboard.press("Escape");
   await page.goto("app://lyra/index.html#/access");
   await page.locator(".lp-svc", { hasText: "Browser" }).click();
-  await page.getByRole("switch", { name: /Let Lyra use your browser/ }).click();
+  await page.getByRole("switch", { name: /Let Tomo use your browser/ }).click();
   await page.getByText("Waiting for the extension…").waitFor();
   check((await page.getByRole("button", { name: "Show the extension's folder" }).count()) === 1, "turning it on shows how to add the extension");
   await page.screenshot({ path: join(shots, "desktop-17-browser-setup.png") });
@@ -272,27 +272,27 @@ check(true, "playback control is its own switch");
     args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`],
   });
   try {
-    await page.getByText("Lyra opens pages in its own window there").waitFor({ timeout: 30_000 });
-    check(true, "the extension connects to Lyra by itself");
+    await page.getByText("Tomo opens pages in its own window there").waitFor({ timeout: 30_000 });
+    check(true, "the extension connects to Tomo by itself");
     await page.screenshot({ path: join(shots, "desktop-18-browser-connected.png") });
     // a web page can't pretend to be the extension
     const own = browser.pages()[0];
     await own.goto(siteUrl);
     const sneaky = await own.evaluate(() => new Promise((r) => { const w = new WebSocket("ws://127.0.0.1:47615/lyra"); w.onopen = () => r("open"); w.onerror = () => r("refused"); }));
-    check(sneaky === "refused", "a web page can't connect to Lyra's link");
+    check(sneaky === "refused", "a web page can't connect to Tomo's link");
     await page.keyboard.press("Escape");
     await page.goto("app://lyra/index.html#/");
-    await page.getByPlaceholder("Message Lyra").fill(`open ${siteUrl}`);
+    await page.getByPlaceholder("Message Tomo").fill(`open ${siteUrl}`);
     await page.getByRole("button", { name: "Send" }).click();
     await page.locator(".reply", { hasText: "Hiking boots arrive Thursday." }).last().waitFor({ timeout: 30_000 });
-    check(true, "Lyra opens a page in the browser and reads it");
+    check(true, "Tomo opens a page in the browser and reads it");
     check(browser.pages().filter((p) => p.url() === siteUrl).length === 2 && own.url() === siteUrl, "it uses its own window; your tab is left alone");
     await page.screenshot({ path: join(shots, "desktop-19-browser-read.png") });
 
     // ---- 0.60: using the page: typing is free, Place order waits for the tap on the card ----
     const checkoutUrl = siteUrl.replace("/orders", "/checkout");
     const ask = async (words) => {
-      await page.getByPlaceholder("Message Lyra").fill(words);
+      await page.getByPlaceholder("Message Tomo").fill(words);
       await page.getByRole("button", { name: "Send" }).click();
     };
     await ask(`open ${checkoutUrl}`);
@@ -300,16 +300,16 @@ check(true, "playback control is its own switch");
     await ask("type Happy birthday into Gift note");
     await page.locator(".reply", { hasText: "Typed it in." }).last().waitFor({ timeout: 30_000 });
     const lyraTab = browser.pages().find((p) => p !== own && p.url() === checkoutUrl);
-    check((await lyraTab.locator("input[name=note]").inputValue()) === "Happy birthday", "Lyra types into a field on the page");
+    check((await lyraTab.locator("input[name=note]").inputValue()) === "Happy birthday", "Tomo types into a field on the page");
     await ask("press Place order");
     const stepCard = page.locator(".action-card", { hasText: "Place order" }).last();
     await stepCard.waitFor({ timeout: 30_000 });
-    check(orders.length === 0, "a button that buys isn't pressed by Lyra: it becomes a card");
-    check(await stepCard.getByText("Happy birthday").isVisible(), "the card shows the site, the button and what Lyra filled in");
+    check(orders.length === 0, "a button that buys isn't pressed by Tomo: it becomes a card");
+    check(await stepCard.getByText("Happy birthday").isVisible(), "the card shows the site, the button and what Tomo filled in");
     await page.screenshot({ path: join(shots, "desktop-20-browser-card.png") });
     await stepCard.getByRole("button", { name: /Press "Place order"/ }).click();
     await stepCard.getByText(/Pressed/).waitFor({ timeout: 30_000 });
-    check(orders.length === 1 && orders[0] === "note=Happy birthday", "after the tap, Lyra presses it and the order goes through once");
+    check(orders.length === 1 && orders[0] === "note=Happy birthday", "after the tap, Tomo presses it and the order goes through once");
     await page.screenshot({ path: join(shots, "desktop-21-browser-done.png") });
   } finally {
     await browser.close();
@@ -325,13 +325,13 @@ check(await traySwitch.isChecked(), "Settings shows the tray switch");
 await page.screenshot({ path: join(shots, "desktop-6-background.png") });
 await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close());
 await page.waitForTimeout(500);
-check(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length === 1 && !BrowserWindow.getAllWindows()[0].isVisible()), "closing the window hides Lyra to the tray instead of quitting");
+check(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length === 1 && !BrowserWindow.getAllWindows()[0].isVisible()), "closing the window hides Tomo to the tray instead of quitting");
 await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].show());
 await traySwitch.click();
-await page.getByText("Closing the window quits Lyra").waitFor();
+await page.getByText("Closing the window quits Tomo").waitFor();
 check((await page.evaluate(() => window.lyraDesktop.shell.prefs())).tray === false, "the tray can be turned off");
 await traySwitch.click();
-await page.getByText("Lyra stays in the tray").waitFor();
+await page.getByText("Tomo stays in the tray").waitFor();
 await app.close();
 
 const dataDir = join(home, ".config", "Lyra", "data");

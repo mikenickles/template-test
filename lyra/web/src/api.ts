@@ -452,7 +452,7 @@ function homeGaps(lyra: Lyra): string[] {
   const gaps: string[] = [];
   if (s.choice.provider === "fake") gaps.push("an AI model (add your API key here, in Settings, AI model)");
   const off = s.connectors.filter((c) => ["gmail", "calendar"].includes(c.id) && c.state !== "connected").map((c) => c.label);
-  if (off.length) gaps.push(`${off.join(" and ")} connected on this computer (on the Lyra page)`);
+  if (off.length) gaps.push(`${off.join(" and ")} connected on this computer (on the Tomo page)`);
   return gaps;
 }
 
@@ -493,7 +493,7 @@ export const syncApi = {
     await push.forget();
     syncChanged();
   },
-  testPush: async () => (await ready).push("Lyra", "This is a test from your home base. Push is working.", "#/"),
+  testPush: async () => (await ready).push("Tomo", "This is a test from your home base. Push is working.", "#/"),
   /** Make this computer the one that does Lyra's background work (or stop). Turns heads-ups on if they were off. */
   setHome: async (on: boolean): Promise<{ headsUpsOn: boolean }> => {
     const lyra = await ready;
@@ -625,8 +625,8 @@ function watchForNotices(lyra: Lyra): void {
       if (!d) return void seen.delete(e.taskId);
       seen.set(e.taskId, d.task.status);
       if (d.task.status === "ready" && before !== "ready") {
-        ring(lyra, `Ready for you: ${d.task.title}`, d.task.needs || "Lyra finished its part.", `#/t/${e.taskId}`);
-        notice(lyra, `Ready for you: ${d.task.title}`, d.task.needs || "Lyra finished its part.", `#/t/${e.taskId}`);
+        ring(lyra, `Ready for you: ${d.task.title}`, d.task.needs || "Tomo finished its part.", `#/t/${e.taskId}`);
+        notice(lyra, `Ready for you: ${d.task.title}`, d.task.needs || "Tomo finished its part.", `#/t/${e.taskId}`);
       }
     }
   });
@@ -804,5 +804,5 @@ export async function sendChat(text: string, h: StreamHandlers, channelId: numbe
   // sent back to back: the first message's send already tells you about this reply
   if (queued) return;
   // you switched away while Lyra was writing
-  if (message.content.trim()) notice(lyra, "Lyra", firstLine(message.content), chatHash(channelId));
+  if (message.content.trim()) notice(lyra, "Tomo", firstLine(message.content), chatHash(channelId));
 }

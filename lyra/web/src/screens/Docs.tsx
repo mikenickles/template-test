@@ -62,7 +62,7 @@ export function Docs({ toast }: { toast: (m: string) => void }) {
           <Plus size={16} /> New doc
         </button>
       </div>
-      {!docs?.length && <p className="page-sub">Made by Lyra. Ask in chat for a doc or a dashboard.</p>}
+      {!docs?.length && <p className="page-sub">Made by Tomo. Ask in chat for a doc or a dashboard.</p>}
       {!!docs?.length && (
         <div className="activity-filters artifact-filters" role="tablist" aria-label="Show">
           {FILTERS.map((f) => (
@@ -91,7 +91,7 @@ export function Docs({ toast }: { toast: (m: string) => void }) {
           ))}
         </div>
       ) : (
-        <p className="mem-empty">{docs.length ? (filter === "dashboard" ? "No dashboards yet. Ask Lyra for one in chat." : "No docs yet.") : "Nothing here yet."}</p>
+        <p className="mem-empty">{docs.length ? (filter === "dashboard" ? "No dashboards yet. Ask Tomo for one in chat." : "No docs yet.") : "Nothing here yet."}</p>
       )}
     </div>
   );
@@ -186,11 +186,11 @@ function DashboardPage({ doc, toast, onChange: set }: { doc: Doc; toast: (m: str
           ]}
         />
       </div>
-      {dash ? <DashboardView d={dash} /> : <p className="mem-empty">This dashboard can't be shown. Ask Lyra to make it again.</p>}
+      {dash ? <DashboardView d={dash} /> : <p className="mem-empty">This dashboard can't be shown. Ask Tomo to make it again.</p>}
       {doc.instructions.trim() ? (
-        <p className="hint dash-how">How Lyra refreshes it: {doc.instructions}</p>
+        <p className="hint dash-how">How Tomo refreshes it: {doc.instructions}</p>
       ) : (
-        <p className="hint dash-how">To change it, ask Lyra in chat: “update my {doc.title} dashboard”.</p>
+        <p className="hint dash-how">To change it, ask Tomo in chat: “update my {doc.title} dashboard”.</p>
       )}
     </div>
   );
@@ -286,7 +286,7 @@ export function DocPage({ id, toast, canGoogle }: { id: number; toast: (m: strin
           items={[
             // on a computer, Copy and Google Docs cover it (the desktop save dialog is for backups)
             ...(!isDesktop
-              ? [{ label: "Share", onClick: () => void run(() => shareFile(`${doc.title.replace(/[^\w .-]+/g, "").trim() || "Lyra doc"}.md`, new TextEncoder().encode(`# ${doc.title}\n\n${doc.body}\n`))) }]
+              ? [{ label: "Share", onClick: () => void run(() => shareFile(`${doc.title.replace(/[^\w .-]+/g, "").trim() || "Tomo doc"}.md`, new TextEncoder().encode(`# ${doc.title}\n\n${doc.body}\n`))) }]
               : []),
             ...(canGoogle
               ? [

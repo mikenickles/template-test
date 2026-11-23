@@ -96,7 +96,7 @@ export function Usage() {
         </div>
       )}
       {total === 0 ? (
-        <p className="mem-empty">No usage in this period yet. Lyra counts tokens from every reply, worker and routine, starting with this version.</p>
+        <p className="mem-empty">No usage in this period yet. Tomo counts tokens from every reply, worker and routine, starting with this version.</p>
       ) : (
         <>
           <figure className="usage-chart">
@@ -152,8 +152,8 @@ export function Usage() {
       <div className="usage-more">
         <JobsAndCalls range={range} today={today} />
       </div>
-      <p className="hint">"Cached" tokens are the part of a request that's the same as the one before (Lyra's rules and tools); providers read those from a cache at a fraction of the normal price, so they cost much less than their count suggests.</p>
-      <p className="hint">Counts are what each provider reported for Lyra's requests on your synced devices. "Sent" is everything the model read (your message, memory, history); "written" is its reply. Your provider's bill is the final word on cost.</p>
+      <p className="hint">"Cached" tokens are the part of a request that's the same as the one before (Tomo's rules and tools); providers read those from a cache at a fraction of the normal price, so they cost much less than their count suggests.</p>
+      <p className="hint">Counts are what each provider reported for Tomo's requests on your synced devices. "Sent" is everything the model read (your message, memory, history); "written" is its reply. Your provider's bill is the final word on cost.</p>
     </div>
   );
 }
@@ -248,7 +248,7 @@ function JobsAndCalls({ range, today }: { range: UsageRange; today: Date }) {
           <label className="item">
             <span className="body">
               <div className="title">Tokens under each reply</div>
-              <div className="sub">A small count under Lyra's replies on this device. Press and hold a reply to see its full count any time.</div>
+              <div className="sub">A small count under Tomo's replies on this device. Press and hold a reply to see its full count any time.</div>
             </span>
             <input
               type="checkbox"

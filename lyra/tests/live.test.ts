@@ -36,7 +36,7 @@ describe("live voice call", () => {
     expect(c.status).toBe("ended");
   });
 
-  it("hands delegated work to Lyra's engine and sends the answer back for that delegation", async () => {
+  it("hands delegated work to Tomo's engine and sends the answer back for that delegation", async () => {
     let release!: (v: string) => void;
     const asked: string[] = [];
     const { c, sent, kept } = call((req) => {
@@ -79,7 +79,7 @@ describe("live voice call", () => {
     expect(c.error).toBe("Bad event");
   });
 
-  it("starts the session with Lyra's character, memory and recent chat, and keeps the key in the engine", async () => {
+  it("starts the session with Tomo's character, memory and recent chat, and keeps the key in the engine", async () => {
     const s = liveSession({ userName: "Mike", soul: "Warm and brief.", memory: "- Rowan's party is Saturday", voice: "marin", history: [{ role: "user", text: "hi" }, { role: "assistant", text: "Hey Mike." }] });
     expect(s.model).toBe(LIVE_MODEL);
     expect(s.delegation).toEqual({ type: "client" });

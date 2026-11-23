@@ -22,7 +22,7 @@ function models() {
     id: "fake",
     model: "fake",
     async generate(req, onText) {
-      const isWorker = req.system.startsWith("You are one of Lyra's background workers");
+      const isWorker = req.system.startsWith("You are one of Tomo's background workers");
       if (isWorker) workerRequests.push({ ...req, messages: structuredClone(req.messages) });
       const next = isWorker ? work.shift() : chat.shift();
       const r = typeof next === "function" ? await next(req) : (next ?? say("ok"));
@@ -59,11 +59,11 @@ describe("background workers", () => {
     const d = lyra.task(1);
     expect(d.task).toMatchObject({ status: "ready", needs: "Review the result and mark it done.", steps_total: 2, steps_done: 1 });
     expect(d.log.map((l) => [l.who, l.text]).reverse()).toEqual([
-      ["lyra", "Lyra added this task."],
-      ["lyra", "Lyra set it to Working."],
+      ["lyra", "Tomo added this task."],
+      ["lyra", "Tomo set it to Working."],
       ["worker", "Started work."],
       ["worker", "Picked 5 games that work outdoors"],
-      ["lyra", "Lyra added a step: Make a schedule"],
+      ["lyra", "Tomo added a step: Make a schedule"],
       ["worker", "The worker finished: Shortlist games"],
       ["worker", "Planned 5 games"],
       ["worker", "Result: Five games fill the two hours.\n\n- **Start:** treasure hunt\n- **End:** piñata"],
@@ -104,7 +104,7 @@ describe("background workers", () => {
     // same run, continued: the worker saw its earlier question and the answer
     expect(lyra.workerRuns(1)).toHaveLength(1);
     const last = workerRequests.at(-1)!.messages.at(-1)!;
-    expect(JSON.stringify(last)).toContain("Lyra says: Lee, sooner is better");
+    expect(JSON.stringify(last)).toContain("Tomo says: Lee, sooner is better");
   });
 
   it("can be stopped", async () => {

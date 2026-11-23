@@ -102,14 +102,14 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
           Memory file
         </label>
         <textarea id="memory-file" className="editor" value={draft} onChange={(e) => setDraft(e.target.value)} spellCheck />
-        <p className="hint">One fact per line, starting with “- ”. Lyra reads this before every reply.</p>
+        <p className="hint">One fact per line, starting with “- ”. Tomo reads this before every reply.</p>
       </div>
     );
 
   return (
     <div className="screen mem-sections">
       <h1 className="page-title">Memory</h1>
-      <p className="page-sub">What Lyra knows about you. Tap to change or forget.</p>
+      <p className="page-sub">What Tomo knows about you. Tap to change or forget.</p>
 
       <div className="seg-tabs mem-tabs" role="tablist" aria-label="Memory">
         {TABS.map((t) => (
@@ -128,7 +128,7 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
           {total === 0 ? (
             <div className="mem-empty-card">
               <p className="mem-empty-title">Nothing yet.</p>
-              <p>As you chat, Lyra keeps what will still matter next week: how you like things done, what you're working on, what you're waiting on. Or tell it directly: “remember I'm vegetarian”.</p>
+              <p>As you chat, Tomo keeps what will still matter next week: how you like things done, what you're working on, what you're waiting on. Or tell it directly: “remember I'm vegetarian”.</p>
             </div>
           ) : (
             filled.map((s) => (
@@ -158,7 +158,7 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
           {channels.length > 0 && (
             <section className="section">
               <h2 className="section-label">
-                Channel notebooks <span className="blurb">What Lyra knows about one subject each</span>
+                Channel notebooks <span className="blurb">What Tomo knows about one subject each</span>
               </h2>
               <div className="group">
                 {channels.map((c) => (
@@ -183,7 +183,7 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
               <label className="item">
                 <span className="body">
                   <div className="title">Tidy my notes each week</div>
-                  <div className="sub">Lyra merges duplicates and drops what's done or out of date, then tells you what changed in the chat, with an Undo.</div>
+                  <div className="sub">Tomo merges duplicates and drops what's done or out of date, then tells you what changed in the chat, with an Undo.</div>
                 </span>
                 <input
                   type="checkbox"
@@ -217,7 +217,7 @@ export function Memory({ toast, channels }: { toast: (m: string) => void; channe
               <button className="item" onClick={() => setDraft(view.content)}>
                 <span className="body">
                   <div className="title">Edit as text</div>
-                  <div className="sub">The whole file Lyra reads before every reply</div>
+                  <div className="sub">The whole file Tomo reads before every reply</div>
                 </span>
                 <Chevron className="chev" />
               </button>
@@ -309,7 +309,7 @@ function NoteSheet({
       >
         <h2 className="dialog-title">{note.text === null ? "Add a note" : "Edit note"}</h2>
         <label className="action-field">
-          <span>What Lyra should know</span>
+          <span>What Tomo should know</span>
           <textarea rows={3} value={text} autoFocus maxLength={300} placeholder="I'm vegetarian" onChange={(e) => setText(e.target.value)} />
         </label>
         <div className="action-field" style={{ marginTop: 12 }}>
@@ -368,7 +368,7 @@ function TalkNotes({ toast }: { toast: (m: string) => void }) {
       {!style.on ? (
         <div className="mem-empty-card">
           <p className="mem-empty-title">Talk like me is off.</p>
-          <p>Lyra keeps its own voice. Turn it on in Settings, You and appearance, and Lyra picks up your slang, energy and emoji over time.</p>
+          <p>Tomo keeps its own voice. Turn it on in Settings, You and appearance, and Tomo picks up your slang, energy and emoji over time.</p>
           <a className="btn quiet" href="#/settings/you">
             Open settings
           </a>
@@ -376,7 +376,7 @@ function TalkNotes({ toast }: { toast: (m: string) => void }) {
       ) : style.notes.length ? (
         <section className="section">
           <h2 className="section-label">
-            What Lyra noticed <span className="blurb">{style.updatedAt ? `Updated ${ago(parse(style.updatedAt))}` : ""}</span>
+            What Tomo noticed <span className="blurb">{style.updatedAt ? `Updated ${ago(parse(style.updatedAt))}` : ""}</span>
           </h2>
           <div className="group">
             {style.notes.map((n, i) => (
@@ -391,7 +391,7 @@ function TalkNotes({ toast }: { toast: (m: string) => void }) {
       ) : (
         <div className="mem-empty-card">
           <p className="mem-empty-title">Nothing learned yet.</p>
-          <p>Lyra goes by your recent chat for now, and every few days takes note of how you talk. Only from your own messages, never your email.</p>
+          <p>Tomo goes by your recent chat for now, and every few days takes note of how you talk. Only from your own messages, never your email.</p>
         </div>
       )}
       {style.on && (
@@ -400,7 +400,7 @@ function TalkNotes({ toast }: { toast: (m: string) => void }) {
             {busy ? "Working…" : "Update now"}
           </button>
           {style.notes.length > 0 && (
-            <button className="btn text" disabled={busy} onClick={() => void ask("Forget how you talk? Lyra starts learning again from scratch.").then<unknown>((ok) => ok && act(() => api.forgetStyle(), "Forgotten"))}>
+            <button className="btn text" disabled={busy} onClick={() => void ask("Forget how you talk? Tomo starts learning again from scratch.").then<unknown>((ok) => ok && act(() => api.forgetStyle(), "Forgotten"))}>
               Forget all
             </button>
           )}
@@ -441,7 +441,7 @@ function SkillList({ toast }: { toast: (m: string) => void }) {
         </div>
       ) : (
         <p className="mem-empty">
-          No skills yet. Show Lyra how you like something done (“When I plan a trip: check flights, block my calendar, make a packing list. Save that as a skill.”), or write one here.
+          No skills yet. Show Tomo how you like something done (“When I plan a trip: check flights, block my calendar, make a packing list. Save that as a skill.”), or write one here.
         </p>
       )}
       <button className="btn quiet tidy-now" onClick={() => setEditing("new")}>
@@ -501,7 +501,7 @@ function SkillSheet({ skill, toast, onClose, onSaved }: { skill: Skill | null; t
             <span>Steps</span>
             <textarea rows={8} value={f.steps} placeholder={"1. Check flights from home\n2. Block the dates on my calendar\n3. Make a packing list"} onChange={set("steps")} />
           </label>
-          <p className="hint">Skills change how Lyra does a job, not what it's allowed to do. Sending or booking still waits for your tap.</p>
+          <p className="hint">Skills change how Tomo does a job, not what it's allowed to do. Sending or booking still waits for your tap.</p>
         </div>
         <div className="action-buttons">
           <button className="btn primary" disabled={busy || !f.name.trim() || !f.use_when.trim() || !f.steps.trim()} onClick={() => void save()}>
@@ -544,7 +544,7 @@ function PeopleList({ toast }: { toast: (m: string) => void }) {
           ))}
         </div>
       ) : (
-        <p className="mem-empty">No one yet. Tell Lyra about the people who matter (“Dana is my sister, dana@example.com”), or add them here.</p>
+        <p className="mem-empty">No one yet. Tell Tomo about the people who matter (“Dana is my sister, dana@example.com”), or add them here.</p>
       )}
       <button className="btn quiet tidy-now" onClick={() => setEditing("new")}>
         Add a person
@@ -597,7 +597,7 @@ function PersonSheet({ person, toast, onClose, onSaved }: { person: Person | nul
     }
   };
   const remove = async () => {
-    if (!person || !(await ask(`Remove ${person.name}'s card? Lyra forgets what it noted about them.`))) return;
+    if (!person || !(await ask(`Remove ${person.name}'s card? Tomo forgets what it noted about them.`))) return;
     await api.deletePerson(person.id);
     toast("Removed");
     onSaved();
@@ -619,7 +619,7 @@ function PersonSheet({ person, toast, onClose, onSaved }: { person: Person | nul
           {field("emails", "Email")}
           {field("phones", "Phone")}
           {field("aliases", "Also called")}
-          {field("notes", "What Lyra knows (one per line)", true)}
+          {field("notes", "What Tomo knows (one per line)", true)}
         </div>
         <div className="action-buttons">
           <button className="btn primary" disabled={busy || !f.name.trim()} onClick={() => void save()}>

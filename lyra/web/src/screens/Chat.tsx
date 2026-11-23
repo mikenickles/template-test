@@ -123,7 +123,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
       })
       .catch(() => {
         setMessages([]);
-        toast("Couldn't load the chat. Is Lyra running?");
+        toast("Couldn't load the chat. Is Tomo running?");
       });
   }, [toast, channelId]);
 
@@ -369,7 +369,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
     sound.send();
     // A reply's being written: this joins it, like texting back to back.
     if (pending) {
-      if (files.length) return toast("Photos and files go once Lyra has finished this reply.");
+      if (files.length) return toast("Photos and files go once Tomo has finished this reply.");
       if (!text) return;
       setInput("");
       requestAnimationFrame(grow);
@@ -623,7 +623,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
             <div className="hello">
               <StarChart />
               <p className="eyebrow">{greeting()}</p>
-              <h1>{userName !== "you" ? `Hi ${userName}, I'm Lyra.` : "Hi, I'm Lyra."}</h1>
+              <h1>{userName !== "you" ? `Hi ${userName}, I'm Tomo.` : "Hi, I'm Tomo."}</h1>
               <p>Text me like you would a trusted assistant. I'll keep it short and remember what matters.</p>
               <SetupCard toast={toast} />
               <div className="chips">
@@ -691,7 +691,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                   )}
                   {m.role === "user" && !m.content.trim() ? (
                     m.meta.reaction ? (
-                      <span className="reaction lone" role="img" aria-label={`Lyra reacted ${m.meta.reaction}`}>
+                      <span className="reaction lone" role="img" aria-label={`Tomo reacted ${m.meta.reaction}`}>
                         {m.meta.reaction}
                       </span>
                     ) : null
@@ -708,7 +708,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                           );
                         })()}
                         {m.meta.reaction && (
-                          <span className="reaction" role="img" aria-label={`Lyra reacted ${m.meta.reaction}`}>
+                          <span className="reaction" role="img" aria-label={`Tomo reacted ${m.meta.reaction}`}>
                             {m.meta.reaction}
                           </span>
                         )}
@@ -919,7 +919,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
           {replyTo && (
             <div className="replying">
               <span className="replying-body">
-                <span className="replying-label">{replyTo.mine ? "Replying to your message" : "Replying to Lyra"}</span>
+                <span className="replying-label">{replyTo.mine ? "Replying to your message" : "Replying to Tomo"}</span>
                 <span className="replying-text">{replyTo.excerpt}</span>
               </span>
               <button type="button" className="replying-close" aria-label="Stop replying to that message" onClick={() => setReplyTo(null)}>
@@ -969,14 +969,14 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
             }}
           />
           <label htmlFor="msg" className="sr-only">
-            Message Lyra
+            Message Tomo
           </label>
           <textarea
             id="msg"
             ref={boxRef}
             rows={1}
             value={input}
-            placeholder={channel ? `Message ${channel.name}` : "Message Lyra"}
+            placeholder={channel ? `Message ${channel.name}` : "Message Tomo"}
             enterKeyHint="send"
             onChange={(e) => {
               setInput(e.target.value);
@@ -1003,7 +1003,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
           ) : (
             <>
               {canTalk && !input.trim() && !drafts.length && (
-                <button type="button" className="talk" aria-label="Talk with Lyra" title="Talk with Lyra" onClick={() => void talk()}>
+                <button type="button" className="talk" aria-label="Talk with Tomo" title="Talk with Tomo" onClick={() => void talk()}>
                   <Wave size={21} />
                 </button>
               )}
@@ -1113,7 +1113,7 @@ function WhySheet({ onSend }: { onSend: (why: string) => void }) {
       <button className="dialog-scrim" aria-label="Skip" tabIndex={-1} onClick={() => onSend("")} />
       <div className="sheet why-sheet" role="dialog" aria-modal="true" aria-label="What was off?">
         <h2 className="why-title">What was off?</h2>
-        <p className="why-sub">Lyra learns from this, so the next replies fit you better.</p>
+        <p className="why-sub">Tomo learns from this, so the next replies fit you better.</p>
         <div className="why-chips">
           {FEEDBACK_REASONS.map((r) => (
             <button
@@ -1230,7 +1230,7 @@ function MessageActions({
           <button
             className="item"
             onClick={() => {
-              void ask("Delete this message? Lyra will forget it was said, but anything it saved to memory stays.").then<unknown>((ok) => ok && onAct("delete"));
+              void ask("Delete this message? Tomo will forget it was said, but anything it saved to memory stays.").then<unknown>((ok) => ok && onAct("delete"));
             }}
           >
             <span className="body">

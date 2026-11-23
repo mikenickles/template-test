@@ -47,7 +47,7 @@ export async function prepare(file: Blob, name: string, mediaType = file.type): 
   const type = mediaType || "application/octet-stream";
   const isImage = type.startsWith("image/");
   const kind = isImage ? "image" : attachmentKind({ mediaType: type, name });
-  if (!kind) throw new Error(`Lyra can't read ${name}. Photos, PDFs and text files work.`);
+  if (!kind) throw new Error(`Tomo can't read ${name}. Photos, PDFs and text files work.`);
   const id = crypto.randomUUID();
   if (kind !== "image") {
     const limit = kind === "pdf" ? 8 : 0.2;
@@ -58,7 +58,7 @@ export async function prepare(file: Blob, name: string, mediaType = file.type): 
   try {
     img = await createImageBitmap(file, { imageOrientation: "from-image" });
   } catch {
-    throw new Error(`Lyra couldn't open ${name}. Try a JPEG or PNG (some phone formats like HEIC don't work yet).`);
+    throw new Error(`Tomo couldn't open ${name}. Try a JPEG or PNG (some phone formats like HEIC don't work yet).`);
   }
   try {
     const main = await draw(img, LONG_EDGE, 0.85);

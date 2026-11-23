@@ -6,7 +6,7 @@ import { Lyra } from "../core/lyra.ts";
 import { memStores, platform } from "./helpers.ts";
 
 const req = (webSearch: boolean) => ({
-  system: "You are Lyra.",
+  system: "You are Tomo.",
   messages: [{ role: "user", parts: [{ type: "text", text: "Any news on the school levy?" }] }] as Msg[],
   tools: [{ name: "remember", description: "x", schema: { type: "object", properties: {} } }],
   webSearch,
@@ -144,7 +144,7 @@ describe("OpenAI web search", () => {
   });
 });
 
-describe("web search in Lyra", () => {
+describe("web search in Tomo", () => {
   function searching(): ModelProvider & { requests: { webSearch?: boolean }[] } {
     const requests: { webSearch?: boolean }[] = [];
     const queue: GenerateResult[] = [

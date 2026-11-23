@@ -37,7 +37,7 @@ const toolTurn = [
 ];
 
 const req = {
-  system: "You are Lyra.",
+  system: "You are Tomo.",
   messages: [{ role: "user", parts: [{ type: "text", text: "Anything from school?" }] }] as Msg[],
   tools: [{ name: "gmail__search_mail", description: "search", schema: { type: "object", properties: { query: { type: "string" } } } }],
 };
@@ -52,7 +52,7 @@ describe("OpenAI Responses API", () => {
     expect(api.urls[0]).toBe("https://api.openai.com/v1/responses");
     expect(api.bodies[0]).toMatchObject({
       model: "gpt-6.1-sol",
-      instructions: "You are Lyra.",
+      instructions: "You are Tomo.",
       store: false,
       stream: true,
       include: ["reasoning.encrypted_content"],

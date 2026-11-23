@@ -12,7 +12,7 @@ public class LyraApp extends Application {
         try {
             PushPlugin.start(this);
         } catch (Exception e) {
-            Log.w("Lyra", "push didn't start", e);
+            Log.w("Tomo", "push didn't start", e);
         }
     }
 }

@@ -213,7 +213,7 @@ export function NewChannelDialog({ onClose, onCreated, toast }: { onClose: () =>
           value={about}
           maxLength={280}
           rows={3}
-          placeholder="What should Lyra know about this channel?"
+          placeholder="What should Tomo know about this channel?"
           onChange={(e) => setAbout(e.target.value)}
         />
 
@@ -287,7 +287,7 @@ export function ChannelInfo({ id, toast, onChange }: { id: number; toast: (m: st
           {channel.name} notebook
         </label>
         <textarea id="nb-file" className="editor" value={draft} onChange={(e) => setDraft(e.target.value)} spellCheck />
-        <p className="hint">One fact per line, starting with “- ”. Lyra reads this before every reply in {channel.name}.</p>
+        <p className="hint">One fact per line, starting with “- ”. Tomo reads this before every reply in {channel.name}.</p>
       </div>
     );
 
@@ -349,7 +349,7 @@ export function ChannelInfo({ id, toast, onChange }: { id: number; toast: (m: st
                 ))}
               </div>
             ) : (
-              <p className="mem-empty">No open tasks. Ask Lyra in this channel, or add one on the Tasks tab.</p>
+              <p className="mem-empty">No open tasks. Ask Tomo in this channel, or add one on the Tasks tab.</p>
             )}
           </section>
 
@@ -362,7 +362,7 @@ export function ChannelInfo({ id, toast, onChange }: { id: number; toast: (m: st
             </button>
           </div>
           <p className="hint" style={{ margin: "8px 0 0" }}>
-            Lyra saves facts about {channel.name} here. Things about you go in main memory.
+            Tomo saves facts about {channel.name} here. Things about you go in main memory.
           </p>
 
           {notebook.sections.map((s) => (

@@ -33,7 +33,7 @@ describe("memory file edits", () => {
   });
 
   it("creates a missing section when the file was hand-edited", () => {
-    const md = addItem("# Lyra memory\n\n## People\n- A\n", "Open loops", "Waiting on the plumber quote");
+    const md = addItem("# Tomo memory\n\n## People\n- A\n", "Open loops", "Waiting on the plumber quote");
     expect(listItems(md, "Open loops")).toEqual(["Waiting on the plumber quote"]);
     expect(listItems(md, "People")).toEqual(["A"]);
   });

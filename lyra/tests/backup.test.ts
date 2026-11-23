@@ -19,14 +19,14 @@ describe("backup file", () => {
 
   it("rejects short passphrases, other files and tampering", async () => {
     await expect(encryptBackup(payload, "short")).rejects.toThrow(/at least 8/);
-    await expect(decryptBackup(new TextEncoder().encode("hello, not a backup at all, really not"), PASS)).rejects.toThrow(/isn't a Lyra backup/);
+    await expect(decryptBackup(new TextEncoder().encode("hello, not a backup at all, really not"), PASS)).rejects.toThrow(/isn't a Tomo backup/);
     const file = await encryptBackup(payload, PASS);
     file[file.length - 1] ^= 1;
     await expect(decryptBackup(file, PASS)).rejects.toThrow(/passphrase/);
   });
 
   it("names files by date", () => {
-    expect(backupName(new Date(2026, 10, 2))).toBe("Lyra backup 2026-11-02.lyra");
+    expect(backupName(new Date(2026, 10, 2))).toBe("Tomo backup 2026-11-02.lyra");
   });
 });
 
@@ -38,7 +38,7 @@ describe("backup and restore", () => {
     await a.chat("Remember that Rowan's party is Saturday", noop);
     const rowan = await a.createChannel({ name: "Rowan", about: "Birthday" });
     await a.chat("The bounce house is booked", noop, rowan.id);
-    await a.saveSoul("# Lyra's soul\n\nBe brief and kind.");
+    await a.saveSoul("# Tomo's soul\n\nBe brief and kind.");
     await a.connectGoogle("gmail");
     const file = await a.backup(PASS);
     expect(new TextDecoder().decode(file).includes("sk-ant-secret")).toBe(false);

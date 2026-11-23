@@ -7,7 +7,7 @@ import { fakeGoogle, memStores, platform } from "./helpers.ts";
 const noop = { text: () => {}, status: () => {}, memory: () => {} };
 const say = (text: string): GenerateResult => ({ parts: [{ type: "text", text }], stop: "end" });
 
-describe("Lyra engine", () => {
+describe("Tomo engine", () => {
   it("starts on the practice model until a key is added, and keeps keys out of the database", async () => {
     const stores = memStores();
     const lyra = await Lyra.start(platform({}, stores));

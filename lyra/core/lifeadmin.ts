@@ -324,7 +324,7 @@ export async function scanInbox(d: ScanDeps): Promise<ReturnType<typeof checkIte
   const user = d.userName === "you" ? "the user" : d.userName;
   const gmail = (await d.connectors.tools()).filter((t) => /^gmail__(search_mail|read_thread)$/.test(t.name));
   if (!gmail.length) return [];
-  const system = `You are Lyra, ${user}'s chief of staff, going through their recent email for life admin. Today is ${today} (${d.timeZone ?? "local time"}).
+  const system = `You are Tomo, ${user}'s chief of staff, going through their recent email for life admin. Today is ${today} (${d.timeZone ?? "local time"}).
 
 Find, in mail from the last ${d.days} day${d.days === 1 ? "" : "s"}:
 - bill: an amount due with a due date (utilities, phone, credit card statement, rent, insurance, medical, taxes).

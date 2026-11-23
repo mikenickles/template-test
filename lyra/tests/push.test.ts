@@ -63,21 +63,21 @@ describe("push from the home base", () => {
     const g = fakeGoogle(["tok-old-phone"]);
     const stores = memStores();
     const lyra = await Lyra.start(platform({ fetch: g.fetch }, stores));
-    expect(await lyra.push("Lyra", "nothing set up")).toBe(0);
+    expect(await lyra.push("Tomo", "nothing set up")).toBe(0);
     await expect(lyra.setupPush(services(), account("another-project"))).rejects.toThrow(/different Firebase projects/);
     await lyra.setupPush(services(), account());
     expect(await lyra.pushStatus()).toEqual({ configured: true, canSend: true, devices: [] });
-    expect(await lyra.push("Lyra", "no phones yet")).toBe(0);
+    expect(await lyra.push("Tomo", "no phones yet")).toBe(0);
 
     // the phones sign up (their addresses arrive through sync)
     expect(await lyra.registerPushDevice("d1", "Phone", "tok-phone")).toBe(true);
     expect(await lyra.registerPushDevice("d1", "Phone", "tok-phone")).toBe(false);
     await lyra.registerPushDevice("d2", "Old phone", "tok-old-phone");
 
-    expect(await lyra.push("Heads-up from Lyra", "Rowan's school closes early Friday.", "#/c/2", ["Remind me Thursday", "Draft a reply"])).toBe(1);
-    expect(g.sent).toEqual([{ token: "tok-phone", title: "Heads-up from Lyra", body: "Rowan's school closes early Friday.", hash: "#/c/2", options: ["Remind me Thursday", "Draft a reply"] }]);
+    expect(await lyra.push("Heads-up from Tomo", "Rowan's school closes early Friday.", "#/c/2", ["Remind me Thursday", "Draft a reply"])).toBe(1);
+    expect(g.sent).toEqual([{ token: "tok-phone", title: "Heads-up from Tomo", body: "Rowan's school closes early Friday.", hash: "#/c/2", options: ["Remind me Thursday", "Draft a reply"] }]);
     expect((await lyra.pushStatus()).devices.map((d) => d.name)).toEqual(["Phone"]);
-    await lyra.push("Lyra", "again");
+    await lyra.push("Tomo", "again");
     expect(g.tokenCalls()).toBe(1); // the sending token is reused until it runs out
 
     // the sending key lives with the API keys, not in the synced data or a backup
@@ -85,6 +85,6 @@ describe("push from the home base", () => {
     expect(JSON.stringify(lyra.pushConfig())).not.toContain("PRIVATE KEY");
     await lyra.forgetPush();
     expect(await lyra.pushStatus()).toEqual({ configured: false, canSend: false, devices: [] });
-    expect(await lyra.push("Lyra", "off")).toBe(0);
+    expect(await lyra.push("Tomo", "off")).toBe(0);
   });
 });

@@ -117,7 +117,7 @@ const TOOLS: ToolDef[] = [
 export async function learnStyle(provider: ModelProvider, samples: string[], current: string[], userName: string, rated: RatedReply[] = []): Promise<string[] | null> {
   if (samples.length < 10 && rated.length < 3) return null;
   const user = userName === "you" ? "the user" : userName;
-  const system = `You are Lyra, ${user}'s chief of staff. Below are ${user}'s own recent messages to you${rated.length ? `, and replies of yours they rated` : ""}. Describe how ${user} talks${rated.length ? " and what they like in a reply" : ""}, so you can talk a little more like them.
+  const system = `You are Tomo, ${user}'s chief of staff. Below are ${user}'s own recent messages to you${rated.length ? `, and replies of yours they rated` : ""}. Describe how ${user} talks${rated.length ? " and what they like in a reply" : ""}, so you can talk a little more like them.
 
 Write up to ${MAX_STYLE_NOTES} short notes, one line each, about the way they talk${rated.length ? " and the replies they like" : ""}, never about what they talked about:
 - Words, slang and phrases they actually use, quoted ("hell yeah", "lol", "sounds good dude").

@@ -85,7 +85,7 @@ public class PushPlugin extends Plugin {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
         if (nm != null && nm.getNotificationChannel(CHANNEL) == null) {
-            nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Lyra", NotificationManager.IMPORTANCE_HIGH));
+            nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Tomo", NotificationManager.IMPORTANCE_HIGH));
         }
     }
 

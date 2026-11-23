@@ -148,8 +148,8 @@ function loopback(state) {
       const ok = u.searchParams.get("state") === state && u.searchParams.has("code");
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.end(
-        `<!doctype html><meta charset="utf-8"><title>Lyra</title><body style="font:18px system-ui;padding:48px;background:#f3f1ea;color:#131416">` +
-          (ok ? "<h2>You're signed in.</h2><p>You can close this tab and go back to Lyra.</p>" : "<h2>Sign-in didn't finish.</h2><p>Go back to Lyra and try again.</p>"),
+        `<!doctype html><meta charset="utf-8"><title>Tomo</title><body style="font:18px system-ui;padding:48px;background:#f3f1ea;color:#131416">` +
+          (ok ? "<h2>You're signed in.</h2><p>You can close this tab and go back to Tomo.</p>" : "<h2>Sign-in didn't finish.</h2><p>Go back to Tomo and try again.</p>"),
       );
       clearTimeout(timer);
       server.close();
@@ -221,7 +221,7 @@ ipcMain.handle("google:authorize", async (_e, scopes, interactive) => {
 // Sign-in to other services: only Spotify's page. Its redirect comes back to a one-time
 // listener on 127.0.0.1 (any port, as Spotify allows for loopback), path /spotify.
 ipcMain.handle("oauth:loopback", async (_e, url) => {
-  if (typeof url !== "string" || !url.startsWith("https://accounts.spotify.com/authorize?") || !url.includes("__REDIRECT__")) throw new Error("Not a sign-in page Lyra opens.");
+  if (typeof url !== "string" || !url.startsWith("https://accounts.spotify.com/authorize?") || !url.includes("__REDIRECT__")) throw new Error("Not a sign-in page Tomo opens.");
   const result = await new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
       const u = new URL(req.url, "http://127.0.0.1");
@@ -232,8 +232,8 @@ ipcMain.handle("oauth:loopback", async (_e, url) => {
       const ok = u.searchParams.has("code");
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.end(
-        `<!doctype html><meta charset="utf-8"><title>Lyra</title><body style="font:18px system-ui;padding:48px;background:#f3f1ea;color:#131416">` +
-          (ok ? "<h2>You're signed in to Spotify.</h2><p>You can close this tab and go back to Lyra.</p>" : "<h2>Sign-in didn't finish.</h2><p>Go back to Lyra and try again.</p>"),
+        `<!doctype html><meta charset="utf-8"><title>Tomo</title><body style="font:18px system-ui;padding:48px;background:#f3f1ea;color:#131416">` +
+          (ok ? "<h2>You're signed in to Spotify.</h2><p>You can close this tab and go back to Tomo.</p>" : "<h2>Sign-in didn't finish.</h2><p>Go back to Tomo and try again.</p>"),
       );
       clearTimeout(timer);
       server.close();
@@ -280,9 +280,9 @@ ipcMain.handle("backup:keep", async (_e, name, bytes) => {
 ipcMain.handle("backup:saveAs", async (_e, name, bytes) => {
   await fs.promises.mkdir(backupDir(), { recursive: true });
   const r = await dialog.showSaveDialog(win, {
-    title: "Save your Lyra backup",
+    title: "Save your Tomo backup",
     defaultPath: path.join(backupDir(), safeName(name)),
-    filters: [{ name: "Lyra backup", extensions: ["lyra"] }],
+    filters: [{ name: "Tomo backup", extensions: ["lyra"] }],
   });
   if (r.canceled || !r.filePath) return null;
   await writeAtomic(r.filePath, Buffer.from(bytes));
@@ -315,8 +315,15 @@ ipcMain.handle("app:info", () => ({ version: app.getVersion(), platform: process
 
 function startMenuShortcut() {
   if (process.platform !== "win32" || !app.isPackaged) return;
-  const link = path.join(app.getPath("appData"), "Microsoft", "Windows", "Start Menu", "Programs", "Lyra.lnk");
-  const want = { target: process.execPath, appUserModelId: APP_ID, description: "Lyra, your chief of staff", icon: process.execPath, iconIndex: 0 };
+  const programs = path.join(app.getPath("appData"), "Microsoft", "Windows", "Start Menu", "Programs");
+  const link = path.join(programs, "Tomo.lnk");
+  // the app was called Lyra: its old Start menu entry goes, the new one takes its place
+  try {
+    fs.rmSync(path.join(programs, "Lyra.lnk"), { force: true });
+  } catch {
+    /* not there */
+  }
+  const want = { target: process.execPath, appUserModelId: APP_ID, description: "Tomo, your chief of staff", icon: process.execPath, iconIndex: 0 };
   try {
     const have = fs.existsSync(link) ? shell.readShortcutLink(link) : null;
     if (!have || have.target !== process.execPath) shell.writeShortcutLink(link, have ? "replace" : "create", want);
@@ -337,7 +344,7 @@ function createWindow(show = true) {
     height: 800,
     minWidth: 400,
     minHeight: 560,
-    title: "Lyra",
+    title: "Tomo",
     icon: ICON,
     autoHideMenuBar: true,
     titleBarStyle: "hidden",
@@ -377,7 +384,7 @@ function createWindow(show = true) {
     if (!prefs.toldAboutTray && Notification.isSupported()) {
       prefs.toldAboutTray = true;
       void savePrefs();
-      new Notification({ title: "Lyra is still running", body: "It keeps your routines and heads-ups going from the tray. Right-click its icon to quit.", icon: ICON }).show();
+      new Notification({ title: "Tomo is still running", body: "It keeps your routines and heads-ups going from the tray. Right-click its icon to quit.", icon: ICON }).show();
     }
   });
   win.on("closed", () => (win = null));
@@ -415,12 +422,12 @@ function updateTray() {
   }
   if (tray) return;
   tray = new Tray(nativeImage.createFromPath(ICON).resize({ width: 32, height: 32 }));
-  tray.setToolTip("Lyra");
+  tray.setToolTip("Tomo");
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: "Open Lyra", click: () => showWindow() },
+      { label: "Open Tomo", click: () => showWindow() },
       { type: "separator" },
-      { label: "Quit Lyra", click: () => app.quit() },
+      { label: "Quit Tomo", click: () => app.quit() },
     ]),
   );
   tray.on("click", () => showWindow());
@@ -513,7 +520,7 @@ ipcMain.handle("updates:installPack", async (_e, bytes) => {
   } catch {
     throw new Error("That update file is damaged.");
   }
-  if (pack.format !== "lyra-pack" || !/^\d+\.\d+\.\d+$/.test(pack.version) || typeof pack.files !== "object") throw new Error("That isn't a Lyra update.");
+  if (pack.format !== "lyra-pack" || !/^\d+\.\d+\.\d+$/.test(pack.version) || typeof pack.files !== "object") throw new Error("That isn't a Tomo update.");
   if (pack.minShell > SHELL_VERSION) return { installed: false, needsFullInstall: true, version: pack.version };
   const names = Object.keys(pack.files);
   if (!names.includes("dist/index.html") || !names.every((n) => /^dist\/[\w\-.\/]+$/.test(n) && !n.includes(".."))) throw new Error("That update has unexpected files.");

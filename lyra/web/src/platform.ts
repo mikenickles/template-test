@@ -380,7 +380,7 @@ export const notifier = {
         return r.days.split("").map((d) => ({
           id: REMINDER_BASE + r.id * 100 + Number(d) * 10 + ti,
           title: r.name,
-          body: "Tap to open Lyra and it'll run now.",
+          body: "Tap to open Tomo and it'll run now.",
           schedule: { on: { weekday: Number(d) + 1, hour, minute }, allowWhileIdle: true },
           extra: { hash: r.channel_id ? `#/c/${r.channel_id}` : "#/" },
         }));
@@ -400,8 +400,8 @@ export const notifier = {
     await LocalNotifications.schedule({
       notifications: future.map((r) => ({
         id: ONE_OFF_BASE + (r.id % 1_000_000),
-        title: r.kind === "remind" ? "Reminder" : "Lyra is checking back",
-        body: r.kind === "remind" ? r.text : `${r.text} Open Lyra for the update.`,
+        title: r.kind === "remind" ? "Reminder" : "Tomo is checking back",
+        body: r.kind === "remind" ? r.text : `${r.text} Open Tomo for the update.`,
         // allowWhileIdle so a reminder isn't held back by battery saving
         schedule: { at: new Date(r.due_at), allowWhileIdle: true },
         extra: { hash: r.channel_id ? `#/c/${r.channel_id}` : "#/" },
@@ -437,11 +437,11 @@ export const notifier = {
 
   /** A test, a few seconds from now, so there's time to leave the app and see it arrive. */
   async test(): Promise<void> {
-    if (desk) return desk.notify("Lyra", "Notifications work. This is how I'll reach you.", "#/");
+    if (desk) return desk.notify("Tomo", "Notifications work. This is how I'll reach you.", "#/");
     if (!isNative) throw new Error("Notifications work in the Android app.");
-    if (!(await allowed())) throw new Error("Notifications are off for Lyra. Allow them first.");
+    if (!(await allowed())) throw new Error("Notifications are off for Tomo. Allow them first.");
     await LocalNotifications.schedule({
-      notifications: [{ id: NOTICE_BASE + 99_999, title: "Lyra", body: "Notifications work. This is how I'll reach you.", schedule: { at: new Date(Date.now() + 6_000), allowWhileIdle: true }, extra: { hash: "#/" } }],
+      notifications: [{ id: NOTICE_BASE + 99_999, title: "Tomo", body: "Notifications work. This is how I'll reach you.", schedule: { at: new Date(Date.now() + 6_000), allowWhileIdle: true }, extra: { hash: "#/" } }],
     });
   },
 
@@ -524,7 +524,7 @@ export async function shareFile(name: string, bytes: Uint8Array): Promise<void> 
   }
   const { uri } = await Filesystem.writeFile({ path: name, data: toBase64(bytes), directory: Directory.Cache });
   try {
-    await Share.share({ title: name, files: [uri], dialogTitle: "Save your Lyra backup" });
+    await Share.share({ title: name, files: [uri], dialogTitle: "Save your Tomo backup" });
   } catch (e) {
     // closing the share sheet without picking anything isn't an error
     if (!/cancel/i.test((e as Error).message ?? "")) throw e;
@@ -559,8 +559,8 @@ export const appLock = {
     if (!prompting) {
       const mine: Promise<{ ok: boolean; error?: string }> =
       BiometricAuth.authenticate({
-        reason: "Unlock Lyra",
-        androidTitle: "Unlock Lyra",
+        reason: "Unlock Tomo",
+        androidTitle: "Unlock Tomo",
         androidSubtitle: "Use your fingerprint, face or screen lock",
         allowDeviceCredential: true,
         androidConfirmationRequired: false,

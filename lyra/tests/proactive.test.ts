@@ -132,7 +132,7 @@ describe("heads-ups", () => {
     const m = lyra.messages(null).at(-1)!;
     expect(m.content).toMatch(/^Dana's waiting/);
     expect(m.meta.headsUp).toBe(true);
-    expect(events).toContainEqual({ type: "message", channelId: null, notify: { title: "Heads-up from Lyra", body: "Dana's waiting on your answer about Friday.", options: [] } });
+    expect(events).toContainEqual({ type: "message", channelId: null, notify: { title: "Heads-up from Tomo", body: "Dana's waiting on your answer about Friday.", options: [] } });
     expect(provider.requests[0].system).toMatch(/Keep it to what matters today or tomorrow/);
 
     // (0.53) four hours on and nothing has changed: no AI call at all
@@ -189,7 +189,7 @@ describe("check-ins when things are quiet", () => {
     const m = lyra.messages(null).at(-1)!;
     expect(m.meta).toMatchObject({ checkIn: true, suggestions: ["Yes, do that", "Not this week"] });
     expect(provider.requests[0].system).toMatch(/This is a check-in/);
-    expect(events).toContainEqual({ type: "message", channelId: null, notify: { title: "Lyra", body: expect.stringMatching(/^I could pull/), options: ["Yes, do that", "Not this week"] } });
+    expect(events).toContainEqual({ type: "message", channelId: null, notify: { title: "Tomo", body: expect.stringMatching(/^I could pull/), options: ["Yes, do that", "Not this week"] } });
     // unanswered: no second ask, even after the 8 hours
     expect(lyra.tickCheckIn(atLA(19, 1))).toBe(false);
     await lyra.chat("Yes, do that", noop);
@@ -228,7 +228,7 @@ describe("check-ins when things are quiet", () => {
 });
 
 describe("while you were away", () => {
-  it("lists what Lyra did on its own since you left, not the conversation", async () => {
+  it("lists what Tomo did on its own since you left, not the conversation", async () => {
     const db = await DB.open(SQL);
     addMessage(db, "user", "hello");
     addMessage(db, "assistant", "Hi Sam.");
@@ -257,7 +257,7 @@ describe("suggested next steps", () => {
     expect(message.meta.suggestions).toEqual(["Add it to my tasks", "Remind me Friday", "A fourth"]); // offers to answer an email are dropped
   });
 
-  it("offered before the answer is written, Lyra is told the answer is still to come (a real model took 'shown' to mean sent)", async () => {
+  it("offered before the answer is written, Tomo is told the answer is still to come (a real model took 'shown' to mean sent)", async () => {
     const provider = new FakeProvider([call("suggest_replies", { options: ["Remind me Friday"] }), say("Yes, Ortiz wrote back Monday.")]);
     const lyra = await Lyra.start(platform({ provider }));
     const { message } = await lyra.chat("Did the plumber get back to me?", noop);
@@ -267,14 +267,14 @@ describe("suggested next steps", () => {
     expect(message.meta.suggestions).toEqual(["Remind me Friday"]);
   });
 
-  it("tells Lyra which switch would let it do what was asked, only for services that are connected", async () => {
+  it("tells Tomo which switch would let it do what was asked, only for services that are connected", async () => {
     const provider = new FakeProvider([say("Hi."), say("Hi.")]);
     const lyra = await Lyra.start(platform({ provider }));
     await lyra.chat("hi", noop);
     expect(provider.requests[0].system).not.toContain("With your OK each time");
     await lyra.connectGoogle("gmail");
     await lyra.chat("hi", noop);
-    expect(provider.requests[1].system).toMatch(/can let you send emails for them \(Write emails\), archive, trash, label or mark mail \(Organize your mail\)[^]*"With your OK each time" on the Lyra page/);
+    expect(provider.requests[1].system).toMatch(/can let you send emails for them \(Write emails\), archive, trash, label or mark mail \(Organize your mail\)[^]*"With your OK each time" on the Tomo page/);
     expect(provider.requests[1].system).not.toContain("Calendar changes");
   });
 });
@@ -398,7 +398,7 @@ describe("staying proactive when things go wrong", () => {
     const db = (lyra as unknown as { db: { run(sql: string, p?: unknown[]): void } }).db;
     db.run("INSERT INTO messages (channel_id, role, content, meta) VALUES (NULL, 'assistant', 'Flight moved to 9:40.', ?)", [JSON.stringify({ headsUp: true })]);
     db.run("INSERT INTO messages (channel_id, role, content, meta) VALUES (NULL, 'assistant', 'Ortiz confirmed Thursday.', ?)", [JSON.stringify({ reminder: { id: 1, kind: "follow_up" } })]);
-    expect(lyra.ownPostsSince(0).map((p) => p.title)).toEqual(["Heads-up from Lyra", "Lyra followed up"]);
+    expect(lyra.ownPostsSince(0).map((p) => p.title)).toEqual(["Heads-up from Tomo", "Tomo followed up"]);
     lyra.markPushed(null);
     expect(lyra.ownPostsSince(0).map((p) => p.body)).toEqual(["Flight moved to 9:40."]);
   });

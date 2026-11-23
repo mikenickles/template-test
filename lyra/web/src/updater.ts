@@ -55,7 +55,7 @@ export async function checkForUpdate(lyra: Lyra, opts: { quiet?: boolean } = {})
     // say so once per version, wherever you are
     if (store("lyra.updates.told") !== found.version) {
       store("lyra.updates.told", found.version);
-      void notifier.now(`Lyra ${found.version} is ready`, "Open Settings to update.", "#/settings/about").catch(() => {});
+      void notifier.now(`Tomo ${found.version} is ready`, "Open Settings to update.", "#/settings/about").catch(() => {});
     }
     return state;
   } catch (e) {

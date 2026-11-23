@@ -21,7 +21,7 @@ export function isSection(s: string): s is Section {
 export function templateChannel(name: string, about: string): string {
   return `# ${cleanItem(name)}
 
-Lyra's notebook for this channel${about ? `: ${cleanItem(about)}` : ""}.
+Tomo's notebook for this channel${about ? `: ${cleanItem(about)}` : ""}.
 Facts about this subject live here. Things about you in general go in main memory.
 
 ## Notes
@@ -33,10 +33,10 @@ Facts about this subject live here. Things about you in general go in main memor
 }
 
 export function templateMemory(userName: string): string {
-  const who = userName === "you" ? "the person Lyra works for" : userName;
-  return `# Lyra memory
+  const who = userName === "you" ? "the person Tomo works for" : userName;
+  return `# Tomo memory
 
-What Lyra knows about ${who}. Lyra reads this at the start of every conversation.
+What Tomo knows about ${who}. Tomo reads this at the start of every conversation.
 You can edit it by hand at any time. Keep one fact per line.
 
 ## Rules

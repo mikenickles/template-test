@@ -37,7 +37,7 @@ describe("inbox triage", () => {
     expect(() => checkTriage({ range: "x", needs_you: [], can_wait: [], newsletters: [] })).toThrow(/empty/);
   });
 
-  it("is something Lyra does when asked: no card tool without Gmail, a card after reading the inbox", async () => {
+  it("is something Tomo does when asked: no card tool without Gmail, a card after reading the inbox", async () => {
     const without = new FakeProvider([say("Hi.")]);
     const l0 = await Lyra.start(platform({ provider: without }));
     await l0.chat("hi", noop);

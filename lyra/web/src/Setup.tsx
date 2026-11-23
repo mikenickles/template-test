@@ -45,18 +45,18 @@ export function useSetup(): { steps: SetupStep[]; state: AppState | null; reload
   const steps: SetupStep[] = [
     {
       key: "model",
-      title: "Give Lyra a brain",
-      sub: "Add an API key from Claude, OpenAI or Gemini. Until then Lyra only practices.",
+      title: "Give Tomo a brain",
+      sub: "Add an API key from Claude, OpenAI or Gemini. Until then Tomo only practices.",
       done: state.choice.provider !== "fake",
       href: "#/settings/model",
     },
-    { key: "name", title: "Tell Lyra your name", sub: "So it knows who it works for.", done: state.userName !== "you", href: "#/settings/you" },
+    { key: "name", title: "Tell Tomo your name", sub: "So it knows who it works for.", done: state.userName !== "you", href: "#/settings/you" },
     ...(canConnect
       ? [
           {
             key: "connect" as const,
             title: "Connect your mail and calendar",
-            sub: "Read-only. This is how Lyra knows what's coming up.",
+            sub: "Read-only. This is how Tomo knows what's coming up.",
             done: google.some((c) => c.state === "connected"),
             href: "#/access",
           },
@@ -66,14 +66,14 @@ export function useSetup(): { steps: SetupStep[]; state: AppState | null; reload
       ? [
           {
             key: "notify" as const,
-            title: "Let Lyra reach you",
+            title: "Let Tomo reach you",
             sub: "Notifications for heads-ups, reminders and finished tasks.",
             done: notify === "granted" && state.notifications,
             act: async () => {
               if (!state.notifications) await api.saveSettings({ notifications: true });
               if (notify === "denied") return void (await notifier.openSettings());
               if (!(await notifier.ask())) return "Notifications are still off. You can allow them in your phone's settings.";
-              return "Lyra can reach you now";
+              return "Tomo can reach you now";
             },
           },
         ]

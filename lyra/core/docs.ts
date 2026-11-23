@@ -123,7 +123,7 @@ export async function saveToGoogleDocs(d: Doc, tokens: TokenSource, fetchFn: typ
   if (r.status === 400) r = await send("text/plain");
   if (r.status === 401 || r.status === 403) {
     await tokens.invalidate();
-    throw new Error("Google refused. Try again, and approve Lyra's access to the docs it creates.");
+    throw new Error("Google refused. Try again, and approve Tomo's access to the docs it creates.");
   }
   if (r.status === 404 && d.gdoc_id) throw new Error("GONE");
   if (!r.ok) throw new Error(`Google said ${r.status}.`);

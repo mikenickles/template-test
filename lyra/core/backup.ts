@@ -77,7 +77,7 @@ export async function encryptBackup(payload: BackupPayload, passphrase: string):
 
 export async function decryptBackup(file: Uint8Array, passphrase: string): Promise<BackupPayload> {
   const head = file.subarray(0, MAGIC.length);
-  if (file.length < MAGIC.length + 44 || !head.every((b, i) => b === MAGIC[i])) throw new Error("That file isn't a Lyra backup.");
+  if (file.length < MAGIC.length + 44 || !head.every((b, i) => b === MAGIC[i])) throw new Error("That file isn't a Tomo backup.");
   const salt = file.subarray(MAGIC.length, MAGIC.length + 16);
   const iv = file.subarray(MAGIC.length + 16, MAGIC.length + 28);
   let packed: Uint8Array;
@@ -89,12 +89,12 @@ export async function decryptBackup(file: Uint8Array, passphrase: string): Promi
     throw new Error("That passphrase doesn't open this backup.");
   }
   const payload = JSON.parse(new TextDecoder().decode(await squeeze(packed, "gunzip"))) as BackupPayload;
-  if (payload.format !== "lyra-backup" || payload.version !== 1 || typeof payload.db !== "string") throw new Error("This backup is from a newer Lyra. Update the app first.");
+  if (payload.format !== "lyra-backup" || payload.version !== 1 || typeof payload.db !== "string") throw new Error("This backup is from a newer Tomo. Update the app first.");
   return payload;
 }
 
 /** "Lyra backup 2026-11-12.lyra" */
 export function backupName(now = new Date()): string {
   const d = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  return `Lyra backup ${d}${BACKUP_EXT}`;
+  return `Tomo backup ${d}${BACKUP_EXT}`;
 }

@@ -82,7 +82,7 @@ describe("talking like the user", () => {
     expect(lyra.talkStyle().notes).toEqual([]);
   });
 
-  it("takes a thumbs up or down on Lyra's replies, and learns what the user likes from them", async () => {
+  it("takes a thumbs up or down on Tomo's replies, and learns what the user likes from them", async () => {
     const m = scripted([]);
     const lyra = await Lyra.start(platform({ provider: m.provider }));
     await lyra.saveSettings({ proactive: { level: "off" } });
@@ -94,7 +94,7 @@ describe("talking like the user", () => {
       ids.push(addMessage(db, "assistant", `Here's a long answer ${i} `.repeat(30), {}, null).id);
     }
     const mine = addMessage(db, "user", "thanks", {}, null).id;
-    await expect(lyra.rateReply(mine, "up")).rejects.toThrow(/Only Lyra's replies/);
+    await expect(lyra.rateReply(mine, "up")).rejects.toThrow(/Only Tomo's replies/);
 
     const up = await lyra.rateReply(ids[0], "up", "ignored on a thumbs up");
     expect(up.meta.feedback).toMatchObject({ rating: "up" });

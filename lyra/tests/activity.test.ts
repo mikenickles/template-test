@@ -4,7 +4,7 @@ import { addMessage, DB } from "../core/db.ts";
 import { SQL } from "./helpers.ts";
 
 describe("the activity log", () => {
-  it("brings task runs, routine runs, Lyra's own posts and logged jobs together, newest first", async () => {
+  it("brings task runs, routine runs, Tomo's own posts and logged jobs together, newest first", async () => {
     const db = await DB.open(SQL);
     db.run("INSERT INTO tasks (title) VALUES ('Find a plumber')");
     const transcript = [

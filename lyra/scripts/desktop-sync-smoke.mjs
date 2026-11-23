@@ -85,10 +85,10 @@ async function device(name) {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("dialog", (d) => d.accept()); // "this replaces what's on this device"
-  await page.getByText("I'm Lyra.").waitFor({ timeout: 20_000 });
+  await page.getByText("I'm Tomo.").waitFor({ timeout: 20_000 });
   const say = async (text) => {
     await page.goto("app://lyra/index.html#/");
-    await page.getByPlaceholder("Message Lyra").fill(text);
+    await page.getByPlaceholder("Message Tomo").fill(text);
     await page.getByRole("button", { name: "Send" }).click();
     await page.locator(".bubble", { hasText: text }).waitFor();
   };
@@ -152,10 +152,10 @@ await a.say("A while apart");
 await a.page.waitForTimeout(6000); // A's change is in Drive first
 await b.say("B while apart"); // B changed too, without having loaded A's
 await b.page.waitForTimeout(6000);
-const asked = b.page.getByRole("alertdialog", { name: "Lyra changed on both devices" });
+const asked = b.page.getByRole("alertdialog", { name: "Tomo changed on both devices" });
 await asked.waitFor({ timeout: 20_000 });
 await b.page.screenshot({ path: join(shots, "desktop-5-conflict.png") });
-check(true, "when both changed, Lyra asks which to keep");
+check(true, "when both changed, Tomo asks which to keep");
 await b.page.getByRole("button", { name: "Use Computer A's" }).click();
 await b.shows("A while apart");
 check((await b.page.locator(".bubble", { hasText: "B while apart" }).count()) === 0, "picking the other device's version loads it");
@@ -164,8 +164,8 @@ check([...drive.values()].some((f) => f.appProperties.kind === "conflict"), "the
 // home base: computer A takes Lyra's background work; B sees it and leaves the work to A
 await a.settings();
 await a.page.getByRole("switch", { name: /home base/ }).click();
-await a.page.getByText(/This computer is Lyra's home base/).first().waitFor();
-check([...drive.values()].some((f) => f.appProperties.home === "1" && f.appProperties.deviceName === "Computer A"), "a computer can be made Lyra's home base (its heartbeat is in Drive)");
+await a.page.getByText(/This computer is Tomo's home base/).first().waitFor();
+check([...drive.values()].some((f) => f.appProperties.home === "1" && f.appProperties.deviceName === "Computer A"), "a computer can be made Tomo's home base (its heartbeat is in Drive)");
 await a.page.screenshot({ path: join(shots, "desktop-13-home-base.png") });
 await a.page.locator(".item", { hasText: "Ring my phone" }).getByRole("button", { name: "Set up" }).click();
 await a.page.getByRole("dialog", { name: "Ring my phone" }).waitFor();
@@ -176,7 +176,7 @@ await a.page.getByRole("dialog", { name: "Ring my phone" }).getByRole("button", 
 await b.settings();
 await b.page.getByRole("button", { name: "Sync now" }).click();
 await b.page.getByText("Home base · Computer A").waitFor({ timeout: 20_000 });
-check(await b.page.getByText(/Doing Lyra's routines and heads-ups/).isVisible(), "the other device sees the home base and leaves the background work to it");
+check(await b.page.getByText(/Doing Tomo's routines and heads-ups/).isVisible(), "the other device sees the home base and leaves the background work to it");
 
 const kept = (d) => (existsSync(join(d.documents, "Lyra Backups")) ? readdirSync(join(d.documents, "Lyra Backups")) : []).filter((f) => f.startsWith("Lyra auto "));
 check(kept(a).length >= 2 && kept(b).length >= 2, `each computer keeps encrypted copies in Documents/Lyra Backups (${kept(a).length} and ${kept(b).length})`);

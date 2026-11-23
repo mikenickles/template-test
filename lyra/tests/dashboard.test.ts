@@ -60,7 +60,7 @@ describe("dashboards", () => {
     expect(d.blocks).toHaveLength(2);
   });
 
-  it("Lyra makes a dashboard that remembers how to refresh, and Refresh rebuilds it", async () => {
+  it("Tomo makes a dashboard that remembers how to refresh, and Refresh rebuilds it", async () => {
     const provider = new FakeProvider([
       call("make_dashboard", SUBS),
       say("Here's your subscriptions dashboard."),
@@ -84,7 +84,7 @@ describe("dashboards", () => {
     expect(sys).toContain("Per month: $84.97");
     expect(provider.requests[2].tools.map((t) => t.name)).toContain("save_dashboard");
     // dashboards stay in Lyra
-    await expect(lyra.saveDocToGoogle(1)).rejects.toThrow(/stay in Lyra/);
+    await expect(lyra.saveDocToGoogle(1)).rejects.toThrow(/stay in Tomo/);
   });
 
   it("a refresh that searched the web marks the dashboard as outside content", async () => {

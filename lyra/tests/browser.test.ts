@@ -76,7 +76,7 @@ describe("your browser", () => {
     expect(browser.log.slice(-2)).toEqual(["listen:false", "close"]);
   });
 
-  it("starts listening again when Lyra opens with it on, and says what to do when the extension isn't there", async () => {
+  it("starts listening again when Tomo opens with it on, and says what to do when the extension isn't there", async () => {
     const browser = fakeBrowser(false);
     const provider = new FakeProvider([call("browser__open_page", { url: "https://shop.example" }), say("Open your browser first.")]);
     const p = platform({ provider, browser });
@@ -127,7 +127,7 @@ describe("using pages in your browser", () => {
     expect(needsOk(note, "submit")).toBe(true);
     expect(needsOk(card)).toBe(true);
     expect(describePage(SHOP)).toMatch(/\[4\] "Place order" button ⚑/);
-    expect(describePage(SHOP)).toMatch(/\[3\] "Card number" field: private, Lyra never types here/);
+    expect(describePage(SHOP)).toMatch(/\[3\] "Card number" field: private, Tomo never types here/);
   });
 
   it("clicks and types freely, makes a card for Place order, and presses it only after the tap", async () => {

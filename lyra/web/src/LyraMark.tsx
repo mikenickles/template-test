@@ -82,7 +82,7 @@ export function StarChart() {
     [70, 210, 1.1],
   ];
   return (
-    <svg className="chart" viewBox="0 0 300 230" role="img" aria-label="The Lyra constellation">
+    <svg className="chart" viewBox="0 0 300 230" role="img" aria-label="The Tomo constellation">
       <circle cx={vx} cy={vy} r="26" fill="none" stroke="var(--chart-line)" strokeWidth="1" strokeDasharray="2 4" />
       <path
         d={`M${vx} ${vy}L${pts[0].join(" ")}L${pts[1].join(" ")}L${pts[2].join(" ")}L${pts[3].join(" ")}L${pts[0].join(" ")}`}

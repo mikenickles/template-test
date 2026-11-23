@@ -294,7 +294,7 @@ describe("Drive sync folder", () => {
     expect(laptop.sync.othersActive(Date.now() + 200_000)).toBe(false);
   });
 
-  it("lists what Lyra posted unasked since a message, for telling a device that just caught up", async () => {
+  it("lists what Tomo posted unasked since a message, for telling a device that just caught up", async () => {
     const d = await device("Phone", fakeDrive());
     await d.lyra.chat("hello", noop);
     const after = d.lyra.lastMessageId();
@@ -307,7 +307,7 @@ describe("Drive sync folder", () => {
     add("PG&E is due Friday", { lifeAdmin: { ids: [1] } });
     expect(d.lyra.ownPostsSince(after).map((p) => [p.title, p.body])).toEqual([
       ["School check", "School closes early Friday."],
-      ["Heads-up from Lyra", "Your flight moved to 9:40."],
+      ["Heads-up from Tomo", "Your flight moved to 9:40."],
     ]);
     expect(d.lyra.ownPostsSince(d.lyra.lastMessageId())).toEqual([]);
   });

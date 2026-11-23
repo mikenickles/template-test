@@ -593,7 +593,7 @@ async function bearer(t: TokenSource, what: string): Promise<string> {
     return await t.get();
   } catch (e) {
     if (e instanceof NeedsConsentError || /NEEDS_CONSENT/.test(String((e as Error).message)))
-      throw new Error(`Lyra isn't allowed to ${what} yet. Turn it on in Connections (on the Lyra page), then try again.`);
+      throw new Error(`Tomo isn't allowed to ${what} yet. Turn it on in Connections (on the Tomo page), then try again.`);
     throw e;
   }
 }
@@ -696,7 +696,7 @@ export function checkRemove(e: CalendarEvent, timeZone?: string): RemoveDraft {
 }
 
 export async function doRemove(d: ActionDeps, r: RemoveDraft): Promise<ActionResult> {
-  if (!d.events) throw new Error("Lyra isn't allowed to change your calendar yet. Turn it on in Connections, then try again.");
+  if (!d.events) throw new Error("Tomo isn't allowed to change your calendar yet. Turn it on in Connections, then try again.");
   // guests hear about it only when it's the user's own event being cancelled
   const url = `${CAL}/${encodeURIComponent(r.eventId)}?sendUpdates=${r.mine && r.guests ? "all" : "none"}`;
   const res = await d.fetch(url, { method: "DELETE", headers: { authorization: `Bearer ${await bearer(d.events, "add calendar events")}` } });
@@ -754,7 +754,7 @@ export async function doRsvp(d: ActionDeps, v: RsvpDraft): Promise<ActionResult>
 }
 
 export async function doArchive(d: ActionDeps, a: ArchiveDraft): Promise<ActionResult> {
-  if (!d.modify) throw new Error("Lyra isn't allowed to organize your mail yet. Turn it on in Connections, then try again.");
+  if (!d.modify) throw new Error("Tomo isn't allowed to organize your mail yet. Turn it on in Connections, then try again.");
   for (const t of a.threads) await post(d, `${GMAIL}/threads/${t.id}/modify`, d.modify, "organize your mail", { removeLabelIds: ["INBOX"] });
   return { did: "archived", at: new Date().toISOString() };
 }
@@ -787,7 +787,7 @@ function mailLabels(op: MailOp, labelId?: string): { addLabelIds?: string[]; rem
 
 /** Does it, and returns the payload as done (a new label's id is kept, so Undo can take it off). */
 export async function doMail(d: ActionDeps, m: MailDraft): Promise<{ result: ActionResult; payload: MailDraft }> {
-  if (!d.modify) throw new Error("Lyra isn't allowed to organize your mail yet. Turn it on in Connections, then try again.");
+  if (!d.modify) throw new Error("Tomo isn't allowed to organize your mail yet. Turn it on in Connections, then try again.");
   let label = m.label;
   if (m.op === "label" && label && !label.id) {
     const r = await post(d, `${GMAIL}/labels`, d.modify, "organize your mail", { name: label.name, labelListVisibility: "labelShow", messageListVisibility: "show" });
@@ -850,7 +850,7 @@ const DRIVE_UPLOAD = "https://www.googleapis.com/upload/drive/v3/files";
 const DOCS = "https://docs.googleapis.com/v1/documents";
 
 async function driveFetch(d: ActionDeps, url: string, init: RequestInit): Promise<Response> {
-  if (!d.drive) throw new Error("Lyra isn't allowed to change your Drive files yet. Turn it on in Connections, then try again.");
+  if (!d.drive) throw new Error("Tomo isn't allowed to change your Drive files yet. Turn it on in Connections, then try again.");
   const headers = { ...(init.headers as Record<string, string>), authorization: `Bearer ${await bearer(d.drive, "change your Drive files")}` };
   const r = await d.fetch(url, { ...init, headers });
   if (r.status === 401 || r.status === 403) {
@@ -858,7 +858,7 @@ async function driveFetch(d: ActionDeps, url: string, init: RequestInit): Promis
     const j = (await r.json().catch(() => ({}))) as { error?: { message?: string } };
     throw new Error(`Google refused (${r.status})${j.error?.message ? `: ${j.error.message}` : ""}. If it's your file, turn "Change your files" off and on again in Connections, then try again.`);
   }
-  if (r.status === 404) throw new Error("That file isn't in Drive anymore (or Lyra can't reach it).");
+  if (r.status === 404) throw new Error("That file isn't in Drive anymore (or Tomo can't reach it).");
   if (!r.ok) {
     const j = (await r.json().catch(() => ({}))) as { error?: { message?: string } };
     throw new Error(`Google said ${r.status}${j.error?.message ? `: ${j.error.message}` : ""}.`);

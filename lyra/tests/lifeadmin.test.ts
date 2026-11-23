@@ -11,7 +11,7 @@ const call = (name: string, input: Record<string, unknown>, id = "c1"): Generate
 const seen = new Set(["aaa111", "bbb222", "ccc333"]);
 
 describe("life admin", () => {
-  it("only keeps clean items from threads Lyra actually saw, and updates rather than repeats", async () => {
+  it("only keeps clean items from threads Tomo actually saw, and updates rather than repeats", async () => {
     const db = await DB.open(SQL);
     const items = [
       LA.checkItem({ kind: "bill", thread_id: "aaa111", who: "PG&E", title: "Electric bill", amount: 84.5, due_on: "2026-11-16" }, seen),

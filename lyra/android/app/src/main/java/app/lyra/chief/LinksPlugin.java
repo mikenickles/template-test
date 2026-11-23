@@ -20,7 +20,7 @@ public class LinksPlugin extends Plugin {
         String url = call.getString("url", "");
         // only Spotify's own sign-in page, and directions (leave-now nudges)
         if (!url.startsWith("https://accounts.spotify.com/") && !url.startsWith("https://www.google.com/maps/dir/")) {
-            call.reject("Not a sign-in page Lyra opens.");
+            call.reject("Not a sign-in page Tomo opens.");
             return;
         }
         Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(url));

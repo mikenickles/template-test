@@ -19,7 +19,7 @@
             android:id="@+id/widget_avatar"
             android:layout_width="44dp"
             android:layout_height="44dp"
-            android:contentDescription="Lyra"
+            android:contentDescription="Tomo"
             android:src="@mipmap/ic_launcher_round" />
 
         <LinearLayout
@@ -32,7 +32,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Lyra"
+                android:text="Tomo"
                 android:textColor="@color/widget_text"
                 android:textSize="16sp"
                 android:fontFamily="sans-serif-medium" />
@@ -54,7 +54,7 @@
             android:layout_height="44dp"
             android:padding="10dp"
             android:background="@drawable/widget_mic_bg"
-            android:contentDescription="Talk to Lyra"
+            android:contentDescription="Talk to Tomo"
             android:src="@drawable/ic_mic" />
     </LinearLayout>
 
@@ -65,7 +65,7 @@
         android:layout_marginTop="10dp"
         android:ellipsize="end"
         android:maxLines="2"
-        android:text="Tap to talk to Lyra"
+        android:text="Tap to talk to Tomo"
         android:textColor="@color/widget_text"
         android:textSize="14sp" />
 </LinearLayout>

@@ -367,7 +367,7 @@ export function App() {
   if (failed && !state)
     return (
       <div className="center-load" style={{ padding: 24, textAlign: "center" }}>
-        Lyra couldn't start. Close the app and open it again.
+        Tomo couldn't start. Close the app and open it again.
       </div>
     );
   if (!state) return <div className="center-load">Loading…</div>;
@@ -425,13 +425,13 @@ export function App() {
           {route.name === "tasks" && <div className="topbar-slot" id="topbar-center" />}
           {route.name === "chat" && !channel && (
             <div className="avatar-stack head-row">
-              <a className="orb orb-sm" href="#/access" aria-label="Lyra" title="Lyra">
+              <a className="orb orb-sm" href="#/access" aria-label="Tomo" title="Tomo">
                 <Avatar />
               </a>
               {/* (0.58) the name and Lyra's status sit beside the face */}
               <div className="head-words">
                 <a className="head-name" href="#/access" tabIndex={-1} aria-hidden="true">
-                  Lyra
+                  Tomo
                 </a>
                 <StatusLine state={state} />
               </div>
@@ -599,7 +599,7 @@ function LockScreen({ onUnlock }: { onUnlock: () => void }) {
       <span className="orb orb-lg">
         <Avatar />
       </span>
-      <h1>Lyra is locked</h1>
+      <h1>Tomo is locked</h1>
       <p>Unlock with your fingerprint, face or screen lock.</p>
       {error && (
         <p className="hint bad" role="alert">
@@ -636,7 +636,7 @@ function DeskBar({ route, channel, back }: { route: Route; channel?: Channel; ba
       )}
       <span className="desk-drag" />
       {inChat && (
-        <a className="desk-action" href={channel ? `#/c/${channel.id}/info` : "#/access"} aria-label={channel ? `${channel.name}: channel details` : "What Lyra can access"} title="Details">
+        <a className="desk-action" href={channel ? `#/c/${channel.id}/info` : "#/access"} aria-label={channel ? `${channel.name}: channel details` : "What Tomo can access"} title="Details">
           <Info size={20} />
         </a>
       )}

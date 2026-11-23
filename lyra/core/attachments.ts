@@ -45,7 +45,7 @@ export function checkAttachments(list: Attachment[]): AttachmentNote[] {
   return list.map((a) => {
     const kind = attachmentKind(a);
     const name = cleanName(a.name);
-    if (!kind) throw new Error(`Lyra can't read ${name}. Photos, PDFs and text files work.`);
+    if (!kind) throw new Error(`Tomo can't read ${name}. Photos, PDFs and text files work.`);
     const size = bytesOf(a.data);
     if (!/^[A-Za-z0-9+/]*={0,2}$/.test(a.data.slice(0, 2000)) || !size) throw new Error(`${name} didn't come through. Try attaching it again.`);
     if (size > (kind === "image" ? MAX_IMAGE : kind === "pdf" ? MAX_PDF : MAX_TEXT))

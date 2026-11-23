@@ -42,7 +42,7 @@ describe("birthdays", () => {
     expect(birthdayNotices(people, "2027-11-16", day.seen)!.text).toBe("Dana's birthday is tomorrow (turning 41).");
   });
 
-  it("posts the heads-up once a day, from a birthday Lyra was told in chat or the card", async () => {
+  it("posts the heads-up once a day, from a birthday Tomo was told in chat or the card", async () => {
     const lyra = await Lyra.start(platform());
     const dana = await lyra.savePerson(null, { name: "Dana Ortiz", birthday: "Nov 17 1986" });
     expect(dana.birthday).toBe("1986-11-17");

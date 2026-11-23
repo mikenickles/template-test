@@ -35,7 +35,7 @@ export function ModelSettings({ state, run, busy }: { state: AppState; run: (fn:
           <button
             className={`provider-head practice${current.provider === "fake" ? " using" : ""}`}
             disabled={busy || current.provider === "fake"}
-            onClick={() => void run(() => api.saveSettings({ provider: "fake" }), "Lyra now uses Practice")}
+            onClick={() => void run(() => api.saveSettings({ provider: "fake" }), "Tomo now uses Practice")}
           >
             <span className="body">
               <span className="title">Practice</span>
@@ -53,10 +53,10 @@ export function ModelSettings({ state, run, busy }: { state: AppState; run: (fn:
         <div className="group">
           <label className="item" htmlFor="live-voice">
             <span className="body">
-              <div className="title">Lyra's voice</div>
+              <div className="title">Tomo's voice</div>
               <div className="sub">
                 {state.keys.openai
-                  ? `Talk with Lyra out loud using OpenAI's GPT-Live, about ${PRICE} a minute while a call is open. Tap Talk in the message box.`
+                  ? `Talk with Tomo out loud using OpenAI's GPT-Live, about ${PRICE} a minute while a call is open. Tap Talk in the message box.`
                   : "Live voice uses OpenAI's GPT-Live. Add an OpenAI API key above to turn it on."}
               </div>
             </span>
@@ -77,7 +77,7 @@ export function ModelSettings({ state, run, busy }: { state: AppState; run: (fn:
           <label className="item">
             <span className="body">
               <div className="title">Web search</div>
-              <div className="sub">Lyra and its workers can look things up with your model's built-in search. Each search adds a small fee on your model bill.</div>
+              <div className="sub">Tomo and its workers can look things up with your model's built-in search. Each search adds a small fee on your model bill.</div>
             </span>
             <input
               type="checkbox"
@@ -118,9 +118,9 @@ function BackgroundModel({ state, run, busy }: { state: AppState; run: (fn: () =
       <div className="group">
         <label className="item">
           <span className="body">
-            <div className="title">For Lyra's own checks</div>
+            <div className="title">For Tomo's own checks</div>
             <div className="sub">
-              Mail watch, heads-ups, quiet routines, tidy-ups and inbox scans run on this one. Your chats, tasks and anything Lyra tells you are still written by your main model.
+              Mail watch, heads-ups, quiet routines, tidy-ups and inbox scans run on this one. Your chats, tasks and anything Tomo tells you are still written by your main model.
               {v === "auto" && auto ? (same ? ` No smaller partner for ${label(state.choice.model)}, so it uses that.` : ` Now: ${label(auto)}.`) : ""}
             </div>
           </span>
@@ -193,7 +193,7 @@ function ProviderCard({
     };
   }, [open, ready, p.id, reload, state.keys.openaiBaseUrl]);
 
-  const use = (m: Model) => void run(() => api.saveSettings({ provider: p.id, model: m.id }), `Lyra now uses ${m.label}`);
+  const use = (m: Model) => void run(() => api.saveSettings({ provider: p.id, model: m.id }), `Tomo now uses ${m.label}`);
   const currentLabel = using ? (models?.find((m) => m.id === state.choice.model)?.label ?? state.choice.model) : null;
   const match = (m: Model) => !filter.trim() || `${m.label} ${m.id}`.toLowerCase().includes(filter.trim().toLowerCase());
   const list = (models ?? []).filter(match);

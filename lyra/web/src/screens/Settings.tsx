@@ -51,7 +51,7 @@ const FINDER: { label: string; more: string; where: string; href: string; phone?
   { label: "Avatar size", more: "lyra picture orb bigger smaller display", where: "You and appearance", href: "#/settings/you" },
   { label: "Talk like me", more: "mirror slang how lyra talks style tone", where: "You and appearance", href: "#/settings/you" },
   { label: "Weather", more: "city place forecast temperature", where: "You and appearance", href: "#/settings/you" },
-  { label: "Make Lyra your assistant", more: "default digital assistant gesture power button home corner swipe gemini google hey", where: "You and appearance", href: "#/settings/you", phone: true },
+  { label: "Make Tomo your assistant", more: "default digital assistant gesture power button home corner swipe gemini google hey", where: "You and appearance", href: "#/settings/you", phone: true },
   { label: "Shortcuts", more: "app icon long press quick tile widget talk voice memo reach faster", where: "You and appearance", href: "#/settings/you", phone: true },
   { label: "Sounds", more: "audio noise chime bell mute", where: "You and appearance", href: "#/settings/you" },
   { label: "Gentle motion", more: "animation haze background breathing avatar glow moving battery", where: "You and appearance", href: "#/settings/you" },
@@ -67,12 +67,13 @@ const FINDER: { label: string; more: string; where: string; href: string; phone?
   { label: "App lock", more: "fingerprint face pin biometric privacy security", where: "Notifications and privacy", href: "#/settings/alerts", phone: true },
   { label: "Sync between devices", more: "phone computer drive passphrase", where: "Sync and backup", href: "#/settings/sync" },
   { label: "Home base", more: "always on computer laptop push firebase ring my phone", where: "Sync and backup", href: "#/settings/sync" },
+  { label: "Push notifications", more: "ring my phone firebase fcm closed instant notify", where: "Sync and backup, on your home base", href: "#/settings/sync" },
   { label: "Back up and restore", more: "backup export import move new phone file", where: "Sync and backup", href: "#/settings/sync" },
   { label: "Updates", more: "version new release install", where: "Updates", href: "#/settings/about" },
-  { label: "Mail, Calendar and Files", more: "gmail google drive connect connections access disconnect", where: "The Lyra page", href: "#/access" },
-  { label: "Spotify", more: "music now playing playlists playback", where: "The Lyra page", href: "#/access" },
-  { label: "Phone notifications and contacts", more: "texts messages read notifications address book", where: "The Lyra page", href: "#/access", phone: true },
-  { label: "What Lyra may do with your OK", more: "send email write emails calendar changes archive tidy inbox texts playlists", where: "The Lyra page", href: "#/access" },
+  { label: "Mail, Calendar and Files", more: "gmail google drive connect connections access disconnect", where: "The Tomo page", href: "#/access" },
+  { label: "Spotify", more: "music now playing playlists playback", where: "The Tomo page", href: "#/access" },
+  { label: "Phone notifications and contacts", more: "texts messages read notifications address book", where: "The Tomo page", href: "#/access", phone: true },
+  { label: "What Tomo may do with your OK", more: "send email write emails calendar changes archive tidy inbox texts playlists", where: "The Tomo page", href: "#/access" },
   { label: "Memory", more: "what lyra knows notes people skills forget remember", where: "Memory", href: "#/memory" },
   { label: "Soul", more: "personality character voice who lyra is", where: "Soul", href: "#/soul" },
   { label: "Routines", more: "morning brief schedule scheduled daily", where: "Tasks", href: "#/tasks" },
@@ -173,7 +174,7 @@ function SettingsHome({ state }: { state: AppState }) {
     { href: "#/settings/alerts", icon: <Bell />, title: TITLES.alerts, sub: alerts },
     { href: "#/settings/sync", icon: <Cloud />, title: TITLES.sync, sub: sync?.enabled ? (sync.lastError ? "Sync needs attention" : `Syncing as ${sync.deviceName}`) : "Sync is off" },
     { href: "#/access", icon: <Plug />, title: "Connections", sub: connected ? `${connected} of ${usable} connected` : "Mail, Calendar and Files: none connected yet" },
-    { href: "#/settings/about", icon: <Refresh />, title: TITLES.about, sub: `Lyra ${version}` },
+    { href: "#/settings/about", icon: <Refresh />, title: TITLES.about, sub: `Tomo ${version}` },
   ];
 
   // find any setting by a word in it (0.47): "quiet", "backup", "haptics", "spotify"
@@ -183,7 +184,7 @@ function SettingsHome({ state }: { state: AppState }) {
   return (
     <div className="screen">
       <h1 className="page-title">Settings</h1>
-      <p className="page-sub">Lyra lives on {thisDevice}.</p>
+      <p className="page-sub">Tomo lives on {thisDevice}.</p>
       <label className="settings-search">
         <Search size={18} />
         <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a setting" aria-label="Find a setting" />
@@ -199,7 +200,7 @@ function SettingsHome({ state }: { state: AppState }) {
               <Chevron className="chev" />
             </a>
           ))}
-          {!found.length && <p className="hint settings-none">Nothing by that name. Try another word, or ask Lyra in chat.</p>}
+          {!found.length && <p className="hint settings-none">Nothing by that name. Try another word, or ask Tomo in chat.</p>}
         </div>
       )}
       <div className="group settings-home" hidden={words.length > 0}>
@@ -225,7 +226,7 @@ function YouSection({ state, setState, toast, run, busy }: Omit<Props, "section"
       <section className="section">
         <h2 className="section-label">You</h2>
         <label className="field-label" htmlFor="name">
-          What should Lyra call you?
+          What should Tomo call you?
         </label>
         <div className="field-row">
           <input id="name" className="field" value={name} placeholder="Your first name" onChange={(e) => setName(e.target.value)} autoComplete="given-name" />
@@ -282,7 +283,7 @@ function YouSection({ state, setState, toast, run, busy }: Omit<Props, "section"
                 onChange={() => void run(() => api.saveSettings({ bubbles: b.id }), `${b.label} it is`)}
               />
               <span className="sample" aria-hidden="true">
-                Hey Lyra!
+                Hey Tomo!
               </span>
               <span className="name">{b.label}</span>
               <span className="about">{b.about}</span>
@@ -317,15 +318,15 @@ function ReachSection({ toast }: { toast: (m: string) => void }) {
   if (state === null) return null;
   return (
     <section className="section">
-      <h2 className="section-label">Reach Lyra faster</h2>
+      <h2 className="section-label">Reach Tomo faster</h2>
       <div className="group">
         <button className="item" onClick={() => void listen.chooseAssistant().catch((e) => toast((e as Error).message))}>
           <span className="body">
-            <div className="title">Make Lyra your assistant</div>
+            <div className="title">Make Tomo your assistant</div>
             <div className="sub">
               {state === "on"
-                ? "Lyra is this phone's assistant: the assistant gesture (holding the power or home button, or swiping in from a corner) opens it listening."
-                : "Pick Lyra under Digital assistant app, and the phone's assistant gesture (holding the power or home button, or swiping in from a corner) opens Lyra listening instead."}
+                ? "Tomo is this phone's assistant: the assistant gesture (holding the power or home button, or swiping in from a corner) opens it listening."
+                : "Pick Tomo under Digital assistant app, and the phone's assistant gesture (holding the power or home button, or swiping in from a corner) opens Tomo listening instead."}
             </div>
           </span>
           {state === "on" ? <span className="pill">On</span> : <Chevron size={18} className="chev" />}
@@ -333,13 +334,13 @@ function ReachSection({ toast }: { toast: (m: string) => void }) {
       </div>
       <ul className="reach-list">
         <li>
-          <b>Lyra's icon:</b> press and hold it for Talk to Lyra, Voice memo and Tasks.
+          <b>Tomo's icon:</b> press and hold it for Talk to Tomo, Voice memo and Tasks.
         </li>
         <li>
-          <b>Quick Settings:</b> add the Lyra tile to talk from anywhere.
+          <b>Quick Settings:</b> add the Tomo tile to talk from anywhere.
         </li>
         <li>
-          <b>Home screen:</b> add the Lyra widget for what's next and a mic.
+          <b>Home screen:</b> add the Tomo widget for what's next and a mic.
         </li>
       </ul>
     </section>
@@ -357,7 +358,7 @@ function SizeSection() {
       <h2 className="section-label">Size</h2>
       <div className="size-preview" aria-hidden="true">
         <Orb />
-        <p>This is how big Lyra and its messages look.</p>
+        <p>This is how big Tomo and its messages look.</p>
       </div>
       <div className="size-row">
         <span>Text in chats</span>
@@ -381,7 +382,7 @@ function SizeSection() {
         </div>
       </div>
       <div className="size-row">
-        <span>Lyra's avatar</span>
+        <span>Tomo's avatar</span>
         <div className="seg" role="radiogroup" aria-label="Avatar size" ref={avatarPill}>
           <span className="slide-pill" aria-hidden="true" />
           {AVATAR_SIZES.map((s) => (
@@ -418,7 +419,7 @@ function HapticsSection() {
         <label className="item">
           <span className="body">
             <div className="title">Gentle motion</div>
-            <div className="sub">A soft haze that drifts behind everything, and Lyra's avatar breathes (a little quicker while it's thinking). Off saves a touch of battery.</div>
+            <div className="sub">A soft haze that drifts behind everything, and Tomo's avatar breathes (a little quicker while it's thinking). Off saves a touch of battery.</div>
           </span>
           <input
             type="checkbox"
@@ -434,7 +435,7 @@ function HapticsSection() {
         <label className="item">
           <span className="body">
             <div className="title">Sounds</div>
-            <div className="sub">A few soft notes: when you send, when Lyra answers, when something gets done, and a bell when Lyra speaks first.</div>
+            <div className="sub">A few soft notes: when you send, when Tomo answers, when something gets done, and a bell when Tomo speaks first.</div>
           </span>
           <input
             type="checkbox"
@@ -492,12 +493,12 @@ function TalkLikeMe({ state, run, busy, toast }: { state: AppState; run: (fn: ()
   };
   return (
     <section className="section">
-      <h2 className="section-label">How Lyra talks to you</h2>
+      <h2 className="section-label">How Tomo talks to you</h2>
       <div className="group">
         <label className="item">
           <span className="body">
             <div className="title">Talk like me</div>
-            <div className="sub">Lyra picks up your slang, energy and emoji over time and talks a bit more like you. Lyra learns only from your own messages and the replies you rate with a thumbs up or down, never your email.</div>
+            <div className="sub">Tomo picks up your slang, energy and emoji over time and talks a bit more like you. Tomo learns only from your own messages and the replies you rate with a thumbs up or down, never your email.</div>
           </span>
           <input
             type="checkbox"
@@ -505,7 +506,7 @@ function TalkLikeMe({ state, run, busy, toast }: { state: AppState; run: (fn: ()
             className="switch"
             checked={state.mirror}
             disabled={busy}
-            onChange={(e) => void run(() => api.saveSettings({ mirror: e.target.checked }), e.target.checked ? "Lyra will talk more like you" : "Lyra will keep its own voice")}
+            onChange={(e) => void run(() => api.saveSettings({ mirror: e.target.checked }), e.target.checked ? "Tomo will talk more like you" : "Tomo will keep its own voice")}
           />
         </label>
       </div>
@@ -513,7 +514,7 @@ function TalkLikeMe({ state, run, busy, toast }: { state: AppState; run: (fn: ()
         <>
           {style.notes.length ? (
             <>
-              <p className="hint">What Lyra has noticed so far:</p>
+              <p className="hint">What Tomo has noticed so far:</p>
               <ul className="style-notes">
                 {style.notes.map((n) => (
                   <li key={n}>{n}</li>
@@ -521,14 +522,14 @@ function TalkLikeMe({ state, run, busy, toast }: { state: AppState; run: (fn: ()
               </ul>
             </>
           ) : (
-            <p className="hint">Nothing learned yet. Lyra goes by your recent chat for now, and every few days takes note of how you talk.</p>
+            <p className="hint">Nothing learned yet. Tomo goes by your recent chat for now, and every few days takes note of how you talk.</p>
           )}
           <div className="field-row">
             <button className="btn quiet" disabled={working} onClick={() => void act(() => api.learnStyleNow(), "Updated")}>
               {working ? "Listening…" : style.notes.length ? "Update now" : "Learn now"}
             </button>
             {style.notes.length > 0 && (
-              <button className="btn text" disabled={working} onClick={() => void ask("Forget what Lyra noticed about how you talk?").then<unknown>((ok) => ok && act(() => api.forgetStyle(), "Forgotten"))}>
+              <button className="btn text" disabled={working} onClick={() => void ask("Forget what Tomo noticed about how you talk?").then<unknown>((ok) => ok && act(() => api.forgetStyle(), "Forgotten"))}>
                 Forget
               </button>
             )}
@@ -540,8 +541,8 @@ function TalkLikeMe({ state, run, busy, toast }: { state: AppState; run: (fn: ()
 }
 
 const LEVELS = [
-  { id: "off", label: "Off", sub: "Lyra speaks when spoken to (plus your routines and reminders)." },
-  { id: "light", label: "Light", sub: "Every 4 hours Lyra looks at your mail, calendar and tasks, and only speaks up for something that matters today." },
+  { id: "off", label: "Off", sub: "Tomo speaks when spoken to (plus your routines and reminders)." },
+  { id: "light", label: "Light", sub: "Every 4 hours Tomo looks at your mail, calendar and tasks, and only speaks up for something that matters today." },
   { id: "active", label: "Active", sub: "Every hour, with a lower bar: things coming up, replies people are waiting on, tasks ready for you." },
 ] as const;
 
@@ -598,7 +599,7 @@ function HeadsUps({ state, run, busy }: { state: AppState; run: (fn: () => Promi
             <span className="body">
               <div className="title">Check in when it's quiet</div>
               <div className="sub">
-                When nothing needs you, Lyra offers to take something on or asks something to get to know you, {p.level === "active" ? "up to twice a day" : "about once a day"}. Never while you're mid-conversation, and not again until you've answered.
+                When nothing needs you, Tomo offers to take something on or asks something to get to know you, {p.level === "active" ? "up to twice a day" : "about once a day"}. Never while you're mid-conversation, and not again until you've answered.
               </div>
             </span>
             <input
@@ -607,7 +608,7 @@ function HeadsUps({ state, run, busy }: { state: AppState; run: (fn: () => Promi
               className="switch"
               checked={p.checkIns}
               disabled={busy}
-              onChange={(e) => void run(() => api.saveSettings({ proactive: { checkIns: e.target.checked } }), e.target.checked ? "Lyra will check in" : "No check-ins")}
+              onChange={(e) => void run(() => api.saveSettings({ proactive: { checkIns: e.target.checked } }), e.target.checked ? "Tomo will check in" : "No check-ins")}
             />
           </label>
           {state.connectors.some((c) => c.id === "gmail" && c.state === "connected") && (
@@ -615,7 +616,7 @@ function HeadsUps({ state, run, busy }: { state: AppState; run: (fn: () => Promi
               <span className="body">
                 <div className="title">Watch for important mail</div>
                 <div className="sub">
-                  Every 5 minutes Lyra checks for new mail from people on your People cards, or that Gmail marks Important. Only something new gets read, and you hear about it only if it needs you, with buttons for the next step.
+                  Every 5 minutes Tomo checks for new mail from people on your People cards, or that Gmail marks Important. Only something new gets read, and you hear about it only if it needs you, with buttons for the next step.
                 </div>
               </span>
               <input
@@ -624,13 +625,13 @@ function HeadsUps({ state, run, busy }: { state: AppState; run: (fn: () => Promi
                 className="switch"
                 checked={p.mailWatch}
                 disabled={busy}
-                onChange={(e) => void run(() => api.saveSettings({ proactive: { mailWatch: e.target.checked } }), e.target.checked ? "Lyra will watch your mail" : "Mail watch off")}
+                onChange={(e) => void run(() => api.saveSettings({ proactive: { mailWatch: e.target.checked } }), e.target.checked ? "Tomo will watch your mail" : "Mail watch off")}
               />
             </label>
           )}
         </div>
       )}
-      {p.level !== "off" && <p className="hint">Each check uses some tokens even when it stays quiet. They show on the Usage page under heads-ups. Checks run while Lyra is open, or in the background with {isNative ? "Keep watch" : "the tray"} (below){isNative ? "" : ". With sync on, your phone does the checking"}.</p>}
+      {p.level !== "off" && <p className="hint">Each check uses some tokens even when it stays quiet. They show on the Usage page under heads-ups. Checks run while Tomo is open, or in the background with {isNative ? "Keep watch" : "the tray"} (below){isNative ? "" : ". With sync on, your phone does the checking"}.</p>}
     </section>
   );
 }
@@ -664,7 +665,7 @@ function BackgroundSection({ toast }: { toast: (m: string) => void }) {
     <section className="section">
       <h2 className="section-label">In the background</h2>
       {bg === null ? (
-        <p className="hint">Keeping Lyra running in the tray needs the newest Windows app. Get it from Settings, Updates.</p>
+        <p className="hint">Keeping Tomo running in the tray needs the newest Windows app. Get it from Settings, Updates.</p>
       ) : (
         <>
           <div className="group">
@@ -673,8 +674,8 @@ function BackgroundSection({ toast }: { toast: (m: string) => void }) {
                 <div className="title">{isNative ? "Keep watch" : "Keep running in the tray"}</div>
                 <div className="sub">
                   {isNative
-                    ? `Routines, heads-ups and follow-ups keep running after you leave Lyra, checked every ${bg.every ?? 15} minutes. Android requires a notification while it's on, so it shows what's next and the latest from Lyra. Uses a little more battery.`
-                    : "Closing the window leaves Lyra in the tray, so routines, heads-ups and sync keep going. Quit from the tray icon."}
+                    ? `Routines, heads-ups and follow-ups keep running after you leave Tomo, checked every ${bg.every ?? 15} minutes. Android requires a notification while it's on, so it shows what's next and the latest from Tomo. Uses a little more battery.`
+                    : "Closing the window leaves Tomo in the tray, so routines, heads-ups and sync keep going. Quit from the tray icon."}
                 </div>
               </span>
               <input
@@ -683,7 +684,7 @@ function BackgroundSection({ toast }: { toast: (m: string) => void }) {
                 className="switch"
                 checked={bg.on}
                 disabled={busy}
-                onChange={(e) => void change({ on: e.target.checked }, e.target.checked ? (isNative ? "Keeping watch" : "Lyra stays in the tray") : isNative ? "Stopped keeping watch" : "Closing the window quits Lyra")}
+                onChange={(e) => void change({ on: e.target.checked }, e.target.checked ? (isNative ? "Keeping watch" : "Tomo stays in the tray") : isNative ? "Stopped keeping watch" : "Closing the window quits Tomo")}
               />
             </label>
             {isNative && bg.on && (
@@ -721,18 +722,18 @@ function BackgroundSection({ toast }: { toast: (m: string) => void }) {
                   className="switch"
                   checked={!!bg.atLogin}
                   disabled={busy || !bg.on}
-                  onChange={(e) => void change({ atLogin: e.target.checked }, e.target.checked ? "Lyra opens with Windows" : "Lyra won't open with Windows")}
+                  onChange={(e) => void change({ atLogin: e.target.checked }, e.target.checked ? "Tomo opens with Windows" : "Tomo won't open with Windows")}
                 />
               </label>
             )}
           </div>
           {isNative && homeBase && bg?.on && (
             <p className="hint">
-              {homeBase} is Lyra's home base, so the background work happens there and this phone doesn't need Keep watch. You can turn it off; the notification goes with it. Your phone takes over on its own if {homeBase} goes quiet (when Lyra is open).
+              {homeBase} is Tomo's home base, so the background work happens there and this phone doesn't need Keep watch. You can turn it off; the notification goes with it. Your phone takes over on its own if {homeBase} goes quiet (when Tomo is open).
             </p>
           )}
-          {isNative && <p className="hint">Swiping Lyra away from your recent apps stops it until you open it again.</p>}
-          {isDesktop && !routinesHere && <p className="hint">With sync on, your phone runs routines and heads-ups. To run them on this computer instead, make it Lyra's home base under Sync and backup.</p>}
+          {isNative && <p className="hint">Swiping Tomo away from your recent apps stops it until you open it again.</p>}
+          {isDesktop && !routinesHere && <p className="hint">With sync on, your phone runs routines and heads-ups. To run them on this computer instead, make it Tomo's home base under Sync and backup.</p>}
         </>
       )}
     </section>
@@ -766,7 +767,7 @@ function NotificationCheckup({ state, run, toast }: { state: AppState; run: (fn:
     {
       ok: perm === "granted" && state.notifications,
       title: "Notifications allowed",
-      sub: perm === "denied" ? "Android has them turned off for Lyra." : !state.notifications ? "Turned off in Lyra." : "Lyra can reach you.",
+      sub: perm === "denied" ? "Android has them turned off for Tomo." : !state.notifications ? "Turned off in Tomo." : "Tomo can reach you.",
       fix:
         perm === "denied" ? (
           <button className="btn quiet" onClick={() => void notifier.openSettings()}>
@@ -799,7 +800,7 @@ function NotificationCheckup({ state, run, toast }: { state: AppState; run: (fn:
     {
       ok: state.proactive.level !== "off",
       title: "Heads-ups on",
-      sub: state.proactive.level === "off" ? "Off: Lyra only speaks when spoken to." : `${state.proactive.level === "active" ? "Active" : "Light"}, with check-ins ${state.proactive.checkIns ? "on" : "off"}.`,
+      sub: state.proactive.level === "off" ? "Off: Tomo only speaks when spoken to." : `${state.proactive.level === "active" ? "Active" : "Light"}, with check-ins ${state.proactive.checkIns ? "on" : "off"}.`,
       fix: (
         <button className="btn quiet" onClick={() => void run(() => api.saveSettings({ proactive: { level: "light", checkIns: true } }), "Heads-ups: Light")}>
           Turn on
@@ -811,9 +812,9 @@ function NotificationCheckup({ state, run, toast }: { state: AppState; run: (fn:
     rows.push({
       ok: watch.on,
       title: isDesktop ? "Keep running in the tray" : "Keep watch on",
-      sub: watch.on ? "Lyra keeps checking with the app in the background." : "Off: Lyra only checks while the app is open.",
+      sub: watch.on ? "Tomo keeps checking with the app in the background." : "Off: Tomo only checks while the app is open.",
       fix: (
-        <button className="btn quiet" onClick={() => void background.set({ on: true }).then((s) => (setWatch(s), toast("Lyra will keep watch")), (e) => toast((e as Error).message))}>
+        <button className="btn quiet" onClick={() => void background.set({ on: true }).then((s) => (setWatch(s), toast("Tomo will keep watch")), (e) => toast((e as Error).message))}>
           Turn on
         </button>
       ),
@@ -822,7 +823,7 @@ function NotificationCheckup({ state, run, toast }: { state: AppState; run: (fn:
     rows.push({
       ok: battery,
       title: "Not held back by battery saving",
-      sub: battery ? "Lyra's 15-minute check-ins get through." : "Android may delay or skip Lyra's background checks.",
+      sub: battery ? "Tomo's 15-minute check-ins get through." : "Android may delay or skip Tomo's background checks.",
       fix: (
         <button className="btn quiet" onClick={() => void background.askBattery()}>
           Allow
@@ -834,7 +835,7 @@ function NotificationCheckup({ state, run, toast }: { state: AppState; run: (fn:
   return (
     <section className="section">
       <h2 className="section-label">Checkup</h2>
-      <p className="hint">{all ? "All set: Lyra can reach you without being asked." : "A few things stop Lyra reaching you without being asked. Each is one tap."}</p>
+      <p className="hint">{all ? "All set: Tomo can reach you without being asked." : "A few things stop Tomo reaching you without being asked. Each is one tap."}</p>
       <div className="group">
         {rows.map((r) => (
           <div className="item checkup-row" key={r.title}>
@@ -849,7 +850,7 @@ function NotificationCheckup({ state, run, toast }: { state: AppState; run: (fn:
           </div>
         ))}
       </div>
-      {!isDesktop && <p className="hint">Don't swipe Lyra away from your recent apps: that stops Lyra until you open the app again. Reminders, routine nudges and life admin heads-ups still arrive; heads-ups and check-ins need Lyra running.</p>}
+      {!isDesktop && <p className="hint">Don't swipe Tomo away from your recent apps: that stops Tomo until you open the app again. Reminders, routine nudges and life admin heads-ups still arrive; heads-ups and check-ins need Tomo running.</p>}
       <button
         className="btn quiet"
         onClick={() =>
@@ -875,7 +876,7 @@ function AlertsSection({ state, run, busy, toast }: { state: AppState; run: (fn:
           <label className="item">
             <span className="body">
               <div className="title">Notify me</div>
-              <div className="sub">When Lyra finishes a reply after you've switched away, a routine or heads-up posts news, or a task is ready for you. Plus a reminder at each routine's time.</div>
+              <div className="sub">When Tomo finishes a reply after you've switched away, a routine or heads-up posts news, or a task is ready for you. Plus a reminder at each routine's time.</div>
             </span>
             <input
               type="checkbox"
@@ -886,7 +887,7 @@ function AlertsSection({ state, run, busy, toast }: { state: AppState; run: (fn:
               onChange={(e) => {
                 const on = e.target.checked;
                 void run(async () => {
-                  if (on && !(await api.allowNotifications())) throw new Error("Android has notifications off for Lyra. Turn them on in your phone's Settings, Apps, Lyra.");
+                  if (on && !(await api.allowNotifications())) throw new Error("Android has notifications off for Tomo. Turn them on in your phone's Settings, Apps, Tomo.");
                   return api.saveSettings({ notifications: on });
                 }, on ? "Notifications on" : "Notifications off");
               }}
@@ -906,7 +907,7 @@ function AlertsSection({ state, run, busy, toast }: { state: AppState; run: (fn:
           <label className="item">
             <span className="body">
               <div className="title">App lock</div>
-              <div className="sub">Ask for your fingerprint, face or screen lock to open Lyra, and again after it's been away a minute.</div>
+              <div className="sub">Ask for your fingerprint, face or screen lock to open Tomo, and again after it's been away a minute.</div>
             </span>
             <input
               type="checkbox"

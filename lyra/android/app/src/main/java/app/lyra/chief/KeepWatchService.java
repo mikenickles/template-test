@@ -35,7 +35,7 @@ public class KeepWatchService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm.getNotificationChannel(CHANNEL) == null) {
             // lowest importance: no sound, no pop-up, no status bar icon, tucked at the bottom of the shade
             NotificationChannel ch = new NotificationChannel(CHANNEL, "Keeping watch", NotificationManager.IMPORTANCE_MIN);
-            ch.setDescription("Shown while Lyra runs your routines and heads-ups in the background. Android requires it.");
+            ch.setDescription("Shown while Tomo runs your routines and heads-ups in the background. Android requires it.");
             ch.setShowBadge(false);
             nm.createNotificationChannel(ch);
         }

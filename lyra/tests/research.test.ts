@@ -16,7 +16,7 @@ function models() {
     id: "fake",
     model: "fake",
     async generate(req) {
-      const isWorker = req.system.startsWith("You are one of Lyra's background workers");
+      const isWorker = req.system.startsWith("You are one of Tomo's background workers");
       if (isWorker) workerRequests.push(req);
       return (isWorker ? work.shift() : chat.shift()) ?? say("ok");
     },

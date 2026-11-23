@@ -27,7 +27,7 @@ export async function startVoiceCall(channelId: number | null, changed: () => vo
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
   } catch {
-    throw new Error("Lyra needs the microphone for live voice. Allow it when asked, or in your device's settings for Lyra.");
+    throw new Error("Tomo needs the microphone for live voice. Allow it when asked, or in your device's settings for Tomo.");
   }
 
   const pc = new RTCPeerConnection();

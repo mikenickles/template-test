@@ -5,7 +5,7 @@ import { Avatar } from "./LyraMark";
 import { Mic } from "./icons";
 import { startVoiceCall, type VoiceCall } from "./voiceCall";
 
-const LABEL = { connecting: "Connecting…", listening: "Listening", speaking: "Lyra is speaking", working: "Working on it…", ended: "Call ended" } as const;
+const LABEL = { connecting: "Connecting…", listening: "Listening", speaking: "Tomo is speaking", working: "Working on it…", ended: "Call ended" } as const;
 
 /** The live voice screen: Lyra's face, what's being said, the clock, mute and end. */
 export function VoiceOverlay({ channel, onClose, toast }: { channel: Channel | null; onClose: () => void; toast: (m: string) => void }) {
@@ -57,9 +57,9 @@ export function VoiceOverlay({ channel, onClose, toast }: { channel: Channel | n
   const elapsed = handle?.startedAt ? (Date.now() - handle.startedAt) / 1000 : 0;
   const call = handle?.call;
   return (
-    <div className={`voice voice-${status}${handle?.muted ? " muted" : ""}`} role="dialog" aria-modal="true" aria-label="Live voice with Lyra">
+    <div className={`voice voice-${status}${handle?.muted ? " muted" : ""}`} role="dialog" aria-modal="true" aria-label="Live voice with Tomo">
       <div className="voice-top">
-        <span className="voice-where">{channel ? channel.name : "Lyra"}</span>
+        <span className="voice-where">{channel ? channel.name : "Tomo"}</span>
         <span className="voice-clock" aria-label="Call length and estimated cost">
           {clock(elapsed)} · about ${((elapsed / 60) * LIVE_PRICE_PER_MINUTE).toFixed(2)}
         </span>

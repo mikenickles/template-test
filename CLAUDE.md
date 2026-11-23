@@ -8,7 +8,7 @@
 
 ## Lyra (`lyra/`)
 
-Lyra is a personal AI chief-of-staff Android app, built in phases (see `lyra/README.md` for the phase table).
+Lyra is a personal AI chief-of-staff Android app, built in phases (see `lyra/README.md` for the phase table). Since 0.61 the app is called **Tomo** in everything the user sees (UI, prompts, soul/voice/principles, notifications, Android labels, desktop title/tray/Start menu `Tomo.lnk`); code names stay Lyra: class `Lyra`, `lyra/` folder, `app.lyra.chief`, plugin names, `lyra.*` storage keys, the "Lyra Updates" folder and `Lyra-*` update file names (ApkInstallerPlugin checks `^Lyra-`), "Lyra Backups"/"Lyra auto" backups, desktop productName/exe `Lyra` (it names the userData folder) and the zip's `Lyra` folder. A stored custom soul.md has Lyra→Tomo replaced once (setting "soulRenamed"). Write "Tomo" in new user-visible text.
 The repo root also holds an Astro blog; Lyra is self-contained in `lyra/`.
 
 - Phone-only: a Capacitor 8 Android app (`lyra/android`, package `app.lyra.chief`); there is no server.

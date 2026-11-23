@@ -17,14 +17,14 @@ export function BackupSection({ toast }: { toast: (m: string) => void }) {
       <div className="group">
         <button className="item" onClick={() => setMode({ kind: "backup" })}>
           <span className="body">
-            <div className="title">Back up Lyra</div>
+            <div className="title">Back up Tomo</div>
             <div className="sub">Chats, memory, channels, tasks, routines and soul, locked with a passphrase. Save the file to Drive, email or anywhere.</div>
           </span>
         </button>
         <button className="item" onClick={() => picker.current?.click()}>
           <span className="body">
             <div className="title">Restore from a backup</div>
-            <div className="sub">Moving to {thisDevice}? Pick your Lyra backup file.</div>
+            <div className="sub">Moving to {thisDevice}? Pick your Tomo backup file.</div>
           </span>
         </button>
       </div>
@@ -55,7 +55,7 @@ function PassphraseDialog({ mode, toast, onClose }: { mode: Mode; toast: (m: str
 
   const go = async () => {
     if (!ready || busy) return;
-    if (!backup && !(await ask(`Restoring replaces everything Lyra has on ${thisDevice} with the backup. Continue?`))) return;
+    if (!backup && !(await ask(`Restoring replaces everything Tomo has on ${thisDevice} with the backup. Continue?`))) return;
     setBusy(true);
     setError(null);
     try {
@@ -86,11 +86,11 @@ function PassphraseDialog({ mode, toast, onClose }: { mode: Mode; toast: (m: str
         }}
       >
         <h2 id="bk-title" className="dialog-title">
-          {backup ? "Back up Lyra" : "Restore Lyra"}
+          {backup ? "Back up Tomo" : "Restore Tomo"}
         </h2>
         <p className="dialog-text">
           {backup
-            ? "Choose a passphrase. You'll need it to restore, and nobody can open the backup without it, not even Google or Lyra's makers. If you forget it, the backup can't be opened."
+            ? "Choose a passphrase. You'll need it to restore, and nobody can open the backup without it, not even Google or Tomo's makers. If you forget it, the backup can't be opened."
             : `Enter the passphrase for ${mode.name}.`}
         </p>
         <div className="float-field">

@@ -10,7 +10,7 @@ const say = (text: string): GenerateResult => ({ parts: [{ type: "text", text }]
 const call = (name: string, input: Record<string, unknown>, id = "c1"): GenerateResult => ({ parts: [{ type: "tool_call", id, name, input }], stop: "tool_use" });
 
 describe("docs", () => {
-  it("Lyra writes a doc, lists it next time, and updates it", async () => {
+  it("Tomo writes a doc, lists it next time, and updates it", async () => {
     const provider = new FakeProvider([
       call("write_doc", { title: "Denver trip", body: "## Friday\n- Fly out 9am" }),
       say("I put the plan in a doc."),
@@ -40,7 +40,7 @@ describe("docs", () => {
     expect(message.meta.tools).toContainEqual({ name: "create_task", ok: false });
   });
 
-  it("saves to Google Docs with access to only the docs Lyra creates, then updates the same one", async () => {
+  it("saves to Google Docs with access to only the docs Tomo creates, then updates the same one", async () => {
     const granted = new Set<string>();
     const google = {
       available: true,
