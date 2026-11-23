@@ -14,7 +14,7 @@ export type UpdateState =
   | { kind: "ready"; version: string } // computer: restart to use it
   | { kind: "needs-full"; version: string } // computer: this one needs the full Windows app
   | { kind: "permission" } // phone: allow "install unknown apps" first
-  | { kind: "error"; message: string };
+  | { kind: "error"; message: string; signIn?: boolean }; // signIn: Google wants a fresh OK before Drive can be read
 
 let state: UpdateState = { kind: "idle" };
 const subs = new Set<() => void>();
@@ -59,7 +59,7 @@ export async function checkForUpdate(lyra: Lyra, opts: { quiet?: boolean } = {})
     }
     return state;
   } catch (e) {
-    set(opts.quiet ? { kind: "idle" } : { kind: "error", message: (e as Error).message });
+    set(opts.quiet ? { kind: "idle" } : { kind: "error", message: (e as Error).message, signIn: (e as Error).name === "NeedsConsentError" || /approve Tomo again|approve Lyra again/i.test((e as Error).message) });
     return state;
   }
 }

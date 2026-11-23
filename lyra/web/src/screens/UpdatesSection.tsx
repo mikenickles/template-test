@@ -32,7 +32,7 @@ export function UpdatesSection() {
       case "permission":
         return "Allow Tomo to install apps (the switch Android just opened), then come back and tap Update.";
       case "error":
-        return state.message;
+        return state.signIn ? "Google wants you to sign in again before Tomo can look in your Drive. Your chats and settings are all still here." : state.message;
       default:
         return "Updates come from the Lyra Updates folder in your Google Drive.";
     }
@@ -45,6 +45,8 @@ export function UpdatesSection() {
         ? { label: "Update", go: () => void updatesApi.apply() }
         : state.kind === "ready"
           ? { label: "Restart", go: () => void updatesApi.apply() }
+          : state.kind === "error" && state.signIn
+            ? { label: "Sign in again", go: () => void updatesApi.signInAndCheck().catch(() => {}) }
           : state.kind === "needs-full"
             ? { label: "Open Drive", go: () => void window.open(DRIVE_FOLDER, "_blank") }
             : { label: "Check", go: () => void updatesApi.check() };

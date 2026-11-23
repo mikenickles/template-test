@@ -458,6 +458,12 @@ function homeGaps(lyra: Lyra): string[] {
 
 export const updatesApi = {
   check: async () => checkForUpdate(await ready),
+  /** (0.63.1) Google's OK for Drive lapsed: sign in again, then look for the update */
+  signInAndCheck: async () => {
+    const l = await ready;
+    await l.connectGoogle("drive");
+    return checkForUpdate(l);
+  },
   apply: async () => applyUpdate(await ready),
 };
 
