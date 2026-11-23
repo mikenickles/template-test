@@ -182,6 +182,204 @@ What does not:
 
 Hard rules rechecked: one file, one URL in the source and one external request, no other asset or library.
 
+## Round 2 re-check
+
+**Verdict: PASS.** The budget is unchanged: 10 real draw calls idle, 12 at most while firing or during a grenade burst, of 200.
+File size is 146 KB. Pooling holds over 500 shots and 20 grenades. Four of the five first-pass findings are fixed: the
+grenade burst, impacts, muzzle flash and HUD. **Tan is only partly fixed.** It gained dE 4 to 8 at every distance, but
+it still reads at about 70 % of Green's contrast and still fails at 150 units. It passes because Tan reads reliably to
+60 units and mostly to 100. The measured fix is fog 20 / 320 (see the Tan section).
+
+New scripts: `tests/visual_r2b_teams.cjs`, `_perf.cjs`, `_fx.cjs`, `_hud.cjs`, `_altviews.cjs` and `_fog.cjs`.
+Screenshots: `screenshots/round2/visual_re_*.png`. Rendering is software (SwiftShader), so **milliseconds show relative
+cost only**. `index.html` was not edited. Candidate fixes were applied to the live scene through `page.evaluate`
+(instance colours, an extra hull mesh, `CONFIG.fog`). Any `CONFIG` value a test changed was put back.
+
+### Budget (`visual_r2b_perf.cjs`)
+
+| Item | First pass | Re-check | Limit |
+| --- | --- | --- | --- |
+| Draw calls idle, rifle up (WebGL level) | 10 | **10** (7 main + 3 shadow) | under 200 |
+| Full-auto rifle / SMG, worst frame | 12 | **12 / 12** | |
+| Grenade aim / burst (sphere, ring, light) | 11 / 10 | **11 / 12** | |
+| Named views, scoped | 9 | 9 | |
+| Game counter vs WebGL count | equal | equal in every state | |
+| Triangles idle, main / with shadow | 14,922 / 26,062 | 14,922 / **26,062** | none set |
+| Triangles aiming (arc of 61 icosahedra) / burst | | 19,802 main / 26,702 total | |
+| Shadow pass during a burst | | **still 3 calls**: the burst light casts no shadow | |
+| Lights / shadow lights / map | 1 shadow light / 2048 | 3 lights, **1** casting / 2048 (hemisphere, sun, burst point light) | 1 shadow light, 2048 or less |
+| `index.html` | 136,532 | **146,098 bytes** | under 400 KB |
+| Console errors / blocked requests | 0 / 0 | 0 / 0 | |
+| `render()` idle / full auto / burst | 138 / 124 ms | 112 to 142 / 110 to 121 / 115 to 135 ms (median), relative only | |
+| **First burst** frame vs later bursts | | **157 ms** vs 111 to 125 ms (programs 14 to 16) | |
+| **First grenade aim** frame vs later | | **149 ms** vs 116 to 134 ms (programs 13 to 14) | |
+
+- **The burst light is not a second shadow caster and does not force a recompile on its own.** The point light is
+  always in the scene (intensity 0, parked at y -50), so the number of lights never changes. Removing it in the test
+  cost a 304 ms recompile frame. That hitch is the one the always-present light avoids. Its idle cost is
+  within the noise: 118 ms without it, 124 ms after it was added back.
+- **The first burst still hitches** (new finding 1). Two programs compile on the first burst (the additive sphere and
+  the ring) and one on the first aim (the arc dots). Shader programs grow from 11 at load to 22 once every effect has been
+  seen once. Later bursts show no spike.
+- **Pooling across 500 shots (all four guns) and 20 grenades:** scene objects 19 to 19, textures 2 to 2,
+  programs 22 to 22, lights 3 to 3 (1 casting), DOM nodes 73 to 73, JS heap 13.6 to 13.6 MB, live grenades 0.
+  Geometries 11 to 12: one geometry uploaded for the first time, not growth per shot. `shotLog` and `audioLog` stay at 200.
+- **Headroom for round 3:** 188 calls free. The first-pass estimate still holds: 10 soldiers in an instanced mesh
+  add 0 to 2 calls (10 more if each casts a separate shadow), the train adds 2 to 10, and round 3 lands between 14 and
+  45 calls. File size grew 9.6 KB this pass, so 254 KB is left.
+
+### Earlier findings
+
+| # | First-pass finding | Status | Evidence |
+| --- | --- | --- | --- |
+| 1a | Grenade burst nearly invisible | **Fixed** | A yellow dome grows to the 7 unit radius and is visible from the burst tick (`visual_re_burst_14u.png`, `visual_re_burst_40u.png`, ticks 0, 1, 3, 5, 8, 12, 18). From 40 units it changes a 222 x 70 px area on tick 0 and 144 x 88 px at its peak, against a projected 7 unit radius of 82 px. That matches a half-buried dome, and it fades by tick 15. From 14 units the dome and ring fill the expected 233 px radius, and the shake moves the whole frame for 14 ticks. The flash is pale yellow, near white at its peak against the pale wall. Particle ring and sparks are visible |
+| 1b | Thrown grenade blocks the view on the throw tick | **Partly** | No longer drawn on ticks 1 and 2 (`hideNear` 1.3). It then pops in on tick 3 at 1.4 units as a red block of 15,257 px, about 120 px or 17 % of the screen height, then 9,926 px on tick 4 and 7,020 px on tick 5 (`visual_re_throw_ticks.png`, frames aim, 1, 2, 3, 6). Smaller than before but not by much; see new finding 2 |
+| 1c | Arc preview a 1 px line | **Fixed** | 5 px dots and a larger landing dot. Dot vs background dE 65 on the pale haze and wall, 75 on the dark floor under the bed, 108 on the blue blanket (`visual_re_arc_pale.png`, `_dark.png`, `_bedwall.png`). 254 to 384 arc px in the frame |
+| 2 | Tan reads much worse than Green | **Partly** | Tan section below |
+| 3 | Wood and fabric impacts invisible on their own surface | **Fixed** | Every surface is at least dE 25 (table below, `visual_re_impacts.png`) |
+| 4 | Sniper flash below the muzzle; flash counted in frames | **Fixed** | The flash is a child of the gun mesh and sits on the kicked muzzle of all four guns, the sniper included (`visual_re_flash.png`). Visible on sim ticks 0, 1, 2 and gone on tick 3, which is 0.05 s. Three renders with no tick between all show it, so the duration no longer depends on frame rate |
+| 5a | Yellow weapon name weak on pale walls | **Fixed** | The dark outline reads over the sunlit window wall and the pale shelf at both sizes (`visual_re_hud_window_720.png`, `visual_re_hud_paleshelf_1080.png`). The name is still yellow, which is fine with the outline |
+| 5b | Damage numbers on the crosshair and on each other | **Fixed** | Measured from element rectangles: SMG burst at 8 units gives 3 numbers, 0 on the crosshair, 0 overlapping, nearest 70 px from the centre (111 px at 1080). Rifle at 3 units: 2 numbers, 0 / 0, 97 px. Scoped sniper kill: 34 px (38 at 1080). Numbers stack upward over the target (`visual_re_hud_numbers_720.png`) |
+| 5c | Hit vs kill marker; scope | Still good | White X on a hit, larger red X on a kill, both while scoped. Scope fov reads 20 (`visual_re_hud_hit_720.png`, `visual_re_hud_kill_720.png`, `visual_re_hud_scope_1080.png`) |
+| 5d | HUD sizes are fixed pixels | Not changed (carried) | At 1080 the 14 px weapon name is small but legible (`visual_re_hud_paleshelf_1080.png`) |
+| 6 | `bed_top` eye inside a dummy | **Fixed** | Eye (31, 19.6, 80). The blanket edge fills the lower third of the frame (33 % of the frame is within 6 units), but floor, desk, chair and both shelves are in view (`visual_re_view_bed_top.png`) |
+| 7 | SMG and pistol viewmodels alike | **Fixed** | The SMG has a long yellow magazine and a longer body; the pistol is a short block with a dark grip (`visual_re_viewmodels.png`, SMG, pistol, rifle, sniper) |
+| 7 | Tracer is a thick beam in the scope | **Not fixed** (was minor, not on the fix list) | White beam across the lower right of the scope on a kill (`visual_re_hud_kill_720.png`) |
+| 7 | Decals, casings | Deferred / unchanged | Not re-checked beyond the screenshots |
+
+**Impacts on their own surfaces.** Pistol shot from 2 to 7 units. The test switched off kick, shake, flash, tracer and
+the decal, so only the particles change the frame. Colour difference at tick 4, with the full range over ticks 2 to 14:
+
+| Surface (hit collider) | Particles on surface | dE now | First pass |
+| --- | --- | --- | --- |
+| wood (`room.floor`) | `#D9B88B` on `#774A29` | **42** (39 to 44) | 4 to 5 |
+| fabric, bed side (`bed.slab`) | `#6C81B1` on `#D4C8B6` (blue alt colour) | **47** (45 to 48) | 7 to 11 |
+| fabric, blanket top (`bed.slab`) | `#F5F7FA` on `#4E6A9F` | **61** (59 to 61) | |
+| plastic (fort) | `#CDD0A9` on `#2A61AD` | 79 (60 to 86) | 47 to 67 |
+| book (book stairs) | `#F3E2CB` on `#E87918` | 69 (64 to 69) | 61 to 69 |
+| card (tunnel) | `#D2C2A1` on `#8C8F90` | **28** (27 to 28) | 15 to 21 |
+| metal (mug) | `#ECEDED` on `#8C8F90` | **35** (34 to 36) | 15 to 21 |
+
+The metal spark is still 4 specks that live 0.16 s (gone by tick 14). It is readable, but metal is the weakest impact
+by size.
+
+### Tan readability (`visual_r2b_teams.cjs`)
+
+The method is the same as the first pass: 569 views with a clear line to a dummy, which is the same view set. The body
+centre is compared with the pixels just beside the body, using the worst side. Each view is tagged sun or shade by
+re-rendering it with the sun off; only 16 of 569 views have the sun on the visible face, because the sun patch is small
+(round 4). "Under 15" means hard to pick out at a glance.
+
+| Team | Distance | Body px wide | Median dE (first pass) | 10th pct | Under 15 | Median body colour |
+| --- | --- | --- | --- | --- | --- | --- |
+| Green | 10 | 23 | 65.8 (64.9) | 60.9 | 0 % | `#2A933C` |
+| Green | 30 | 8 | 65.2 (65.6) | 60.4 | 0 % | `#2E9541` |
+| Green | 60 | 4 | 57.4 (57.2) | 53.6 | 0 % | `#429E55` |
+| Green | 100 | 2.3 | 39.8 (39.9) | 38.4 | 0 % | `#6DB07F` |
+| Green | 150 | 1.6 | 17.9 (17.4) | 17.4 | 0 % | `#A9CBBB` |
+| Tan | 10 | 23 | **47.7** (39.8) | 31.9 | 0 % | `#C5924A` |
+| Tan | 30 | 8 | **41.4** (37.8) | 30.1 | 1 % | `#C6944E` |
+| Tan | 60 | 4 | **40.8** (32.8) | 27.3 | 0 % | `#C79D60` |
+| Tan | 100 | 2.3 | **27.9** (22.8) | 13.6 | **10 %** (10 %) | `#CCB088` |
+| Tan | 150 | 1.6 | **11.4** (9.0) | 10.9 | **100 %** (100 %) | `#D2CABF` |
+
+- **Where each team stops reading.** Green reads by colour at every distance. Its limit is size: under 3 px wide
+  beyond 100 units unscoped. Tan reads reliably to 60 units, mostly at 100 (median 28, but 1 view in 10 is under 15,
+  against shelves and walls), and **not at 150** (11, every view under 15). The haze still drives Tan toward
+  `#D2CABF`, close to the wall and haze colour.
+- **Sun vs shade.** In the sun both teams gain (Tan 54 to 55 and Green 76 and up at 10 to 30 units); neither loses
+  contrast in the beam. All 100 and 150 unit views are in shade.
+- **By background**, median dE at 10 / 30 / 60 / 100 units: floor 35 / 32 / 29 / 19, wall 51 / 49 / 43 / 28, desk
+  48 / 52 / 45 / 30, fort 48 / 48 / 43 / 31, shelf 43 / 41 / 37 / 28, cover 48 / 47 / 41, bed 45 / 42 (3 views each).
+  Green is 55 to 115 on all of them. **The builder's sample is confirmed**: the new Tan is a little worse on the brown
+  floor at short range (35 at 10 units, against 36.8 on the floor in the first pass) and better everywhere else.
+- **Worst Tan views at 60 units or less:** the tunnel-top dummy against the orange ruler ramp and desk (dE 13.9 at
+  30 units, 15.9 at 60) and the tall-shelf L1 dummy against the wall (16.0).
+
+**Candidates**, measured over the same 569 views on the live scene. All figures are Tan median dE, with the share
+under 15 in brackets.
+
+| Candidate | 10 u | 30 u | 60 u | 100 u | 150 u | Tan on floor, 30 u or less | Worst view, 60 u or less | Green 100 / 150 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Now (`#D9A75A`, fog 10 / 220) | 47.7 | 41.4 (1 %) | 40.8 | 27.9 (10 %) | 11.4 (100 %) | 33.1 | 13.9 | 39.8 / 17.9 |
+| Tan `#C98A35` / `#8F5F22` | 53.2 | 50.3 (1 %) | 45.9 (3 %) | 31.6 (0 %) | 13.1 (100 %) | 30.4 | **10.3** (orange book stairs) | same |
+| Tan `#C4822A` / `#86561A` | 56.3 | 53.3 (1 %) | 47.8 (3 %) | 33.1 (0 %) | 13.6 (100 %) | 30.5 | **10.3** | same |
+| Tan `#B87A2E` / `#7E521C` | 52.1 (1 %) | 50.4 (3 %) | 43.8 (2 %) | 30.2 | 12.3 (100 %) | **24.4** | | same |
+| Dark outline hull 0.06 / 0.10 on every soldier | centre dE unchanged; edge dE 51 / 47 to 51 at 10 to 30 u, **nothing at 100 or more** (sub-pixel) | | | | | 33.1 | 13.9 | same |
+| Fog 10 / 300 | 47.7 | 42.0 | 43.8 | 35.8 (5 %) | 24.0 (0 %) | 33.3 | | 50.3 / 35.1 |
+| **Fog 20 / 320** | 47.7 | 42.5 | 45.8 | **38.9 (0 %)** | **27.2 (0 %)** | 33.4 | 13.4 | 53.3 / 39.9 |
+| Tan `#C98A35` + fog 20 / 320 | 53.2 | 50.4 | 50.7 | 44.2 (0 %) | 31.1 (0 %) | 30.6 | **10.1** | 53.3 / 39.9 |
+
+- **A darker Tan alone does not fix range.** 150 units stays at 13 to 14, every view under 15. It also moves Tan toward
+  the orange climb routes and books: flat dE to the route orange `#FF8A1F` falls from 37 to 28, and to the book orange
+  `#E67E22` from 31 to 20. The worst view drops to dE 10 against the orange book stairs. The darkest candidate also
+  loses ground on the floor (24).
+- **An outline does not help where Tan fails.** At 100 to 150 units the body is 1.6 to 2.3 px wide, so a 0.06 to 0.10
+  unit hull is under a pixel. It adds a little edge contrast at 10 to 30 units, where Tan already reads. It also costs one
+  draw call.
+- **Fog distances are the limit, for both teams.** At 150 units the current fog is 67 % haze. Fog 20 / 320 is 43 %.
+  That lifts Tan at 100 and 150 units to 0 % under 15 and lifts Green at 150 from 18 to 40, with no worst case made
+  worse. The room still hazes: the far wall is dE 14.2 paler and bluer than the near wall, against 13.5 now, and
+  spawn_green and floor_centre look almost the same (`visual_re_fog_now_vs_20_320.png`, left now, right 20 / 320).
+- Strips: `visual_re_team_strips.png`. Rows: Green now, Tan now, Tan `#C98A35`, Tan `#C98A35` with fog 20 / 320.
+  Columns are 10, 30 and 60 units, enlarged 2x.
+
+**Recommendation (lead): set `CONFIG.fog` to near 20, far 320 and keep the Tan colour.** Tan's median dE goes from
+27.9 to 38.9 at 100 units and from 11.4 to 27.2 at 150, with no view under 15 at any distance; Green improves too.
+The feel tester should confirm that the room still feels huge, because haze is a pillar 1 cue. If the fog cannot
+change, the next best is Tan `#C98A35` / `#8F5F22`: 100 units reaches 0 % under 15, but 150 units still fails and Tan
+gets close to the orange routes. In that case also move the graybox route orange further from Tan. Do not add an
+outline for readability.
+
+### Has the cooler haze cost the warm look? (named views vs the first pass)
+
+Same pixels in the same named views, first pass compared with now:
+
+| Where | First pass | Now | dE |
+| --- | --- | --- | --- |
+| Window panes (scene background through the window), `desk_top` | `#E6DCCB` | `#D6DEE8` | 15.4 |
+| Far haze, `west_lane` centre | `#D2D0C5` | `#C7D1D8` | 10.3 |
+| Walls, `desk_top` | `#BEC3BF` | `#B9C4C8` | 4.7 to 5.4 |
+| Bed side / blanket / far floor, `desk_top` | `#D7CBB9` / `#68789B` / `#8C694C` | `#D4CCBE` / `#6479A2` / `#896953` | 2.6 / 4.1 / 4.6 |
+| Near floor and cover, `west_lane` | | | 0.0 |
+| Green dummy at 10 units | `#2A933C` | `#2A933C` | 0 |
+
+- Warmth, measured as the frame's mean red minus blue over the upper half (walls and far room), drops in every named
+  view: spawn_green -27 to -39, shelf_top 25 to 9, desk_top -2 to -13, east_lane 6 to -4, floor_centre -5 to -12.
+- **What it cost.** The walls moved from neutral greige to a cool grey-blue, and the window now looks like pale sky
+  rather than warm light. The floor, bed, blanket, shelves and all near colours are unchanged, and Green is not hurt
+  (its median dE is the same or higher at every distance). The room still reads warm at soldier height, where the floor
+  fills the frame. This is the trade the lead accepted; no change is needed now. The window colour can be restored in
+  round 4, for example with a warm emissive window pane, without touching the haze.
+
+### Named views (DESIGN section 10)
+
+All nine are in `visual_re_view_*.png`. The new eyes are confirmed: `bed_top` (31, 19.6, 80), `desk_top`
+(97.5, 27.6, 66) and `west_lane` (42, 1.6, 24).
+- `west_lane` (`visual_re_view_west_lane.png`) is clear down the lane to the far fort, with a cover block in the right
+  foreground.
+- `bed_top` is described in finding 6 above.
+- `desk_top` (`visual_re_view_desk_top.png`) is the same frame as the first pass. The chair back fills the left third
+  (32 % of the frame is within 6 units). New finding 3.
+
+### New findings
+
+1. **Medium: shader compile hitch on the first grenade burst and the first grenade aim.** The first burst frame took
+   157 ms against 111 to 125 ms for the first frame of bursts 2 to 4, while two programs compiled (14 to 16). The first
+   aim frame took 149 ms against 116 to 134 ms (13 to 14 programs). In software rendering that is +30 to +40 %. On real
+   hardware a first-use compile is typically a visible hitch on the first grenade of a match. Programs grow lazily from
+   11 at load to 22. **Fix:** at load, after building the effects, make `fx.sphere`, `fx.arc`, `vm.flash` and the
+   tracer instance visible once, call `renderer.compile(scene, camera)` and `renderer.compile(vm.scene, vm.cam)`, then
+   hide them again. Re-check: the first burst frame within 10 % of later bursts and programs constant from load.
+2. **Minor: the thrown grenade pops in at 1.4 units as a block 17 % of the screen high** on the third tick
+   (`visual_re_throw_ticks.png`). **Fix:** `grenade.hideNear` 2.5 (at 2.3 units it is already down to 5,210 px, about
+   72 px), or draw the thrown body at its true 0.16 radius rather than 1.6x for its first 0.2 s.
+3. **Minor (lead): `desk_top` is a third chair back** (`visual_re_view_desk_top.png`). Moving the eye to
+   (97.5, 27.6, 62) looking at (20, 8, 74) only takes the near share from 32 % to 29 %, so this is a choice for the lead,
+   not a builder fix.
+4. **Note for round 4:** any darker Tan must keep dE 25 or more from the route and book oranges; the candidates above
+   fall to 18 to 20.
+
 ---
 
 # VISUAL.md: round 1 (graybox)

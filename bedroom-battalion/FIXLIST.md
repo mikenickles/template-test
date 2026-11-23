@@ -1,4 +1,29 @@
-# FIXLIST.md: round 2, pass 1
+# FIXLIST.md: round 2, pass 2
+
+Gate status after pass 1: PASS, narrowly (feel re-check). Bug re-check: all six earlier findings fixed, 0 blocker,
+0 major, 3 minor. Visual re-check: PASS, 12 draw calls firing, 146 KB. This short pass widens the SMG margin and
+clears what the re-checks found. Numbers and rules are in DESIGN.md 15.7.
+
+| # | Kind | Fix | Source | Re-check |
+| --- | --- | --- | --- | --- |
+| 1 | Feel gate | `smg.damage` 25. | FEEL re-check 1 | Feel tester: SMG vs rifle time to kill at 10 to 40 units, body and head aim |
+| 2 | Visual, pillar 5 | Fog near 20, far 320 (Tan colour stays). | VISUAL re-check | Visual tester: Tan dE at 100 and 150 units in the build. Feel tester: room still feels huge |
+| 3 | Feel | Audio gains: SMG 1.3 / 0.75, sniper 0.6 / 0.55. Tracers start at each gun's muzzle; sniper tracer thicker and longer; none through the scope at close range. | FEEL re-check 2, 3; VISUAL re-check 7 | Feel tester |
+| 4 | Visual / perf | Compile effect shaders at load so first shot, aim and burst do not hitch. `grenade.hideNear` 2.5, `flashOpacity` 0.4. | VISUAL re-check new findings; FEEL minor | Visual tester: first-burst frame time vs later ones |
+| 5 | Minor bug | Desk skirt panel `96..96.5, 73..87, 17..24.5` so sliding along an apron cannot drop you off the seat. | BUGS R2-7 | Bug tester: R2-7 repro and neighbours; routes |
+
+Conflict resolved: the round 1 feel tester asked for near 10 / far 220 for depth (pillar 1); the visual tester
+measures the far wall as slightly paler at 20 / 320 with the cool haze than it is now, so depth is kept and Tan
+readability (pillar 5) is gained. The feel tester confirms on the build.
+
+Deferred: R2-8 (grenade grazes a raised box corner by 0.1 in 0.2 % of throws), R2-9 (head 7.6 cm into the desk top
+for one tick when sprint-jumping up a ruler), jump sound nearly silent, pistol shot mostly hiss, `desk_top` view
+partly filled by the chair back, HUD sizes fixed in pixels, no hand or grenade model while aiming. All to round 5
+unless the user's notes say otherwise.
+
+---
+
+# Round 2, pass 1 fix list (done)
 
 Merged from BUGS.md, FEEL.md and VISUAL.md (their "# Round 2" sections). At most 5 items. Fix these and nothing else.
 DESIGN.md is already updated: section 12, the new section 15.6 (numbers and rules), carry-over 8 in 15.5, the

@@ -1,0 +1,473 @@
+{
+ "lights": [
+  [
+   0,
+   "HemisphereLight",
+   3,
+   false,
+   0
+  ],
+  [
+   0,
+   "DirectionalLight",
+   3,
+   true,
+   2048
+  ],
+  [
+   0,
+   "PointLight",
+   0,
+   false,
+   0
+  ]
+ ],
+ "start": {
+  "sceneObjects": 19,
+  "lights": 3,
+  "shadowLights": 1,
+  "geometries": 6,
+  "textures": 2,
+  "programs": 11,
+  "domNodes": 73,
+  "grenadesLive": 0,
+  "heapMB": 13.6
+ },
+ "auto_rifle": {
+  "maxCalls": 12,
+  "maxTris": 26078,
+  "per": {
+   "fbo1": "3c/11140t",
+   "screen": "9c/14938t"
+  },
+  "msMedian": 109.5,
+  "msMax": 170.2
+ },
+ "auto_smg": {
+  "maxCalls": 12,
+  "maxTris": 26078,
+  "per": {
+   "fbo1": "3c/11140t",
+   "screen": "9c/14938t"
+  },
+  "msMedian": 120.8,
+  "msMax": 141.6
+ },
+ "programsBeforeAim": 13,
+ "bursts": [
+  {
+   "burst": 1,
+   "aimCalls": 11,
+   "aimPer": {
+    "fbo1": "3c/11140t",
+    "screen": "8c/19802t"
+   },
+   "aimMs": 149.2,
+   "programsAtAim": 14,
+   "programsAfter": 16,
+   "burstMaxCalls": 12,
+   "burstPer": {
+    "fbo1": "3c/11140t",
+    "screen": "9c/15562t"
+   },
+   "burstMaxTris": 26702,
+   "lightCast": false,
+   "lightMax": 199.62962962962965,
+   "firstFrames": [
+    [
+     0,
+     157.3,
+     12,
+     1
+    ],
+    [
+     1,
+     120.9,
+     12,
+     1
+    ],
+    [
+     2,
+     118,
+     12,
+     1
+    ],
+    [
+     3,
+     115.5,
+     12,
+     1
+    ],
+    [
+     4,
+     114.8,
+     12,
+     1
+    ],
+    [
+     5,
+     114.2,
+     12,
+     1
+    ]
+   ],
+   "msLater": [
+    117.5,
+    119,
+    115.5,
+    116.1,
+    119.4,
+    114.7,
+    114.7,
+    115.3,
+    114.5,
+    123.1
+   ],
+   "lightPos": [
+    0,
+    -50,
+    0
+   ]
+  },
+  {
+   "burst": 2,
+   "aimCalls": 11,
+   "aimPer": {
+    "fbo1": "3c/11140t",
+    "screen": "8c/19802t"
+   },
+   "aimMs": 115.8,
+   "programsAtAim": 16,
+   "programsAfter": 16,
+   "burstMaxCalls": 12,
+   "burstPer": {
+    "fbo1": "3c/11140t",
+    "screen": "9c/15562t"
+   },
+   "burstMaxTris": 26702,
+   "lightCast": false,
+   "lightMax": 199.62962962962965,
+   "firstFrames": [
+    [
+     0,
+     110.9,
+     12,
+     1
+    ],
+    [
+     1,
+     125.6,
+     12,
+     1
+    ],
+    [
+     2,
+     129.8,
+     12,
+     1
+    ],
+    [
+     3,
+     134.9,
+     12,
+     1
+    ],
+    [
+     4,
+     120.4,
+     12,
+     1
+    ],
+    [
+     5,
+     119.6,
+     12,
+     1
+    ]
+   ],
+   "msLater": [
+    115,
+    114.3,
+    108.1,
+    121,
+    129.9,
+    130.5,
+    128.9,
+    128.6,
+    124.5,
+    123.5
+   ],
+   "lightPos": [
+    0,
+    -50,
+    0
+   ]
+  },
+  {
+   "burst": 3,
+   "aimCalls": 11,
+   "aimPer": {
+    "fbo1": "3c/11140t",
+    "screen": "8c/19802t"
+   },
+   "aimMs": 134.5,
+   "programsAtAim": 16,
+   "programsAfter": 16,
+   "burstMaxCalls": 12,
+   "burstPer": {
+    "fbo1": "3c/11140t",
+    "screen": "9c/15562t"
+   },
+   "burstMaxTris": 26702,
+   "lightCast": false,
+   "lightMax": 199.62962962962965,
+   "firstFrames": [
+    [
+     0,
+     118.7,
+     12,
+     1
+    ],
+    [
+     1,
+     117.9,
+     12,
+     1
+    ],
+    [
+     2,
+     120.9,
+     12,
+     1
+    ],
+    [
+     3,
+     120.9,
+     12,
+     1
+    ],
+    [
+     4,
+     119.4,
+     12,
+     1
+    ],
+    [
+     5,
+     117.3,
+     12,
+     1
+    ]
+   ],
+   "msLater": [
+    144.4,
+    132,
+    134.3,
+    131.2,
+    127.5,
+    133.5,
+    130.4,
+    128.8,
+    136.1,
+    133.8
+   ],
+   "lightPos": [
+    0,
+    -50,
+    0
+   ]
+  },
+  {
+   "burst": 4,
+   "aimCalls": 11,
+   "aimPer": {
+    "fbo1": "3c/11140t",
+    "screen": "8c/19802t"
+   },
+   "aimMs": 132,
+   "programsAtAim": 16,
+   "programsAfter": 16,
+   "burstMaxCalls": 12,
+   "burstPer": {
+    "fbo1": "3c/11140t",
+    "screen": "9c/15562t"
+   },
+   "burstMaxTris": 26702,
+   "lightCast": false,
+   "lightMax": 199.62962962962965,
+   "firstFrames": [
+    [
+     0,
+     124.8,
+     12,
+     1
+    ],
+    [
+     1,
+     132.3,
+     12,
+     1
+    ],
+    [
+     2,
+     133.4,
+     12,
+     1
+    ],
+    [
+     3,
+     135.8,
+     12,
+     1
+    ],
+    [
+     4,
+     135.8,
+     12,
+     1
+    ],
+    [
+     5,
+     135.1,
+     12,
+     1
+    ]
+   ],
+   "msLater": [
+    139.4,
+    135.1,
+    136.9,
+    136.3,
+    134,
+    127.7,
+    128.7,
+    127.6,
+    133.5,
+    129
+   ],
+   "lightPos": [
+    0,
+    -50,
+    0
+   ]
+  }
+ ],
+ "pointLightCost": {
+  "withLight": 141.6,
+  "withoutLight": 118.3,
+  "recompileFrameRemove": 304.1,
+  "recompileFrameAdd": 126.4,
+  "backAgain": 123.5
+ },
+ "states": [
+  {
+   "label": "idle, rifle, Green spawn",
+   "reported": 10,
+   "ms": 142.3,
+   "calls": 10,
+   "tris": 26062,
+   "per": {
+    "fbo1": "3c/11140t",
+    "screen": "7c/14922t"
+   }
+  },
+  {
+   "label": "idle, sniper scoped",
+   "reported": 9,
+   "ms": 126.3,
+   "calls": 9,
+   "tris": 25978,
+   "per": {
+    "fbo1": "3c/11140t",
+    "screen": "6c/14838t"
+   }
+  },
+  {
+   "label": "named view spawn_green",
+   "reported": 9,
+   "ms": 128.9,
+   "calls": 9,
+   "tris": 25978,
+   "per": {
+    "fbo1": "3c/11140t",
+    "screen": "6c/14838t"
+   }
+  },
+  {
+   "label": "named view bed_top",
+   "reported": 9,
+   "ms": 112.6,
+   "calls": 9,
+   "tris": 25978,
+   "per": {
+    "fbo1": "3c/11140t",
+    "screen": "6c/14838t"
+   }
+  },
+  {
+   "label": "named view desk_top",
+   "reported": 9,
+   "ms": 112.5,
+   "calls": 9,
+   "tris": 25978,
+   "per": {
+    "fbo1": "3c/11140t",
+    "screen": "6c/14838t"
+   }
+  },
+  {
+   "label": "named view west_lane",
+   "reported": 9,
+   "ms": 131.9,
+   "calls": 9,
+   "tris": 25978,
+   "per": {
+    "fbo1": "3c/11140t",
+    "screen": "6c/14838t"
+   }
+  },
+  {
+   "label": "named view shelf_top",
+   "reported": 9,
+   "ms": 119.5,
+   "calls": 9,
+   "tris": 25978,
+   "per": {
+    "fbo1": "3c/11140t",
+    "screen": "6c/14838t"
+   }
+  }
+ ],
+ "pool": {
+  "fired": 500,
+  "grenades": 20,
+  "loopTicks": 3551,
+  "before": {
+   "sceneObjects": 19,
+   "lights": 3,
+   "shadowLights": 1,
+   "geometries": 11,
+   "textures": 2,
+   "programs": 22,
+   "domNodes": 73,
+   "grenadesLive": 0,
+   "heapMB": 13.6
+  },
+  "after": {
+   "sceneObjects": 19,
+   "lights": 3,
+   "shadowLights": 1,
+   "geometries": 12,
+   "textures": 2,
+   "programs": 22,
+   "domNodes": 73,
+   "grenadesLive": 0,
+   "heapMB": 13.6
+  },
+  "shotLog": 200,
+  "audioLog": 200
+ },
+ "fileSizeBytes": 146098,
+ "errors": [],
+ "blocked": []
+}

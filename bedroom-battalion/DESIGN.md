@@ -43,7 +43,7 @@ All of these live in one `CONFIG` object at the top of index.html.
 | spring.launchVel | (-4.5, 31, 0) | lands about (29, 18, 80) |
 | camera.fovVertical | 75 deg | feel tester confirmed 75; wider shrinks the furniture. Read live from CONFIG |
 | camera.near / far | 0.05 / 400 | |
-| fog (linear) near / far | 10 / 220 | colour = haze colour (was 30 / 330, which added no depth). Read live from CONFIG |
+| fog (linear) near / far | 20 / 320 (round 2: with the cool haze colour this keeps the far wall pale and lets Tan read at 150 units; was 10 / 220) | colour = haze colour (was 30 / 330, which added no depth). Read live from CONFIG |
 | light.hemi sky / ground / intensity | `#FFF8EC` / `#D8CFC4` / 3.0 | the fill must not tint walls khaki or the ceiling tan |
 | light.sun intensity | 3.0 | |
 | sim.hz | 60 fixed, render interpolated | |
@@ -422,7 +422,7 @@ Must work headless with no pointer lock and no user gesture.
 | Weapon | Damage | Fire rate | Mag | Reload | Notes |
 | --- | --- | --- | --- | --- | --- |
 | Rifle | 26 | 600 rpm auto | 30 | 2.2 s | medium recoil and spread |
-| SMG | 20 | 900 rpm auto | 40 | 2.0 s | the close-range winner; wide spread past 25 units |
+| SMG | 25 | 900 rpm auto | 40 | 2.0 s | the close-range winner; wide spread past 25 units |
 | Sniper | 90 | bolt, 1.3 s cycle | 5 | 3.0 s | right-click scope, 20 deg fov scoped |
 | Pistol | 30 | semi, 0.18 s min | 12 | 1.4 s | accurate |
 | Grenade | 140 max, radius 7 | one per round | - | - | 2 s fuse, arc preview |
@@ -583,3 +583,22 @@ Rules added:
 - Damage numbers rise from above the target and are offset so they never cover the crosshair or each other.
 - HUD text (weapon name, ammo) has a dark outline so it reads on pale walls.
 - SMG and pistol viewmodels must differ at a glance (the SMG gets a stock and a long magazine).
+
+### 15.7 Round 2, pass 2 (overrides 15.6 where they differ)
+
+| Key | Was | Now | Why |
+| --- | --- | --- | --- |
+| smg.damage | 20 | 25 | the close-range lead over the rifle was 33 ms, too small to feel; 25 gives 0.20 s against 0.30 s and still loses from 30 units |
+| fog near / far | 10 / 220 | 20 / 320 | Tan was unreadable at 150 units; measured to fix it with the far wall still paler than the near |
+| SMG shot gains | 0.9 / 0.5 | 1.3 / 0.75 | still 4 to 5 dB under the rifle |
+| sniper shot gains | 0.8 / 0.7 | 0.6 / 0.55 | sniper plus kill tone peaked at 0.97 of full scale |
+| grenade.hideNear | 1.3 | 2.5 | the thrown grenade popped in at 17 % of screen height |
+| grenade flashOpacity | 0.55 | 0.4 | the dome hid everything inside it |
+
+Rules added:
+- Tracers start at the current weapon's muzzle (after kick), not a shared point. The sniper tracer is thicker and
+  longer lived (width 0.07, life 0.2 s); no tracer is drawn through the scope view closer than 3 units.
+- Effect shaders are compiled at load (`renderer.compile` with the burst sphere, arc, muzzle flash, tracer and
+  particles briefly visible), so the first shot, first grenade aim and first burst do not hitch.
+- Desk skirt: panel `96..96.5, 73..87, 17..24.5` closes the chair seat's east edge under the desk, so sliding along
+  an apron can stop you but never drop you.
