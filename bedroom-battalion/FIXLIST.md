@@ -51,3 +51,25 @@ skateboard under the ruler, where a stopper cannot help.
 | 2(c) | Feel, pillar 3 | Add the two ruler props (DESIGN 4.2): solid book stacks under each ruler outside the seat footprint, so there is no gap between the skateboard or chair stairs and the ruler. Keep the stoppers where they are now. Pressing into the ruler's side from the seat is allowed to slide and stop; it must not drop you. | `feel_ruler_trap.cjs`: no falls. All 18 routes and `validateWaypoints()` still clean |
 
 Graph change accepted: edge `w.5 - ub.e` removed on both halves (W-c sits on it).
+
+## Round 1 closed: gate PASSED
+
+Evidence, all on the fixed build:
+- Bug tester re-check: bed, desk and tall shelf L3 reached by every route, up and down, walking and sprinting.
+  Findings 1, 2, 3 and 5 confirmed fixed. No regressions. No console errors.
+- Feel tester re-check: "the room feels huge" passes, more comfortably than before.
+- Visual tester re-check: PASS. 5 draw calls with the shadow pass, 10,362 triangles, 85,035 bytes.
+
+### Carried into round 2 (added to the Deferred table above)
+
+| Item | Source |
+| --- | --- |
+| Jumbo crayons at 1.3 mask the fort firing slits; turn them north-south beside the gate path | FEEL re-check |
+| Bed top clips to near white in the sun and the pillows vanish into it; bed underside too bright | VISUAL re-check A, B; FEEL re-check |
+| Bed book-stairs head hidden behind pillow P2 from the bed top | FEEL re-check |
+| Bear descent costs 25 hp at walk or sprint since `airControl` 0.12 | FEEL re-check |
+| W-c funnels bed-side runners onto the spring pad | FEEL re-check |
+| Desk side of both rulers is an open drop under the desk top below y 22.7 (up to 62 hp) | BUGS 12 |
+| 14.2 bare units outside each fort east door | FEEL re-check |
+| Spawn and centre-lane views still read as grey crates at eye level | FEEL re-check |
+| Cover grey nearly matches the desk colour; ceiling light invisible against the ceiling | VISUAL D |

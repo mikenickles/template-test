@@ -214,3 +214,89 @@ in round 3. Script: `tests/bug_02_routes_walkpath.cjs`.
 All in `tests/`, run with `node name.cjs` from that folder. `bug_lib.cjs` holds the shared helpers and my independent
 overlap test. `bug_03_routes_manual.cjs` also prints fixed-yaw diagonal runs; most of those that are flagged walk off
 the side of a ramp by construction and are not findings.
+
+---
+
+# Re-check (round 1, after fix passes 1 and 2)
+
+**Gate: PASS.** Bed top, desk top and tall shelf L3 reached by every route in 4.4, up and down, walking and
+sprinting, through `walkPath` and with raw input, end positions checked by my own code. Findings 1, 2, 3 and 5 are
+all confirmed fixed. No regressions. One new minor finding (12), which was already in the first build.
+
+Build tested: `index.html` 85,035 bytes, 356 colliders (was 347). Console errors and warnings in every run: none.
+`validateWaypoints()` returns `[]`. All 138 nodes sit where DESIGN puts them (apart from the three declared moves),
+and the new pieces match DESIGN (stair guards, seat stoppers, W-c both halves, E-c, jumbo crayons, `climb.speed` 5.5,
+`airControl` 0.12, fog 10 / 220): 0 mismatches in `bug_12_design_match.cjs`, updated to the new tables. The two ruler
+props are wedges on `92.5..95.5, 64..73` and `87..96` whose tops are the rulers' undersides, as DESIGN asks.
+
+## The four fixes
+
+| Finding | Result | What I ran (`tests/bug_16_recheck.cjs` unless stated) |
+| --- | --- | --- |
+| 1. Strings re-grab at the top | **Fixed** | W held for 12 s on all 8 strings from every side with standing room: 34 of 34 end standing on the top surface, 0 re-grabs. That includes both desk strings from under the desk. The original call `teleport(110.5, 20, 130, Math.PI/2, 0); setInput({forward:true}); step(12)` ends on the ground at (108.6, 40, 130). Releasing W and walking back into the string still grabs it, and S takes you down to (108.6, 20, 130), so downward use still works |
+| 2. Dead stop on route edges | **Fixed** | The three original calls now reach the top. Lanes with W and with W+Shift at x 107.3 to 107.99 on both shelf stairs, and x 91.5 to 92.3 on the skateboard and the chair stairs: 40 of 40 reach the top with no damage. In the full lane set the only stops left are real walls: the chair-back posts (x 85.7, 86.05) and the south end of each stair guard at floor level (start x 108.0 and above, which is beside the stairs, not on them) |
+| 3. Drop into the shelf bay | **Fixed** | Aiming at the L1 node from the stair foot and from five points up each flight, walk and sprint, both shelves: 24 of 24 end on L1 with no damage. The guard slides you along to the landing |
+| 5. Mid-air jump after letting go | **Fixed** | Second Space 1 to 6 ticks after letting go, both floor strings: vy stays negative (-0.73 to -2.57), no jump |
+
+## The gate again
+
+- `bug_02_routes_walkpath.cjs`: all 18 routes up, walk and sprint, ok with the end on the last node; all two-way routes
+  down ok; 34 of 34 chained journeys from the Green spawn ok with 0 damage. Strings are quicker as intended
+  (desk_yoyo 7.0 s / 6.4 s, was 9.7 / 9.1; each shelf string 4.5 s / 4.3 s, was 6.6 / 6.4). The rest are unchanged.
+- `bug_04_gate_manual.cjs` (raw `setInput` + `step` + `lookAt`): 82 of 82 legs ok, every route up and down, walk and
+  sprint. Whole climbs with no teleport: bed 20.0 s, desk 22.3 s, top shelf by yo-yo, desk, bridge and strings and back
+  down to the floor 71.7 s (was 82.7), top shelf by the tall stairs 57.3 s.
+- `bug_03_routes_manual.cjs`: lanes reaching the top are now tall and small stairs 18 of 20 each (the two that stop
+  start beside the stairs, against the guard's end), skateboard 14 of 18 and chair stairs 14 of 18 (chair-back posts only).
+  Everything else as in the first table. tunnel_drop at crouch speed still misses (finding 6, deferred).
+
+## New geometry
+
+- **Generic sweep** (`bug_06_collision.cjs`, 20,848 runs, now including W-c, E-c, the jumbo crayons, the guards and the
+  stoppers): no tunnelling, nothing mounted that should not be, no jitter, 0 rescues. Room walls 2,720 runs clean.
+- **Props, stoppers, guards** (`bug_16_recheck.cjs`, 2,096 runs, walk / sprint / sprint-jump / crouch): off both rulers
+  sideways along their whole length, into each stopper and ruler foot from 16 directions on the seat, into the props at
+  floor level from every side and from under the seat, corner-cuts from the skateboard and chair-stair heads toward the
+  rulers, into the guards from the stairs, from the floor under L1 and off the L1 rim above them. 0 wedged, 0 rescues,
+  nobody stuck in the 0.5 slot between a ramp and its prop.
+- **Deepest overlap seen:** 4.6 cm of head into the desk top for one tick, sprint-jumping on a ruler under the desk
+  edge, then pushed clear. The 2 cm ruin brick / stub pinch from before is unchanged.
+- **Other suites, unchanged results:** `bug_07_special_collision.cjs` (slits, stair sides, under the bed, slabs: 0 fell
+  through in 3,261 drops), `bug_09_strings.cjs` (68 bottom grabs, 48 top grabs, 6 falling grabs, climb now 5.5 u/s),
+  `bug_10_fall_damage.cjs` (exact), `bug_11_keys.cjs` (all keys), `bug_13_misc.cjs`, `bug_14_misc2.cjs`.
+
+## Fuzz
+
+`bug_08_fuzz.cjs` seeds 11, 12, 13: 5,994 episodes, 2.8 million ticks. 0 out of room, 0 below the floor, 0 rescues,
+0 NaN, 0 wedged, 0 wrong fall damage.
+
+## New finding
+
+### 12. MINOR: the desk side of both rulers is an open drop under the desk top
+
+```js
+__game.teleport(93.31, 17, 76.66); __game.lookAt(94, 18.6, 75);   // on the seat, heading for the ruler foot at an angle
+__game.setInput({ forward: true }); __game.step(4);
+// walks up ruler north diagonally, off its east side under the desk, falls 20.7 units to the floor: 53.6 hp
+```
+
+Same from `teleport(92.5, 17, 77); lookAt(95.2, 18.6, 70)` (62.6 hp) and on ruler south from
+`teleport(92.5, 17, 83); lookAt(95.2, 18.6, 90)` (62.6 hp).
+
+Below y 22.7 your head fits under the desk top (underside 24.5), so the ruler's east edge (x 95.5) is open and the
+drop is up to 22.5 units. Going straight up the ruler anywhere across its width is fine
+(20 of 20 lanes each), and above y 22.7 the desk edge pushes you back on. This was the same in the first build; I
+missed it then because my ruler runs were all straight. It is the ruler version of finding 3. A stack under the desk
+edge beside each ruler, like the stair guards, would close it. Script: `tests/bug_16_recheck.cjs` ("seat toward (94,75)" runs).
+
+## Still open from the first report
+
+Findings 4, 6, 7, 8, 9, 10 and 11 are deferred in FIXLIST.md and behave as first reported (4, 6 and 9 re-run and
+confirmed unchanged).
+
+## Script changes
+
+`bug_05_targeted.cjs`, `bug_05b_stair_trap.cjs` and `bug_07_special_collision.cjs` had position-based `while` loops
+with no limit; each now stops after 1,500 ticks. `bug_05_targeted.cjs` runs to completion on this build. Its section 1
+"escape" rows and section 8 describe the old stuck spot and no longer mean anything; use `bug_16_recheck.cjs` instead.
+`bug_09_strings.cjs` and `bug_12_design_match.cjs` now read the new climb speed and the new DESIGN tables.

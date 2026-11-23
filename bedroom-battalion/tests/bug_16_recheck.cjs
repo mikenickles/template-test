@@ -78,7 +78,7 @@ const { boot } = require('./bug_lib.cjs');
       G.clearInput(); for (let i = 0; i < 300 && !T.st().onGround; i++) G.step(DT);
       const q = T.st();
       if (G.rescueLog.length) out.geo.rescues++;
-      if (/from ruler|seat/.test(tag) && q.y < 1 && G.damageLog.length) out.geo.fellToFloorFromRuler.push({ tag, mode, start, end: T.pos(), dmg: G.damageLog.map((d) => +d.amount.toFixed(1)) });
+      if (/from ruler|seat|head/.test(tag) && q.y < 1 && G.damageLog.length) out.geo.fellToFloorFromRuler.push({ tag, mode, start, end: T.pos(), dmg: G.damageLog.map((d) => +d.amount.toFixed(1)) });
       // wedge test: any of 8 directions (or a jump) must move us
       let best = 0;
       for (let a = 0; a < 8 && best < 0.4; a++) { G.teleport(q.x, q.y, q.z, a * Math.PI / 4, 0); G.setInput({ forward: true }); G.step(0.5); G.clearInput(); const w = T.st(); best = Math.max(best, Math.hypot(w.x - q.x, w.z - q.z) + Math.abs(w.y - q.y)); }
@@ -95,8 +95,8 @@ const { boot } = require('./bug_lib.cjs');
       for (const [pz0, pz1] of [[64, 73], [87, 96]]) for (let z = pz0 - 0.6; z <= pz1 + 0.6; z += 0.6) { run(`floor into prop from east z=${z.toFixed(1)}`, [97.5, 0, z], Math.PI / 2, mode, 120); run(`floor into prop from west z=${z.toFixed(1)}`, [84.5, 0, z], -Math.PI / 2, mode, 200); }
       for (const x of [92.1, 92.25, 92.4, 93, 94, 95, 95.6]) { run(`floor into prop n from north x=${x}`, [x, 0, 61], Math.PI, mode, 120); run(`floor into prop s from south x=${x}`, [x, 0, 99], 0, mode, 120); run(`under seat into prop n from south x=${x}`, [x, 0, 76], 0, mode, 120); run(`under seat into prop s from north x=${x}`, [x, 0, 84], Math.PI, mode, 120); }
       // skateboard / chair stairs heads at their east edge, at angles toward the ruler
-      for (const x of [90, 91, 91.6, 92, 92.3]) for (const ob of [0, -0.4, -0.8]) { run(`skateboard head x=${x} ob ${ob}`, [x, (68 - 50) * 17 / 23, 68], Math.PI + ob, mode, 200); }
-      for (const x of [90, 91, 91.6, 92]) for (const ob of [0, 0.4, 0.8]) run(`chair stairs head x=${x} ob ${ob}`, [x, 17 / 29 * 23, 91.4], 0 - ob, mode, 200);
+      for (const x of [90, 91, 91.6, 92, 92.3]) for (const ob of [0, 0.2, 0.4, 0.6, 0.8, 1.1]) { run(`skateboard head x=${x} ob ${ob}`, [x, (68 - 50) * 17 / 23, 68], Math.PI + ob, mode, 200); }
+      for (const x of [90, 91, 91.6, 92]) for (const ob of [0, 0.2, 0.4, 0.6, 0.8, 1.1]) run(`chair stairs head x=${x} ob ${ob}`, [x, 17 / 29 * 23, 91.4], 0 - ob, mode, 200);
       // stair guards: from the stairs sideways at every 4th step, from the floor under L1, from L1 down onto them
       for (const [zf, dir, zc] of [[151, -1, 136], [9, 1, 24]]) {
         for (let i = 2; i <= 33; i += 3) { const z = zf + dir * 0.85 * (i - 0.5); for (const ob of [0, 0.6, -0.6]) run(`stairs step ${i} into guard`, [106.5, 20 / 34 * i, z], -Math.PI / 2 + ob, mode, 100); }
