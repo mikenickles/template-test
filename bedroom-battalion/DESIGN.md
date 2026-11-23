@@ -484,3 +484,69 @@ main brick colour, all climb routes in orange `#FF8A1F` with strings yellow, cov
 ## 14. Scope guard
 
 Anything not in the build prompt goes to LATER.md, not the game.
+
+## 15. Round 2: gunplay spec
+
+Section 12 has damage, fire rate, magazine and reload. These are the rest of the starting numbers; all go in CONFIG.
+
+### 15.1 Weapon handling
+
+| | Rifle | SMG | Sniper | Pistol |
+| --- | --- | --- | --- | --- |
+| Base spread (deg, standing still) | 0.5 | 1.4 | 3.0 unscoped, 0.05 scoped | 0.35 |
+| Spread added per shot / max | 0.35 / 3.0 | 0.30 / 4.5 | - | 0.9 / 3.0 |
+| Spread recovery (deg per s) | 7 | 9 | - | 8 |
+| Recoil kick up / side (deg per shot) | 0.9 / 0.25 | 0.55 / 0.35 | 3.5 / 0.4 | 1.4 / 0.2 |
+| Recoil recovery | view returns 60 % of the kick over 0.25 s | same | same | same |
+| Damage falloff | full to 60, down to 70 % at 120 | full to 25, down to 45 % at 70 | none | full to 40, down to 70 % at 90 |
+| Draw time | 0.45 s | 0.35 s | 0.7 s | 0.25 s |
+| Screen shake per shot | small | small | strong | small |
+| Reserve ammo | 90 | 120 | 15 | 36 |
+
+- Spread multipliers: crouched 0.6, moving 1.5, sprinting 2.5, airborne 3.0. Cannot fire while sprinting or on a string.
+- Sniper: right mouse holds the scope (fov 25, 0.2 s in, dark vignette with a thin cross). Scoped mouse sensitivity scales with fov. After each shot the bolt cycles for 1.3 s and the scope drops for the first 0.5 s of it.
+- Headshots x2. Hitscan against the collider list plus target hit volumes. Bullets stop at the first collider.
+- Reload cancels when you switch weapon. Empty magazine auto-reloads on a fire press.
+- Keys: 1 primary, 2 pistol, G grenade (hold to aim with arc preview, release to throw), R reload, mouse wheel cycles, left mouse fires, right mouse scopes. Keys 3, 4, 5 pick Rifle, SMG, Sniper as the primary while testing (round 3 replaces this with the round-start pick).
+- Grenade: toy firecracker. Throw speed 18 at the view direction plus 10 degrees up, gravity as the player, bounces with 0.45 restitution, 2 s fuse from release, 110 damage at the centre falling linearly to 0 at radius 7, blocked by colliders (line of sight from the burst to the target). One per life; `__game.give('grenade')` restocks for tests.
+
+### 15.2 Juice (required)
+
+- Viewmodel: a simple blocky toy gun per weapon in the lower right, with kick-back and return per shot, a reload dip, and sway while moving.
+- Muzzle flash (2 frames), a tracer line that fades in 0.08 s, an ejected shell casing that bounces once (pooled, instanced), slight screen shake.
+- Crosshair: four ticks that widen with the current spread. Hit marker X on hit (white), larger and red on a kill.
+- Impacts by surface: wood chips (brown), fabric puffs (soft, slow, pale), plastic sparks (bright, fast), book and card (paper flecks), metal (spark). A small decal dot at the impact, pooled, max 64.
+- Sound (Web Audio, synthesized, starts on the first user gesture; no errors if audio is unavailable): a distinct shot per weapon (rifle mid crack, SMG light rapid tap, sniper deep boom with a tail, pistol sharp pop), dry click when empty, reload per weapon, bolt cycle, weapon switch, plastic "tick" on hit and a sharper one on a kill, grenade pin, bounce and pop, footsteps by surface, jump and land. Master volume in CONFIG.
+- HUD: weapon name, magazine / reserve, grenade count, health.
+
+### 15.3 Target dummies
+
+Static toy-soldier blockouts: body `0.8 x 0.5`, 1.4 tall, head `0.45` cube on top (total 1.8), on a flat base. Tan-coloured
+ones on the south half, Green on the north, so team readability can be judged. 100 hp, show damage numbers, go
+rigid and tip over when eliminated with a few plastic chips, stand back up after 3 s.
+
+Positions (feet): floor (60, 0, 34) (60, 0, 50) (48, 0, 80) (70.8, 0, 80) (60, 0, 110) (60, 0, 126) (38, 0, 64) (100, 0, 66)
+(100, 0, 94) (38, 0, 96); ruin platform (60, 1.2, 78); bed (27, 18, 80) (26, 18, 50); desk (104, 26, 66) (104, 26, 94);
+tall shelf L1 (112, 20, 131), L3 (112, 60, 139); small shelf L2 (112, 40, 16); tunnel top (77, 8, 80);
+Tan tower (70.5, 7, 150.5); behind the Tan fort slit (66, 0, 137).
+
+### 15.4 Test hook additions
+
+`fire()`, `setInput({fire, scope})`, `selectWeapon(name)`, `reload()`, `throwGrenade(holdSeconds)`, `give(what)`,
+`state().weapon {name, mag, reserve, spread, reloading, scoped}`, `state().targets [{id, hp, down, pos}]`,
+`raycast(origin, dir)` returning `{id, kind, surface, distance, point}`, `shotLog` (last 200 shots: weapon, hit id,
+zone, damage, distance), `audioLog` (last 200 sound events by name, logged even when audio is muted or unavailable),
+`resetTargets()`.
+
+### 15.5 Round 1 carry-overs to fix in this build
+
+1. Skirting and door frame trim thinned to 0.3 so the camera cannot enter them.
+2. Draw-call and triangle counters include the shadow pass (`renderer.info.autoReset = false`, manual reset per frame).
+3. `player.stepSmooth` lowered to 9 to calm the camera on book stairs.
+4. Named views: `west_lane` eye (42, 1.6, 24); `desk_top` eye (97.5, 27.6, 66).
+5. Jumbo crayons C-a turned north-south so they stop masking the firing slits: `55.7..57, 29..38` and `63..64.3, 29..38`, h 1.3, mirrored.
+6. Graybox bed top drawn in blanket blue `#3D5A99` (sides stay `#E9E4DA`), pillows keep their pale colour; bed underside darkened.
+7. Bear head pulled back to `6..14, 39..45` so the body gives a 4-deep ledge on the way down.
+8. Desk apron: panels `95..95.5, 64..75, 17..24.5` and `95..95.5, 85..96, 17..24.5` close the drop under the desk top beside each ruler.
+9. A string cannot be grabbed while falling faster than 12 u/s.
+10. `walkPath` refuses to drive a one-way edge backward.
