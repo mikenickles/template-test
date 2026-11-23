@@ -2,7 +2,7 @@
 // shelf, stargazing on a quiet activity log, looking around with a magnifier, or waving hello.
 // Drawn like the face (the Kit body in the accent); the motion stops with Gentle motion off.
 
-const BODY = "M19 70 C19 46 32 30 50 30 C68 30 81 45 81 66 C81 75 77 79 68 79 L30 79 C22 79 19 76 19 70 Z";
+import tomoStill from "./assets/tomo-idle.webp";
 
 export type Pose = "nap" | "read" | "stars" | "look" | "wave";
 
@@ -14,15 +14,6 @@ export function askTomo(say: string) {
 }
 
 function Scene({ pose }: { pose: Pose }) {
-  const eyes =
-    pose === "nap" ? (
-      <path className="es-shut" d="M52 54 Q56 57.5 60 54 M62 54 Q66 57.5 70 54" />
-    ) : (
-      <g className="es-eyes">
-        <ellipse className="es-lid" cx={pose === "read" ? 55 : 57} cy={pose === "stars" ? 47 : pose === "read" ? 50 : 52} rx="2.4" ry="3.4" />
-        <ellipse className="es-lid" cx={pose === "read" ? 64 : 66} cy={pose === "stars" ? 47 : pose === "read" ? 50 : 52} rx="2.4" ry="3.4" />
-      </g>
-    );
   return (
     <svg className={`es es-${pose}`} viewBox="0 0 120 100" aria-hidden="true">
       <ellipse className="es-shadow" cx="60" cy="90" rx="24" ry="2.8" />
@@ -34,10 +25,17 @@ function Scene({ pose }: { pose: Pose }) {
           <circle className="tw" cx="104" cy="16" r="1.3" />
         </g>
       )}
-      <g className="es-body" transform="translate(10 10)">
-        <path className="es-fill" d={BODY} />
-        {eyes}
-        {pose === "wave" && <circle className="es-fill es-hand" cx="84" cy="52" r="6" />}
+      <defs>
+        <clipPath id={`es-clip-${pose}`}>
+          <circle cx="60" cy="56" r="30" />
+        </clipPath>
+      </defs>
+      <g className="es-body">
+        <g clipPath={`url(#es-clip-${pose})`}>
+          <rect x="30" y="26" width="60" height="60" fill="#fcfcfc" />
+          <image href={tomoStill} x="20" y="12" width="80" height="80" preserveAspectRatio="xMidYMid slice" />
+        </g>
+        <circle cx="60" cy="56" r="30" className="es-ring" />
       </g>
       {pose === "nap" && (
         <g className="es-z">

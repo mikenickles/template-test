@@ -10698,3 +10698,15 @@ html[data-ambient="on"] .es-hand { transform-origin: 0% 100%; animation: es-wave
 .who-does-what .job-row { gap: 10px; flex-wrap: wrap; }
 .who-does-what .job-row .body { flex: 1 1 200px; min-width: 0; }
 .who-does-what .job-select { flex: 0 1 190px; max-width: 100%; }
+
+/* (0.65) Tomo's face: the robot in a circle, idle loop, working loop while a reply is written */
+.tomo-face { position: relative; display: block; width: 100%; height: 100%; aspect-ratio: 1; border-radius: 50%; overflow: hidden; background: #fcfcfc; box-shadow: 0 0 0 1px var(--line-strong); }
+.tomo-face img, .tomo-face video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity 0.35s ease; }
+.tomo-face .tomo-still, .tomo-face .tomo-working { opacity: 0; }
+body[data-busy] .tomo-face .tomo-working { opacity: 1; }
+body[data-busy] .tomo-face .tomo-idle { opacity: 0; }
+html[data-ambient="off"] .tomo-face video { display: none; }
+html[data-ambient="off"] .tomo-face .tomo-still { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .tomo-face video { display: none; } .tomo-face .tomo-still { opacity: 1; } }
+.tomo-face img, .tomo-face video { transform: scale(1.32) translateY(5%); }
+.es-ring { fill: none; stroke: var(--line-strong); stroke-width: 1; }

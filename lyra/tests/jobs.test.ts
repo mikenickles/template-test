@@ -34,7 +34,7 @@ describe("who does what in Tomo", () => {
     // a real choice so jobs resolve (the fake provider still answers)
     await p.secrets.set("key.openai", "sk-test");
     (lyra as unknown as { keys: Record<string, string> }).keys.openai = "sk-test";
-    lyra.db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('provider', ?)", [JSON.stringify({ provider: "openai", model: "sol-2" })]);
+    (lyra as unknown as { db: { run(s: string, a: unknown[]): void } }).db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('provider', ?)", [JSON.stringify({ provider: "openai", model: "sol-2" })]);
     (lyra as unknown as { fetch: unknown }).fetch;
     const rows = await lyra.jobModels();
     expect(rows[0]).toMatchObject({ id: "chat", model: "sol-2" });

@@ -1,3 +1,6 @@
+import tomoIdle from "./assets/tomo-idle.mp4";
+import tomoWorking from "./assets/tomo-working.mp4";
+import tomoStill from "./assets/tomo-idle.webp";
 
 // (0.59) Lyra's face is Kit: a small blob in the accent color that glances, blinks and hops.
 // Drawn on a 100-unit square; the motion is CSS (".kit" in styles.css), so it follows Gentle motion.
@@ -38,20 +41,18 @@ export function LyraMark({ size = 30 }: { size?: number }) {
   );
 }
 
-/** Lyra's face: Kit. */
+/**
+ * (0.65) Tomo's face: the little robot, in a circle. Two looping clips: idle, and working
+ * (typing on a laptop) while a reply is being written (body[data-busy]). With Gentle motion
+ * off or reduced motion asked for, the still picture shows instead.
+ */
 export function Avatar() {
   return (
-    <svg className="avatar kit" viewBox="12 17 76 72" aria-hidden="true">
-      <circle className="kit-halo" cx="50" cy="50" r="50" />
-      <ellipse className="kit-shadow" cx="50" cy="83" rx="21" ry="2.6" />
-      <g className="kit-hop">
-        <path className="kit-body" d={KIT_BODY} />
-        <g className="kit-eyes">
-          <ellipse className="kit-lid" cx="57" cy="52" rx="2.4" ry="3.4" />
-          <ellipse className="kit-lid" cx="66" cy="52" rx="2.4" ry="3.4" />
-        </g>
-      </g>
-    </svg>
+    <span className="avatar tomo-face" aria-hidden="true">
+      <img className="tomo-still" src={tomoStill} alt="" />
+      <video className="tomo-idle" src={tomoIdle} poster={tomoStill} autoPlay loop muted playsInline preload="auto" />
+      <video className="tomo-working" src={tomoWorking} autoPlay loop muted playsInline preload="auto" />
+    </span>
   );
 }
 

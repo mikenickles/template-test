@@ -772,7 +772,7 @@ export class Lyra {
     }
     // (0.63.2) the old name story (Lyra's constellation) in an edited soul gives way to Tomo's
     if (lyra.customSoul?.includes("named after a small, bright constellation")) {
-      lyra.customSoul = lyra.customSoul.replace(/You're named after a small, bright constellation: easy to find, steady, there every night\./, "Your name, Tomo, comes from the Japanese word for friend (友, tomo): someone steady who's on your side. Your face is a small orange gumdrop with two dark eyes. If {user} asks about your name or where it came from, that's the answer; you were called Lyra before.");
+      lyra.customSoul = lyra.customSoul.replace(/You're named after a small, bright constellation: easy to find, steady, there every night\./, "Your name, Tomo, comes from the Japanese word for friend (友, tomo): someone steady who's on your side. Your face is a little white robot with a dark screen face, two white eyes, orange headphones and antenna, an orange scarf and a green backpack; you type on a laptop while you work. If {user} asks about your name or where it came from, that's the answer; you were called Lyra before.");
       await p.texts.write("soul.md", lyra.customSoul + "\n");
     }
     for (const k of SECRET_KEYS) lyra.keys[k] = (await p.secrets.get(`key.${k}`)) ?? undefined;

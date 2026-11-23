@@ -573,10 +573,7 @@ try {
   await page.getByText("Tomo will talk more like you").waitFor();
   await page.goto(`${base}/#/`);
   await page.locator(".bubble").first().waitFor();
-  check(
-    (await page.locator(".topbar .kit .kit-body").evaluate((el) => getComputedStyle(el).fill)) === (await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--accent").trim().replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)})`))),
-    "Kit, Tomo's face, takes the accent color",
-  );
+  check((await page.locator(".topbar .tomo-face video.tomo-idle").count()) === 1, "Tomo's face is the robot, in a circle, with its idle clip");
   await shot("light-23-accent-chat");
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto(`${base}/#/tasks`);

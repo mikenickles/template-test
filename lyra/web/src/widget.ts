@@ -2,7 +2,7 @@
 // a status that always fits, and the latest thing Lyra posted on its own today.
 import { registerPlugin } from "@capacitor/core";
 import type { Lyra } from "../../core/lyra";
-import { kitSvg } from "./LyraMark";
+import tomoIcon from "./assets/tomo-icon.png";
 import { isNative } from "./platform";
 import { widgetWords } from "./statusText";
 
@@ -35,7 +35,8 @@ function accentColors(accent: string): [string, string] {
 /** Kit in the accent color as a small round PNG. */
 async function avatarPng(accent: string): Promise<string | undefined> {
   const img = new Image();
-  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(kitSvg(...accentColors(accent)))}`;
+  void accent;
+  img.src = tomoIcon; // (0.65) the robot, the same picture as the app icon
   await img.decode();
   const size = 160;
   const c = document.createElement("canvas");

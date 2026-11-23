@@ -12,6 +12,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "0.65.0",
+    date: "2026-11-24",
+    notes: ["Tomo has a new look: a little white robot with orange headphones, a scarf and a backpack, in a circle. It idles, and types on a laptop while it's working on a reply. The app icon, splash screen, widget and Windows icon are the robot too."],
+  },
+  {
     version: "0.64.0",
     date: "2026-11-24",
     notes: [
