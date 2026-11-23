@@ -31,19 +31,21 @@ All of these live in one `CONFIG` object at the top of index.html.
 | move.walk / sprint / crouch | 5 / 7 / 2.5 u/s | sprint only forward |
 | move.groundAccelTime | 0.10 s to full speed | snappy |
 | move.groundStopTime | 0.08 s | no sliding |
-| move.airControl | 0.25 | fraction of ground accel |
+| move.airControl | 0.12 | fraction of ground accel (was 0.25; a jump could be fully reversed in the air) |
 | move.gravity | 22 u/s^2 | |
 | move.jumpVel | 7.8 u/s | apex about 1.38 |
 | move.stepUp | 0.65 | auto step, used by all book stairs |
 | move.maxSlopeDeg | 50 | steeper counts as a wall |
 | move.slopeSpeedKeep | horizontal speed constant on ramps | no slowdown uphill |
-| climb.speed | 3.5 u/s | strings |
+| climb.speed | 5.5 u/s | strings (was 3.5; strings were never the faster choice) |
 | climb.grabRadius | 0.8 | horizontal distance to string |
 | fall.safe / perUnit | 10 units / 5 hp per unit above | bed to floor = 40 hp |
 | spring.launchVel | (-4.5, 31, 0) | lands about (29, 18, 80) |
-| camera.fovVertical | 75 deg | "about 80"; feel tester tunes |
+| camera.fovVertical | 75 deg | feel tester confirmed 75; wider shrinks the furniture. Read live from CONFIG |
 | camera.near / far | 0.05 / 400 | |
-| fog (linear) near / far | 30 / 330 | colour = haze colour, far wall about 45 % hazed |
+| fog (linear) near / far | 10 / 220 | colour = haze colour (was 30 / 330, which added no depth). Read live from CONFIG |
+| light.hemi sky / ground / intensity | `#FFF8EC` / `#D8CFC4` / 3.0 | the fill must not tint walls khaki or the ceiling tan |
+| light.sun intensity | 3.0 | |
 | sim.hz | 60 fixed, render interpolated | |
 
 Weapon, bot and match numbers are added in rounds 2 and 3 (section 12 lists them).
@@ -107,6 +109,7 @@ No headboard (it would block the south route).
 | Open notebook | `99..111, 74..86, 26..26.4` (walkable) |
 | Stacked books | `111..119, 86..93`, three books 1.2 high each, each inset 0.6 (`y 26..29.6`) |
 | Pencil cup | cylinder (115.5, 98) r 2.6, `y 26..35` |
+| Seat stoppers (2) | cylinders r 0.5, `y 17..18`, at (92.2, 73.3) and (92.2, 86.7). They close the seat edge between each ramp head and ruler foot so cutting the corner cannot drop you off the seat |
 | Under desk | eraser `104..108, 66..68, 0..1.2` (mirrored); paper ball cylinder (108, 80) r 2.5, h 4.5 |
 
 Slab ramps are thin: solid only from the walking surface down by `thickness`. You can pass underneath
@@ -127,6 +130,7 @@ Both are open ladder shelves: four corner posts 1.2 x 1.2 and horizontal boards 
 | Strings L2 to L3 | at `(107.6, 136)` and `(107.6, 152)`, `y 40..60`, exit +x | none |
 | L1 items | upright books `114..119.5, 134..142`, h 7; piggy bank `112.5..117.5, 123..127`, h 4 | upright books `114..119.5, 18..26`, h 7; plant pot cylinder (115, 36) r 2, h 4 |
 | L2 items | globe cylinder (115, 142) r 4, h 10; upright books `114..119.5, 120..128`, h 7 | flat books `112..119, 20..27`, h 1.2; alarm clock `113..118, 34..37`, h 4 |
+| Stair guard | row of tall upright books under L1 beside the stairs: `108..108.6, 122.1..151, 0..19` | mirrored: `108..108.6, 9..37.9, 0..19` |
 | L3 items | trophy cylinder (115, 128) r 2.5, h 9; flat books `112..119, 142..149`, h 1.2 | - |
 
 The spec asks for a smaller shelf opposite the tall one, so Tan's corner is 20 units taller.
@@ -155,6 +159,14 @@ This is a known balance watch item for round 5.
 String rules: walk into a string within grabRadius while your feet are between its bottom and top to grab it.
 Forward climbs, back descends, jump lets go. At the top you are placed on the surface 1 unit along the exit direction.
 At the bottom you step off. Strings can be used downward by walking into them from the top surface.
+After topping out, forward input is ignored until it is released and that string cannot be re-grabbed for 0.5 s,
+so holding forward leaves you standing on the surface. Letting go of a string never grants an extra mid-air jump.
+
+Seeing routes from above: every string is drawn 2 units higher than its top surface, and every ramp, bridge and
+stair head laps its route colour 1.5 units onto the top surface it reaches, so the way down is visible from on top.
+
+Blocked step-ups: when a step up is refused for lack of head room, the obstacle acts as a wall and the player
+slides along it. It never cancels the whole move.
 
 ## 5. Forts and ruin
 
@@ -198,7 +210,8 @@ All of these are colliders. "Mirrored" objects also exist at z' = 160 - z.
 | --- | --- | --- | --- |
 | W-a | alphabet blocks (3 x 3 x 3 each) | `37..40, 28..31` h 3; `37..40, 31..34` h 6; `34..37, 31..34` h 3 | yes |
 | W-b | toy car | `33..36, 56..62` h 2.2 (half under the bed edge) | yes |
-| C-a | crayons (low cover) | `50..59, 30..30.9` h 0.9; `62..71, 31.5..32.4` h 0.9 | yes |
+| W-c | alphabet block | `33..36, 69..72` h 3 (half under the bed edge; fills the 29 unit gap around the spring pad) | yes |
+| C-a | jumbo crayons (crouch cover) | `50..59, 30..31.3` h 1.3; `62..71, 31.5..32.8` h 1.3 | yes |
 | C-b | toy car | `52..55, 43..49` h 2.2 | yes |
 | C-c | dump truck (north only) | bed `63..68, 44..51` h 3.6; cab `63..68, 51..54` h 5 | no |
 | C-c' | marble run (south only) | ramp `63..68, 106..113` h 4; tower `63..68, 113..116` h 8 | no |
@@ -208,6 +221,7 @@ All of these are colliders. "Mirrored" objects also exist at z' = 160 - z.
 | C-f | alphabet blocks | `53..56, 67..70` h 6 (north); `64..67, 90..93` h 6 (south, rotated copy) | no |
 | E-a | alphabet blocks | `80..83, 30..33` h 6; `83..86, 30..33` h 3; `80..83, 33..36` h 3 | yes |
 | E-b | toy car | `110..116, 46..49` h 2.2 | yes |
+| E-c | alphabet block (north only) | `79.5..82.5, 44..47` h 3 (Tan's side already has the solid chair stairs here) | no |
 | Tunnel | cardboard box over the east straight | walls `72.6..73.6` and `80.4..81.4`, `z 68..92`, `y 0..8`; roof `72.6..81.4, 68..92, 6.8..8` | centred |
 
 Lanes: west (x 0..41, by and under the bed), centre (x 45..75, inside the track loop), east (x 79..120, by the desk legs).
@@ -270,8 +284,8 @@ Edges: spawn-gate, spawn-inw, inw-wdoor, spawn-ine, ine-edoor, inw-rampfoot, ram
 | n.ub.n | (18, 0, 46) | s.bs.wfoot | (19, 0, 144.5) |
 | n.ub.1 | (18, 0, 50) | s.ub.app | (19, 0, 131) |
 | n.ub.2 | (22, 0, 60) | s.ub.n | (19, 0, 114) |
-| n.ub.e | (33, 0, 67) | s.ub.1 | (19, 0, 110) |
-| n.w.2 | (42.5, 0, 37) | s.ub.2 | (22, 0, 100) |
+| n.ub.e | (33, 0, 67) | s.ub.1 | (21, 0, 110) |
+| n.w.2 | (42.5, 0, 37) | s.ub.2 | (24, 0, 100) |
 | n.w.3 | (38.5, 0, 50) | s.ub.e | (33, 0, 93) |
 | n.w.x | (39, 0, 54) | s.w.2 | (42.5, 0, 123) |
 | n.w.4 | (37.5, 0, 64) | s.w.3 | (38.5, 0, 110) |
@@ -285,7 +299,8 @@ Edges: spawn-gate, spawn-inw, inw-wdoor, spawn-ine, ine-edoor, inw-rampfoot, ram
 
 Edges (north): f.wdoor-w.1, w.1-w.ramp, w.ramp-w.rampw, w.ramp-bed.end (ramp), w.rampw-ub.n, ub.n-ub.1,
 ub.1-ub.2, ub.2-ub.e, ub.2-m.ub, ub.e-m.ub, ub.e-w.4, w.1-w.2, w.2-w.3, w.3-w.x, w.x-w.4, w.4-w.5,
-w.5-m.pad, w.5-ub.e, bed.end-bed.b, bed.b-m.bed, m.bed-m.bed.e, m.pad to m.bed.e (launch).
+w.5 to m.pad (one way), w.5-ub.e, bed.end-bed.b, bed.b-m.bed, m.bed-m.bed.e, m.pad to m.bed.e (launch).
+If W-c blocks an edge here, move n.ub.e, n.w.5 and their south twins by up to 2 units.
 
 Edges (south): f.wdoor-w.1, w.1-bs.app, bs.app-bs.foot, bs.foot-bed.end (ramp), bs.foot-bs.wfoot,
 bs.wfoot-ub.app, ub.app-ub.n, ub.n-ub.1, ub.1-ub.2, ub.2-ub.e, ub.2-m.ub, ub.e-m.ub, ub.e-w.4, w.1-w.2,
@@ -309,7 +324,7 @@ bed.b-m.bed.
 | n.r.n | (64.5, 0, 74.8) | s.r.s | (55.5, 0, 85.2) |
 | n.r.nw | (54.8, 0, 74.8) | s.r.se | (65.2, 0, 85.2) |
 | m.r.w | (54.8, 0, 80) | m.r.e | (65.2, 0, 80) |
-| m.plat | (60, 1.2, 80) | | |
+| m.plat | (60, 1.2, 78) | | |
 
 Edges (north): f.gate-c.2 (cross), c.2-c.3, c.3-c.4, c.4-c.5, c.5-r.ne, c.3-c.x, c.x-c.w, c.w-m.c.w,
 c.4-c.y, c.y-c.e, c.e-m.c.e, w.x-c.x (cross), e.x-c.y (cross).
@@ -440,7 +455,7 @@ Headshots x2. Health 100. Match: first to 5, rounds 2:30, 5 s freeze.
 | Skirting, door, window frame | `#F2EFE6` |
 | Ceiling | `#F5F2EA` |
 | Floor planks / gaps | `#7A4E2E` / `#4A2E1A` |
-| Bed frame | `#C79A5E` |
+| Bed frame | `#E9E4DA` (painted; the old pine `#C79A5E` was too close to Tan) |
 | Blanket / stitching | `#3D5A99` / `#9DB4E8` |
 | Sheet and pillows | `#E8EEF5` with `#8FA9D6` stripes |
 | Desk and chair | `#8FA3B5` |
@@ -451,7 +466,7 @@ Headshots x2. Health 100. Match: first to 5, rounds 2:30, 5 s freeze.
 | Alphabet blocks | `#D43C2E`, `#2F6FD0`, `#F2C230`, `#7B4BB5`, `#F08A2A` with white letters |
 | Train | engine `#1F4FA8`, trim `#F2C230`, wheels `#D43C2E`, cars `#D43C2E`, `#F2C230`, `#F08A2A`, `#7B4BB5` |
 | Track | rails `#6B7480`, sleepers `#5A3B22` |
-| Cardboard | `#C9A26B` with `#A5804D` edges |
+| Cardboard | `#8F6B47` with `#6E4F33` edges (darker kraft, kept clear of Tan) |
 | Books | `#C0392B`, `#2E6DB4`, `#8E44AD`, `#E67E22`, `#34495E`, pages `#F4EFE2` |
 | Strings (routes) | `#FFD21F` |
 | Spring pad | `#E0281F` with `#FFD21F` chevrons |

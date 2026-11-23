@@ -115,14 +115,8 @@ const { boot } = require('./bug_lib.cjs');
     }
 
     // ---- 6. fort north wall top from the tower ramp ----
-    out.fortWallTop = (() => {
-      G.clearInput(); T.reset(); G.teleport(62, 0, 9, 0, 0); G.step(0.3);                // on the tower ramp (x 53..67, z 7.5..10.5)
-      const onRamp = sample();
-      G.look(YAW.n, 0); G.setInput({ forward: true }); G.step(0.6); G.clearInput(); G.step(0.2);
-      const stepNorth = sample();
-      G.look(YAW.w, 0); G.setInput({ forward: true }); G.step(2); G.clearInput(); G.step(0.2);
-      return { onRamp, afterWalkingNorthOffTheRamp: stepNorth, afterWalkingWestAlongIt: sample() };
-    })();
+    // (moved to bug_05b_stair_trap.cjs, which walks up the ramp from its foot instead of teleporting into the wedge)
+    out.fortWallTop = 'see bug_05b_stair_trap.cjs';
 
     // ---- 7. teleport() with the head a few mm inside a big slab: sideways eject ----
     out.teleportEject = (() => {
