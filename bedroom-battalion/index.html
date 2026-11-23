@@ -307,7 +307,7 @@ const CONFIG = {
         grenadeMin: 10, grenadeMax: 25, grenadeCooldown: 6, grenadeHit: 2.5, grenadeFresh: 3, sniperMin: 12, tacticalReload: 0.5,
         strafeSwap: [0.5, 1.0], holdScan: 0.6, holdScanSpeed: 0.5,
         rideChance: 0.35, rideMaxWait: 6, rideFlankSlack: 1.15, rideHoldMax: 15,
-        separation: 0.9, sepRate: 0.3, occupiedArrive: 1.3,
+        separation: 0.9, sepRate: 0.3, sepSwirl: 1.0, sepClosing: 1.0, occupiedArrive: 1.3,
         sprintStates: ['setup', 'cover', 'retreat', 'flank'] },
   match: { roundsToWin: 5, roundTime: 150, freeze: 5, roundEnd: 4, maxReplays: 3, deathCam: 1.5, maxSimSeconds: 2400,
            killFeed: 5, killFeedTime: 5, calloutGap: 4, calloutMax: 3, calloutTime: 4, dmgArcTime: 1, botLogMax: 4000,
@@ -316,8 +316,8 @@ const CONFIG = {
   roles: {           // DESIGN 16.4: hold node(s) and the push route into the enemy half, per team; primaries to pick from
     west:   { primary: ['rifle', 'smg'],    green: { hold: ['n.w.5'], push: ['s.w.5', 's.w.2', 's.w.1', 's.f.wdoor', 's.f.inw'] },
                                             tan:   { hold: ['s.w.5'], push: ['n.w.5', 'n.w.2', 'n.w.1', 'n.f.wdoor', 'n.f.inw'] } },
-    bed:    { primary: ['sniper', 'rifle'], green: { hold: ['n.bed.b'], push: ['s.bed.b', 's.bed.end', 's.bs.foot', 's.w.1', 's.f.wdoor'] },
-                                            tan:   { hold: ['s.bed.b'], push: ['n.bed.b', 'n.bed.end', 'n.w.ramp', 'n.w.1', 'n.f.wdoor'] } },
+    bed:    { primary: ['sniper', 'rifle'], green: { hold: ['n.bed.b'], via: 'n.w.ramp', push: ['s.bed.b', 's.bed.end', 's.bs.foot', 's.w.1', 's.f.wdoor'] },
+                                            tan:   { hold: ['s.bed.b'], via: 's.bs.foot', push: ['n.bed.b', 'n.bed.end', 'n.w.ramp', 'n.w.1', 'n.f.wdoor'] } },
     centre: { primary: ['smg', 'rifle'],    green: { hold: ['n.r.n'], push: ['s.r.s', 's.c.4', 's.c.2', 's.f.gate', 's.f.spawn'], ride: 'ride.e' },
                                             tan:   { hold: ['s.r.s'], push: ['n.r.n', 'n.c.4', 'n.c.2', 'n.f.gate', 'n.f.spawn'], ride: 'ride.w' } },
     high:   { primary: ['sniper'],          green: { hold: ['n.desk.1', 'n.ss2.b'], push: ['s.desk.1', 's.e.2', 's.f.edoor', 's.f.ine'] },
@@ -1642,7 +1642,7 @@ const player = {
   climbing: null, climbNeedRelease: false, grabCooldown: 0,
   health: CONFIG.player.health, peakY: 0, coyote: 0, jumpBuf: 0, jumpHeld: false,
   launched: false, launchX: 0, launchZ: 0, warped: false, sprinting: false, fwdLock: false, noGrab: null, noGrabT: 0,
-  stepOff: 0, pstepOff: 0, moved: 0, safe: { x: 60, y: 0, z: 20 }, carryVx: 0, carryVz: 0, wedgeT: 0, id: 'player'
+  stepOff: 0, pstepOff: 0, moved: 0, safe: { x: 60, y: 0, z: 20 }, carryVx: 0, carryVz: 0, wedgeT: 0, id: 'player', team: 'green', name: 'You'
 };
 ACTORS.push(player);
 const damageLog = [];
@@ -3299,15 +3299,22 @@ function pathFromHere(b, goal, extra) {
 function stopMoving(b) { b.path = [b.lastNode]; b.edges = []; b.pi = 1; }
 function nearestNodeLevel(x, y, z) { return nearestNode(x, y, z); }
 // ---- plan: setup to the hold node, hold, push along the lane, hunt in the last 30 s ----
+// The setup route: through the role's own climb when it has one (DESIGN 16.4: the Bed role goes up the blanket slope or the book
+// stairs; without this Tan's Bed bot took the spring pad up the west lane, because the south stairs are the longer way round).
+function setupPath(b) {
+  const B = b.brain, via = CONFIG.roles[B.role][b.team].via;
+  if (via) { const res = astar(via, B.hold, { cross: true }); if (res && pathFromHere(b, B.hold, { res })) return true; }
+  return pathFromHere(b, B.hold);
+}
 function brainStartRound(b) {
   const B = b.brain; if (!B || b.dead) return;
   B.phase = 'setup'; setState(b, 'advance'); b.sprintMove = true;
-  pathFromHere(b, B.hold);
+  setupPath(b);
 }
 function resumePlan(b) {
   const B = b.brain; B.atCover = false; b.sprintMove = false; B.gotoNode = null;
   if (B.phase === 'hunt') return startHunt(b, true);
-  if (B.phase === 'setup' || B.phase === 'hold') { B.phase = 'setup'; setState(b, 'advance'); b.sprintMove = true; if (!pathFromHere(b, B.hold)) { B.phase = 'hold'; setState(b, 'hold'); } return; }
+  if (B.phase === 'setup' || B.phase === 'hold') { B.phase = 'setup'; setState(b, 'advance'); b.sprintMove = true; if (!setupPath(b)) { B.phase = 'hold'; setState(b, 'hold'); } return; }
   setState(b, 'advance');
   const n = B.push[Math.min(B.pushIdx, B.push.length - 1)];
   pathFromHere(b, n);
@@ -3575,7 +3582,8 @@ function brainTick(b, dt) {
   if (!T) { B.target = null; B.vis = false; }
   const now = game.time;
   // retreat below the difficulty's health, once per life
-  if (!B.retreated && b.hp < D.retreat && b.hp > 0 && B.state !== 'retreat') startRetreat(b);
+  const hp = b === player ? player.health : b.hp;            // the autoplayed player keeps its health in .health
+  if (!B.retreated && hp < D.retreat && hp > 0 && B.state !== 'retreat') startRetreat(b);
   // hunt in the last 30 s
   if (match.timeLeft <= AI.huntLast && B.phase !== 'hunt' && B.state !== 'retreat') startHunt(b);
   if (T && B.vis) {
@@ -3644,9 +3652,11 @@ function separateSoldiers() {
       let dx = c.x - a.x, dz = c.z - a.z, d = Math.hypot(dx, dz);
       if (d >= sep) continue;
       if (d < 1e-4) { dx = 1; dz = 0; d = 1; } else { dx /= d; dz /= d; }
-      const push = (sep - Math.min(d, sep)) * AI.sepRate * 0.5;
-      for (const [o, s] of [[a, -1], [c, 1]]) {
-        const nx = o.x + dx * push * s, nz = o.z + dz * push * s;
+      // apart; when two soldiers walk into each other head-on, a sideways swirl too, so they slide round each other in a corridor
+      const closing = (c.vx - a.vx) * dx + (c.vz - a.vz) * dz < -AI.sepClosing;        // walking into each other (head-on)
+      const push = (sep - Math.min(d, sep)) * AI.sepRate * 0.5, k = closing ? AI.sepSwirl : 0, ux = (dx - k * dz) / Math.hypot(1, k), uz = (dz + k * dx) / Math.hypot(1, k);
+      for (let q = 0; q < 2; q++) {
+        const o = q ? c : a, sgn = q ? 1 : -1, nx = o.x + ux * push * sgn, nz = o.z + uz * push * sgn;
         if (firstBlocker(nx, nz, r, o.y + M.stepUp, o.y + o.height) === null) { o.x = nx; o.z = nz; }
       }
     }
@@ -4127,7 +4137,7 @@ function updateHUD(realDt) {
   updateMatchHUD();
   if (h !== ui.lastHealth) { ui.lastHealth = h; ui.health.textContent = h; ui.healthBox.className = h <= 30 ? 'low' : ''; }
   ui.hint.style.display = p.climbing ? 'block' : 'none';
-  ui.hud.style.visibility = game.view ? 'hidden' : 'visible';
+  ui.hud.style.visibility = game.view || game.phase === 'title' ? 'hidden' : 'visible';
   updateWeaponHUD();
   if (!game.debug) return;
   ui.debugTimer -= realDt;

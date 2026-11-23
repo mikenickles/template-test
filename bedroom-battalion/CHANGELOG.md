@@ -689,3 +689,168 @@ Screenshots looked at:
   - soldiers at range (Green against Tan), the tip-over, chevrons;
   - the grenade hand;
   - draw calls with 10 soldiers and the train in view.
+
+## Round 3B: combat, team play, match rules, HUD and menus (DESIGN.md 16.4 to 16.7, 16.9, 16.10)
+
+`index.html` is now 306,871 bytes (was 233,131). New scripts in `tests/`: `builder_r3b_matches.cjs` (runMatch per difficulty and
+seed, with full summaries), `builder_r3b_balance.cjs` (many seeds), `builder_r3b_roles.cjs` (kills and deaths per role and team, deaths
+by region), `builder_r3b_abtest.cjs` (balance with a live CONFIG override), `builder_r3b_ui.cjs` (real mouse and keys, screenshots),
+`builder_r3b_fight.cjs` (firefight draw calls, screenshots, sim cost), `builder_r3b_idle.cjs` (matches without autoplay),
+`builder_r3b_raycast.cjs` (R3A-1), `builder_r3b_smoke.cjs`. Screenshots: `screenshots/round3/builder_r3b_*.png`.
+
+### What was built
+
+- **Weapons are per soldier.** Every soldier carries an arsenal (the player's is the old `arsenal`), and every weapon function takes
+  the shooter, so bots fire through exactly the player's code: fire rate, magazine, reload, spread, recoil, bolt, grenade throw.
+  Player-only effects stay player-only: viewmodel, casings, hit marker, damage numbers, kill tick. Bot shots trace from the bot's gun
+  and sound at its position. Each bot's spread is seeded from the match seed.
+- **Soldiers can die.** Any soldier, the player included, has head and body hit volumes. `damageSoldier` handles teammates (they stop
+  bullets and take no damage; a thrower's own grenade still hurts the thrower), kills, the kill feed and per-soldier stats.
+  The player dies in a match (no respawn). Free play (`__game.start()`) still respawns the player as before.
+- **Brain** (DESIGN 16.4), on top of the 3A navigation:
+  - **Roles:** assigned by a seeded shuffle each round; with four Green bots, Centre is always filled. Primaries come from the role list.
+  - **Round plan:** setup to the hold node; hold until 40 s or the team leads in soldiers alive; push along the lane to the enemy fort;
+    hunt the team's last known enemy position in the last 30 s.
+  - **Perception:** 110° cone, range per difficulty, line of sight to body then head against colliders and the train, at 10 Hz per
+    soldier (staggered). Gunshots within 40 and being hit reveal the shooter.
+  - **Engage:** reaction time; aim error that settles from acquire to settled, scaled by target speed / 7 and by 1.5 while moving;
+    bursts (automatics) or single presses (pistol, sniper) with the difficulty's pause; head aim chance per burst.
+  - **Engage details:** no burst while a teammate is in the line of fire. Snipers scope, crouch and stand still, and draw the pistol
+    under 12 units. Strafing only onto ground at the same height and never into the envelope.
+  - **Cover:** taken when hurt, or when the target is not in the open (only its head shows, or it is crouched). A node within 12 is
+    prefiltered by the per-node 8-direction cover bits (precomputed at load) and checked for no line of sight at crouch eye height 1.0.
+    At cover the bot crouches and peeks: stands 0.8–1.2 s and fires, crouches 1.0–1.8 s; it leaves after 6 s without contact.
+  - **Flank:** when the target has held cover over 6 s, a bot that is not the closest teammate goes through the adjacent lane to the
+    last known position.
+  - **Retreat:** once per life, below the difficulty's health, to cover near the nearest teammate; it holds there until calm.
+  - **Grenades:** at a known enemy behind cover 10–25 away, with the difficulty's chance. The arc is solved by simulating 13 pitches
+    with the real grenade physics.
+  - **Callouts:** Green bots, at most one per bot per 4 s and three on screen, from the region table in `CONFIG.regions`.
+- **16.10 decisions:**
+  - **Crossings:** the window is 1.5 s, and A* adds the expected wait at a closed crossing (`astar(..., {cross: true})`, wait x 5 per s).
+  - **Centre ride:** in 35 % of rounds the Centre bot takes its team's ride edge when the wait is under 6 s. It holds up to 15 s for
+    such a window, then walks.
+  - **Flank ride:** a flank uses the team's ride edge when that route, wait included, is within 15 % of walking.
+  - **Separation:** soldiers (player included) push apart under 0.9, never into a wall; bodies do not collide.
+  - **Crouch:** in cover and while scoped, with a visible pose.
+- **Match** (16.5):
+  - **Rounds:** first to 5; rounds 2:30; 5 s freeze in which nobody moves or fires (round-end and match-end also freeze everyone).
+    Everyone is reset at the fort spawns each round. No respawn. A round ends on elimination, or at 0:00 to the side with more standing.
+  - **Replays:** equal at 0:00 is a replay that does not count. After three replays in a row, the next equal round goes to more total
+    health remaining (equal health is another replay).
+  - **Player death:** the camera tips with the body for 1.5 s, then spectates a living Green bot from its eye; left click cycles.
+  - **End screens:** round-end screen 4 s. Match-end screen with winner, score and a kills/deaths table; Enter rematches at the same
+    difficulty, Esc goes to the title.
+  - **Autoplay:** gives the player brain fields and a role, so the player plays as a Green bot through the same code.
+- **HUD and menus** (16.6):
+  - **HUD:** round, timer, "GREEN n - n TAN" and five pips per side top centre; kill feed top right (killer, weapon, victim, team
+    colours, HEADSHOT, last five, 5 s); callouts left; red damage arcs toward each attacker for 1 s; health and weapon show the
+    spectated soldier while spectating; freeze-time picker with countdown; "Spectating Green 3" banner.
+  - **Title:** Play, Recruit / Regular / Veteran, sensitivity and volume sliders, controls list.
+  - **Pause on Esc:** Resume, sensitivity 0.2–3.0, volume 0–100, Quit to title. Settings, difficulty and the last primary pick persist
+    in localStorage (wrapped in try/catch).
+  - **Stingers:** round start, round end, win and lose jingles.
+- **Esc-click fix (BUGS R1 finding 4):** the pause state follows the real pointer-lock state. Resume only asks for the lock and play
+  resumes when it is granted, so a stale "released" event cannot pause a resumed game. The frame loop also resumes if it ever finds
+  the game paused with the lock held.
+- **Hook** (16.7 3B): `startMatch({difficulty, seed, autoplay})`, `state().match {phase, round, score, timeLeft, alive, difficulty,
+  replays, freezeLeft, winner, autoplay, pick, spectating, playerDead, seed, lastRound}`, `runMatch({difficulty, seed, maxSimSeconds,
+  autoplay})` (autoplay defaults to on; `errors` are exceptions caught inside the loop), `skipRound(winner)` (`'green'`, `'tan'`,
+  `'replay'`, or nothing for the 0:00 rules), `killBot`, `setGodMode`, `botLog`, `killFeed`, `callouts`, `laneUse`, `highGroundTime`.
+  Extras: `matchReport`, `spectateNext`, `pickPrimary`, `setSetting`, `settings`, `quitToTitle`, `rematch`, `pause`, `resume`,
+  `setRoundTime`, `damagePlayer`; `state().bots` gains role, brainState, mag and kills; `state().player` gains dead and team;
+  `state().app`, `state().pointerLocked`.
+- **Fix BUGS R3A-1:** `__game.raycast` returns a soldier hit (`kind: 'soldier'`, id, team, zone) instead of throwing.
+
+### Measured
+
+| Check | Result |
+| --- | --- |
+| Console | `errors` empty in every script: matches, nav tests, UI with real input, page reload |
+| runMatch, autoplay, recruit seed 1 / 2 | Green 5-3 in 9 rounds (wall 5.05 s) / Green 5-4 in 9 rounds (4.04 s) |
+| runMatch, autoplay, regular seed 1 / 2 | Tan 1-5 in 7 rounds (2.55 s) / Tan 4-5 in 11 rounds (4.55 s) |
+| runMatch, autoplay, veteran seed 1 / 2 | Green 5-2 in 9 rounds (4.18 s) / Tan 3-5 in 8 rounds (3.81 s) |
+| Those six matches, rounds | 53 rounds: 31 ended by elimination, 16 on time, 6 replays (no health tiebreak). Durations 41 to 150 s; kills per round 4 to 9 |
+| Those six matches, logs | `stuckLog` 0 and `trainRescueLog` 0 in every match; envelope seconds 0 |
+| Those six matches, combat | Headshot share of kills 16.7 to 27.6 % (of soldier hits 11.5 to 17.6 %). Grenades thrown 2 to 11 per match. Rides 0 to 2 per match (0 to 6 attempts) |
+| Lane use | In 5 of 6 matches both teams spent time in every lane (west, centre, east) and on the bed, desk and shelves. In regular seed 1 Tan spent 0 s on the desk and 6 s on the shelves. Full numbers in `builder_r3b_matches.cjs` output |
+| Balance, autoplay, seeds 500 to 513 | recruit Green 6 / Tan 8, regular 8 / 6, veteran 8 / 6: 22 to 20 over 42 matches. Rounds 160 to 157, kills 1151 to 1119. 0 stuck, 0 rescues, 0 errors, about 3.8 s wall per match |
+| runMatch without autoplay (player idle), regular seeds 31, 32 | Tan 5-3, Tan 5-4; the idle player died every round (0/9, 0/10) and spectated; 0 stuck, 0 rescues |
+| Round paths (skipRound and timer) | One Tan killed, timer to 0: Green by "time". Three equal 0:00 rounds: replays 1, 2, 3. Fourth equal round with a Tan bot at 40 hp: Green by "health". The replays did not count (score 2-0) |
+| Freeze pick, real input | key 2 SMG, key 3 sniper; locked left click cycles (sniper to rifle); clicking the SMG option with the mouse free picks SMG and equips it |
+| Death and spectating, real input | camera tips for 1.5 s, then spectates bot.10; left clicks go to bot.11, then bot.12 |
+| Pause and settings, real input | Esc: paused, mouse free. Pause sliders change sensitivity (2.0 to 1.4). Resume: playing, locked |
+| Esc-click race | Esc then a click on Resume after 0, 10, 30, 60, 0, 10 ms: 6 of 6 end playing and locked, none paused-and-locked |
+| Settings after reload | sensitivity 1.4, volume 40, veteran and pick SMG all survive a page reload |
+| Results screens, real input | Match-end screen (Green 5-0, mouse freed). Enter: new match in freeze, locked. Esc on a match-end screen: title, bots removed |
+| Draw calls, full live round from the autoplayed player's eye, every 0.25 s (600 frames) | max 17, mean 14.3, max triangles 31,014. Software rendering |
+| Sim cost per tick, live veteran match, 10 soldiers | 0.101 ms (software headless, relative only). 3A nav test 10 bots: 0.047 ms |
+| Routes | all 18 ok walking and sprinting, no damage, same times as round 2. `validateWaypoints()` `[]`. 338 single-edge walks ok |
+| 3A regressions | nav test, 10 bots, 30 minutes, seeds 1 to 3: all 340 edge directions, every kind, route and crossing; 0 stuck, 0 rescues, 0 envelope seconds, 0 train contacts, rides 27 / 36 / 14. Player train tests (laps, scrape, pushes, wedges) and bullet, grenade and carry-over checks unchanged |
+| R3A-1 | `raycast([59, 1.6, 60], [0, 0, -1])` with a bot at n.c.3 returns `{id: 'bot.1', kind: 'soldier', team: 'green', zone: 'head', distance: 7.775}` |
+
+Screenshots looked at:
+- `builder_r3b_title.png`: title with Play, the difficulty buttons, sliders and controls. The HUD showed through behind it; now hidden
+  on the title.
+- `builder_r3b_freeze_picker.png`: top bar with round, 2:30, score and pips; the three choices with the selected one in yellow; countdown 5.
+- `builder_r3b_firefight.png`: autoplay view from the bed. Kill feed "Green 3 RIFLE Tan 2 HEADSHOT" and "Green 1 SMG Tan 3", three
+  callouts on the left, pips 4 and 3. No enemy happens to be in frame.
+- `builder_r3b_spectating.png`: from Green 1's eye behind the fort wall, the banner, the bot's SMG ammo in the HUD.
+- `builder_r3b_crouched_bot.png`: a crouched Green sniper, body visibly short.
+- `builder_r3b_match_end.png`: "GREEN WINS", 5-0, the kills/deaths table, and the Enter and Esc buttons.
+
+### Design items done differently, and why
+
+1. **`__game.start()` stays free play** (no match), because the testers' round 1 to 3A scripts rely on it. The title's Play button
+   and `startMatch` start a match.
+2. **Bed role setup route goes through the team's own climb** (Green the blanket slope, Tan the book stairs; `roles.bed.*.via`).
+   The south stairs are about 38 units longer (foot at z 144.5 and the walk round the pillows), so plain A* sent Tan's Bed bot up the
+   west lane to the spring pad. That made the west lane two against one: Tan won 32 of 40 matches. With the route: 22 to 20 over 42.
+3. **Separation swirl only head-on.** A sideways push breaks the corridor deadlock that separation alone caused (2 stuck entries in
+   the nav test). Applied always, it shifted fights toward Tan (1-5 in both directions against 4-2 without), so it now applies only
+   when two soldiers are closing faster than 1 u/s.
+4. **Replay rule reading:** three replays in a row are allowed; the fourth equal 0:00 goes to total health, and equal health replays again.
+5. **Freeze pick by click:** with the pointer locked, a left click cycles the pick (DOM options cannot be clicked while locked); with
+   the mouse free, clicking an option picks it.
+6. **No stopping on strings, rides, crossings or the track.** The brain lets the navigation run there and fights only once off.
+7. **"Target not in the open"** is read as only the head visible, or the target crouched.
+8. **Callouts:** "Enemy at their fort" is the Tan fort (Green callers). "Last one" when Tan is down to one.
+9. **Round-end and match-end freeze everyone**, like freeze time.
+
+### Design problems found (for the lead)
+
+- **Rides are rare** even with the 16.10 rule: 0 to 2 per match from 0 to 6 attempts. The Centre bot has to survive to push time, a
+  deck must come within 6 s, and a bot that sees an enemy while waiting fights instead of boarding.
+- **Many rounds run the full 2:30:** 22 of 53 in the six reported matches (16 on time, 6 replays). Each side holds until 40 s, and
+  hit rates are about 8 to 10 % of shots.
+- **Tan's longer way onto the bed** (above) is a map asymmetry; with the forced route Tan's Bed bot simply arrives later.
+- **The east side is a sniper lane from fort to fort:** in a traced round both High-east snipers hit each other within 10 s of the
+  start (about 119 units).
+
+### Known weak spots
+
+- Spectating from a bot's eye shows that bot's own gun box at the bottom of the frame (its head is culled).
+- Separation never pushes into a wall, but it does not check for ledges; two soldiers at a desk or shelf edge could nudge one off.
+- Bots compensate recoil perfectly (the aim is re-set each tick); their inaccuracy is the designed aim error plus weapon spread.
+- Real browsers refuse a new pointer lock for about a second after Esc; a quick Resume click then leaves the game paused with the
+  mouse free (the allowed outcome) until clicked again. Headless grants the lock at once, so only that case was run.
+- Nobody has listened to the stingers, jingles or bot gun sounds; they were only checked for names and for not throwing.
+- HUD sizes are fixed in pixels.
+
+### What to re-test
+
+- **Bug tester:**
+  - full matches on each difficulty (`runMatch` and real play);
+  - player death into spectating, cycling, the round end with the player dead;
+  - replay and tiebreak paths; pause, quit and rematch; settings with storage blocked;
+  - the Esc-click race;
+  - friendly fire; grenades on teammates and on the thrower;
+  - stuckLog and trainRescueLog during matches; R3A-1.
+- **Feel tester:**
+  - each difficulty against the player: reaction, aim, bursts, how often bots take cover, flank and throw;
+  - round length and pace (many full 2:30 rounds); the east sniper lane;
+  - freeze pick, callouts and kill feed readability.
+- **Visual tester:**
+  - HUD, title, pause, picker and results screens, damage arcs, the spectate view;
+  - crouch pose and chevrons in a fight;
+  - draw calls in the busiest firefights.
