@@ -10555,3 +10555,22 @@ html[data-ambient="on"] .tabbar:not(.floating) {
 .browser-typed li:last-child {
   border-bottom: 0;
 }
+
+/* ---- (0.60.2) tab bar words: a bit bigger, and centered in the pill (the underline no longer pushes them up) ---- */
+.tabbar-item,
+.tabbar-item.on {
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+}
+.tabbar-inner > .slide-pill::after {
+  bottom: 6px;
+  width: 20px;
+  margin-left: -10px;
+}
+.tabbar-icon {
+  margin-left: 24px;
+  top: 6px;
+}
