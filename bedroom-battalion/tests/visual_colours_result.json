@@ -1,0 +1,1726 @@
+{
+ "rows": [
+  {
+   "name": "wall north",
+   "cond": "side shade",
+   "palette": "#BFD3E0",
+   "rendered": "#AAAA9B",
+   "rgb": [
+    170,
+    170,
+    155
+   ],
+   "spread": 0,
+   "hsv": [
+    60,
+    9,
+    67
+   ],
+   "dEfromPalette": 21.8
+  },
+  {
+   "name": "wall east",
+   "cond": "side shade",
+   "palette": "#BFD3E0",
+   "rendered": "#AAAA9B",
+   "rgb": [
+    170,
+    170,
+    155
+   ],
+   "spread": 0,
+   "hsv": [
+    60,
+    9,
+    67
+   ],
+   "dEfromPalette": 21.8
+  },
+  {
+   "name": "wall south",
+   "cond": "side shade",
+   "palette": "#BFD3E0",
+   "rendered": "#AAAA9B",
+   "rgb": [
+    170,
+    170,
+    155
+   ],
+   "spread": 0,
+   "hsv": [
+    60,
+    9,
+    67
+   ],
+   "dEfromPalette": 21.8
+  },
+  {
+   "name": "wall west",
+   "cond": "side shade",
+   "palette": "#BFD3E0",
+   "rendered": "#AAAA9B",
+   "rgb": [
+    170,
+    170,
+    155
+   ],
+   "spread": 0,
+   "hsv": [
+    60,
+    9,
+    67
+   ],
+   "dEfromPalette": 21.8
+  },
+  {
+   "name": "ceiling",
+   "cond": "under shade",
+   "palette": "#F5F2EA",
+   "rendered": "#AF8A64",
+   "rgb": [
+    175,
+    138,
+    100
+   ],
+   "spread": 0,
+   "hsv": [
+    30,
+    43,
+    69
+   ],
+   "dEfromPalette": 42.5
+  },
+  {
+   "name": "ceiling light fitting",
+   "cond": "under shade",
+   "palette": "#F2EFE6",
+   "rendered": "#AD8962",
+   "rgb": [
+    173,
+    137,
+    98
+   ],
+   "spread": 0,
+   "hsv": [
+    31,
+    43,
+    68
+   ],
+   "dEfromPalette": 41.9
+  },
+  {
+   "name": "skirting",
+   "cond": "side shade",
+   "palette": "#F2EFE6",
+   "rendered": "#D8C1A0",
+   "rgb": [
+    216,
+    193,
+    160
+   ],
+   "spread": 0,
+   "hsv": [
+    35,
+    26,
+    85
+   ],
+   "dEfromPalette": 21.6
+  },
+  {
+   "name": "door",
+   "cond": "side shade",
+   "palette": "#F2EFE6",
+   "rendered": "#D8C1A0",
+   "rgb": [
+    216,
+    193,
+    160
+   ],
+   "spread": 0,
+   "hsv": [
+    35,
+    26,
+    85
+   ],
+   "dEfromPalette": 21.6
+  },
+  {
+   "name": "window pane (background)",
+   "cond": "none",
+   "palette": "#E6DCCB",
+   "rendered": "#E6DCCB",
+   "rgb": [
+    230,
+    220,
+    203
+   ],
+   "spread": 0,
+   "hsv": [
+    38,
+    12,
+    90
+   ],
+   "dEfromPalette": 0
+  },
+  {
+   "name": "floor shade",
+   "cond": "top shade",
+   "palette": "#7A4E2E",
+   "rendered": "#7F4C27",
+   "rgb": [
+    127,
+    76,
+    39
+   ],
+   "spread": 0,
+   "hsv": [
+    25,
+    69,
+    50
+   ],
+   "dEfromPalette": 5.2
+  },
+  {
+   "name": "floor sun",
+   "cond": "top sun",
+   "palette": "#7A4E2E",
+   "rendered": "#985B2D",
+   "rgb": [
+    152,
+    91,
+    45
+   ],
+   "spread": 0,
+   "hsv": [
+    26,
+    70,
+    60
+   ],
+   "dEfromPalette": 13.7
+  },
+  {
+   "name": "floor west of ruin (DESIGN says sunbeam)",
+   "cond": "top shade",
+   "palette": "#7A4E2E",
+   "rendered": "#814D27",
+   "rgb": [
+    129,
+    77,
+    39
+   ],
+   "spread": 17,
+   "hsv": [
+    25,
+    70,
+    51
+   ],
+   "dEfromPalette": 5.9
+  },
+  {
+   "name": "floor under bed",
+   "cond": "top shade",
+   "palette": "#7A4E2E",
+   "rendered": "#7F4C27",
+   "rgb": [
+    127,
+    76,
+    39
+   ],
+   "spread": 0,
+   "hsv": [
+    25,
+    69,
+    50
+   ],
+   "dEfromPalette": 5.2
+  },
+  {
+   "name": "bed underside",
+   "cond": "under shade",
+   "palette": "#C79A5E",
+   "rendered": "#8D5624",
+   "rgb": [
+    141,
+    86,
+    36
+   ],
+   "spread": 0,
+   "hsv": [
+    29,
+    74,
+    55
+   ],
+   "dEfromPalette": 26.1
+  },
+  {
+   "name": "bed top shade",
+   "cond": "top shade",
+   "palette": "#C79A5E",
+   "rendered": "#CE9751",
+   "rgb": [
+    206,
+    151,
+    81
+   ],
+   "spread": 0,
+   "hsv": [
+    34,
+    61,
+    81
+   ],
+   "dEfromPalette": 7.5
+  },
+  {
+   "name": "bed top sun",
+   "cond": "top sun",
+   "palette": "#C79A5E",
+   "rendered": "#F6B15C",
+   "rgb": [
+    246,
+    177,
+    92
+   ],
+   "spread": 0,
+   "hsv": [
+    33,
+    63,
+    96
+   ],
+   "dEfromPalette": 19.6
+  },
+  {
+   "name": "bed side east",
+   "cond": "side shade",
+   "palette": "#C79A5E",
+   "rendered": "#B27C3F",
+   "rgb": [
+    178,
+    124,
+    63
+   ],
+   "spread": 0,
+   "hsv": [
+    32,
+    65,
+    70
+   ],
+   "dEfromPalette": 11.9
+  },
+  {
+   "name": "pillow top sun",
+   "cond": "top sun",
+   "palette": "#E8EEF5",
+   "rendered": "#FFFFF1",
+   "rgb": [
+    255,
+    255,
+    241
+   ],
+   "spread": 0,
+   "hsv": [
+    60,
+    5,
+    100
+   ],
+   "dEfromPalette": 12.3
+  },
+  {
+   "name": "pillow top shade",
+   "cond": "top shade",
+   "palette": "#E8EEF5",
+   "rendered": "#F0E9D5",
+   "rgb": [
+    240,
+    233,
+    213
+   ],
+   "spread": 0,
+   "hsv": [
+    44,
+    11,
+    94
+   ],
+   "dEfromPalette": 14.7
+  },
+  {
+   "name": "blanket ridge shade",
+   "cond": "top shade",
+   "palette": "#3D5A99",
+   "rendered": "#3F5682",
+   "rgb": [
+    63,
+    86,
+    130
+   ],
+   "spread": 0,
+   "hsv": [
+    219,
+    52,
+    51
+   ],
+   "dEfromPalette": 11.6
+  },
+  {
+   "name": "desk top",
+   "cond": "top shade",
+   "palette": "#8FA3B5",
+   "rendered": "#949F9D",
+   "rgb": [
+    148,
+    159,
+    157
+   ],
+   "spread": 0,
+   "hsv": [
+    169,
+    7,
+    62
+   ],
+   "dEfromPalette": 11.5
+  },
+  {
+   "name": "desk leg west face",
+   "cond": "side shade",
+   "palette": "#8FA3B5",
+   "rendered": "#7F837D",
+   "rgb": [
+    127,
+    131,
+    125
+   ],
+   "spread": 0,
+   "hsv": [
+    100,
+    5,
+    51
+   ],
+   "dEfromPalette": 18.6
+  },
+  {
+   "name": "desk underside",
+   "cond": "under shade",
+   "palette": "#8FA3B5",
+   "rendered": "#655B4C",
+   "rgb": [
+    101,
+    91,
+    76
+   ],
+   "spread": 0,
+   "hsv": [
+    36,
+    25,
+    40
+   ],
+   "dEfromPalette": 34.8
+  },
+  {
+   "name": "shelf board top",
+   "cond": "top shade",
+   "palette": "#EFE9DD",
+   "rendered": "#F7E4C0",
+   "rgb": [
+    247,
+    228,
+    192
+   ],
+   "spread": 0,
+   "hsv": [
+    39,
+    22,
+    97
+   ],
+   "dEfromPalette": 13.5
+  },
+  {
+   "name": "shelf board underside",
+   "cond": "under shade",
+   "palette": "#EFE9DD",
+   "rendered": "#AB855E",
+   "rgb": [
+    171,
+    133,
+    94
+   ],
+   "spread": 0,
+   "hsv": [
+    30,
+    45,
+    67
+   ],
+   "dEfromPalette": 40.8
+  },
+  {
+   "name": "shelf post west face",
+   "cond": "side shade",
+   "palette": "#EFE9DD",
+   "rendered": "#D6BC99",
+   "rgb": [
+    214,
+    188,
+    153
+   ],
+   "spread": 0,
+   "hsv": [
+    34,
+    29,
+    84
+   ],
+   "dEfromPalette": 21.2
+  },
+  {
+   "name": "cover top shade (game box)",
+   "cond": "top shade",
+   "palette": "#9AA3AD",
+   "rendered": "#A09F96",
+   "rgb": [
+    160,
+    159,
+    150
+   ],
+   "spread": 0,
+   "hsv": [
+    54,
+    6,
+    63
+   ],
+   "dEfromPalette": 11.2
+  },
+  {
+   "name": "cover side shade (game box)",
+   "cond": "side shade",
+   "palette": "#9AA3AD",
+   "rendered": "#898377",
+   "rgb": [
+    137,
+    131,
+    119
+   ],
+   "spread": 0,
+   "hsv": [
+    40,
+    13,
+    54
+   ],
+   "dEfromPalette": 17.9
+  },
+  {
+   "name": "cover top sun (marble ramp)",
+   "cond": "top sun",
+   "palette": "#9AA3AD",
+   "rendered": "#BFBBAA",
+   "rgb": [
+    191,
+    187,
+    170
+   ],
+   "spread": 0,
+   "hsv": [
+    49,
+    11,
+    75
+   ],
+   "dEfromPalette": 17.9
+  },
+  {
+   "name": "cover west face sun (C-f block)",
+   "cond": "west sun",
+   "palette": "#9AA3AD",
+   "rendered": "#AEA591",
+   "rgb": [
+    174,
+    165,
+    145
+   ],
+   "spread": 0,
+   "hsv": [
+    41,
+    17,
+    68
+   ],
+   "dEfromPalette": 17.9
+  },
+  {
+   "name": "route top shade (landing)",
+   "cond": "top shade",
+   "palette": "#FF8A1F",
+   "rendered": "#FF8719",
+   "rgb": [
+    255,
+    135,
+    25
+   ],
+   "spread": 0,
+   "hsv": [
+    29,
+    90,
+    100
+   ],
+   "dEfromPalette": 1.9
+  },
+  {
+   "name": "route side shade (stairs)",
+   "cond": "side shade",
+   "palette": "#FF8A1F",
+   "rendered": "#E46F12",
+   "rgb": [
+    228,
+    111,
+    18
+   ],
+   "spread": 0,
+   "hsv": [
+    27,
+    92,
+    89
+   ],
+   "dEfromPalette": 11
+  },
+  {
+   "name": "route top (spring pad, in bed shadow)",
+   "cond": "top shade",
+   "palette": "#FF8A1F",
+   "rendered": "#FF8719",
+   "rgb": [
+    255,
+    135,
+    25
+   ],
+   "spread": 0,
+   "hsv": [
+    29,
+    90,
+    100
+   ],
+   "dEfromPalette": 1.9
+  },
+  {
+   "name": "route underside (skate ramp)",
+   "cond": "under shade",
+   "palette": "#FF8A1F",
+   "rendered": "#C0550A",
+   "rgb": [
+    192,
+    85,
+    10
+   ],
+   "spread": 0,
+   "hsv": [
+    25,
+    95,
+    75
+   ],
+   "dEfromPalette": 24
+  },
+  {
+   "name": "string (yo-yo) west face",
+   "cond": "side shade",
+   "palette": "#FFD21F",
+   "rendered": "#E4AA12",
+   "rgb": [
+    228,
+    170,
+    18
+   ],
+   "spread": 0,
+   "hsv": [
+    43,
+    92,
+    89
+   ],
+   "dEfromPalette": 17.7
+  },
+  {
+   "name": "green fort top",
+   "cond": "top shade",
+   "palette": "#2F6FD0",
+   "rendered": "#316CB4",
+   "rgb": [
+    49,
+    108,
+    180
+   ],
+   "spread": 0,
+   "hsv": [
+    213,
+    73,
+    71
+   ],
+   "dEfromPalette": 15
+  },
+  {
+   "name": "green fort front face",
+   "cond": "side shade",
+   "palette": "#2F6FD0",
+   "rendered": "#295890",
+   "rgb": [
+    41,
+    88,
+    144
+   ],
+   "spread": 0,
+   "hsv": [
+    213,
+    72,
+    56
+   ],
+   "dEfromPalette": 25.2
+  },
+  {
+   "name": "tan fort top",
+   "cond": "top shade",
+   "palette": "#D43C2E",
+   "rendered": "#DC3A27",
+   "rgb": [
+    220,
+    58,
+    39
+   ],
+   "spread": 0,
+   "hsv": [
+    6,
+    82,
+    86
+   ],
+   "dEfromPalette": 6.1
+  },
+  {
+   "name": "tan fort front face",
+   "cond": "side shade",
+   "palette": "#D43C2E",
+   "rendered": "#BD2F1D",
+   "rgb": [
+    189,
+    47,
+    29
+   ],
+   "spread": 0,
+   "hsv": [
+    7,
+    85,
+    74
+   ],
+   "dEfromPalette": 7
+  },
+  {
+   "name": "ruin top sun (platform)",
+   "cond": "top sun",
+   "palette": "#7B4BB5",
+   "rendered": "#9957B2",
+   "rgb": [
+    153,
+    87,
+    178
+   ],
+   "spread": 0,
+   "hsv": [
+    284,
+    51,
+    70
+   ],
+   "dEfromPalette": 12.8
+  },
+  {
+   "name": "ruin side shade",
+   "cond": "side shade",
+   "palette": "#7B4BB5",
+   "rendered": "#6D3B7D",
+   "rgb": [
+    109,
+    59,
+    125
+   ],
+   "spread": 0,
+   "hsv": [
+    285,
+    53,
+    49
+   ],
+   "dEfromPalette": 23.5
+  },
+  {
+   "name": "spare soldier side",
+   "cond": "side shade",
+   "palette": "#B9BEC6",
+   "rendered": "#A59989",
+   "rgb": [
+    165,
+    153,
+    137
+   ],
+   "spread": 0,
+   "hsv": [
+    34,
+    17,
+    65
+   ],
+   "dEfromPalette": 19.6
+  },
+  {
+   "name": "track rail top",
+   "cond": "top shade",
+   "palette": "#4B5058",
+   "rendered": "#4E4E4B",
+   "rgb": [
+    78,
+    78,
+    75
+   ],
+   "spread": 0,
+   "hsv": [
+    60,
+    4,
+    31
+   ],
+   "dEfromPalette": 7.2
+  },
+  {
+   "name": "chair seat top",
+   "cond": "top shade",
+   "palette": "#8FA3B5",
+   "rendered": "#949F9D",
+   "rgb": [
+    148,
+    159,
+    157
+   ],
+   "spread": 0,
+   "hsv": [
+    169,
+    7,
+    62
+   ],
+   "dEfromPalette": 11.5
+  },
+  {
+   "name": "fog: south wall from 8",
+   "cond": "fog",
+   "palette": "#BFD3E0",
+   "rendered": "#AAAA9B",
+   "rgb": [
+    170,
+    170,
+    155
+   ],
+   "spread": 0,
+   "hsv": [
+    60,
+    9,
+    67
+   ],
+   "dEfromPalette": 21.8
+  },
+  {
+   "name": "fog: south wall from 40",
+   "cond": "fog",
+   "palette": "#BFD3E0",
+   "rendered": "#ABAB9B",
+   "rgb": [
+    171,
+    171,
+    155
+   ],
+   "spread": 0,
+   "hsv": [
+    60,
+    9,
+    67
+   ],
+   "dEfromPalette": 21.9
+  },
+  {
+   "name": "fog: south wall from 80",
+   "cond": "fog",
+   "palette": "#BFD3E0",
+   "rendered": "#AFAE9F",
+   "rgb": [
+    175,
+    174,
+    159
+   ],
+   "spread": 0,
+   "hsv": [
+    56,
+    9,
+    69
+   ],
+   "dEfromPalette": 20.9
+  },
+  {
+   "name": "fog: south wall from 120",
+   "cond": "fog",
+   "palette": "#BFD3E0",
+   "rendered": "#B7B5A6",
+   "rgb": [
+    183,
+    181,
+    166
+   ],
+   "spread": 0,
+   "hsv": [
+    53,
+    9,
+    72
+   ],
+   "dEfromPalette": 19.5
+  },
+  {
+   "name": "fog: south wall from 155",
+   "cond": "fog",
+   "palette": "#BFD3E0",
+   "rendered": "#C1BDAD",
+   "rgb": [
+    193,
+    189,
+    173
+   ],
+   "spread": 0,
+   "hsv": [
+    48,
+    10,
+    76
+   ],
+   "dEfromPalette": 18.8
+  }
+ ],
+ "pairs": [
+  {
+   "env": "bed top shade",
+   "envColour": "#CE9751",
+   "team": "Tan #E0C080 | top shade",
+   "teamColour": "#E8BB6F",
+   "dE": 13.5
+  },
+  {
+   "env": "bed top shade",
+   "envColour": "#CE9751",
+   "team": "Tan shadow #B8975A | top shade",
+   "teamColour": "#BF934D",
+   "dE": 5.5
+  },
+  {
+   "env": "bed top sun",
+   "envColour": "#F6B15C",
+   "team": "Tan #E0C080 | top sun",
+   "teamColour": "#FFDC7E",
+   "dE": 20
+  },
+  {
+   "env": "bed top sun",
+   "envColour": "#F6B15C",
+   "team": "Tan shadow #B8975A | top sun",
+   "teamColour": "#E4AD58",
+   "dE": 6.9
+  },
+  {
+   "env": "bed side east",
+   "envColour": "#B27C3F",
+   "team": "Tan #E0C080 | side shade",
+   "teamColour": "#C89B57",
+   "dE": 11.9
+  },
+  {
+   "env": "bed side east",
+   "envColour": "#B27C3F",
+   "team": "Tan shadow #B8975A | side shade",
+   "teamColour": "#A4793C",
+   "dE": 5.6
+  },
+  {
+   "env": "ceiling",
+   "envColour": "#AF8A64",
+   "team": "Tan #E0C080 | side shade",
+   "teamColour": "#C89B57",
+   "dE": 17.2
+  },
+  {
+   "env": "ceiling",
+   "envColour": "#AF8A64",
+   "team": "Tan shadow #B8975A | side shade",
+   "teamColour": "#A4793C",
+   "dE": 15
+  },
+  {
+   "env": "shelf board underside",
+   "envColour": "#AB855E",
+   "team": "Tan shadow #B8975A | side shade",
+   "teamColour": "#A4793C",
+   "dE": 13.5
+  },
+  {
+   "env": "shelf post west face",
+   "envColour": "#D6BC99",
+   "team": "Tan #E0C080 | side shade",
+   "teamColour": "#C89B57",
+   "dE": 23.7
+  },
+  {
+   "env": "skirting",
+   "envColour": "#D8C1A0",
+   "team": "Tan #E0C080 | side shade",
+   "teamColour": "#C89B57",
+   "dE": 25.9
+  },
+  {
+   "env": "shelf board top",
+   "envColour": "#F7E4C0",
+   "team": "Tan #E0C080 | top shade",
+   "teamColour": "#E8BB6F",
+   "dE": 28.5
+  },
+  {
+   "env": "wall north",
+   "envColour": "#AAAA9B",
+   "team": "Tan #E0C080 | side shade",
+   "teamColour": "#C89B57",
+   "dE": 35.9
+  },
+  {
+   "env": "wall north",
+   "envColour": "#AAAA9B",
+   "team": "Green #2FA84A | side shade",
+   "teamColour": "#298731",
+   "dE": 55.8
+  },
+  {
+   "env": "floor shade",
+   "envColour": "#7F4C27",
+   "team": "Tan shadow #B8975A | side shade",
+   "teamColour": "#A4793C",
+   "dE": 20.3
+  },
+  {
+   "env": "floor shade",
+   "envColour": "#7F4C27",
+   "team": "Green shadow #1F7A36 | side shade",
+   "teamColour": "#1A6122",
+   "dE": 54
+  },
+  {
+   "env": "cover side shade (game box)",
+   "envColour": "#898377",
+   "team": "Tan shadow #B8975A | side shade",
+   "teamColour": "#A4793C",
+   "dE": 33.6
+  },
+  {
+   "env": "route side shade (stairs)",
+   "envColour": "#E46F12",
+   "team": "Tan #E0C080 | side shade",
+   "teamColour": "#C89B57",
+   "dE": 39.8
+  },
+  {
+   "env": "string (yo-yo) west face",
+   "envColour": "#E4AA12",
+   "team": "Tan #E0C080 | side shade",
+   "teamColour": "#C89B57",
+   "dE": 33
+  }
+ ],
+ "contrasts": [
+  {
+   "a": "fog: south wall from 8",
+   "b": "fog: south wall from 155",
+   "dE": 7.5
+  },
+  {
+   "a": "fog: south wall from 8",
+   "b": "fog: south wall from 80",
+   "dE": 1.6
+  },
+  {
+   "a": "ceiling",
+   "b": "ceiling light fitting",
+   "dE": 0.8
+  },
+  {
+   "a": "floor shade",
+   "b": "floor sun",
+   "dE": 9.7
+  },
+  {
+   "a": "floor shade",
+   "b": "floor under bed",
+   "dE": 0
+  },
+  {
+   "a": "floor under bed",
+   "b": "bed underside",
+   "dE": 8.2
+  },
+  {
+   "a": "route side shade (stairs)",
+   "b": "string (yo-yo) west face",
+   "dE": 35
+  },
+  {
+   "a": "route top shade (landing)",
+   "b": "bed top sun",
+   "dE": 30.5
+  },
+  {
+   "a": "route side shade (stairs)",
+   "b": "bed side east",
+   "dE": 35.3
+  },
+  {
+   "a": "wall north",
+   "b": "cover side shade (game box)",
+   "dE": 14.6
+  },
+  {
+   "a": "wall north",
+   "b": "desk leg west face",
+   "dE": 15.8
+  },
+  {
+   "a": "cover side shade (game box)",
+   "b": "desk leg west face",
+   "dE": 5.4
+  },
+  {
+   "a": "cover top shade (game box)",
+   "b": "desk top",
+   "dE": 6
+  },
+  {
+   "a": "spare soldier side",
+   "b": "cover side shade (game box)",
+   "dE": 9.4
+  },
+  {
+   "a": "skirting",
+   "b": "shelf post west face",
+   "dE": 2.4
+  },
+  {
+   "a": "bed top shade",
+   "b": "bed top sun",
+   "dE": 14
+  }
+ ],
+ "factor": {
+  "top shade": [
+   1.088,
+   0.947,
+   0.73
+  ],
+  "side shade": [
+   0.774,
+   0.62,
+   0.441
+  ],
+  "top sun": [
+   1.612,
+   1.357,
+   0.962
+  ],
+  "west sun": [
+   1.31,
+   1.027,
+   0.678
+  ],
+  "under shade": [
+   0.474,
+   0.286,
+   0.156
+  ]
+ },
+ "predictedTeam": {
+  "Green #2FA84A | top shade": "#31A43F",
+  "Green #2FA84A | side shade": "#298731",
+  "Green #2FA84A | top sun": "#3CC149",
+  "Green #2FA84A | west sun": "#36AA3D",
+  "Green #2FA84A | under shade": "#1F5E1B",
+  "Green shadow #1F7A36 | top shade": "#21772E",
+  "Green shadow #1F7A36 | side shade": "#1A6122",
+  "Green shadow #1F7A36 | top sun": "#298C35",
+  "Green shadow #1F7A36 | west sun": "#247C2C",
+  "Green shadow #1F7A36 | under shade": "#134311",
+  "Tan #E0C080 | top shade": "#E8BB6F",
+  "Tan #E0C080 | side shade": "#C89B57",
+  "Tan #E0C080 | top sun": "#FFDC7E",
+  "Tan #E0C080 | west sun": "#FCC26B",
+  "Tan #E0C080 | under shade": "#A06C34",
+  "Tan shadow #B8975A | top shade": "#BF934D",
+  "Tan shadow #B8975A | side shade": "#A4793C",
+  "Tan shadow #B8975A | top sun": "#E4AD58",
+  "Tan shadow #B8975A | west sun": "#D0994A",
+  "Tan shadow #B8975A | under shade": "#835422"
+ },
+ "nearTeam": [
+  {
+   "name": "bed top shade",
+   "rendered": "#CE9751",
+   "nearestRawTeam": {
+    "d": 11.8,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 4,
+    "as": "Tan shadow #B8975A | west sun",
+    "colour": "#D0994A"
+   }
+  },
+  {
+   "name": "bed underside",
+   "rendered": "#8D5624",
+   "nearestRawTeam": {
+    "d": 26.2,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 4.2,
+    "as": "Tan shadow #B8975A | under shade",
+    "colour": "#835422"
+   }
+  },
+  {
+   "name": "bed side east",
+   "rendered": "#B27C3F",
+   "nearestRawTeam": {
+    "d": 13.6,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 5.6,
+    "as": "Tan shadow #B8975A | side shade",
+    "colour": "#A4793C"
+   }
+  },
+  {
+   "name": "floor west of ruin (DESIGN says sunbeam)",
+   "rendered": "#814D27",
+   "nearestRawTeam": {
+    "d": 30,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 6.3,
+    "as": "Tan shadow #B8975A | under shade",
+    "colour": "#835422"
+   }
+  },
+  {
+   "name": "floor shade",
+   "rendered": "#7F4C27",
+   "nearestRawTeam": {
+    "d": 30.5,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 6.8,
+    "as": "Tan shadow #B8975A | under shade",
+    "colour": "#835422"
+   }
+  },
+  {
+   "name": "floor under bed",
+   "rendered": "#7F4C27",
+   "nearestRawTeam": {
+    "d": 30.5,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 6.8,
+    "as": "Tan shadow #B8975A | under shade",
+    "colour": "#835422"
+   }
+  },
+  {
+   "name": "bed top sun",
+   "rendered": "#F6B15C",
+   "nearestRawTeam": {
+    "d": 21.3,
+    "team": "Tan #E0C080"
+   },
+   "nearestRenderedTeam": {
+    "d": 6.9,
+    "as": "Tan shadow #B8975A | top sun",
+    "colour": "#E4AD58"
+   }
+  },
+  {
+   "name": "floor sun",
+   "rendered": "#985B2D",
+   "nearestRawTeam": {
+    "d": 25.4,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 7.6,
+    "as": "Tan shadow #B8975A | under shade",
+    "colour": "#835422"
+   }
+  },
+  {
+   "name": "shelf board underside",
+   "rendered": "#AB855E",
+   "nearestRawTeam": {
+    "d": 12.6,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 13.5,
+    "as": "Tan shadow #B8975A | side shade",
+    "colour": "#A4793C"
+   }
+  },
+  {
+   "name": "ceiling light fitting",
+   "rendered": "#AD8962",
+   "nearestRawTeam": {
+    "d": 12.1,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 14.5,
+    "as": "Tan shadow #B8975A | side shade",
+    "colour": "#A4793C"
+   }
+  },
+  {
+   "name": "ceiling",
+   "rendered": "#AF8A64",
+   "nearestRawTeam": {
+    "d": 12.4,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 15,
+    "as": "Tan shadow #B8975A | side shade",
+    "colour": "#A4793C"
+   }
+  },
+  {
+   "name": "string (yo-yo) west face",
+   "rendered": "#E4AA12",
+   "nearestRawTeam": {
+    "d": 38.7,
+    "team": "Tan #E0C080"
+   },
+   "nearestRenderedTeam": {
+    "d": 23.5,
+    "as": "Tan shadow #B8975A | top sun",
+    "colour": "#E4AD58"
+   }
+  },
+  {
+   "name": "shelf post west face",
+   "rendered": "#D6BC99",
+   "nearestRawTeam": {
+    "d": 15.4,
+    "team": "Tan #E0C080"
+   },
+   "nearestRenderedTeam": {
+    "d": 23.7,
+    "as": "Tan #E0C080 | side shade",
+    "colour": "#C89B57"
+   }
+  },
+  {
+   "name": "skirting",
+   "rendered": "#D8C1A0",
+   "nearestRawTeam": {
+    "d": 16.8,
+    "team": "Tan #E0C080"
+   },
+   "nearestRenderedTeam": {
+    "d": 25.4,
+    "as": "Tan #E0C080 | top shade",
+    "colour": "#E8BB6F"
+   }
+  },
+  {
+   "name": "door",
+   "rendered": "#D8C1A0",
+   "nearestRawTeam": {
+    "d": 16.8,
+    "team": "Tan #E0C080"
+   },
+   "nearestRenderedTeam": {
+    "d": 25.4,
+    "as": "Tan #E0C080 | top shade",
+    "colour": "#E8BB6F"
+   }
+  },
+  {
+   "name": "shelf board top",
+   "rendered": "#F7E4C0",
+   "nearestRawTeam": {
+    "d": 20.6,
+    "team": "Tan #E0C080"
+   },
+   "nearestRenderedTeam": {
+    "d": 28.5,
+    "as": "Tan #E0C080 | top shade",
+    "colour": "#E8BB6F"
+   }
+  },
+  {
+   "name": "desk underside",
+   "rendered": "#655B4C",
+   "nearestRawTeam": {
+    "d": 36.5,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 29.3,
+    "as": "Tan shadow #B8975A | under shade",
+    "colour": "#835422"
+   }
+  },
+  {
+   "name": "route underside (skate ramp)",
+   "rendered": "#C0550A",
+   "nearestRawTeam": {
+    "d": 43,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 29.9,
+    "as": "Tan #E0C080 | under shade",
+    "colour": "#A06C34"
+   }
+  },
+  {
+   "name": "cover west face sun (C-f block)",
+   "rendered": "#AEA591",
+   "nearestRawTeam": {
+    "d": 25.7,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 31.4,
+    "as": "Tan #E0C080 | side shade",
+    "colour": "#C89B57"
+   }
+  },
+  {
+   "name": "spare soldier side",
+   "rendered": "#A59989",
+   "nearestRawTeam": {
+    "d": 26.7,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 32.1,
+    "as": "Tan shadow #B8975A | side shade",
+    "colour": "#A4793C"
+   }
+  },
+  {
+   "name": "route side shade (stairs)",
+   "rendered": "#E46F12",
+   "nearestRawTeam": {
+    "d": 46,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 33.5,
+    "as": "Tan shadow #B8975A | west sun",
+    "colour": "#D0994A"
+   }
+  },
+  {
+   "name": "cover side shade (game box)",
+   "rendered": "#898377",
+   "nearestRawTeam": {
+    "d": 31,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 33.6,
+    "as": "Tan shadow #B8975A | side shade",
+    "colour": "#A4793C"
+   }
+  },
+  {
+   "name": "cover top sun (marble ramp)",
+   "rendered": "#BFBBAA",
+   "nearestRawTeam": {
+    "d": 27.9,
+    "team": "Tan #E0C080"
+   },
+   "nearestRenderedTeam": {
+    "d": 35.3,
+    "as": "Tan #E0C080 | side shade",
+    "colour": "#C89B57"
+   }
+  },
+  {
+   "name": "route top shade (landing)",
+   "rendered": "#FF8719",
+   "nearestRawTeam": {
+    "d": 49.1,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 35.3,
+    "as": "Tan shadow #B8975A | west sun",
+    "colour": "#D0994A"
+   }
+  },
+  {
+   "name": "route top (spring pad, in bed shadow)",
+   "rendered": "#FF8719",
+   "nearestRawTeam": {
+    "d": 49.1,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 35.3,
+    "as": "Tan shadow #B8975A | west sun",
+    "colour": "#D0994A"
+   }
+  },
+  {
+   "name": "wall north",
+   "rendered": "#AAAA9B",
+   "nearestRawTeam": {
+    "d": 30.1,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 35.9,
+    "as": "Tan #E0C080 | side shade",
+    "colour": "#C89B57"
+   }
+  },
+  {
+   "name": "wall east",
+   "rendered": "#AAAA9B",
+   "nearestRawTeam": {
+    "d": 30.1,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 35.9,
+    "as": "Tan #E0C080 | side shade",
+    "colour": "#C89B57"
+   }
+  },
+  {
+   "name": "wall south",
+   "rendered": "#AAAA9B",
+   "nearestRawTeam": {
+    "d": 30.1,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 35.9,
+    "as": "Tan #E0C080 | side shade",
+    "colour": "#C89B57"
+   }
+  },
+  {
+   "name": "wall west",
+   "rendered": "#AAAA9B",
+   "nearestRawTeam": {
+    "d": 30.1,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 35.9,
+    "as": "Tan #E0C080 | side shade",
+    "colour": "#C89B57"
+   }
+  },
+  {
+   "name": "track rail top",
+   "rendered": "#4E4E4B",
+   "nearestRawTeam": {
+    "d": 47,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 36.1,
+    "as": "Green shadow #1F7A36 | under shade",
+    "colour": "#134311"
+   }
+  },
+  {
+   "name": "window pane (background)",
+   "rendered": "#E6DCCB",
+   "nearestRawTeam": {
+    "d": 28.4,
+    "team": "Tan #E0C080"
+   },
+   "nearestRenderedTeam": {
+    "d": 37,
+    "as": "Tan #E0C080 | top shade",
+    "colour": "#E8BB6F"
+   }
+  },
+  {
+   "name": "pillow top shade",
+   "rendered": "#F0E9D5",
+   "nearestRawTeam": {
+    "d": 29.3,
+    "team": "Tan #E0C080"
+   },
+   "nearestRenderedTeam": {
+    "d": 37.8,
+    "as": "Tan #E0C080 | top shade",
+    "colour": "#E8BB6F"
+   }
+  },
+  {
+   "name": "cover top shade (game box)",
+   "rendered": "#A09F96",
+   "nearestRawTeam": {
+    "d": 32.3,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 38.1,
+    "as": "Tan shadow #B8975A | side shade",
+    "colour": "#A4793C"
+   }
+  },
+  {
+   "name": "desk leg west face",
+   "rendered": "#7F837D",
+   "nearestRawTeam": {
+    "d": 36,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 38.8,
+    "as": "Tan shadow #B8975A | side shade",
+    "colour": "#A4793C"
+   }
+  },
+  {
+   "name": "tan fort front face",
+   "rendered": "#BD2F1D",
+   "nearestRawTeam": {
+    "d": 55.5,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 41,
+    "as": "Tan #E0C080 | under shade",
+    "colour": "#A06C34"
+   }
+  },
+  {
+   "name": "desk top",
+   "rendered": "#949F9D",
+   "nearestRawTeam": {
+    "d": 37.9,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 43.5,
+    "as": "Tan shadow #B8975A | side shade",
+    "colour": "#A4793C"
+   }
+  },
+  {
+   "name": "chair seat top",
+   "rendered": "#949F9D",
+   "nearestRawTeam": {
+    "d": 37.9,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 43.5,
+    "as": "Tan shadow #B8975A | side shade",
+    "colour": "#A4793C"
+   }
+  },
+  {
+   "name": "pillow top sun",
+   "rendered": "#FFFFF1",
+   "nearestRawTeam": {
+    "d": 36.5,
+    "team": "Tan #E0C080"
+   },
+   "nearestRenderedTeam": {
+    "d": 44.5,
+    "as": "Tan #E0C080 | top shade",
+    "colour": "#E8BB6F"
+   }
+  },
+  {
+   "name": "tan fort top",
+   "rendered": "#DC3A27",
+   "nearestRawTeam": {
+    "d": 59.7,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 47,
+    "as": "Tan #E0C080 | under shade",
+    "colour": "#A06C34"
+   }
+  },
+  {
+   "name": "blanket ridge shade",
+   "rendered": "#3F5682",
+   "nearestRawTeam": {
+    "d": 69.7,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 62.1,
+    "as": "Green shadow #1F7A36 | under shade",
+    "colour": "#134311"
+   }
+  },
+  {
+   "name": "ruin side shade",
+   "rendered": "#6D3B7D",
+   "nearestRawTeam": {
+    "d": 77.6,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 67.7,
+    "as": "Tan shadow #B8975A | under shade",
+    "colour": "#835422"
+   }
+  },
+  {
+   "name": "green fort front face",
+   "rendered": "#295890",
+   "nearestRawTeam": {
+    "d": 77.2,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 68.8,
+    "as": "Green shadow #1F7A36 | under shade",
+    "colour": "#134311"
+   }
+  },
+  {
+   "name": "green fort top",
+   "rendered": "#316CB4",
+   "nearestRawTeam": {
+    "d": 82.5,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 78.6,
+    "as": "Green shadow #1F7A36 | under shade",
+    "colour": "#134311"
+   }
+  },
+  {
+   "name": "ruin top sun (platform)",
+   "rendered": "#9957B2",
+   "nearestRawTeam": {
+    "d": 84.9,
+    "team": "Tan shadow #B8975A"
+   },
+   "nearestRenderedTeam": {
+    "d": 79.1,
+    "as": "Tan shadow #B8975A | under shade",
+    "colour": "#835422"
+   }
+  }
+ ]
+}

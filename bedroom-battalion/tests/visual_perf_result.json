@@ -1,0 +1,1097 @@
+{
+ "inventory": {
+  "meshes": [
+   {
+    "type": "Mesh",
+    "instanced": false,
+    "count": 1,
+    "verts": 12936,
+    "tris": 4312,
+    "castShadow": true,
+    "receiveShadow": true,
+    "frustumCulled": false,
+    "visible": true,
+    "material": "MeshLambertMaterial",
+    "flatShading": false,
+    "map": null,
+    "mapInfo": null
+   },
+   {
+    "type": "Mesh",
+    "instanced": true,
+    "count": 473,
+    "verts": 24,
+    "tris": 5676,
+    "castShadow": true,
+    "receiveShadow": true,
+    "frustumCulled": false,
+    "visible": true,
+    "material": "MeshLambertMaterial",
+    "flatShading": false,
+    "map": null,
+    "mapInfo": null
+   },
+   {
+    "type": "Mesh",
+    "instanced": false,
+    "count": 1,
+    "verts": 4,
+    "tris": 2,
+    "castShadow": false,
+    "receiveShadow": true,
+    "frustumCulled": true,
+    "visible": true,
+    "material": "MeshLambertMaterial",
+    "flatShading": false,
+    "map": [
+     512,
+     1024
+    ],
+    "mapInfo": {
+     "aniso": 16,
+     "mip": true,
+     "min": 1008
+    }
+   }
+  ],
+  "lights": [
+   {
+    "type": "HemisphereLight",
+    "intensity": 3.4,
+    "color": "#fff1d6",
+    "castShadow": false,
+    "ground": "#b08d6a"
+   },
+   {
+    "type": "DirectionalLight",
+    "intensity": 2.4,
+    "color": "#ffe2b0",
+    "castShadow": true,
+    "shadow": {
+     "mapSize": [
+      2048,
+      2048
+     ],
+     "actual": [
+      2048,
+      2048
+     ],
+     "bias": -0.0005,
+     "normalBias": 0.02,
+     "radius": 2,
+     "ortho": {
+      "w": 182.85433164534822,
+      "h": 173.1920928595497,
+      "near": 132.19458271676993,
+      "far": 307.8054172832301
+     },
+     "texelWorld": [
+      0.08928434162370519,
+      0.084566451591577
+     ],
+     "depthRange": 175.61083456646017
+    }
+   }
+  ],
+  "renderer": {
+   "shadowEnabled": true,
+   "shadowType": 2,
+   "shadowAutoUpdate": true,
+   "toneMapping": 0,
+   "outputColorSpace": "srgb",
+   "pixelRatio": 1,
+   "memory": {
+    "geometries": 3,
+    "textures": 2
+   },
+   "programs": 7,
+   "antialias": true,
+   "samples": 4,
+   "maxAniso": 16,
+   "glRenderer": "WebKit WebGL",
+   "drawingBuffer": [
+    1280,
+    720
+   ]
+  },
+  "fog": {
+   "near": 30,
+   "far": 330,
+   "color": "#e6dccb"
+  },
+  "background": "#e6dccb",
+  "texUploads": [
+   {
+    "fn": "texImage2D",
+    "target": 3553,
+    "level": 0,
+    "ifmt": 6408,
+    "w": 1,
+    "h": 1
+   },
+   {
+    "fn": "texImage2D",
+    "target": 34069,
+    "level": 0,
+    "ifmt": 6408,
+    "w": 1,
+    "h": 1
+   },
+   {
+    "fn": "texImage2D",
+    "target": 34070,
+    "level": 0,
+    "ifmt": 6408,
+    "w": 1,
+    "h": 1
+   },
+   {
+    "fn": "texImage2D",
+    "target": 34071,
+    "level": 0,
+    "ifmt": 6408,
+    "w": 1,
+    "h": 1
+   },
+   {
+    "fn": "texImage2D",
+    "target": 34072,
+    "level": 0,
+    "ifmt": 6408,
+    "w": 1,
+    "h": 1
+   },
+   {
+    "fn": "texImage2D",
+    "target": 34073,
+    "level": 0,
+    "ifmt": 6408,
+    "w": 1,
+    "h": 1
+   },
+   {
+    "fn": "texImage2D",
+    "target": 34074,
+    "level": 0,
+    "ifmt": 6408,
+    "w": 1,
+    "h": 1
+   },
+   {
+    "fn": "texImage2D",
+    "target": 3553,
+    "level": 0,
+    "ifmt": 32856,
+    "w": 2048,
+    "h": 2048
+   },
+   {
+    "fn": "texStorage2D",
+    "target": 3553,
+    "levels": 11,
+    "ifmt": 35907,
+    "w": 512,
+    "h": 1024
+   }
+  ],
+  "rbo": [
+   {
+    "ifmt": 33190,
+    "w": 2048,
+    "h": 2048,
+    "samples": 0
+   }
+  ],
+  "colliders": 347
+ },
+ "views": {
+  "spawn_green": {
+   "plain": {
+    "glCalls": 5,
+    "glTris": 19978,
+    "glLines": 0,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 3,
+      "tris": 9990,
+      "lines": 0,
+      "verts": 29970,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 3,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   },
+   "debug": {
+    "glCalls": 7,
+    "glTris": 19978,
+    "glLines": 5292,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 5,
+      "tris": 9990,
+      "lines": 5292,
+      "verts": 40554,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 5,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   }
+  },
+  "spawn_tan": {
+   "plain": {
+    "glCalls": 5,
+    "glTris": 19978,
+    "glLines": 0,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 3,
+      "tris": 9990,
+      "lines": 0,
+      "verts": 29970,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 3,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   },
+   "debug": {
+    "glCalls": 7,
+    "glTris": 19978,
+    "glLines": 5292,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 5,
+      "tris": 9990,
+      "lines": 5292,
+      "verts": 40554,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 5,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   }
+  },
+  "bed_top": {
+   "plain": {
+    "glCalls": 5,
+    "glTris": 19978,
+    "glLines": 0,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 3,
+      "tris": 9990,
+      "lines": 0,
+      "verts": 29970,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 3,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   },
+   "debug": {
+    "glCalls": 7,
+    "glTris": 19978,
+    "glLines": 5292,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 5,
+      "tris": 9990,
+      "lines": 5292,
+      "verts": 40554,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 5,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   }
+  },
+  "desk_top": {
+   "plain": {
+    "glCalls": 5,
+    "glTris": 19978,
+    "glLines": 0,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 3,
+      "tris": 9990,
+      "lines": 0,
+      "verts": 29970,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 3,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   },
+   "debug": {
+    "glCalls": 7,
+    "glTris": 19978,
+    "glLines": 5292,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 5,
+      "tris": 9990,
+      "lines": 5292,
+      "verts": 40554,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 5,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   }
+  },
+  "shelf_top": {
+   "plain": {
+    "glCalls": 5,
+    "glTris": 19978,
+    "glLines": 0,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 3,
+      "tris": 9990,
+      "lines": 0,
+      "verts": 29970,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 3,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   },
+   "debug": {
+    "glCalls": 7,
+    "glTris": 19978,
+    "glLines": 5292,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 5,
+      "tris": 9990,
+      "lines": 5292,
+      "verts": 40554,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 5,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   }
+  },
+  "floor_centre": {
+   "plain": {
+    "glCalls": 5,
+    "glTris": 19978,
+    "glLines": 0,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 3,
+      "tris": 9990,
+      "lines": 0,
+      "verts": 29970,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 3,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   },
+   "debug": {
+    "glCalls": 7,
+    "glTris": 19978,
+    "glLines": 5292,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 5,
+      "tris": 9990,
+      "lines": 5292,
+      "verts": 40554,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 5,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   }
+  },
+  "under_bed": {
+   "plain": {
+    "glCalls": 5,
+    "glTris": 19978,
+    "glLines": 0,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 3,
+      "tris": 9990,
+      "lines": 0,
+      "verts": 29970,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 3,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   },
+   "debug": {
+    "glCalls": 7,
+    "glTris": 19978,
+    "glLines": 5292,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 5,
+      "tris": 9990,
+      "lines": 5292,
+      "verts": 40554,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 5,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   }
+  },
+  "east_lane": {
+   "plain": {
+    "glCalls": 5,
+    "glTris": 19978,
+    "glLines": 0,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 3,
+      "tris": 9990,
+      "lines": 0,
+      "verts": 29970,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 3,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   },
+   "debug": {
+    "glCalls": 7,
+    "glTris": 19978,
+    "glLines": 5292,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 5,
+      "tris": 9990,
+      "lines": 5292,
+      "verts": 40554,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 5,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   }
+  },
+  "west_lane": {
+   "plain": {
+    "glCalls": 5,
+    "glTris": 19978,
+    "glLines": 0,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 3,
+      "tris": 9990,
+      "lines": 0,
+      "verts": 29970,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 3,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   },
+   "debug": {
+    "glCalls": 7,
+    "glTris": 19978,
+    "glLines": 5292,
+    "passes": {
+     "fbo1": {
+      "calls": 2,
+      "tris": 9988,
+      "lines": 0,
+      "verts": 29964,
+      "instanced": 1
+     },
+     "screen": {
+      "calls": 5,
+      "tris": 9990,
+      "lines": 5292,
+      "verts": 40554,
+      "instanced": 1
+     }
+    },
+    "reported": {
+     "drawCalls": 5,
+     "triangles": 9990
+    },
+    "viewports": [
+     [
+      "fbo1",
+      2048,
+      2048
+     ],
+     [
+      "screen",
+      1280,
+      720
+     ]
+    ]
+   }
+  }
+ },
+ "timing": {
+  "spawn_green": {
+   "median": 126.1,
+   "min": 123.3,
+   "max": 127.6
+  },
+  "spawn_tan": {
+   "median": 128.3,
+   "min": 124.1,
+   "max": 162.4
+  },
+  "bed_top": {
+   "median": 107.1,
+   "min": 101,
+   "max": 110.9
+  },
+  "desk_top": {
+   "median": 122.2,
+   "min": 116,
+   "max": 125.4
+  },
+  "shelf_top": {
+   "median": 126.4,
+   "min": 122.7,
+   "max": 127.8
+  },
+  "floor_centre": {
+   "median": 134.9,
+   "min": 130.6,
+   "max": 147.9
+  },
+  "under_bed": {
+   "median": 131.3,
+   "min": 125.6,
+   "max": 132.9
+  },
+  "east_lane": {
+   "median": 147.6,
+   "min": 145,
+   "max": 150.1
+  },
+  "west_lane": {
+   "median": 171.1,
+   "min": 164.8,
+   "max": 199.1
+  }
+ },
+ "worstView": "west_lane",
+ "cheapestView": "bed_top",
+ "breakdown": {
+  "west_lane": {
+   "baseline": {
+    "median": 157.4,
+    "min": 150.5,
+    "max": 184.3
+   },
+   "shadowMapFrozen": {
+    "median": 131.4,
+    "min": 127.3,
+    "max": 182.2
+   },
+   "noShadowSampling": {
+    "median": 59.4,
+    "min": 56.1,
+    "max": 65.3
+   },
+   "noShadowsAtAll": {
+    "median": 37,
+    "min": 36,
+    "max": 37.7
+   },
+   "baselineAgain": {
+    "median": 156.5,
+    "min": 154.3,
+    "max": 162.4
+   },
+   "noFog": {
+    "median": 143.8,
+    "min": 141.3,
+    "max": 148.4
+   },
+   "hide_static": {
+    "median": 55.7,
+    "min": 55.3,
+    "max": 56.5
+   },
+   "hide_instanced": {
+    "median": 143.9,
+    "min": 131.1,
+    "max": 149.8
+   },
+   "hide_floor": {
+    "median": 133.7,
+    "min": 129.9,
+    "max": 164.2
+   },
+   "debugOn": {
+    "median": 166.2,
+    "min": 153,
+    "max": 176.8
+   }
+  },
+  "bed_top": {
+   "baseline": {
+    "median": 102.5,
+    "min": 95.3,
+    "max": 142.9
+   },
+   "shadowMapFrozen": {
+    "median": 77.3,
+    "min": 75.9,
+    "max": 80
+   },
+   "noShadowSampling": {
+    "median": 39.8,
+    "min": 38.1,
+    "max": 42.3
+   },
+   "noShadowsAtAll": {
+    "median": 19.3,
+    "min": 19.2,
+    "max": 19.6
+   },
+   "baselineAgain": {
+    "median": 95.1,
+    "min": 93.2,
+    "max": 120
+   },
+   "noFog": {
+    "median": 99,
+    "min": 95.4,
+    "max": 104.9
+   },
+   "hide_static": {
+    "median": 57.5,
+    "min": 55.2,
+    "max": 88.7
+   },
+   "hide_instanced": {
+    "median": 92.1,
+    "min": 89.5,
+    "max": 94.2
+   },
+   "hide_floor": {
+    "median": 105.5,
+    "min": 103.9,
+    "max": 108.3
+   },
+   "debugOn": {
+    "median": 109.7,
+    "min": 107.1,
+    "max": 113.2
+   }
+  }
+ },
+ "sim": {
+  "idle at spawn": {
+   "ticks": 1200,
+   "msPerTick": 0.0064
+  },
+  "sprint into fort wall": {
+   "ticks": 1200,
+   "msPerTick": 0.0031
+  },
+  "walk in ruin bricks": {
+   "ticks": 1200,
+   "msPerTick": 0.002
+  },
+  "walk up tall-shelf stairs": {
+   "ticks": 1200,
+   "msPerTick": 0.0024
+  }
+ },
+ "errors": [],
+ "blocked": [],
+ "requests": [
+  "file:///home/user/template-test/bedroom-battalion/index.html",
+  "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+ ],
+ "fileSizeBytes": 80336,
+ "timing1080": {
+  "west_lane": {
+   "median": 286,
+   "min": 280,
+   "max": 337.3
+  },
+  "bed_top": {
+   "median": 187.7,
+   "min": 183.8,
+   "max": 194.1
+  }
+ },
+ "timing360": {
+  "west_lane": {
+   "median": 68.9,
+   "min": 66.8,
+   "max": 84.3
+  },
+  "bed_top": {
+   "median": 53.5,
+   "min": 51.1,
+   "max": 55.5
+  }
+ }
+}
