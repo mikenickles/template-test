@@ -66,7 +66,7 @@ describe("reactions", () => {
   });
 
   it("refuses emoji outside the set", async () => {
-    const t = await setup([call({ emoji: "💀" }), say("Ha.")]);
+    const t = await setup([call({ emoji: "🦄" }), say("Ha.")]);
     await runTurn(t.ctx, "lol", t.emit);
     expect(t.seen).toEqual([]);
     expect(listMessages(t.db, null)[0].meta.reaction).toBeUndefined();

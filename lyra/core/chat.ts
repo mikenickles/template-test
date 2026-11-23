@@ -57,7 +57,7 @@ export interface TurnInbox {
 }
 
 /** The reactions Lyra can put on a message, like a tapback. */
-export const REACTIONS = ["❤️", "👍", "😂", "🎉", "😮", "😢", "🙏", "🔥", "🙌", "😅"] as const;
+export const REACTIONS = ["❤️", "👍", "😂", "💀", "🎉", "😮", "😢", "🙏", "🔥", "🙌", "😅"] as const;
 
 /** What a turn can see and change beyond its own chat: notebooks and channels. */
 export interface Workspace {
@@ -526,7 +526,7 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
       name: "react",
       description:
         "Put an emoji reaction on the user's latest message, the way a friend taps a reaction on a text. " +
-        "Use it often, whenever the message has any feeling in it: good news, thanks, a joke, plans, excitement, a win, something sad. React and reply in the same turn. " +
+        "Use it often, whenever the message has any feeling in it: good news, thanks, a joke, plans, excitement, a win, something sad. 😂 for funny, 💀 for so funny it's deadly, 😮 for wow. React and reply in the same turn. " +
         "Write your reply and react in the same response. When nothing more needs saying (\"thanks!\", \"ok cool\"), the reaction can be your whole reply: send no text.",
       schema: {
         type: "object",
