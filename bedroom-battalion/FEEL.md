@@ -245,6 +245,55 @@ Who is best where now: 0 to 20 u, the SMG by a hair (the rifle wins with head ai
 - Whether the remaining 0.18 degree per tap drift is noticed, and whether the white dome flash is exciting or blinding.
 - The empty-handed grenade aim.
 
+## Round 2 re-check 2
+
+**Gate "every weapon is satisfying within 10 seconds and clearly different": PASS.** At 25 damage the SMG is the clear close-range pick: 0.20 s against the rifle's 0.30 at 10 and 20 units, standing or strafing. It still loses to the rifle from 30 units, so it is not the best gun overall. Nothing measured got worse in handling, cadence or grenade damage. The wider haze costs a little depth, but the room still reads as huge.
+
+| Weapon | Verdict | Why |
+| --- | --- | --- |
+| Rifle | **PASS** | Best from 30 to 120 units in taps and bursts. It still wins head aim at 20 units (0.10 s). Unchanged from re-check 1. |
+| SMG | **PASS** | Body aim: 0.20 s at 10 and 20 u standing and strafing, against the rifle's 0.30 / 0.30 standing and 0.30 / 0.30 strafing. Head aim at 10 u: 0.07 against 0.10. From 30 u it loses standing and is even or behind strafing. |
+| Sniper | **PASS** | Unchanged: scoped hit at 60 u is 100 % still, 25 % strafing, 3 % in the air; bolt 1.28 s, not shortened by switching. The new tracer is thick and starts at the muzzle. |
+| Pistol | **PASS** | Unchanged numbers; still beats the SMG standing at 30 to 40 u, but not while strafing. |
+| Grenade | **PASS** | Same kill window (all bursts within 1.5 u kill, 64 % at 1.5 to 2 u; 123 damage best). The dome is now see-through: the dummy, cover and walls inside and behind it stay visible through the whole burst. |
+
+Method as before, on this build: `feel_r2b_ttk.cjs` (40 trials per cell, 10 to 60 u, five stances and aims), `feel_r2b_extras.cjs`, `feel_r2b_handling.cjs`, `feel_r2b_sniper.cjs`, `feel_r2b_audio.cjs`, `feel_r2b_mix.cjs`. New scripts: `feel_r2b_re2_frames.cjs`, `_flash.cjs`, `_grenade.cjs` (copies writing `feel_re2_*` pictures), `feel_r2b_re2_dome.cjs` and `feel_r2b_re2_haze.cjs`. No console errors in any run. `index.html` was not touched.
+
+### Items asked for
+
+| # | Item | Result | Evidence |
+| --- | --- | --- | --- |
+| 1 | Gate | **PASS** | Table above. |
+| 2 | SMG clearly the close-range pick, not dominant | **Fixed** | Table below. The SMG kills a third faster than the rifle at 10 and 20 u, body or head at 10. It loses at 30 u standing (bursts 0.80 against the rifle's 0.63 / 0.70). Strafing at 30 u it is even with rifle bursts and behind rifle taps (1.07 against 1.07 / 0.93). At 40 u it is well behind. I do not measure it ahead while strafing at 30 u; either way it is not dominant. |
+| 2b | Pistol against SMG at 30 to 40 u | **Acceptable** | Standing: pistol clicking 0.73 / 0.92 s against SMG bursts 0.80 / 1.60. Strafing: pistol 1.10 / 2.02 against SMG 1.07 / 1.27. So the pistol wins standing still at mid range and the SMG wins on the move. |
+| 3 | Wider haze, 20 / 320 | **Acceptable trade: the room still feels huge, with slightly less depth** | `feel_re2_cmp_haze.png` shows six player-eye views; in each pair the left is the build (20 / 320) and the right is 10 / 220. The difference is small in every view because the walls are already close to the cool haze colour, so the far wall reads pale and far in both. The build is a touch crisper at 60 to 120 u: orange ramps, desk and shelves keep more colour from the bed top and mid floor. Haze at fort-to-fort range (120 u) is 33 % against 52 %; that is close to the round 1 value of 30 / 330 that added no depth, but the cool haze and pale walls now carry the depth instead. Spawn and centre lane read exactly as before; their weakness is the grey cover, not the haze. |
+| 4 | Loudness of the four shots, peak with a kill tone | **Fixed** | Loudest 50 ms after the 0.5 master: rifle 0.088, SMG 0.064 (-2.8 dB), pistol about 0.085 (-0.3 dB), sniper 0.174 (+5.9 dB). One second held: SMG 0.056 against rifle 0.062 (-0.9 dB). Peaks: sniper plus kill 0.81, grenade pop plus two kill tones 0.86, pistol plus kill 0.77. Nothing clips. The sniper is the loud one, which is right. |
+| 5 | Tracers per gun | **Fixed, with one new oddity** | `feel_re2_cmp_flash.png`: every tracer now starts at its own gun's muzzle, and the sniper's is a thick, bright, longer-lived wedge that reads as the heavy shot. Through the scope (`feel_re2_cmp_shot_sniper_scoped.png`) the tracer is seen end-on from 3 units out, as a pale square about 25 px across on the target. It stays for the whole 0.2 s life, like a sticker. |
+| 6 | Dome no longer hides what is inside | **Fixed** | `feel_re2_cmp_dome.png`: a dummy killed by a burst 0.2 u away, seen from 14 u. The dummy tipping, the cover block, the ruin wall and the desk behind all stay visible through the dome at every tick. `feel_re2_cmp_burst_14u.png` and `_40u.png` still read at full size. The thrown grenade no longer appears near the eye (`feel_re2_cmp_grenade_*.png`, throw-tick frames). |
+| 7 | Made worse | **Only the scoped tracer square** | Handling, cadence, reload, draw, bolt, held-through-empty (rifle 2.30 s, SMG 2.07 s), R during a draw, scoped spread and grenade damage are identical to re-check 1. |
+
+### SMG against rifle (median s to kill, 40 trials, perfect re-aim; `feel_r2b_ttk.cjs`)
+
+| | 10 u | 20 u | 30 u | 40 u | 60 u |
+| --- | --- | --- | --- | --- | --- |
+| SMG body, standing (held / 5-shot bursts) | **0.20** / **0.20** | **0.20** / **0.20** | 1.53 / 0.80 | 4.67 (83 %) / 1.60 | (35 %) / 2.20 (88 %) |
+| Rifle body, standing (held / 3-shot bursts / taps) | 0.30 / 0.53 / 0.70 | 0.30 / 0.53 / 0.70 | 0.80 / 0.63 / 0.70 | 2.50 (90 %) / 0.73 / 0.70 | 5.20 (85 %) / 1.07 / 0.70 |
+| SMG body, strafing (held / bursts) | **0.20** / **0.20** | **0.20** / **0.20** | 1.60 (95 %) / 1.07 | (68 %) / 1.27 (98 %) | (15 %) / 2.73 (73 %) |
+| Rifle body, strafing (held / bursts / taps) | 0.30 / 0.53 / 0.70 | 0.30 / 0.53 / 0.70 | 1.80 (93 %) / 1.07 / 0.93 | (60 %) / 1.60 / 1.17 | (45 %) / 1.60 / 1.17 |
+| SMG head, standing (held / bursts) | **0.07** / **0.07** | 0.20 / 0.13 | 1.60 / 1.07 | 4.67 (80 %) / 1.67 | |
+| Rifle head, standing (held / bursts / taps) | 0.10 / 0.10 / 0.23 | **0.10** / 0.10 / 0.23 | 0.30 / 0.53 / 0.23 | 2.50 / 0.53 / 0.47 | |
+
+With no correction at all (aim once, hold) the SMG is still 0.20 s at 10 and 20 u. At 30 u it kills 75 % held and 100 % in bursts (1.07 s); the rifle in bursts kills 100 % in 0.63 s. Crouched at 40 u the SMG in bursts (0.67) is nearly level with rifle bursts (0.63); a crouching SMG player is competitive at mid range. Watch this with bots, but it is not dominant.
+
+### Remaining issues (not gate items)
+1. **The scoped sniper tracer shows as a pale square on the target for 0.2 s.** Change `fx.tracerScopeMin 3 -> 20`, or draw no tracer while scoped. Untested.
+2. **Pistol shot is still mostly hiss (79 % above 3 kHz) and the jump sound is still nearly silent (0.007 rms).** Both are deferred to round 5. Ears needed for the pistol; `jump` gain `0.15 -> 0.5` stands.
+3. **No grenade or hand is drawn while aiming one** (deferred). Also the haze trade: if the lead wants more depth back without losing Tan, 15 / 270 sits between the two (haze 40 % at 120 u). Untested for Tan readability, which is the visual tester's measure.
+
+### Only a human can confirm
+- Whether 0.20 against 0.30 s now feels like a different gun under a mouse. The numbers say a third faster.
+- The SMG's new loudness and the sniper's lower boom: the measurements say balanced, not good.
+
 ---
 
 # FEEL.md: round 1 (graybox)
