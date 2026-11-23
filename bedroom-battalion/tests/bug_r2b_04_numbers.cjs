@@ -12,7 +12,7 @@ const { boot } = require('./bug_lib.cjs');
     // expected by DESIGN 12 / 15.1 / 15.6
     const D = {
       rifle: { dmg: 26, fall: [60, 120, 0.7], base: 0.5, bloom: 0.35, max: 3.0, move: 1.5, kick: 0.9 },
-      smg: { dmg: 20, fall: [25, 70, 0.45], base: 1.0, bloom: 0.2, max: 3.5, move: 1.15, kick: 0.55 },
+      smg: { dmg: 25, fall: [25, 70, 0.45], base: 1.0, bloom: 0.2, max: 3.5, move: 1.15, kick: 0.55 },
       sniper: { dmg: 90, fall: null, base: 3.0, bloom: 0, max: 3.0, move: 1.5, kick: 3.5 },
       pistol: { dmg: 30, fall: [30, 70, 0.5], base: 0.6, bloom: 0.6, max: 3.0, move: 1.5, kick: 1.4 },
     };

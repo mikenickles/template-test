@@ -265,6 +265,75 @@ cover; `node bug_r2b_01_grenade.cjs <seed> <throws> <sections>`), `bug_r2b_02_sn
 `bug_r2_07` (seeds 21 to 23). `bug_r2_04` and `bug_r2_08` still expect the old numbers (110 damage, no 10 degrees) and
 are replaced by `bug_r2b_01`. Every loop has a tick limit.
 
+## Round 2 re-check 2
+
+**Nothing blocks the feel gate, and nothing regressed.** R2-7 is fixed. Findings: 0 blocker, 0 major, 0 new minor.
+R2-8 and R2-9 are deferred and behave exactly as before.
+
+Build tested: `index.html` 148,119 bytes (commit 23abb60), unchanged during testing. Every comparison below was also
+run on the previous build (146,098 bytes, commit a4050a4) with the same script.
+
+### 1. R2-7 and the lanes beside the rulers
+
+- R2-7 repro (`teleport(95.3, 17, 78, -8 * Math.PI / 180, 0)`, forward 4 s): now stops at (95.6, 17, 75.4) with no
+  damage. Previous build: floor, 35 hp. **Fixed.**
+- Both rulers, walk and sprint, starts x 91.6 to 96.4 in 0.1 steps, at 0, 4, 8, 12, 16 and 20 degrees each way.
+  Toward the desk side: every run that fell on the previous build now stops on the seat (S). Ruler lanes x 92.2 to 95.4
+  straight still all reach the ruler top and step onto the desk.
+- Away from the desk (12 to 16 degrees and more): the runs that walk off the ruler's open west side are the same starts
+  as on the previous build. The only changed results are starts at x 95.7 to 96.4, which put the capsule inside the
+  new panel at teleport. The game pushes you out of the panel and the run then behaves like a start at x 95.6 (or
+  falls east when pushed out to x 96.9). A player cannot stand there, so I am not counting it. Nothing is worse.
+- Seat's east edge: 729 runs from (93.5, 17, z) for z 73.5 to 86.5, headings from 80 degrees left to 80 degrees right
+  of due east, walking, sprinting and sprint-jumping. 0 falls, and every run could walk back west afterwards.
+  Previous build: falls on the same runs (35 hp).
+
+### 2. The new panel: wedging, snagging, blocking
+
+- Collision sweep (`bug_06_collision.cjs`, 20,892 runs, every box face including `desk.skirt`): 0 jitter, 0 lifted
+  on top, 0 rescues. Its "deep" list (6 entries) is identical to the previous build's: the R2-9 desk-top tick and
+  ruin-stub corners at about 1 to 5 cm.
+- `bug_03_routes_manual.cjs` (443 lanes over the chair seat, both rulers, the skateboard, the chair stairs and
+  tunnel_drop): 54 flagged, exactly the same rows as on the previous build.
+- Raw-input gate `bug_04_gate_manual.cjs`: 82 of 82, including desk_skate, desk_stairs and tunnel_drop up and down.
+- Round 1 finding 12's three repros still end on the desk with no damage.
+
+### 3. SMG damage
+
+`CONFIG.weapons.smg.damage` 25; DESIGN 12 now says 25. Real shots at 13 ranges, every hit within one cent of
+25 x falloff (full to 25, down to 45 % at 70): 25.0 to 25 units, 23.4 at 30.2, 20.43 at 40, 17.4 at 50,
+14.63 at 59, 11.25 from 70 on (head 22.5). Spread 1.0, moving 1.15, bloom 0.2 to 3.5 unchanged.
+
+### 4. Load-time shader compile
+
+- A fresh page loads, sits on the title and starts with no console errors or warnings (`errors` empty after load and
+  after start). `bug_r2_06_input_audio.cjs`: clean with real input and with five ways of breaking audio.
+- First rendered frame after start, in all 9 named views and two player views: 0 pixels differ from the same views
+  3 s later with nothing fired, and no shot, grenade or sound is logged. So no flash, burst sphere, arc or tracer
+  is left visible. Looking at the first frame from the player's eye confirms it. After firing 10 rounds and bursting
+  a grenade, then waiting 3.5 s, the only differences are the HUD numbers and the pooled impact decals.
+
+### 5. Regression
+
+- State machine (`bug_r2b_05`): held-through-empty, R buffered during the draw (40 of 40), 2,880 action orders, death
+  mid-action (7 of 7 fire afterwards), 150,000 ticks of abuse: all as in re-check 1, no invariant broken.
+- Grenade (`bug_r2b_01`): launch view + 10 degrees, 35 pressed cases clean, 3,900 face throws (now 314 boxes with the
+  skirt) and 5,173 random throws. 0 born inside, 0 entered a solid, 0 left the room. Removal outside the room box
+  works. Damage against distance and cover is the same to the cent. The 28 corner grazes are R2-8 (deferred), one of
+  them now on the skirt's face.
+- Hitscan: 5,584 random rays, 0 through a solid; 1,916 aimed rays (6 more for the skirt), the same 59 face-touching
+  disagreements. Slit, gate, door gap, chair-back gap and crenels still let shots through.
+- `validateWaypoints()` returns `[]`. All 18 routes, up and down, walk and sprint, with my own end checks: 68 of 68
+  legs ok, and the two one-way routes refuse to be driven down.
+- Fuzz with movement, firing and throwing: 2 seeds, 2.23 million ticks, 11,827 grenades. Player never out of the room,
+  0 rescues, 0 NaN, ammo in range, no grenade outside the room or inside a solid. There were 5 single ticks more than
+  5 cm inside a solid: 4 are the R2-9 desk-top tick (deferred), and 1 is a 5.0 cm graze on the side of
+  `ruin.stub.n.high` in mid-air. The collision sweep shows those ruin-stub grazes on the previous build too.
+
+Scripts: `tests/bug_r2b_08_load_firstframe.cjs` with `bug_r2b_08_diff.py` (new). `bug_r2b_03_ruler_lanes.cjs` now takes
+the angles to run as an argument. `bug_r2b_04_numbers.cjs` expects SMG 25. `bug_r2b_06_apron_drop.cjs skirt` is the
+seat-edge sweep.
+
 ---
 
 # BUGS.md: round 1 (graybox)

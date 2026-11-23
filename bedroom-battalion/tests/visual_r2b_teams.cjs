@@ -22,6 +22,8 @@ const CANDS = [
   { name: 'tan #C98A35 + outline 0.06', tan: ['#C98A35', '#8F5F22'], outline: [0.06, '#20180F'] },
 ];
 
+const NOW_ONLY = process.argv[2] === 'now';      // re-check 2: the build as it is, no candidates
+if (NOW_ONLY) CANDS.splice(1);
 (async () => {
   const t0 = Date.now();
   const h = await open({ width: 1280, height: 720, probe: true });
@@ -130,7 +132,7 @@ const CANDS = [
     line.push('| tan body@60 ' + R.filter((x) => x.team === 'tan' && x.d === 60).sort((a, b) => a.dEmin - b.dEmin)[30].body);
     console.log(line.join(' '));
   }
-  fs.writeFileSync(path.resolve(__dirname, 'visual_r2b_teams_result.json'), JSON.stringify({ views: views.length, results }));
+  fs.writeFileSync(path.resolve(__dirname, NOW_ONLY ? 'visual_r2b_teams_result2.json' : 'visual_r2b_teams_result.json'), JSON.stringify({ views: views.length, results }));
 
   // ---- evidence strips: Tan floor dummy target.9 and Green target.8, median view per distance, now and the chosen fix ----
   const pick = (R, id) => DIST.map((d) => { const r = R.filter((x) => x.id === id && x.d === d && x.lift < 1).sort((a, b) => a.dEmin - b.dEmin); return r.length ? r[r.length >> 1] : null; }).filter(Boolean);
@@ -145,7 +147,10 @@ const CANDS = [
   };
   const tanEyes = pick(now, 'target.9'), greenEyes = pick(now, 'target.8');
   console.log('\nstrip target.9 (Tan) views:', tanEyes.map((x) => x.d + 'u ' + x.behind + ' ' + x.sun).join(', '), '| target.8 (Green):', greenEyes.map((x) => x.d + 'u ' + x.behind + ' ' + x.sun).join(', '));
-  await strip('visual_re_team_strips.png', [{ cand: CANDS[0], eyes: greenEyes }, { cand: CANDS[0], eyes: tanEyes }, { cand: CANDS[1], eyes: tanEyes }, { cand: CANDS[8], eyes: tanEyes }]);
+  if (NOW_ONLY) {     // re-check 2: 100 and 150 unit views too (median views of any Tan / Green dummy at those distances)
+    const far = (team) => [100, 150].map((d) => { const r = now.filter((x) => x.team === team && x.d === d).sort((a, b) => a.dEmin - b.dEmin); return r[r.length >> 1]; }).filter(Boolean);
+    await strip('visual_re2_team_strips.png', [{ cand: CANDS[0], eyes: greenEyes.concat(far('green')) }, { cand: CANDS[0], eyes: tanEyes.concat(far('tan')) }]);
+  } else await strip('visual_re_team_strips.png', [{ cand: CANDS[0], eyes: greenEyes }, { cand: CANDS[0], eyes: tanEyes }, { cand: CANDS[1], eyes: tanEyes }, { cand: CANDS[8], eyes: tanEyes }]);
   console.log('errors', JSON.stringify(h.errors), 'total', Math.round((Date.now() - t0) / 1000), 's');
   await h.browser.close();
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -2,6 +2,7 @@
 // room. Side-by-side of spawn_green and floor_centre, now vs proposed, and the far-wall vs near-wall colour.
 const fs = require('fs'); const path = require('path');
 const { open, dE, hex, SHOTS } = require('./visual_r2_lib.cjs');
+const PFX = process.env.PFX || 'visual_re_';      // re-check 2 runs with PFX=visual_re2_
 (async () => {
   const h = await open({ width: 1280, height: 720 });
   const r = await h.page.evaluate(() => {
@@ -19,7 +20,7 @@ const { open, dE, hex, SHOTS } = require('./visual_r2_lib.cjs');
     F.near = keep[0]; F.far = keep[1]; __game.render();
     return { url: o.toDataURL('image/png'), out };
   });
-  fs.writeFileSync(path.resolve(SHOTS, 'visual_re_fog_now_vs_20_320.png'), Buffer.from(r.url.split(',')[1], 'base64'));
+  fs.writeFileSync(path.resolve(SHOTS, 'visual_re_fog_now_vs_20_320.png'.replace('visual_re_', PFX)), Buffer.from(r.url.split(',')[1], 'base64'));
   for (const [k, v] of Object.entries(r.out)) console.log(k.padEnd(24), Object.entries(v).map(([a, b]) => a + ' ' + hex(b)).join('  '), v.near ? 'near-far dE ' + dE(v.near, v.far) : '');
   await h.browser.close();
 })().catch((e) => { console.error(e); process.exit(1); });

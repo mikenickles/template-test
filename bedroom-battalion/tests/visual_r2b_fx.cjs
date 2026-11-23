@@ -4,6 +4,7 @@
 // flash per gun by sim tick; SMG vs pistol viewmodel. Canvas only (no DOM HUD).
 const fs = require('fs'); const path = require('path');
 const { open, dE, hex, SHOTS } = require('./visual_r2_lib.cjs');
+const PFX = process.env.PFX || 'visual_re_';      // re-check 2 runs with PFX=visual_re2_
 (async () => {
   const h = await open({ width: 1280, height: 720, probe: true });
   const p = h.page;
@@ -16,7 +17,7 @@ const { open, dE, hex, SHOTS } = require('./visual_r2_lib.cjs');
       frames.forEach((f, i) => g.drawImage(f, crop[0], crop[1], crop[2], crop[3], i * (w + 4), 0, w, hh)); return o.toDataURL('image/png'); };
     window.__copy = () => { const c = document.getElementById('view'), o = document.createElement('canvas'); o.width = c.width; o.height = c.height; o.getContext('2d').drawImage(c, 0, 0); return o; };
   });
-  const save = (file, url) => fs.writeFileSync(path.resolve(SHOTS, file), Buffer.from(url.split(',')[1], 'base64'));
+  const save = (file, url) => fs.writeFileSync(path.resolve(SHOTS, file.replace('visual_re_', PFX)), Buffer.from(url.split(',')[1], 'base64'));
 
   // ---------- grenade burst from 14 and 40 units ----------
   for (const D of [14, 40]) {
@@ -45,7 +46,7 @@ const { open, dE, hex, SHOTS } = require('./visual_r2_lib.cjs');
     __game.clearInput(); __game.give('grenade'); __game.selectWeapon('rifle'); __game.teleport(60, 0, 30, 0, 0); __game.step(0.6); __game.lookAt(60, 2.2, 50);
     __game.setInput({ grenade: true }); __game.step(0.3); __game.render(); const crop = [0, 0, 1280, 720]; const aim = window.__read(crop), frames = [window.__copy()], rows = [];
     __game.clearInput();
-    for (let i = 1; i <= 6; i++) { __game.step(1 / 60); __game.render(); const b = window.__read(crop); let red = 0; for (let k = 0; k < b.length; k += 4) if (b[k] > 150 && b[k + 1] < 90 && b[k + 2] < 90) red++; rows.push([i, red, __game.grenades.length ? +Math.hypot(__game.grenades[0].x - 60, __game.grenades[0].y - 1.6, __game.grenades[0].z - 30).toFixed(2) : null]); if (i <= 3 || i === 6) frames.push(window.__copy()); }
+    for (let i = 1; i <= 10; i++) { __game.step(1 / 60); __game.render(); const b = window.__read(crop); let red = 0; for (let k = 0; k < b.length; k += 4) if (b[k] > 150 && b[k + 1] < 90 && b[k + 2] < 90) red++; rows.push([i, red, __game.grenades.length ? +Math.hypot(__game.grenades[0].x - 60, __game.grenades[0].y - 1.6, __game.grenades[0].z - 30).toFixed(2) : null]); if (i <= 3 || i === 6 || i === 8) frames.push(window.__copy()); }
     __game.step(3); return { rows, url: window.__strip(frames, [0, 0, 1280, 720], 0.25) };
   });
   save('visual_re_throw_ticks.png', th.url); console.log('throw ticks [tick, red px (grenade colour), grenade distance from eye]:', JSON.stringify(th.rows));
