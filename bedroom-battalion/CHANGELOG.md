@@ -320,3 +320,134 @@ against the east wall (skirting stays visible), `bed_top`.
 - The viewmodels are plain boxes and the sounds have only been checked for names and for not throwing; nobody has
   listened to them.
 - Casings bounce at the height of the player's feet, not on whatever is under them.
+
+## Round 2, pass 2 (FIXLIST.md "round 2, pass 1")
+
+Only the five FIXLIST items were touched. `index.html` is now 146,098 bytes (was 136,532). New scripts, all in `tests/`:
+`builder_r2b_item1.cjs` (grenade repros, 10,000+ random throws, launch pitch, sniper bolt, ruler lanes), `builder_r2b_ttk.cjs`
+(time to kill), `builder_r2b_item3.cjs` (grenade damage, burst, arc, throw tick), `builder_r2b_item4.cjs` (handling),
+`builder_r2b_item5.cjs` with `builder_r2b_pixels.py` (colour measurements), `builder_r2b_regress.cjs`, `builder_r2b_smoke.cjs`,
+`builder_r2b_vm.cjs`, and two diagnostics (`builder_r2b_loaderr.cjs`, `builder_r2b_arcpath.cjs`). Screenshots are in
+`screenshots/round2/builder_r2b_*.png`.
+
+### Item 1: grenade start, sniper bolt, desk apron (fixed)
+
+- (a) The grenade is created at the eye and swept to the release point (0.5 ahead, 0.2 right, 0.15 down). If anything is in the
+  way it starts at the contact point, backed off by its 0.16 body. A grenade that leaves the room box (with a 0.16 tolerance) is
+  removed without a burst. The missing 10 degrees came from `viewBasis` returning one shared object, so the raised direction
+  was overwritten by the plain view direction. It is now read before the second call.
+- (b) Each gun keeps its own cooldown (`arsenal.guns[name].cool`). Guns that are not out keep counting down, and switching back
+  restores the time left. So the 1.3 s sniper bolt keeps running while another gun is out, and a switch never shortens it.
+- (c) Apron panels moved to `95.5..96` (DESIGN 15.5 item 8).
+- Measured: the east-wall repro starts at x 119.86 and bursts in the room at (112.68, 0.02, 80.6). The Tan fort repro starts at
+  z 133.87 against the wall, bounces back and bursts at z 129.38, and dummy 21 keeps 100 hp. Launch angle is view pitch +10.00
+  at -60, -22.9, 0, 22.9, 45 and 70 degrees, speed 18. Sniper, then pistol, then sniper: the next shot comes 1.283 s after the
+  first (the `fire()` hook shot is logged one tick early), then every 1.300 s. With rifle or SMG in between it is the same.
+  Ruler lanes x 92.6 to 95.4 every 0.1, both rulers, walking and sprinting, each run up the ruler and then east onto the desk:
+  116 of 116 reach the desk with 0 damage. 10,078 random throws, 1,298 of them with the old release point inside or touching a
+  solid: 0 started inside a solid, 0 entered one, 0 left the room, 0 removed. `bug_r2_04_grenade.cjs` section B: all 20
+  pressed-against cases start outside every solid and stay in the room. Section C: 1,200 throws, 0 inside, 0 out (its "disagree"
+  rows compare against the old 110 damage). `bug_r2_08_grenade_wall.cjs` agrees.
+
+### Item 2: SMG (fixed)
+
+- SMG damage 20, spread 1.0 / bloom 0.20 / max 3.5. New per-weapon `moveMult` (SMG 1.15) replaces `gun.spreadMult.move` (1.5)
+  for that gun only. SMG shot gains 0.9 and 0.5. The SMG viewmodel has a long yellow magazine and a wire stock
+  (`builder_r2b_vm_smg_vs_pistol.png`).
+- Time to kill, median of 60 trials, held trigger, aim put back on the body centre every tick, real spread and recoil
+  (`builder_r2b_ttk.cjs`):
+
+| Range | SMG stand | Rifle stand | SMG strafe | Rifle strafe |
+| --- | --- | --- | --- | --- |
+| 10 | 0.283 s | 0.317 s | 0.283 s | 0.317 s |
+| 20 | 0.283 s | 0.317 s | 0.350 s | 0.417 s |
+| 40 | 4.80 s (77 % kill) | 2.12 s (97 %) | 4.87 s (37 %) | 5.22 s (60 %) |
+| 60 | 5.33 s (13 %) | 5.22 s (83 %) | 5.80 s (2 %) | 5.22 s (53 %) |
+
+### Item 3: grenade (fixed)
+
+- Damage 140. Burst: an additive sphere that grows to the 7 unit radius in 0.15 s and fades over 0.12 s; a ring of 72 sparks
+  that travels at constant speed and stops exactly at the radius; bigger and faster burst particles; one point light that is
+  dark until a burst and flashes for 0.18 s. Shake now scales with distance out to 40 units. The thrown grenade is not drawn
+  until it is 1.3 units from the eye. There is no held-grenade model in the viewmodel, so the thrown body was what filled the
+  screen. The arc preview is now a dotted line of instanced spheres, each 5 px on screen at any distance, with a 14 px landing
+  dot and no dots nearer than 2 units. All numbers are in `CONFIG.grenade`.
+- Measured: aimed throws from 6, 10 and 14 units burst 0.22, 0.21 and 0.23 from the dummy for 124.3, 123.7 and 123.5 damage, and
+  kill it each time. Burst frames from 14 and 40 units: `builder_r2b_burst_14u_t1/t5/t9/t15.png` and `builder_r2b_burst_40u_*.png`.
+  Arc: `builder_r2b_arc_floor.png`, `builder_r2b_arc_palewall.png`. Throw tick: `builder_r2b_throwtick_now_t1.png` shows no
+  grenade, against `builder_r2b_throwtick_oldDrawing_t1.png` (`hideNear` 0) where it covers about a fifth of the screen.
+- Draw calls: the burst adds one call (the sphere) while it shows. 12 at most during flight and burst, 11 while aiming.
+
+### Item 4: handling (fixed)
+
+- `recoilReturn` 0.8. Pistol spread 0.6, bloom 0.6, `recoverDelay` 0.12, falloff [30, 70, 0.5]. Sniper `scopeFov` 20. Scoped
+  spread is a set value: 0.05 still or crouched, 1.5 moving, 4.0 airborne (`scopedMove`, `scopedAir`; stance multipliers are not
+  applied on top). Sniper shot gains 0.8 / 0.7; fabric, book and card footsteps 0.75.
+- Holding fire through empty on an automatic: one dry click and the reload starts, once per empty magazine. With no reserve it is
+  one click per hold, not one per tick. R during a draw is buffered (also the `reload()` hook) and starts when the draw ends.
+  Switching weapon drops the buffer.
+- Measured (`builder_r2b_item4.cjs`): rifle drift 1 s after one tap 0.18 deg (0.36 with 0.6); three taps 0.54 (1.08); full
+  magazine 5.4 (10.8). Scoped sniper spread 0.05 still, 0.05 crouched, 1.5 moving, 4.0 airborne; fov 20. Rifle and SMG held through
+  empty: 1 dry click, reload 0.100 s / 0.067 s after the last shot, firing resumes when the reload ends. One hold drains all four
+  rifle magazines (18.5 s). R tapped for 0.1 s inside the draw: rifle, pistol and sniper all reload when the draw ends.
+- Time to kill, standing, 60 trials: at 60 units, rifle taps 0.717 s and paced pistol 1.417 s. At 101 units (from the Green
+  tower), rifle taps 3.05 s (97 % kill) and paced pistol 4.68 s (35 % kill). The pistol no longer out-ranges the rifle.
+
+### Item 5: readability (fixed as specified; see the note on Tan)
+
+- Tan `#D9A75A` / `#A87C3A`, haze and page background `#D6DEE8`. Named view `bed_top` eye (31, 19.6, 80).
+- Impact colours: wood `#E8C89A`, fabric `#FFFFFF`. On a face whose palette colour is within dE 30 of that colour, the impact
+  uses an alternate colour instead: wood `#4A2E1A`, fabric `#5F78B0`. Colliders now carry the colour of their visual (the bed slab
+  has separate top, side and bottom colours) so the choice is made per face.
+- The muzzle flash is a child of the gun model, at its muzzle, so it follows the kick. It lasts `gun.flashTime` 0.05 s of
+  simulation time (3 ticks), not a count of frames.
+- Damage numbers start above the target's head. Each frame they are pushed out of a 34 px box round the crosshair and off each
+  other (the oldest keeps its place). HUD text (weapon name, ammo, health, hint, damage numbers) has a 1 px dark outline.
+- Measured (`builder_r2b_item5.cjs`, `builder_r2b_pixels.py`). Body pixel against the pixels just beside it, CIE76 dE, median
+  over views, this build against a copy with the old Tan and haze:
+
+| | 10 u | 60 u | 100 u |
+| --- | --- | --- | --- |
+| Tan now | 32.6 (8 views) | 37.0 (7) | 21.2 (3) |
+| Tan old | 36.2 | 30.7 | 22.1 |
+| Green now | 67.1 | 56.7 | 46.1 |
+
+  Impacts, particle pixels against the surface pixels: wood on the floor 46.3 (old colour 6.1); wood on a desk leg 41.2; wood on
+  a pale bed leg, alternate colour, 60.4 (old 45.8); fabric on the blanket 63.9 (old 61.0); fabric on the pale bed side,
+  alternate, 39.5 (old 12.8); fabric on a pillow, alternate, 59.4 (old 9.0); fabric on the bear 40.8 (old 34.2).
+  Flash: on the sniper muzzle tip in `builder_r2b_flash_sniper_tick0..2.png` and gone at tick 3; six renders with no tick between
+  them still show it. Damage numbers: 4 shown, 0 overlapping, none over the crosshair, nearest 106 px from centre
+  (`builder_r2b_numbers_pale.png`). HUD over the pale skirting: `builder_r2b_hud_palewall.png`.
+
+### Regression (`builder_r2b_regress.cjs`)
+
+All 18 routes ok walking and sprinting, with the same times and end heights as before and no damage. `validateWaypoints()` is
+`[]`. Draw calls: 10 idle, 12 firing any gun, 11 aiming a grenade, 12 in grenade flight and burst. 26,014 triangles. 0 rescues.
+`errors` is empty in every script. `builder_r2_input.cjs` (real mouse and keys) passes with no errors. `bug_r2_06_input_audio.cjs`:
+all six audio variants (no AudioContext, constructor throws, stuck suspended, createGain throws, createBuffer throws, normal)
+run with no errors.
+
+### What to re-test
+
+- Bug tester: R2-1 to R2-6, with the 10,000-throw fuzz. Note that `bug_r2_04` and `bug_r2_08` still expect 110 damage.
+  Also: the apron from the seat side at x 95.5 to 96, where a lane outside the ruler now stops against the apron's end
+  with no fall; holding fire through several magazines; R during a draw; switching mid-bolt.
+- Feel tester: SMG against rifle by range, grenade payoff, recoil drift, the pistol at range, and listening to the new gains.
+- Visual tester: Tan against backgrounds (see below), burst and arc, impacts on wood and fabric, sniper flash, damage numbers,
+  HUD outline, `bed_top`.
+
+### DESIGN.md items I could not do as written, and what I did instead
+
+1. **"Fabric puffs white, at least dE 25 from the surface."** White is within dE 25 of the pale fabrics (bed side `#E9E4DA`,
+   pillows `#E8EEF5`). On those faces the puffs use the alternate blue `#5F78B0`, and the same rule gives pale-wood faces (bed legs,
+   shelves, ceiling) dark chips. Every measured case is at least dE 39.
+2. **Scoped spread "0.05 still or crouched; 1.5 moving; 4.0 airborne"** is applied as set values. The crouch multiplier is not
+   applied on top, so crouched and moving is 1.5.
+3. **"The held grenade in the viewmodel never fills the screen."** There is no held-grenade model. The thrown grenade is hidden
+   until it is 1.3 units from the eye, and the gun drops while aiming, as before.
+4. **Holding fire through empty on an automatic** gives one dry click per empty magazine. With no reserve left it clicks once per
+   hold, so a held trigger does not click every tick.
+5. **Design note on Tan (not a deviation):** with the new Tan and haze, and my view set, Tan reads better at 60 units (37.0 against
+   30.7) and about the same at 100 (21.2 against 22.1). At 10 units it is a little worse against the brown floor (32.6 against
+   36.2), because the deeper tan is closer to the floor in lightness. Green is 46 to 67 at the same distances. The visual tester's
+   larger view set should decide whether more is needed.
