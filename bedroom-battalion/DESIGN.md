@@ -109,7 +109,8 @@ No headboard (it would block the south route).
 | Open notebook | `99..111, 74..86, 26..26.4` (walkable) |
 | Stacked books | `111..119, 86..93`, three books 1.2 high each, each inset 0.6 (`y 26..29.6`) |
 | Pencil cup | cylinder (115.5, 98) r 2.6, `y 26..35` |
-| Seat stoppers (2) | cylinders r 0.5, `y 17..18`, at (92.2, 73.3) and (92.2, 86.7). They close the seat edge between each ramp head and ruler foot so cutting the corner cannot drop you off the seat |
+| Ruler props (2) | stacks of books filling the space under each ruler outside the seat: north `92.5..95.5, 64..73`, south `92.5..95.5, 87..96`, solid from the floor up to the ruler's underside (stepped boxes or one wedge). With these there is no gap to fall into beside the skateboard or the chair stairs |
+| Seat stoppers (2) | cylinders r 0.5, `y 17..18`, at (92.45, 73.3) and (92.2, 86.7) (north one moved by the builder so it does not push skateboard lanes off the board). They close the seat edge between each ramp head and ruler foot so cutting the corner cannot drop you off the seat |
 | Under desk | eraser `104..108, 66..68, 0..1.2` (mirrored); paper ball cylinder (108, 80) r 2.5, h 4.5 |
 
 Slab ramps are thin: solid only from the walking surface down by `thickness`. You can pass underneath

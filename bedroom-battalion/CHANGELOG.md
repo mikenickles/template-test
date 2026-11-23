@@ -122,3 +122,90 @@ The mirrored `ts2.b - ts2.c` edge is left out, as DESIGN 9.4 says it is replaced
 - The bed frame colour in direct sun reads orange-tan, close to the Tan squad colour.
 - Letting go of a shelf string drops you onto the book stairs below, which can be a long fall.
 - Below about 4 fps the real-time loop drops simulation time instead of catching up.
+
+## Round 1, pass 2 (FIXLIST.md round 1, pass 1)
+
+`index.html` is now 84,699 bytes, 354 colliders, 168 graph edges, 10,338 triangles, still 3 reported draw calls.
+Only the five FIXLIST items were touched. Scripts: `tests/builder_pass2.cjs`, `builder_lanes.cjs`,
+`builder_rulertrap.cjs`, plus the pass 1 scripts re-run.
+
+### Item 1: strings (fixed)
+
+- Topping out sets a forward lock (forward is ignored until released) and blocks re-grabbing that string for
+  `climb.topRegrab` = 0.5 s. `walkPath` releases forward for one tick after topping out.
+- Grabbing and letting go of a string both clear coyote time, so there is no jump in the air after letting go.
+- Measured: the BUGS 1 repro ends `climbing: false, onGround: true` at (108.6, 40, 130). Same for all six shelf
+  strings (y 40 or 60) and for the yo-yo and shoelace from under the desk and from outside (107, 26, 55.5 / 104.5).
+  Releasing, turning east and walking leaves the string behind. Walking back into a string from the top still grabs
+  it and S still descends. Second jump press 0 to 5 ticks after letting go: vy stays negative, no height gained.
+- Behaviour change to know about: approaching the yo-yo from the north and holding W used to carry you across the
+  desk; now you stop where you are placed until W is released, as DESIGN 4.4 now says.
+
+### Item 2: dead stops (a and b fixed, c built but its re-check still fails)
+
+- (a) Ground follow: a refused step-up no longer cancels the move. First the player is pushed out of whatever takes
+  the head room, as if already standing on the step; if that does not free the step, the step itself is treated as a
+  wall and the velocity slides along it. Position is held (velocity kept) only if both fail.
+- (b) Stair guards added exactly as DESIGN 4.3: `s.tall.guard` and `n.small.guard`.
+- (c) Seat stoppers added: `chair.stopper.s` at (92.2, 86.7) as DESIGN 4.2, **`chair.stopper.n` at (92.45, 73.3), not
+  (92.2, 73.3)**. At 92.2 the skateboard lanes x 92.25 to 92.35 were pushed east round the stopper, off the side of
+  the skateboard, and fell for 32.9 hp, and x 92.20 stopped dead against it; that includes the third BUGS 2 repro.
+  At 92.45 every skateboard lane that is on the ramp is pushed west onto the seat.
+- Measured: the three BUGS 2 repro calls reach the top (6.3 s, 6.3 s, 5.6 s). Lanes every 0.05: tall and small
+  stairs x 107.30 to 107.95 all reach L1 walking and sprinting; x 108.00 and above now meet the end of the guard at
+  floor level, which is an ordinary wall. Skateboard and chair stairs x 91.00 to 92.35 all end standing on the seat.
+  BUGS 3 (aim at the L1 node from the stair foot): reaches L1 at (107.6, 20, 124.1), no damage.
+  `tests/bug_05b_stair_trap.cjs`: all 16 cut-corner cases end "on L1", no damage.
+- **Not fixed: `tests/feel_ruler_trap.cjs` still shows 6 falls (21 to 32 hp) and 3 timeouts out of 15**, the same
+  pattern as before, and identical with the stopper at 92.2 or 92.45 (`builder_rulertrap.cjs` run against both).
+  The stoppers cannot change it: aiming at the ruler at z 71 or 68 walks the player back off the seat onto the
+  skateboard and then off the skateboard's east side under the ruler, north of the stopper; aiming at z 73.5 presses
+  the player against the ruler's side where it is 0.7 to 1.2 above the seat, which no rule lets them mount.
+  This needs a design change (for example closing the space under each ruler beside the skateboard and chair
+  stairs, or a longer ruler foot), not a builder tweak.
+- `tests/bug_05_targeted.cjs` can no longer finish: its section 8 walks lane x 108.2 up the tall stairs in a
+  `while` loop, and that lane is now stopped by the guard, so the loop never ends. I covered its sections 1 to 3
+  with the same calls in `builder_pass2.cjs` and `builder_lanes.cjs`. The bug tester needs to update that script.
+
+### Item 3: haze and light (fixed)
+
+- Fog 10 / 220; hemisphere `#FFF8EC` / `#D8CFC4` at 3.0; sun 3.0; bed frame `#E9E4DA`.
+- `CONFIG.camera` (fov, near, far) and `CONFIG.fog` are re-read on every render.
+- Measured from `spawn_green`: near wall pixel (178, 188, 188), far wall (212, 209, 198), ceiling (218, 208, 191).
+  Setting fog to 1 / 60 and fov to 40 through the hook changed the same pixels on the next render and restoring
+  them restored the pixels exactly. Screenshot looked at: walls pale blue, far wall paler, ceiling off-white.
+- Side effect: the off-white bed top in direct sun now clips to near white.
+
+### Item 4: strings and routes (fixed)
+
+- `climb.speed` 5.5, `move.airControl` 0.12. Strings are drawn `climb.drawAbove` = 2 above their top (collider
+  unchanged). Route colour is lapped `route.lap` = 1.5 onto the surface at the blanket slope, bed stairs,
+  skateboard, chair stairs, both rulers (on the desk), both ends of both bridges and both shelf stair heads.
+- Measured, sprinting from the Green spawn through the graph: desk by yo-yo 14.9 s, by small-shelf stairs and
+  bridge 17.4 s, by skateboard and ruler 16.0 s. A shelf string takes 4.3 s node to node.
+
+### Item 5: cover (fixed, with one graph change)
+
+- Added `n.W-c`, `s.W-c`, `n.E-c`; crayons are now 1.3 high and 1.3 deep as DESIGN 6.
+- **No node was moved. Edge `w.5 - ub.e` was removed on both halves instead.** W-c sits on that leg, and a search of
+  every position of `ub.e` and `w.5` within 2 units (0.1 grid) found none that clears W-c without blocking
+  `ub.e - m.ub`. `w.5` still reaches `ub.e` through `w.4`. `validateWaypoints()` returns `[]`.
+
+### Re-run after all changes
+
+| Check | Result |
+| --- | --- |
+| Load | `ready` true, `errors` empty in every script |
+| `validateWaypoints()` | `[]` |
+| 18 routes, walking and sprinting | all ok, end heights 18 / 26 / 20 / 40 / 60 / 8, no damage |
+| Every graph edge, both directions where two-way (332 walks) | all ok |
+| Random-input walkers, 56 simulated minutes | never outside the room or inside a solid, safety net never fired |
+| Real click, keys, backtick, Esc, resume | work |
+| Gate to gate sprint | 14.9 s straight, 16.9 s through the ruin (unchanged) |
+
+### What to re-test
+
+- Bug tester: BUGS 1, 2, 3 and 5; that walking into the guard ends and the stoppers from every side cannot trap
+  or drop you; strings downward from the top.
+- Feel tester: the ruler corner-cut (still failing, see item 2), the yo-yo against the stairs, haze.
+- Visual tester: wall, ceiling and bed colours; the sunlit bed top; route laps and string tops from above.

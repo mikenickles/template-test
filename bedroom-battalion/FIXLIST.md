@@ -39,3 +39,15 @@ before the round is closed.
 | Sun shadows cover only about 4 % of the floor; under the bed is as bright as open floor | VISUAL 3 | Round 4 (lighting) |
 | Cardboard colour moved away from Tan in the palette | VISUAL 1 | Round 4 (already in DESIGN) |
 | Tan's tall shelf is 20 units higher and sees more of the enemy half | FEEL | Round 5 (balance) |
+
+## Pass 2 (one item)
+
+Pass 1 result by the builder's own runs: items 1, 3, 4, 5 fixed; 2(a) and 2(b) fixed; 2(c) built but
+`feel_ruler_trap.cjs` still shows 6 falls and 3 timeouts, because the fall happens off the east side of the
+skateboard under the ruler, where a stopper cannot help.
+
+| # | Kind | Fix | Re-check |
+| --- | --- | --- | --- |
+| 2(c) | Feel, pillar 3 | Add the two ruler props (DESIGN 4.2): solid book stacks under each ruler outside the seat footprint, so there is no gap between the skateboard or chair stairs and the ruler. Keep the stoppers where they are now. Pressing into the ruler's side from the seat is allowed to slide and stop; it must not drop you. | `feel_ruler_trap.cjs`: no falls. All 18 routes and `validateWaypoints()` still clean |
+
+Graph change accepted: edge `w.5 - ub.e` removed on both halves (W-c sits on it).
