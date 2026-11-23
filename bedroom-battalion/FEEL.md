@@ -135,6 +135,116 @@ All four shots are measurably different, rendered offline from `CONFIG.audio.sou
 - Scoped tracking at one-third sensitivity, and whether the 0.5 s scope drop after each shot is rhythm or annoyance.
 - Whether 0.30 s to kill at close range is too fast to react to once bots shoot back.
 
+## Round 2 re-check
+
+**Gate "every weapon is satisfying within 10 seconds and clearly different": PASS, narrowly.** The grenade now pays off and reads at its true size, recoil comes back, the pistol is a sidearm again and the automatics reload when held through empty. The narrow part is the SMG: it now beats the rifle at 10 and 20 units, standing and strafing, as the fix list asked, but only by one or two ticks (0.27 s against 0.30 s), and the rifle still wins with head aim. It is clearly different in the hand and on screen. It is not yet clearly the better pick. One CONFIG number fixes that (finding 1).
+
+| Weapon | Verdict | Why |
+| --- | --- | --- |
+| Rifle | **PASS** | Best from 30 to 120 units. Taps now stay on target: no-correction taps at 60 u kill 88 % (was 43 %). Still the best gun with head aim at close range (0.10 s). |
+| SMG | **PASS, narrowly** | Fastest body kill at 10 and 20 u, standing (0.27 against 0.30 s) and strafing (0.27 / 0.33 against 0.30 / 0.40 s). Loses from 30 u on and is useless past 40. The lead is 33 ms, too small to feel. |
+| Sniper | **PASS** | Scoped 0.05 degrees still or crouched, 1.5 moving, 4.0 in the air (hit rate at 60 u: 100 / 25 / 3 %). Fov 20. Bolt 1.28 to 1.30 s and switching does not shorten it. One head shot at any range from every perch. |
+| Pistol | **PASS** | Fast clicking at 30 u kills in 0.73 s (was 3.43 s). Past 85 u it takes 4.2 to 5.6 s against the rifle's 1.2 to 3.5 s, so it no longer out-ranges the rifle. |
+| Grenade | **PASS** | A burst within about 1.8 units of a dummy kills it (up to 123 damage). A near miss does 50 to 100. The flash dome grows to the blast radius, is clear at 14 and 40 units, and the arc preview is a thick dotted line with a landing dot that ends where the grenade stops. |
+
+How this was judged: headless through `window.__game` with fixed stepping and the game's own seeded spread and recoil. About 9,000 scripted engagements (40 trials per cell for time to kill, 30 per long-range cell, 825 real grenade throws), every first-pass measurement re-run, frame captures of every weapon and the grenade, and every sound rendered offline from `CONFIG.audio.sounds`, alone and in same-tick mixes. Scripts are `tests/feel_r2b_*.cjs` (`ttk`, `trials`, `handling`, `extras`, `long`, `sniper`, `grenade`, `frames`, `flash`, `audio`, `mix`; helper `feel_r2b_lib.js`). Pictures are `screenshots/round2/feel_re_*.png`. No console errors in any run. `index.html` was not touched.
+
+### First-pass findings: status
+
+| # | First-pass finding | Status | Evidence |
+| --- | --- | --- | --- |
+| 1 | SMG has no job | **Partly fixed** | Wins at 10 and 20 u by 0.03 to 0.07 s and loses from 30 u on. Rifle head aim still wins at 10 u (0.10 against 0.13 s). |
+| 2 | Grenade cannot kill; burst tiny; thin arc | **Fixed** | 145 of 825 throws killed; best throws 123 damage; dome reaches the radius (`feel_re_cmp_burst_14u.png`, `_40u.png`, `_dummy.png`); arc shown as dots plus a landing dot (`feel_re_cmp_grenade_*.png`). Throws still cannot reach high ground (lead's decision, not re-tested). |
+| 3 | Recoil never comes back | **Fixed** | After one rifle tap the aim settles 0.18 degrees high (was 0.36), after a 3-round burst 0.54 (was 1.08), after a full magazine 5.4 (was 10.8). SMG magazine 4.4, pistol 12 shots 3.4. |
+| 4 | Pistol out-ranges rifle; fast clicking useless | **Fixed** | See the table above. Bloom is 1.33 degrees after 12 fast shots (was at 3.0 from shot 4). |
+| 5 | Sound levels | **Partly fixed** | SMG -5.5 dB under the rifle on one shot and -4 dB over a second of fire (was -10 dB). Sniper plus kill peaks at 0.97 of full scale, so it does not clip but has 0.3 dB of headroom. Fabric steps are -9 dB under wood (was -20). Pistol still 79 % above 3 kHz; jump still 0.007. |
+| 6 | Hold through empty does nothing | **Fixed** | Rifle and SMG play one `dry` and the reload on the tick after the last round, then fire again with fire still held (rifle 2.30 s, SMG 2.07 s). |
+| 7 | Small, pale far targets | **Fixed** (scope fov 20) | `feel_re_long_tallshelf_135u_scoped.png`: the green dummy at 135 u is small but picks out. The Tan dummy at 96 u reads well against the fort (`feel_re_long_desk_96u_scoped.png`). |
+| 8a | Tracers start at one fixed point | **Not fixed** (not on the fix list) | `feel_re_cmp_shot_sniper.png`: the sniper tracer starts below and left of its muzzle flash and crosses in front of the barrel. |
+| 8b | All tracers look the same | **Not fixed** (not on the fix list) | Same width and life for all four guns. |
+| 8c | Wood chips invisible on the floor | **Fixed** | Pale chips show clearly on the planks (`feel_re_cmp_impacts.png`, top left). |
+| 8d | Muzzle flash detached from the muzzle | **Fixed** | The flash sits on each gun's own muzzle for 3 ticks (`feel_re_cmp_flash.png`). |
+
+### Time to kill (body, 100 hp, median s, 40 trials; `feel_r2b_ttk.cjs`)
+
+Perfect re-aim every tick (recoil fully controlled, spread real). Each cell is the median, with kill % added where it is under 100.
+
+| Standing | 10 u | 20 u | 30 u | 40 u | 60 u |
+| --- | --- | --- | --- | --- | --- |
+| Rifle held | 0.30 | 0.30 | 0.60 | 1.40 (88 %) | 2.30 (88 %) |
+| Rifle 3-shot bursts | 0.53 | 0.53 | 0.63 | 1.07 | 1.07 |
+| Rifle taps | 0.70 | 0.70 | 0.70 | 0.93 | 0.70 |
+| SMG held | **0.27** | **0.27** | 1.60 | 5.25 (55 %) | (10 %) |
+| SMG 5-shot bursts | **0.27** | **0.27** | 1.07 | 2.13 | 3.27 (63 %) |
+| Pistol fastest clicking | 0.55 | 0.55 | 0.73 | 0.92 | 3.43 |
+| Pistol paced | 0.70 | 0.70 | 0.70 | 0.93 | 1.63 |
+
+| Strafing | 10 u | 20 u | 30 u | 40 u | 60 u |
+| --- | --- | --- | --- | --- | --- |
+| Rifle held / bursts / taps | 0.30 / 0.53 / 0.70 | 0.40 / 0.53 / 0.70 | 2.40 / 1.07 / 0.93 | 5.28 (53 %) / 1.27 / 1.17 | 2.60 (50 %) / 1.60 / 1.17 |
+| SMG held / bursts | **0.27 / 0.27** | **0.33 / 0.27** | 2.60 / 1.27 | (33 %) / 2.40 | (5 %) / 3.27 (60 %) |
+| Pistol clicking / paced | 0.55 / 0.70 | 0.55 / 0.70 | 1.10 / 1.17 | 1.47 / 1.40 | 4.37 (53 %) / 2.57 |
+
+No correction at all (aim once, hold), standing: at 20 u the SMG is 0.27 s against the rifle's 0.30. At 30 u the rifle in bursts kills every time in 0.63 s; the SMG held kills 43 % of the time. Rifle taps at 60 u kill 88 % of the time (43 % in the first pass). Head aim at 10 u: rifle 0.10 s, SMG 0.13, pistol 0.18.
+
+Who is best where now: 0 to 20 u, the SMG by a hair (the rifle wins with head aim); 20 to 30 u, even, with the rifle ahead in bursts; 30 to 120 u, the rifle, in taps or bursts; 60 u and beyond, the scoped sniper. Neither the SMG nor the rifle is dominant everywhere. The rifle is still the safest single pick because it gives up at most 0.03 s up close.
+
+### Findings, most important first
+
+#### 1. The SMG's lead is too small to feel (gate, narrow)
+- Evidence: 20 damage means five body hits, four gaps of 0.067 s, so 0.267 s. The rifle needs four hits, three gaps of 0.1 s, so 0.30 s. The difference is two ticks, and with head aim the rifle wins (two 52-damage hits in 0.10 s against three SMG hits in 0.13 s).
+- Tried live (`feel_r2b_trials.cjs`, 40 trials per cell, median s):
+
+| | 10 u stand | 10 u strafe | 10 u head | 20 u stand | 20 u strafe | 30 u stand, bursts | 30 u strafe, bursts | 40 u stand, bursts |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Rifle (reference) | 0.30 | 0.30 | 0.10 | 0.30 | 0.40 | 0.63 | 1.07 | 1.07 |
+| SMG now (20 damage) | 0.27 | 0.27 | 0.13 | 0.27 | 0.33 | 1.07 | 1.20 | 1.80 |
+| **SMG damage 25** | **0.20** | **0.20** | **0.07** | **0.20** | **0.27** | 0.80 | 1.07 | 1.60 |
+| SMG 1100 rpm | 0.23 | 0.23 | 0.12 | 0.23 | 0.28 | 1.00 | 1.50 | 1.62 (95 %) |
+| SMG damage 25, falloff 20 / 60 / 0.4 | 0.20 | 0.20 | 0.07 | 0.20 | 0.20 | 0.80 | 1.07 | 1.80 |
+
+- Change: `weapons.smg.damage 20 -> 25`. Four body hits kill only inside the 25 unit falloff start, so the SMG gets a sharp, learnable edge. Up close it is a third faster than the rifle (0.20 against 0.30 s) and wins head shots. Past 25 units a fifth hit is needed, and it still clearly loses at 30 and 40. Keep the falloff as it is.
+
+#### 2. Sniper at the clipping line, SMG still quieter than the rifle (sound, needs ears)
+- Same-tick mixes rendered after the 0.5 master (`feel_r2b_mix.cjs`, worst of 12 noise seeds): sniper plus kill peaks at 0.97, sniper alone 0.86, grenade pop plus two kill tones 0.86. Nothing clips now, but a sniper kill during a grenade pop would.
+- SMG: one shot is 0.044 rms against the rifle's 0.088 (-6 dB); one second held is 0.039 against 0.062 (-4 dB). It is now louder than the hit tick (it was quieter).
+- Tried offline: SMG gains `0.9 / 0.5 -> 1.3 / 0.75` gives 0.067 single (-2.4 dB) and 0.055 held (-1 dB), peak 0.71. Sniper gains `0.8 / 0.7 -> 0.6 / 0.55` gives a sniper-plus-kill peak of 0.79.
+- Change: those two gain pairs, or a `DynamicsCompressor` (threshold -6 dB) before `audio.out`. Footsteps: fabric is still 9 dB under wood. Try `step_fabric` gain `0.75 -> 1.2`. `jump` is still 0.007 rms, about 16 dB under a wood step; try `jump` gain `0.15 -> 0.5` (from the first pass, not done).
+
+#### 3. Tracers still start from one point for every gun (gun feel, visible)
+- `feel_re_cmp_shot_sniper.png`, `feel_re_cmp_flash.png`: the flash now sits on each muzzle, which makes the mismatch more visible. The sniper tracer begins below and left of the flash, about a third of the way down the barrel. The SMG and pistol tracers begin just behind their flashes.
+- Change: start the tracer at the same kicked-muzzle point the flash now uses. For the sniper's heavier read, use a thicker, longer-lived tracer: `tracerWidth 0.035 -> 0.07`, `tracerLife 0.08 -> 0.2`, per weapon. Code change, untested.
+
+#### 4. Grenade: kill window and burst picture (works; two small notes)
+- Damage against how far the burst lands from the dummy, horizontally (825 throws from 10 to 18 units, `feel_r2b_grenade.cjs`):
+
+| Miss distance (u) | 0 to 0.5 | 0.5 to 1 | 1 to 1.5 | 1.5 to 2 | 2 to 3 | 3 to 4 | 4 to 5 | 5 to 6 | 6 to 7 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Mean damage | 123 | 118 | 111 | 101 | 88 | 68 | 49 | 29 | 9 |
+| Kill % | 100 | 100 | 100 | 64 | 0 | 0 | 0 | 0 | 0 |
+
+- Best throws: from 12 u at -12 degrees pitch, 114 damage (kill); from 14, 16 and 18 u, within 0.23 to 0.34 u for 123 damage (kill). From 10 u a level throw flies past and the best was 78. A throw at your own feet rolls about 4 units forward before it stops, so it cannot be "dropped" at a corner.
+- Burst frames (`feel_re_cmp_burst_14u.png`, `_40u.png`, `_dummy.png`): from 14 u the dome grows to the radius in about 0.15 s and fills a third of the screen width, with a ring of sparks and a warm light on the wall. From 40 u it is still plainly visible over the cover. It reads as the biggest thing in the game. At its peak (ticks 3 to 9) it is close to opaque white, so for about 0.15 s nothing inside or behind it can be seen. Suggested `grenade.flashOpacity 0.55 -> 0.4` so a target inside stays visible. A human should judge it in motion.
+- Arc preview: dots about 5 px with a 14 px landing dot. It ends where the grenade comes to rest, level, lobbed 30 degrees, thrown down and off a wall. Dots behind a dummy are hidden by it, even though the grenade flies through dummies. The throw tick and the next tick show only the rifle coming back up, so nothing fills the screen. While aiming, no grenade or hand is drawn at all and the crosshair is hidden. That reads as "empty hands". A human check; a small grenade in the lower right would fit the rest of the juice.
+
+#### 5. Pistol beats the SMG from 30 units (balance note, not a gate item)
+- Standing at 30 / 40 u: pistol clicking 0.73 / 0.92 s against SMG bursts 1.07 / 2.13. Crouched at 40 u the clicking pistol (0.55) is about level with the rifle held (0.50). The sidearm being the better gun than a primary at mid range is fine for a pistol, and finding 1 does not change it. Watch it when bots exist.
+
+#### 6. Smaller
+- Scoped crouch-walking gives the moving value (1.5). That matches "still or crouched" read as "crouched and still". Fine.
+- Recoil after a full rifle magazine still leaves the aim 5.4 degrees high. That is intended, because sustained fire climbs.
+- The pistol shot is still 79 % above 3 kHz with 4 % below 300 Hz. Ears needed; the first-pass low layer suggestion stands.
+
+### What the changes made worse
+- Nothing measured got worse in time to kill, handling or sound order. Cadence, reload, draw and switch times, sprint-to-fire, string blocking and audio ordering are unchanged from the first pass (`feel_r2b_handling.cjs`, `feel_r2b_audio.cjs`).
+- Two small new effects: the near-opaque grenade dome (finding 4), and the tracer and muzzle mismatch is easier to see now that the flash is on the muzzle (finding 3).
+
+### Only a human can confirm
+- Whether a 0.03 s SMG lead (or 0.10 s with damage 25) feels like "the close-range gun" under a real mouse.
+- Punch of each shot, especially the SMG at its new level and the pistol's thin top end.
+- Whether the remaining 0.18 degree per tap drift is noticed, and whether the white dome flash is exciting or blinding.
+- The empty-handed grenade aim.
+
 ---
 
 # FEEL.md: round 1 (graybox)
