@@ -10708,5 +10708,5 @@ body[data-busy] .tomo-face .tomo-idle { opacity: 0; }
 html[data-ambient="off"] .tomo-face video { display: none; }
 html[data-ambient="off"] .tomo-face .tomo-still { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .tomo-face video { display: none; } .tomo-face .tomo-still { opacity: 1; } }
-.tomo-face img, .tomo-face video { transform: scale(1.32) translateY(5%); }
+.tomo-face img, .tomo-face video { transform: scale(1.06) translateY(3%); }
 .es-ring { fill: none; stroke: var(--line-strong); stroke-width: 1; }
