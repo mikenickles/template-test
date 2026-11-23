@@ -1,4 +1,44 @@
-# FIXLIST.md: round 1, pass 1
+# FIXLIST.md: round 2, pass 1
+
+Merged from BUGS.md, FEEL.md and VISUAL.md (their "# Round 2" sections). At most 5 items. Fix these and nothing else.
+DESIGN.md is already updated: section 12, the new section 15.6 (numbers and rules), carry-over 8 in 15.5, the
+palette (Tan and haze), and three named views in section 10.
+
+Gate status: FAIL. The feel tester passes the rifle, sniper and pistol and fails the SMG and the grenade.
+No blockers. Bug tester: 0 blocker, 2 major, 4 minor. Visual tester: PASS on budget (12 draw calls firing, 136 KB).
+
+| # | Kind | Fix | Source | Re-check |
+| --- | --- | --- | --- | --- |
+| 1 | Major bugs | (a) A grenade thrown while pressed against anything starts inside it and can leave the room: create at the eye, sweep to the release point, never start in a collider, remove any grenade outside the room. Also add the missing 10 degrees of upward throw. (b) Switching weapons skips the sniper bolt (shots every 0.70 s): the bolt timer must keep running across switches. (c) The desk apron blocks the desk-side third of each ruler: move the panels to `95.5..96` (DESIGN 15.5 item 8). | BUGS R2 1, 2, 3, 4 | Bug tester: the three repros; 10,000 random throws with none leaving the room; ruler lanes x 92.6 to 95.4 all reach the desk |
+| 2 | Feel gate | **SMG gets a job.** Damage 20, spread 1.0 / 0.20 / 3.5, per-weapon moving multiplier 1.15 (DESIGN 15.6). It must beat the rifle's time to kill at 10 and 20 units standing and strafing, and lose to it by 40 units. Make SMG and pistol viewmodels differ at a glance. Raise the SMG shot gains. | FEEL R2 1, 5; VISUAL R2 | Feel tester: time-to-kill table by range, standing and strafing |
+| 3 | Feel gate | **Grenade pays off.** Damage 140. Burst reads at its true 7 unit size (flash sphere, particle ring, light flash, distance-scaled shake). Thicker arc preview. The held grenade must never fill the screen on the throw tick. | FEEL R2 2; VISUAL R2 1 | Feel tester: a centred burst eliminates a full-health dummy; burst visible in a frame from 14 and 40 units. Visual tester: burst and arc screenshots |
+| 4 | Feel | **Handling.** `recoilReturn` 0.8. Pistol numbers and falloff. Sniper scope fov 20 and scoped spread 1.5 moving / 4.0 airborne. Automatics dry-click then reload when held through empty. R buffered during draw. Sniper and footstep gains. All in DESIGN 15.6. | FEEL R2 3, 4, 5; BUGS R2 5, 6 | Feel tester: rifle taps at 60 units, pistol vs rifle past 60, held-through-empty behaviour |
+| 5 | Visual, pillar 5 | **Readability.** Tan to `#D9A75A` / `#A87C3A` and haze to `#D6DEE8` so Tan reads at range. Wood and fabric impacts recoloured to contrast with their surface. Muzzle flash follows the kicked muzzle and lasts 0.05 s. Damage numbers offset from the crosshair and each other. Dark outline on HUD text. Named views per DESIGN section 10. | VISUAL R2 2, 3, 4, 5 | Visual tester: Tan vs background dE at 10, 60, 100, 150 units against Green; impact dE on wood and fabric |
+
+## Conflicts resolved
+
+- Grenade throw speed stays 18. The feel tester notes it cannot reach any high place; raising it breaks the level
+  throw. High places are answered by climbing or the sniper. Revisit in round 5.
+- The sniper stays one head shot at any range; that is its job (pillar 3: it rewards climbing).
+- Haze colour moves from warm to cool. This costs a little of the warm-afternoon look (style) to gain Tan
+  readability at range (pillar 5); the sun and fill light stay warm.
+
+## Deferred
+
+| Item | Source | When |
+| --- | --- | --- |
+| Grenade stops rolling almost at once; casings bounce at foot height only | builder | Round 5 |
+| Decals are identical dark squares that look like tiles at point-blank range | VISUAL R2 | Round 4 |
+| Bed book-stairs head hidden behind pillow P2 from the bed top | FEEL | Round 4 (pillows become soft shapes) |
+| Tan snipers get clearer targets than Green ones, on top of the taller shelf | VISUAL R2 | Round 5 (balance) |
+| Turned crayons may reach into the train envelope near z 36 and z 124 | builder | Round 3 (check when the train exists) |
+| Grenade self-damage is on | builder | Lead: keep |
+| Dummies do not block the player | builder | Fine; they are removed in round 3 |
+| Esc then click within 30 ms; ramps mountable 0.45 higher from the side; `tunnel_drop` at crouch speed | BUGS R1 4, 9, 6 | Rounds 3 and 5 |
+
+---
+
+# Round 1 fix list (closed)
 
 Merged from BUGS.md, FEEL.md and VISUAL.md by the lead. At most 5 items. Fix these and nothing else.
 DESIGN.md has already been updated to match; where this list and DESIGN.md agree, DESIGN.md has the numbers.

@@ -385,13 +385,13 @@ ts2.d-ts3.d, ts2.e-ts3.e (all climb), ts2.b-ts2.d, ts2.d-ts2.c, ts2.c-ts2.e, ts3
 | --- | --- | --- |
 | spawn_green | (60, 1.6, 20) | (60, 1.6, 80) |
 | spawn_tan | (60, 1.6, 140) | (60, 1.6, 80) |
-| bed_top | (27, 19.6, 80) | (100, 10, 80) |
-| desk_top | (97.5, 27.6, 80) | (20, 8, 80) |
+| bed_top | (31, 19.6, 80) | (100, 10, 80) |
+| desk_top | (97.5, 27.6, 66) | (20, 8, 80) |
 | shelf_top | (110.5, 61.6, 136) | (30, 0, 50) |
 | floor_centre | (60, 1.6, 66) | (60, 3, 110) |
 | under_bed | (28, 1.6, 80) | (28, 2, 50) |
 | east_lane | (83.2, 1.6, 40) | (90, 12, 80) |
-| west_lane | (40, 1.6, 30) | (30, 10, 70) |
+| west_lane | (42, 1.6, 24) | (30, 10, 70) |
 
 ## 11. Test hook: `window.__game`
 
@@ -422,10 +422,10 @@ Must work headless with no pointer lock and no user gesture.
 | Weapon | Damage | Fire rate | Mag | Reload | Notes |
 | --- | --- | --- | --- | --- | --- |
 | Rifle | 26 | 600 rpm auto | 30 | 2.2 s | medium recoil and spread |
-| SMG | 16 | 900 rpm auto | 40 | 2.0 s | wide spread past 25 units |
-| Sniper | 90 | bolt, 1.3 s cycle | 5 | 3.0 s | right-click scope, 25 deg fov scoped |
+| SMG | 20 | 900 rpm auto | 40 | 2.0 s | the close-range winner; wide spread past 25 units |
+| Sniper | 90 | bolt, 1.3 s cycle | 5 | 3.0 s | right-click scope, 20 deg fov scoped |
 | Pistol | 30 | semi, 0.18 s min | 12 | 1.4 s | accurate |
-| Grenade | 110 max, radius 7 | one per round | - | - | 2 s fuse, arc preview |
+| Grenade | 140 max, radius 7 | one per round | - | - | 2 s fuse, arc preview |
 
 Headshots x2. Health 100. Match: first to 5, rounds 2:30, 5 s freeze.
 
@@ -447,11 +447,11 @@ Headshots x2. Health 100. Match: first to 5, rounds 2:30, 5 s freeze.
 | Use | Hex |
 | --- | --- |
 | Green squad | `#2FA84A` (shadow side `#1F7A36`) |
-| Tan squad | `#E0C080` (shadow side `#B8975A`) |
+| Tan squad | `#D9A75A` (shadow side `#A87C3A`); deepened in round 2 because the paler tan vanished into the haze and walls at range |
 | Spare soldiers (neutral) | `#B9BEC6` |
 | Sun light | `#FFE2B0` |
 | Hemisphere fill sky / ground | `#FFF1D6` / `#B08D6A` |
-| Haze and fog | `#E6DCCB` |
+| Haze and fog | `#D6DEE8` (cool, so Tan stays visible through it) |
 | Walls | `#BFD3E0` |
 | Skirting, door, window frame | `#F2EFE6` |
 | Ceiling | `#F5F2EA` |
@@ -547,6 +547,39 @@ zone, damage, distance), `audioLog` (last 200 sound events by name, logged even 
 5. Jumbo crayons C-a turned north-south so they stop masking the firing slits: `55.7..57, 29..38` and `63..64.3, 29..38`, h 1.3, mirrored.
 6. Graybox bed top drawn in blanket blue `#3D5A99` (sides stay `#E9E4DA`), pillows keep their pale colour; bed underside darkened.
 7. Bear head pulled back to `6..14, 39..45` so the body gives a 4-deep ledge on the way down.
-8. Desk apron: panels `95..95.5, 64..75, 17..24.5` and `95..95.5, 85..96, 17..24.5` close the drop under the desk top beside each ruler.
+8. Desk apron: panels `95.5..96, 64..75, 17..24.5` and `95.5..96, 85..96, 17..24.5` close the drop under the desk top beside each ruler. They sit outside the ruler footprint (`92.5..95.5`) so every ruler lane still reaches the top.
 9. A string cannot be grabbed while falling faster than 12 u/s.
 10. `walkPath` refuses to drive a one-way edge backward.
+
+### 15.6 Round 2 tuning after the first test pass (these override 15.1 and 15.2 where they differ)
+
+| Key | Was | Now | Why |
+| --- | --- | --- | --- |
+| smg.damage | 16 | 20 | SMG killed slower than the rifle at every range |
+| smg base spread / per shot / max | 1.4 / 0.30 / 4.5 | 1.0 / 0.20 / 3.5 | |
+| smg moving spread multiplier | 1.5 (global) | 1.15 (per weapon) | the SMG is the run-and-gun weapon; other guns keep 1.5 |
+| gun.recoilReturn | 0.6 | 0.8 | taps drifted 0.36 deg each and never came back |
+| pistol base spread / per shot | 0.35 / 0.9 | 0.6 / 0.6 | fast clicking hit full bloom by shot 4 |
+| pistol.recoverDelay | 0.25 s | 0.12 s | |
+| pistol falloff | full to 40, 70 % at 90 | full to 30, 50 % at 70 | paced pistol out-ranged the rifle |
+| sniper.scopeFov | 25 | 20 | far targets were 10 x 22 px |
+| sniper scoped spread | 0.05 always | 0.05 still or crouched; 1.5 moving; 4.0 airborne | no running or jumping scoped shots |
+| grenade.damage | 110 | 140 | could not eliminate a full-health target |
+| grenade throw | view pitch | view pitch + 10 deg up (as 15.1 already said) | was not implemented |
+| audio gains | | SMG shot layers 0.55 to 0.9 and 0.3 to 0.5; sniper 1.0 to 0.8 and 0.9 to 0.7; fabric, book and card footsteps to about 0.75 | SMG was 10 dB under the rifle; sniper could clip |
+
+Rules added:
+- The sniper bolt timer belongs to the weapon and keeps running while another weapon is out. Switching never shortens it.
+- A grenade is created at the eye and swept to its release point; if anything is in the way it starts at the contact
+  point. It can never start inside a collider or outside the room, and a grenade that leaves the room box is removed.
+- Holding fire through an empty magazine on an automatic gives one dry click and then starts the reload without a new press.
+- R pressed during a weapon draw is buffered, like fire.
+- Grenade burst reads at its true size: a flash sphere expanding to the 7 unit radius over 0.15 s, a ring of
+  particles to that radius, a brief light flash, and screen shake scaled by distance. The held grenade in the
+  viewmodel never fills the screen. The arc preview is a dotted line of small spheres or a ribbon at least 3 px wide.
+- Impact effects contrast with their own surface: wood chips pale `#E8C89A`, fabric puffs white, each at least dE 25
+  from the surface it comes from.
+- Muzzle flash is parented to the muzzle after kick and lasts a set 0.05 s, not a number of frames.
+- Damage numbers rise from above the target and are offset so they never cover the crosshair or each other.
+- HUD text (weapon name, ammo) has a dark outline so it reads on pale walls.
+- SMG and pistol viewmodels must differ at a glance (the SMG gets a stock and a long magazine).
