@@ -21,6 +21,26 @@ for one tick when sprint-jumping up a ruler), jump sound nearly silent, pistol s
 partly filled by the chair back, HUD sizes fixed in pixels, no hand or grenade model while aiming. All to round 5
 unless the user's notes say otherwise.
 
+## Round 2 closed: gate PASSED
+
+Evidence, all on the final build (148,119 bytes):
+- Feel tester re-check 2: every weapon passes. SMG 0.20 s against the rifle's 0.30 s at 10 and 20 units, loses from 30.
+  Grenade eliminates within 1.5 units. Shot loudness balanced, nothing clips.
+- Bug tester re-check 2: 0 blocker, 0 major, 0 new minor. All earlier findings fixed. No console errors.
+- Visual tester re-check 2: PASS. 12 draw calls at worst while firing, shader programs flat from load, pooling holds.
+  Tan reads at every distance (0 % of views under dE 15 at 100 and 150 units).
+
+### Carried into round 3
+
+| Item | Source |
+| --- | --- |
+| Scoped sniper tracer shows as a pale square over the target for 0.2 s; draw no tracer while scoped | FEEL and VISUAL re-check 2 |
+| Pistol shot is mostly hiss; jump sound nearly silent (try gain 0.15 to 0.5) | FEEL re-check 2 |
+| No hand or grenade model while aiming a grenade | FEEL re-check 2 |
+| SMG crouched at 40 units is close to rifle bursts; watch once bots exist | FEEL re-check 2 |
+| Turned crayons may reach the train envelope near z 36 and z 124 | builder |
+| Remove target dummies when bots arrive; replace test keys 3, 4, 5 with the round-start weapon pick | design |
+
 ---
 
 # Round 2, pass 1 fix list (done)

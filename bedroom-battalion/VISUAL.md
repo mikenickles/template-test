@@ -380,6 +380,75 @@ All nine are in `visual_re_view_*.png`. The new eyes are confirmed: `bed_top` (3
 4. **Note for round 4:** any darker Tan must keep dE 25 or more from the route and book oranges; the candidates above
    fall to 18 to 20.
 
+## Round 2 re-check 2
+
+**Verdict: PASS.** On the build itself, Tan now reads at every distance (0 % of views under dE 15 at 100 and 150 units).
+The budget is unchanged at 10 draw calls idle and 12 while firing or in a burst. All shaders are compiled at load. The
+thrown grenade no longer pops in large. One minor defect: the scoped sniper tracer seen end-on is a white square over
+the target (finding A).
+
+New scripts: `tests/visual_r2b2_extra.cjs` and `tests/visual_r2b2_tracers.cjs`. I re-ran these with a `now` /
+`PFX=visual_re2_` switch: `visual_r2b_teams.cjs now`, `visual_r2b_fx.cjs`, `visual_r2b_fog.cjs`, `visual_r2b_perf.cjs`.
+Screenshots: `screenshots/round2/visual_re2_*.png` (10 files). Software rendering, so milliseconds show relative cost
+only. `index.html` was not edited.
+
+### Budget
+
+| Item | Re-check 1 | Re-check 2 | Limit |
+| --- | --- | --- | --- |
+| Draw calls idle (WebGL level, including shadow) | 10 | **10** (7 + 3) | under 200 |
+| Full-auto rifle / SMG | 12 / 12 | **12 / 12** | |
+| Grenade aim / burst | 11 / 12 | **11 / 12**; shadow pass stays 3 (burst light casts none) | |
+| Triangles idle, with shadow | 26,062 | **26,086** (+24: the desk skirt box in both passes) | |
+| Shadow lights / map | 1 / 2048 | 1 / 2048 | 1 / 2048 or less |
+| Shader programs at load / after first shot, all guns, first aim, four bursts | 11, rising to 22 | **14 / 14 / 14 / 14 / 14** | |
+| `index.html` | 146,098 | **148,119 bytes** | under 400 KB |
+| Console errors / blocked requests | 0 / 0 | 0 / 0 | |
+| Pooling, 500 shots + 20 grenades | flat | flat: scene objects 19, textures 2, programs, lights 3 (1 casting), DOM 73, heap 16.3 MB; geometries 11 to 12 (one first upload) | |
+
+Headroom is unchanged: 188 calls free and 252 KB of file left.
+
+### Items
+
+| # | Item | Status | Evidence |
+| --- | --- | --- | --- |
+| 1 | Tan reads at every distance (fog 20 / 320 in the build) | **Fixed** | Table below; identical to the live-scene prediction. Strip `visual_re2_team_strips.png`: top row Green, bottom row Tan, at 10, 30, 60, 100 and 150 units |
+| 1 | Any worst case worse? | **No, within 0.5** | The single Tan view under 15 is the tunnel-top dummy against the orange ruler ramp from 30 units: dE 13.4, against 13.9 before. Every other worst case improved (the tall-shelf L1 dummy against the wall went from 16.0 to 18.2). Floor at 10 units is 35.2, against 35.0 |
+| 2 | Far wall paler than near | **Yes** | From the Green spawn the far south wall is `#BDC8CC` and the near north wall `#DCD2C1`, dE 14.2 (13.5 at the old fog) |
+| 2 | Named views | **Look right** | `visual_re2_views.png` (all nine, in section 10 order). Nothing new is blocking; `desk_top` still has the chair back (deferred) |
+| 3 | Shaders compiled at load | **Fixed** | 14 programs at load and still 14 after the first shot of every gun, the first aim and four bursts (re-check 1: 11 rising to 22). The first aim frame is within noise of the frame before it |
+| 3 | First-burst frame time | **Fixed (residual within noise)** | Burst tick frame 160 ms against 129 to 136 ms for the next five frames, and 161 / 129 / 133 ms on bursts 2 to 4. A second run gave 176 ms against 143 to 149 ms, then 134 / 125 / 128 ms. That is +20 % with no program compiling, down from +35 % with two. Random single frames in the same runs reach 183 to 205 ms, so this is at the noise floor of software rendering. If it shows on real hardware, render one frame at load with the sphere visible at opacity 0: `renderer.compile` compiles programs but does not upload the sphere's geometry |
+| 3 | Nothing stray on the first frame | **Clean** | `visual_re2_first_frame.png`: the first canvas frame after load (behind the title overlay) is the spawn view with the rifle. The visible-mesh list holds only the world, the effects pools, the dummies and the rifle. The sphere, arc and muzzle flash are hidden again after the compile |
+| 4 | Thrown grenade first visible frame | **Fixed** | Hidden for ticks 1 to 6, first drawn on tick 7 at 2.57 units: 3,899 px, about 62 px or 9 % of the screen height (was 15,257 px, 17 %). Then 3,144 and 2,579 px (`visual_re2_throw_ticks.png`, frames aim, 1, 2, 3, 6, 8) |
+| 4 | Dome at opacity 0.4 | **Still reads** | From 40 units the changed area is 222 x 70 px on tick 0 and 144 x 88 px at peak, the same as at 0.55, and it lasts to tick 14. From 14 units the dome still fills its 233 px radius. Objects inside are now seen through it (`visual_re2_burst_40u.png`, `visual_re2_burst_14u.png`) |
+| 5 | Tracers per gun | **Fixed** | Down a long lane the rifle, SMG and pistol tracers leave their own muzzle tips. The sniper tracer is a thicker wedge from just ahead of its kicked muzzle (`visual_re2_tracers.png`, top row the shot tick, bottom row 2 ticks later). Visible for 4 ticks (rifle, SMG, pistol) and 12 ticks (sniper, 0.2 s). The tracer is first drawn on the tick after the shot, which is fine |
+| 5 | Scoped sniper tracer | **Minor defect** | Finding A |
+| 6 | Desk skirt panel | **Fixed, correct colour** | Collider `desk.skirt` at `96..96.5, 73..87, 17..24.5`, surface wood, in line with the aprons at `95.5..96`. It is drawn in the desk colour `#8FA3B5` (shaded face `#818F96`, same as the aprons and desk underside), so it follows the graybox rule of big furniture in its palette colour. No gap or z-fight at its joints with the aprons in `visual_re2_desk_skirt.png` (from the seat, from the seat corner, from the floor) |
+| 7 | Budget | **PASS** | Table above |
+
+**Tan and Green in the build** (569 views, same method):
+
+| Team | 10 u | 30 u | 60 u | 100 u | 150 u |
+| --- | --- | --- | --- | --- | --- |
+| Green median dE (under 15) | 66.5 | 66.9 | 63.8 | 53.3 | 39.9 (0 %) |
+| Tan median dE (under 15) | 47.7 (0 %) | 42.5 (1 %, one view) | 45.8 (0 %) | **38.9 (0 %)** | **27.2 (0 %)** |
+| Tan, re-check 1 | 47.7 | 41.4 | 40.8 | 27.9 (10 %) | 11.4 (100 %) |
+| Tan 10th percentile | 32.0 | 31.6 | 30.8 | 18.4 | 27.0 |
+
+Tan still trails Green by about a third of its contrast, but it no longer drops out. It is limited by size, as Green is:
+2.3 px wide at 100 units and 1.6 px at 150 unscoped.
+
+### New findings
+
+A. **Minor: the scoped sniper tracer is a bright square over the target.** Seen end-on, the 0.07-wide box shows its
+   near end, 3 units out, as a near-white square at the crosshair. Shooting at a wall 9 to 41 units away: 45 x 45 px
+   (2,025 to 2,114 near-white px) on the first tick after the shot, 39 px on tick 2 and 33 px on tick 3. After the scope
+   drops it is still about 14 px until tick 12 (`visual_re2_scope_tracer.png`: before, shot tick, tick 3, tick 8).
+   A head at 100 units is 9 px in the scope, so the square covers the target, the hit and the start of the tip-over for
+   0.1 to 0.2 s. I count this as a defect, not as acceptable. **Fix:** draw no tracer while scoped, since the scoped
+   shooter sees the impact and the damage number. Or, if a tracer is wanted, start it at 60 % of the hit distance so
+   that its near end is far away and small.
+
 ---
 
 # VISUAL.md: round 1 (graybox)
