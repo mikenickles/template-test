@@ -36,11 +36,51 @@
   #debug { position: absolute; left: 8px; top: 8px; margin: 0; padding: 6px 9px; font: 12px/1.45 Consolas, Menlo, monospace;
     background: rgba(0,0,0,.6); color: #FFFFFF; white-space: pre; display: none; border-radius: 3px; }
   #title { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: rgba(24,20,16,.55); cursor: pointer; text-align: center; }
+    background: rgba(24,20,16,.55); text-align: center; }
   #title h1 { margin: 0; font-size: 64px; letter-spacing: 6px; text-shadow: 0 4px 0 rgba(0,0,0,.45); }
   #title .go { margin: 18px 0 26px; font-size: 24px; color: #FFD21F; text-shadow: 0 2px 0 rgba(0,0,0,.5); }
   #title .keys { font-size: 15px; line-height: 1.8; opacity: .95; text-shadow: 0 1px 0 rgba(0,0,0,.6); }
   #title b { color: #FFD21F; font-weight: 700; }
+  /* ---- round 3B HUD and menus ---- */
+  .ol { text-shadow: -1px -1px 0 #14110E, 1px -1px 0 #14110E, -1px 1px 0 #14110E, 1px 1px 0 #14110E, 0 2px 2px rgba(0,0,0,.6); }
+  #mbar { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); text-align: center; display: none; }
+  #mtime { font-size: 26px; font-weight: 700; letter-spacing: 2px; }
+  #mscore { font-size: 17px; font-weight: 700; letter-spacing: 2px; margin-top: 2px; }
+  #mscore .g { color: #2FA84A; } #mscore .t { color: #D9A75A; }
+  #mround { font-size: 11px; letter-spacing: 3px; opacity: .85; }
+  .pips { display: inline-block; margin: 4px 6px 0; } .pips i { display: inline-block; width: 9px; height: 13px; margin: 0 2px; border: 1px solid #14110E; border-radius: 2px; }
+  .pips.g i.on { background: #2FA84A; } .pips.t i.on { background: #D9A75A; } .pips i.off { background: rgba(20,17,14,.45); }
+  #feed { position: absolute; right: 16px; top: 12px; text-align: right; font-size: 14px; font-weight: 700; }
+  #feed div { margin-bottom: 3px; padding: 2px 8px; background: rgba(20,17,14,.45); border-radius: 3px; display: inline-block; clear: both; float: right; }
+  #feed .g { color: #3FCF5E; } #feed .t { color: #F0BE6E; } #feed .w { color: #FFFFFF; font-weight: 400; margin: 0 6px; } #feed .hs { color: #FFD21F; margin-left: 4px; }
+  #callouts { position: absolute; left: 16px; top: 38%; font-size: 15px; }
+  #callouts div { margin-bottom: 4px; padding: 3px 9px; background: rgba(20,17,14,.5); border-left: 3px solid #2FA84A; border-radius: 2px; }
+  #callouts b { color: #3FCF5E; margin-right: 6px; }
+  #arcs { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+  #arcs i { position: absolute; left: -64px; top: -64px; width: 128px; height: 128px; border-radius: 50%; border: 5px solid transparent; border-top-color: #E0281F; box-sizing: border-box; display: none; }
+  #picker { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); text-align: center; display: none; pointer-events: auto; }
+  #picker .ttl { font-size: 15px; letter-spacing: 3px; color: #FFD21F; margin-bottom: 8px; }
+  #picker .opt { display: inline-block; width: 118px; margin: 0 5px; padding: 10px 0; background: rgba(20,17,14,.62); border: 2px solid rgba(255,255,255,.35); border-radius: 4px; cursor: pointer; font-weight: 700; letter-spacing: 2px; }
+  #picker .opt.sel { border-color: #FFD21F; color: #FFD21F; background: rgba(20,17,14,.8); }
+  #picker .opt small { display: block; font-size: 11px; opacity: .8; font-weight: 400; letter-spacing: 1px; }
+  #pickCount { font-size: 34px; font-weight: 700; margin-top: 8px; }
+  #spect { position: absolute; left: 50%; bottom: 13%; transform: translateX(-50%); font-size: 18px; padding: 6px 16px; background: rgba(20,17,14,.55); border-radius: 4px; display: none; }
+  #spect small { display: block; font-size: 12px; opacity: .8; text-align: center; }
+  .overlay { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  #roundEnd { pointer-events: none; }
+  #roundEnd .box, #matchEnd .box { background: rgba(20,17,14,.72); padding: 22px 40px; border-radius: 6px; }
+  #roundEnd h2, #matchEnd h2 { margin: 0 0 6px; font-size: 40px; letter-spacing: 4px; }
+  #roundEnd .how { font-size: 18px; color: #FFD21F; } #roundEnd .sc, #matchEnd .sc { font-size: 22px; margin-top: 8px; font-weight: 700; }
+  #matchEnd { background: rgba(24,20,16,.55); }
+  #matchEnd table { margin: 14px auto 6px; border-collapse: collapse; font-size: 15px; }
+  #matchEnd td, #matchEnd th { padding: 3px 14px; text-align: left; } #matchEnd th { color: #FFD21F; font-weight: 700; letter-spacing: 1px; }
+  #matchEnd tr.g td:first-child { color: #3FCF5E; } #matchEnd tr.t td:first-child { color: #F0BE6E; }
+  .btn { display: inline-block; margin: 8px 6px; padding: 9px 22px; background: rgba(20,17,14,.6); border: 2px solid rgba(255,255,255,.45); border-radius: 4px; cursor: pointer; font-size: 18px; font-weight: 700; letter-spacing: 2px; color: #FFFFFF; }
+  .btn:hover, .btn.sel { border-color: #FFD21F; color: #FFD21F; }
+  .btn.small { font-size: 14px; padding: 6px 14px; }
+  .set { margin: 10px 0; font-size: 15px; } .set input { vertical-align: middle; width: 200px; margin: 0 10px; } .set span { display: inline-block; min-width: 40px; text-align: left; color: #FFD21F; }
+  #pause { background: rgba(24,20,16,.6); }
+  #pause h2 { font-size: 42px; letter-spacing: 6px; margin: 0 0 14px; }
 </style>
 </head>
 <body>
@@ -52,16 +92,38 @@
   <div id="ammo"><div class="name" id="wname">RIFLE</div><div class="count"><span id="mag">30</span> <small>/ <span id="res">90</span></small></div><div class="gren" id="gren">GRENADE 1</div></div>
   <div id="health"><small>HEALTH</small><span id="healthNum">100</span></div>
   <div id="hint">W climb &nbsp; S descend &nbsp; Space let go</div>
+  <div id="mbar" class="ol"><div id="mround">ROUND 1</div><div id="mtime">2:30</div>
+    <div id="mscore"><span class="g">GREEN</span> <span id="sg">0</span> - <span id="st">0</span> <span class="t">TAN</span></div>
+    <div><span class="pips g" id="pg"></span><span class="pips t" id="pt"></span></div></div>
+  <div id="feed" class="ol"></div>
+  <div id="callouts" class="ol"></div>
+  <div id="arcs"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div id="picker" class="ol"><div class="ttl">CHOOSE YOUR PRIMARY</div>
+    <div class="opt" data-w="rifle">1 RIFLE<small>all-round</small></div><div class="opt" data-w="smg">2 SMG<small>close range</small></div><div class="opt" data-w="sniper">3 SNIPER<small>long range</small></div>
+    <div id="pickCount">5</div></div>
+  <div id="spect" class="ol"></div>
   <pre id="debug"></pre>
 </div>
+<div id="roundEnd" class="overlay ol"><div class="box"><h2 id="reTitle">GREEN WINS THE ROUND</h2><div class="how" id="reHow"></div><div class="sc" id="reScore"></div></div></div>
+<div id="matchEnd" class="overlay ol"><div class="box"><h2 id="meTitle">GREEN WINS</h2><div class="sc" id="meScore"></div><div id="meTable"></div>
+  <div><span class="btn" id="meAgain">ENTER &nbsp; REMATCH</span><span class="btn" id="meTitleBtn">ESC &nbsp; TITLE</span></div></div></div>
+<div id="pause" class="overlay ol"><h2>PAUSED</h2><div class="btn" id="pResume">RESUME</div>
+  <div class="set">Mouse sensitivity <input type="range" id="pSens" min="0.2" max="3" step="0.1"><span id="pSensV"></span></div>
+  <div class="set">Master volume <input type="range" id="pVol" min="0" max="100" step="1"><span id="pVolV"></span></div>
+  <div class="btn small" id="pQuit">QUIT TO TITLE</div></div>
 <div id="title">
   <h1>BEDROOM BATTALION</h1>
-  <div class="go" id="titleGo">Click to play</div>
+  <div class="go"><span class="btn" id="tPlay">PLAY</span></div>
+  <div id="titleGo" style="display:none"></div>
+  <div class="set" id="tDiff"><span class="btn small" data-d="recruit">RECRUIT</span><span class="btn small" data-d="regular">REGULAR</span><span class="btn small" data-d="veteran">VETERAN</span></div>
+  <div class="set">Mouse sensitivity <input type="range" id="tSens" min="0.2" max="3" step="0.1"><span id="tSensV"></span></div>
+  <div class="set">Master volume <input type="range" id="tVol" min="0" max="100" step="1"><span id="tVolV"></span></div>
   <div class="keys">
     <b>W A S D</b> move &nbsp; <b>Mouse</b> look &nbsp; <b>Shift</b> sprint &nbsp; <b>Space</b> jump &nbsp; <b>C</b> or <b>Ctrl</b> crouch<br>
     Yellow strings: walk into one to grab it, <b>W</b> climbs, <b>S</b> descends, <b>Space</b> lets go<br>
     <b>Left mouse</b> fire &nbsp; <b>Right mouse</b> scope &nbsp; <b>R</b> reload &nbsp; <b>1</b> primary &nbsp; <b>2</b> pistol &nbsp; <b>Wheel</b> swap &nbsp; <b>G</b> hold to aim a grenade, release to throw<br>
-    Test picks: <b>3</b> rifle &nbsp; <b>4</b> SMG &nbsp; <b>5</b> sniper &nbsp;&nbsp; <b>Esc</b> releases the mouse &nbsp; <b>`</b> debug overlay
+    Freeze time: <b>1</b> rifle &nbsp; <b>2</b> SMG &nbsp; <b>3</b> sniper (or click) &nbsp;&nbsp; Dead: <b>left click</b> next teammate &nbsp;&nbsp; <b>Esc</b> pause &nbsp; <b>`</b> debug overlay<br>
+    Five Green against five Tan. First to five rounds. No respawns.
   </div>
 </div>
 <script type="module">
@@ -191,6 +253,14 @@ const CONFIG = {
       step_metal:   [{ k: 'o', t: 'sine', f: 1500, f1: 1300, d: 0.08, g: 0.12 }, { k: 'n', t: 'highpass', f: 3000, d: 0.02, g: 0.12 }],
       jump:        [{ k: 'n', t: 'lowpass', f: 600, f1: 1000, d: 0.08, g: 0.5 }],      // round 3: gain 0.15 to 0.5 (was nearly silent)
       land:        [{ k: 'o', t: 'sine', f: 120, f1: 50, d: 0.12, g: 0.4 }, { k: 'n', t: 'lowpass', f: 400, d: 0.08, g: 0.3 }],
+      // ---- round 3B: stingers and jingles ----
+      stinger_round_start: [{ k: 'o', t: 'square', f: 523, d: 0.12, g: 0.25 }, { k: 'o', t: 'square', f: 784, d: 0.22, g: 0.25, at: 0.13 }, { k: 'n', t: 'highpass', f: 5000, d: 0.05, g: 0.15, at: 0.13 }],
+      stinger_round_end:   [{ k: 'o', t: 'triangle', f: 784, d: 0.15, g: 0.3 }, { k: 'o', t: 'triangle', f: 587, d: 0.15, g: 0.3, at: 0.16 }, { k: 'o', t: 'triangle', f: 392, d: 0.35, g: 0.3, at: 0.32 }],
+      jingle_win:  [{ k: 'o', t: 'square', f: 523, d: 0.14, g: 0.22 }, { k: 'o', t: 'square', f: 659, d: 0.14, g: 0.22, at: 0.15 }, { k: 'o', t: 'square', f: 784, d: 0.14, g: 0.22, at: 0.3 },
+                    { k: 'o', t: 'square', f: 1047, d: 0.5, g: 0.25, at: 0.45 }, { k: 'o', t: 'triangle', f: 523, d: 0.6, g: 0.2, at: 0.45 }],
+      jingle_lose: [{ k: 'o', t: 'triangle', f: 440, d: 0.25, g: 0.28 }, { k: 'o', t: 'triangle', f: 392, d: 0.25, g: 0.28, at: 0.27 }, { k: 'o', t: 'triangle', f: 330, d: 0.25, g: 0.28, at: 0.54 },
+                    { k: 'o', t: 'triangle', f: 262, f1: 240, d: 0.8, g: 0.3, at: 0.81 }],
+      ui_click:    [{ k: 'o', t: 'sine', f: 1200, d: 0.03, g: 0.15 }],
       // ---- round 3: train (played through sfxAt with distance attenuation and doppler) ----
       train_clack:   [{ k: 'n', t: 'bandpass', f: 1400, q: 3, d: 0.035, g: 0.5 }, { k: 'o', t: 'square', f: 180, f1: 120, d: 0.03, g: 0.25 }],
       train_whistle: [{ k: 'o', t: 'triangle', f: 880, f1: 860, d: 0.55, g: 0.35 }, { k: 'o', t: 'triangle', f: 1108, f1: 1090, d: 0.55, g: 0.25 },
@@ -205,7 +275,7 @@ const CONFIG = {
            rescueTime: 0.3,                // both push exits blocked this long: placed outside the envelope and logged
            pushEps: 0.02, bandEps: 0.03,   // pushed this far clear; parts lower than feet + bandEps do not push
            envCell: 0.25, envStep: 0.1, envBox: [36, 84, 28, 132], envBand: [13.5, 19.5],   // swept-envelope grid (x0, x1, z0, z1)
-           crossLook: 3, crossMargin: 2,   // a cross edge starts only if no car reaches it within crossLook s (margin in units of track)
+           crossLook: 1.5, crossMargin: 2, span: 67,   // a cross edge starts only if no car reaches it within crossLook s (16.10: was 3); span = track the train covers
            whistleZ: 80, jointGap: 6, axles: [-4.7, -3.3, 3.3, 4.7],      // wheel axles along each car; a clack per axle per rail joint
            clackDelays: [0, 0.35, 2.0, 2.35],   // = (lead axle - each axle) / speed: one logged clack event per car per joint plays all four axles
            rumbleGain: 0.35, rumbleRef: 6, clackRange: 45, soundSpeed: 60, audioRef: 5,   // distance attenuation ref / doppler sound speed
@@ -216,7 +286,7 @@ const CONFIG = {
   soldier: { body: [0.8, 1.3, 0.5], crouchBody: 0.7, head: 0.45, base: [1.0, 0.05, 0.8], gun: [0.1, 0.12, 0.75], gunAt: [0.32, 1.05, -0.18],
              gunColor: '#3A4048', tipTime: 0.25, chips: 8, bob: 0.06, stride: 1.2,
              chevron: { range: 60, above: 0.55, size: 0.32, losHz: 10 } },
-  bot: { max: 10, hp: 100, arrive: 0.3, arriveY: 0.75, sprintCross: true,
+  bot: { max: 10, hp: 100, crossWaitCost: 5, arrive: 0.3, arriveY: 0.75, sprintCross: true,
          costClimb: 1.5, costRamp: 1.2, costJump: 4, costCross: 2, waitCost: 5, maxWait: 8,     // A* edge costs (DESIGN 16.3); waitCost per s of waiting
          stuckProgress: 0.5, stuckJump: 1.5, stuckStrafe: 2.5, strafeTime: 0.5, stuckRepath: 3.5, stuckPlace: 6,
          rideCapacity: 1, rideSpot: { flatbed: -3.75, gondola: 0 },    // where a rider stands on each deck car (along the car)
@@ -226,6 +296,44 @@ const CONFIG = {
     'ride.w': { a: 'w.ride.w', b: 'n.c.x', wait: [46.5, 0, 104], boardZ: 104, offZ: 58, step: [46.5, 0, 56], dir: -1, x: 43 },
     'ride.e': { a: 'w.ride.e', b: 's.c.y', wait: [73.5, 0, 56], boardZ: 56, offZ: 98, step: [74.0, 0, 100], dir: 1, x: 77 } },
   navTest: { pRoute: 0.2, pEdge: 0.35, pRide: 1 },
+  // ---- round 3B: combat, team play, match rules, HUD (DESIGN.md 16.4 to 16.6, 16.10) ----
+  difficulty: {      // DESIGN 16.4 presets; aim error in degrees (half angle), burst in shots, strafe = chance per engagement
+    recruit: { label: 'Recruit', reaction: 0.70, aimAcquire: 5.0, aimSettled: 2.0, settle: 1.6, headChance: 0.00, burst: [3, 4], burstPause: 0.55, vision: 90, strafe: 0.0, grenadeChance: 0.10, retreat: 25 },
+    regular: { label: 'Regular', reaction: 0.45, aimAcquire: 3.2, aimSettled: 1.1, settle: 1.1, headChance: 0.10, burst: [4, 6], burstPause: 0.35, vision: 120, strafe: 0.5, grenadeChance: 0.30, retreat: 35 },
+    veteran: { label: 'Veteran', reaction: 0.28, aimAcquire: 2.0, aimSettled: 0.55, settle: 0.7, headChance: 0.25, burst: [5, 8], burstPause: 0.22, vision: 140, strafe: 1.0, grenadeChance: 0.50, retreat: 40 } },
+  ai: { cone: 110, losHz: 10, hearRange: 40, targetSpeedK: 7, movingMult: 1.5, lostAfter: 1.5, memory: 8,
+        holdUntil: 40, huntLast: 30, coverRadius: 12, coverCheck: 3, coverHeight: 1.2, crouchEye: 1.0, coverMaxPath: 20,
+        peekStand: [0.8, 1.2], peekCrouch: [1.0, 1.8], coverLeave: 6, flankAfter: 6, flankCooldown: 12, retreatRadius: 20, retreatCalm: 8,
+        grenadeMin: 10, grenadeMax: 25, grenadeCooldown: 6, grenadeHit: 2.5, grenadeFresh: 3, sniperMin: 12, tacticalReload: 0.5,
+        strafeSwap: [0.5, 1.0], holdScan: 0.6, holdScanSpeed: 0.5,
+        rideChance: 0.35, rideMaxWait: 6, rideFlankSlack: 1.15, rideHoldMax: 15,
+        separation: 0.9, sepRate: 0.3, occupiedArrive: 1.3,
+        sprintStates: ['setup', 'cover', 'retreat', 'flank'] },
+  match: { roundsToWin: 5, roundTime: 150, freeze: 5, roundEnd: 4, maxReplays: 3, deathCam: 1.5, maxSimSeconds: 2400,
+           killFeed: 5, killFeedTime: 5, calloutGap: 4, calloutMax: 3, calloutTime: 4, dmgArcTime: 1, botLogMax: 4000,
+           playerSpawn: { green: [60, 0, 20, Math.PI], tan: [60, 0, 140, 0] },
+           botSpawns: { green: [[52, 0, 13], [56, 0, 20], [64, 0, 20], [68, 0, 18]], tan: [[60, 0, 140], [52, 0, 147], [56, 0, 140], [64, 0, 140], [68, 0, 142]] } },
+  roles: {           // DESIGN 16.4: hold node(s) and the push route into the enemy half, per team; primaries to pick from
+    west:   { primary: ['rifle', 'smg'],    green: { hold: ['n.w.5'], push: ['s.w.5', 's.w.2', 's.w.1', 's.f.wdoor', 's.f.inw'] },
+                                            tan:   { hold: ['s.w.5'], push: ['n.w.5', 'n.w.2', 'n.w.1', 'n.f.wdoor', 'n.f.inw'] } },
+    bed:    { primary: ['sniper', 'rifle'], green: { hold: ['n.bed.b'], push: ['s.bed.b', 's.bed.end', 's.bs.foot', 's.w.1', 's.f.wdoor'] },
+                                            tan:   { hold: ['s.bed.b'], push: ['n.bed.b', 'n.bed.end', 'n.w.ramp', 'n.w.1', 'n.f.wdoor'] } },
+    centre: { primary: ['smg', 'rifle'],    green: { hold: ['n.r.n'], push: ['s.r.s', 's.c.4', 's.c.2', 's.f.gate', 's.f.spawn'], ride: 'ride.e' },
+                                            tan:   { hold: ['s.r.s'], push: ['n.r.n', 'n.c.4', 'n.c.2', 'n.f.gate', 'n.f.spawn'], ride: 'ride.w' } },
+    high:   { primary: ['sniper'],          green: { hold: ['n.desk.1', 'n.ss2.b'], push: ['s.desk.1', 's.e.2', 's.f.edoor', 's.f.ine'] },
+                                            tan:   { hold: ['s.desk.1', 's.ts3.d'], push: ['n.desk.1', 'n.e.2', 'n.f.edoor', 'n.f.ine'] } },
+    east:   { primary: ['rifle', 'smg'],    green: { hold: ['n.e.6'], push: ['s.e.6', 's.e.2', 's.e.1', 's.f.edoor', 's.f.ine'] },
+                                            tan:   { hold: ['s.e.6'], push: ['n.e.6', 'n.e.2', 'n.e.1', 'n.f.edoor', 'n.f.ine'] } } },
+  roleNames: { west: 'West', bed: 'Bed', centre: 'Centre', high: 'High east', east: 'East' },
+  regions: {         // [x0, x1, y0, y1, z0, z1]; first match wins. Callout text and the laneUse bucket of each.
+    list: [['tall shelf', [103.5, 120, 19, 90, 116, 156], 'on the tall shelf', 'shelves'], ['small shelf', [103.5, 120, 19, 90, 4, 44], 'on the small shelf', 'shelves'],
+           ['desk', [95, 120, 24, 90, 55, 105], 'on the desk', 'desk'], ['chair', [85, 96, 14, 90, 70, 90], 'on the chair', 'desk'],
+           ['bed', [0, 35, 16, 90, 45, 115], 'on the bed', 'bed'], ['under bed', [0, 35, -5, 6, 45, 115], 'under the bed', 'west'],
+           ['north fort', [46, 74, -5, 9, 6, 26], 'at their fort', 'centre'], ['south fort', [46, 74, -5, 9, 134, 154], 'at their fort', 'centre'],
+           ['ruin', [51, 69, -5, 6, 71, 89], 'at the ruin', 'centre']],
+    westX: 43, eastX: 77 },
+  hud: { arcRadius: 64 },
+  storageKey: 'bedroomBattalion.settings',
   color: {
     haze: '#D6DEE8', wall: '#BFD3E0', trim: '#F2EFE6', ceiling: '#F5F2EA', plank: '#7A4E2E', plankGap: '#4A2E1A',
     sun: '#FFE2B0', hemiSky: '#FFF8EC', hemiGround: '#D8CFC4',
@@ -387,7 +495,8 @@ const INPUT_NAMES = Object.keys(vinput);
 const inp = { forward: false, back: false, left: false, right: false, jump: false, sprint: false, crouch: false, fire: false, scope: false, grenade: false, reload: false };
 const GAME_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space',
   'ShiftLeft', 'ShiftRight', 'KeyC', 'ControlLeft', 'ControlRight', 'Backquote', 'KeyR', 'KeyG', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5']);
-const WEAPON_KEYS = { Digit2: 'pistol', Digit3: 'rifle', Digit4: 'smg', Digit5: 'sniper' };
+const WEAPON_KEYS = { Digit2: 'pistol' };       // round 3B: keys 3 to 5 no longer pick weapons (the freeze-time pick does)
+const PICK_KEYS = { Digit1: 'rifle', Digit2: 'smg', Digit3: 'sniper' };
 
 function readInput(out) {
   out.forward = vinput.forward || !!keys.KeyW || !!keys.ArrowUp;
@@ -406,10 +515,15 @@ function clearKeys() { for (const k in keys) delete keys[k]; }
 function initInput(canvas) {
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Backquote' && !e.repeat) { setDebug(!game.debug); e.preventDefault(); return; }
+    if (match.active && match.phase === 'matchEnd') {        // results screen: Enter rematch, Esc title
+      if (e.code === 'Enter' && !e.repeat) { e.preventDefault(); rematch(); } else if (e.code === 'Escape') quitToTitle();
+      return;
+    }
     if (e.code === 'Escape') { if (game.phase === 'playing') pauseGame(); return; }
     if (game.phase !== 'playing') return;
     audioUnlock();
-    if (!e.repeat && e.code === 'Digit1') selectWeapon(arsenal.primary);
+    if (!e.repeat && match.active && match.phase === 'freeze' && !player.autoplay && PICK_KEYS[e.code]) pickPrimary(PICK_KEYS[e.code]);
+    else if (!e.repeat && e.code === 'Digit1') selectWeapon(arsenal.primary);
     else if (!e.repeat && WEAPON_KEYS[e.code]) selectWeapon(WEAPON_KEYS[e.code]);
     keys[e.code] = true;
     if (GAME_KEYS.has(e.code)) e.preventDefault();
@@ -418,21 +532,30 @@ function initInput(canvas) {
   window.addEventListener('blur', clearKeys);
   document.addEventListener('mousemove', (e) => {
     if (document.pointerLockElement !== canvas || game.phase !== 'playing') return;
-    const s = CONFIG.input.sensitivity * camera.fov / CONFIG.camera.fovVertical;      // scoped sensitivity scales with fov
+    const s = CONFIG.input.sensitivity * settings.sensitivity * camera.fov / CONFIG.camera.fovVertical;      // scoped sensitivity scales with fov
     player.yaw = wrapAngle(player.yaw - e.movementX * s);
     player.pitch = clamp(player.pitch - e.movementY * s, -CONFIG.input.pitchLimit, CONFIG.input.pitchLimit);
   });
-  document.addEventListener('pointerlockchange', () => {
-    if (document.pointerLockElement !== canvas && game.phase === 'playing' && game.pointerLock) pauseGame();
-  });
-  document.addEventListener('pointerlockerror', () => { game.pointerLock = false; });
+  // DESIGN 16.6 / BUGS R1 finding 4: the pause state follows the actual pointer-lock state. A click on Resume only asks for the
+  // lock; play resumes when the lock is granted, so a stale "released" event can no longer pause a game the click resumed.
+  document.addEventListener('pointerlockchange', () => syncPauseToLock());
+  document.addEventListener('pointerlockerror', () => { game.pointerLock = false; game.lockWanted = false; });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   document.addEventListener('mousedown', (e) => {
-    if (document.pointerLockElement !== canvas || game.phase !== 'playing') return;
+    if (game.phase !== 'playing') return;
+    const locked = document.pointerLockElement === canvas;
+    if (match.active && player.dead && e.button === 0 && (locked || e.target === canvas)) { spectateNext(); return; }   // left click cycles the spectated teammate
+    if (match.active && match.phase === 'freeze' && !player.autoplay && e.button === 0 && locked) { cyclePick(); return; }
+    if (!locked) return;
     audioUnlock(); keys['Mouse' + e.button] = true; e.preventDefault();
   });
   document.addEventListener('mouseup', (e) => { delete keys['Mouse' + e.button]; });
   document.addEventListener('wheel', (e) => { if (document.pointerLockElement === canvas && game.phase === 'playing' && e.deltaY) cycleWeapon(); }, { passive: true });
+}
+function syncPauseToLock() {
+  const locked = document.pointerLockElement === ui.canvas;
+  if (locked) { game.lockWanted = false; if (game.phase === 'paused') resumeGame(); else if (game.phase === 'title') { game.phase = 'playing'; hideTitle(); } return; }
+  if (game.phase === 'playing' && game.pointerLock && !(match.active && match.phase === 'matchEnd')) pauseGame();
 }
 
 // =====================================================================================================
@@ -1129,6 +1252,11 @@ function raycastWorld(ox, oy, oz, dx, dy, dz, maxDist, withTargets) {
       best = t; found = true; RH.c = null; RH.target = null; RH.soldier = b; RH.zone = z ? 'head' : 'body'; RH.nx = _rp.n[0]; RH.ny = _rp.n[1]; RH.nz = _rp.n[2];
     }
   }
+  if (withTargets && withTargets !== true && withTargets !== player && !player.dead && match.active && player.bodyPlanes) for (let z = 0; z < 2; z++) {   // a bot's shot can hit the player
+    const t = rayPlanes(ox, oy, oz, dx, dy, dz, z ? player.headPlanes : player.bodyPlanes, best);
+    if (t < 0) continue;
+    best = t; found = true; RH.c = null; RH.target = null; RH.soldier = player; RH.zone = z ? 'head' : 'body'; RH.nx = _rp.n[0]; RH.ny = _rp.n[1]; RH.nz = _rp.n[2];
+  }
   RH.t = best;
   return found;
 }
@@ -1545,11 +1673,20 @@ function respawnPlayer() {
   resetArsenal();                      // one grenade per life, full ammunition
   placePlayer(s[0], s[1], s[2], s[3], 0);
 }
-function hurtPlayer(amount, cause, extra) {
+// Returns true when the hit killed the player. In a match the player dies (no respawn; spectating follows); in free play the
+// round 1 placeholder still respawns at the Green spawn.
+function hurtPlayer(amount, cause, extra, attacker, head) {
   const p = player;
+  if (p.dead) return false;
+  if (cause === 'fall' && game.god && match.active) return false;
   p.health = Math.max(0, p.health - amount);
   damageLog.push(Object.assign({ amount, cause, time: game.time }, extra));
-  if (p.health <= 0) respawnPlayer();          // round 1 placeholder: back to the Green spawn at full health
+  if (attacker && attacker !== p && match.active) { dmgArcs.push({ x: attacker.x, z: attacker.z, t: CONFIG.match.dmgArcTime }); if (dmgArcs.length > 6) dmgArcs.shift(); }
+  if (p.brain && match.active) brainHurt(p, attacker);
+  if (p.health > 0) return false;
+  if (match.active) { killSoldier(p, attacker || null, (extra && extra.weapon) || cause, !!head); return true; }
+  respawnPlayer();
+  return true;
 }
 function hurtActor(p, amount, cause, extra) { if (p === player) hurtPlayer(amount, cause, extra); else hurtBot(p, amount, cause, extra); }
 function leaveGround(p) { p.onGround = false; p.ground = null; p.peakY = p.y; }
@@ -1604,7 +1741,17 @@ function tickClimb(p, I, dt) {
 function stepRefused(p, x, z, g) {
   return g.c !== null && g.y > p.y + 0.02 && !volumeFree(x, z, CONFIG.player.radius, g.y + CONFIG.move.stepUp, g.y + p.height);
 }
-function tickPlayer(dt) { readInput(inp); moveActor(player, inp, dt); }
+function tickPlayer(dt) {
+  const p = player;
+  if (match.active && (p.dead || p.autoplay)) {  // a body, or autoplay driving the player as a Green bot through the same brain
+    if (p.input) { driveSoldier(p, dt, false); return; }
+    moveActor(p, NO_INPUT, dt); return;
+  }
+  readInput(inp);
+  if (matchFrozen()) { inp.forward = inp.back = inp.left = inp.right = inp.jump = inp.sprint = inp.fire = inp.grenade = inp.reload = inp.scope = false; }   // freeze: nobody moves or fires
+  moveActor(p, inp, dt);
+  if (match.active) updateHitVolumes(p);
+}
 // The movement controller (round 1), shared by the player and the bots: p is the actor, I its (real or virtual) input this tick.
 function moveActor(p, I, dt) {
   TQ.walls = !(p.wedgeT > 0);
@@ -1740,21 +1887,31 @@ const shotLog = [];        // last 200 shots {weapon, hit, zone, damage, distanc
 const targets = [];
 const grenadesLive = [];
 const grenadeLog = { removed: 0 };        // grenades removed for leaving the room (should stay 0)
-function rnd() {           // seeded, so shots repeat exactly from a fresh page
-  let t = (arsenal.seed += 0x6D2B79F5);
+// Round 3B: every soldier carries an arsenal (the player's is `arsenal`). Weapon functions take the shooter S (default the player),
+// so bots fire through exactly the same code: fire rate, magazine, reload, spread, recoil.
+player.arsenal = arsenal;
+function makeArsenal(seed) {
+  const A = { current: 'rifle', primary: 'rifle', guns: {}, cool: 0, drawT: 0, reloadT: 0, bloom: 0, sinceShot: 9, recP: 0, recY: 0, recRateP: 0, recRateY: 0,
+    scope: 0, scopeLock: 0, kick: 0, flash: 0, boltT: 0, press: 0, fireHeld: false, reloadBuf: false, dryHeld: false, grenades: 0, gAim: false, gHeld: false,
+    gHold: 0, shake: 0, hitT: 0, hitKill: false, seed: seed >>> 0, lastFire: -1 };
+  resetArsenal(A);
+  return A;
+}
+function rnd(A = arsenal) {      // seeded per arsenal, so shots repeat exactly from a fresh page (and per bot from its seed)
+  let t = (A.seed += 0x6D2B79F5);
   t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
 function logShot(e) { e.time = +game.time.toFixed(3); shotLog.push(e); if (shotLog.length > 200) shotLog.shift(); return e; }
-function resetArsenal() {
-  const A = arsenal;
+function sfxS(S, name) { if (S === player && !player.autoplayCam) sfx(name); else sfxAt(name, S.x, S.y + 1.4, S.z, S.vx, S.vz); }   // the player hears its own gun at full level
+function resetArsenal(A = arsenal) {
   for (const k in CONFIG.weapons) A.guns[k] = { mag: CONFIG.weapons[k].mag, reserve: CONFIG.weapons[k].reserve, cool: 0 };
   A.grenades = CONFIG.grenade.count;
   A.cool = A.drawT = A.reloadT = A.bloom = A.recP = A.recY = A.scope = A.scopeLock = A.kick = A.boltT = A.press = A.shake = A.hitT = 0;
-  A.gAim = false; A.flash = 0; A.reloadBuf = false; A.dryHeld = false;
+  A.gAim = false; A.gHeld = false; A.flash = 0; A.reloadBuf = false; A.dryHeld = false; A.fireHeld = false;
 }
-function selectWeapon(name) {
-  const A = arsenal;
+function selectWeapon(name, S = player) {
+  const A = S.arsenal;
   if (!CONFIG.weapons[name]) return false;
   if (name !== 'pistol') A.primary = name;
   if (name === A.current) return true;
@@ -1762,21 +1919,21 @@ function selectWeapon(name) {
   A.current = name;
   A.reloadT = 0; A.reloadBuf = false;  // switching cancels a reload
   A.drawT = CONFIG.weapons[name].draw; A.bloom = 0; A.scope = 0; A.scopeLock = 0; A.cool = A.guns[name].cool || 0; A.boltT = 0; A.press = 0;
-  sfx('switch');
+  sfxS(S, 'switch');
   return true;
 }
 function cycleWeapon() { selectWeapon(arsenal.current === 'pistol' ? arsenal.primary : 'pistol'); }
-function startReload() {
-  const A = arsenal, W = CONFIG.weapons[A.current], g = A.guns[A.current];
+function startReload(S = player) {
+  const A = S.arsenal, W = CONFIG.weapons[A.current], g = A.guns[A.current];
   if (A.reloadT > 0 || g.mag >= W.mag || g.reserve <= 0) return false;
   if (A.drawT > 0) { A.reloadBuf = true; return false; }      // R during a draw is buffered and starts when the draw ends
   A.reloadT = W.reload; A.scope = 0; A.boltT = 0;
-  sfx('reload_' + A.current);
+  sfxS(S, 'reload_' + A.current);
   return true;
 }
 // Current spread half-angle in degrees: base (or scoped) + bloom, times the stance multipliers.
-function currentSpread() {
-  const A = arsenal, W = CONFIG.weapons[A.current], M = CONFIG.gun.spreadMult, p = player;
+function currentSpread(S = player) {
+  const A = S.arsenal, W = CONFIG.weapons[A.current], M = CONFIG.gun.spreadMult, p = S;
   const air = !p.onGround && !p.climbing, moving = Math.hypot(p.vx, p.vz) > CONFIG.gun.moveSpeed;
   if (W.scopedSpread !== undefined && A.scope >= 0.999) return air ? W.scopedAir : moving ? W.scopedMove : W.scopedSpread;   // scoped: set values
   let s = W.spread + A.bloom, m = 1;
@@ -1806,29 +1963,32 @@ function viewBasis(yaw, pitch) {
   B.fx = -sy * cp; B.fy = sp; B.fz = -cy * cp; B.rx = cy; B.rz = -sy; B.ux = sy * sp; B.uy = cp; B.uz = cy * sp;
   return B;
 }
-function fireShot() {
-  const A = arsenal, name = A.current, W = CONFIG.weapons[name], g = A.guns[name], p = player, G = CONFIG.gun, L = CONFIG.input.pitchLimit;
-  const spread = currentSpread(), B = viewBasis(p.yaw, p.pitch);
-  const a = Math.tan(spread * DEG * Math.sqrt(rnd())), ph = rnd() * Math.PI * 2, ca = a * Math.cos(ph), sa = a * Math.sin(ph);
+const teamColor = (t) => (t === 'green' ? CONFIG.target.green : CONFIG.target.tan);
+function fireShot(S = player) {
+  const A = S.arsenal, name = A.current, W = CONFIG.weapons[name], g = A.guns[name], p = S, G = CONFIG.gun, L = CONFIG.input.pitchLimit, me = S === player;
+  const spread = currentSpread(S), B = viewBasis(p.yaw, p.pitch);
+  const a = Math.tan(spread * DEG * Math.sqrt(rnd(A))), ph = rnd(A) * Math.PI * 2, ca = a * Math.cos(ph), sa = a * Math.sin(ph);
   let dx = B.fx + ca * B.rx + sa * B.ux, dy = B.fy + sa * B.uy, dz = B.fz + ca * B.rz + sa * B.uz;
   const dl = Math.hypot(dx, dy, dz); dx /= dl; dy /= dl; dz /= dl;
+  const brx = B.rx, brz = B.rz, bfx = B.fx, bfy = B.fy, bfz = B.fz;
   const ox = p.x, oy = p.y + p.eye, oz = p.z;
-  const hit = raycastWorld(ox, oy, oz, dx, dy, dz, G.range, true), dist = hit ? RH.t : G.range;
+  const hit = raycastWorld(ox, oy, oz, dx, dy, dz, G.range, S), dist = hit ? RH.t : G.range;
   const hx = ox + dx * dist, hy = oy + dy * dist, hz = oz + dz * dist;
   const e = { weapon: name, hit: null, zone: null, damage: 0, distance: hit ? +dist.toFixed(3) : null, kind: null, surface: null, spread: +spread.toFixed(3) };
+  if (!me) e.by = S.id;
   let killed = false;
   if (hit && RH.target) {
     const T = RH.target, dmg = W.damage * falloffFactor(W, dist) * (RH.zone === 'head' ? G.headMult : 1);
     e.hit = T.id; e.zone = RH.zone; e.damage = +dmg.toFixed(2); e.kind = 'target'; e.surface = 'plastic';
     killed = damageTarget(T, dmg, RH.zone, hx, hy, hz);
-    spawnBurst(hx, hy, hz, RH.nx, RH.ny, RH.nz, CONFIG.fx.impact.plastic, T.team === 'green' ? CONFIG.target.green : CONFIG.target.tan, 3);
+    spawnBurst(hx, hy, hz, RH.nx, RH.ny, RH.nz, CONFIG.fx.impact.plastic, teamColor(T.team), 3);
     A.hitT = killed ? G.killMarkTime : G.hitMarkTime; A.hitKill = killed;
   } else if (hit && RH.soldier) {
     const b = RH.soldier, dmg = W.damage * falloffFactor(W, dist) * (RH.zone === 'head' ? G.headMult : 1), zone = RH.zone;
-    const res = damageSoldier(b, dmg, zone, player);
+    const res = damageSoldier(b, dmg, zone, S, name);
     e.hit = b.id; e.zone = zone; e.damage = +res.dealt.toFixed(2); e.kind = 'soldier'; e.surface = 'plastic';
     killed = res.killed;
-    spawnBurst(hx, hy, hz, RH.nx, RH.ny, RH.nz, CONFIG.fx.impact.plastic, b.team === 'green' ? CONFIG.target.green : CONFIG.target.tan, 3);
+    spawnBurst(hx, hy, hz, RH.nx, RH.ny, RH.nz, CONFIG.fx.impact.plastic, teamColor(b.team), 3);
     if (res.dealt > 0) { A.hitT = killed ? G.killMarkTime : G.hitMarkTime; A.hitKill = killed; }
   } else if (hit) {
     const c = RH.c;
@@ -1838,11 +1998,12 @@ function fireShot() {
     if (!c.train) spawnDecal(hx, hy, hz, RH.nx, RH.ny, RH.nz);       // decals are static: none on the moving cars
   }
   logShot(e);
-  spawnCasing(ox + B.rx * 0.34 + B.fx * 0.8, oy - 0.22 + B.fy * 0.8, oz + B.rz * 0.34 + B.fz * 0.8, B.rx * 2.6 + p.vx, 2.2, B.rz * 2.6 + p.vz, p.y);
-  sfx('shot_' + name);
-  if (e.kind === 'target' || (e.kind === 'soldier' && e.damage > 0)) sfx(killed ? 'kill' : 'hit');
-  // recoil: the view kicks, then 60 % of the kick returns over 0.25 s
-  const up = W.kickUp * DEG, side = (rnd() * 2 - 1) * W.kickSide * DEG;
+  if (me) spawnCasing(ox + brx * 0.34 + bfx * 0.8, oy - 0.22 + bfy * 0.8, oz + brz * 0.34 + bfz * 0.8, brx * 2.6 + p.vx, 2.2, brz * 2.6 + p.vz, p.y);
+  sfxS(S, 'shot_' + name);
+  if (me && (e.kind === 'target' || (e.kind === 'soldier' && e.damage > 0))) sfx(killed ? 'kill' : 'hit');
+  if (typeof onGunshot === 'function') onGunshot(S);
+  // recoil: the view kicks, then part of the kick returns over 0.25 s
+  const up = W.kickUp * DEG, side = (rnd(A) * 2 - 1) * W.kickSide * DEG;
   p.pitch = clamp(p.pitch + up, -L, L); p.yaw = wrapAngle(p.yaw + side);
   A.recP += up * G.recoilReturn; A.recY += side * G.recoilReturn;
   A.recRateP = A.recP / G.recoilReturnTime; A.recRateY = Math.abs(A.recY) / G.recoilReturnTime;
@@ -1851,26 +2012,28 @@ function fireShot() {
   A.sinceShot = 0; A.kick += W.vmKick; A.flash = G.flashTime; A.dryHeld = false; A.shake = Math.max(A.shake, W.shake); A.lastFire = game.time;
   if (W.scopeDrop) { A.scopeLock = W.scopeDrop; A.boltT = W.boltSound; }
   A.cool = (W.auto ? Math.max(A.cool, -DT) : 0) + W.interval;       // automatic fire keeps exact cadence across ticks
-  // tracer: from the current gun's muzzle after the kick; none at all while scoped (round 3 carry-over 1)
+  // tracer: from the current gun's muzzle after the kick; none at all while scoped (round 3 carry-over 1). Bots: from their gun.
   const tl = Math.min(dist, G.tracerLen);
-  if (A.scope <= 0.6) { muzzleWorld(_mw); spawnTracer(_mw.x, _mw.y, _mw.z, ox + dx * tl, oy + dy * tl, oz + dz * tl, W); }
+  if (me && !player.autoplayCam) { if (A.scope <= 0.6) { muzzleWorld(_mw); spawnTracer(_mw.x, _mw.y, _mw.z, ox + dx * tl, oy + dy * tl, oz + dz * tl, W); } }
+  else spawnTracer(ox + brx * 0.32 + bfx * 0.7, oy - 0.45 + bfy * 0.7, oz + brz * 0.32 + bfz * 0.7, ox + dx * tl, oy + dy * tl, oz + dz * tl, W);
   return e;
 }
 // One trigger pull (pressed = a new press this tick). Returns the shot record, or null if nothing was fired.
-function pullTrigger(pressed) {
-  const A = arsenal, g = A.guns[A.current], p = player;
+function pullTrigger(pressed, S = player, I = inp) {
+  const A = S.arsenal, g = A.guns[A.current], p = S;
   if (A.gAim || p.climbing || p.sprinting || A.drawT > 0 || A.reloadT > 0) return null;      // no firing while sprinting or on a string
   if (g.mag <= 0) {                    // empty: a fire press, or an automatic held through empty (once per hold), dry-clicks and reloads
-    const held = CONFIG.weapons[A.current].auto && inp.fire && !A.dryHeld && A.cool <= 1e-6;
-    if (pressed || A.press > 0 || held) { A.press = 0; A.dryHeld = true; sfx('dry'); startReload(); }
+    const held = CONFIG.weapons[A.current].auto && I.fire && !A.dryHeld && A.cool <= 1e-6;
+    if (pressed || A.press > 0 || held) { A.press = 0; A.dryHeld = true; sfxS(S, 'dry'); startReload(S); }
     return null;
   }
   if (A.cool > 1e-6) return null;
   A.press = 0;
-  return fireShot();
+  return fireShot(S);
 }
-function tickWeapons(dt) {
-  const A = arsenal, G = CONFIG.gun, p = player, L = CONFIG.input.pitchLimit;
+// The trigger, reload, grenade and scope logic of one soldier for one tick, from its input I.
+function tickArsenal(S, I, dt) {
+  const A = S.arsenal, G = CONFIG.gun, p = S, L = CONFIG.input.pitchLimit;
   const W = CONFIG.weapons[A.current], g = A.guns[A.current];
   if (A.recP > 0) { const d = Math.min(A.recP, A.recRateP * dt); A.recP -= d; p.pitch = clamp(p.pitch - d, -L, L); }
   if (A.recY !== 0) { const d = Math.sign(A.recY) * Math.min(Math.abs(A.recY), A.recRateY * dt); A.recY -= d; p.yaw = wrapAngle(p.yaw - d); }
@@ -1881,35 +2044,39 @@ function tickWeapons(dt) {
   if (A.cool > 0) A.cool -= dt;
   for (const k in A.guns) if (k !== A.current && A.guns[k].cool > 0) A.guns[k].cool = Math.max(0, A.guns[k].cool - dt);
   if (A.flash > 0) A.flash = A.flash - dt > 1e-6 ? A.flash - dt : 0;
-  if (A.drawT > 0) { A.drawT = Math.max(0, A.drawT - dt); if (A.drawT <= 0 && A.reloadBuf) { A.reloadBuf = false; startReload(); } }
+  if (A.drawT > 0) { A.drawT = Math.max(0, A.drawT - dt); if (A.drawT <= 0 && A.reloadBuf) { A.reloadBuf = false; startReload(S); } }
   if (A.scopeLock > 0) A.scopeLock -= dt;
-  if (A.boltT > 0) { A.boltT -= dt; if (A.boltT <= 0) sfx('bolt'); }
+  if (A.boltT > 0) { A.boltT -= dt; if (A.boltT <= 0) sfxS(S, 'bolt'); }
   if (A.reloadT > 0) {
     A.reloadT -= dt;
     if (A.reloadT <= 1e-9) { A.reloadT = 0; const n = Math.min(W.mag - g.mag, g.reserve); g.mag += n; g.reserve -= n; }
   }
-  const pressed = inp.fire && !A.fireHeld;
-  A.fireHeld = inp.fire;
-  if (!inp.fire) A.dryHeld = false;
+  const pressed = I.fire && !A.fireHeld;
+  A.fireHeld = I.fire;
+  if (!I.fire) A.dryHeld = false;
   if (pressed) A.press = G.pressBuffer; else if (A.press > 0) A.press -= dt;
-  if (inp.reload) startReload();
+  if (I.reload) startReload(S);
   // grenade: hold to aim (arc preview), release to throw
-  if (inp.grenade && !A.gHeld && A.grenades > 0 && !p.climbing) { A.gAim = true; A.gHold = 0; A.scope = 0; sfx('grenade_pin'); }
-  if (A.gAim) { if (inp.grenade) A.gHold += dt; else { A.gAim = false; throwGrenadeNow(); } }
-  A.gHeld = inp.grenade;
+  if (I.grenade && !A.gHeld && A.grenades > 0 && !p.climbing) { A.gAim = true; A.gHold = 0; A.scope = 0; sfxS(S, 'grenade_pin'); }
+  if (A.gAim) { if (I.grenade) A.gHold += dt; else { A.gAim = false; throwGrenadeNow(S); } }
+  A.gHeld = I.grenade;
   // sniper scope: held on right mouse, drops for the first part of the bolt cycle
-  const wantScope = !!W.scopeFov && inp.scope && A.reloadT <= 0 && A.drawT <= 0 && A.scopeLock <= 0 && !A.gAim && !p.climbing;
+  const wantScope = !!W.scopeFov && I.scope && A.reloadT <= 0 && A.drawT <= 0 && A.scopeLock <= 0 && !A.gAim && !p.climbing;
   A.scope = approach(A.scope, wantScope ? 1 : 0, dt / (W.scopeIn || 0.2));
-  if (A.press > 0 || (W.auto && inp.fire)) pullTrigger(pressed);
+  if (A.press > 0 || (W.auto && I.fire)) pullTrigger(pressed, S, I);
   else if (A.cool < 0) A.cool = 0;
+}
+const NO_INPUT = (() => { const o = {}; for (const k of INPUT_NAMES) o[k] = false; return o; })();
+function tickWeapons(dt) {
+  if (!player.dead) tickArsenal(player, player.autoplay && match.active ? (matchFrozen() ? NO_INPUT : player.input) : matchFrozen() ? NO_INPUT : inp, dt);
   tickGrenades(dt); if (game.range) tickTargets(dt); tickFx(dt);
 }
 
 // ---- grenade (toy firecracker) -------------------------------------------------------------------------------
 // Thrown at the view direction plus upDeg. Created at the eye and swept to the release point beside it; if anything is in
 // the way it starts at the contact point (backed off by its body), so it never starts inside a collider or outside the room.
-function grenadeStart(out) {
-  const p = player, K = CONFIG.grenade, B = viewBasis(p.yaw, clamp(p.pitch + K.upDeg * DEG, -1.55, 1.55));
+function grenadeStart(out, S = player) {
+  const p = S, K = CONFIG.grenade, B = viewBasis(p.yaw, clamp(p.pitch + K.upDeg * DEG, -1.55, 1.55));
   out.vx = B.fx * K.speed; out.vy = B.fy * K.speed; out.vz = B.fz * K.speed;      // read before viewBasis is called again (shared object)
   const F = viewBasis(p.yaw, p.pitch), ex = p.x, ey = p.y + p.eye, ez = p.z;
   const rx = F.rx * 0.2 + F.fx * 0.5, ry = -0.15 + F.fy * 0.5, rz = F.rz * 0.2 + F.fz * 0.5, rl = Math.hypot(rx, ry, rz);
@@ -1973,11 +2140,13 @@ function grenadeTrainPush(o) {
     }
   }
 }
-function throwGrenadeNow() {
-  const A = arsenal;
+function throwGrenadeNow(S = player) {
+  const A = S.arsenal;
   if (A.grenades <= 0) return false;
   A.grenades--;
-  grenadesLive.push(grenadeStart({ fuse: CONFIG.grenade.fuse }));
+  const o = grenadeStart({ fuse: CONFIG.grenade.fuse, owner: S }, S);
+  grenadesLive.push(o);
+  if (typeof onGrenadeThrown === 'function') onGrenadeThrown(S, o);
   return true;
 }
 function blastDamage(bx, by, bz, cx, cy, cz) {      // linear from the centre to 0 at the radius; blocked by any collider in between
@@ -1995,13 +2164,14 @@ function burstGrenade(o) {
   const B = fx.blasts[fx.blastNext]; fx.blastNext = (fx.blastNext + 1) % fx.blasts.length;
   B.x = bx; B.y = by; B.z = bz; B.t = 0; B.on = true;           // flash sphere and light, animated in tickFx
   let any = false;
-  for (const b of bots) {                        // soldiers: linear falloff, blocked by colliders; never teammates
+  const owner = o.owner || player, mine = owner === player;
+  for (const b of bots) {                        // soldiers: linear falloff, blocked by colliders; never teammates (the thrower can hurt itself)
     if (b.dead) continue;
     const dmg = blastDamage(bx, by, bz, b.x, b.y + 0.9, b.z);
     if (dmg <= 0) continue;
-    const d = Math.hypot(b.x - bx, b.y + 0.9 - by, b.z - bz), res = damageSoldier(b, dmg, 'blast', player);
-    logShot({ weapon: 'grenade', hit: b.id, zone: 'blast', damage: +res.dealt.toFixed(2), distance: +d.toFixed(3), kind: 'soldier', surface: 'plastic', spread: 0 });
-    if (res.dealt > 0) { any = true; arsenal.hitT = res.killed ? CONFIG.gun.killMarkTime : CONFIG.gun.hitMarkTime; arsenal.hitKill = res.killed; sfx(res.killed ? 'kill' : 'hit'); }
+    const d = Math.hypot(b.x - bx, b.y + 0.9 - by, b.z - bz), res = damageSoldier(b, dmg, 'blast', owner, 'grenade');
+    logShot({ weapon: 'grenade', hit: b.id, zone: 'blast', damage: +res.dealt.toFixed(2), distance: +d.toFixed(3), kind: 'soldier', surface: 'plastic', spread: 0, by: mine ? undefined : owner.id });
+    if (res.dealt > 0) { any = true; if (mine) { arsenal.hitT = res.killed ? CONFIG.gun.killMarkTime : CONFIG.gun.hitMarkTime; arsenal.hitKill = res.killed; sfx(res.killed ? 'kill' : 'hit'); } }
   }
   if (game.range) for (const T of targets) {
     if (T.down) continue;
@@ -2015,9 +2185,9 @@ function burstGrenade(o) {
     sfx(killed ? 'kill' : 'hit');
   }
   if (!any) logShot({ weapon: 'grenade', hit: null, zone: null, damage: 0, distance: null, kind: null, surface: null, spread: 0 });
-  const p = player, pd = Math.hypot(p.x - bx, p.y + 0.9 - by, p.z - bz), self = blastDamage(bx, by, bz, p.x, p.y + 0.9, p.z);
+  const p = player, pd = Math.hypot(p.x - bx, p.y + 0.9 - by, p.z - bz), self = p.dead ? 0 : blastDamage(bx, by, bz, p.x, p.y + 0.9, p.z);
   if (pd < K.shakeRange) arsenal.shake = Math.max(arsenal.shake, K.burstShake * (1 - pd / K.shakeRange));     // shake scaled by distance
-  if (self > 0) hurtPlayer(self, 'grenade', { distance: pd });
+  if (self > 0) damageSoldier(p, self, 'blast', owner, 'grenade', { distance: pd });
 }
 function tickGrenades(dt) {
   for (let i = grenadesLive.length - 1; i >= 0; i--) {
@@ -2308,7 +2478,7 @@ function precompileEffects() {
 }
 function renderViewmodel() {
   const A = arsenal, V = CONFIG.viewmodel;
-  if (game.view || A.scope > 0.6) return;
+  if (game.view || A.scope > 0.6 || player.dead) return;
   for (const k in vm.guns) vm.guns[k].visible = k === A.current;
   vm.hand.visible = A.gAim;
   if (A.gAim) {                                  // the gun drops away (poseViewmodel) and the hand rises with the firecracker
@@ -2557,8 +2727,8 @@ function deckWait(rid, t, ignoreClaims) {
 function astar(fromId, toId, opts = {}) {
   const s = NAV.index[fromId], goal = NAV.index[toId];
   if (s === undefined || goal === undefined) return null;
-  const ride = !!opts.ride, key = s * 4096 + goal;
-  if (!ride && NAV.cache.has(key)) return NAV.cache.get(key);
+  const ride = !!opts.ride, cross = !!opts.cross, key = s * 4096 + goal;
+  if (!ride && !cross && NAV.cache.has(key)) return NAV.cache.get(key);
   const P = NAV.pos, G = P[goal], g = NAV.g, f = NAV.f, mark = NAV.mark, closed = NAV.closed, heap = NAV.heap, stamp = ++NAV.stamp;
   const h = (i) => Math.hypot(P[i][0] - G[0], P[i][1] - G[1], P[i][2] - G[2]);
   const t0 = opts.time !== undefined ? opts.time : game.time, spd = CONFIG.move.walk, B = CONFIG.bot;
@@ -2579,7 +2749,7 @@ function astar(fromId, toId, opts = {}) {
         const w = deckWait(L.e.ride, t0 + g[u] / spd);
         if (w > B.maxWait) continue;
         c += w * B.waitCost;
-      }
+      } else if (cross && L.e.kind === 'cross') c += crossWaitAt(L.e, t0 + g[u] / spd) * B.crossWaitCost;   // 16.10: expected wait at a closed crossing
       const v = L.to, ng = g[u] + c;
       if (mark[v] === stamp && ng >= g[v]) continue;
       if (closed[v] === stamp) continue;
@@ -2594,7 +2764,7 @@ function astar(fromId, toId, opts = {}) {
     nodes.reverse(); edges.reverse();
     res = { nodes, edges, cost: g[goal] };
   }
-  if (!ride) NAV.cache.set(key, res);
+  if (!ride && !cross) NAV.cache.set(key, res);
   return res;
 }
 // ---- bots ----
@@ -2607,6 +2777,15 @@ function resetNavStats(seed) {
     stuckJumps: 0, stuckStrafes: 0, stuckRepaths: 0, tasks: { route: 0, edge: 0, random: 0, ride: 0 }, noPath: 0, pushes0: trainStats.pushes, hitWhileWaiting: 0,
     rescues0: trainRescueLog.length, stuck0: stuckLog.length });
 }
+// The navigation and brain fields every bot has; the player gets them too when autoplay drives it as a Green bot.
+function initNavFields(b, nodeId) {
+  Object.assign(b, { input: newBotInput(), dead: false, deadT: 0, tip: 0, botState: 'idle',
+    path: [nodeId], edges: [], pi: 1, lastNode: nodeId, goal: nodeId, task: null, ride: null, crossing: false, evade: null,
+    blocked: 0, speedWas: 0, groundWas: true, stuckT: 0, stuckRef: Infinity, stuckStage: 0, strafeT: 0, strafeDir: 1, jumpNow: false, hist: [nodeId],
+    avoid: {}, avoidT: 0, bob: 0, ryaw: b.yaw || 0, losT: 0, chevron: false, trainHits: 0, stuckEp: null, stuckCarry: 0, sprintMove: false, brain: null,
+    bodyPlanes: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+    headPlanes: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]] });
+}
 function newBotInput() { const o = {}; for (const k of INPUT_NAMES) o[k] = false; return o; }
 function spawnBot(team, nodeId, opts = {}) {
   if (bots.length >= CONFIG.bot.max) return false;
@@ -2615,22 +2794,17 @@ function spawnBot(team, nodeId, opts = {}) {
   if (nodeId && WAYPOINTS.nodes[nodeId]) pos = WAYPOINTS.nodes[nodeId];
   else { const S = BOT_SPAWNS[team]; pos = S[bots.filter((b) => b.team === team).length % S.length]; nodeId = nearestNode(pos[0], pos[1], pos[2]); }
   const slot = [...Array(CONFIG.bot.max).keys()].find((k) => !bots.some((b) => b.slot === k));
-  const P = CONFIG.player, n = bots.filter((b) => b.team === team).length + 1;
+  const P = CONFIG.player, n = opts.name ? 0 : bots.filter((b) => b.team === team).length + 1;
   const b = {
-    id: 'bot.' + (++botSeq), name: (team === 'green' ? 'Green ' : 'Tan ') + n, team, slot, weapon: 'rifle',
+    id: 'bot.' + (++botSeq), name: opts.name || (team === 'green' ? 'Green ' : 'Tan ') + n, team, slot, weapon: 'rifle',
     x: pos[0], y: pos[1], z: pos[2], vx: 0, vy: 0, vz: 0, yaw: team === 'green' ? Math.PI : 0, pitch: 0, px: pos[0], py: pos[1], pz: pos[2],
     height: P.height, eye: P.eye, peye: P.eye, onGround: true, ground: null, surface: null, crouching: false,
     climbing: null, climbNeedRelease: false, grabCooldown: 0, health: CONFIG.bot.hp, hp: CONFIG.bot.hp, peakY: pos[1], coyote: 0, jumpBuf: 0, jumpHeld: false,
     launched: false, launchX: 0, launchZ: 0, warped: false, sprinting: false, fwdLock: false, noGrab: null, noGrabT: 0,
-    stepOff: 0, pstepOff: 0, moved: 0, safe: { x: pos[0], y: pos[1], z: pos[2] }, carryVx: 0, carryVz: 0, wedgeT: 0,
-    input: newBotInput(), dead: false, deadT: 0, tip: 0, botState: 'idle', navTest: !!opts.navTest,
-    path: [nodeId], edges: [], pi: 1, lastNode: nodeId, goal: nodeId, task: null, ride: null, crossing: false, evade: null,
-    blocked: 0, speedWas: 0, groundWas: true, stuckT: 0, stuckRef: Infinity, stuckStage: 0, strafeT: 0, strafeDir: 1, jumpNow: false, hist: [nodeId],
-    avoid: {}, avoidT: 0, bob: 0, ryaw: 0, losT: 0, chevron: false, trainHits: 0,
-    bodyPlanes: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
-    headPlanes: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+    stepOff: 0, pstepOff: 0, moved: 0, safe: { x: pos[0], y: pos[1], z: pos[2] }, carryVx: 0, carryVz: 0, wedgeT: 0, navTest: !!opts.navTest
   };
-  b.ryaw = b.yaw;
+  initNavFields(b, nodeId);
+  b.arsenal = makeArsenal(Math.floor(brnd() * 4294967296));
   placeActor(b, pos[0], pos[1], pos[2]);
   bots.push(b); ACTORS.push(b);
   updateHitVolumes(b);
@@ -2699,24 +2873,36 @@ function botRepath(b, why) {
   b.path = ['@'].concat(rest.nodes); b.edges = [pseudo].concat(rest.edges); b.pi = 1;
   b.stuckRef = Infinity;
 }
-function hurtBot(b, amount, cause) { damageSoldier(b, amount, cause, null); }
-// Damage from the player's gun or grenade (or the world when attacker is null). Teammates take none.
-function damageSoldier(b, dmg, zone, attacker) {
+function hurtBot(b, amount, cause) { damageSoldier(b, amount, cause, null, cause); }
+// Damage to any soldier, the player included, from a shooter / thrower (or the world when attacker is null). Teammates take none;
+// a thrower's own grenade still hurts the thrower. Returns {dealt, killed}.
+function damageSoldier(b, dmg, zone, attacker, weapon, extra) {
   if (b.dead) return { dealt: 0, killed: false };
-  const atk = attacker === player ? 'green' : attacker ? attacker.team : null;
-  if (atk && atk === b.team) return { dealt: 0, killed: false, friendly: true };
+  const atk = attacker ? attacker.team : null;
+  if (atk && atk === b.team && attacker !== b) return { dealt: 0, killed: false, friendly: true };
+  if (b === player) {
+    if (game.god && match.active) return { dealt: 0, killed: false, god: true };
+    if (match.active && match.stats && attacker && zone !== 'fall' && zone !== 'blast') { match.stats.hits++; if (zone === 'head') match.stats.headHits++; }
+    const cause = zone === 'fall' ? 'fall' : weapon === 'grenade' ? 'grenade' : 'shot';
+    const died = hurtPlayer(dmg, cause, Object.assign({ attacker: attacker ? attacker.id : null, weapon: weapon || null, zone }, extra), attacker, zone === 'head');
+    return { dealt: dmg, killed: died };
+  }
   b.hp = Math.max(0, b.hp - dmg); b.health = b.hp;
-  if (zone !== 'fall') spawnNumber(b.x, b.y + 1.85 + CONFIG.target.numberAbove, b.z, dmg, zone === 'head', b.hp <= 0);
+  if (match.active && match.stats && attacker && zone !== 'fall' && zone !== 'blast') { match.stats.hits++; if (zone === 'head') match.stats.headHits++; }
+  if (attacker === player && zone !== 'fall') spawnNumber(b.x, b.y + 1.85 + CONFIG.target.numberAbove, b.z, dmg, zone === 'head', b.hp <= 0);
+  if (typeof brainHurt === 'function') brainHurt(b, attacker);
   if (b.hp > 0) return { dealt: dmg, killed: false };
-  killSoldier(b);
+  killSoldier(b, attacker, weapon || zone, zone === 'head');
   return { dealt: dmg, killed: true };
 }
-function killSoldier(b) {
+function killSoldier(b, attacker, weapon, head) {
   b.dead = true; b.botState = 'dead'; b.deadT = 0; b.hp = 0; b.health = 0; b.crouching = false;
-  for (const k of INPUT_NAMES) b.input[k] = false;
+  if (b.input) for (const k of INPUT_NAMES) b.input[k] = false;
   for (const c of TRAIN.cars) if (c.claim === b.id) c.claim = null;
   b.ride = null; b.evade = null; b.crossing = false;
-  spawnBurst(b.x, b.y + 1, b.z, 0, 1, 0, CONFIG.fx.impact.plastic, b.team === 'green' ? CONFIG.target.green : CONFIG.target.tan, CONFIG.soldier.chips);
+  if (b.arsenal) { b.arsenal.gAim = false; b.arsenal.scope = 0; }
+  spawnBurst(b.x, b.y + 1, b.z, 0, 1, 0, CONFIG.fx.impact.plastic, teamColor(b.team), CONFIG.soldier.chips);
+  if (typeof onSoldierKilled === 'function') onSoldierKilled(b, attacker || null, weapon || null, !!head);
 }
 // Oriented hit volumes (body, head) from the bot's position, yaw and stance. Arrays are reused: no allocation per tick.
 function setOBox(P, cx, cz, fx, fz, hd, hw, y0, y1) {
@@ -2732,7 +2918,12 @@ const onPadXZ = (x, z) => COLLIDERS.some((c) => c.kind === 'pad' && x > c.x0 && 
 function botArrived(b, B, nextEdge) {
   if (b.launched && ((nextEdge && nextEdge.kind === 'launch') || onPadXZ(B[0], B[2]))) return true;     // the pad fired: node done (as walkPath)
   if (b.climbing || !b.onGround) return false;
-  return Math.hypot(B[0] - b.x, B[2] - b.z) < CONFIG.bot.arrive && Math.abs(B[1] - b.y) < CONFIG.bot.arriveY;
+  const dh = Math.hypot(B[0] - b.x, B[2] - b.z);
+  if (Math.abs(B[1] - b.y) >= CONFIG.bot.arriveY) return false;
+  if (dh < CONFIG.bot.arrive) return true;
+  // 16.10 separation: another soldier standing on the node keeps this one up to 0.9 away, so near enough counts as arrived
+  if (dh < CONFIG.ai.occupiedArrive) for (const o of ACTORS) if (o !== b && !o.dead && Math.hypot(B[0] - o.x, B[2] - o.z) < CONFIG.ai.separation && Math.abs(o.y - B[1]) < 1) return true;
+  return false;
 }
 function botReached(b) {
   const e = b.edges[b.pi - 1], id = b.path[b.pi];
@@ -2741,6 +2932,7 @@ function botReached(b) {
     if (nav.edgeUse) { nav.edgeUse[dk] = (nav.edgeUse[dk] || 0) + 1; nav.kindUse[e.kind] = (nav.kindUse[e.kind] || 0) + 1; }
     if (e.kind === 'cross' && nav.crossUse) { nav.crossUse[e.key] = (nav.crossUse[e.key] || 0) + 1; nav.crossTotal++; }
     if (e.kind === 'ride' && nav.rides) nav.rides[e.ride]++;
+    if (match.active && match.stats) { if (e.kind === 'ride') match.stats.rides[b.team]++; if (e.kind === 'cross') match.stats.crossings[b.team]++; }
   }
   if (e && b.stuckEp === e.key) { b.stuckEp = null; b.stuckCarry = 0; }              // got through the edge it once stalled on
   b.crossing = false; b.ride = null; b.lastNode = id; b.pi++;
@@ -2759,6 +2951,15 @@ function crossSafe(e) {
   const T = CONFIG.train, last = TRAIN.cars[TRAIN.cars.length - 1], lo = last.sR - T.crossMargin, hi = TRAIN.sRaw + T.speed * T.crossLook + T.crossMargin;
   const c0 = lo + modL(e.sRange[0] - lo), c1 = c0 + (e.sRange[1] - e.sRange[0]);
   return !(c0 <= hi || c1 >= lo + TRACK.length);
+}
+// Seconds a bot arriving at time t would wait before this crossing opens (0 if open).
+function crossWaitAt(e, t) {
+  if (!e.sRange) return 0;
+  const T = CONFIG.train, head = trainHeadS(t), lo = head - T.span - T.crossMargin, hi = head + T.speed * T.crossLook + T.crossMargin;
+  const c0 = lo + modL(e.sRange[0] - lo), c1 = c0 + (e.sRange[1] - e.sRange[0]);
+  if (c0 <= hi) return Math.max(0, (c1 - lo) / T.speed);
+  if (c1 >= lo + TRACK.length) return Math.max(0, (c1 - TRACK.length - lo) / T.speed);
+  return 0;
 }
 function holdAt(b, P) { if (Math.hypot(P[0] - b.x, P[2] - b.z) > 0.6) { aimYaw(b, P[0], P[2]); b.input.forward = true; } }
 // Leave the envelope by the shortest way: the nearest point outside it with ground at this level and a clear straight line.
@@ -2882,8 +3083,12 @@ function botThink(b, dt) {
   b.riding = riding;
   if (!b.evade && !riding && !b.crossing && !b.climbing && actorInEnvelope(b)) startEvade(b);     // never stand on the track
   if (b.evade) { botEvade(b, dt); return; }
+  if (b.brain && match.active && brainTick(b, dt)) return;                                         // round 3B: the combat brain owns this tick
   for (let guard = 0; guard < 4; guard++) {
-    if (b.pi >= b.path.length) { if (b.navTest) navNextTask(b); if (b.pi >= b.path.length) { b.botState = 'idle'; b.node = b.lastNode; b.nextNode = null; b.edge = null; return; } }
+    if (b.pi >= b.path.length) {
+      if (b.navTest) navNextTask(b); else if (b.brain && match.active) brainPathDone(b);
+      if (b.pi >= b.path.length) { b.botState = 'idle'; b.node = b.lastNode; b.nextNode = null; b.edge = null; if (b.brain && match.active) brainIdle(b, dt); return; }
+    }
     if (!botArrived(b, nodeXYZ(b.path[b.pi]), b.edges[b.pi])) break;
     botReached(b);
   }
@@ -2896,7 +3101,7 @@ function botThink(b, dt) {
   }
   b.botState = b.climbing ? 'climb' : b.crossing ? 'cross' : 'move';
   const str = e.kind === 'climb' ? (e.str || (e.str = stringForEdge(A, B))) : null;
-  if (steerTo(b, I, B, e.kind, str, b.crossing && CONFIG.bot.sprintCross, b.blocked)) b.blocked = 0;
+  if (steerTo(b, I, B, e.kind, str, (b.crossing && CONFIG.bot.sprintCross) || (b.sprintMove && !b.crossing), b.blocked)) b.blocked = 0;
   if (b.strafeT > 0 && !b.climbing) { I.left = b.strafeDir < 0; I.right = b.strafeDir > 0; }
   if (b.jumpNow) { I.jump = true; b.jumpNow = false; }
   botStuck(b, dt, B);
@@ -2952,6 +3157,7 @@ function navNextTask(b) {
 }
 function startNavTest(opts = {}) {
   const n = clamp(Math.round(opts.bots || 10), 1, CONFIG.bot.max), seed = opts.seed === undefined ? 1 : opts.seed;
+  if (match.active) endMatchQuietly();
   removeBots(); seedBots(seed); resetNavStats(seed); nav.on = true;
   if (game.phase !== 'playing') startGame({ pointerLock: false });
   const starts = NAV.stop.filter((id) => WAYPOINTS.nodes[id][1] === 0);
@@ -2986,31 +3192,464 @@ function navStats() {
     trainPushes: trainStats.pushes - (nav.pushes0 || 0), hitWhileWaiting: nav.hitWhileWaiting, noPath: nav.noPath, dead: bots.filter((b) => b.dead).length
   };
 }
+// One soldier driven by a brain or the nav test (a bot, or the player under autoplay): think, trigger, move, bookkeeping.
+function driveSoldier(b, dt, armed) {
+  if (b.dead) { for (let k = 0; k < INPUT_NAMES.length; k++) b.input[INPUT_NAMES[k]] = false; if (b !== player) b.deadT += dt; }
+  else botThink(b, dt);
+  if (armed && !b.dead && b.arsenal && b !== player) tickArsenal(b, matchFrozen() ? NO_INPUT : b.input, dt);
+  b.speedWas = Math.hypot(b.vx, b.vz); b.groundWas = b.onGround;
+  moveActor(b, b.input, dt);
+  b.tip = approach(b.tip, b.dead ? 1 : 0, dt / CONFIG.soldier.tipTime);                 // rigid tip-over, as the dummies
+  if (b.onGround && !b.dead) b.bob += b.moved / CONFIG.soldier.stride * Math.PI;          // walk bob follows distance walked
+  if (b.groundWas && b.onGround && !b.climbing && b.input.forward && b.moved < 0.3 * Math.max(b.speedWas, 1) * dt) b.blocked++; else if (b.onGround) b.blocked = 0;
+  if (!b.dead) {
+    if (nav.on && actorInEnvelope(b) && !b.riding && !b.crossing && !(b.ride && b.ride.phase !== 'wait')) {
+      nav.envTime += dt; nav.envTimeByBot[b.id] = (nav.envTimeByBot[b.id] || 0) + dt;
+    }
+    if (match.active && match.phase === 'live' && actorInEnvelope(b) && !b.riding && !b.crossing && !(b.ride && b.ride.phase !== 'wait') && match.stats) match.stats.envTime += dt;
+    updateHitVolumes(b);
+  }
+}
 function tickBots(dt) {
+  for (let i = 0; i < bots.length; i++) driveSoldier(bots[i], dt, match.active);
+  // teammate chevrons: line of sight from the viewer's eye (the player, or the soldier being spectated), at chevron.losHz per bot (staggered)
+  const C = CONFIG.soldier.chevron, every = Math.max(1, Math.round(CONFIG.sim.hz / C.losHz)), tick = Math.round(game.time * CONFIG.sim.hz), V = viewSubject();
   for (let i = 0; i < bots.length; i++) {
     const b = bots[i];
-    if (b.dead) { for (let k = 0; k < INPUT_NAMES.length; k++) b.input[INPUT_NAMES[k]] = false; b.deadT += dt; }
-    else botThink(b, dt);
-    b.speedWas = Math.hypot(b.vx, b.vz); b.groundWas = b.onGround;
-    moveActor(b, b.input, dt);
-    b.tip = approach(b.tip, b.dead ? 1 : 0, dt / CONFIG.soldier.tipTime);                 // rigid tip-over, as the dummies
-    if (b.onGround && !b.dead) b.bob += b.moved / CONFIG.soldier.stride * Math.PI;          // walk bob follows distance walked
-    if (b.groundWas && b.onGround && !b.climbing && b.input.forward && b.moved < 0.3 * Math.max(b.speedWas, 1) * dt) b.blocked++; else if (b.onGround) b.blocked = 0;
-    if (!b.dead) {
-      if (nav.on && actorInEnvelope(b) && !b.riding && !b.crossing && !(b.ride && b.ride.phase !== 'wait')) {
-        nav.envTime += dt; nav.envTimeByBot[b.id] = (nav.envTimeByBot[b.id] || 0) + dt;
+    if (b.team !== 'green' || b.dead || b === V) { b.chevron = false; continue; }
+    if ((tick + i) % every) continue;
+    const ex = V.x, ey = V.y + V.eye, ez = V.z, hx = b.x - ex, hy = b.y + 1.65 - ey, hz = b.z - ez, d = Math.hypot(hx, hy, hz);
+    b.chevron = d <= C.range && (d < 0.5 || !raycastWorld(ex, ey, ez, hx / d, hy / d, hz / d, d - 0.3, false));
+  }
+}
+// ---- round 3B: the combat brain (DESIGN 16.4, 16.10). Runs on top of the 3A navigation: it sets paths for the movement states
+//      (advance, flank, cover, retreat, hunt) and takes the tick itself when it stands and fights (engage, hold, peek). ----
+const AIX = { coverBits: null, tick: 0 };
+const diffP = () => CONFIG.difficulty[match.difficulty] || CONFIG.difficulty.regular;
+const BRAIN_STATES = ['advance', 'hold', 'engage', 'cover', 'flank', 'retreat', 'hunt'];
+function viewSubject() {                         // whose eye the camera uses: the player, or the soldier being spectated
+  if (match.active && player.dead && match.spec) { const b = bots.find((o) => o.id === match.spec); if (b) return b; }
+  return player;
+}
+const bodyCY = (s) => (s.crouching ? 0.4 : 0.7), headCY = (s) => (s.crouching ? 0.975 : 1.575);
+// DESIGN 16.4: per node, which of 8 directions has cover within 3 units at 1.2 high (bit k = direction k * 45 degrees from north)
+function buildCoverInfo() {
+  const AI = CONFIG.ai, ids = NAV.ids;
+  AIX.coverBits = new Uint8Array(ids.length);
+  withStatic(() => ids.forEach((id, i) => {
+    const P = WAYPOINTS.nodes[id];
+    let bits = 0;
+    for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, dx = -Math.sin(a), dz = -Math.cos(a); if (raycastWorld(P[0], P[1] + AI.coverHeight, P[2], dx, 0, dz, AI.coverCheck, false)) bits |= 1 << k; }
+    AIX.coverBits[i] = bits;
+  }));
+}
+function losClear(ax, ay, az, bx, by, bz) {
+  const dx = bx - ax, dy = by - ay, dz = bz - az, d = Math.hypot(dx, dy, dz);
+  if (d < 0.3) return true;
+  return !raycastWorld(ax, ay, az, dx / d, dy / d, dz / d, d - 0.25, false);
+}
+function regionOf(x, y, z) {                     // [callout text, laneUse bucket]
+  const L = CONFIG.regions;
+  for (const r of L.list) { const B = r[1]; if (x >= B[0] && x <= B[1] && y >= B[2] && y <= B[3] && z >= B[4] && z <= B[5]) return r; }
+  return x < L.westX ? ['west', null, 'west lane', 'west'] : x > L.eastX ? ['east', null, 'east lane', 'east'] : ['centre', null, 'centre', 'centre'];
+}
+function setState(b, st) {
+  const B = b.brain;
+  if (B.state === st) return;
+  botLog.push({ time: +game.time.toFixed(2), bot: b.id, name: b.name, from: B.state, to: st });
+  if (botLog.length > CONFIG.match.botLogMax) botLog.shift();
+  B.state = st;
+}
+function postCallout(b, text) {
+  if (!match.active || b.team !== 'green' || b === player || b.dead && text !== "I'm down") return;
+  if (game.time - (b.lastCallout || -99) < CONFIG.match.calloutGap) return;
+  b.lastCallout = game.time;
+  callouts.push({ time: +game.time.toFixed(2), who: b.name, text });
+  if (callouts.length > 200) callouts.shift();
+}
+function newBrain(b, role) {
+  const R = CONFIG.roles[role][b.team];
+  return { role, hold: R.hold[Math.floor(brnd() * R.hold.length)], push: R.push, pushIdx: 0, phase: 'setup', state: 'advance',
+    target: null, vis: false, visBody: false, mem: null, seenSince: 0, lastSeenT: -99, engageT: 0, reactT: 0, burstLeft: 0, pauseT: 0, aimHead: false,
+    errYaw: 0, errPitch: 0, lastFireSeen: -1, semi: false, strafeOn: false, strafeSwap: 0, atCover: false, coverT: 0, peekStand: false, peekT: 0,
+    coverCool: -99, retreated: false, calmT: 0, flankCool: -99, flankStage: 0, grenadeCool: -99, throwT: 0, throwYaw: 0, throwPitch: 0,
+    lastHurtT: -99, threat: null, heard: null, rideTry: !!(R.ride && brnd() < CONFIG.ai.rideChance), rideWaitT: 0, rideDone: false, scanT: brnd() * 10,
+    huntT: 0, lostT: 0, gotoNode: null };
+}
+// A path from where the soldier stands: walk straight to the nearest node it can reach, then A* (16.10 crossing waits included).
+function pathFromHere(b, goal, extra) {
+  if (!goal || !WAYPOINTS.nodes[goal]) return false;
+  const L = WAYPOINTS.nodes[b.lastNode];
+  let start = null;
+  if (L && Math.hypot(L[0] - b.x, L[2] - b.z) < 0.6 && Math.abs(L[1] - b.y) < 0.8) start = b.lastNode;
+  else {
+    const cands = NAV.stop.map((id) => { const P = WAYPOINTS.nodes[id]; return [id, Math.hypot(P[0] - b.x, (P[1] - b.y) * 3, P[2] - b.z)]; }).sort((u, v) => u[1] - v[1]).slice(0, 8);
+    for (const [id] of cands) { const P = WAYPOINTS.nodes[id]; if (Math.abs(P[1] - b.y) < 0.8 && segmentWalkable(b.x, b.y, b.z, P[0], P[2])) { start = id; break; } }
+    if (!start) start = cands.length ? cands[0][0] : b.lastNode;
+  }
+  let res = extra && extra.res ? extra.res : astar(start, goal, { cross: true });
+  if (extra && extra.res && extra.res.nodes[0] !== start) { const lead = astar(start, extra.res.nodes[0], { cross: true }); res = lead ? appendPath(lead, extra.res) : null; }
+  if (!res) return false;
+  b.ride = null; b.crossing = false; b.goal = goal;
+  if (start === b.lastNode && L && Math.hypot(L[0] - b.x, L[2] - b.z) < 0.6) { b.path = res.nodes.slice(); b.edges = res.edges.slice(); }
+  else { const pseudo = { a: '@', b: start, kind: 'walk', key: '(from here)>' + start, pseudo: true, oneWay: true }; b.path = ['@'].concat(res.nodes); b.edges = [pseudo].concat(res.edges); }
+  b.pi = 1; b.stuckT = 0; b.stuckRef = Infinity; b.stuckStage = 0;
+  return true;
+}
+function stopMoving(b) { b.path = [b.lastNode]; b.edges = []; b.pi = 1; }
+function nearestNodeLevel(x, y, z) { return nearestNode(x, y, z); }
+// ---- plan: setup to the hold node, hold, push along the lane, hunt in the last 30 s ----
+function brainStartRound(b) {
+  const B = b.brain; if (!B || b.dead) return;
+  B.phase = 'setup'; setState(b, 'advance'); b.sprintMove = true;
+  pathFromHere(b, B.hold);
+}
+function resumePlan(b) {
+  const B = b.brain; B.atCover = false; b.sprintMove = false; B.gotoNode = null;
+  if (B.phase === 'hunt') return startHunt(b, true);
+  if (B.phase === 'setup' || B.phase === 'hold') { B.phase = 'setup'; setState(b, 'advance'); b.sprintMove = true; if (!pathFromHere(b, B.hold)) { B.phase = 'hold'; setState(b, 'hold'); } return; }
+  setState(b, 'advance');
+  const n = B.push[Math.min(B.pushIdx, B.push.length - 1)];
+  pathFromHere(b, n);
+}
+function startPush(b) {
+  const B = b.brain, AI = CONFIG.ai, R = CONFIG.roles[B.role][b.team];
+  if (B.rideTry && !B.rideDone && R.ride) {      // 16.10: Centre rides its team's edge when the expected wait is under 6 s
+    const C = CONFIG.rides[R.ride], to = astar(b.lastNode, C.a, { cross: true });
+    if (to) {
+      const w = deckWait(R.ride, game.time + to.cost / CONFIG.move.walk + 0.5);
+      if (w < AI.rideMaxWait) {
+        const e = WAYPOINTS.edges.find((x) => x.ride === R.ride);
+        let k = 0, bd = Infinity; B.push.forEach((id, i) => { const P = WAYPOINTS.nodes[id], Q = WAYPOINTS.nodes[C.b], d = Math.hypot(P[0] - Q[0], P[2] - Q[2]); if (d < bd) { bd = d; k = i; } });
+        B.pushIdx = Math.min(k + 1, B.push.length - 1);
+        if (pathFromHere(b, C.b, { res: appendPath(to, { nodes: [C.a, C.b], edges: [e], cost: e.cost }) })) { B.phase = 'push'; B.rideDone = true; setState(b, 'advance'); match.stats.rideTries++; return true; }
       }
-      updateHitVolumes(b);
+      if (B.rideWaitT < AI.rideHoldMax) return false;        // keep holding for a better deck, up to rideHoldMax
     }
   }
-  // teammate chevrons: line of sight from the player's eye, checked at chevron.losHz per bot (staggered)
-  const C = CONFIG.soldier.chevron, every = Math.max(1, Math.round(CONFIG.sim.hz / C.losHz)), tick = Math.round(game.time * CONFIG.sim.hz);
-  for (let i = 0; i < bots.length; i++) {
-    const b = bots[i];
-    if (b.team !== 'green' || b.dead) { b.chevron = false; continue; }
-    if ((tick + i) % every) continue;
-    const ex = player.x, ey = player.y + player.eye, ez = player.z, hx = b.x - ex, hy = b.y + 1.65 - ey, hz = b.z - ez, d = Math.hypot(hx, hy, hz);
-    b.chevron = d <= C.range && (d < 0.5 || !raycastWorld(ex, ey, ez, hx / d, hy / d, hz / d, d - 0.3, false));
+  B.phase = 'push'; B.pushIdx = 0; setState(b, 'advance'); b.sprintMove = false;
+  pathFromHere(b, B.push[0]);
+  return true;
+}
+function startHunt(b, again) {
+  const B = b.brain, M = match.teamMem[b.team], enemyFort = b.team === 'green' ? 's.f.spawn' : 'n.f.spawn';
+  B.phase = 'hunt'; setState(b, 'hunt'); b.sprintMove = false; B.huntT = game.time; B.atCover = false;
+  const goal = M && game.time - M.t < 20 ? nearestNode(M.x, M.y, M.z) : enemyFort;
+  if (!pathFromHere(b, goal) && !again) pathFromHere(b, enemyFort);
+}
+function brainPathDone(b) {
+  const B = b.brain;
+  if (B.state === 'cover' || B.state === 'retreat') { B.atCover = true; B.coverT = game.time; B.peekT = 0; B.peekStand = false; return; }
+  if (B.state === 'flank') {
+    if (B.flankStage === 1 && B.gotoNode) { B.flankStage = 2; pathFromHere(b, B.gotoNode); return; }
+    return resumePlan(b);
+  }
+  if (B.phase === 'setup') { B.phase = 'hold'; setState(b, 'hold'); b.sprintMove = false; return; }
+  if (B.phase === 'push') { if (B.pushIdx < B.push.length - 1) { B.pushIdx++; pathFromHere(b, B.push[B.pushIdx]); } else { setState(b, 'hold'); } return; }
+  if (B.phase === 'hunt' && game.time - B.huntT > 4) startHunt(b, true);
+}
+function brainIdle(b, dt) {                      // standing at the end of a path: scan toward the enemy side
+  const B = b.brain, AI = CONFIG.ai;
+  B.scanT += dt * AI.holdScanSpeed;
+  const P = WAYPOINTS.nodes[B.push[Math.min(B.pushIdx, B.push.length - 1)]] || WAYPOINTS.nodes[B.push[0]];
+  const base = P ? Math.atan2(-(P[0] - b.x), -(P[2] - b.z)) : (b.team === 'green' ? Math.PI : 0);
+  b.yaw = wrapAngle(base + Math.sin(B.scanT) * AI.holdScan); b.pitch = 0;
+  if (B.heard && game.time - B.heard.t < 3) { b.yaw = Math.atan2(-(B.heard.x - b.x), -(B.heard.z - b.z)); }
+  maybeTacticalReload(b);
+}
+// ---- perception: 110 degree cone, range by difficulty, line of sight to head and body, at losHz per soldier (staggered) ----
+function perceive(b) {
+  const B = b.brain, D = diffP(), AI = CONFIG.ai, coneCos = Math.cos(AI.cone / 2 * DEG);
+  const ex = b.x, ey = b.y + b.eye, ez = b.z, fx = -Math.sin(b.yaw), fz = -Math.cos(b.yaw);
+  let best = null, bd = Infinity, bVis = false;
+  for (const e of match.soldiers) {
+    if (e.dead || e.team === b.team) continue;
+    const dx = e.x - ex, dz = e.z - ez, dh = Math.hypot(dx, dz), d = Math.hypot(dh, e.y + 1 - ey);
+    if (d > D.vision) continue;
+    if (dh > 2.5 && (dx * fx + dz * fz) / dh < coneCos) continue;
+    const vb = losClear(ex, ey, ez, e.x, e.y + bodyCY(e), e.z), vh = vb ? true : losClear(ex, ey, ez, e.x, e.y + headCY(e), e.z);
+    if (!vb && !vh) continue;
+    const score = d * (e === B.target ? 0.8 : 1);
+    if (score < bd) { bd = score; best = e; bVis = vb; }
+  }
+  const was = B.target;
+  if (best) {
+    if (best !== was) { B.target = best; B.engageT = 0; B.reactT = D.reaction; B.burstLeft = 0; B.pauseT = 0; B.strafeOn = brnd() < D.strafe; B.seenSince = game.time;
+      if (!B.mem || B.mem.who !== best.id || game.time - B.mem.t > 5) postCallout(b, 'Enemy ' + regionOf(best.x, best.y, best.z)[2] + (best.onGround && best.ground && best.ground.train ? '' : ''));
+      if (best.onGround && best.ground && best.ground.train) postCallout(b, 'Enemy on the train'); }
+    B.vis = true; B.visBody = bVis; B.lastSeenT = game.time;
+    B.mem = B.mem || { x: 0, y: 0, z: 0, t: 0, who: null }; B.mem.x = best.x; B.mem.y = best.y; B.mem.z = best.z; B.mem.t = game.time; B.mem.who = best.id;
+    const M = match.teamMem[b.team]; M.x = best.x; M.y = best.y; M.z = best.z; M.t = game.time;
+  } else { B.vis = false; B.visBody = false; if (was && was.dead) B.target = null; }
+}
+function onGunshot(S) {                          // a gunshot within hearRange reveals the shooter's position to enemies
+  if (!match.active || match.phase !== 'live') return;
+  if (match.stats) match.stats.shots[S.team]++;
+  const R = CONFIG.ai.hearRange;
+  for (const b of match.soldiers) {
+    if (b.dead || !b.brain || b.team === S.team) continue;
+    if (Math.hypot(b.x - S.x, b.y - S.y, b.z - S.z) > R) continue;
+    const H = b.brain.heard || (b.brain.heard = { x: 0, y: 0, z: 0, t: 0 }); H.x = S.x; H.y = S.y; H.z = S.z; H.t = game.time;
+  }
+}
+function brainHurt(b, attacker) {                // being hit reveals the attacker's direction
+  if (!b.brain || !match.active) return;
+  const B = b.brain; B.lastHurtT = game.time;
+  if (attacker && attacker !== b) { const H = B.heard || (B.heard = { x: 0, y: 0, z: 0, t: 0 }); H.x = attacker.x; H.y = attacker.y; H.z = attacker.z; H.t = game.time; B.threat = attacker; }
+  if (b.hp > 0) postCallout(b, "I'm hit");
+}
+function onGrenadeThrown(S) { if (match.active && match.stats) match.stats.grenades[S.team]++; }
+// ---- engage: reaction time, aim error that settles, bursts through the real weapon code ----
+function aimAt(b, x, y, z) { const dx = x - b.x, dz = z - b.z; b.yaw = Math.atan2(-dx, -dz); b.pitch = clamp(Math.atan2(y - (b.y + b.eye), Math.hypot(dx, dz)), -1.4, 1.4); }
+function chooseWeapon(b, d) {
+  const A = b.arsenal, P = A.primary, gp = A.guns[P], gs = A.guns.pistol;
+  let want = P;
+  if (gp.mag + gp.reserve <= 0) want = 'pistol';
+  else if (P === 'sniper' && d < CONFIG.ai.sniperMin) want = 'pistol';
+  if (want === 'pistol' && gs.mag + gs.reserve <= 0) want = P;
+  if (A.current !== want && A.reloadT <= 0) selectWeapon(want, b);
+}
+function teammateInLine(b, T) {
+  const ex = b.x, ey = b.y + b.eye, ez = b.z, tx = T.x, ty = T.y + bodyCY(T), tz = T.z, dx = tx - ex, dy = ty - ey, dz = tz - ez, d = Math.hypot(dx, dy, dz);
+  if (!raycastWorld(ex, ey, ez, dx / d, dy / d, dz / d, d, b)) return false;
+  return !!(RH.soldier && RH.soldier.team === b.team);
+}
+function maybeTacticalReload(b) {
+  const A = b.arsenal, W = CONFIG.weapons[A.current], g = A.guns[A.current];
+  if (A.reloadT <= 0 && g.mag < W.mag * CONFIG.ai.tacticalReload && g.reserve > 0) b.input.reload = true;
+}
+function engage(b, T, dt, fromCover) {
+  const B = b.brain, I = b.input, D = diffP(), AI = CONFIG.ai, A = b.arsenal;
+  if (B.state !== 'cover' && B.state !== 'retreat') setState(b, 'engage');
+  B.engageT += dt;
+  const d = Math.hypot(T.x - b.x, T.y - b.y, T.z - b.z);
+  chooseWeapon(b, d);
+  const W = CONFIG.weapons[A.current], sniper = A.current === 'sniper';
+  // stance and movement: snipers scope, crouch and stand still (16.10); others may strafe on flat ground
+  let moving = false;
+  if (sniper) { I.scope = true; I.crouch = true; }
+  else if (B.strafeOn && !fromCover && b.onGround) {
+    B.strafeSwap -= dt;
+    if (B.strafeSwap <= 0) { B.strafeSwap = lerp(AI.strafeSwap[0], AI.strafeSwap[1], brnd()); b.strafeDir = brnd() < 0.5 ? -1 : 1; }
+    const sx = Math.cos(b.yaw) * b.strafeDir, sz = -Math.sin(b.yaw) * b.strafeDir;     // right vector times direction
+    const g = withStatic(() => groundBelow(b.x + sx * 1.2, b.z + sz * 1.2, CONFIG.player.radius, b.y + CONFIG.move.stepUp, b.y + CONFIG.move.stepUp));
+    if (g.c && g.y > b.y - 0.7 && !inEnvelope(b.x + sx * 1.6, b.z + sz * 1.6, true)) { I.right = b.strafeDir > 0; I.left = b.strafeDir < 0; moving = true; }
+    else b.strafeDir = -b.strafeDir;
+  }
+  // aim: exact point plus an error that settles over time, scaled by target speed and own movement
+  const ts = Math.hypot(T.vx || 0, T.vz || 0), settle = Math.min(1, B.engageT / D.settle);
+  const err = lerp(D.aimAcquire, D.aimSettled, settle) * (1 + ts / AI.targetSpeedK) * (moving || Math.hypot(b.vx, b.vz) > 0.5 ? AI.movingMult : 1);
+  const ty = T.y + (B.aimHead ? headCY(T) : bodyCY(T));
+  aimAt(b, T.x, ty, T.z);
+  b.yaw = wrapAngle(b.yaw + B.errYaw * err * DEG); b.pitch = clamp(b.pitch + B.errPitch * err * DEG, -1.4, 1.4);
+  if (B.engageT < B.reactT || A.reloadT > 0 || A.drawT > 0) return true;
+  if (sniper && (A.scope < 0.999 || Math.hypot(b.vx, b.vz) > 0.3)) return true;
+  if (B.pauseT > 0) { B.pauseT -= dt; return true; }
+  if (B.burstLeft <= 0) {
+    if (teammateInLine(b, T)) { B.pauseT = 0.3; return true; }
+    const r = W.auto ? D.burst : [1, 1];
+    B.burstLeft = r[0] + Math.floor(brnd() * (r[1] - r[0] + 1)); B.aimHead = brnd() < D.headChance;
+    const a = brnd() * Math.PI * 2, m = Math.sqrt(brnd()); B.errYaw = Math.cos(a) * m; B.errPitch = Math.sin(a) * m;
+    B.lastFireSeen = A.lastFire;
+  }
+  if (A.lastFire !== B.lastFireSeen) {
+    B.lastFireSeen = A.lastFire; B.burstLeft--;
+    if (B.burstLeft <= 0) { B.pauseT = W.auto ? D.burstPause : Math.max(D.burstPause, W.interval + 0.05); return true; }
+  }
+  if (W.auto) I.fire = true; else { B.semi = !B.semi; I.fire = B.semi; }
+  return true;
+}
+// ---- cover: a node within 12 units with no line of sight from the threat at crouch eye height (prefiltered by the 8 cover bits) ----
+function findCover(b, tx, ty, tz, radius, nearMate) {
+  const AI = CONFIG.ai;
+  let best = null, bs = Infinity;
+  for (const id of NAV.stop) {
+    const P = WAYPOINTS.nodes[id], d = Math.hypot(P[0] - b.x, P[1] - b.y, P[2] - b.z);
+    if (d > radius || d < 0.5) continue;
+    if (P[1] < CONFIG.train.cab + 0.5 && inEnvelope(P[0], P[2], true)) continue;
+    const a = Math.atan2(-(tx - P[0]), -(tz - P[2])), k = ((Math.round(wrapAngle(a) / (Math.PI / 4)) % 8) + 8) % 8;
+    if (!(AIX.coverBits[NAV.index[id]] & (1 << k))) continue;
+    if (losClear(tx, ty, tz, P[0], P[1] + AI.crouchEye, P[2])) continue;
+    let s = d;
+    if (nearMate) { let m = Infinity; for (const o of match.soldiers) if (o !== b && !o.dead && o.team === b.team) m = Math.min(m, Math.hypot(o.x - P[0], o.z - P[2])); s = d * 0.5 + (m === Infinity ? 30 : m); }
+    if (s < bs) { bs = s; best = id; }
+  }
+  return best;
+}
+function goCover(b, threat) {
+  const B = b.brain, AI = CONFIG.ai;
+  if (game.time - B.coverCool < 4) return false;
+  B.coverCool = game.time;
+  const id = findCover(b, threat.x, threat.y + 1.6, threat.z, AI.coverRadius, false);
+  if (!id || !pathFromHere(b, id)) return false;
+  setState(b, 'cover'); B.atCover = false; b.sprintMove = true;
+  return true;
+}
+function startRetreat(b) {
+  const B = b.brain, AI = CONFIG.ai, T = B.threat || B.target || null;
+  B.retreated = true;
+  const tx = T ? T.x : b.x, ty = T ? T.y + 1.6 : b.y + 1.6, tz = T ? T.z : b.z + (b.team === 'green' ? 10 : -10);
+  const id = findCover(b, tx, ty, tz, AI.retreatRadius, true);
+  if (!id || !pathFromHere(b, id)) return false;
+  setState(b, 'retreat'); B.atCover = false; B.calmT = 0; b.sprintMove = true;
+  return true;
+}
+function startFlank(b) {                         // through an adjacent lane, then to the last known position
+  const B = b.brain, M = B.mem, X = CONFIG.regions;
+  B.flankCool = game.time + CONFIG.ai.flankCooldown;
+  const lane = M.x < X.westX ? 'west' : M.x > X.eastX ? 'east' : 'centre';
+  const to = lane === 'centre' ? (b.x < 60 ? 'west' : 'east') : 'centre';
+  let best = null, bd = Infinity;
+  for (const id of NAV.stop) {
+    const P = WAYPOINTS.nodes[id];
+    if (P[1] > 0.5) continue;
+    const l = P[0] < X.westX ? 'west' : P[0] > X.eastX ? 'east' : 'centre';
+    if (l !== to) continue;
+    const d = Math.abs(P[2] - M.z) + Math.abs(P[0] - M.x) * 0.3;
+    if (d < bd) { bd = d; best = id; }
+  }
+  if (!best) return false;
+  B.gotoNode = nearestNode(M.x, M.y, M.z);
+  // 16.10: a flank may use the team's ride edge when that route, wait included, is within 15 % of walking
+  const R = CONFIG.roles[B.role][b.team].ride || (b.team === 'green' ? 'ride.e' : 'ride.w'), C = CONFIG.rides[R];
+  const walk = astar(b.lastNode, B.gotoNode, { cross: true }), to2 = astar(b.lastNode, C.a, { cross: true }), after = astar(C.b, B.gotoNode, { cross: true });
+  if (walk && to2 && after) {
+    const w = deckWait(R, game.time + to2.cost / CONFIG.move.walk + 0.5), e = WAYPOINTS.edges.find((x) => x.ride === R);
+    const rc = to2.cost + e.cost + w * CONFIG.bot.waitCost + after.cost;
+    if (w < CONFIG.bot.maxWait && rc <= walk.cost * CONFIG.ai.rideFlankSlack) {
+      if (pathFromHere(b, B.gotoNode, { res: appendPath(appendPath(to2, { nodes: [C.a, C.b], edges: [e], cost: e.cost }), after) })) {
+        setState(b, 'flank'); B.flankStage = 2; b.sprintMove = true; match.stats.rideTries++; return true;
+      }
+    }
+  }
+  if (!pathFromHere(b, best)) return false;
+  setState(b, 'flank'); B.flankStage = 1; b.sprintMove = true;
+  return true;
+}
+function closestTo(b, M) {                       // is b the living teammate nearest to that point?
+  const d0 = Math.hypot(b.x - M.x, b.z - M.z);
+  for (const o of match.soldiers) if (o !== b && !o.dead && o.team === b.team && Math.hypot(o.x - M.x, o.z - M.z) < d0) return false;
+  return true;
+}
+// ---- grenades: at a known enemy behind cover at 10 to 25 units, when the arc solves, with the difficulty's chance ----
+const _gs = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, rest: false, car: null };
+function solveThrow(b, tx, ty, tz) {
+  const K = CONFIG.grenade, AI = CONFIG.ai, yaw0 = b.yaw, pitch0 = b.pitch, n = 40, dt = K.fuse / n;
+  b.yaw = Math.atan2(-(tx - b.x), -(tz - b.z));
+  let best = null, bd = AI.grenadeHit;
+  for (let p = -0.25; p <= 0.95; p += 0.1) {
+    b.pitch = p; grenadeStart(_gs, b); _gs.car = null;
+    for (let i = 0; i < n; i++) grenadeStep(_gs, dt, true);
+    const d = Math.hypot(_gs.x - tx, (_gs.y - ty) * 0.5, _gs.z - tz);
+    if (d < bd) { bd = d; best = p; }
+  }
+  const yaw = b.yaw; b.yaw = yaw0; b.pitch = pitch0;
+  return best === null ? null : [yaw, best];
+}
+function tryGrenade(b) {
+  const B = b.brain, AI = CONFIG.ai, M = B.mem, D = diffP();
+  if (!M || B.throwT > 0 || b.arsenal.grenades <= 0 || game.time < B.grenadeCool || game.time - M.t > AI.grenadeFresh || B.vis) return false;
+  const d = Math.hypot(M.x - b.x, M.z - b.z);
+  if (d < AI.grenadeMin || d > AI.grenadeMax) return false;
+  B.grenadeCool = game.time + AI.grenadeCooldown;
+  if (brnd() >= D.grenadeChance) return false;
+  const s = solveThrow(b, M.x, M.y + 0.2, M.z);
+  if (!s) return false;
+  B.throwYaw = s[0]; B.throwPitch = s[1]; B.throwT = 3;      // hold the pin for 2 ticks, release on the 3rd
+  return true;
+}
+// ---- the brain tick: returns true when it set this tick's input itself (the navigation does not run) ----
+function brainTick(b, dt) {
+  const B = b.brain, I = b.input, AI = CONFIG.ai, D = diffP();
+  if (matchFrozen()) { b.botState = 'freeze'; return true; }
+  if (B.throwT > 0) {                            // a grenade throw in progress: aim, hold, release
+    B.throwT--; b.yaw = B.throwYaw; b.pitch = B.throwPitch; I.grenade = B.throwT > 0; b.botState = B.state;
+    return true;
+  }
+  // movement sub-states keep the navigation (strings, rides, crossings, launches): no stopping on a string or the track
+  if (b.climbing || b.riding || b.crossing || (b.ride && b.ride.phase !== 'wait') || b.launched || actorInEnvelope(b)) return false;
+  AIX.tick = Math.round(game.time * CONFIG.sim.hz);
+  const every = Math.max(1, Math.round(CONFIG.sim.hz / AI.losHz));
+  if ((AIX.tick + b.slotP) % every === 0) perceive(b);
+  const T = B.target && !B.target.dead ? B.target : null;
+  if (!T) { B.target = null; B.vis = false; }
+  const now = game.time;
+  // retreat below the difficulty's health, once per life
+  if (!B.retreated && b.hp < D.retreat && b.hp > 0 && B.state !== 'retreat') startRetreat(b);
+  // hunt in the last 30 s
+  if (match.timeLeft <= AI.huntLast && B.phase !== 'hunt' && B.state !== 'retreat') startHunt(b);
+  if (T && B.vis) {
+    const d = Math.hypot(T.x - b.x, T.z - b.z);
+    if ((B.state === 'cover' || B.state === 'retreat') && !B.atCover && d > 8) { b.botState = B.state; return false; }   // still running to cover
+    if (B.state === 'cover' && B.atCover) return peek(b, T, dt, true);
+    if (B.state === 'retreat' && B.atCover) { I.crouch = false; B.calmT = 0; return engage(b, T, dt, true); }
+    // go to cover when hurt recently, or when the target is not in the open (only its head shows, or it is crouched)
+    if (B.state === 'engage' && (now - B.lastHurtT < 0.6 || !B.visBody || T.crouching) && b.arsenal.current !== 'sniper' && goCover(b, T)) return false;
+    b.botState = 'engage';
+    return engage(b, T, dt, false);
+  }
+  // target lost: keep watching where it was for a moment, maybe a grenade, maybe a flank
+  if (B.mem && B.state === 'engage' && now - B.lastSeenT < AI.lostAfter) {
+    aimAt(b, B.mem.x, B.mem.y + 1.2, B.mem.z); tryGrenade(b); b.botState = 'engage';
+    return true;
+  }
+  if (B.state === 'engage') { tryGrenade(b); if (B.throwT > 0) return true; resumePlan(b); return false; }
+  if (B.state === 'cover' && B.atCover) {
+    if (B.mem) tryGrenade(b);
+    if (now - B.lastSeenT > AI.coverLeave && now - B.lastHurtT > AI.coverLeave) { resumePlan(b); return false; }
+    return peek(b, null, dt, true);
+  }
+  if (B.state === 'retreat' && B.atCover) {
+    B.calmT += dt; I.crouch = true;
+    if (B.heard && now - B.heard.t < 3) aimAt(b, B.heard.x, B.heard.y + 1.2, B.heard.z);
+    maybeTacticalReload(b);
+    if (B.calmT > AI.retreatCalm && now - B.lastHurtT > AI.retreatCalm) resumePlan(b);
+    b.botState = 'retreat';
+    return true;
+  }
+  // flank a target that has held cover for flankAfter s (not the teammate closest to it)
+  if (B.mem && B.state !== 'flank' && B.state !== 'retreat' && now - B.mem.t < AI.memory && now - B.lastSeenT > AI.flankAfter && now > B.flankCool && !closestTo(b, B.mem)) {
+    if (startFlank(b)) return false;
+  }
+  // hold: wait at the hold node until 40 s into the round or the team leads in soldiers alive, then push
+  if (B.phase === 'hold') {
+    if (match.liveT >= AI.holdUntil || teamLeads(b.team)) { B.rideWaitT += dt; if (startPush(b)) return false; }
+    brainIdle(b, dt); b.botState = 'hold';
+    return true;
+  }
+  b.botState = B.state;
+  return false;
+}
+function peek(b, T, dt, atCover) {               // crouch in cover; stand to fire a burst; crouch again
+  const B = b.brain, AI = CONFIG.ai, I = b.input;
+  B.peekT -= dt;
+  if (B.peekT <= 0) { B.peekStand = !B.peekStand; B.peekT = B.peekStand ? lerp(AI.peekStand[0], AI.peekStand[1], brnd()) : lerp(AI.peekCrouch[0], AI.peekCrouch[1], brnd()); }
+  b.botState = 'cover';
+  if (B.peekStand && T) { engage(b, T, dt, true); I.crouch = b.arsenal.current === 'sniper'; return true; }
+  I.crouch = true;
+  if (B.mem) aimAt(b, B.mem.x, B.mem.y + 1.2, B.mem.z);
+  maybeTacticalReload(b);
+  return true;
+}
+function teamLeads(team) { const a = match.alive; return team === 'green' ? a.green > a.tan : a.tan > a.green; }
+// ---- 16.10 soft separation: soldiers closer than 0.9 drift apart, never into a wall; bodies do not collide ----
+function separateSoldiers() {
+  const AI = CONFIG.ai, sep = AI.separation, r = CONFIG.player.radius, M = CONFIG.move;
+  for (let i = 0; i < ACTORS.length; i++) {
+    const a = ACTORS[i];
+    if (a.dead || a.climbing) continue;
+    for (let j = i + 1; j < ACTORS.length; j++) {
+      const c = ACTORS[j];
+      if (c.dead || c.climbing || Math.abs(a.y - c.y) > 1) continue;
+      let dx = c.x - a.x, dz = c.z - a.z, d = Math.hypot(dx, dz);
+      if (d >= sep) continue;
+      if (d < 1e-4) { dx = 1; dz = 0; d = 1; } else { dx /= d; dz /= d; }
+      const push = (sep - Math.min(d, sep)) * AI.sepRate * 0.5;
+      for (const [o, s] of [[a, -1], [c, 1]]) {
+        const nx = o.x + dx * push * s, nz = o.z + dz * push * s;
+        if (firstBlocker(nx, nz, r, o.y + M.stepUp, o.y + o.height) === null) { o.x = nx; o.z = nz; }
+      }
+    }
   }
 }
 // ---- soldier models (DESIGN 16.2): one InstancedMesh of boxes for every part of every soldier, one for the chevrons ----
@@ -3018,7 +3657,7 @@ const SOLD = { mesh: null, chev: null, parts: 4 };
 function soldierMeshes() { return [SOLD.mesh, SOLD.chev, TRAIN.vis && TRAIN.vis.mesh, TRAIN.vis && TRAIN.vis.wheelMesh]; }
 function buildSoldiers(scene) {
   const n = CONFIG.bot.max, K = CONFIG.soldier;
-  SOLD.mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 90, specular: 0x444444 }), n * SOLD.parts);
+  SOLD.mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 90, specular: 0x444444 }), (n + 1) * SOLD.parts);   // + the player's own model (slot n)
   for (let i = 0; i < SOLD.mesh.count; i++) { fxPut(SOLD.mesh, i, 0, -50, 0, 0, 0, 0); SOLD.mesh.setColorAt(i, _fx.c.set('#ffffff')); }
   SOLD.mesh.castShadow = SOLD.mesh.receiveShadow = true; SOLD.mesh.frustumCulled = false; scene.add(SOLD.mesh);
   const g = new THREE.BufferGeometry(), w = 0.36, P = [];      // a downward chevron in the xy plane, unit size
@@ -3041,7 +3680,9 @@ const _sm = { root: new THREE.Matrix4(), m: new THREE.Matrix4(), t: new THREE.Ma
 function updateSoldierVisuals(alpha, realDt) {
   if (!SOLD.mesh) return;
   const K = CONFIG.soldier, m = SOLD.mesh, S = _sm;
-  for (const b of bots) {
+  const showMe = match.active && player.slot === CONFIG.bot.max && (viewSubject() !== player || !!game.view);
+  if (!showMe) { const i0 = CONFIG.bot.max * SOLD.parts; for (let i = 0; i < SOLD.parts; i++) fxPut(m, i0 + i, 0, -50, 0, 0, 0, 0); }
+  for (const b of showMe ? bots.concat(player) : bots) {
     const x = lerp(b.px, b.x, alpha), y = lerp(b.py, b.y, alpha), z = lerp(b.pz, b.z, alpha), base = b.slot * SOLD.parts;
     let yaw = b.yaw, back = 0;
     if (b.climbing) { yaw = Math.atan2(-b.climbing.ex, -b.climbing.ez); back = 0.3; }   // face the surface the string hangs by, flat against the string
@@ -3085,11 +3726,208 @@ function updateSoldierVisuals(alpha, realDt) {
 // 11. MATCH RULES  (stub: rounds, scoring, freeze time and rematch arrive in round 3)
 // =====================================================================================================
 const game = { phase: 'title', time: 0, timeScale: 1, pointerLock: false, debug: false, view: null,
-  fps: 0, drawCalls: 0, triangles: 0, ready: false, range: false };
-function tickMatch(dt) { /* round 3B */ }
+  fps: 0, drawCalls: 0, triangles: 0, ready: false, range: false, god: false };
+// Round 3B match (DESIGN 16.5): first to 5, rounds 2:30, 5 s freeze, no respawn, replays and the health tiebreak.
+// game.phase stays the app state (title / playing / paused); match.phase is the match state. __game.start() is still a free-play
+// sandbox with no match (the testers' round 1 and 2 scripts rely on it).
+const match = { active: false, phase: 'title', round: 0, score: { green: 0, tan: 0 }, timeLeft: 0, t: 0, liveT: 0, difficulty: 'regular', seed: 1,
+  autoplay: false, replays: 0, rounds: [], kills: [], soldiers: [], stats: null, laneUse: null, highGround: null, winner: null, spec: null, alive: { green: 0, tan: 0 },
+  teamMem: { green: { x: 0, y: 0, z: 0, t: -99 }, tan: { x: 0, y: 0, z: 0, t: -99 } }, roundKills: [], stuck0: 0, rescue0: 0, pick: 'rifle', endReason: '' };
+const killFeed = [], callouts = [], botLog = [], dmgArcs = [];
+function matchFrozen() { return match.active && match.phase !== 'live'; }
+function countAlive() { let g = 0, t = 0; for (const s of match.soldiers) if (!s.dead) { if (s.team === 'green') g++; else t++; } match.alive.green = g; match.alive.tan = t; }
+function newLane() { return { west: 0, centre: 0, east: 0, bed: 0, desk: 0, shelves: 0 }; }
+function startMatch(opts = {}) {
+  const diff = CONFIG.difficulty[opts.difficulty] ? opts.difficulty : settings.difficulty;
+  removeBots(); nav.on = false;
+  const seed = opts.seed === undefined ? (Date.now() & 0xffffff) : opts.seed;
+  seedBots(seed); arsenal.seed = (seed * 2654435761) >>> 0;
+  Object.assign(match, { active: true, phase: 'freeze', round: 0, score: { green: 0, tan: 0 }, difficulty: diff, seed, autoplay: !!opts.autoplay, replays: 0, rounds: [],
+    kills: [], winner: null, spec: null, roundKills: [], stuck0: stuckLog.length, rescue0: trainRescueLog.length, endReason: '', t0: game.time,
+    stats: { shots: { green: 0, tan: 0 }, hits: 0, headHits: 0, kills: 0, headKills: 0, grenades: { green: 0, tan: 0 }, rides: { green: 0, tan: 0 },
+      crossings: { green: 0, tan: 0 }, rideTries: 0, envTime: 0 },
+    laneUse: { green: newLane(), tan: newLane() }, highGround: { green: 0, tan: 0 } });
+  killFeed.length = 0; callouts.length = 0; botLog.length = 0; dmgArcs.length = 0;
+  const p = player;
+  Object.assign(p, { team: 'green', name: 'You', id: 'player', dead: false, deadT: 0, tip: 0, kills: 0, deaths: 0 });
+  initNavFields(p, 'n.f.spawn');
+  p.autoplay = match.autoplay; p.slot = CONFIG.bot.max;
+  for (let i = 1; i <= 4; i++) spawnBot('green', null, { name: 'Green ' + i });
+  for (let i = 1; i <= 5; i++) spawnBot('tan', null, { name: 'Tan ' + i });
+  match.soldiers = [p].concat(bots);
+  paintSoldier(p);
+  match.soldiers.forEach((s, i) => { s.kills = 0; s.deaths = 0; s.slotP = i; });
+  if (game.phase !== 'playing') startGame({ pointerLock: opts.pointerLock === true });
+  hideOverlays();
+  beginRound();
+  return true;
+}
+function rolesFor(team, n) {                     // seeded shuffle; with four soldiers the Centre role is always filled
+  const R = ['west', 'bed', 'centre', 'high', 'east'];
+  for (let i = R.length - 1; i > 0; i--) { const j = Math.floor(brnd() * (i + 1)); const t = R[i]; R[i] = R[j]; R[j] = t; }
+  if (n < 5 && R.indexOf('centre') >= n) { const k = R.indexOf('centre'); R[k] = R[n - 1]; R[n - 1] = 'centre'; }
+  return R.slice(0, n);
+}
+function resetSoldier(s, pos, yaw) {
+  s.dead = false; s.deadT = 0; s.tip = 0; s.crouching = false; s.height = CONFIG.player.height; s.eye = s.peye = CONFIG.player.eye;
+  if (s === player) s.health = CONFIG.player.health; else { s.hp = s.health = CONFIG.bot.hp; }
+  placeActor(s, pos[0], pos[1], pos[2], yaw, 0);
+  if (s.arsenal) resetArsenal(s.arsenal);
+  const n = nearestNode(pos[0], pos[1], pos[2]); s.lastNode = n; s.path = [n]; s.edges = []; s.pi = 1; s.goal = n;
+  s.ride = null; s.crossing = false; s.evade = null; s.stuckT = 0; s.stuckRef = Infinity; s.stuckEp = null; s.stuckCarry = 0; s.sprintMove = false;
+  if (s.input) for (const k of INPUT_NAMES) s.input[k] = false;
+  updateHitVolumes(s);
+}
+function beginRound() {
+  const M = CONFIG.match;
+  match.round++; match.phase = 'freeze'; match.t = M.freeze; match.timeLeft = M.roundTime; match.liveT = 0; match.roundKills = []; match.spec = null;
+  grenadesLive.length = 0; for (const c of TRAIN.cars) c.claim = null;
+  match.teamMem.green.t = match.teamMem.tan.t = -99;
+  const greens = bots.filter((b) => b.team === 'green'), tans = bots.filter((b) => b.team === 'tan');
+  resetSoldier(player, M.playerSpawn.green, M.playerSpawn.green[3]);
+  greens.forEach((b, i) => resetSoldier(b, M.botSpawns.green[i], Math.PI));
+  tans.forEach((b, i) => resetSoldier(b, M.botSpawns.tan[i], 0));
+  const gBrains = match.autoplay ? [player].concat(greens) : greens;
+  const gRoles = rolesFor('green', gBrains.length), tRoles = rolesFor('tan', tans.length);
+  const give = (s, role) => {
+    s.brain = newBrain(s, role); s.role = role;
+    const list = CONFIG.roles[role].primary, w = list[Math.floor(brnd() * list.length)];
+    s.arsenal.primary = w; s.arsenal.current = w; s.weapon = w;
+  };
+  gBrains.forEach((s, i) => give(s, gRoles[i])); tans.forEach((s, i) => give(s, tRoles[i]));
+  if (!match.autoplay) { player.brain = null; player.role = null; arsenal.primary = arsenal.current = match.pick; }
+  countAlive();
+}
+function freezeEnded() {
+  match.phase = 'live'; sfx('stinger_round_start');
+  for (const s of match.soldiers) if (s.brain && !s.dead) brainStartRound(s);
+}
+function endRound(winner, reason) {
+  const M = CONFIG.match;
+  const entry = { round: match.round, winner, reason, duration: +match.liveT.toFixed(2), kills: match.roundKills.length, killList: match.roundKills.slice(),
+    alive: { green: match.alive.green, tan: match.alive.tan } };
+  if (winner) { match.score[winner]++; match.replays = 0; } else match.replays++;
+  match.rounds.push(entry); match.lastRound = entry;
+  match.phase = 'roundEnd'; match.t = M.roundEnd;
+  sfx('stinger_round_end');
+  showRoundEnd(entry);
+}
+function totalHealth(team) { let h = 0; for (const s of match.soldiers) if (!s.dead && s.team === team) h += s === player ? player.health : s.hp; return h; }
+function decideAtTime() {                        // 0:00: more standing wins; equal is a replay; after maxReplays in a row, more total health
+  const a = match.alive;
+  if (a.green !== a.tan) return endRound(a.green > a.tan ? 'green' : 'tan', 'time');
+  if (match.replays >= CONFIG.match.maxReplays) {
+    const hg = totalHealth('green'), ht = totalHealth('tan');
+    if (hg !== ht) return endRound(hg > ht ? 'green' : 'tan', 'health');
+  }
+  return endRound(null, 'replay');
+}
+function onSoldierKilled(v, attacker, weapon, head) {
+  if (!match.active) return;
+  v.deaths = (v.deaths || 0) + 1;
+  if (attacker && attacker !== v) attacker.kills = (attacker.kills || 0) + 1;
+  const k = { round: match.round, time: +game.time.toFixed(2), killer: attacker ? attacker.name : null, killerTeam: attacker ? attacker.team : null,
+    weapon: weapon || 'world', victim: v.name, victimTeam: v.team, head: !!head, self: attacker === v };
+  match.kills.push(k); match.roundKills.push(k); killFeed.push(k); if (killFeed.length > 50) killFeed.shift();
+  if (match.stats) { match.stats.kills++; if (head) match.stats.headKills++; }
+  if (v === player) { player.deadT = 0; player.crouching = false; }
+  if (v.team === 'green' && v !== player) { v.lastCallout = -99; postCallout(v, "I'm down"); }
+  if (attacker && attacker.team === 'green' && attacker !== v) { attacker.lastCallout = Math.min(attacker.lastCallout || -99, game.time - CONFIG.match.calloutGap); postCallout(attacker, 'Enemy down'); }
+  countAlive();
+  if (match.alive.tan === 1) { const g = match.soldiers.find((s) => s.team === 'green' && !s.dead && s !== player); if (g) postCallout(g, 'Last one'); }
+  for (const s of match.soldiers) if (s.brain && s.brain.target === v) { s.brain.target = null; s.brain.vis = false; }
+}
+function regionBucket(s) { return regionOf(s.x, s.y, s.z)[3]; }
+function tickMatch(dt) {
+  if (!match.active) return;
+  const M = CONFIG.match;
+  if (match.phase === 'freeze') { match.t -= dt; if (match.t <= 1e-9) freezeEnded(); }
+  else if (match.phase === 'live') {
+    match.liveT += dt; match.timeLeft = Math.max(0, match.timeLeft - dt);
+    for (const s of match.soldiers) {
+      if (s.dead) continue;
+      const k = regionBucket(s); match.laneUse[s.team][k] += dt;
+      if (k === 'bed' || k === 'desk' || k === 'shelves') match.highGround[s.team] += dt;
+    }
+    countAlive();
+    if (match.alive.green === 0 || match.alive.tan === 0) endRound(match.alive.green ? 'green' : match.alive.tan ? 'tan' : null, match.alive.green || match.alive.tan ? 'eliminated' : 'replay');
+    else if (match.timeLeft <= 0) decideAtTime();
+  } else if (match.phase === 'roundEnd') {
+    match.t -= dt;
+    if (match.t <= 1e-9) {
+      const w = match.score.green >= M.roundsToWin ? 'green' : match.score.tan >= M.roundsToWin ? 'tan' : null;
+      if (w) endMatch(w); else { hideOverlays(); beginRound(); }
+    }
+  }
+  // the player's death: the camera tips with the body for deathCam s, then spectates a living Green bot
+  if (player.dead) {
+    player.deadT += dt; player.tip = approach(player.tip, 1, dt / CONFIG.soldier.tipTime);
+    if (player.deadT >= M.deathCam) { const cur = bots.find((b) => b.id === match.spec); if (!cur || cur.dead) spectateNext(); }
+  }
+  for (let i = dmgArcs.length - 1; i >= 0; i--) { dmgArcs[i].t -= dt; if (dmgArcs[i].t <= 0) dmgArcs.splice(i, 1); }
+}
+function spectateNext() {
+  const G = bots.filter((b) => b.team === 'green' && !b.dead);
+  if (!G.length) { match.spec = null; return null; }
+  const i = G.findIndex((b) => b.id === match.spec);
+  match.spec = G[(i + 1) % G.length].id;
+  return match.spec;
+}
+function endMatch(winner) {
+  match.phase = 'matchEnd'; match.winner = winner;
+  sfx(winner === 'green' ? 'jingle_win' : 'jingle_lose');
+  game.pointerLock = false;                      // the mouse is freed for the results screen; this is not a pause
+  if (document.pointerLockElement) document.exitPointerLock();
+  showMatchEnd();
+}
+function rematch() { const d = match.difficulty, ap = match.autoplay; startMatch({ difficulty: d, autoplay: ap, pointerLock: false }); requestLock(); return true; }
+function endMatchQuietly() {                     // leave a match without the title screen (nav test, free play)
+  match.active = false; match.phase = 'title'; player.dead = false; player.autoplay = false; player.brain = null; hideOverlays();
+  if (player.health <= 0) player.health = CONFIG.player.health;
+}
+function quitToTitle() {
+  removeBots(); match.active = false; match.phase = 'title'; player.dead = false; player.autoplay = false; player.brain = null;
+  game.pointerLock = false; if (document.pointerLockElement) document.exitPointerLock();
+  respawnPlayer(); hideOverlays(); showTitle();
+  return true;
+}
+function skipRound(winner) {                     // ends the live round now: a team name wins it; no name decides it as at 0:00
+  if (!match.active) return false;
+  if (match.phase === 'freeze') freezeEnded();
+  if (match.phase !== 'live') return false;
+  countAlive();
+  if (winner === 'green' || winner === 'tan') endRound(winner, 'skipped');
+  else if (winner === 'replay') endRound(null, 'replay');
+  else decideAtTime();
+  return match.lastRound;
+}
+function runMatch(opts = {}) {
+  const w0 = performance.now(), errs = [];
+  startMatch({ difficulty: opts.difficulty, seed: opts.seed, autoplay: opts.autoplay !== false, pointerLock: false });
+  const end = game.time + (opts.maxSimSeconds || CONFIG.match.maxSimSeconds);
+  while (match.phase !== 'matchEnd' && game.time < end) {
+    try { simTick(); } catch (e) { errs.push(String(e && e.stack || e).slice(0, 400)); if (errs.length > 10) break; game.time += DT; }
+  }
+  return matchReport(errs, performance.now() - w0);
+}
+function matchReport(errs, wall) {
+  const S = match.stats;
+  return { winner: match.winner, score: Object.assign({}, match.score), difficulty: match.difficulty, seed: match.seed, autoplay: match.autoplay,
+    rounds: match.rounds.map((r) => ({ round: r.round, winner: r.winner, reason: r.reason, duration: r.duration, kills: r.kills, alive: r.alive })),
+    stuckLog: stuckLog.slice(match.stuck0), trainRescueLog: trainRescueLog.slice(match.rescue0), laneUse: JSON.parse(JSON.stringify(match.laneUse)),
+    highGroundTime: Object.assign({}, match.highGround), errors: errs || [], simSeconds: +(game.time - match.t0).toFixed(1), wallSeconds: wall !== undefined ? +(wall / 1000).toFixed(2) : null,
+    stats: { kills: S.kills, headKills: S.headKills, headshotKillShare: S.kills ? +(S.headKills / S.kills).toFixed(3) : 0, hits: S.hits, headHits: S.headHits,
+      headshotHitShare: S.hits ? +(S.headHits / S.hits).toFixed(3) : 0, shots: S.shots, grenades: S.grenades, rides: S.rides, rideTries: S.rideTries,
+      crossings: S.crossings, envelopeSeconds: +S.envTime.toFixed(2) },
+    soldiers: match.soldiers.map((s) => ({ name: s.name, team: s.team, kills: s.kills || 0, deaths: s.deaths || 0, role: s.role || null })),
+    finished: match.phase === 'matchEnd' };
+}
+
 function simTick() {
   for (let i = 0; i < ACTORS.length; i++) savePrev(ACTORS[i]);     // before the train carries riders, so rendering interpolates the carry too
-  tickTrain(DT); tickPlayer(DT); tickMoveAudio(); tickWeapons(DT); tickBots(DT); tickMatch(DT);
+  tickTrain(DT); tickPlayer(DT); tickMoveAudio(); tickWeapons(DT); tickBots(DT);
+  separateSoldiers();
+  tickMatch(DT);
   game.time += DT;
 }
 
@@ -3097,37 +3935,152 @@ function simTick() {
 // 12. HUD AND MENUS
 // =====================================================================================================
 const ui = { canvas: null, title: null, go: null, hud: null, health: null, healthBox: null, hint: null, debug: null, lastHealth: -1, debugTimer: 0,
-  ticks: null, hitm: null, scope: null, wname: null, mag: null, res: null, gren: null, last: '' };
+  ticks: null, hitm: null, scope: null, wname: null, mag: null, res: null, gren: null, last: '', mkey: '', fkey: '', ckey: '', pkey: '', skey: '' };
+// Settings persist in localStorage (wrapped: the game works without it). Sensitivity multiplies CONFIG.input.sensitivity.
+const settings = { sensitivity: 1, volume: 50, difficulty: 'regular', pick: 'rifle' };
+function loadSettings() {
+  try { const s = JSON.parse(window.localStorage.getItem(CONFIG.storageKey) || 'null'); if (s && typeof s === 'object') for (const k in settings) if (k in s) settings[k] = s[k]; } catch (err) { /* no storage: defaults */ }
+  settings.sensitivity = clamp(+settings.sensitivity || 1, 0.2, 3); settings.volume = clamp(Math.round(+settings.volume), 0, 100);
+  if (!CONFIG.difficulty[settings.difficulty]) settings.difficulty = 'regular';
+  if (!['rifle', 'smg', 'sniper'].includes(settings.pick)) settings.pick = 'rifle';
+  match.pick = settings.pick; applySettings();
+}
+function saveSettings() { try { window.localStorage.setItem(CONFIG.storageKey, JSON.stringify(settings)); } catch (err) { /* ignore */ } }
+function applySettings() { CONFIG.audio.master = settings.volume / 100; syncSettingsUI(); }
+function setSetting(k, v) { settings[k] = v; if (k === 'pick') match.pick = v; applySettings(); saveSettings(); return Object.assign({}, settings); }
+function syncSettingsUI() {
+  if (!ui.canvas) return;
+  for (const [s, v] of [['tSens', 'tSensV'], ['pSens', 'pSensV']]) { $(s).value = settings.sensitivity; $(v).textContent = (+settings.sensitivity).toFixed(1); }
+  for (const [s, v] of [['tVol', 'tVolV'], ['pVol', 'pVolV']]) { $(s).value = settings.volume; $(v).textContent = settings.volume; }
+  for (const el of $('tDiff').children) el.classList.toggle('sel', el.dataset.d === settings.difficulty);
+}
 function initUI() {
   ui.canvas = $('view'); ui.title = $('title'); ui.go = $('titleGo'); ui.hud = $('hud');
   ui.health = $('healthNum'); ui.healthBox = $('health'); ui.hint = $('hint'); ui.debug = $('debug');
   ui.ticks = $('crosshair').children; ui.hitm = $('hitm'); ui.scope = $('scope'); ui.wname = $('wname'); ui.mag = $('mag'); ui.res = $('res'); ui.gren = $('gren');
-  ui.title.addEventListener('click', () => { audioUnlock(); startGame({ pointerLock: true }); });
+  $('tPlay').addEventListener('click', () => { audioUnlock(); sfx('ui_click'); startMatch({ difficulty: settings.difficulty, pointerLock: true }); });
+  for (const el of $('tDiff').children) el.addEventListener('click', () => { sfx('ui_click'); setSetting('difficulty', el.dataset.d); });
+  for (const id of ['tSens', 'pSens']) $(id).addEventListener('input', (e) => setSetting('sensitivity', +e.target.value));
+  for (const id of ['tVol', 'pVol']) $(id).addEventListener('input', (e) => setSetting('volume', +e.target.value));
+  $('pResume').addEventListener('click', () => { audioUnlock(); if (game.pointerLock) requestLock(); else resumeGame(); });
+  $('pQuit').addEventListener('click', () => quitToTitle());
+  $('meAgain').addEventListener('click', () => rematch());
+  $('meTitleBtn').addEventListener('click', () => quitToTitle());
+  for (const el of $('picker').querySelectorAll('.opt')) el.addEventListener('click', (e) => { e.stopPropagation(); pickPrimary(el.dataset.w); });
+  const P = $('pg'), Q = $('pt'); for (let i = 0; i < 5; i++) { P.appendChild(document.createElement('i')); Q.appendChild(document.createElement('i')); }
+  loadSettings();
+}
+function requestLock() {
+  game.pointerLock = true; game.lockWanted = true;
+  try { const p = ui.canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { game.lockWanted = false; }); }
+  catch (err) { game.lockWanted = false; }
 }
 function startGame(opts) {
   const lock = !opts || opts.pointerLock !== false;
   game.phase = 'playing';
-  ui.title.style.display = 'none';
+  hideTitle();
   clearKeys();
-  if (lock) {
-    game.pointerLock = true;
-    try { const p = ui.canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { game.pointerLock = false; }); }
-    catch (err) { game.pointerLock = false; }
-  } else game.pointerLock = false;
+  if (lock) requestLock(); else game.pointerLock = false;
   return true;
 }
+function showTitle() { game.phase = 'title'; ui.title.style.display = 'flex'; syncSettingsUI(); }
+function hideTitle() { ui.title.style.display = 'none'; }
+function hideOverlays() { for (const id of ['roundEnd', 'matchEnd', 'pause']) $(id).style.display = 'none'; }
 function pauseGame() {
+  if (game.phase !== 'playing') return;
   game.phase = 'paused';
   clearKeys();
-  ui.go.textContent = 'Paused. Click to resume';
-  ui.title.style.display = 'flex';
+  $('pause').style.display = 'flex'; syncSettingsUI();
   if (document.pointerLockElement) document.exitPointerLock();
+}
+function resumeGame() {
+  if (game.phase !== 'paused') return;
+  game.phase = 'playing'; clearKeys();
+  $('pause').style.display = 'none';
+  lastFrame = performance.now(); accumulator = 0;
+}
+function pickPrimary(w) {
+  if (!['rifle', 'smg', 'sniper'].includes(w)) return false;
+  setSetting('pick', w);
+  if (match.active && match.phase === 'freeze' && !player.autoplay) { arsenal.primary = w; selectWeapon(w); }
+  return true;
+}
+function cyclePick() { const L = ['rifle', 'smg', 'sniper']; return pickPrimary(L[(L.indexOf(match.pick) + 1) % 3]); }
+const TEAM_NAME = { green: 'GREEN', tan: 'TAN' };
+const REASONS = { eliminated: (w) => (w === 'green' ? 'Tan eliminated' : 'Green eliminated'), time: () => 'More soldiers standing at 0:00',
+  health: () => 'More total health after three replays', replay: () => 'Equal at 0:00: this round is replayed', skipped: () => 'Round skipped' };
+function showRoundEnd(r) {
+  $('reTitle').textContent = r.winner ? TEAM_NAME[r.winner] + ' WINS THE ROUND' : 'ROUND REPLAYED';
+  $('reTitle').style.color = r.winner ? teamColor(r.winner) : '#FFFFFF';
+  $('reHow').textContent = (REASONS[r.reason] || (() => r.reason))(r.winner);
+  $('reScore').textContent = 'GREEN ' + match.score.green + ' - ' + match.score.tan + ' TAN';
+  $('roundEnd').style.display = 'flex';
+}
+function showMatchEnd() {
+  $('roundEnd').style.display = 'none';
+  $('meTitle').textContent = TEAM_NAME[match.winner] + ' WINS'; $('meTitle').style.color = teamColor(match.winner);
+  $('meScore').textContent = 'GREEN ' + match.score.green + ' - ' + match.score.tan + ' TAN';
+  const rows = match.soldiers.slice().sort((a, b) => (a.team === b.team ? (b.kills || 0) - (a.kills || 0) : a.team === 'green' ? -1 : 1));
+  $('meTable').innerHTML = '<table><tr><th>SOLDIER</th><th>KILLS</th><th>DEATHS</th></tr>' +
+    rows.map((s) => '<tr class="' + (s.team === 'green' ? 'g' : 't') + '"><td>' + s.name + '</td><td>' + (s.kills || 0) + '</td><td>' + (s.deaths || 0) + '</td></tr>').join('') + '</table>';
+  $('matchEnd').style.display = 'flex';
+}
+const fmtTime = (t) => { const s = Math.ceil(Math.max(0, t)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+function hudSubject() { return viewSubject(); }
+function updateMatchHUD() {
+  const on = match.active && !game.view;
+  $('mbar').style.display = on ? 'block' : 'none';
+  $('feed').style.display = $('callouts').style.display = on ? 'block' : 'none';
+  if (!on) { $('picker').style.display = $('spect').style.display = 'none'; for (const a of $('arcs').children) a.style.display = 'none'; return; }
+  const M = CONFIG.match, live = match.phase === 'live';
+  const mk = match.round + '|' + fmtTime(live ? match.timeLeft : match.phase === 'freeze' ? M.roundTime : match.timeLeft) + '|' + match.score.green + '|' + match.score.tan + '|' + match.alive.green + '|' + match.alive.tan;
+  if (mk !== ui.mkey) {
+    ui.mkey = mk;
+    $('mround').textContent = 'ROUND ' + match.round + (match.replays ? '  (REPLAY ' + match.replays + ')' : '');
+    $('mtime').textContent = fmtTime(live ? match.timeLeft : match.phase === 'freeze' ? M.roundTime : match.timeLeft);
+    $('sg').textContent = match.score.green; $('st').textContent = match.score.tan;
+    [...$('pg').children].forEach((el, i) => { el.className = i < match.alive.green ? 'on' : 'off'; });
+    [...$('pt').children].forEach((el, i) => { el.className = i < match.alive.tan ? 'on' : 'off'; });
+  }
+  // kill feed: last five, five seconds each
+  const fk = killFeed.filter((k) => game.time - k.time < M.killFeedTime).slice(-M.killFeed), fkk = fk.map((k) => k.time + k.victim).join();
+  if (fkk !== ui.fkey) {
+    ui.fkey = fkk;
+    const tc = (t) => (t === 'green' ? 'g' : 't');
+    $('feed').innerHTML = fk.map((k) => '<div>' + (k.killer && !k.self ? '<span class="' + tc(k.killerTeam) + '">' + k.killer + '</span>' : '') + '<span class="w">' +
+      (k.weapon || '').toUpperCase() + '</span><span class="' + tc(k.victimTeam) + '">' + k.victim + '</span>' + (k.head ? '<span class="hs">HEADSHOT</span>' : '') + '</div>').join('');
+  }
+  const co = callouts.filter((c) => game.time - c.time < M.calloutTime).slice(-M.calloutMax), ck = co.map((c) => c.time + c.who).join();
+  if (ck !== ui.ckey) { ui.ckey = ck; $('callouts').innerHTML = co.map((c) => '<div><b>' + c.who + '</b>' + c.text + '</div>').join(''); }
+  // freeze-time weapon picker
+  const pick = match.phase === 'freeze' && !match.autoplay;
+  $('picker').style.display = pick ? 'block' : 'none';
+  if (pick) {
+    const pk = match.pick + Math.ceil(match.t);
+    if (pk !== ui.pkey) { ui.pkey = pk; for (const el of $('picker').querySelectorAll('.opt')) el.classList.toggle('sel', el.dataset.w === match.pick); $('pickCount').textContent = Math.max(1, Math.ceil(match.t)); }
+  }
+  // spectating banner, or how the player went down
+  let sp = '';
+  if (player.dead && !match.autoplay) {
+    const V = viewSubject();
+    if (V !== player) sp = 'Spectating ' + V.name + '<small>Left click: next teammate</small>';
+    else { const k = match.kills.slice().reverse().find((x) => x.victim === 'You'); sp = k && k.killer && !k.self ? 'Eliminated by ' + k.killer : 'Eliminated'; }
+  }
+  if (sp !== ui.skey) { ui.skey = sp; $('spect').innerHTML = sp; $('spect').style.display = sp ? 'block' : 'none'; }
+  // damage direction: red arcs round the crosshair toward each recent attacker
+  const arcs = $('arcs').children;
+  for (let i = 0; i < arcs.length; i++) {
+    const d = dmgArcs[i];
+    if (!d || player.dead) { arcs[i].style.display = 'none'; continue; }
+    const a = Math.atan2(-(d.x - player.x), -(d.z - player.z)), rel = wrapAngle(a - player.yaw);       // 0 ahead, positive to the left
+    arcs[i].style.display = 'block'; arcs[i].style.transform = 'rotate(' + (-rel * 180 / Math.PI).toFixed(1) + 'deg)'; arcs[i].style.opacity = Math.min(1, d.t / CONFIG.match.dmgArcTime + 0.2);
+  }
 }
 const _proj = new THREE.Vector3();
 function updateWeaponHUD() {
-  const A = arsenal, W = CONFIG.weapons[A.current], g = A.guns[A.current], hh = window.innerHeight / 2;
+  const S = hudSubject(), A = S.arsenal || arsenal, W = CONFIG.weapons[A.current], g = A.guns[A.current], hh = window.innerHeight / 2;
   // crosshair: four ticks pushed out by the current spread, in screen pixels at the current fov
-  const gap = Math.max(3, Math.tan(currentSpread() * DEG) / Math.tan(camera.fov * DEG / 2) * hh), T = ui.ticks, show = A.scope < 0.5 && !A.gAim;
+  const gap = Math.max(3, Math.tan(currentSpread(S) * DEG) / Math.tan(camera.fov * DEG / 2) * hh), T = ui.ticks, show = A.scope < 0.5 && !A.gAim && !(player.dead && S === player);
   $('crosshair').style.display = show ? 'block' : 'none';
   if (show) {
     T[0].style.top = (-gap - 9) + 'px'; T[1].style.top = gap + 'px'; T[2].style.left = (-gap - 9) + 'px'; T[3].style.left = gap + 'px';
@@ -3170,7 +4123,8 @@ function updateWeaponHUD() {
   }
 }
 function updateHUD(realDt) {
-  const p = player, h = Math.ceil(p.health);
+  const p = player, S = hudSubject(), h = Math.ceil(S === player ? p.health : S.hp);
+  updateMatchHUD();
   if (h !== ui.lastHealth) { ui.lastHealth = h; ui.health.textContent = h; ui.healthBox.className = h <= 30 ? 'low' : ''; }
   ui.hint.style.display = p.climbing ? 'block' : 'none';
   ui.hud.style.visibility = game.view ? 'hidden' : 'visible';
@@ -3277,6 +4231,16 @@ function renderFrame(alpha, realDt) {
     const v = VIEWS[game.view];
     camera.position.set(v[0][0], v[0][1], v[0][2]);
     camera.lookAt(_look.set(v[1][0], v[1][1], v[1][2]));
+  } else if (match.active && p.dead) {
+    const V = viewSubject();
+    if (V === p) {                               // the camera tips over with the body for deathCam s
+      const k = Math.min(1, p.deadT / CONFIG.match.deathCam), e = lerp(CONFIG.player.eye, 0.35, k * k);
+      camera.position.set(lerp(p.px, p.x, alpha), lerp(p.py, p.y, alpha) + e, lerp(p.pz, p.z, alpha));
+      camera.rotation.set(lerp(p.pitch, -0.25, k), p.yaw, k * 1.25, 'YXZ');
+    } else {                                     // spectating a living Green bot from its eye
+      camera.position.set(lerp(V.px, V.x, alpha), lerp(V.py, V.y, alpha) + lerp(V.peye, V.eye, alpha), lerp(V.pz, V.z, alpha));
+      camera.rotation.set(V.pitch, V.yaw, 0, 'YXZ');
+    }
   } else {
     camera.position.set(lerp(p.px, p.x, alpha), lerp(p.py, p.y, alpha) + lerp(p.peye, p.eye, alpha) + lerp(p.pstepOff, p.stepOff, alpha), lerp(p.pz, p.z, alpha));
     const sh = arsenal.shake;
@@ -3294,6 +4258,7 @@ function frame(now) {
   lastFrame = now;
   if (real > 0) game.fps = game.fps ? lerp(game.fps, 1 / real, 0.1) : 1 / real;
   let alpha = 1;
+  if (game.phase === 'paused' && document.pointerLockElement === ui.canvas) resumeGame();     // never paused with the pointer locked
   if (game.phase === 'playing' && game.timeScale > 0) {
     accumulator += real * game.timeScale;
     let n = 0;
@@ -3402,6 +4367,7 @@ function init() {
   buildEnvelope();
   buildWaypoints();
   buildNav();
+  buildCoverInfo();
   buildFx(scene);
   buildTargets(scene);
   buildTrainVisuals(scene);
@@ -3422,7 +4388,7 @@ function init() {
       const p = player;
       return { phase: game.phase, time: +game.time.toFixed(4),
         player: { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw, pitch: p.pitch, onGround: p.onGround,
-          crouching: p.crouching, climbing: !!p.climbing, health: p.health, surface: p.surface },
+          crouching: p.crouching, climbing: !!p.climbing, health: p.health, surface: p.surface, dead: !!p.dead, team: 'green' },
         weapon: (() => { const A = arsenal, g = A.guns[A.current]; return { name: A.current, mag: g.mag, reserve: g.reserve, spread: currentSpread(),
           reloading: A.reloadT > 0, scoped: A.scope >= 0.999, scope: A.scope, drawing: A.drawT > 0, grenades: A.grenades, fov: camera.fov }; })(),
         targets: game.range ? targets.map((T) => ({ id: T.id, hp: T.hp, down: T.down, pos: [T.x, T.y, T.z], team: T.team })) : [],
@@ -3431,10 +4397,16 @@ function init() {
           cars: TRAIN.cars.map((c) => ({ type: c.type, pos: [+c.x.toFixed(3), 0, +c.z.toFixed(3)], yaw: +c.yaw.toFixed(4), vel: [+c.vx.toFixed(3), +c.vz.toFixed(3)],
             sFront: +modL(c.sF).toFixed(3), claim: c.claim })) },
         riding: player.onGround && player.ground && player.ground.train ? player.ground.id : null,
+        match: { phase: match.active ? match.phase : 'title', round: match.round, score: Object.assign({}, match.score), timeLeft: +match.timeLeft.toFixed(3),
+          alive: Object.assign({}, match.alive), difficulty: match.difficulty, replays: match.replays, freezeLeft: match.phase === 'freeze' ? +match.t.toFixed(3) : 0,
+          winner: match.winner, autoplay: match.autoplay, pick: match.pick, spectating: match.spec, playerDead: !!player.dead, seed: match.seed,
+          lastRound: match.lastRound ? { winner: match.lastRound.winner, reason: match.lastRound.reason, duration: match.lastRound.duration } : null },
+        app: game.phase, pointerLocked: !!document.pointerLockElement,
         bots: bots.map((b) => ({ id: b.id, name: b.name, team: b.team, pos: [b.x, b.y, b.z], hp: b.hp, state: b.botState, node: b.node || b.lastNode,
           nextNode: b.nextNode || null, edge: b.edge ? b.edge.key : null, edgeKind: b.edge ? b.edge.kind : null, path: b.path.slice(b.pi),
           riding: b.onGround && b.ground && b.ground.train ? b.ground.car.type : null, ridePhase: b.ride ? b.ride.phase : null, climbing: !!b.climbing,
-          weapon: b.weapon, stuckTime: +b.stuckT.toFixed(3), dead: b.dead, crouching: b.crouching, yaw: b.yaw, task: b.task, chevron: b.chevron,
+          weapon: b.arsenal ? b.arsenal.current : b.weapon, role: b.role || null, brainState: b.brain ? b.brain.state : null,
+          mag: b.arsenal ? b.arsenal.guns[b.arsenal.current].mag : null, kills: b.kills || 0, stuckTime: +b.stuckT.toFixed(3), dead: b.dead, crouching: b.crouching, yaw: b.yaw, task: b.task, chevron: b.chevron,
           inEnvelope: actorInEnvelope(b) })),
         fps: game.fps, drawCalls: game.drawCalls, triangles: game.triangles };
     },
@@ -3460,7 +4432,23 @@ function init() {
     walkPath,
     validateWaypoints,
     spawnBot: (team, nodeId) => spawnBot(team, nodeId),
-    skipRound: () => false,         // round 3B
+    skipRound: (winner) => skipRound(winner),
+    // ---- round 3B (DESIGN.md 16.7) ----
+    startMatch: (opts) => startMatch(Object.assign({ pointerLock: false }, opts)),
+    runMatch: (opts) => runMatch(opts),
+    setGodMode: (on) => { game.god = !!on; return game.god; },
+    botLog, killFeed, callouts,
+    matchReport: () => matchReport([], undefined),
+    spectateNext: () => spectateNext(),
+    pickPrimary: (w) => pickPrimary(w),
+    setSetting: (k, v) => setSetting(k, v),
+    settings: () => Object.assign({}, settings),
+    quitToTitle: () => quitToTitle(),
+    rematch: () => rematch(),
+    pause: () => { pauseGame(); return game.phase; },
+    resume: () => { resumeGame(); return game.phase; },
+    setRoundTime: (t) => { if (!match.active) return false; match.timeLeft = Math.max(0, +t || 0); return match.timeLeft; },
+    damagePlayer: (amount) => damageSoldier(player, +amount || 0, 'body', null, 'test'),
     setTimeScale: (n) => { game.timeScale = Math.max(0, +n || 0); return game.timeScale; },
     damageLog,
     rescueLog,
@@ -3485,8 +4473,8 @@ function init() {
     raycast: (o, d) => {
       const l = Math.hypot(d[0], d[1], d[2]);
       if (!(l > 0) || !raycastWorld(o[0], o[1], o[2], d[0] / l, d[1] / l, d[2] / l, CONFIG.gun.range, true)) return null;
-      const T = RH.target, c = RH.c;
-      return { id: T ? T.id : c.id, kind: T ? 'target' : c.kind, surface: T ? 'plastic' : c.surface, zone: RH.zone, distance: RH.t,
+      const T = RH.target, S = RH.soldier, c = RH.c;      // BUGS R3A-1: a soldier hit is returned like any other (was a TypeError)
+      return { id: T ? T.id : S ? S.id : c.id, kind: T ? 'target' : S ? 'soldier' : c.kind, surface: T || S ? 'plastic' : c.surface, team: S ? S.team : T ? T.team : undefined, zone: RH.zone, distance: RH.t,
         point: [o[0] + d[0] / l * RH.t, o[1] + d[1] / l * RH.t, o[2] + d[2] / l * RH.t], normal: [RH.nx, RH.ny, RH.nz] };
     },
     shotLog,
