@@ -232,7 +232,7 @@ const CONFIG = {
   viewmodel: { fov: 55, pos: [0.21, -0.2, -0.46], kickDecay: 16, swayAmp: 0.008, swayFreq: 9, reloadDip: 0.2, drawDrop: 0.45,
     body: '#3A4048', dark: '#23272D', accent: '#F2C230', wood: '#8A5A32',
     light: { dir: [-0.35, 0.75, 0.55], ambient: 0.5, diffuse: 0.55, top: 0.12, spec: 0.22, shine: 24 },   // 4B: baked into the viewmodel colours
-    models: { rifle: { muzzle: -0.62 }, smg: { muzzle: -0.36 }, sniper: { muzzle: -0.9 }, pistol: { muzzle: -0.22 } },   // 4B: models are built in vmGun; the muzzle is in model space
+    models: { rifle: { muzzle: -0.62 }, smg: { muzzle: -0.36 }, sniper: { muzzle: -0.9 }, pistol: { muzzle: -0.22, dy: 0.05 } },   // dy: 17.12 follow-up, the pistol and its hands sit higher   // 4B: models are built in vmGun; the muzzle is in model space
     // round 3: a green plastic hand holding the red firecracker, shown while a grenade is aimed (the gun drops out of view)
     hand: '#2FA84A', handDark: '#1F7A36', grenade: '#E0281F', fuse: '#FFD21F', handPos: [0.2, -0.19, -0.42], handRise: 0.12,
   },
@@ -391,7 +391,7 @@ const CONFIG = {
          palette: {
            blanketStitch: '#9DB4E8', sheetStripe: '#8FA9D6', blanketEnd: 97,
            fortGreen: ['#2F6FD0', '#F0F0F0', '#8C97A6'], fortTan: ['#D43C2E', '#F0F0F0', '#8C97A6'], ruin: ['#F08A2A', '#7B4BB5', '#F0F0F0'],
-           blocks: ['#D43C2E', '#2F6FD0', '#F2C230', '#7B4BB5', '#F08A2A'],
+           blocks: ['#D43C2E', '#2F6FD0', '#7B4BB5', '#1F8A8A', '#C2185B'],      // 17.12: no yellow or orange (Tan readability)
            books: ['#C0392B', '#2E6DB4', '#8E44AD', '#E67E22', '#34495E'], pages: '#E6DECB', bookBand: '#F2C230',
            cardEdge: '#6E4F33', rail: '#6B7480', sleeper: '#5A3B22', railJoint: '#4B5058',
            ruler: '#F2C230', deck: '#E0281F', wheel: '#34495E', grip: '#3A404B', truck: '#9AA3AD',
@@ -399,12 +399,12 @@ const CONFIG = {
            bear: '#C08A8E', bearPad: '#E8C9C3', eye: '#1F2228', sockA: '#7B4BB5', sockB: '#F08A2A', sockToe: '#F4EFE2', dust: '#8E9095', shoeLid: '#34495E',
            bucket: '#2E6DB4', bucketIn: '#14223A', bucketHandle: '#F2C230',
            lamp: '#C0392B', lampTrim: '#F2C230', lampInside: '#FFF3D6', mug: '#F4EFE2', mugBand: '#2E6DB4', coffee: '#4A2E1A',
-           pencilCup: '#8E44AD', pencils: ['#F2C230', '#D43C2E', '#2F6FD0', '#F08A2A', '#7B4BB5', '#F2C230'], pencilWood: '#E8C9A0',
+           pencilCup: '#8E44AD', pencils: ['#F2C230', '#D43C2E', '#2F6FD0', '#F08A2A', '#7B4BB5', '#F2C230'], pencilWood: '#EAD6C2',
            notebookCover: '#2E6DB4', eraserA: '#F29BB0', eraserB: '#6C9BD2', paper: '#F4F2EC', tack: '#D43C2E',
            yoyo: '#E0281F', yoyoAxle: '#F2C230', aglet: '#D8DEE6',
            piggy: '#F2A7B8', globeSea: '#3E7CC0', globeLand: '#F2E6C8', globeStand: '#34495E', trophy: '#F2C230', trophyBase: '#34495E',
            pot: '#C86B3C', soil: '#4A2E1A', leaf: '#2F6F7A', clock: '#D43C2E', bell: '#B9BEC6',
-           cars: ['#F2C230', '#7B4BB5', '#2E6DB4'], carGlass: '#BFD3E0', tyre: '#2B2F36', hub: '#D8DEE6', bumper: '#9AA3AD',
+           cars: ['#F2C230', '#7B4BB5', '#2E6DB4'], carGlass: '#BFD3E0', carTrim: '#34495E', tyre: '#2B2F36', hub: '#D8DEE6', bumper: '#9AA3AD',
            truckBed: '#F08A2A', truckCab: '#F2C230', load: '#9AA3AD', marbles: ['#2E6DB4', '#E0281F', '#F2C230'], gameBox: '#2E6DB4', gameBoxSide: '#F4EFE2',
            ball: ['#E0281F', '#F2C230'], crayons: ['#D43C2E', '#2F6FD0', '#7B4BB5', '#F08A2A'], crate: '#C0392B', crateTrim: '#F4EFE2',
            knob: '#F2C230', cord: '#F4EFE2', lampShade: '#FFF3D6', lampRim: '#C9B98F',
@@ -1507,14 +1507,14 @@ function buildTiles() {
   });
   // books: spines with bands (along u for books lying flat, along v for upright books), sides with pages between the covers
   for (const col of P.books) {
-    tile('spineH' + col, 256, 64, (g, w, h) => { g.fillStyle = col; g.fillRect(0, 0, w, h); g.fillStyle = P.bookBand; for (const x of [0.1, 0.13, 0.87, 0.9]) g.fillRect(x * w, 0, 6, h); g.fillStyle = shade(col, 0.75); g.fillRect(0.38 * w, h * 0.3, 0.24 * w, h * 0.4); });
-    tile('spineV' + col, 64, 256, (g, w, h) => { g.fillStyle = col; g.fillRect(0, 0, w, h); g.fillStyle = P.bookBand; for (const y of [0.08, 0.11, 0.86, 0.89]) g.fillRect(0, y * h, w, 6); g.fillStyle = shade(col, 0.75); g.fillRect(w * 0.3, 0.35 * h, w * 0.4, 0.3 * h); });
+    tile('spineH' + col, 256, 64, (g, w, h) => { g.fillStyle = col; g.fillRect(0, 0, w, h); g.fillStyle = P.bookBand; for (const x of [0.1, 0.13, 0.87, 0.9]) g.fillRect(Math.round(x * w), 0, 6, h); g.fillStyle = shade(col, 0.75); g.fillRect(Math.round(0.38 * w), Math.round(h * 0.3), Math.round(0.24 * w), Math.round(h * 0.4)); });   // whole pixels: no blended band edges
+    tile('spineV' + col, 64, 256, (g, w, h) => { g.fillStyle = col; g.fillRect(0, 0, w, h); g.fillStyle = P.bookBand; for (const y of [0.08, 0.11, 0.86, 0.89]) g.fillRect(0, Math.round(y * h), w, 6); g.fillStyle = shade(col, 0.75); g.fillRect(Math.round(w * 0.3), Math.round(0.35 * h), Math.round(w * 0.4), Math.round(0.3 * h)); });
     tile('side' + col, 256, 64, (g, w, h) => { g.fillStyle = P.pages; g.fillRect(0, 0, w, h); g.fillStyle = shade(P.pages, 0.9); for (let y = 14; y < h - 12; y += 5) g.fillRect(0, y, w, 1); g.fillStyle = col; g.fillRect(0, 0, w, 10); g.fillRect(0, h - 10, w, 10); });
     tile('sideV' + col, 64, 256, (g, w, h) => { g.fillStyle = P.pages; g.fillRect(0, 0, w, h); g.fillStyle = shade(P.pages, 0.9); for (let x = 14; x < w - 12; x += 5) g.fillRect(x, 0, 1, h); g.fillStyle = col; g.fillRect(0, 0, 10, h); g.fillRect(w - 10, 0, 10, h); });
   }
   tile('ruler', 64, 128, (g, w, h) => {          // ruler markings along v (the ruler's length), both edges
     g.fillStyle = P.ruler; g.fillRect(0, 0, w, h); g.fillStyle = '#2A2420';
-    for (let i = 0; i < 10; i++) { const y = i * h / 10, L = i === 0 ? 18 : i === 5 ? 12 : 7; g.fillRect(0, y, L, 2); g.fillRect(w - L, y, L, 2); }
+    for (let i = 0; i < 10; i++) { const y = Math.round(i * h / 10), L = i === 0 ? 18 : i === 5 ? 12 : 7; g.fillRect(0, y, L, 2); g.fillRect(w - L, y, L, 2); }
   }, [3, 1], P.ruler);
   tile('notebook', 256, 256, (g, w, h) => {
     g.fillStyle = '#FBFAF4'; g.fillRect(0, 0, w, h); g.strokeStyle = '#8FB3E0'; g.lineWidth = 2;
@@ -1555,7 +1555,7 @@ function buildTiles() {
   });
   // toy cars: a side with painted windows and a front with lights, per body colour
   for (const col of P.cars) {
-    tile('carSide' + col, 256, 128, (g, w, h) => { g.fillStyle = col; g.fillRect(0, 0, w, h); g.fillStyle = P.carGlass; g.fillRect(w * 0.12, 14, w * 0.33, h * 0.32); g.fillRect(w * 0.52, 14, w * 0.33, h * 0.32); g.fillStyle = shade(col, 0.72); g.fillRect(0, h * 0.58, w, 8); g.fillRect(w * 0.5 - 2, 14, 4, h * 0.52); });
+    tile('carSide' + col, 256, 128, (g, w, h) => { g.fillStyle = col; g.fillRect(0, 0, w, h); g.fillStyle = P.carGlass; g.fillRect(Math.round(w * 0.12), 14, Math.round(w * 0.33), Math.round(h * 0.32)); g.fillRect(Math.round(w * 0.52), 14, Math.round(w * 0.33), Math.round(h * 0.32)); g.fillStyle = P.carTrim; g.fillRect(0, Math.round(h * 0.58), w, 8); g.fillRect(Math.round(w * 0.5) - 2, 14, 4, Math.round(h * 0.52)); });   // 17.12: a dark trim (a darkened yellow came within dE 20 of Tan)
     tile('carFront' + col, 128, 128, (g, w, h) => { g.fillStyle = col; g.fillRect(0, 0, w, h); g.fillStyle = P.carGlass; g.fillRect(14, 12, w - 28, h * 0.34); g.fillStyle = '#FFF2A8'; g.fillRect(10, h * 0.62, 22, 16); g.fillRect(w - 32, h * 0.62, 22, 16); g.fillStyle = '#34495E'; g.fillRect(6, h - 18, w - 12, 10); });
   }
   tile('window', 512, 448, (g, w, h) => {        // the painted outside view: warm sky, a soft sun glow, a tree and the garden
@@ -3864,7 +3864,7 @@ function poseViewmodel(p = player) {      // places the current gun model of sol
   const A = p.arsenal || arsenal, V = CONFIG.viewmodel, W = CONFIG.weapons[A.current];
   const g = vm.guns[A.current], sp = Math.min(1, Math.hypot(p.vx, p.vz) / CONFIG.move.sprint) * (p.onGround ? 1 : 0.2), t = game.time * V.swayFreq;
   const rl = A.reloadT > 0 ? Math.sin(Math.PI * (1 - A.reloadT / W.reload)) : 0, dr = A.drawT > 0 ? A.drawT / W.draw : 0, aim = A.gAim ? 1 : 0;
-  g.position.set(V.pos[0] + Math.sin(t) * V.swayAmp * sp, V.pos[1] + Math.abs(Math.cos(t)) * V.swayAmp * sp - rl * V.reloadDip - (dr + aim) * V.drawDrop, V.pos[2] + A.kick);
+  g.position.set(V.pos[0] + Math.sin(t) * V.swayAmp * sp, V.pos[1] + (V.models[A.current].dy || 0) + Math.abs(Math.cos(t)) * V.swayAmp * sp - rl * V.reloadDip - (dr + aim) * V.drawDrop, V.pos[2] + A.kick);
   g.rotation.set(A.kick * 1.4 - rl * 0.5 - dr * 0.8, 0, rl * 0.35);
   return g;
 }
@@ -6210,6 +6210,21 @@ function init() {
         return { name: m.name, pos, index: m.geometry.index ? m.geometry.index.array : null }; }),
     sceneRaycast: (o, d, far) => { const rc = new THREE.Raycaster(new THREE.Vector3(...o), new THREE.Vector3(...d).normalize(), 0, far || 5);   // test-only: what a three.js ray meets first
       const hits = rc.intersectObjects(scene.children, true).filter((h) => h.object.visible); return hits.slice(0, 3).map((h) => ({ name: h.object.name || h.object.type, distance: +h.distance.toFixed(3) })); },
+    atlasScan: (hex) => {                          // test-only: per atlas tile, the pixel colour nearest to hex (CIE76 dE)
+      const lab = (r, g, b) => { const f = (c) => { c /= 255; return c > 0.04045 ? Math.pow((c + 0.055) / 1.055, 2.4) : c / 12.92; }; const rr = f(r), gg = f(g), bb = f(b);
+        const X = (0.4124 * rr + 0.3576 * gg + 0.1805 * bb) / 0.95047, Y = 0.2126 * rr + 0.7152 * gg + 0.0722 * bb, Z = (0.0193 * rr + 0.1192 * gg + 0.9505 * bb) / 1.08883, h = (v) => (v > 0.008856 ? Math.cbrt(v) : 7.787 * v + 16 / 116);
+        return [116 * h(Y) - 16, 500 * (h(X) - h(Y)), 200 * (h(Y) - h(Z))]; };
+      const n = parseInt(hex.slice(1), 16), T = lab(n >> 16, (n >> 8) & 255, n & 255), S = ATLAS.size, img = ATLAS.g.getImageData(0, 0, S, S).data, out = [];
+      for (const t of Object.values(ART.tiles)) {
+        const x0 = Math.round(t.rect[0] * S), w = Math.round(t.rect[2] * S), h = Math.round(t.rect[3] * S), y0 = S - Math.round((t.rect[1] + t.rect[3]) * S);
+        let best = 1e9, col = null, n = 0; const near = new Map();     // also the nearest colour covering at least 2 % of the tile
+        for (let y = y0; y < y0 + h; y += 2) for (let x = x0; x < x0 + w; x += 2) { const i = (y * S + x) * 4, L = lab(img[i], img[i + 1], img[i + 2]), d = Math.hypot(L[0] - T[0], L[1] - T[1], L[2] - T[2]); n++;
+          if (d < best) { best = d; col = [img[i], img[i + 1], img[i + 2]]; } const k = Math.round(d); near.set(k, (near.get(k) || 0) + 1); }
+        let acc = 0, area = null; for (const k of [...near.keys()].sort((a, b) => a - b)) { acc += near.get(k); if (acc >= 0.02 * n) { area = k; break; } }
+        out.push({ tile: t.key, minDE: +best.toFixed(1), colour: '#' + col.map((v) => v.toString(16).padStart(2, '0')).join(''), dE2pct: area });
+      }
+      return out.sort((a, b) => a.minDE - b.minDE);
+    },
     renderInfo: () => ({ programs: renderer.info.programs.length, textures: renderer.info.memory.textures, geometries: renderer.info.memory.geometries,
       calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, shadowMap: CONFIG.light.shadowMap, art: artStats() }),
     waypoints: WAYPOINTS,

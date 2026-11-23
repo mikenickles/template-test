@@ -23,11 +23,11 @@ const VIEWS = ['spawn_green', 'spawn_tan', 'bed_top', 'desk_top', 'shelf_top', '
       const lab = (R, G, B) => { const f = (c) => { c /= 255; return c > 0.04045 ? Math.pow((c + 0.055) / 1.055, 2.4) : c / 12.92; }; const rr = f(R), gg = f(G), bb = f(B);
         const X = (0.4124 * rr + 0.3576 * gg + 0.1805 * bb) / 0.95047, Y = 0.2126 * rr + 0.7152 * gg + 0.0722 * bb, Z = (0.0193 * rr + 0.1192 * gg + 0.9505 * bb) / 1.08883;
         const h = (v) => (v > 0.008856 ? Math.cbrt(v) : 7.787 * v + 16 / 116); return [116 * h(Y) - 16, 500 * (h(X) - h(Y)), 200 * (h(Y) - h(Z))]; };
-      const cases = [], spots = [[60, 0, 60, 'sun'], [50, 0, 88, 'sun'], [44, 0, 140, 'sun'], [100, 0, 75, 'shade under desk'], [20, 0, 70, 'shade under bed'], [88, 0, 125, 'east floor']];
+      const cases = [], spots = [[60, 0, 60, 'sun'], [50, 0, 88, 'sun'], [44, 0, 140, 'sun'], [100, 0, 75, 'shade under desk'], [20, 0, 70, 'shade under bed'], [88, 0, 125, 'east floor'], [38.5, 0, 37, 'letter blocks W-a behind'], [38.5, 0, 123, 'letter blocks W-a (south) behind']];
       for (const [x, y, z, where] of spots) for (const crouch of [false, true]) for (const d of [20, 60]) {
         g.removeBots(); const id = g.spawnBot('tan'); const b = g.bots.find((o) => o.id === id);
         b.x = b.px = x; b.y = b.py = y; b.z = b.pz = z; b.yaw = b.ryaw = 0; b.vx = b.vz = 0; b.crouching = crouch;
-        let cx = x, cz = z - d; if (cz < 2) cz = z + d; if (cz > 158) cz = z - d;     // camera along z, in the room
+        let cx = x, cz = z - d; if (cz < 2 || /north|W-a behind/.test(where) && !/south/.test(where)) cz = z + d; if (cz > 158) cz = z - d;     // camera along z, in the room
         g.teleport(cx, 0, cz); g.lookAt(x, y + (crouch ? 0.6 : 0.9), z); g.render();
         const A = new Uint8Array(read()); g.removeBots(); g.render(); const B = read();
         const dE = [], fa = [[], [], []], fb = [[], [], []]; for (let i = 0; i < A.length; i += 4) { if (A[i] === B[i] && A[i + 1] === B[i + 1] && A[i + 2] === B[i + 2]) continue; const a = lab(A[i], A[i + 1], A[i + 2]), c = lab(B[i], B[i + 1], B[i + 2]); dE.push(Math.hypot(a[0] - c[0], a[1] - c[1], a[2] - c[2])); for (let k = 0; k < 3; k++) { fa[k].push(A[i + k]); fb[k].push(B[i + k]); } }

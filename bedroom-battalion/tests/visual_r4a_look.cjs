@@ -9,8 +9,8 @@ const fs = require('fs'); const path = require('path'); const os = require('os')
 const { open, dE, hex } = require('./visual_r3_lib.cjs');
 const SHOTS = path.resolve(__dirname, '..', 'screenshots', 'round4');
 const VIEWS = ['spawn_green', 'spawn_tan', 'bed_top', 'desk_top', 'shelf_top', 'floor_centre', 'under_bed', 'east_lane', 'west_lane'];
-const R3 = path.join(process.env.BB_TMP || os.tmpdir(), 'bb_index_r3_c90ee3c.html'), R4 = path.resolve(__dirname, '..', 'snapshots', 'index_r4a.html');
-const save = (file, url) => { fs.mkdirSync(SHOTS, { recursive: true }); fs.writeFileSync(path.resolve(SHOTS, file), Buffer.from(url.split(',')[1], 'base64')); };
+const R3 = path.join(process.env.BB_TMP || os.tmpdir(), 'bb_index_r3_c90ee3c.html'), R4 = path.resolve(__dirname, '..', 'snapshots', process.env.R4FILE || 'index_r4a.html')      /* R4FILE=index_r4b.html for the full round 4 pass */;
+const save = (file, url) => { if (process.env.R4FILE) file = file.replace('visual_4a_', 'visual_4_'); fs.mkdirSync(SHOTS, { recursive: true }); fs.writeFileSync(path.resolve(SHOTS, file), Buffer.from(url.split(',')[1], 'base64')); };
 const ROUTES = [   // [name, eye, target]
   ['book stairs (south, bed)', [36, 1.6, 150], [26, 8, 140]], ['ruler from the chair seat', [88, 18.6, 77], [94, 24, 66]],
   ['skateboard / chair stairs', [76, 2.5, 62], [88, 6, 72]], ['yo-yo string', [99, 2, 50], [107, 14, 53.3]],

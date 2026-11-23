@@ -5,7 +5,7 @@
 //   silhouette diff (setMatrixAt is wrapped on the live mesh; the game re-sends every matrix each render).
 const path = require('path'); const fs = require('fs');
 const { open: open2, dE, hex } = require('./visual_r2_lib.cjs');
-const SHOTS = path.resolve(__dirname, '..', 'screenshots', 'round3');
+const SHOTS = path.resolve(__dirname, '..', 'screenshots', process.env.SHOTDIR || 'round3');      // SHOTDIR=round4 for round 4 runs
 async function open(opts = {}) {
   const h = await open2(Object.assign({ probe: true }, process.env.VIS_FILE ? { file: path.resolve(process.env.VIS_FILE) } : {}, opts));      // VIS_FILE picks another build
   await install(h.page);

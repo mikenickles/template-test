@@ -1507,3 +1507,53 @@ The art fit (`builder_r4a_fit.cjs`, final build) is unchanged from 4A except the
   show; none was seen.
 - **The tester's three ray outliers** (e1, yo-yo, sills) were not reproduced on this build. The 4A snapshot has no ray hook to
   compare against (see R4A-4).
+
+### 4B follow-up (DESIGN 17.12)
+
+- **Letter blocks recoloured** away from Tan:
+  - `art.palette.blocks` was red, blue, yellow `#F2C230`, purple, orange.
+  - It is now red `#D43C2E`, blue `#2F6FD0`, purple `#7B4BB5`, teal `#1F8A8A`, raspberry `#C2185B`.
+  - The new colours are well away from Green: teal is dE 53.7 from Green `#2FA84A`.
+  - The board-game lid and the marble-run panels take their colours from this list, so they changed with it.
+- **Other small colour fixes:**
+  - The toy cars' side trim was a darkened body colour. On the yellow car that came within dE 20 of Tan, so the trim is now a
+    dark slate (`carTrim` `#34495E`).
+  - The pencil wood is paler: `#E8C9A0` (dE 24.9) to `#EAD6C2`.
+  - Spine bands, ruler ticks and car windows are now drawn on whole pixels. Before, the blended edge pixels between yellow and a
+    cover colour landed near Tan (as low as dE 3.3 on a purple spine).
+- **Colour scan against Tan `#D9A75A`** (CIE76 Lab).
+  - **CONFIG.** The closest colours are:
+
+    | Colour | Where | dE to Tan |
+    | --- | --- | --- |
+    | `#C9B98F` | ceiling-light rim | 25.5 |
+    | `#FFE2B0` | sun colour (a light, not a surface) | 27.6 |
+    | `#F08A2A` | ruin bricks, sock stripe, orange pencil, dump-truck bed, crayon, gondola | 28.8 |
+    | `#C86B3C` | plant pot | 28.8 |
+    | `#F2C230` | rulers, yellow car and truck cab, ball panel, marble, trophy, knob, lamp trim | 29.2 |
+
+    The planks (`#5E4535`) and cardboard (`#8F6B47`) are further away.
+  - **Atlas tiles** (`__game.atlasScan`, test only). For each tile it reports the nearest pixel, and the nearest colour that
+    covers at least 2 % of the tile. Every cover and floor tile is at least 28.4 for both, the nearest being the orange book
+    spine (`#CA6E1D`). The only tiles under 25 are two that are not cover or floor:
+    - the painted window view (16.8, one edge pixel; 34 at 2 % of the tile);
+    - the lamp bulb glow (18.1).
+- **Tan contrast.** The same `builder_r4b_look.cjs` measure as before, with two backgrounds added: Tan in front of the W-a letter
+  blocks, north and south, at 20 and 60 units, standing and crouched.
+  - **Worst background, colour dE:**
+    - before, on `snapshots/index_r4b.html`: 12.0, a standing Tan at 60 units in front of the yellow W-a block;
+    - after: 20.8, a standing Tan at 20 units on sunlit floor with the sunlit orange ruin bricks behind it. This case did not
+      change.
+  - **Letter-block cases:** 12.0–17.9 before, 30.7–94.6 after.
+  - **All cases:**
+
+    | | Before | After |
+    | --- | --- | --- |
+    | Median of per-pixel medians | 29.1 | 38.7 |
+    | Median colour dE | 29.4 | 39.3 |
+
+  - **Clipping:** unchanged, at most 0.26 % in any named view.
+- **Pistol viewmodel:** it now sits 0.05 higher, so both green hands show at the bottom of the frame. This is one viewmodel
+  offset: `viewmodel.models.pistol.dy`, applied in `poseViewmodel`. The flash and tracer still start at the muzzle.
+- **Hashes:** colliders `ff03369f`, unchanged. Only colours, canvas drawing and the viewmodel offset changed.
+- **Not changed:** the engine stays cab-forward, and only the sniper aims, as 17.12 decides.
