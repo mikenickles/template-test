@@ -1557,3 +1557,78 @@ The art fit (`builder_r4a_fit.cjs`, final build) is unchanged from 4A except the
   offset: `viewmodel.models.pistol.dy`, applied in `poseViewmodel`. The flash and tracer still start at the muzzle.
 - **Hashes:** colliders `ff03369f`, unchanged. Only colours, canvas drawing and the viewmodel offset changed.
 - **Not changed:** the engine stays cab-forward, and only the sniper aims, as 17.12 decides.
+
+## Round 4 fix pass
+
+FIXLIST "Round 4 fix pass" R4-1 to R4-5 and DESIGN 17.13. The user dropped the measurement tables, budget runs and
+screenshot sets for this pass, so nothing below was measured; render cost is kept down by design (one instanced outline
+per soldier part sharing the body's instance matrix, no new shader programs during a match).
+
+- **R4-1, Tan contrast:**
+  - Yellow and orange cover, toys and lane props recoloured, in `CONFIG.art.palette`. That covers the ruin, book spines,
+    ruler, socks, bucket handle, yo-yo axle, trophy, pot, cars, truck, marbles, ball and crayons, plus the train flatbed,
+    gondola and trim (`CONFIG.art.train.colors`).
+  - Cardboard is a cooler grey kraft: `#7D6A5C`, edge `#5F5047`.
+  - Soldier bodies (legs and upper body, not the gun) get a dark screen-space outline, `CONFIG.art.outline` (1.4 px,
+    shade 0.55). It is an instanced back-face mesh per part.
+- **R4-2, dead bodies:** every part tips with the body, and bodies tint toward `#7E8288` (`CONFIG.art.deadGrey`). The
+  "arms stay upright" report was not reproduced; the tip already applied to every part.
+- **R4-3, audio:**
+  - Stereo pan from the camera's right axis (`CONFIG.audio.pan` 0.85).
+  - Bot footsteps within 25 units at volume 0.6.
+  - Room and bed creaks are half as loud and are held back within 5 s of a gunshot.
+- **R4-4:** orange route-edge caps on the blanket slope (foot and sides) and the skateboard edges (`CONFIG.art.routeEdge`).
+- **R4-5:**
+  - Climbing soldiers sit 0.16 closer to the string, inside the hit volume (`CONFIG.art.climbPull`).
+  - Dust motes are capped at 3 px and fade out within 2 units of the camera.
+  - Decals are twice the size, and the metal mark is redrawn so it shows.
+  - Health sits on the same dark panel as ammo.
+  - The title controls text is 1rem.
+  - Reload dips the gun part way only (0.1, tilt 0.25).
+- **Bug fixed during the round 5 check:** an R4-5 comment in `CONFIG.fx` had swallowed `scorches`, `scorchSize`,
+  `scorchReach` and `decalLift`. The first bullet decal then threw, and `runMatch` stopped after 13 s. This was never in a
+  committed build.
+- **Hashes:** colliders unchanged by this pass (`ff03369f` until the round 5 chicane).
+
+## Round 5 polish
+
+The "Round 3 closed" carry-overs in FIXLIST.md. Per the user there were no tester re-checks, and the 300-seed balance run
+was skipped.
+
+- **Under-desk sniper line:**
+  - Two staggered toy chests, `96..107, 76..78.5` (blue) and `105..120, 81.5..84` (purple), h 3.
+  - The paper ball moved from (108, 80) to (114, 92), out of the chicane.
+  - m.e moved to (102.5, 0, 80); new nodes n.e.dn, m.e.de and s.e.ds. The edge n.e.5-m.e is replaced by the path through
+    the chicane.
+  - Collider hash is now `e2904076`, and `validateWaypoints()` returns `[]`.
+- **Grenade dodge:**
+  - The grenade has to be in the bot's view cone (or within 2 units).
+  - The dodge is a chance per difficulty (30 / 60 / 90 %), made after a reaction delay (0.6 / 0.45 / 0.3 s), with the
+    seeded generator.
+- **Cover:** bots stay at least 3 s and two peeks (`ai.coverMin`, `ai.coverPeeks`).
+- **Train:** the Centre bot boards during setup when a deck is due within 8 s of reaching the wait node
+  (`ai.rideSetupWait`); otherwise it rides at push time as before. FIXLIST and FEEL ask for boarding during setup, which
+  means more rides, not fewer.
+- **Callouts:**
+  - The gap is 6 s per bot (was 4).
+  - "Enemy down" is gone.
+  - "I'm hit" is skipped within 4 s of any other callout.
+  - Together these aim at about 10 a minute.
+- **R3-7:** the crossing wait is capped at 6 s (`ai.waitMax`, was 8). With no other route the bot relocates.
+- **R3-8:** a bot with a visible target that has not fired for 6 s relocates (`ai.engageQuiet`), except while holding
+  before push time.
+- **R3-9:** `__game.start()` after a finished match removes the bots, ends the match and respawns a live player.
+- **Veteran east-lane snipers:** the High role holds fire at targets beyond 80 units for the first 10 s of a round.
+- **Pointer-lock resume:**
+  - The pause screen says "Click anywhere to resume", and a click on it, beside the box, or on the canvas resumes.
+  - A click inside the browser's lock cooldown after Esc (`CONFIG.ui.lockCooldown`, 1.1 s) waits it out, then asks for the
+    lock.
+- **HUD text:** never below 12 px. The root size floor is 12 px, and every sub-1rem size is `max(12px, …)`.
+- **Optional art:**
+  - Brick studs are bigger and darker (r 0.42, h 0.22, shade 0.74).
+  - The ceiling gradient is finer, with a stronger falloff to the walls (grid 12, edge 0.78).
+- **Checks run (the only ones allowed),** with `tests/builder_r5_final.cjs`:
+  - zero console errors on load;
+  - `validateWaypoints()` returned `[]`;
+  - one `runMatch` (Regular, seed 1, autoplay) finished: Tan 5-2, 7 rounds, 0 stuck, 0 idle, 0 errors.
+  - The script ran three times: the first two runs found the decal crash above (and a reporting slip in the script).

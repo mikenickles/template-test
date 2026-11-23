@@ -111,7 +111,7 @@ No headboard (it would block the south route).
 | Pencil cup | cylinder (115.5, 98) r 2.6, `y 26..35` |
 | Ruler props (2) | stacks of books filling the space under each ruler outside the seat: north `92.5..95.5, 64..73`, south `92.5..95.5, 87..96`, solid from the floor up to the ruler's underside (stepped boxes or one wedge). With these there is no gap to fall into beside the skateboard or the chair stairs |
 | Seat stoppers (2) | cylinders r 0.5, `y 17..18`, at (92.45, 73.3) and (92.2, 86.7) (north one moved by the builder so it does not push skateboard lanes off the board). They close the seat edge between each ramp head and ruler foot so cutting the corner cannot drop you off the seat |
-| Under desk | eraser `104..108, 66..68, 0..1.2` (mirrored); paper ball cylinder (108, 80) r 2.5, h 4.5 |
+| Under desk | eraser `104..108, 66..68, 0..1.2` (mirrored); paper ball cylinder (114, 92) r 2.5, h 4.5 (round 5: moved from (108, 80), out of the chicane); round 5 chicane: two toy chests h 3, `96..107, 76..78.5` (north, blue) and `105..120, 81.5..84` (south, purple), staggered so there is no straight sight line along z 80 under the desk |
 
 Slab ramps are thin: solid only from the walking surface down by `thickness`. You can pass underneath
 wherever there is 1.9 or more of clearance.
@@ -251,6 +251,8 @@ Primitives: `box` (axis-aligned), `ramp` (axis-aligned footprint, linear height 
 - Player: capsule (radius 0.4, height 1.8) against these primitives, with step-up and slope limit.
 - Hitscan (round 2) raycasts the same collider list, never the visual meshes.
 - Round 3 adds oriented boxes for the train cars only.
+- Round 5 adds the under-desk chicane (`m.desk.chicane.n`, `m.desk.chicane.s`, section 4.2) and moves the paper ball, so
+  `colliderHash()` changes from `ff03369f` (rounds 3 and 4) to `e2904076`.
 - Falling out of the room must be impossible: if the player leaves the room box or drops below y -5,
   put them back at their last grounded position.
 
@@ -343,7 +345,9 @@ m.r.w-m.plat (jump), m.r.e-m.plat (jump), m.c.w-m.r.w (jump over sill), m.c.e-m.
 | n.e.3 (skate foot) | (89, 0, 48.5) | s.e.3 (stairs foot) | (89, 0, 111.7) |
 | n.e.x | (81, 0, 59.5) | s.e.x | (81, 0, 100.5) |
 | n.e.6 | (83.2, 0, 66) | s.e.6 | (83.2, 0, 94) |
-| m.e.w | (83.2, 0, 80) | m.e | (100, 0, 80) |
+| m.e.w | (83.2, 0, 80) | m.e | (102.5, 0, 80) (round 5: was (100, 0, 80)) |
+| n.e.dn (round 5) | (111, 0, 74) | s.e.ds (round 5) | (101.5, 0, 87) |
+| | | m.e.de (round 5) | (110.5, 0, 80) |
 | n.e.4 | (100, 0, 48) | s.e.4 | (100, 0, 112) |
 | n.e.5 | (100, 0, 66) | s.e.5 | (100, 0, 94) |
 | n.seat | (89, 17, 74.5) | s.seat | (89, 17, 85.5) |
@@ -367,7 +371,7 @@ m.r.w-m.plat (jump), m.r.e-m.plat (jump), m.c.w-m.r.w (jump over sill), m.c.e-m.
 | | | s.ts2.e / s.ts3.e | (110.5, 40, 152) / (110.5, 60, 152) |
 
 Edges (north): f.edoor-e.1, e.1-e.2, e.2-e.3w, e.3w-e.3, e.3w-e.x, e.x-e.6, e.6-m.e.w, e.2-e.4, e.4-e.5,
-e.5-m.e, e.2-ss.app, ss.app-ss.foot, ss.foot-ss.top (ramp), ss.top-ss1.a, ss1.a-ss1.s, ss1.a-ss1.b,
+e.5-m.e (round 5: replaced by the chicane path n.e.5 - n.e.dn - m.e.de - m.e - s.e.ds - s.e.5), e.2-ss.app, ss.app-ss.foot, ss.foot-ss.top (ramp), ss.top-ss1.a, ss1.a-ss1.s, ss1.a-ss1.b,
 ss1.b-ss1.c, ss1.b-ss2.b (climb), ss1.c-ss2.c (climb), ss2.b-ss2.c, e.3-seat (ramp), seat-m.seat,
 seat-rul.foot, m.seat-rul.foot, rul.foot-rul.top (ramp), rul.top-desk.w, desk.w-desk.1, desk.w-m.desk,
 desk.1-desk.n, desk.n-desk.br, e.4-yy.foot, yy.foot-desk.n (climb), desk.br-ss1.s (ramp),
@@ -720,13 +724,15 @@ Difficulty presets (all in CONFIG):
 | Strafe while engaging | never | half the time | always |
 | Grenade chance when suitable | 10 % | 30 % | 50 % |
 | Retreat below health | 25 | 35 | 40 |
+| Grenade dodge chance (round 5) | 30 % | 60 % | 90 % |
+| Grenade reaction delay (round 5) | 0.6 s | 0.45 s | 0.3 s |
 
 Aim error is multiplied by (1 + target speed / 7) and by 1.5 while the bot itself moves.
 
-Callouts: Green bots post short text pings in the HUD, at most one per bot per 4 s and three on screen, from a region table:
+Callouts: Green bots post short text pings in the HUD, at most one per bot per 6 s (round 5; was 4 s) and three on screen, from a region table:
 "Enemy on the bed", "Enemy under the bed", "Enemy on the desk", "Enemy on the chair", "Enemy on the tall shelf",
 "Enemy on the small shelf", "Enemy on the train", "Enemy at the ruin", "Enemy at their fort", "Enemy west lane",
-"Enemy centre", "Enemy east lane", plus "I'm hit", "Enemy down", "I'm down", "Last one". Regions are boxes in CONFIG.
+"Enemy centre", "Enemy east lane", plus "I'm hit", "I'm down", "Last one" ("Enemy down" is dropped in round 5). Regions are boxes in CONFIG.
 
 ### 16.5 Match rules (3B)
 
@@ -803,7 +809,7 @@ firefight. Bot logic must cost little: line-of-sight raycasts throttled and stag
 Bot liveness (a living bot must always be doing something):
 - A bot may stand still only while: in `hold` before push time; in `cover` for at most `ai.retreatCalm` (5 s) without a
   visible target; in `engage` while it has fired, scoped, reloaded or re-aimed at a visible target within the last 2 s;
-  waiting at a ride or crossing for at most 8 s; or during freeze time. Anything else stationary for more than 5 s is logged
+  waiting at a ride or crossing for at most 6 s (round 5; was 8 s: then another route, or a relocate if there is none); or during freeze time. Anything else stationary for more than 5 s is logged
   in a new `idleLog` (bot, state, position, seconds) and the bot is forced back to `advance` or `hunt`. Every `idleLog`
   entry is a bug for the tester, like `stuckLog`.
 - `engage` without line of sight from the bot's current eye for `ai.lostAfter` (3 s) moves to the last known position
@@ -815,7 +821,8 @@ Awareness and pacing:
 - `ai.holdUntil` 20 s (was 40). `ai.huntLast` 60 s (was 30).
 - In every state, being hit or a shot passing within 3 units turns the bot toward the source and starts `engage` (or
   `cover` if below retreat health). A gunshot within 40 units turns bots that have no target.
-- A bot within 8 units of a live grenade it can see sprints away from it, out of its radius if possible.
+- A bot within 8 units of a live grenade it can see sprints away from it, out of its radius if possible. Round 5: the grenade
+  must be in its view cone (or within 2 units), and the dodge is a per-difficulty chance after a reaction delay (16.4 table).
 - Engage ranges per weapon: bots do not open fire beyond SMG 40, pistol 50, rifle 90, sniper unlimited. Beyond that they close in or hold.
 
 Difficulty: Recruit preset becomes reaction 1.0 s, aim error 7.0 / 3.0 deg, settle 2.0 s, burst 2 to 3, pause 0.9 s.
@@ -831,9 +838,17 @@ west straight, lower on the east straight, so it tells you where the train is.
 
 Rules: a tie on total health after three replays goes to the side that dealt more damage that round; if that is also equal,
 the round is awarded to neither and the next round starts as a normal round (the replay counter resets).
-Death camera lasts 1.5 s. Every callout, including "I'm down" and "Enemy down", obeys one per bot per 4 s.
-Callouts: "I'm hit" once per life; lane callouts say "our side" or "their side"; the same region is not called twice within
+Death camera lasts 1.5 s. Every callout, including "I'm down", obeys one per bot per 6 s (round 5; was 4 s).
+Callouts: "I'm hit" once per life, and not within 4 s of any other callout (round 5); lane callouts say "our side" or "their side"; the same region is not called twice within
 8 s; at most 2 on screen.
+
+Round 5 AI numbers (`CONFIG.ai`):
+- `coverMin` 3 s and `coverPeeks` 2: a bot that reaches cover stays at least 3 s and peeks twice before it may leave.
+- `engageQuiet` 6 s: a bot with a visible target that has not fired for 6 s (no clear shot) relocates, except while holding
+  before push time.
+- `highQuiet` 10 s, `highQuietRange` 80: the High role holds fire at targets beyond 80 units for the first 10 s of a round.
+- `rideSetupWait` 8 s: the Centre bot boards straight from the spawn in setup when a deck is due within 8 s of arriving at
+  the wait node; otherwise it rides at push time as before.
 
 Determinism: `startMatch`, `runMatch`, rematch and Quit-then-Play reset the match clock, the train position, all bot state
 and the random generator, so the same seed gives the same match every time in one page.

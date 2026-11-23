@@ -9,7 +9,7 @@
      menus scale with it. Panels are rounded plastic bricks with studs along the top; accents are crayon colours. ---- */
   :root { --ink: #14110E; --white: #FFFFFF; --accent: #FFD21F; --danger: #E0281F; --green: #2FA84A; --tan: #D9A75A;
     --panel: rgba(28,24,40,.72); --panel2: rgba(28,24,40,.86); --brick: #2F6FD0; --crayonR: #D43C2E; --crayonB: #2F6FD0; --crayonY: #F2C230; --crayonP: #7B4BB5; --crayonO: #F08A2A; }
-  html { font-size: clamp(10px, calc(0.95vh + 0.5vw), 26px); }
+  html { font-size: clamp(12px, calc(0.95vh + 0.5vw), 26px); }   /* round 5: HUD text never below 12 px */
   html, body { margin: 0; height: 100%; overflow: hidden; background: #D6DEE8; }
   body { font-family: "Arial Rounded MT Bold", "Trebuchet MS", "Segoe UI", system-ui, sans-serif; color: var(--white); user-select: none; }
   #view { display: block; width: 100%; height: 100%; }
@@ -31,13 +31,13 @@
   #scope i { position: absolute; background: rgba(0,0,0,.85); }
   #scope .h { left: 0; right: 0; top: 50%; height: 1px; } #scope .v { top: 0; bottom: 0; left: 50%; width: 1px; }
   #ammo { position: absolute; right: 1.6rem; bottom: 1.4rem; text-align: right; padding: 0.55rem 1.1rem 0.5rem; --stud: var(--crayonY); }
-  #ammo .name { font-size: 0.95rem; letter-spacing: 0.22rem; color: var(--accent); font-weight: 800; }
+  #ammo .name { font-size: max(12px, 0.95rem); letter-spacing: 0.22rem; color: var(--accent); font-weight: 800; }
   #ammo .count { font-size: 2.2rem; font-weight: 800; line-height: 1.05; } #ammo .count small { font-size: 1.15rem; font-weight: 700; opacity: .85; }
-  #ammo .gren { font-size: 0.85rem; letter-spacing: 0.14rem; opacity: .95; color: #FFB3A8; }
+  #ammo .gren { font-size: max(12px, 0.85rem); letter-spacing: 0.14rem; opacity: .95; color: #FFB3A8; }
   .dmg { position: absolute; left: 0; top: 0; font-size: 1.3rem; font-weight: 800; color: var(--white); display: none; white-space: nowrap; }
   .dmg.head { color: var(--accent); font-size: 1.6rem; } .dmg.kill { color: var(--danger); }
   #health { position: absolute; left: 1.6rem; bottom: 1.4rem; font-size: 2.2rem; font-weight: 800; letter-spacing: 0.05rem; padding: 0.55rem 1.1rem 0.45rem; --stud: var(--green); }
-  #health small { font-size: 0.9rem; font-weight: 700; opacity: .9; margin-right: 0.6rem; letter-spacing: 0.15rem; color: #9FE3AE; }
+  #health small { font-size: max(12px, 0.9rem); font-weight: 700; opacity: .9; margin-right: 0.6rem; letter-spacing: 0.15rem; color: #9FE3AE; }
   #health.low { color: var(--danger); } #health.low small { color: #FFB3A8; }
   #hint { position: absolute; left: 50%; bottom: 22%; transform: translateX(-50%); font-size: 1.05rem; color: var(--accent); display: none; padding: 0.3rem 0.9rem; }
   #debug { position: absolute; left: 8px; top: 8px; margin: 0; padding: 6px 9px; font: 12px/1.45 Consolas, Menlo, monospace;
@@ -57,7 +57,7 @@
   #mtime { font-size: 1.9rem; font-weight: 800; letter-spacing: 0.12rem; line-height: 1.05; }
   #mscore { font-size: 1.2rem; font-weight: 800; letter-spacing: 0.12rem; margin-top: 0.1rem; }
   #mscore .g { color: #49C866; } #mscore .t { color: #F0BE6E; }
-  #mround { font-size: 0.8rem; letter-spacing: 0.25rem; opacity: .9; }
+  #mround { font-size: max(12px, 0.8rem); letter-spacing: 0.25rem; opacity: .9; }
   .pips { display: inline-block; margin: 0.3rem 0.4rem 0; } .pips i { display: inline-block; width: 0.7rem; height: 0.95rem; margin: 0 0.14rem; border: 0.1rem solid var(--ink); border-radius: 0.25rem 0.25rem 0.15rem 0.15rem; }
   .pips.g i.on { background: var(--green); } .pips.t i.on { background: var(--tan); } .pips i.off { background: rgba(20,17,14,.45); }
   #feed { position: absolute; right: 1.1rem; top: 1rem; text-align: right; font-size: 1rem; font-weight: 800; }
@@ -65,6 +65,7 @@
   #feed .g { color: #49C866; } #feed .t { color: #F0BE6E; } #feed .w { color: var(--white); font-weight: 700; margin: 0 0.45rem; opacity: .9; } #feed .hs { color: var(--accent); margin-left: 0.3rem; }
   #callouts { position: absolute; left: 1.1rem; top: 38%; font-size: 1.05rem; font-weight: 700; }
   #callouts div { margin-bottom: 0.3rem; padding: 0.22rem 0.7rem; background: var(--panel); border-left: 0.35rem solid var(--green); border-radius: 0.2rem 0.6rem 0.6rem 0.2rem; }
+  #pause .hint { margin-top: 0.8rem; font-size: 1rem; font-weight: 700; opacity: .85; letter-spacing: 0.08rem; }
   #callouts b { color: #49C866; margin-right: 0.45rem; }
   #arcs { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
   #arcs i { position: absolute; left: -4.6rem; top: -4.6rem; width: 9.2rem; height: 9.2rem; border-radius: 50%; border: 0.38rem solid transparent; border-top-color: var(--danger); box-sizing: border-box; display: none; }
@@ -75,10 +76,10 @@
   #picker .opt::before { content: ""; position: absolute; left: 0.7rem; right: 0.7rem; top: -0.5rem; height: 0.4rem; background: radial-gradient(circle at 50% 100%, rgba(255,255,255,.35) 0 0.34rem, transparent 0.36rem) 0 0 / 1.25rem 0.8rem repeat-x; }
   #picker .opt.sel { border-color: var(--accent); color: var(--accent); background: var(--panel2); transform: translateY(-0.15rem); }
   #picker .opt.sel::before { background: radial-gradient(circle at 50% 100%, var(--accent) 0 0.34rem, transparent 0.36rem) 0 0 / 1.25rem 0.8rem repeat-x; }
-  #picker .opt small { display: block; font-size: 0.8rem; opacity: .85; font-weight: 700; letter-spacing: 0.05rem; }
+  #picker .opt small { display: block; font-size: max(12px, 0.8rem); opacity: .85; font-weight: 700; letter-spacing: 0.05rem; }
   #pickCount { font-size: 2.4rem; font-weight: 900; margin-top: 0.6rem; }
   #spect { position: absolute; left: 50%; bottom: 13%; transform: translateX(-50%); font-size: 1.3rem; font-weight: 800; padding: 0.45rem 1.2rem; display: none; --stud: var(--green); }
-  #spect small { display: block; font-size: 0.85rem; opacity: .85; text-align: center; font-weight: 700; }
+  #spect small { display: block; font-size: max(12px, 0.85rem); opacity: .85; text-align: center; font-weight: 700; }
   .overlay { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
   #roundEnd { pointer-events: none; }
   #roundEnd .box, #matchEnd .box { padding: 1.5rem 2.8rem 1.3rem; --stud: var(--crayonY); }
@@ -95,7 +96,7 @@
   .btn:hover::before, .btn.sel::before { background: radial-gradient(circle at 50% 100%, var(--accent) 0 0.34rem, transparent 0.36rem) 0 0 / 1.25rem 0.8rem repeat-x; }
   .btn:active { transform: translateY(0.15rem); box-shadow: 0 0.12rem 0 #120F1C; }
   #tPlay { font-size: 2rem; padding: 0.8rem 3rem; background: linear-gradient(#3FBF5C, #2A8F43); border-color: rgba(255,255,255,.6); box-shadow: 0 0.35rem 0 #1A5E2B; }
-  .btn.small { font-size: 0.95rem; padding: 0.45rem 1rem; margin-top: 0.7rem; }
+  .btn.small { font-size: max(12px, 0.95rem); padding: 0.45rem 1rem; margin-top: 0.7rem; }
   .set { margin: 0.7rem 0; font-size: 1rem; font-weight: 700; } .set input { vertical-align: middle; width: 13rem; margin: 0 0.7rem; accent-color: var(--accent); } .set span { display: inline-block; min-width: 2.8rem; text-align: left; color: var(--accent); }
   #pause { background: rgba(20,16,30,.55); }
   #pause .box { padding: 1.4rem 2.4rem 1.2rem; --stud: var(--crayonO); }
@@ -128,7 +129,7 @@
 <div id="roundEnd" class="overlay ol"><div class="box brick"><h2 id="reTitle">GREEN WINS THE ROUND</h2><div class="how" id="reHow"></div><div class="sc" id="reScore"></div></div></div>
 <div id="matchEnd" class="overlay ol"><div class="box brick"><h2 id="meTitle">GREEN WINS</h2><div class="sc" id="meScore"></div><div id="meTable"></div>
   <div><span class="btn" id="meAgain">ENTER &nbsp; REMATCH</span><span class="btn" id="meTitleBtn">ESC &nbsp; TITLE</span></div></div></div>
-<div id="pause" class="overlay ol"><div class="box brick"><h2>PAUSED</h2><span class="squig"></span><div class="btn" id="pResume">RESUME</div>
+<div id="pause" class="overlay ol"><div class="box brick"><h2>PAUSED</h2><span class="squig"></span><div class="btn" id="pResume">RESUME</div><div class="hint" id="pHint">Click anywhere to resume</div>
   <div class="set">Mouse sensitivity <input type="range" id="pSens" min="0.2" max="3" step="0.1"><span id="pSensV"></span></div>
   <div class="set">Master volume <input type="range" id="pVol" min="0" max="100" step="1"><span id="pVolV"></span></div>
   <div class="btn small" id="pQuit">QUIT TO TITLE</div></div></div>
@@ -219,7 +220,7 @@ const CONFIG = {
             numbers: 12, numberLife: 0.8, numberRise: 1.4, numberAbove: 0.35, numberClear: 34, numberGap: 2 },   // px kept clear round the crosshair
   fx: { particles: 192, casings: 24, decals: 64, tracers: 24, tracerLife: 0.08, tracerWidth: 0.035, tracerColor: '#FFE7A0', tracerScopeMin: 3,   // per-weapon tracerWidth / tracerLife override
         casingColor: '#D9A93A', casingLife: 1.4, casingSize: [0.03, 0.03, 0.08], decalColor: '#2A2420', decalSize: 0.13,
-        decalSizes: { wood: 0.4, plastic: 0.28, fabric: 0.48, book: 0.36, card: 0.4, metal: 0.26 },   // R4-5: twice the 4B size scorches: 8, scorchSize: 3.2, scorchReach: 2.5, decalLift: { fabric: 0.13, book: 0.05 },   // 17.7
+        decalSizes: { wood: 0.4, plastic: 0.28, fabric: 0.48, book: 0.36, card: 0.4, metal: 0.26 }, scorches: 8, scorchSize: 3.2, scorchReach: 2.5, decalLift: { fabric: 0.13, book: 0.05 },   // 17.7; R4-5: decalSizes twice the 4B size
         flashColor: '#FFE27A',
         impactMinDE: 30,   // an impact colour closer than this (CIE76) to the colour of the face it hit uses its alt colour
         impact: {    // particles by surface: count, speed, gravity, life, size; alt is used on surfaces too close to color
@@ -327,17 +328,18 @@ const CONFIG = {
   navTest: { pRoute: 0.2, pEdge: 0.35, pRide: 1 },
   // ---- round 3B: combat, team play, match rules, HUD (DESIGN.md 16.4 to 16.6, 16.10) ----
   difficulty: {      // DESIGN 16.4 presets; aim error in degrees (half angle), burst in shots, strafe = chance per engagement
-    recruit: { label: 'Recruit', reaction: 1.00, aimAcquire: 7.0, aimSettled: 3.0, settle: 2.0, headChance: 0.00, burst: [2, 3], burstPause: 0.90, vision: 90, strafe: 0.0, grenadeChance: 0.10, retreat: 25 },   // 16.11
-    regular: { label: 'Regular', reaction: 0.45, aimAcquire: 3.2, aimSettled: 1.1, settle: 1.1, headChance: 0.10, burst: [4, 6], burstPause: 0.35, vision: 120, strafe: 0.5, grenadeChance: 0.30, retreat: 35 },
-    veteran: { label: 'Veteran', reaction: 0.28, aimAcquire: 2.0, aimSettled: 0.55, settle: 0.7, headChance: 0.25, burst: [5, 8], burstPause: 0.22, vision: 140, strafe: 1.0, grenadeChance: 0.50, retreat: 40 } },
+    recruit: { label: 'Recruit', reaction: 1.00, aimAcquire: 7.0, aimSettled: 3.0, settle: 2.0, headChance: 0.00, burst: [2, 3], burstPause: 0.90, vision: 90, strafe: 0.0, grenadeChance: 0.10, retreat: 25, dodge: 0.3, grenadeReact: 0.6 },   // 16.11; round 5: dodge, grenadeReact
+    regular: { label: 'Regular', reaction: 0.45, aimAcquire: 3.2, aimSettled: 1.1, settle: 1.1, headChance: 0.10, burst: [4, 6], burstPause: 0.35, vision: 120, strafe: 0.5, grenadeChance: 0.30, retreat: 35, dodge: 0.6, grenadeReact: 0.45 },
+    veteran: { label: 'Veteran', reaction: 0.28, aimAcquire: 2.0, aimSettled: 0.55, settle: 0.7, headChance: 0.25, burst: [5, 8], burstPause: 0.22, vision: 140, strafe: 1.0, grenadeChance: 0.50, retreat: 40, dodge: 0.9, grenadeReact: 0.3 } },
   ai: { cone: 110, losHz: 10, hearRange: 40, targetSpeedK: 7, movingMult: 1.5, lostAfter: 3, memory: 8,          // 16.11: lostAfter 1.5 -> 3
         holdUntil: 20, huntLast: 60, coverRadius: 12, coverCheck: 3, coverHeight: 1.2, crouchEye: 1.0, coverMaxPath: 20,   // 16.11: 40 -> 20, 30 -> 60
         peekStand: [0.8, 1.2], peekCrouch: [1.0, 1.8], flankAfter: 6, flankCooldown: 12, retreatRadius: 20, retreatCalm: 5,   // 16.11: 8 -> 5
         // 16.11 liveness: standing still outside an allowed case for idleLimit s is logged in idleLog and the bot moves on;
         // any bot that has stayed within campRadius for campLimit s relocates (so nobody holds one spot for half a minute)
-        idleLimit: 5, idleMove: 0.5, activeWindow: 2, campLimit: 15, campRadius: 1.0, waitMax: 8, relocateMin: 4, relocateMax: 12,
+        idleLimit: 5, idleMove: 0.5, activeWindow: 2, campLimit: 15, campRadius: 1.0, waitMax: 6, relocateMin: 4, relocateMax: 12,
         // 16.11 awareness: hits and near misses (within nearMiss of the bot) turn it in every state; gunshots turn bots without a target
         nearMiss: 3, lookTime: 0.7, grenadeFlee: 8, fleeDist: 8.5,
+        coverMin: 3, coverPeeks: 2, engageQuiet: 6, highQuiet: 10, highQuietRange: 80, rideSetupWait: 8,   // round 5
         engageRange: { smg: 40, pistol: 50, rifle: 90, sniper: 1e9 }, closeReplan: 3,
         searchFresh: 45, searchDistK: 0.25,
         grenadeMin: 10, grenadeMax: 25, grenadeCooldown: 6, grenadeHit: 2.5, grenadeFresh: 3, sniperMin: 12, tacticalReload: 0.5,
@@ -345,8 +347,9 @@ const CONFIG = {
         rideChance: 0.6, rideMaxWait: 8, rideFlankSlack: 1.15,                    // 16.11: 0.35 -> 0.6, 6 -> 8
         separation: 0.9, sepRate: 0.3, sepSwirl: 1.0, sepClosing: 1.0, occupiedArrive: 1.3,
         sprintStates: ['setup', 'cover', 'retreat', 'flank'] },
+  ui: { lockCooldown: 1.1 },          // round 5: s a browser refuses a new pointer lock after Esc (click-to-resume waits it out)
   match: { roundsToWin: 5, roundTime: 150, freeze: 5, roundEnd: 4, maxReplays: 3, deathCam: 1.5, maxSimSeconds: 2400,
-           killFeed: 5, killFeedTime: 5, calloutGap: 4, calloutMax: 2, calloutTime: 4, calloutRegionGap: 8, dmgArcTime: 1, botLogMax: 4000, idleLogMax: 2000,
+           killFeed: 5, killFeedTime: 5, calloutGap: 6, calloutHitQuiet: 4, calloutMax: 2, calloutTime: 4, calloutRegionGap: 8, dmgArcTime: 1, botLogMax: 4000, idleLogMax: 2000,
            playerSpawn: { green: [60, 0, 20, Math.PI], tan: [60, 0, 140, 0] },
            botSpawns: { green: [[52, 0, 13], [56, 0, 20], [64, 0, 20], [68, 0, 18]], tan: [[60, 0, 140], [52, 0, 147], [56, 0, 140], [64, 0, 140], [68, 0, 142]] } },
   roles: {           // DESIGN 16.4: hold node(s) and the push route into the enemy half, per team; primaries to pick from
@@ -376,8 +379,8 @@ const CONFIG = {
          toneMapping: 'neutral', exposure: 0.86,                          // R4A-2: 1.0 -> 0.86 with the sun at 2.4                              // set once: Khronos neutral keeps palette colours, rolls off highlights
          shellShadow: false,                                                 // walls and ceiling do not cast, so the sun reaches the whole floor
          stepCap: 0.3, skirtBead: 0.36,
-         course: 1.1, brickLen: 2.4, brickBevel: 0.045, brickJoint: 0.7, brickTop: 1.18, studShade: 0.84, brickMain: 0.72, brickVary: 0.05, blockBevel: 0.12,   // R4A-5: crisper bricks
-         studR: 0.36, studH: 0.14, studGap: 1.2, railJoint: 4,
+         course: 1.1, brickLen: 2.4, brickBevel: 0.045, brickJoint: 0.7, brickTop: 1.18, studShade: 0.74, brickMain: 0.72, brickVary: 0.05, blockBevel: 0.12,   // R4A-5: crisper bricks
+         studR: 0.42, studH: 0.22, studGap: 1.2, railJoint: 4,   // round 5: bigger, darker studs (were 0.36 / 0.14, shade 0.84)
          floorTex: { w: 1024, h: 2048, planks: 8 }, plankTones: [0.84, 0.92, 1.0, 1.07, 1.14],
          windowGlow: '#FFF6E6',
          vao: { band: 1.2, floor: 0.72, underBed: 0.42, underDesk: 0.72, underChair: 0.82 },        // vertex-colour occlusion
@@ -385,7 +388,7 @@ const CONFIG = {
                underChair: 0.22, edge: 0.2, edgeWidth: 4, wallFoot: 3, corner: 0.18, cornerWidth: 5 },                    // contact shadow decals
          routeEdge: 0.3,
          outline: { px: 1.4, shade: 0.55 }, deadGrey: '#7E8288', climbPull: 0.16,     // R4-1 outline, R4-2 dead tint, R4-5 climber fit
-         chunks: [3, 4], ceiling: { grid: 8, centre: 1.06, edge: 0.84 },                                                    // R4A-1: static art split 3 x 4 over the room for culling
+         chunks: [3, 4], ceiling: { grid: 12, centre: 1.08, edge: 0.78 },                                                    // R4A-1: static art split 3 x 4 over the room for culling
          titleCam: { centre: [60, 0, 80], radius: 36, squash: 1.25, height: 27, bob: 4, speed: 0.035, look: [60, 5, 80] },   // 4B title drift
          train: { bodyY: 0.75, wheelR: 0.38, crank: 0.16, cupola: 1.1,
                   colors: { flatbed: '#1F8A8A', gondola: '#C2185B', trim: '#F0F0F0' } },     // R4-1: art overrides of train.colors (no yellow or orange)              // round 4B toy consist
@@ -396,7 +399,7 @@ const CONFIG = {
            fortGreen: ['#2F6FD0', '#F0F0F0', '#8C97A6'], fortTan: ['#D43C2E', '#F0F0F0', '#8C97A6'], ruin: ['#7B4BB5', '#F0F0F0', '#1F8A8A'],   // R4-1: no orange
            blocks: ['#D43C2E', '#2F6FD0', '#7B4BB5', '#1F8A8A', '#C2185B'],      // 17.12: no yellow or orange (Tan readability)
            books: ['#C0392B', '#2E6DB4', '#8E44AD', '#1F8A8A', '#34495E'], pages: '#E6DECB', bookBand: '#F2C230',
-           cardEdge: '#6E4F33', rail: '#6B7480', sleeper: '#5A3B22', railJoint: '#4B5058',
+           cardEdge: '#5F5047', rail: '#6B7480', sleeper: '#5A3B22', railJoint: '#4B5058',
            ruler: '#7FB8E0', deck: '#E0281F', wheel: '#34495E', grip: '#3A404B', truck: '#9AA3AD',
            spring: '#E0281F', springCoil: '#B9BEC6', springBase: '#4B5058', domino: '#F4EFE2', dominoPip: '#1F2228',
            bear: '#C08A8E', bearPad: '#E8C9C3', eye: '#1F2228', sockA: '#7B4BB5', sockB: '#1F8A8A', sockToe: '#F4EFE2', dust: '#8E9095', shoeLid: '#34495E',
@@ -409,7 +412,7 @@ const CONFIG = {
            pot: '#2E6DB4', soil: '#4A2E1A', leaf: '#2F6F7A', clock: '#D43C2E', bell: '#B9BEC6',
            cars: ['#C2185B', '#7B4BB5', '#2E6DB4'], carGlass: '#BFD3E0', carTrim: '#34495E', tyre: '#2B2F36', hub: '#D8DEE6', bumper: '#9AA3AD',
            truckBed: '#2E6DB4', truckCab: '#D43C2E', load: '#9AA3AD', marbles: ['#2E6DB4', '#E0281F', '#F0F0F0'], gameBox: '#2E6DB4', gameBoxSide: '#F4EFE2',
-           ball: ['#E0281F', '#F0F0F0'], crayons: ['#D43C2E', '#2F6FD0', '#7B4BB5', '#1F8A8A'], crate: '#C0392B', crateTrim: '#F4EFE2',
+           ball: ['#E0281F', '#F0F0F0'], crayons: ['#D43C2E', '#2F6FD0', '#7B4BB5', '#1F8A8A'], crate: '#C0392B', crateTrim: '#F4EFE2', chestA: '#2E6DB4', chestB: '#7B4BB5',
            knob: '#F2C230', cord: '#F4EFE2', lampShade: '#FFF3D6', lampRim: '#C9B98F',
            skyTop: '#9FC3E8', skyLow: '#FFE9C2', hill: '#B8C9A8', fence: '#F4EFE2', trunk: '#8A6A55', leaves: '#7FA392', bush: '#93AE9C',
            flowerA: '#F29BB0', flowerB: '#F2C230', lawn: '#A9BE9A', pillow: '#EEF2F8' } },
@@ -420,7 +423,7 @@ const CONFIG = {
     sun: '#FFE2B0', hemiSky: '#FFF8EC', hemiGround: '#D8CFC4',
     bed: '#E9E4DA', bedUnder: '#6F6A63', blanket: '#3D5A99', sheet: '#D9E1EB', desk: '#8FA3B5', shelf: '#DED6C8',
     fortGreen: '#2F6FD0', fortTan: '#D43C2E', ruin: '#7B4BB5',
-    cardboard: '#8F6B47', route: '#FF8A1F', string: '#FFD21F', cover: '#9AA3AD', spare: '#B9BEC6', track: '#4B5058', sleeper: '#3A3E45',
+    cardboard: '#7D6A5C', route: '#FF8A1F', string: '#FFD21F', cover: '#9AA3AD', spare: '#B9BEC6', track: '#4B5058', sleeper: '#3A3E45',
     hud: '#FFFFFF', accent: '#FFD21F', danger: '#E0281F'
   },
   debug: { box: '#00E5FF', ramp: '#FF4DFF', cyl: '#B6FF00', string: '#FFD21F', pad: '#FF3030', shell: '#FFFFFF',
@@ -950,7 +953,8 @@ function buildWorld(scene, renderer) {
   box('desk.apron.n', 95.5, 96, 64, 75, 17, 24.5, C.desk, 'wood'); box('desk.apron.s', 95.5, 96, 85, 96, 17, 24.5, C.desk, 'wood');   // close the drop beside each ruler
   cyl('chair.stopper.n', 92.45, 73.3, 0.5, 17, 18, G, 'wood'); cyl('chair.stopper.s', 92.2, 86.7, 0.5, 17, 18, G, 'wood');   // seat stoppers
   boxNS('desk.eraser', 104, 108, 66, 68, 0, 1.2, G, 'plastic');
-  cyl('desk.paperball', 108, 80, 2.5, 0, 4.5, G, 'card');
+  cyl('desk.paperball', 114, 92, 2.5, 0, 4.5, G, 'card');                                         // round 5: moved out of the chicane (was 108, 80)
+  box('m.desk.chicane.n', 96, 107, 76, 78.5, 0, 3, G, 'wood'); box('m.desk.chicane.s', 105, 120, 81.5, 84, 0, 3, G, 'wood');   // round 5: closes the under-desk floor-to-floor sniper line
 
   // ---- 4.3 shelves (open ladder shelves: corner posts and boards only) ----
   for (const s of [{ pre: 's.tall', z0: 116, z1: 156, tops: [20, 40, 60] }, { pre: 'n.small', z0: 4, z1: 44, tops: [20, 40] }]) {
@@ -2086,6 +2090,13 @@ function artCover(M) {
   for (const x of [tbx.x0, tbx.x1 - 0.5]) for (const z of [tbx.z0, tbx.z1 - 0.5]) bev(pt, x, x + 0.5, 0, tbx.y1, z, z + 0.5, { col: P.crateTrim, tile: grainTile }, 0.06);
   for (let k = 0; k < 4; k++) { const x = tbx.x0 + 0.05 + k * 0.9; bev(pt, x, x + 0.8, tbx.y1 - 0.2, tbx.y1, tbx.z0, tbx.z1, { col: P.crate, tile: grainTile }, 0.05); }
   paintCollider('m.E-d.toybox', P.crate);
+  for (const [id, col] of [['m.desk.chicane.n', P.chestA], ['m.desk.chicane.s', P.chestB]]) {        // round 5: the under-desk toy chests
+    const c = COL(id);
+    bev(pt, c.x0 + 0.08, c.x1 - 0.08, 0, c.y1 - 0.35, c.z0 + 0.08, c.z1 - 0.08, { col, tile: grainTile, skip: { ny: 1 } }, 0.06);
+    bev(pt, c.x0, c.x1, c.y1 - 0.42, c.y1, c.z0, c.z1, { col: shade(col, 1.12), tile: grainTile }, 0.1);                    // lid
+    for (let x = c.x0 + 1.2; x < c.x1 - 0.5; x += 2.4) bev(pt, x, x + 0.3, 0.2, c.y1 - 0.5, c.z0 - 0.06, c.z1 + 0.06, { col: P.crateTrim }, 0.04);   // bands
+    paintCollider(id, col);
+  }
   // tunnel: corrugated cardboard with darker cut edges at the open ends and flaps standing up off the ends of the roof
   const ww = COL('tunnel.wall.w'), we = COL('tunnel.wall.e'), rf = COL('tunnel.roof'), card = { col: '#FFFFFF', tile: { side: T.card, pz: T.cardEdge, nz: T.cardEdge, py: T.card, ny: T.card }, skip: { ny: 1 } };
   for (const c of [ww, we]) bev(pt, c.x0, c.x1, c.y0, c.y1, c.z0, c.z1, card, 0.06);
@@ -3331,6 +3342,7 @@ function viewBasis(yaw, pitch) {
 }
 const teamColor = (t) => (t === 'green' ? CONFIG.target.green : CONFIG.target.tan);
 function fireShot(S = player) {
+  if (S.brain) S.brain.lastShotT = game.time;
   const A = S.arsenal, name = A.current, W = CONFIG.weapons[name], g = A.guns[name], p = S, G = CONFIG.gun, L = CONFIG.input.pitchLimit, me = S === player;
   const spread = currentSpread(S), B = viewBasis(p.yaw, p.pitch);
   const a = Math.tan(spread * DEG * Math.sqrt(rnd(A))), ph = rnd(A) * Math.PI * 2, ca = a * Math.cos(ph), sa = a * Math.sin(ph);
@@ -3998,7 +4010,7 @@ function buildWaypoints() {
     'n.ss1.a': [110.5, 20, 40], 'n.ss1.s': [111.5, 20, 42.5], 'n.ss1.b': [110.5, 20, 30], 'n.ss2.b': [110.5, 40, 30],
     'n.ss1.c': [110.5, 20, 14], 'n.ss2.c': [110.5, 40, 14],
     's.e.1': [78, 0, 136], 's.e.2': [90, 0, 134], 's.e.3w': [84, 0, 111.7], 's.e.3': [89, 0, 111.7], 's.e.x': [81, 0, 100.5],
-    's.e.6': [83.2, 0, 94], 'm.e': [100, 0, 80], 's.e.4': [100, 0, 112], 's.e.5': [100, 0, 94], 's.seat': [89, 17, 85.5],
+    's.e.6': [83.2, 0, 94], 'm.e': [102.5, 0, 80], 'n.e.dn': [111, 0, 74], 'm.e.de': [110.5, 0, 80], 's.e.ds': [101.5, 0, 87], 's.e.4': [100, 0, 112], 's.e.5': [100, 0, 94], 's.seat': [89, 17, 85.5],
     'm.tunnel.top': [77, 8, 80], 's.rul.foot': [94, 17, 83.5], 's.rul.top': [94, 26, 95.7], 's.desk.w': [97, 26, 95.7],
     's.desk.1': [104, 26, 94], 's.sl.foot': [107, 0, 106.7], 's.desk.s': [107, 26, 102.5], 's.desk.br': [111.5, 26, 103.5],
     's.ts.app': [100, 0, 153], 's.ts.foot': [105.7, 0, 152.5], 's.ts.top': [105.7, 20, 120], 's.ts1.a': [110.5, 20, 120],
@@ -4021,7 +4033,7 @@ function buildWaypoints() {
       ${h}.w.1>${h}.w.2 ${h}.w.2>${h}.w.3 ${h}.w.3>${h}.w.x ${h}.w.x>${h}.w.4 ${h}.w.4>${h}.w.5 ${h}.bed.b>m.bed
       ${h}.c.2>${h}.c.3 ${h}.c.3>${h}.c.4 ${h}.c.4>${h}.c.5 ${h}.c.3>${h}.c.x ${h}.c.x>${h}.c.w ${h}.c.w>m.c.w ${h}.c.4>${h}.c.y ${h}.c.y>${h}.c.e ${h}.c.e>m.c.e
       ${h}.f.edoor>${h}.e.1 ${h}.e.1>${h}.e.2 ${h}.e.2>${h}.e.3w ${h}.e.3w>${h}.e.3 ${h}.e.3w>${h}.e.x ${h}.e.x>${h}.e.6 ${h}.e.2>${h}.e.4
-      ${h}.e.4>${h}.e.5 ${h}.e.5>m.e ${h}.seat>m.seat ${h}.seat>${h}.rul.foot m.seat>${h}.rul.foot ${h}.rul.top>${h}.desk.w ${h}.desk.w>${h}.desk.1 ${h}.desk.w>m.desk`);
+      ${h}.e.4>${h}.e.5 ${h}.seat>m.seat ${h}.seat>${h}.rul.foot m.seat>${h}.rul.foot ${h}.rul.top>${h}.desk.w ${h}.desk.w>${h}.desk.1 ${h}.desk.w>m.desk`);
     add('walk', `${h}.w.5>m.pad`, true);        // one way: standing on the pad always launches
     add('cross', `${h}.f.gate>${h}.c.2 ${h}.w.x>${h}.c.x ${h}.e.x>${h}.c.y`);
     add('ramp', `${h}.e.3>${h}.seat ${h}.rul.foot>${h}.rul.top`);
@@ -4046,6 +4058,7 @@ function buildWaypoints() {
   add('drop', 'm.tunnel.top>m.c.e m.tunnel.top>m.e.u', true);
   // 16.11: the east lane goes under the chair seat round the toy box (m.e.w is gone; m.e.cn and m.e.cs are not linked to each other)
   add('walk', 'n.e.6>m.e.cn m.e.cn>m.e.u m.e.u>m.e.cs m.e.cs>s.e.6');
+  add('walk', 'n.e.5>n.e.dn n.e.dn>m.e.de m.e.de>m.e m.e>s.e.ds s.e.ds>s.e.5');      // round 5: through the under-desk chicane
   // round 3A ride edges (DESIGN 16.3): a wait node beside each straight, linked by a walk edge; one-way ride edges in the train's direction
   for (const id in CONFIG.rides) N[CONFIG.rides[id].a] = CONFIG.rides[id].wait.slice();
   add('walk', 'w.ride.w>s.c.x w.ride.e>n.c.y');
@@ -4810,6 +4823,12 @@ function setupPath(b) {
 function brainStartRound(b) {
   const B = b.brain; if (!B || b.dead) return;
   B.phase = 'setup'; setState(b, 'advance'); b.sprintMove = true;
+  // round 5: the Centre bot takes its ride straight from the spawn when a deck is due within rideSetupWait s of reaching the wait node
+  const R = CONFIG.roles[B.role] && CONFIG.roles[B.role][b.team];
+  if (R && R.ride && B.rideTry && !B.rideDone) {
+    const C = CONFIG.rides[R.ride], to = astar(b.lastNode, C.a, { cross: true });
+    if (to && deckWait(R.ride, game.time + to.cost / CONFIG.move.walk + 0.5) < CONFIG.ai.rideSetupWait) { B.rideDone = true; B.rideWanted = R.ride; B.phase = 'push'; B.pushIdx = 0; B.pushDone = false; if (tryRide(b)) return; B.phase = 'setup'; B.rideDone = false; }
+  }
   setupPath(b);
 }
 const pushTime = (b) => match.liveT >= CONFIG.ai.holdUntil || teamLeads(b.team);
@@ -4872,7 +4891,7 @@ function startHunt(b) {
 }
 function brainPathDone(b) {
   const B = b.brain;
-  if (B.state === 'cover' || B.state === 'retreat') { B.atCover = true; B.coverT = game.time; B.peekT = 0; B.peekStand = false; return; }
+  if (B.state === 'cover' || B.state === 'retreat') { B.atCover = true; B.coverT = game.time; B.peekT = 0; B.peekStand = false; B.peeks = 0; return; }
   if (B.chasing || B.relocating || B.closeIn) return resumePlan(b);
   if (B.state === 'flank') {
     if (B.flankStage === 1 && B.gotoNode) { B.flankStage = 2; pathFromHere(b, B.gotoNode); return; }
@@ -4930,7 +4949,7 @@ function brainHurt(b, attacker) {                // being hit reveals the attack
   if (!b.brain || !match.active) return;
   const B = b.brain; B.lastHurtT = game.time;
   if (attacker && attacker !== b) { const H = B.heard || (B.heard = { x: 0, y: 0, z: 0, t: 0 }); H.x = attacker.x; H.y = attacker.y; H.z = attacker.z; H.t = game.time; B.threat = attacker; brainAlert(b, attacker); }
-  if (b.hp > 0 && !b.hitCalled) { b.hitCalled = postCallout(b, "I'm hit"); }        // 16.11: once per life
+  if (b.hp > 0 && !b.hitCalled && !(callouts.length && game.time - callouts[callouts.length - 1].time < CONFIG.match.calloutHitQuiet)) { b.hitCalled = postCallout(b, "I'm hit"); }   // once per life; round 5: not over a teammate's call
 }
 function onGrenadeThrown(S) { if (match.active && match.stats) match.stats.grenades[S.team]++; }
 // ---- engage: reaction time, aim error that settles, bursts through the real weapon code ----
@@ -5116,6 +5135,7 @@ function grenadeThreat(b) {                      // a live grenade within grenad
     if (o.owner && o.owner.team === b.team && o.owner !== b) continue;      // teammates' grenades cannot hurt it
     const d = Math.hypot(o.x - b.x, o.y - b.y - 0.9, o.z - b.z);
     if (d > AI.grenadeFlee || !losClear(b.x, b.y + b.eye, b.z, o.x, o.y + 0.1, o.z)) continue;
+    if (Math.abs(wrapAngle(Math.atan2(-(o.x - b.x), -(o.z - b.z)) - b.yaw)) > CONFIG.ai.cone * Math.PI / 360 && d > 2) continue;   // round 5: only grenades in the view cone (or at its feet)
     const away = Math.atan2(-(b.x - o.x), -(b.z - o.z));
     for (const off of [0, 0.5, -0.5, 1.0, -1.0, 1.6, -1.6]) {
       const yaw = away + off, fx = -Math.sin(yaw), fz = -Math.cos(yaw);
@@ -5141,7 +5161,7 @@ function relocate(b) {
 function stillAllowed(b) {
   const B = b.brain, AI = CONFIG.ai, now = game.time;
   if (B.phase === 'hold' && B.state === 'hold' && !pushTime(b)) return true;
-  if ((B.state === 'cover' || B.state === 'retreat') && B.atCover && (B.vis || now - Math.max(B.lastSeenT, B.coverT) <= AI.retreatCalm)) return true;
+  if ((B.state === 'cover' || B.state === 'retreat') && B.atCover && (B.vis || now - Math.max(B.lastSeenT, B.coverT) <= AI.retreatCalm || now - B.coverT < AI.coverMin + AI.peekCrouch[1] * AI.coverPeeks)) return true;
   if (now - B.activeT <= AI.activeWindow) return true;           // fired, scoped, reloaded or re-aimed at a visible target lately
   if ((b.botState === 'wait_cross' || b.botState === 'wait_ride') && b.waitT <= AI.waitMax) return true;
   if (B.lookUntil > now || B.throwT > 0) return true;
@@ -5160,6 +5180,7 @@ function livenessCheck(b, dt) {
   if (b.botState === 'wait_cross' && b.waitT > AI.waitMax) {       // a crossing closed too long: another way, avoiding this edge
     const e = b.edges[b.pi - 1], res = e ? astar(b.lastNode, b.goal, { cross: true, avoid: { [e.key]: 1 } }) : null;
     if (res && pathFromHere(b, b.goal, { res })) b.waitT = 0;
+    else { b.waitT = 0; relocate(b); }                // R3-7: no other way: step off the crossing rather than wait longer
   }
   b.campT += dt;
   if (stillAllowed(b)) b.idleT = 0; else b.idleT += dt;
@@ -5194,7 +5215,11 @@ function brainTick(b, dt) {
   if (b.climbing || b.riding || b.crossing || (b.ride && b.ride.phase !== 'wait') || b.launched || actorInEnvelope(b)) return false;
   // a visible grenade nearby: sprint away until clear
   const every = Math.max(1, Math.round(CONFIG.sim.hz / AI.losHz)), tick = Math.round(now * CONFIG.sim.hz), myTick = (tick + b.slotP) % every === 0;
-  if (myTick && grenadesLive.length) { const G = grenadeThreat(b); if (G) { B.flee = G.o; B.fleeYaw = G.yaw; } }
+  if (myTick && grenadesLive.length) {             // round 5: a dodge is a chance per difficulty, after a reaction delay
+    const G = grenadeThreat(b);
+    if (G && G.o !== B.dodgeSeen) { B.dodgeSeen = G.o; B.dodgeGo = brnd() < D.dodge; B.dodgeAt = now + D.grenadeReact; }
+    if (G && B.dodgeGo && now >= B.dodgeAt) { B.flee = G.o; B.fleeYaw = G.yaw; }
+  }
   if (B.flee) {
     const o = B.flee;
     if (grenadesLive.indexOf(o) < 0 || Math.hypot(o.x - b.x, o.z - b.z) > AI.fleeDist) B.flee = null;
@@ -5230,7 +5255,7 @@ function brainTick(b, dt) {
     if (!b.edges.some((e, k) => e.kind === 'ride' && k >= b.pi - 1)) tryRide(b);
   }
   if (T && B.vis) {
-    B.activeT = now;
+    B.activeT = now; if (!B.wasVis) B.visSince = now; B.wasVis = true;
     const d = Math.hypot(T.x - b.x, T.y - b.y, T.z - b.z);
     if ((B.state === 'cover' || B.state === 'retreat') && !B.atCover && d > 8) { b.botState = B.state; return false; }   // still running to cover
     // beyond this weapon's engage range: close in (or keep holding before push time); never fire there
@@ -5238,6 +5263,10 @@ function brainTick(b, dt) {
     const R = AI.engageRange[b.arsenal.current] || 1e9;
     if (d > R) { if (closeIn(b, T)) { b.botState = 'move'; return false; } aimAt(b, T.x, T.y + 1.2, T.z); b.botState = 'engage'; return true; }
     B.closeIn = null;
+    // round 5: the High role holds its perch the first highQuiet s of a round before it fires at anything beyond highQuietRange
+    if (B.role === 'high' && match.liveT < AI.highQuiet && d > AI.highQuietRange) { B.visSince = now; aimAt(b, T.x, T.y + 1.2, T.z); I.crouch = true; b.botState = 'engage'; return true; }
+    // R3-8: a visible target it has not fired at for engageQuiet s (no clear shot): move on instead of standing there
+    if (now - Math.max(B.lastShotT || -99, B.visSince) > AI.engageQuiet && !(B.phase === 'hold' && !pushTime(b))) { B.visSince = now; relocate(b); return false; }
     if (B.state === 'cover' && B.atCover) return peek(b, T, dt, true);
     if (B.state === 'retreat' && B.atCover) { I.crouch = false; B.calmT = 0; return engage(b, T, dt, true); }
     // go to cover when hurt recently, or when the target is not in the open (only its head shows, or it is crouched)
@@ -5246,6 +5275,7 @@ function brainTick(b, dt) {
     b.botState = 'engage';
     return engage(b, T, dt, false);
   }
+  B.wasVis = false;
   // target lost: keep watching where it was for lostAfter s (maybe a grenade), then go to its last known position
   if (B.mem && B.state === 'engage' && now - B.lastSeenT < AI.lostAfter) {
     aimAt(b, B.mem.x, B.mem.y + 1.2, B.mem.z); tryGrenade(b); b.botState = 'engage'; B.activeT = now;
@@ -5259,7 +5289,8 @@ function brainTick(b, dt) {
   }
   if (B.state === 'cover' && B.atCover) {
     if (B.mem) tryGrenade(b);
-    if (now - Math.max(B.lastSeenT, B.coverT) > AI.retreatCalm && now - B.lastHurtT > AI.retreatCalm) { resumePlan(b); return false; }
+    const stayed = now - B.coverT >= AI.coverMin && (B.peeks || 0) >= AI.coverPeeks;          // round 5: at least coverMin s and two peeks
+    if (stayed && now - Math.max(B.lastSeenT, B.coverT) > AI.retreatCalm && now - B.lastHurtT > AI.retreatCalm) { resumePlan(b); return false; }
     return peek(b, null, dt, true);
   }
   if (B.state === 'retreat' && B.atCover) {
@@ -5286,7 +5317,7 @@ function brainTick(b, dt) {
 function peek(b, T, dt, atCover) {               // crouch in cover; stand to fire a burst; crouch again
   const B = b.brain, AI = CONFIG.ai, I = b.input;
   B.peekT -= dt;
-  if (B.peekT <= 0) { B.peekStand = !B.peekStand; B.peekT = B.peekStand ? lerp(AI.peekStand[0], AI.peekStand[1], brnd()) : lerp(AI.peekCrouch[0], AI.peekCrouch[1], brnd()); }
+  if (B.peekT <= 0) { B.peekStand = !B.peekStand; if (B.peekStand) B.peeks = (B.peeks || 0) + 1; B.peekT = B.peekStand ? lerp(AI.peekStand[0], AI.peekStand[1], brnd()) : lerp(AI.peekCrouch[0], AI.peekCrouch[1], brnd()); }
   b.botState = 'cover';
   if (B.peekStand && T) { engage(b, T, dt, true); return true; }      // snipers too stand to fire (16.11)
   I.crouch = true;
@@ -5671,7 +5702,6 @@ function onSoldierKilled(v, attacker, weapon, head) {
   if (match.stats) { match.stats.kills++; if (head) match.stats.headKills++; }
   if (v === player) { player.deadT = 0; player.crouching = false; }
   if (v.team === 'green' && v !== player) postCallout(v, "I'm down");
-  if (attacker && attacker.team === 'green' && attacker !== v) postCallout(attacker, 'Enemy down');
   countAlive();
   if (match.alive.tan === 1) { const g = match.soldiers.find((s) => s.team === 'green' && !s.dead && s !== player); if (g) postCallout(g, 'Last one'); }
   for (const s of match.soldiers) if (s.brain && s.brain.target === v) { s.brain.target = null; s.brain.vis = false; }
@@ -5803,7 +5833,9 @@ function initUI() {
   for (const id of ['tSens', 'pSens']) $(id).addEventListener('input', (e) => setSetting('sensitivity', +e.target.value));
   for (const id of ['tVol', 'pVol']) $(id).addEventListener('input', (e) => setSetting('volume', +e.target.value));
   for (const el of document.querySelectorAll('.btn, #picker .opt')) el.addEventListener('pointerdown', () => { audioUnlock(); sfx('ui_click'); });   // 17.8 UI clicks
-  $('pResume').addEventListener('click', () => { audioUnlock(); if (game.pointerLock) requestLock(); else resumeGame(); });
+  $('pResume').addEventListener('click', (e) => { e.stopPropagation(); clickResume(); });
+  $('pause').addEventListener('click', (e) => { if (e.target === $('pause')) clickResume(); });      // round 5: a click beside the box resumes too
+  ui.canvas.addEventListener('click', () => { if (game.phase === 'paused') clickResume(); });
   $('pQuit').addEventListener('click', () => quitToTitle());
   $('meAgain').addEventListener('click', () => rematch());
   $('meTitleBtn').addEventListener('click', () => quitToTitle());
@@ -5829,10 +5861,20 @@ function hideTitle() { ui.title.style.display = 'none'; }
 function hideOverlays() { for (const id of ['roundEnd', 'matchEnd', 'pause']) $(id).style.display = 'none'; }
 function pauseGame() {
   if (game.phase !== 'playing') return;
-  game.phase = 'paused';
+  game.phase = 'paused'; game.unlockAt = performance.now();
   clearKeys();
-  $('pause').style.display = 'flex'; syncSettingsUI();
+  $('pause').style.display = 'flex'; syncSettingsUI(); $('pHint').textContent = 'Click anywhere to resume';
   if (document.pointerLockElement) document.exitPointerLock();
+}
+// Round 5: browsers refuse a new pointer lock for about a second after Esc. A click inside that window waits for it (the prompt
+// says so) and asks again when it ends, so the first click always resumes.
+function clickResume() {
+  audioUnlock();
+  if (!game.pointerLock) { resumeGame(); return; }
+  const wait = CONFIG.ui.lockCooldown - (performance.now() - (game.unlockAt || -1e9)) / 1000;
+  const hint = $('pHint');
+  if (wait > 0) { hint.textContent = 'Resuming...'; clearTimeout(game.resumeTimer); game.resumeTimer = setTimeout(() => { if (game.phase === 'paused') requestLock(); }, wait * 1000); return; }
+  requestLock();
 }
 function resumeGame() {
   if (game.phase !== 'paused') return;
@@ -6235,7 +6277,13 @@ function init() {
   window.__game = {
     ready: false,
     CONFIG,
-    start: (opts) => startGame(opts),
+    start: (opts) => {                         // R3-9: after a finished (or abandoned) match, free play starts with a live player
+      if (match.phase === 'matchEnd' || player.dead || player.health <= 0) {
+        removeBots(); match.active = false; match.phase = 'title'; player.dead = false; player.deadT = 0; player.tip = 0;
+        player.autoplay = false; player.brain = null; hideOverlays(); respawnPlayer(); game.phase = 'title';
+      }
+      return startGame(opts);
+    },
     state: () => {
       const p = player;
       return { phase: game.phase, time: +game.time.toFixed(4),
