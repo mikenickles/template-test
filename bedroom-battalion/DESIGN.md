@@ -223,7 +223,7 @@ All of these are colliders. "Mirrored" objects also exist at z' = 160 - z.
 | E-a | alphabet blocks | `80..83, 30..33` h 6; `83..86, 30..33` h 3; `80..83, 33..36` h 3 | yes |
 | E-b | toy car | `110..116, 46..49` h 2.2 | yes |
 | E-c | alphabet block (north only) | `79.5..82.5, 44..47` h 3 (Tan's side already has the solid chair stairs here) | no |
-| Tunnel | cardboard box over the east straight | walls `72.6..73.6` and `80.4..81.4`, `z 68..92`, `y 0..8`; roof `72.6..81.4, 68..92, 6.8..8` | centred |
+| Tunnel | cardboard box over the east straight | walls `72.6..73.6` and `80.4..81.4`, `z 68..92`, `y 0..8`; roof `72.6..81.4, 68..92, 6.5..8` (round 3: lowered so a rider standing on a car roof is scraped off; crouch to ride through) | centred |
 
 Lanes: west (x 0..41, by and under the bed), centre (x 45..75, inside the track loop), east (x 79..120, by the desk legs).
 
@@ -544,7 +544,7 @@ zone, damage, distance), `audioLog` (last 200 sound events by name, logged even 
 2. Draw-call and triangle counters include the shadow pass (`renderer.info.autoReset = false`, manual reset per frame).
 3. `player.stepSmooth` lowered to 9 to calm the camera on book stairs.
 4. Named views: `west_lane` eye (42, 1.6, 24); `desk_top` eye (97.5, 27.6, 66).
-5. Jumbo crayons C-a turned north-south so they stop masking the firing slits: `55.7..57, 29..38` and `63..64.3, 29..38`, h 1.3, mirrored.
+5. Jumbo crayons C-a turned north-south so they stop masking the firing slits: `55.7..57, 28..33.5` and `63..64.3, 28..33.5`, h 1.3, mirrored (round 3: shortened from z 29..38 so they clear the train's swept path on the curve).
 6. Graybox bed top drawn in blanket blue `#3D5A99` (sides stay `#E9E4DA`), pillows keep their pale colour; bed underside darkened.
 7. Bear head pulled back to `6..14, 39..45` so the body gives a 4-deep ledge on the way down.
 8. Desk apron: panels `95.5..96, 64..75, 17..24.5` and `95.5..96, 85..96, 17..24.5` close the drop under the desk top beside each ruler. They sit outside the ruler footprint (`92.5..95.5`) so every ruler lane still reaches the top.
@@ -602,3 +602,184 @@ Rules added:
   particles briefly visible), so the first shot, first grenade aim and first burst do not hitch.
 - Desk skirt: panel `96..96.5, 73..87, 17..24.5` closes the chair seat's east edge under the desk, so sliding along
   an apron can stop you but never drop you.
+
+## 16. Round 3: match spec
+
+Round 3 is built in two halves. **3A**: the train, soldier models, and bot movement (navigation, climbing, train riding,
+safe crossing, stuck handling) with no combat. **3B**: bot combat, match rules, weapon pick, HUD, menus, spectating.
+Gate: the bug tester completes a full match start to finish on each difficulty with no blocker bugs and no stuck bots.
+
+### 16.1 Train (3A)
+
+Section 7 holds the track, consist and car types. Additions:
+
+- Moves at a constant 4 u/s along the oval forever, also during freeze time and between rounds; never stops or reverses.
+  `s` (distance along the track) is deterministic from match time so the timing is learnable.
+- Each car is an oriented box collider (plus its cab, cargo block or gondola walls) following the track tangent, with
+  front and rear on the centre line. The swept envelope is therefore wider on the curves: radius 13.5 to 19.5 around
+  each curve centre, and 2 either side of the straights. No static collider may sit in it.
+  `__game.trainClearance()` returns any static collider that does.
+- Bullets stop at train colliders. Grenades bounce off them and pick up the car's velocity.
+- Standing on a car (roof, deck, cargo block) carries you: position follows the car, and the yaw turns with it on the curves.
+  Jumping off keeps the train's velocity. Decks at 1.2 are boarded with a jump from the floor.
+- Push, never kill: a soldier overlapping a car is pushed out along the car's sideways axis, toward the side they are on.
+  If that is blocked by static geometry, they are pushed ahead of the car along the track until a sideways exit opens.
+  If both stay blocked for 0.3 s, place them at the nearest free spot outside the envelope and log it in `trainRescueLog`
+  (a tester counts every entry as a bug). No damage from the train, ever.
+- Tunnel: the roof underside is 6.5. A soldier standing on a 5-high car roof (head 6.8) hits the roof's front edge and
+  is scraped back off the car into the gap between cars, then pushed aside into the tunnel's side clearance (1.4 each side).
+  Crouched roof riders, and anyone on a deck, ride through.
+- Audio: a low rumble with distance attenuation and a slight doppler, wheel clacks timed to each car's wheels passing rail
+  joints every 6 units, and a whistle each time the engine passes z = 80 on either straight (twice a lap).
+
+### 16.2 Soldiers (3A)
+
+- Same blockout as the target dummies (body, head, flat base) plus a blocky gun in hand, in team colour
+  (Green `#2FA84A`, Tan `#D9A75A`). Instanced: one InstancedMesh per part shared by all ten soldiers, so ten soldiers
+  cost a handful of draw calls including shadows.
+- Hit volumes: head and body, as the dummies. Bullets and grenades use them, never the visual mesh.
+- Simple animation: walk bob, crouch lowers the body, aim pitch tilts the gun, climbing poses flat against the string.
+- Death: goes rigid and tips over as one piece with a few plastic chips (reuse the dummy tip-over). Bodies stay for the
+  round and do not block movement or bullets.
+- A small team-colour chevron floats above living teammates only, within 60 units and only with line of sight.
+- The 21 target dummies are removed from play. They stay reachable through `__game.range(true)` for testing only.
+
+### 16.3 Bot movement (3A)
+
+- Bots drive the same movement controller as the player through virtual input (the code `walkPath` already uses).
+  They never teleport except through the logged rescue below.
+- Pathing: A* over the waypoint graph. Edge cost = length, x1.5 for `climb`, x1.2 for `ramp`, +4 for `jump`.
+  `cross` edges cost +2 and are only started when no car will reach the crossing point within 3 s (or until the
+  train has passed). `launch` and `drop` edges are one way.
+- `ride` edges (new, one way, in the train's direction of travel):
+
+| Edge | Wait at | Board | Ride until | Step off to |
+| --- | --- | --- | --- | --- |
+| ride.w (west straight, northbound) | (46.5, 0, 104) | a flatbed or gondola deck whose centre is within 2 of z 104 | the deck centre passes z 58 | (46.5, 0, 56), then node n.c.x |
+| ride.e (east straight, southbound) | (73.5, 0, 56) | a deck centre within 2 of z 56 | the deck centre passes z 98 | (74.0, 0, 100), then node s.c.y |
+
+  Wait nodes are added to the graph as `w.ride.w` and `w.ride.e`, linked by walk edges to s.c.x and n.c.y respectively.
+  The edge cost includes the expected wait for the next deck car. A bot leaves the wait node if the wait would exceed 8 s.
+  ride.w carries Tan toward Green and ride.e carries Green toward Tan, so the train is fair to both sides.
+- Strings: a bot walks into the string, holds forward to the top (or back to descend), and steps off at the exit.
+- Never on the track: a bot inside the envelope that is not riding or mid-crossing leaves it by the shortest way at once.
+  Bots never choose a node inside the envelope as a place to stop.
+- Stuck handling: if a bot makes less than 0.5 units of progress toward its next node in 1.5 s, it jumps; after 2.5 s it
+  strafes left or right for 0.5 s; after 3.5 s it repaths from its nearest reachable node; after 6 s it is placed at its
+  last reached node and logged in `stuckLog` with position, node and edge. Every `stuckLog` entry is a bug for the tester.
+- Nav test mode (3A only, kept for testing): `__game.startNavTest({bots: 10, seed})` spawns bots that endlessly walk
+  between random nodes chosen so that every edge kind, every route in 4.4, both ride edges and every cross edge get used.
+  `__game.navStats()` returns per-edge use counts, rides completed, crossings, stuck and rescue counts, and time spent
+  inside the envelope while not riding or crossing.
+
+### 16.4 Bot combat and team play (3B)
+
+Squads: Green is the player plus 4 bots; Tan is 5 bots. Names "Green 1" to "Green 4" and "Tan 1" to "Tan 5"; the player is "You".
+
+Roles, assigned at each round start from a seeded random shuffle, mirrored per team:
+
+| Role | Route | Hold at (Green / Tan) | Primary |
+| --- | --- | --- | --- |
+| West | west lane floor | n.w.5 / s.w.5 | rifle or SMG |
+| Bed | blanket slope or book stairs onto the bed | n.bed.b / s.bed.b | sniper or rifle |
+| Centre | centre lane, ruin, may use the ride edge | n.r.n / s.r.s | SMG or rifle |
+| High east | desk (skate, stairs or string) or own shelf | n.desk.1, or n.ss2.b / s.desk.1, or s.ts3.d | sniper |
+| East | east lane floor | n.e.6 / s.e.6 | rifle or SMG |
+
+The player takes no role; Green's four bots take four of the five roles (Centre is always filled).
+
+Round flow for bots: go to the hold node by the role route (setup), hold and watch the lane until 40 s into the round or
+until their team leads in soldiers alive, then push into the enemy half in the same lane, then toward the enemy fort.
+In the last 30 s all living bots hunt toward the last known enemy position.
+
+States: `advance`, `hold`, `engage`, `cover`, `flank`, `retreat`, `hunt`, plus movement sub-states `climb` and `ride`.
+- Perception: a 110 degree view cone, range per difficulty, line of sight raycast to the target's head and body against
+  colliders and the train, checked at 10 Hz per bot (staggered). A gunshot within 40 units reveals the shooter's position.
+  Being hit reveals the attacker's direction.
+- Engage: after the reaction time, aim and fire in bursts with the aim error below, using the real weapon code
+  (fire rate, magazine, reload, spread). Snipers scope and stand still to fire.
+- Cover: when engaged and the target is not in the open, or after taking damage, move to a node within 12 units with
+  no line of sight from the threat at crouch eye height (1.0). Crouch there and peek (stand, fire a burst, crouch).
+  Precompute, per node, which of 8 directions have cover within 3 units at 1.2 high.
+- Flank: when a target holds cover for over 6 s, a bot other than the closest one routes through an adjacent lane.
+- Retreat: below the retreat health, break contact toward cover and the nearest teammate.
+- Grenades: thrown at a known enemy behind cover at 10 to 25 units when the arc solves, with the per-difficulty chance.
+- Friendly fire is off: teammates stop bullets but take no damage. Grenades never hurt teammates (self-damage stays on).
+
+Difficulty presets (all in CONFIG):
+
+| | Recruit | Regular | Veteran |
+| --- | --- | --- | --- |
+| Reaction time to first shot | 0.70 s | 0.45 s | 0.28 s |
+| Aim error at acquire / settled (deg) | 5.0 / 2.0 | 3.2 / 1.1 | 2.0 / 0.55 |
+| Time to settle | 1.6 s | 1.1 s | 0.7 s |
+| Head aim chance | 0 % | 10 % | 25 % |
+| Burst length (automatics) | 3 to 4 | 4 to 6 | 5 to 8 |
+| Pause between bursts | 0.55 s | 0.35 s | 0.22 s |
+| Vision range | 90 | 120 | 140 |
+| Strafe while engaging | never | half the time | always |
+| Grenade chance when suitable | 10 % | 30 % | 50 % |
+| Retreat below health | 25 | 35 | 40 |
+
+Aim error is multiplied by (1 + target speed / 7) and by 1.5 while the bot itself moves.
+
+Callouts: Green bots post short text pings in the HUD, at most one per bot per 4 s and three on screen, from a region table:
+"Enemy on the bed", "Enemy under the bed", "Enemy on the desk", "Enemy on the chair", "Enemy on the tall shelf",
+"Enemy on the small shelf", "Enemy on the train", "Enemy at the ruin", "Enemy at their fort", "Enemy west lane",
+"Enemy centre", "Enemy east lane", plus "I'm hit", "Enemy down", "I'm down", "Last one". Regions are boxes in CONFIG.
+
+### 16.5 Match rules (3B)
+
+- Five rounds to win. Rounds last 2:30. Sides never swap.
+- Each round: everyone is placed at their fort spawns (section 5.1 and mirror), health 100, one grenade, magazines full.
+- Freeze time 5 s: nobody can move or fire; the player picks a primary (rifle, SMG, sniper) with keys 1 to 3 or a click.
+  The last pick is remembered; the default is rifle. The pistol is always carried. Keys 3 to 5 no longer pick weapons.
+- No respawn during a round. A round ends when one squad has nobody standing, or at 0:00 when the side with more
+  soldiers standing wins. Equal at 0:00 is a replay that does not count. After three replays in a row the side with
+  more total health remaining wins.
+- After the player dies, the camera tips with the body for 1.5 s, then spectates a living Green bot from its eye.
+  Left click cycles. If no Green is alive the round is over.
+- Round-end screen 4 s (winner, how, score), then the next freeze. Match-end screen: winner, final score, a table of kills
+  and deaths per soldier. Enter starts a rematch at once at the same difficulty; Esc returns to the title.
+
+### 16.6 HUD and menus (3B)
+
+- HUD: round timer and score top centre ("GREEN 2 - 1 TAN") with five pips per side showing who is alive; kill feed top
+  right (killer, weapon, victim, in team colours, headshot mark, last five, 5 s each); callouts left; damage direction
+  as red arcs around the crosshair pointing at the attacker for 1 s; health bottom left; weapon, ammo and grenade bottom
+  right; freeze-time weapon picker centre with a countdown; "Spectating Green 3" banner bottom centre.
+- Title screen: "Bedroom Battalion", Play, difficulty (Recruit, Regular, Veteran), controls list, settings.
+- Pause on Esc (releases the mouse and stops the simulation): Resume, mouse sensitivity (0.2 to 3.0), master volume
+  (0 to 100), Quit to title. Settings and difficulty persist in localStorage (wrapped in try/catch; the game works without it).
+- Fix BUGS R1 finding 4: Esc then a click within about 30 ms must never leave the game paused with the pointer locked.
+  The pause state follows the actual pointer-lock state.
+- Round start and round end stingers, a short win and lose jingle at match end.
+
+### 16.7 Test hook additions
+
+3A: `state().train {s, speed, cars:[{type, pos, yaw}]}`, `trainClearance()`, `trainRescueLog`, `state().bots
+[{id, name, team, pos, hp, state, node, nextNode, edge, path, riding, climbing, weapon, stuckTime}]`,
+`spawnBot(team, nodeId)` returning an id, `startNavTest({bots, seed})`, `navStats()`, `stuckLog`, `range(on)`, `seed(n)`.
+
+3B: `startMatch({difficulty, seed, autoplay})` (autoplay makes the player a Green bot with a role, so a match plays itself),
+`state().match {phase: 'title'|'freeze'|'live'|'roundEnd'|'matchEnd', round, score {green, tan}, timeLeft,
+alive {green, tan}, difficulty}`, `runMatch({difficulty, seed, maxSimSeconds})` (synchronous, steps the simulation without
+rendering until the match ends and returns `{winner, score, rounds:[{winner, reason, duration, kills}], stuckLog,
+trainRescueLog, laneUse, highGroundTime, errors}`), `skipRound(winner)`, `killBot(id)`, `setGodMode(bool)`,
+`botLog` (state changes), `killFeed`, `callouts`.
+`laneUse` reports, per team, the seconds bots spent in each of the west, centre and east lanes and on the bed, desk and
+shelves. All bot randomness comes from the seeded generator so a seed reproduces a match.
+
+### 16.8 Round 2 carry-overs to fix in 3A
+
+1. No tracer while scoped.
+2. Pistol shot: add a low body under the high crack so it is not mostly hiss. Jump sound gain 0.15 to 0.5.
+3. A simple hand with a grenade drawn while aiming a grenade.
+4. Crayons C-a shortened (section 15.5 item 5).
+5. Tunnel roof underside 6.5 (section 6).
+
+### 16.9 Performance
+
+Ten soldiers and the train must stay inside the budget: target under 40 draw calls including shadows during a full
+firefight. Bot logic must cost little: line-of-sight raycasts throttled and staggered, paths cached, no per-tick allocation.
+`runMatch` on a full match must finish in a few minutes headless.
