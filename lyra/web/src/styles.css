@@ -10692,3 +10692,9 @@ html[data-ambient="on"] .es-hand { transform-origin: 0% 100%; animation: es-wave
 .lp-sheet-head .t svg { width: 24px; height: 24px; }
 .lyra-page .conn-group + .hint { margin: 10px 0 18px; }
 .lyra-page .lp-big { margin-top: 26px; }
+
+/* (0.64) who does what */
+.who-does-what .job-lane { padding: 12px 16px 2px; font-size: 12px; font-weight: 600; color: var(--text-faint); letter-spacing: 0.02em; }
+.who-does-what .job-row { gap: 10px; flex-wrap: wrap; }
+.who-does-what .job-row .body { flex: 1 1 200px; min-width: 0; }
+.who-does-what .job-select { flex: 0 1 190px; max-width: 100%; }

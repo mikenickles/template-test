@@ -47,6 +47,7 @@ export function ModelSettings({ state, run, busy }: { state: AppState; run: (fn:
       </section>
 
       {current.provider !== "fake" && <BackgroundModel state={state} run={run} busy={busy} />}
+      {current.provider !== "fake" && <WhoDoesWhat state={state} run={run} busy={busy} />}
 
       <section className="section">
         <h2 className="section-label">Live voice</h2>
@@ -97,6 +98,74 @@ export function ModelSettings({ state, run, busy }: { state: AppState; run: (fn:
 }
 
 /** Lyra's own background work (mail watch, heads-ups, quiet checks) runs on a smaller model; anything it tells you is written by the main one. */
+type JobRow = Awaited<ReturnType<typeof api.jobModels>>[number];
+const LANE: Record<string, string> = { chat: "You talk to it", deep: "Real work", light: "Light work", watch: "Watching" };
+
+/**
+ * (0.64) Who does what: every job Tomo does, what it's for, how often it runs, and the model it
+ * runs on. Auto follows the job's kind (real work on the main model, light work on its partner,
+ * watching on the smallest); any model from a provider with a key can be picked instead.
+ */
+function WhoDoesWhat({ state, run, busy }: { state: AppState; run: (fn: () => Promise<AppState>, done: string) => Promise<void>; busy: boolean }) {
+  const [rows, setRows] = useState<JobRow[] | null>(null);
+  const [models, setModels] = useState<{ provider: string; label: string; id: string }[]>([]);
+  useEffect(() => {
+    let alive = true;
+    api.jobModels().then((r) => alive && setRows(r), () => {});
+    const ready = state.providers.filter((p) => p.ready && p.id !== "fake");
+    void Promise.all(ready.map((p) => api.models(p.id as "anthropic" | "openai" | "gemini").then((m) => m.map((x) => ({ provider: p.id, label: `${x.label}${ready.length > 1 ? ` · ${p.label}` : ""}`, id: x.id })), () => []))).then((all) => alive && setModels(all.flat()));
+    return () => {
+      alive = false;
+    };
+  }, [state]);
+  if (!rows) return null;
+  const name = (provider: string, id: string) => models.find((m) => m.provider === provider && m.id === id)?.label.split(" · ")[0] ?? id;
+  let lane = "";
+  return (
+    <section className="section who-does-what">
+      <h2 className="section-label">Who does what</h2>
+      <p className="hint">Each job Tomo does, and the model it uses. Auto puts real work on your main model, light work on its smaller partner, and watching on the smallest. Watching jobs only look; when they find something, your main model writes it. You can also ask Tomo to change one.</p>
+      <div className="group">
+        {rows.map((r) => {
+          const head = r.lane !== lane ? ((lane = r.lane), LANE[r.lane]) : null;
+          const value = r.id === "chat" ? `${r.provider}:${r.model}` : r.pick === "auto" ? "auto" : r.pick;
+          return (
+            <div key={r.id}>
+              {head && <div className="job-lane">{head}</div>}
+              <div className="item job-row">
+                <span className="body">
+                  <div className="title">{r.label}</div>
+                  <div className="sub">
+                    {r.what}. {r.when}.
+                  </div>
+                </span>
+                <select
+                  className="select job-select"
+                  aria-label={`Model for ${r.label}`}
+                  value={value}
+                  disabled={busy}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    void run(() => api.setJobModel(r.id, next), next === "auto" ? `${r.label}: automatic` : `${r.label}: ${name(next.split(":")[0], next.slice(next.indexOf(":") + 1))}`).then(() => api.jobModels().then(setRows));
+                  }}
+                >
+                  {r.id !== "chat" && <option value="auto">Auto ({name(r.provider, r.model)})</option>}
+                  {models.map((m) => (
+                    <option key={`${m.provider}:${m.id}`} value={`${m.provider}:${m.id}`}>
+                      {m.label}
+                    </option>
+                  ))}
+                  {!models.some((m) => `${m.provider}:${m.id}` === value) && value !== "auto" && <option value={value}>{value.slice(value.indexOf(":") + 1)}</option>}
+                </select>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function BackgroundModel({ state, run, busy }: { state: AppState; run: (fn: () => Promise<AppState>, done: string) => Promise<void>; busy: boolean }) {
   const [models, setModels] = useState<Model[]>([]);
   const [auto, setAuto] = useState<string | null>(null);

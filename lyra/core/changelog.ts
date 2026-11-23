@@ -12,6 +12,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "0.64.0",
+    date: "2026-11-24",
+    notes: [
+      "Who does what: every job Tomo does (chat, tasks, dashboards, routines, follow-ups, heads-ups, mail watch, check-ins, life admin scans, chat summaries, tidy-ups, learning how you talk) can run on its own model, picked in Settings › AI model or by asking Tomo.",
+      "Auto puts real work on the main model, light work on its partner (Sol → Terra) and watching on the smallest (Sol → Luna).",
+    ],
+  },
+  {
     version: "0.63.4",
     date: "2026-11-23",
     notes: ["Tomo knows what changed in each update (this list), and says what's new once after an update if it comes up."],

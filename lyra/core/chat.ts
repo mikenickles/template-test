@@ -109,6 +109,8 @@ export interface Workspace {
   };
   /** Spotify playback (Phase 14), when the user turned it on. */
   music?: { control(action: string, uri?: string): Promise<string> };
+  /** (0.64) which model does each job; set only when the user asks */
+  models?: { table(): Promise<string>; set(job: string, model: string): Promise<string> };
   /** People cards (Phase 10). */
   people?: {
     directory(): string;
@@ -336,6 +338,16 @@ function actionTools(allowed: ReturnType<NonNullable<Workspace["actions"]>["allo
         required: ["ref"],
       },
     });
+  tools.push({
+    name: "set_job_model",
+    description:
+      "Change which AI model does one of your jobs (chat, tasks, heads-ups, mail watch, tidy-ups…), only when the user asks. Your setup lists the jobs and what each runs on now. model: \"auto\" (the sensible default for that job), a model id from the main provider, or \"provider:model\" for another provider with a key (anthropic, openai, gemini). job \"chat\" changes the main model.",
+    schema: {
+      type: "object",
+      properties: { job: { type: "string", description: "A job id from your setup, like headsup or tidy, or chat." }, model: { type: "string" } },
+      required: ["job", "model"],
+    },
+  });
   if (music)
     tools.push({
       name: "control_music",
@@ -1327,6 +1339,22 @@ export async function runTurn(
           results.push({ type: "tool_result", id: call.id, name: call.name, content, isError: !ok });
           continue;
         }
+        if (call.name === "set_job_model") {
+          let content: string;
+          let ok = false;
+          try {
+            if (!ctx.workspace.models) throw new Error("Models can't be changed here.");
+            // a setting change: only on the user's own word, never because something read this turn asked for it
+            if (state.tainted && !/\b(model|luna|terra|sol|haiku|sonnet|opus|flash|pro|gemini|claude|gpt)\b/i.test([ownWords()].flat().join(" "))) throw new Error(`Not changed: outside content was read this turn. ${ANSWER_FIRST}`);
+            content = await ctx.workspace.models.set(String(call.input.job ?? ""), String(call.input.model ?? ""));
+            ok = true;
+          } catch (e) {
+            content = (e as Error).message;
+          }
+          toolsUsed.push({ name: call.name, ok });
+          results.push({ type: "tool_result", id: call.id, name: call.name, content, isError: !ok });
+          continue;
+        }
         if (call.name === "control_music") {
           let content: string;
           let ok = false;
@@ -1448,6 +1476,7 @@ export const ON_DEMAND = new Set([
   "remind_at_place",
   "update_life_admin",
   "propose_playlist",
+  "set_job_model",
 ]);
 
 /** The one tool that names the on-demand ones: a line each, instead of their full schemas. */

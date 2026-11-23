@@ -368,7 +368,7 @@ export interface RoutineDeps {
   /** "quick": the background model (looking around); "main": the one picked in Settings (writing to the user) */
   provider: (source?: "routine" | "proactive", tier?: "main" | "quick", job?: string) => Promise<ModelProvider>;
   /** Is the background model a different one from the main model? (Only then is there a hand-off.) */
-  splitModels?: () => Promise<boolean>;
+  splitModels?: (source?: string, job?: string) => Promise<boolean>;
   userName: () => string;
   soul?: () => string | undefined;
   timeZone?: string;
@@ -662,9 +662,9 @@ export class Routines {
     try {
       // a check that usually finds nothing looks around on the background model; when it finds
       // something to say, the main model takes over and writes it (see the hand-off below)
-      let quick = r.post_mode === "news" && !!(await this.d.splitModels?.().catch(() => false));
       // what the calls are for, on the Usage page: a routine by its name, Lyra's own checks by theirs
       const job = source === "routine" ? `Routine: ${r.name}` : r.name;
+      let quick = r.post_mode === "news" && !!(await this.d.splitModels?.(source, job).catch(() => false));
       let provider = await this.d.provider(source, quick ? "quick" : "main", job);
       const search = !!this.d.webSearch?.();
       const notebook = r.channel_id ? (await this.d.workspace.notebook(r.channel_id).catch(() => undefined))?.read() : undefined;

@@ -151,7 +151,8 @@ describe("Tomo knows its own setup (0.63.3)", () => {
     await lyra.chat("which model do you use for light tasks?", noop);
     const sys = JSON.stringify(provider.requests[0].system);
     expect(sys).toContain("## Your setup");
-    expect(sys).toContain("Background model for light jobs");
+    expect(sys).toContain("Who does what (job id: model");
+    expect(sys).toContain("mailwatch (Mail watch (looking))");
     expect(sys).toContain("Keep watch (checks with the app closed): on");
     expect(sys).toContain("Tomo 9.9.9");
     expect(sys).toContain("Bank accounts: not connected");
