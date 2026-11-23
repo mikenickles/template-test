@@ -843,3 +843,133 @@ spectating hides the watched bot's own model and shows the normal first-person v
 puts the soldier flat against the string with arms up; z-fighting on the engine rear trim and gondola door posts fixed by
 offsetting faces 0.03 outward; train wheel centres at y 0.68 with narrower bogies so the red wheels show; the grenade burst
 geometry is uploaded at load like the effect shaders.
+
+## 17. Round 4: art pass
+
+The user lifted the 400 KB file-size goal (2026-11-23). There is no file-size limit. Everything is still made in code:
+geometry from primitives, extrusions and merged buffers; textures drawn on canvas; sound from Web Audio. No embedded image
+files or base64 assets, no web fonts, no other libraries.
+
+Round 4 is built in two halves. **4A**: the world (room shell, furniture, every toy and cover piece, routes, forts, ruin,
+tunnel, track), surface detail, lighting, sunbeam, dust and fake ambient occlusion. **4B**: soldiers, guns and viewmodels,
+the train, death and impact effects, HUD and menus, and the remaining audio.
+Gate: the visual tester signs off on style consistency and the build holds the performance budget in 17.9.
+
+### 17.1 Rules that do not change
+
+- **Colliders, waypoints and hit volumes do not change.** Art replaces visual meshes only. Every visual sits within 0.15
+  of its collider's outline on the walkable and shootable faces, so what you see is what you stand on, hide behind and
+  hit. Decorative parts that stick out further (a lamp shade, pencils, a teddy's ear, a car mirror) must be above head
+  height or have no gameplay meaning, and are listed in the changelog. `__game.colliderHash()` returns a hash of the
+  collider list so testers can prove it is unchanged from round 3.
+- Readability (pillar 5) beats decoration: Green and Tan stay the only saturated green and tan things; cover reads as
+  solid; climb routes keep a clear accent (yellow strings, orange-capped route parts, red and yellow spring pad).
+- Graybox colours from section 13 are replaced by the full palette in section 13.
+
+### 17.2 Art direction
+
+- Stylised low-poly toys in warm afternoon light: chunky proportions, rounded or bevelled edges on every toy (small bevel,
+  about 3 % of the size), bright flat paint, no realism, no photo textures, no PBR or environment maps.
+- Materials: Lambert or toon (`MeshToonMaterial` with a 3-step gradient) for the world and toys; Phong with a tight
+  highlight only for soldiers and glossy plastic toys. Pick one shading model per material family and use it everywhere.
+- Surface detail is drawn on canvas at the room's scale: wood grain and plank gaps on the floor, paint and wood grain on
+  furniture, fabric weave and big stitching on the blanket and sheet, printed letters on blocks, ruler markings, book
+  spines with coloured bands (no readable titles), domino pips, a notebook's ruled lines, crayon wrappers.
+- Everything is generic and original. No logos, no real brands, no characters. The trophy, board game box, books and
+  globe carry only abstract shapes.
+
+### 17.3 Room shell and furniture (4A)
+
+- Floor: planks 3.2 wide with varied tones, grain and dark gaps; a few knots. Skirting with a moulded top edge. Walls
+  painted with a faint vertical texture. Door with raised panels, frame and a round knob. Window with frame, sill, glass
+  and a painted outside view (soft sky gradient, a tree and garden shapes) that glows warm. The ceiling light as a round
+  shade with a cord, far overhead.
+- Bed: wooden frame and legs, mattress with rounded edges, a sheet, the rumpled blanket with weave and stitching
+  following the ridges, the hanging blanket corner as a draped fabric slope, two soft pillows (rounded, plump; they must
+  not hide the head of the south book stairs from the bed top), and the under-bed space visibly dark and dusty with grey
+  fluffy dust bunnies, a striped lost sock and the shoebox.
+- Desk and chair: painted wood with grain, rounded corners. Lamp with base, arm, shade and a warm glowing bulb (emissive,
+  no extra shadow light; at most one cheap non-shadow point light if it clearly helps). Pencil cup with pencils, stacked
+  books, open notebook with ruled lines, mug with a handle, eraser and paper ball under the desk.
+- Shelves: painted boards and posts; books upright and flat with coloured spines; globe on a stand with abstract
+  continents; a plain trophy cup; a round pink piggy bank; plant pot with leaves; alarm clock with a face.
+- Stuffed bear: soft rounded body, head with ears and button eyes, stitched seams; generic.
+- Tipped bucket with a handle, spare soldiers as neutral grey statues using the same model as 17.5.
+
+### 17.4 Toys, forts, routes and cover (4A)
+
+- Bricks: stud bricks with real studs (instanced low-poly studs), colour per the palette, slight colour variation, firing
+  slits and crenellations; the ruin with loose and stacked bricks.
+- Alphabet blocks: bevelled cubes with a printed letter on each face (canvas letter atlas) in contrasting colours.
+- Toy cars and dump truck: body, cabin, windows, round wheels, simple bumpers; generic shapes. Crayons: wrapped
+  cylinders with a cone tip. Dominoes: pips. Marble run: tower and ramps with a few marbles. Ball: two-tone panels.
+  Board game box: lid with an abstract pattern. Toy box (east lane): a painted wooden crate.
+- Routes: book stairs as stacked books in varied colours with the orange route cap on each step edge; rulers with
+  markings; skateboard with deck, trucks and wheels; yo-yo with two discs and its bright yellow string; shoelace braided
+  with aglets; the spring pad as a jack-in-the-box spring with a padded top and red and yellow chevrons; the blanket slope
+  as part of the blanket.
+- Tunnel: corrugated cardboard box with flaps, cut openings and darker edges. Track: rails on sleepers, joined sections.
+
+### 17.5 Soldiers, guns and train (4B)
+
+- Soldiers: a proper plastic army man shape (helmet, head, torso with belt and straps, legs, arms holding the gun),
+  single-colour moulded plastic (Green `#2FA84A`, Tan `#D9A75A`) with a slight sheen and a visible mould seam line.
+  A flat base under the feet when standing still; while moving the base is hidden and the soldier moves with a small
+  toy-like hop. Poses: standing aim, kneeling crouch, climbing (flat against the string), sniper scoped. Same hit volumes.
+- Death: goes rigid and tips over as one piece with a few plastic chips, tinting toward grey (`soldier.bodyTint` 0.7).
+- Guns: toy-styled world models and first-person viewmodels per weapon, with moulded plastic hands in the player's team
+  colour; the grenade is a toy firecracker with a fuse. Viewmodels stay clear and distinct at a glance.
+- Train: chunky toy engine with boiler, chimney, cab, buffers and red wheels with visible rods; cars with the palette
+  colours; couplings; the caboose with a small cupola. Same colliders.
+
+### 17.6 Light and atmosphere (4A)
+
+- One warm sun through the window with shadows that fall across a large part of the floor (fit the shadow camera to the
+  room; the round 1 sun reached only about 4 % of the floor). Hemisphere fill as now. Tone mapping and colour output set
+  once and kept consistent.
+- A visible sunbeam from the window to the floor (an additive soft-edged volume, not a second light) with dust motes
+  drifting in it (one Points object, a few hundred motes, brighter inside the beam).
+- Fake ambient occlusion: soft dark contact patches under furniture legs, toys and forts, darker corners, and a clearly
+  darker space under the bed and the desk.
+- Keep fog near 20 / far 320 and the cool haze colour unless the visual tester measures a need to change it; the window
+  view and the sunbeam carry the warmth.
+
+### 17.7 Effects, HUD and menus (4B)
+
+- Impact decals vary by surface (a splinter mark on wood, a dent on plastic, a scuff on fabric) and never look like
+  black tiles at point-blank range. Plastic chips on death in the soldier's colour.
+- HUD and menus restyled in one consistent toy look using CSS only (rounded panels, chunky system-font type, brick and
+  crayon accents), scaled to the window size rather than fixed pixels. The title screen shows the 3D room behind it
+  with the camera slowly drifting. Pause, round-end and match-end screens match.
+
+### 17.8 Audio (4B)
+
+- A room reverb send (a convolver with a synthesized impulse) on big sounds: train rumble, grenade, sniper, round stingers.
+- A deep, slow occasional creak of the room or the bed, and a soft room tone, to sell the giant space.
+- Plastic clatter when a soldier tips over, and impact sounds per surface (wood knock, fabric thump, plastic tick,
+  book slap, card thud).
+- UI clicks for menus.
+
+### 17.9 Performance budget
+
+The user removed the file-size limit; the runtime budget stays. Target: 60 fps on a mid-range laptop with integrated
+graphics at 1080p.
+
+| Item | Limit |
+| --- | --- |
+| Draw calls in the worst view, full firefight, shadow pass included | under 200 (aim for under 120) |
+| Triangles in the worst view, main pass | under 350,000 |
+| Shadow-casting lights / shadow map | 1 / 2048 or less |
+| Texture size / total canvas texture memory (estimated, with mipmaps) | 2048 max / under 64 MB |
+| Shader programs after a full match | under 40, all compiled at load |
+| Render cost in software rendering, same named views and firefight as round 3 | at most 3x round 3 |
+| Per-frame allocation and growth over three matches | none |
+
+Use merged static geometry, InstancedMesh for repeats (studs, bricks, books, blocks, dominoes, pencils, dust), and shared
+materials. Load time must stay short: report the time from page load to `__game.ready` against round 3.
+
+### 17.10 Carry-overs
+
+From round 1 and 2: sun shadows reaching most of the floor; under the bed darker; the ceiling light visible against the
+ceiling; cover colour distinct from the desk colour; the window warm again; the bed book-stairs head not hidden by pillow
+P2; decals not like tiles. From round 3: `soldier.bodyTint` 0.7; refresh the two stale code section banners.

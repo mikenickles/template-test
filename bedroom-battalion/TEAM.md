@@ -75,7 +75,8 @@ await browser.close();
 - Check against the style guide: palette, shading, Green vs Tan readable, cover readable, scale cues,
   no flicker, no gaps in geometry, HUD legible.
 - Measure draw calls, triangles, file size and frame cost against the budget (under 200 draw calls, one
-  shadow light, shadow map 2048 or less, file under 400 KB). Name the costliest object or effect.
+  shadow light, shadow map 2048 or less; the user lifted the 400 KB file limit on 2026-11-23, so report file size
+  but do not fail on it). Name the costliest object or effect.
 - Report to `VISUAL.md` with screenshots referenced by file name.
 
 ## Report format (all testers)
