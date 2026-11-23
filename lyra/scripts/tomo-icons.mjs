@@ -74,7 +74,7 @@ for (const dir of readdirSync(res)) {
     if (name === "ic_launcher.webp") await render(file, w, h, 1, "square");
     if (name === "ic_launcher_round.webp") await render(file, w, h, 1, "circle");
     // adaptive icon: 108dp canvas; the launcher masks it, so the picture fills it (face inside the safe zone)
-    if (name === "ic_launcher_foreground.webp") await render(file, w, h, 1, "fill");
+    if (name === "ic_launcher_foreground.webp") await render(file, w, h, 0.7, "fill");
     if (name === "splash.webp") await render(file, w, h, 0.36, "fill");
     console.log(`  ${dir}/${name} ${w}x${h}`);
   }

@@ -12,6 +12,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "0.65.2",
+    date: "2026-11-24",
+    notes: [
+      "The app icon, splash and Windows icon now show all of Tomo (head, scarf, arms and backpack), like the face in the app.",
+      "Live voice has a voice button: tap it during a call, pick a voice, and Tomo reconnects speaking in that voice. The choice is saved for next time.",
+    ],
+  },
+  {
     version: "0.65.1",
     date: "2026-11-24",
     notes: ["Tomo's face is zoomed out a little, so more of the robot shows: scarf, arms and backpack."],

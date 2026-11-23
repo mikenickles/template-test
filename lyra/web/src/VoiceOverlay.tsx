@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from "react";
-import { clock, LIVE_PRICE_PER_MINUTE } from "../../core/live";
-import type { Channel } from "./api";
+import { clock, LIVE_PRICE_PER_MINUTE, LIVE_VOICES } from "../../core/live";
+import { api, type Channel } from "./api";
 import { Avatar } from "./LyraMark";
 import { Mic } from "./icons";
 import { startVoiceCall, type VoiceCall } from "./voiceCall";
@@ -13,6 +13,31 @@ export function VoiceOverlay({ channel, onClose, toast }: { channel: Channel | n
   const [handle, setHandle] = useState<VoiceCall | null>(null);
   const live = useRef<VoiceCall | null>(null);
   const closing = useRef(false);
+  // (0.65.2) change the voice mid-call: the new voice takes over on a fresh connection
+  const [gen, setGen] = useState(0);
+  const [voices, setVoices] = useState(false);
+  const [voice, setVoice] = useState<string | null>(null);
+  const [switching, setSwitching] = useState<string | null>(null);
+  useEffect(() => {
+    void api.state().then((s) => setVoice(s.liveVoice), () => {});
+  }, []);
+  const pickVoice = async (v: string) => {
+    setVoices(false);
+    if (v === voice) return;
+    setSwitching(v);
+    try {
+      await api.saveSettings({ liveVoice: v });
+      setVoice(v);
+      const old = live.current;
+      live.current = null;
+      setHandle(null);
+      await old?.end().catch(() => {});
+      setGen((n) => n + 1);
+    } catch (e) {
+      toast((e as Error).message);
+      setSwitching(null);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -21,6 +46,7 @@ export function VoiceOverlay({ channel, onClose, toast }: { channel: Channel | n
         if (cancelled) return void h.end();
         live.current = h;
         setHandle(h);
+        setSwitching(null);
       },
       (e) => {
         if (cancelled) return;
@@ -32,16 +58,18 @@ export function VoiceOverlay({ channel, onClose, toast }: { channel: Channel | n
     return () => {
       cancelled = true;
       clearInterval(tick);
-      void live.current?.end();
+      if (!switchingRef.current) void live.current?.end();
     };
-    // one call per time the screen is opened
+    // one call per time the screen is opened, and a fresh one after a voice change
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [gen]);
+  const switchingRef = useRef(false);
+  switchingRef.current = !!switching;
 
   const status = handle?.call.status ?? "connecting";
   // the call ended by itself (dropped, or closed from the other side)
   useEffect(() => {
-    if (status === "ended" && !closing.current) {
+    if (status === "ended" && !closing.current && !switching) {
       closing.current = true;
       if (handle?.call.error) toast(handle.call.error);
       onClose();
@@ -72,7 +100,7 @@ export function VoiceOverlay({ channel, onClose, toast }: { channel: Channel | n
           </span>
         </span>
         <p className="voice-status" role="status">
-          {handle?.muted && status === "listening" ? "Muted" : LABEL[status]}
+          {switching ? `Switching to ${switching}…` : handle?.muted && status === "listening" ? "Muted" : LABEL[status]}
         </p>
         <div className="voice-captions" aria-live="polite">
           {call?.heard && <p className="voice-heard">{call.heard}</p>}
@@ -81,7 +109,20 @@ export function VoiceOverlay({ channel, onClose, toast }: { channel: Channel | n
         </div>
       </div>
 
+      {voices && (
+        <div className="voice-voices" role="group" aria-label="Voices">
+          {LIVE_VOICES.map((v) => (
+            <button key={v} className={`voice-chip${v === voice ? " on" : ""}`} aria-pressed={v === voice} onClick={() => void pickVoice(v)}>
+              {v[0].toUpperCase() + v.slice(1)}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="voice-actions">
+        <button className={`voice-btn${voices ? " on" : ""}`} onClick={() => setVoices((o) => !o)} disabled={!!switching} aria-expanded={voices}>
+          <span className="voice-btn-big" aria-hidden="true">♪</span>
+          <span>{voice ? voice[0].toUpperCase() + voice.slice(1) : "Voice"}</span>
+        </button>
         <button className={`voice-btn${handle?.muted ? " on" : ""}`} onClick={() => handle?.setMuted(!handle.muted)} disabled={!handle} aria-pressed={!!handle?.muted}>
           <Mic size={22} />
           <span>{handle?.muted ? "Unmute" : "Mute"}</span>
