@@ -378,6 +378,9 @@ function buildWorld(scene, renderer) {
   stairs('chair.books', 86, 92, 110.2, -1, 29, 17 / 29, 0.8);                                     // route desk_stairs
   ramp('desk.ruler.n', 92.5, 95.5, 64, 75, 'z', 26, 17, 0.3, RT, 'plastic');
   ramp('desk.ruler.s', 92.5, 95.5, 85, 96, 'z', 17, 26, 0.3, RT, 'plastic');
+  // ruler props: solid book stacks under each ruler outside the seat, up to the ruler underside (no way to fall under a ruler)
+  ramp('desk.ruler.n.prop', 92.5, 95.5, 64, 73, 'z', 25.7, 26 - 0.3 - 9 * 9 / 11, Infinity, G, 'book');
+  ramp('desk.ruler.s.prop', 92.5, 95.5, 87, 96, 'z', 26 - 0.3 - 9 * 9 / 11, 25.7, Infinity, G, 'book');
   climbString('desk.yoyo', 107, 54.5, 0, 26, 0, 1);                                               // route desk_yoyo
   cyl('desk.yoyo.body', 111, 52, 2.2, 0, 1.4, G, 'plastic');
   climbString('desk.lace', 107, 105.5, 0, 26, 0, -1);                                             // route desk_lace

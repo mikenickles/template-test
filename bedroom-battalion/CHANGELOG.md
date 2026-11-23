@@ -209,3 +209,21 @@ Only the five FIXLIST items were touched. Scripts: `tests/builder_pass2.cjs`, `b
   or drop you; strings downward from the top.
 - Feel tester: the ruler corner-cut (still failing, see item 2), the yo-yo against the stairs, haze.
 - Visual tester: wall, ceiling and bed colours; the sunlit bed top; route laps and string tops from above.
+
+## Round 1, pass 3 (FIXLIST.md "Pass 2": ruler props)
+
+Only change: two solid wedges under the rulers outside the seat, `desk.ruler.n.prop` (`92.5..95.5, 64..73`) and
+`desk.ruler.s.prop` (`92.5..95.5, 87..96`), from the floor up to the ruler underside, cover grey, surface `book`.
+The north stopper stays at (92.45, 73.3). `index.html` is 85,035 bytes, 356 colliders, 10,362 triangles.
+
+| Check | Result |
+| --- | --- |
+| `tests/feel_ruler_trap.cjs` | 0 falls, 0 damage. 6 of 15 reach the desk (aim z 75.5 and 74.5); 9 time out pressed against the ruler side or prop (aim z 73.5, 71, 68) |
+| 18 routes, walking and sprinting | all ok, same times and end heights as pass 2, no damage |
+| `validateWaypoints()` | `[]` |
+| Every graph edge (332 walks) | all ok |
+| Skateboard and chair-stair lanes x 91.00 to 92.35, walking and sprinting | all end standing on the seat |
+| Console | `errors` empty |
+
+Re-test: feel tester, the corner-cut from both the skateboard and the chair stairs; bug tester, walking into the
+props from the floor side and from under the desk.
