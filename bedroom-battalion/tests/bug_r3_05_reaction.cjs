@@ -1,12 +1,12 @@
 // Round 3 check 1/4: do bots react to a visible enemy? The player (god mode) is placed in plain view in front of each
 // holding or advancing Tan bot, 8 to 30 units away, inside its 110 degree cone, with my own clear line of sight; then the
 // time to that bot's first shot at anything is measured (5 s limit). Expected: about the difficulty's reaction time.
-// Usage: node bug_r3_05_reaction.cjs <difficulty> [seeds]. Every loop is tick-limited.
+// Usage: node bug_r3_05_reaction.cjs <difficulty> [seeds] [distances, default 12,9,16,20,26] [only weapon]. Every loop is tick-limited.
 const { boot } = require('./bug_r3_lib.cjs');
-const DIFF = process.argv[2] || 'regular', SEEDS = +(process.argv[3] || 6);
+const DIFF = process.argv[2] || 'regular', SEEDS = +(process.argv[3] || 6), DISTS = (process.argv[4] || '12,9,16,20,26').split(',').map(Number), ONLY = process.argv[5] || '';
 (async () => {
   const { browser, page, errors } = await boot();
-  const out = await page.evaluate(({ DIFF, SEEDS }) => {
+  const out = await page.evaluate(({ DIFF, SEEDS, DISTS, ONLY }) => {
     const G = __game, DT = 1 / 60, rows = [];
     for (let seed = 1; seed <= SEEDS; seed++) {
       G.startMatch({ difficulty: DIFF, seed: 300 + seed, autoplay: false }); G.setTimeScale(0); G.setGodMode(true);
@@ -18,7 +18,8 @@ const DIFF = process.argv[2] || 'regular', SEEDS = +(process.argv[3] || 6);
           const b = G.state().bots.find((q) => q.id === b0.id); if (!b || b.dead) continue;
           const fx = -Math.sin(b.yaw), fz = -Math.cos(b.yaw), eye = [b.pos[0], b.pos[1] + 1.6, b.pos[2]];
           let spot = null;
-          for (const d of [12, 9, 16, 20, 26]) for (const a of [0, 0.3, -0.3, 0.6, -0.6]) {
+          if (ONLY && b.weapon !== ONLY) continue;
+          for (const d of DISTS) for (const a of [0, 0.15, -0.15, 0.3, -0.3]) {
             const dx = fx * Math.cos(a) - fz * Math.sin(a), dz = fx * Math.sin(a) + fz * Math.cos(a);
             const x = b.pos[0] + dx * d, z = b.pos[2] + dz * d, y = b.pos[1];
             if (x < 1 || x > 119 || z < 1 || z > 159) continue;
@@ -50,7 +51,7 @@ const DIFF = process.argv[2] || 'regular', SEEDS = +(process.argv[3] || 6);
       }
     }
     return rows;
-  }, { DIFF, SEEDS });
+  }, { DIFF, SEEDS, DISTS, ONLY });
 
   const got = out.filter((r) => r.firstShotAfter !== null).map((r) => r.firstShotAfter).sort((a, b) => a - b);
   const never = out.filter((r) => r.firstShotAfter === null);

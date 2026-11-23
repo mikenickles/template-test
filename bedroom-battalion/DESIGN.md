@@ -797,3 +797,49 @@ firefight. Bot logic must cost little: line-of-sight raycasts throttled and stag
 5. Soldiers get soft separation: soldiers (including the player) push apart gently when closer than 0.9, never through walls,
    so bots do not stack on one node. Bodies of eliminated soldiers do not collide.
 6. Bots crouch in cover and while scoped as snipers (16.4 already says so); the crouch pose must be visible.
+
+### 16.11 Round 3 fix pass (overrides 16.1 to 16.10 where they differ)
+
+Bot liveness (a living bot must always be doing something):
+- A bot may stand still only while: in `hold` before push time; in `cover` for at most `ai.retreatCalm` (5 s) without a
+  visible target; in `engage` while it has fired, scoped, reloaded or re-aimed at a visible target within the last 2 s;
+  waiting at a ride or crossing for at most 8 s; or during freeze time. Anything else stationary for more than 5 s is logged
+  in a new `idleLog` (bot, state, position, seconds) and the bot is forced back to `advance` or `hunt`. Every `idleLog`
+  entry is a bug for the tester, like `stuckLog`.
+- `engage` without line of sight from the bot's current eye for `ai.lostAfter` (3 s) moves to the last known position
+  (or the nearest peek spot that sees it). Snipers stand to fire and crouch only between shots.
+- `hunt` searches: it visits enemy-half nodes it has not seen recently, covering every lane and every high place, never
+  stopping at an enemy spawn. A bot reaching its hunt target with nothing found picks the next unvisited node at once.
+
+Awareness and pacing:
+- `ai.holdUntil` 20 s (was 40). `ai.huntLast` 60 s (was 30).
+- In every state, being hit or a shot passing within 3 units turns the bot toward the source and starts `engage` (or
+  `cover` if below retreat health). A gunshot within 40 units turns bots that have no target.
+- A bot within 8 units of a live grenade it can see sprints away from it, out of its radius if possible.
+- Engage ranges per weapon: bots do not open fire beyond SMG 40, pistol 50, rifle 90, sniper unlimited. Beyond that they close in or hold.
+
+Difficulty: Recruit preset becomes reaction 1.0 s, aim error 7.0 / 3.0 deg, settle 2.0 s, burst 2 to 3, pause 0.9 s.
+Regular and Veteran stay as in 16.4.
+
+Map: east lane cover box (toy box, cardboard colour) `81.4..85, 78.5..81.5`, h 2.5. Node m.e.w (83.2, 0, 80) is removed and the
+lane re-routes under the chair seat through three new nodes, m.e.cn (84, 0, 75), m.e.u (89, 0, 80), m.e.cs (84, 0, 85),
+linked n.e.6 - m.e.cn - m.e.u - m.e.cs - s.e.6 and m.e.cn - m.e.cs is not linked (the box sits between them). The builder
+may move these by up to 2 units to clear the chair legs, and must keep `validateWaypoints()` clean.
+
+Train: `ai.rideChance` 0.6, `ai.rideMaxWait` 8 s. The whistle has two pitches: higher when the engine passes z 80 on the
+west straight, lower on the east straight, so it tells you where the train is.
+
+Rules: a tie on total health after three replays goes to the side that dealt more damage that round; if that is also equal,
+the round is awarded to neither and the next round starts as a normal round (the replay counter resets).
+Death camera lasts 1.5 s. Every callout, including "I'm down" and "Enemy down", obeys one per bot per 4 s.
+Callouts: "I'm hit" once per life; lane callouts say "our side" or "their side"; the same region is not called twice within
+8 s; at most 2 on screen.
+
+Determinism: `startMatch`, `runMatch`, rematch and Quit-then-Play reset the match clock, the train position, all bot state
+and the random generator, so the same seed gives the same match every time in one page.
+
+Looks: bodies tint 50 % toward grey `#8C8C8C` as they tip over; a body's gun rotates with it and loses the aim pitch;
+spectating hides the watched bot's own model and shows the normal first-person viewmodel for its weapon; the climbing pose
+puts the soldier flat against the string with arms up; z-fighting on the engine rear trim and gondola door posts fixed by
+offsetting faces 0.03 outward; train wheel centres at y 0.68 with narrower bogies so the red wheels show; the grenade burst
+geometry is uploaded at load like the effect shaders.

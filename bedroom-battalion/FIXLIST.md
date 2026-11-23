@@ -1,4 +1,47 @@
-# FIXLIST.md: round 2, pass 2
+# FIXLIST.md: round 3, pass 1
+
+Merged from the "# Round 3" sections of BUGS.md, FEEL.md and VISUAL.md. At most 5 items. Numbers and rules are in DESIGN.md 16.11.
+
+Gate status: FAIL on all three difficulties. Every match finishes and there are no blockers, but the bug tester's own
+position check found 107 to 156 bot periods of 37 s or more without moving per 16 matches, mostly snipers frozen in
+`engage` (R3-1) and late-round bots idling at the enemy spawn (R3-2). The game's `stuckLog` missed all of them.
+Feel: playable and close to fair, not yet fun (rounds drag, east lane is a fort-to-fort corridor, Recruit too deadly,
+bots deaf to being shot from behind). Visual: PASS, 16 draw calls in a full firefight, 307 KB, no leaks.
+
+| # | Kind | Fix | Source | Re-check |
+| --- | --- | --- | --- | --- |
+| 1 | Gate blocker | **Bots never freeze.** Fix the sniper `engage` freeze (R3-1) and the late-round idle at enemy spawns (R3-2) at their causes, then add the liveness rule and `idleLog` (16.11). Make a seed reproduce a match: reset clock, train, bots and RNG on every match start (R3-3). | BUGS R3-1, R3-2, R3-3 | Bug tester: own position detector on 16 stepped matches per difficulty, 0 frozen periods; `idleLog` empty; same seed three times in one page gives one result |
+| 2 | Feel | **Pacing and awareness.** `holdUntil` 20, `huntLast` 60, hunt searches unvisited nodes, react to hits and near-misses in every state, flee visible grenades, per-weapon engage ranges, `lostAfter` 3, `retreatCalm` 5. | FEEL R3 1, 4; pacing notes | Feel tester: share of rounds reaching time (target under 20 %), median round length, reaction to being shot from behind |
+| 3 | Feel / map | **Difficulty, east lane, train.** New Recruit preset. East lane toy box and the re-route under the chair (new nodes). Ride chance 0.6 and max wait 8. Two-pitch whistle. | FEEL R3 2, 3; train notes | Feel tester: Recruit and Veteran damage per second at 10 and 30 units; early long-range east-lane kills per round; rides per match. Bug tester: routes and `validateWaypoints()` |
+| 4 | Visual | **Spectating and bodies.** Spectate shows the watched bot's viewmodel and hides its own model. Bodies grey-tinted with the gun lying flat. Climbing pose. Train z-fighting and wheels. Burst geometry warmed at load. | VISUAL R3 1, 2, 3, 4, 5; FEEL spectating | Visual tester: spectate, body and train screenshots; first-burst frame time |
+| 5 | Rules / polish | **Rules and callouts.** Health-tie rule (R3-4), death camera 1.5 s (R3-5), callout rate limit for every callout (R3-6), callout changes in 16.11. | BUGS R3-4, 5, 6; FEEL R3 5 | Bug tester: forced tie sequence; callout rate. Feel tester: callouts per minute |
+
+Required with the hand-back (not a fix): a balance run of at least 120 seeds with autoplay across the three difficulties,
+reporting wins per side, rounds per side, and kills per lane per side. The feel tester measured Green 38 to 22 over 60
+matches while the builder measured 22 to 20 over 42, so the map is not changed for balance until a large sample agrees.
+
+## Conflicts resolved
+
+- East lane: the feel tester's box plus re-route over the cheaper "move the hold node" option, because the corridor hurts
+  every role that walks the east lane, not only the snipers holding it.
+- Bot accuracy (7 to 9 % hits): not raised. Per-weapon engage ranges remove the hopeless long-range shots instead, which
+  keeps Recruit beatable (pillar 2: gun feel for the player matters more than bot accuracy).
+
+## Deferred
+
+| Item | Source | When |
+| --- | --- | --- |
+| North end of the bed top hardly ever contested; possible camping spot | FEEL R3 | Round 5 (balance) |
+| West hold nodes only 10 units apart, so the west lane fights start in 5 to 8 s | FEEL R3 | Round 5 unless the balance run says otherwise |
+| Bot animation quality at fighting range needs a human to judge | FEEL R3 | User playtest |
+| Real browsers refuse a new pointer lock for about 1 s after Esc, so a fast Resume click leaves the game paused | builder | Round 5 (show a "click to resume" prompt) |
+| HUD sizes in fixed pixels; two stale section banners in the code; code comments 36 KB | VISUAL R3 | Round 5 tidy |
+| Rare 5-tick rifle gap (4 in 1,150) | BUGS R3 notes | Round 5 |
+| Bodies sit inside a board for about 3 ticks when descending a string from the top | BUGS R3A-2 | Round 5 |
+
+---
+
+# Round 2, pass 2 fix list (done)
 
 Gate status after pass 1: PASS, narrowly (feel re-check). Bug re-check: all six earlier findings fixed, 0 blocker,
 0 major, 3 minor. Visual re-check: PASS, 12 draw calls firing, 146 KB. This short pass widens the SMG margin and

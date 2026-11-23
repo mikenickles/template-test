@@ -1,3 +1,137 @@
+# Round 3 (bot combat, match rules, HUD and menus): the gate
+
+**Gate: FAIL on all three difficulties.** Every match finishes with a 5-point winner and nothing blocks play. But my own
+per-tick detection finds stuck bots in every match on every difficulty: snipers frozen in `engage` (R3-1) and bots
+standing idle at the enemy spawn (R3-2). `stuckLog` and `trainRescueLog` stayed empty throughout, because these bots
+are not stuck in geometry. They are stuck in their own logic, so the game's own logs never record them.
+
+| Difficulty | Matches completed | Stuck bots, my detection (from 16 stepped matches) | Gate |
+| --- | --- | --- | --- |
+| Recruit | 40 `runMatch` + 16 stepped + 1 real flow | 156 periods of 37 s or more without moving; 35 frozen snipers in 3 matches | FAIL (stuck bots) |
+| Regular | 40 + 16 + 1 real flow | 107 such periods; 23 frozen snipers in 3 matches | FAIL (stuck bots) |
+| Veteran | 40 + 16 + 1 real flow, played out while spectating | 114 such periods; 17 frozen snipers in 3 matches | FAIL (stuck bots) |
+
+Findings: 0 blocker, 3 major, 3 minor. Build tested: `index.html` 306,871 bytes (commit f03e793). Console errors and
+warnings: none in any run (about 1.5 million simulated seconds, real input, `localStorage` throwing).
+
+## Findings
+
+### R3-1. MAJOR: snipers freeze in `engage`: crouched, not firing, not moving, often for the rest of the round
+
+```js
+// fresh page (see R3-3), then:
+__game.startMatch({ difficulty: 'recruit', seed: 201, autoplay: true }); __game.setTimeScale(0);
+// step to 40 s into round 1:
+//   Tan 2 (sniper, crouched, at the shoelace foot, 107.03, 0, 106.53) and Green 3 (sniper, small shelf, 105.70, 20, 39.30)
+//   have both been in engage since 18 s and 25 s. raycast from Tan 2's eye (1.6) to Green 3's head hits bot.3 (head),
+//   and from Green 3 back to Tan 2 hits bot.6. Over the next 20 s: 0 shots from either, both still engage.
+//   Tan 2 stays there in engage until about 110 s into the round.
+```
+
+- **Detection:** `tests/bug_r3_08_engage_freeze.cjs` flags any living bot that stays in engage for 20 s without
+  moving 1 unit and without firing a shot. Over 3 matches each: Recruit 35, Regular 23, Veteran 17 such bots.
+  - 72 of 75 were snipers, and nearly all of them were crouched.
+  - In 43 cases a `raycast` from the bot's standing eye hits an enemy's head.
+  - Some were frozen with an empty magazine (`mag 0`, for example Tan 5 in round 8 of seed 201) and never reloaded.
+- **Not perception in general:** placed in plain view of a holding sniper at 35 to 70 units, every sniper fires
+  (median 0.78 s on Recruit, 0.37 s on Veteran; `bug_r3_05_reaction.cjs`).
+- **Likely cause:** I only infer this from the pattern, not from the code. The sniper crouches to scope (16.10 item 6),
+  then waits for a clear shot from crouched eye height that never comes, and nothing makes it stand, move or reload.
+- **Expected:** a sniper with a target fires, or peeks by standing up, or moves to another spot, or reloads (16.4 cover
+  and peek). Fixing this should also remove most stationary bots from my counts.
+
+### R3-2. MAJOR: hunting and pushing bots end up standing idle at the enemy spawn, so lopsided rounds run to 0:00
+
+```js
+__game.runMatch({ difficulty: 'regular', seed: 1 })     // first call in a fresh page: tan 5-3, rounds 6 and 7 'time' at 3 v 1
+// stepped the same way, round 7 at 0:00: Green 1, 2 and 3 at (59-61, 0, 144) in hunt/idle (Tan's spawn);
+// the last Tan (Tan 2) at (60.1, 0, 16.0) in hunt/idle (Green's spawn). Nobody moves for the last 60 s.
+```
+
+- **Frequency:** in 120 `runMatch` matches, 32 % of rounds ended on time (306 of 999) and 9 % were replays (92).
+  Typical counts at 0:00 are 3 v 1, 4 v 1 and 2 v 1 (`bug_r3_02_runmatch_batch.cjs`).
+- **Stepped matches:** in my example lists (capped at 12 per match), 14 to 16 bots per difficulty sat in `hold` with
+  movement `idle` at the enemy spawn ((60, 0, 143.8) and (60, 0, 16.2)) for 37 s or more, and 6 to 10 more did the
+  same in `hunt`.
+- **Expected (16.4):** pushers move on toward the enemy, and hunters go to the last known enemy position and then
+  search. Arriving at the enemy fort should not end the bot's plan.
+
+### R3-3. MAJOR (reproducibility): a seed does not reproduce a match; the clock and train are not reset per match
+
+```js
+__game.runMatch({ difficulty: 'regular', seed: 1 })   // fresh page: tan 3-5 in 8 rounds
+__game.runMatch({ difficulty: 'regular', seed: 1 })   // same page: green 5-4 in 9 rounds
+__game.runMatch({ difficulty: 'regular', seed: 1 })   // tan 4-5 in 10 rounds
+```
+
+- `startMatch` keeps the game clock and the train's position. Three `startMatch` calls in one page start at time 0, 40
+  and 80, with the train at s 30, 190 and 133.
+- Bot roles are identical across those starts. Only the train phase, and therefore everything after it, differs.
+- Quit to title then Play behaves the same way: score, kill feed, callouts, bodies and health are reset, but the clock
+  and train carry on (time 50.92 in the new match).
+- 16.7 says "a seed reproduces a match", and 16.1 says the train is "deterministic from match time".
+- Expected: `startMatch`, `runMatch`, rematch and Play reset match time and the train to s = 30. The repros in this
+  report hold only for the first match in a fresh page.
+
+### R3-4. MINOR: a tie on total health after three replays replays forever
+
+Four ties in a row at 4 v 4 with equal health: replay, replay, replay, then replay again with `replays` 4, and so on up
+to 7 in my run (`bug_r3_04_rules.cjs`, REPLAYS). With 30 hp less on Green, the fourth tie goes to Tan by `health`,
+which is correct. 16.5 does not say what happens when health is also equal; a side should still win. Suggestion: alive
+count, then health, then the side that scored the last kill.
+
+### R3-5. MINOR: the death camera hands over to spectating after 1.2 s, not 1.5 s
+
+`damagePlayer(500)` in a live round: `state().match.spectating` is set 1.2 s later (`CONFIG.match.deathCam` is 1.5).
+Spectating itself is correct in every other respect (below). Script: `bug_r3_04_rules.cjs` (SPECT `firstSpectateAfter`).
+
+### R3-6. MINOR: "I'm down" and "Enemy down" ignore the one-callout-per-bot-per-4-s limit
+
+In 2 Regular matches, 383 callouts were made, all from Green bots and all with texts from the 16.4 table. Six of them
+came less than 4 s after the same bot's previous callout (0.45 to 3.76 s), and each of those was "I'm down" or
+"Enemy down". These may be meant as priority events; if so, 16.4 should say so. Script: `bug_r3_09_callouts_hud.cjs`.
+
+## Not counted, for the lead
+
+- Clicking during freeze cycles the primary (sniper, rifle, SMG) wherever you click. With the pointer locked you
+  cannot click an option directly. Keys 1 to 3 work, keys 4 and 5 do nothing, and the pick is remembered across
+  rounds and the rematch.
+- A body lying on the track is pushed about 2 units by the train (body at x 76.75, east straight). Nothing else moves
+  bodies.
+- Rifle bots very rarely fire 5 ticks apart instead of 6: 4 of 1,150 gaps, never twice in a row, and the average is
+  6.003 ticks.
+- Bots waiting at crossings: about 8 % of bot time in nav test, down from 10 % in 3A with the 1.5 s window.
+- Three bots spawned on exactly the same point (`spawnBot` three times on one node) never separate (spacing 0 after
+  4 s). In matches I never saw two soldiers closer than 0.2, so separation works there.
+- R3A-2 (bots and the player sink into the board for 3 ticks when going down a string) still happens. R2-9 (head
+  7.6 cm into the desk for one tick when sprint-jumping up a ruler) appeared once in the fuzz run. Both were deferred.
+
+## What passed
+
+| Area | Result |
+| --- | --- |
+| Full matches | 120 `runMatch` (40 per difficulty) and 54 stepped autoplay matches: every one ends with a 5-point winner. 0 `stuckLog`, 0 `trainRescueLog`, 0 errors. 4 to 21 s wall time per match |
+| Counts | Each tick, `match.alive` agrees with the living soldiers. Every elimination round really had one side at 0. No live round over 150 s. Every death is in the kill feed with the right killer, weapon and headshot mark, and the end table matches my own count of kills and deaths for every soldier (54 matches, head kills match `stats.headKills` every time) |
+| Combat | Bots never exceed the magazine and never fire with an empty one. Rate of fire matches the weapon (see note). Every shot's spread is at least the weapon minimum. Friendly fire: thousands of shots stopped on teammates with 0 damage in 54 matches; a pistol shot at a teammate hits `bot.1` for 0; a grenade among two teammates leaves them at 100 while the player takes 119 |
+| Reactions | A bot that sees the player fires after 0.75 s median on Recruit, 0.47 s on Regular and 0.37 s on Veteran (76 placements) |
+| Real flow | Recruit and Regular played by me, Veteran with the player killed 0.5 s into every round so the match plays out while spectating. Title difficulty click and Play click give a locked pointer and freeze. Each round: freeze 5 s in which nobody moves (player input included) and nothing fires; then live; round-end overlay 4 s; next freeze; match end; Enter rematch (round 1, 0-0, same difficulty, kill feed empty, pointer locked); Esc to title. At every round start: 100 hp, full magazines and reserve, 1 grenade, no live grenades. Bodies stay where they fell (except the train note). 0 problems |
+| Round rules | Elimination win; timer win at 5 v 3; replays at 4 v 4 that do not count; the health tiebreak after three replays; freeze blocks movement, fire and grenades; key and click pick and its memory; keys 4 and 5 do nothing; pistol always carried; one grenade per round |
+| Spectating | Starts on a living Green bot; `spectateNext` and a real left click cycle through living Greens only; when the spectated bot dies it moves to another living Green; when the last Green dies the round ends; at the next freeze the player is alive and spectating is cleared |
+| Menus | Difficulty, sensitivity and volume persist across a reload; the game works with `localStorage` throwing. Esc pauses: the pointer is released and the simulation stops (0.00 s in 0.8 s), and Resume locks it again. Esc then click at 0 to 60 ms (16 tries) never leaves the game paused with the pointer locked (R1 finding 4 fixed). Quit to title then Play resets the match (except R3-3). Esc on the end screen goes to the title |
+| Separation | On all 28 raised nodes (bed, desk, rulers, shelves, towers), the player walking into a bot toward the ledge, or standing between a bot and the ledge, never pushes anyone off: 0 falls, 0 inside solids |
+| R3A-1 | Fixed: `raycast` at a soldier returns `{id: 'bot.N', kind: 'soldier', zone: 'head'}` |
+| Regression | `validateWaypoints()` is `[]`; all 18 routes up and down, walking and sprinting: 68 of 68 legs ok. Raw-input gate 82 of 82. Nav test, seeds 11 and 23, 900 s each: 0 stuck, 0 rescues, 0 teleports, 0 car hits, every edge used. Train push suite: 502 runs with 0 damage, 0 rescues and 0 static overlaps. Grenade suite clean (0 born in a solid, 0 left the room). State machine: no invariant broken. Fuzz: 663,106 ticks, never out of the room |
+
+## Scripts
+
+New (`tests/`): `bug_r3_lib.cjs` (boots `index.html`), `bug_r3_01_matches.cjs <difficulty> <seed> <n>` (stepped
+autoplay matches with my detection), `bug_r3_02_runmatch_batch.cjs`, `bug_r3_03_flow.cjs <difficulty> <play|die>` (real
+flow), `bug_r3_04_rules.cjs`, `bug_r3_05_reaction.cjs`, `bug_r3_06_menus.cjs`, `bug_r3_07_separation.cjs`,
+`bug_r3_08_engage_freeze.cjs`, `bug_r3_09_callouts_hud.cjs`. Every loop has a tick or time limit. In my stepped-match
+script, "stationary over 62 s" means at least 37 s without moving 1 unit (a 12 s window plus 25 s).
+
+---
+
 # Round 3A (train, soldiers, bot movement; early pass)
 
 **No blocker or major bug. In 54,000 bot-seconds of nav test there were 0 stuck bots and 0 rescues by my own
