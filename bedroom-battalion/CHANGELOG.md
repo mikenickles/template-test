@@ -227,3 +227,96 @@ The north stopper stays at (92.45, 73.3). `index.html` is 85,035 bytes, 356 coll
 
 Re-test: feel tester, the corner-cut from both the skateboard and the chair stairs; bug tester, walking into the
 props from the floor side and from under the desk.
+
+## Round 2: gunplay (DESIGN.md sections 12 and 15)
+
+`index.html` is now 136,532 bytes. New test scripts: `tests/builder_r2.cjs` (everything below through the hook) and
+`tests/builder_r2_input.cjs` (real mouse and keys).
+
+### What was built
+
+- **Four guns** (rifle, SMG, sniper, pistol) from `CONFIG.weapons`: fire rate, magazine, reserve, reload, draw time, spread
+  with bloom and recovery, stance multipliers, recoil kick with 60 % return over 0.25 s, damage falloff, headshots x2.
+  No firing while sprinting or on a string. Reload cancels on switch. A fire press on an empty magazine gives a dry click
+  and starts the reload. Sniper: right-mouse scope (fov 25 in 0.2 s, vignette with a thin cross, sensitivity scaled by fov),
+  1.3 s bolt cycle, scope drops for the first 0.5 s.
+- **Hitscan** against the collider list (boxes, pads, ramps as convex solids, cylinders) and the dummies' head and body
+  volumes. Never the visual meshes. Seeded random spread, so a fresh page repeats exactly.
+- **Grenade**: hold G for an arc preview that follows the real bounce physics, release to throw; restitution 0.45, 2 s fuse,
+  110 linear to 0 at radius 7, blocked by any collider between burst and target. It also hurts the player. One per life.
+- **21 target dummies** (instanced, glossy Phong): 100 hp, damage numbers, tip over rigid with chips, stand up after 3 s.
+  They are hit volumes only and do not block the player, because most stand exactly on waypoint nodes.
+- **Juice**: a blocky viewmodel per gun (kick, reload dip, draw, sway) in its own pass; 2-frame muzzle flash; tracers;
+  casings that bounce once; shake; particles by surface (wood, fabric, plastic, book, card, metal); 64 pooled decals;
+  four-tick crosshair that widens with spread; white hit marker, larger red one on a kill.
+- **Audio**: every sound in 15.2 synthesized from recipes in `CONFIG.audio.sounds`; the context is created on the first
+  click or key. `audioLog` is filled whether or not anything can be heard.
+- **HUD**: weapon name (and RELOADING), magazine / reserve, grenade count, health.
+- **Hook**: `fire()`, `setInput({fire, scope, grenade, reload})`, `selectWeapon`, `reload`, `throwGrenade`, `give('grenade' |
+  'ammo' | 'health')`, `state().weapon`, `state().targets`, `raycast`, `shotLog`, `audioLog`, `resetTargets`. Extras:
+  `state().weapon` also has `scope`, `drawing`, `grenades`, `fov`; `raycast` also returns `zone` and `normal`; `grenades` is
+  the live grenade list. `fire()` does not advance time; `throwGrenade(hold)` steps the simulation for the hold plus one tick.
+- All effects are pooled: one InstancedMesh for particles, casings, decals and grenades, one for tracers, one for dummies.
+
+### Measured (`tests/builder_r2.cjs`, software rendering)
+
+| Check | Result |
+| --- | --- |
+| Console | `errors` empty, also after a real click created the audio context |
+| Fire rate | rifle 10 shots/s (gap 0.100), SMG 15 (0.067), sniper one per 1.300 s, pistol 6 per second at the fastest press (gap 0.183) |
+| Magazine and reload | rifle 30 then 2.2 s to 30 / 60; SMG 40, 2.0 s, 40 / 80; sniper 5, 3.0 s, 5 / 10; pistol 12, 1.4 s, 12 / 24. Dry click then reload sound each time |
+| Reload cancels on switch | yes for all four (magazine unchanged after switching away and back) |
+| Draw time | 0.47 / 0.37 / 0.70 / 0.27 s to the first possible shot |
+| Rifle damage body / head | 26 / 52 at 10; 22.15 / 44.26 at 90; 18.2 / 36.4 at 121 |
+| SMG | 16 / 32 at 10; 11.68 / 23.29 at 47; 7.2 / 14.4 at 80 |
+| Pistol | 30 / 60 at 10; 25.57 / 51.08 at 65; 21 / 42 at 100 |
+| Sniper | 90 / 180 at 10 and at 121 |
+| Scope | fov 75, 50 half way, 25 scoped; spread 3.0 unscoped, 0.05 scoped; scope gone 0.2 s after the shot, back at 0.72 s; second shot at 1.300 s; bolt sound at 0.42 s |
+| Spread | rifle 0.5 rising 0.35 a shot to 3.0, back to 0.5 in 0.43 s; SMG 1.4 to 4.5, 0.45 s; pistol 0.35 to 3.0, 0.57 s |
+| Multipliers (rifle) | standing 0.5, crouched 0.3, moving 0.75, crouched and moving 0.45, sprinting 1.25, airborne 1.5; 0 shots while sprinting, 0 on a string |
+| Recoil (pistol) | kick 1.4 deg, 0.56 deg left after 0.25 s |
+| Cover | aiming at the dummy behind the Tan fort wall hits `s.fort.front.e.low`, dummy untouched; through the slit, a headshot |
+| Grenade | pin, four bounces, pop; bursts 120 ticks after the release tick; one per life. Damage 102.14 / 78.57 / 47.14 / 15.71 / 1.57 / 0 at 0.5 / 2 / 4 / 6 / 6.9 / 7.5, matching the formula; 0 behind the fort wall against 46.44 at the same distance in the open |
+| Dummies | 21 (10 Green, 11 Tan); all 21 eliminated with one sniper headshot each, 21 kill sounds, all 21 standing at 100 hp afterwards; down for 3.02 s |
+| `audioLog` | switch, shot_rifle / smg / sniper / pistol, bolt, dry, reload_*, hit, kill, grenade_pin / bounce / pop, step_wood / fabric / book / card / plastic, jump, land all appear for the matching action |
+| Routes and graph | all 18 routes ok walking and sprinting, same times and heights, no damage; `validateWaypoints()` is `[]` |
+| Random walkers, 56 simulated minutes | never outside the room or inside a solid |
+| Draw calls | 9 idle, 12 at most while firing the rifle, 11 with the grenade arc. These now include the shadow pass |
+| Triangles | about 26,000 (the counter now includes the shadow pass, which is why it doubled) |
+| Real input | left mouse fires, R reloads, 1 / 2 / 3 / 4 / 5 and the wheel switch, right mouse scopes, G throws |
+
+Screenshots looked at: rifle mid-burst (flash, tracer, damage number, casings, HUD), sniper scoped, grenade arc, pressed
+against the east wall (skirting stays visible), `bed_top`.
+
+### Carry-overs (DESIGN 15.5)
+
+1. Skirting and door frame are 0.3 thick. Screenshot against the east wall shows the board.
+2. Counters include the shadow pass: 9 idle (was 3).
+3. `player.stepSmooth` 9.
+4. `west_lane` eye (42, 1.6, 24), `desk_top` eye (97.5, 27.6, 66).
+5. Crayons at `55.7..57, 29..38` and `63..64.3, 29..38`, mirrored.
+6. Bed top blanket blue, sides `#E9E4DA`, underside `#6F6A63`.
+7. Bear head `6..14, 39..45`.
+8. Desk aprons added; walking east off the middle of the north ruler is held at x 94.6 with no fall.
+9. From 2 above the yo-yo string top it is grabbed at 9.5 u/s; from 34 above it is not grabbed.
+10. `walkPath` returns `ok: false` with an error for `m.bed.e > m.pad`, `m.tunnel.top > m.seat` and `m.pad > n.w.5`.
+
+### DESIGN.md items I could not do as written, and what I did instead
+
+1. **Bloom never builds with the recovery rates as written**: rifle adds 0.35 a shot but recovers 0.7 between shots (SMG 0.30
+   against 0.6). Recovery now waits for `recoverDelay` after the last shot (rifle 0.16 s, SMG 0.12 s, pistol 0.25 s).
+2. **Pistol 0.18 s minimum** is 0.183 s, the next whole tick at 60 Hz.
+3. **Dummy height**: body 1.4 plus head 0.45 is 1.85, not 1.8. The body volume is 1.35 including the 0.05 base.
+4. **Dummies on the z = 80 midline** alternate Green and Tan.
+5. **Sprint spread x2.5** only shows on the crosshair, since firing while sprinting is not allowed.
+6. Holding fire on an empty automatic does nothing until the trigger is pressed again ("on a fire press").
+
+### Known weak spots
+
+- Named view `bed_top` has its eye inside the head of the bed dummy at (27, 18, 80).
+- By my arithmetic the turned crayons reach into the round 3 train envelope where the track curve crosses x 56 and x 64
+  (about z 36 and z 124). Not tested; there is no train yet.
+- A grenade stops rolling almost at once after it lands.
+- The viewmodels are plain boxes and the sounds have only been checked for names and for not throwing; nobody has
+  listened to them.
+- Casings bounce at the height of the player's feet, not on whatever is under them.

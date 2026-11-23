@@ -1,0 +1,35 @@
+// Builder: round 2 with real mouse and keys (pointer lock works headless), and the audio context after a real gesture.
+const { launch } = require('./harness.cjs');
+(async () => {
+  const { browser, page, errors, shot } = await launch({ width: 1280, height: 720 });
+  const out = {};
+  const W = () => page.evaluate(() => { const s = __game.state(); return Object.assign({ phase: s.phase }, s.weapon); });
+  const names = (t) => page.evaluate((t0) => [...new Set(__game.audioLog.filter((a) => a.time >= t0 - 0.002).map((a) => a.name))], t);
+  const now = () => page.evaluate(() => __game.state().time);
+  await page.mouse.click(640, 360); await page.waitForTimeout(300);
+  out.locked = await page.evaluate(() => !!document.pointerLockElement);
+  await page.evaluate(() => { __game.teleport(60, 0, 27.5, Math.PI, 0); });
+  let t = await now();
+  await page.mouse.down(); await page.waitForTimeout(700); await page.mouse.up(); await page.waitForTimeout(200);
+  out.leftMouseRifle = { weapon: await W(), sounds: await names(t) };
+  await shot('round2/builder_real_input.png');
+  t = await now(); await page.keyboard.press('KeyR'); await page.waitForTimeout(400); out.keyR = { reloading: (await W()).reloading, sounds: await names(t) };
+  t = await now(); await page.keyboard.press('Digit2'); await page.waitForTimeout(500); out.key2 = (await W()).name;
+  await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up(); await page.waitForTimeout(150); out.pistolClick = { mag: (await W()).mag, sounds: await names(t) };
+  await page.keyboard.press('Digit1'); await page.waitForTimeout(200); out.key1 = (await W()).name;
+  await page.keyboard.press('Digit4'); await page.waitForTimeout(200); out.key4 = (await W()).name;
+  await page.keyboard.press('Digit3'); await page.waitForTimeout(200); out.key3 = (await W()).name;
+  await page.mouse.wheel(0, 100); await page.waitForTimeout(300); out.wheel = (await W()).name;
+  await page.keyboard.press('Digit1'); await page.waitForTimeout(200); out.key1AfterWheel = (await W()).name;
+  await page.keyboard.press('Digit5'); await page.waitForTimeout(900); out.key5 = (await W()).name;
+  await page.mouse.down({ button: 'right' }); await page.waitForTimeout(500); out.rightMouseScope = await W();
+  await page.mouse.up({ button: 'right' }); await page.waitForTimeout(400); out.scopeReleased = (await W()).scoped;
+  t = await now(); await page.keyboard.down('KeyG'); await page.waitForTimeout(400); const g1 = (await W()).grenades; await page.keyboard.up('KeyG'); await page.waitForTimeout(2600);
+  out.keyG = { grenadesWhileHeld: g1, after: (await W()).grenades, sounds: (await names(t)).filter((n) => n.startsWith('grenade')) };
+  out.audioContext = await page.evaluate(() => { const AC = window.AudioContext || window.webkitAudioContext; return { exists: !!AC }; });
+  out.hud = await page.evaluate(() => ({ name: document.getElementById('wname').textContent, mag: document.getElementById('mag').textContent, res: document.getElementById('res').textContent, gren: document.getElementById('gren').textContent, health: document.getElementById('healthNum').textContent }));
+  await page.keyboard.press('Escape'); await page.waitForTimeout(200); out.afterEsc = (await W()).phase;
+  out.errors = errors;
+  console.log(JSON.stringify(out, null, 1));
+  await browser.close();
+})().catch((e) => { console.error('FAILED', e); process.exit(1); });
