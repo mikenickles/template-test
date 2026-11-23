@@ -52,7 +52,7 @@ const cls = (id) => !id ? 'none' : id === 'room.floor' ? 'floor' : /^room\.wall|
           R.cam(e, c); __game.render();
           const wpx = 0.5 * f / L, n = wpx >= 9 ? 5 : wpx >= 4 ? 3 : 1, off = Math.max(3, Math.round(wpx * 1.6 + 2));
           const px = R.rd(0, 0, n), l = R.rd(-off, 0, n), rr = R.rd(off, 0, n);
-          for (let q = 0; q < 4; q++) R.hide.add(k * 4 + q); __game.render(); const bg = R.rd(0, 0, n); R.hide.clear();
+          for (let q = 0; q < R.np; q++) R.hide.add(k * R.np + q); __game.render(); const bg = R.rd(0, 0, n); R.hide.clear();
           let sun = null; if (d <= 60) { const I = R.sun.intensity; R.sun.intensity = 0; __game.render(); sun = R.rd(0, 0, n); R.sun.intensity = I; }
           out.push({ d, lift, e, body: px, bg, l, r: rr, sunOff: sun, behind: back ? back.id : null, wpx: +wpx.toFixed(1) });
         }

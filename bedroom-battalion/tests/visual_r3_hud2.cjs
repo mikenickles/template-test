@@ -18,7 +18,7 @@ const { open } = require('./visual_r3_lib.cjs');
       // spectating: a fresh non-autoplay match, the player killed, then what the spectated bot's own model covers
       const sp = await p.evaluate(() => { __game.startMatch({ difficulty: 'regular', seed: 14 }); __game.setTimeScale(0); __game.step(7); __game.setGodMode(false); __game.damagePlayer(500); __game.step(2.2); __game.render();
         const R = window.__r3, s = __game.state(), id = s.match.spectating, b = s.bots.find((o) => o.id === id), k = R.slotOf(b.pos);
-        const A = R.full(); for (let q = 0; q < 4; q++) R.hide.add(k * 4 + q); __game.render(); const B = R.full(), shot = R.copy(); R.hide.clear(); __game.render();
+        const A = R.full(); for (let q = 0; q < R.np; q++) R.hide.add(k * R.np + q); __game.render(); const B = R.full(), shot = R.copy(); R.hide.clear(); __game.render();
         let n = 0, bottom = 0; const gl = R.gl(), W = gl.drawingBufferWidth, Hh = gl.drawingBufferHeight; for (let i = 0; i < W * Hh; i++) { const j = i * 4; if (Math.abs(A[j] - B[j]) + Math.abs(A[j + 1] - B[j + 1]) + Math.abs(A[j + 2] - B[j + 2]) > 30) { n++; if (((i / W) | 0) < Hh * 0.3) bottom++; } }
         window.__specHidden = shot; return { spectating: b.name, slot: k, crouching: b.crouching, pctFrame: +(100 * n / (W * Hh)).toFixed(1), pctInBottom30: n ? Math.round(100 * bottom / n) : 0 }; });
       console.log('spectated bot own model covers', JSON.stringify(sp));

@@ -21,7 +21,7 @@ const { open, dE, hex } = require('./visual_r3_lib.cjs');
           for (const a of [-30, -15, 0, 15, 30]) { const ang = a * Math.PI / 180, e = [body.x + Math.sin(ang) * d, 1.6, body.z + toward * Math.cos(ang) * d]; if (e[0] < 1 || e[0] > 119 || e[2] < 1 || e[2] > 159) continue;
             R.cam(e, [body.x, body.y + 0.2, body.z]); const sil = R.silhouette(k); let c = null;
             if (sil.px > 0) { // the body-colour pixel nearest the screen centre among changed pixels: sample head and body centres
-              const pa = R.rd(0, 0, 1); for (let q = 0; q < 4; q++) R.hide.add(k * 4 + q); __game.render(); const pb = R.rd(0, 0, 1); R.hide.clear(); __game.render(); c = { body: pa, bg: pb }; }
+              const pa = R.rd(0, 0, 1); for (let q = 0; q < R.np; q++) R.hide.add(k * R.np + q); __game.render(); const pb = R.rd(0, 0, 1); R.hide.clear(); __game.render(); c = { body: pa, bg: pb }; }
             if (!best || sil.px > best.px) best = { a, e, px: sil.px, w: sil.w, h: sil.h, c }; }
           if (best) { out.push({ team: b.team, zone: z, d, pos: b.pos.map((v) => +v.toFixed(1)), state: b.brainState, px: best.px, w: best.w, h: best.h, centre: best.c });
             if (frames.length < 6 && best.px > 0 && d === 30) { R.cam(best.e, [body.x, body.y + 0.2, body.z]); __game.render(); frames.push(R.copy()); } } }

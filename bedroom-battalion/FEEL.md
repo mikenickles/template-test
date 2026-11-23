@@ -158,6 +158,108 @@ Tried live, Regular, same 12 seeds (`feel_r3_trials.cjs`):
 - Whether the tunnel scrape and the whistle are learnable without being told.
 - How the north end of the bed top plays as a camping spot.
 
+## Round 3 re-check
+
+**Verdict: a full match is now fun on Regular and Veteran and fair enough to ship this round.** Recruit is beatable by a beginner, Regular is a fair fight, and Veteran is a real challenge without aimbot tells.
+- **Fixed:** rounds no longer drag, bots answer being shot in the back, Recruit is gentler, the east-lane rifle corridor is gone, and there were no stuck or idle bots.
+- **Still weak:**
+  - Veteran rounds open with sniper trades, including one fort-to-fort line under the desk.
+  - Bots dodge every grenade, so a grenade cannot hurt an alert bot.
+  - Bots now hardly use cover: crouched 5 % of the time, was 17 %.
+  - Bots still almost never ride the train.
+  - Callouts are as frequent as before.
+- **Balance:** my earlier "Green is favoured" is **not confirmed**: 120 new matches give Green 68, Tan 52 overall, but Recruit and Veteran are even and only Regular leans Green.
+
+Method as before, on this build:
+- 120 instrumented autoplay matches (40 per difficulty, seeds 100 to 139, 932 rounds, 5,741 kills), `feel_r3b_matches.cjs` with `feel_r3b_lib.js`, summarised by `feel_r3b_analyse.cjs`.
+- 18 `runMatch` games for state changes (`feel_r3b_states.cjs`).
+- 324 duels and 120 reaction trials (`feel_r3b_duel.cjs`).
+- 48 grenade throws at holding bots (`feel_r3b_dodge.cjs`).
+- East-side kill breakdown (`feel_r3b_east.cjs`), and spectate and whistle checks (`feel_r3b_flow.cjs`).
+
+Pictures are `screenshots/round3/feel_re_*.png`. No console errors in any run. `stuckLog`, `trainRescueLog` and `idleLog` were empty in all 138 matches. Seeds now reproduce exactly, which is why repeated trials below give identical numbers.
+
+### Items asked for
+
+| # | Item | Result | Evidence |
+| --- | --- | --- | --- |
+| 1 | Fun and fair per difficulty | **Recruit and Regular: yes. Veteran: yes, but it opens with sniper trades.** | Sections below. |
+| 2 | Pacing | **Fixed** | Rounds reaching 0:00 (time or replay): Recruit 13 %, Regular 5 %, Veteran 2 % (were 49 / 39 / 37 %). Median round 108 / 84 / 71 s (were 150 / 138 / 130). First engagement 6.6 / 3.8 / 3.0 s, first kill 19 / 14 / 13 s. Rounds with a 40 s+ silence: 4 / 10 / 6 % (were 11 / 20 / 12). |
+| 3 | Shot from behind mid-route; grenades | **Shots: fixed. Grenades: over-fixed.** | Shot in the back from 15 u: 10 of 10 bots turn at once on every difficulty and hit back in a median 1.0 s (Recruit) or 0.48 s (Regular, Veteran); was 2 to 3 of 10. A missed shot behind: 10 of 10 turn (was 1 to 4). Grenades: see finding 2. |
+| 4 | Recruit beatable, Veteran a challenge | **Fixed** | Rifle bot, standing player: Recruit 51 dps at 10 u (first hit 0.98 s), 13 at 30 u, 6 at 60 u. Regular 108 / 56 / 25. Veteran 134 / 50 / 22, first hit 0.47 s, 33 to 45 % of shots hitting at 30 u. Crouching at 60 u is never hit. |
+| 5 | East lane | **Rifle corridor fixed; sniper lines remain** | Early (first 20 s) east-side kills over 50 u per round: Recruit 0.41 -> 0.12, Regular 0.42 -> 0.28, Veteran 0.37 -> 0.40. Rifle kills among them went from 19 to 45 per difficulty down to 4 to 7. What is left is snipers (30 / 82 / 119). Finding 1 has the remaining line and the fix. |
+| 6 | Balance | **Earlier Green edge not confirmed** | Section below. |
+| 7 | Train | **Partly** | Bots ride less, not more: 0.2 to 0.3 rides per match from 1.8 to 2.1 tries (was 0.6). It is still strong moving cover: it blocks 46 % of the enemy sightlines that walls leave open (33 / 54 / 59 % by difficulty), and 16 % of kills happen within 9 u of a car. Whistle: two pitches, 1.15x on the west straight and 0.85x on the east, about 5 semitones apart; the doppler shift is at most about 7 % at 4 u/s, so the sides stay apart. Ears needed to confirm it is heard in a fight. |
+| 8 | Callouts | **Rules obeyed, still busy** | 9.6 per live minute (was 9.5). The region, including the new "our side / their side", was right in all but 16 of about 9,000 enemy callouts (all from an enemy moving or dying on that tick). "I'm hit" is still the most common callout (2,165), though only once per life; status messages are 36 %. At most 2 on screen. |
+| 9 | Spectating, robotic look | **Spectating fixed; bots now too upright** | `feel_re_cmp_spectate.png`: the watched bot's viewmodel shows and its own body is hidden. Right after the round starts, a teammate standing 0.9 u away can still fill a third of the screen (first frame). Robotic look: see finding 3. |
+
+### Findings, most important first
+
+#### 1. Veteran rounds open with sniper trades; one fort-to-fort line runs under the desk
+- Evidence (`feel_r3b_east.cjs`): on Regular and Veteran, 201 sniper kills at over 50 u landed in the first 20 s of 625 rounds (0.32 per round). Many are snipers doing their job from perches, which pillar 3 wants: tall shelf L1 at (106, 19, 124) onto the floor of the Green half, desk top (107, 26, 102) onto the bed, small shelf (106, 9, 22) onto the west lane.
+- 53 of them, though, are floor-to-floor, both soldiers east of x 95: (105, 0, 108) to (96, 0, 40), (98, 0, 117) to (100, 0, 7), (107, 0, 106) to (98, 0, 11). The line runs under the desk top. The only thing under the desk is the paper ball at `105.5..110.5, 77.5..82.5`. A ray from (105, 1.6, 120) northward first hits something at z 44.
+- Change: close the under-desk line with a chicane of two toys, `96..107, 76..78.5` h 3 and `105..120, 81.5..84` h 3. Move node m.e to about (106, 0, 80) between them and add a node at each end of the chicane: about (112, 0, 74) on the north side and (100, 0, 86) on the south side. Every straight north-south line under the desk is then blocked. Untested: the nodes cannot be added live, and the round 3 test-collider trial showed that bots stick without them.
+- Smaller, if the lead wants softer Veteran openings: the High role holds its perch for the first 10 s before it may fire at targets over 80 u. Untested.
+
+#### 2. Bots dodge every grenade, so a grenade cannot hurt an alert bot
+- Evidence (`feel_r3b_dodge.cjs`, 48 throws at a lone Tan bot holding its node, on Regular; the picture is the same on every difficulty):
+  - Whenever the grenade came to rest within about 5 u of the bot, the bot moved 3 to 8 u and was 8.4 to 9.4 u from the burst when it went off.
+  - That held even for some throws landing behind it.
+  - It took 0 damage in all 48 throws.
+- In matches, grenade kills are 4 / 29 / 34 over 40 matches per difficulty: bot grenades still kill the other team's bots, but a player can no longer flush a bot out of cover with damage.
+- Change: make the dodge a per-difficulty chance with a reaction delay. Suggested chance: Recruit 0.3, Regular 0.6, Veteran 0.9, and only for grenades in the view cone. Suggested delay: `ai.grenadeReact` 0.6 / 0.45 / 0.3 s. Untested.
+
+#### 3. Bots now hardly use cover (from "long crouches" to "standing in the open")
+- Evidence: share of time crouched fell from 17 % to 5 % (6 / 4 / 3 % by difficulty).
+  - In the 2 Hz samples, the movement state reads `cover` or `hold` under 2 % of the time; it is `move` 57 % and `engage` 34 %.
+  - `botLog` shows 4 to 6 cover visits per round as before, but the median visit is now 1.2 to 1.5 s (was 6 s).
+- Retreat is still long on Regular and Veteran: median 18 and 15 s (was 22 to 24).
+- Stop-start is better: the median spell in `advance` between engagements is 2.4 to 3.0 s (was 1.2 to 2.1), and engagements last 3.6 to 6.1 s (were 2.0 to 4.3).
+- Change: let a bot that reaches cover peek at least twice before leaving, with a minimum stay of `ai.coverMin` 3 s (new). Untested.
+
+#### 4. Bots still almost never ride the train
+- 0.2 to 0.3 rides per match from about 2 tries, fewer than before the change to `rideChance` 0.6 and `rideMaxWait` 8.
+- Most tries give up, probably because the shorter hold (20 s) and the push leave no time to wait for a deck car. I did not trace why.
+- Change: let the Centre bot start the ride during setup (before `holdUntil`) when a deck car is due within 8 s. Count `rideTries` against `rides` in `runMatch` to see where tries are lost.
+
+#### 5. Callouts still about 10 per live minute
+- They are accurate, and "our side / their side" works (side checked against the enemy's real z).
+- Change: "I'm hit" only when no teammate has called within 4 s. Drop "Enemy down" when the kill feed already shows it. `calloutGap 4 -> 6` per bot. Untested.
+
+### Balance (120 matches, seeds 100 to 139 per difficulty; `feel_r3b_analyse.cjs`)
+
+| | Matches Green / Tan | Rounds Green / Tan / replay | Kills per soldier per match, Green bots / Tan bots / You |
+| --- | --- | --- | --- |
+| Recruit | 20 / 20 | 144 / 148 / 15 | 5.2 / 5.4 / 5.9 |
+| Regular | 29 / 11 | 182 / 127 / 11 | 6.5 / 5.5 / 5.6 |
+| Veteran | 19 / 21 | 152 / 150 / 3 | 5.8 / 5.4 / 4.8 |
+| All | **68 / 52** | **478 / 425 / 29** | |
+
+- Round share is 53 % Green (z about 1.8, p about 0.08); match share is 57 % (p about 0.14).
+- Regular alone (29 to 11) is unlikely by chance, and there Green bots out-kill Tan in every role, so it is not the autoplayed player. But it does not appear on Recruit or Veteran.
+- The builder's 120 seeds went the other way (55 to 65). With seeds now deterministic, match winners cluster by seed range.
+- So I retract "the map favours Green". The honest statement: no consistent side bias, with a Regular-only lean on seeds 100 to 139. A larger run on rounds rather than matches (300 seeds per difficulty) would settle it.
+
+By lane (all difficulties; kills by the victim's lane, Green kills / Tan kills):
+
+| Lane | Green kills / Tan kills | Leans |
+| --- | --- | --- |
+| West | 966 / 801 | Green |
+| Centre | 905 / 837 | slightly Green |
+| East | 824 / 825 | even |
+| Bed | 95 / 174 | Tan |
+| Desk | 137 / 123 | even |
+| Shelves | 27 / 26 | even |
+
+- The bed is Tan's in both of my runs (Green soldiers die on the bed almost twice as often).
+- The west floor is Green's.
+- Both stem from the asymmetric bed routes: Green climbs the blanket slope, Tan the book stairs. Worth a look in round 5 balance. Not a blocker.
+
+### Only a human can confirm
+- Whether Veteran's opening sniper volley feels unfair or exciting.
+- Whether the two whistles are told apart in a fight.
+- Whether bots standing more and crouching less look braver or dumber.
+
 ---
 
 # Round 2 (gunplay)

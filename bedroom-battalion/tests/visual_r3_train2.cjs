@@ -4,6 +4,7 @@
 // feet height against the deck while it rides.
 const fs = require('fs'); const path = require('path');
 const { open, dE, hex, SHOTS } = require('./visual_r3_lib.cjs');
+const PFX = process.env.PFX || 'visual_';      // the round 3 re-check runs with PFX=visual_re_
 (async () => {
   const h = await open({ width: 1280, height: 720 }); const p = h.page;
   const toS = (s) => p.evaluate((s) => { let k = 0; while (k++ < 4000) { const T = __game.state().train; const d = ((s - T.s) % T.length + T.length) % T.length; if (d < 0.05) break; __game.step(Math.min(10, Math.max(1 / 60, d / 4))); } return __game.state().train.cars; }, s);
@@ -25,7 +26,7 @@ const { open, dE, hex, SHOTS } = require('./visual_r3_lib.cjs');
       dc.putImageData(im, 0, 0); frames.push(fa, d); out.push([name, n]);
     }
     return { out, url: R.sheet(frames, [0, 0, 1280, 720], 0.35, 2) }; }, cars);
-  h.save('visual_train_zfight.png', zf.url); console.log('z-fight px changed >48 (frame | diff x4 in the sheet):', JSON.stringify(zf.out));
+  h.save(PFX + 'train_zfight.png', zf.url); console.log('z-fight px changed >48 (frame | diff x4 in the sheet):', JSON.stringify(zf.out));
   // ---- close views: cargo block, wheels on rails, consist from the floor ----
   const fr = await p.evaluate((cars) => { const R = window.__r3, by = (t) => cars.find((c) => c.type === t), f = by('flatbed'), b = by('boxcar'), F = [];
     const v = (e, t) => { R.cam(e, t); __game.render(); F.push(R.copy()); };
@@ -35,7 +36,7 @@ const { open, dE, hex, SHOTS } = require('./visual_r3_lib.cjs');
     v([20, 1.6, 64], [43, 2.5, 82]);
     v([100, 1.6, 46], [43, 2.5, 82]);
     return R.sheet(F, [0, 0, 1280, 720], 0.4, 3); }, cars);
-  h.save('visual_train_close.png', fr);
+  h.save(PFX + 'train_close.png', fr);
   // ---- rider: a Green bot over ride.e ----
   const ride = await p.evaluate(() => {
     const id = __game.spawnBot('green', 'n.c.y'); const path = __game.botGoto(id, 's.c.y', { via: 'ride.e' }); const out = { id, path, samples: 0, types: {}, dev: [], worst: 0 }; let shot = null;
@@ -47,7 +48,7 @@ const { open, dE, hex, SHOTS } = require('./visual_r3_lib.cjs');
       else if (out.samples > 30) { out.off = b.pos.map((v) => +v.toFixed(2)); break; } }
     out.devRange = out.dev.length ? [Math.min(...out.dev), Math.max(...out.dev)] : null; delete out.dev;
     out.url = shot ? window.__r3.sheet([shot], [240, 60, 800, 600], 1) : null; __game.removeBots(); return out; });
-  if (ride.url) h.save('visual_train_rider.png', ride.url); delete ride.url;
+  if (ride.url) h.save(PFX + 'train_rider.png', ride.url); delete ride.url;
   console.log('rider', JSON.stringify(ride));
   console.log('errors', JSON.stringify(h.errors));
   await h.browser.close();

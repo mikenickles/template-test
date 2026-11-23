@@ -15,10 +15,10 @@ const DIFF = process.argv[2] || 'regular', SEED0 = +(process.argv[3] || 1), COUN
       const G = __game, DT = 1 / 60, CW = G.CONFIG.weapons, D = G.CONFIG.difficulty[DIFF];
       G.startMatch({ difficulty: DIFF, seed, autoplay: true }); G.setTimeScale(0);
       const out = { seed, problems: {}, ex: {}, rounds: [], myKills: {}, myDeaths: {}, myHeadKills: 0, shotsSeen: 0, ffHits: 0, ffDamage: 0 };
-      const P = (k, ex) => { out.problems[k] = (out.problems[k] || 0) + 1; if (ex && (!out.ex[k] || out.ex[k].length < (/stationary|spawn|view|friendly|freeze|faster/.test(k) ? 12 : 4))) (out.ex[k] = out.ex[k] || []).push(ex); };
+      const P = (k, ex) => { out.problems[k] = (out.problems[k] || 0) + 1; if (ex && (!out.ex[k] || out.ex[k].length < (/STUCK|spawn|view|friendly|freeze|faster|engage range/.test(k) ? 12 : 4))) (out.ex[k] = out.ex[k] || []).push(ex); };
       const r2 = (a) => a.map((v) => +(+v).toFixed(2));
       const soldiers = () => { const s = G.state(), p = s.player; const L = s.bots.map((b) => ({ id: b.id, name: b.name, team: b.team, pos: b.pos, hp: b.hp, dead: b.dead, state: b.brainState || b.state, move: b.state, yaw: b.yaw, crouch: b.crouching, riding: b.riding, edgeKind: b.edgeKind, weapon: b.weapon, mag: b.mag, bot: true })); L.push({ id: 'player', name: 'You', team: 'green', pos: [p.x, p.y, p.z], hp: p.health, dead: p.dead || p.health <= 0, state: 'player', move: 'player', yaw: p.yaw, crouch: p.crouching, riding: s.riding, weapon: s.weapon.name, mag: s.weapon.mag, bot: false }); return L; };
-      const byId = {}; const hist = {}, still = {}, vis = {}, lastShotT = {}, prevMag = {}, prevHp = {}, prevDead = {}, startPos = {}, firedAt = {};
+      const byId = {}; const roundVis = {}, roundShots = {}; const hist = {}, still = {}, vis = {}, lastShotT = {}, prevMag = {}, prevHp = {}, prevDead = {}, startPos = {}, firedAt = {};
       let phase = null, phaseT = 0, lastShot = G.shotLog[G.shotLog.length - 1] || null, roundLive0 = 0, feedSeen = 0, tick = 0;
       const maxTicks = 60 * 2600;
       for (; tick < maxTicks; tick++) {
@@ -34,6 +34,8 @@ const DIFF = process.argv[2] || 'regular', SEED0 = +(process.argv[3] || 1), COUN
             if (mine.green !== m.alive.green || mine.tan !== m.alive.tan) P('alive count disagrees at round end', row);
             if (m.lastRound && m.lastRound.reason === 'eliminated' && mine.green > 0 && mine.tan > 0) P('eliminated but both alive', row);
             if (dur > 150.6) P('round longer than 2:30', row);
+            for (const q of L) if (q.bot && (roundVis[q.id] || 0) > 5 && !roundShots[q.id]) P('round with an enemy visible in engage range over 5 s and no shot', { round: m.round, bot: q.name, weapon: q.weapon, visibleSecs: roundVis[q.id], dead: q.dead, pos: r2(q.pos) });
+            for (const k in roundVis) delete roundVis[k]; for (const k in roundShots) delete roundShots[k];
             if (dur > 45) for (const q of L) if (!q.dead && q.bot && Math.hypot(q.pos[0] - startPos[q.id][0], q.pos[2] - startPos[q.id][2]) < 6) P('bot never left spawn', { round: m.round, bot: q.name, pos: r2(q.pos), dur: +dur.toFixed(1) });
             if (m.lastRound && m.lastRound.reason !== 'eliminated') row.survivors = L.filter((q) => !q.dead).map((q) => `${q.name}@${r2(q.pos).join(',')}:${q.state}/${q.move}`);
             out.rounds.push(row);
@@ -59,7 +61,7 @@ const DIFF = process.argv[2] || 'regular', SEED0 = +(process.argv[3] || 1), COUN
           const tgt = byId[e.hit] || (e.kind === 'soldier' ? byId.player : null);
           if (sh && tgt && sh.team === tgt.team && e.by !== e.hit) { out.ffHits++; if (e.damage > 0) { out.ffDamage += e.damage; P('friendly damage', { t: +t.toFixed(2), by: sh.name, hit: tgt.name, weapon: e.weapon, damage: e.damage }); } }
           if (e.weapon !== 'grenade' && sh) {
-            shotsBy[sh.id] = (shotsBy[sh.id] || 0) + 1; firedAt[sh.id] = t;
+            shotsBy[sh.id] = (shotsBy[sh.id] || 0) + 1; firedAt[sh.id] = t; roundShots[sh.id] = (roundShots[sh.id] || 0) + 1;
             const C = CW[e.weapon]; const lt = lastShotT[sh.id + e.weapon];
             if (lt !== undefined && t - lt < C.interval - DT * 0.6) P('fire faster than the weapon', { by: sh.name, weapon: e.weapon, gap: +(t - lt).toFixed(3), interval: C.interval });
             lastShotT[sh.id + e.weapon] = t;
@@ -97,10 +99,24 @@ const DIFF = process.argv[2] || 'regular', SEED0 = +(process.argv[3] || 1), COUN
           const [x, y, z] = q.pos;
           // stalls
           if (tick % 30 === 0) {
-            const h = hist[q.id] || (hist[q.id] = []); h.push([x, y, z, t, q.state]); if (h.length > 25) h.shift();
-            const w12 = h.slice(-25); const moved = Math.max(...w12.map((p) => Math.hypot(p[0] - w12[0][0], p[2] - w12[0][2]) + Math.abs(p[1] - w12[0][1])));
-            if (w12.length === 25 && moved < 1) { const sts = [...new Set(w12.map((p) => p[4]))]; const bad = sts.some((v) => !['hold', 'engage', 'cover'].includes(v)); still[q.id] = (still[q.id] || 0) + 0.5; if (bad && still[q.id] === 0.5) P('stall >12 s outside hold/engage/cover', { round: m.round, t: +tr.toFixed(1), bot: q.name, pos: r2(q.pos), states: sts, edgeKind: q.edgeKind, move: q.move, lastFired: firedAt[q.id] ? +(t - firedAt[q.id]).toFixed(1) : null }); if (still[q.id] === 50) P('stationary over 62 s', { round: m.round, t: +tr.toFixed(1), bot: q.name, pos: r2(q.pos), states: sts, move: q.move, lastFired: firedAt[q.id] ? +(t - firedAt[q.id]).toFixed(1) : null }); }
-            else still[q.id] = 0;
+            // STUCK (my rule, after 16.11): moved under 1 unit for 15 s, fired no shot in those 15 s, and not justified by
+            // hold before 22 s into the round. Counted once per episode; episodes of 37 s or more counted separately.
+            const h = hist[q.id] || (hist[q.id] = []); h.push([x, y, z, t, q.state, q.move]); if (h.length > 31) h.shift();
+            const w = h.slice(-31); const moved = Math.max(...w.map((p) => Math.hypot(p[0] - w[0][0], p[2] - w[0][2]) + Math.abs(p[1] - w[0][1])));
+            const noShot = !(firedAt[q.id] >= w[0][3]);
+            const earlyHold = w.every((p) => p[4] === 'hold') && tr <= 22;
+            if (w.length === 31 && moved < 1 && noShot && !earlyHold) {
+              still[q.id] = (still[q.id] || 0) + 0.5; const sts = [...new Set(w.map((p) => p[4]))], mv = [...new Set(w.map((p) => p[5]))];
+              if (still[q.id] === 0.5) P('STUCK: 15 s stationary, no shot, not justified', { round: m.round, t: +tr.toFixed(1), bot: q.name, weapon: q.weapon, pos: r2(q.pos), states: sts, moves: mv, crouch: q.crouch, lastFired: firedAt[q.id] ? +(t - firedAt[q.id]).toFixed(1) : null });
+              if (still[q.id] === 22) P('STUCK 37 s or more', { round: m.round, t: +tr.toFixed(1), bot: q.name, pos: r2(q.pos), states: sts, moves: mv });
+            } else still[q.id] = 0;
+          }
+          // enemy visible within the weapon's engage range (16.11) with my line of sight, any direction: seconds per round
+          if (tick % 15 === 0) {
+            const RANGE = { smg: 40, pistol: 50, rifle: 90, sniper: 1e9 }, vr = Math.min(RANGE[q.weapon] || 90, D.vision);
+            const eye = [x, y + (q.crouch ? 1.0 : 1.6), z];
+            const sees = L.some((e) => e.team !== q.team && !e.dead && Math.hypot(e.pos[0] - x, e.pos[1] - y, e.pos[2] - z) <= vr && (R2.clearLine(eye, [e.pos[0], e.pos[1] + 1.55, e.pos[2]]) || R2.clearLine([x, y + 1.6, z], [e.pos[0], e.pos[1] + 1.55, e.pos[2]])));
+            if (sees) { roundVis[q.id] = (roundVis[q.id] || 0) + 0.25; }
           }
           if (T.solidAt(x, y, z, q.crouch ? 1.2 : 1.8, { lift: 0.3, eps: 0.05 }).length) P('inside a static solid', { round: m.round, bot: q.name, pos: r2(q.pos), move: q.move, hits: T.solidAt(x, y, z, q.crouch ? 1.2 : 1.8, { lift: 0.3, eps: 0.05 }) });
           if (x < 0.39 || x > 119.61 || z < 0.39 || z > 159.61 || y < -0.01 || y > 89) P('out of the room', { bot: q.name, pos: r2(q.pos) });
@@ -129,7 +145,7 @@ const DIFF = process.argv[2] || 'regular', SEED0 = +(process.argv[3] || 1), COUN
       if (!m.winner || (m.score.green !== 5 && m.score.tan !== 5)) P('no winner with 5', out.end);
       const rep = G.matchReport ? G.matchReport() : null;
       if (rep && rep.soldiers) { out.table = rep.soldiers.map((q) => `${q.name} ${q.kills}/${q.deaths}`).join(', '); for (const q of rep.soldiers) { if ((out.myKills[q.name] || 0) !== q.kills || (out.myDeaths[q.name] || 0) !== q.deaths) P('end table disagrees with my count', { name: q.name, table: [q.kills, q.deaths], mine: [out.myKills[q.name] || 0, out.myDeaths[q.name] || 0] }); } out.reportHeadKills = rep.stats && rep.stats.headKills; }
-      out.stuckLog = G.stuckLog.length; out.trainRescues = G.trainRescueLog.length;
+      out.stuckLog = G.stuckLog.length; out.trainRescues = G.trainRescueLog.length; out.idleLog = G.idleLog ? G.idleLog.length : 'n/a'; out.idleEx = G.idleLog ? G.idleLog.slice(0, 3) : [];
       // the same seed through runMatch: same result?
       const rm = G.runMatch({ difficulty: DIFF, seed, maxSimSeconds: 2600 });
       out.runMatch = { winner: rm.winner, score: rm.score, rounds: rm.rounds.length, stuck: rm.stuckLog.length, trainRescues: rm.trainRescueLog.length, errors: rm.errors.length, finished: rm.finished };
@@ -137,7 +153,7 @@ const DIFF = process.argv[2] || 'regular', SEED0 = +(process.argv[3] || 1), COUN
       return out;
     }, { DIFF, seed });
     results.push(r);
-    console.log(`${DIFF} seed ${seed}: ${r.end.winner} ${r.end.score.green}-${r.end.score.tan} in ${r.rounds.length} rounds (${(r.ticks / 60).toFixed(0)} s) | reasons ${r.rounds.map((q) => q.last && q.last.reason[0]).join('')} | stuckLog ${r.stuckLog} trainRescues ${r.trainRescues} | shots ${r.shotsSeen} ff hits ${r.ffHits} ff dmg ${r.ffDamage} | my head kills ${r.myHeadKills} report ${r.reportHeadKills} | runMatch ${JSON.stringify(r.runMatch)} same=${r.sameAsStepped}`);
+    console.log(`${DIFF} seed ${seed}: ${r.end.winner} ${r.end.score.green}-${r.end.score.tan} in ${r.rounds.length} rounds (${(r.ticks / 60).toFixed(0)} s) | reasons ${r.rounds.map((q) => q.last && q.last.reason[0]).join('')} | stuckLog ${r.stuckLog} trainRescues ${r.trainRescues} idleLog ${r.idleLog} ${JSON.stringify(r.idleEx).slice(0, 200)} | shots ${r.shotsSeen} ff hits ${r.ffHits} ff dmg ${r.ffDamage} | my head kills ${r.myHeadKills} report ${r.reportHeadKills} | runMatch ${JSON.stringify(r.runMatch)} same=${r.sameAsStepped}`);
     console.log('   problems', JSON.stringify(r.problems));
     for (const q of r.rounds) if (q.survivors) console.log('      time-out round', q.round, q.last && q.last.reason, JSON.stringify(q.alive), q.survivors.join(' | '));
     for (const k in r.ex) for (const e of r.ex[k]) console.log('     ', k, JSON.stringify(e).slice(0, 400));

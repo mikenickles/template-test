@@ -17,7 +17,7 @@ async function install(page) {
   await page.evaluate(() => {
     const S = window.__three.scenes[0];
     const R = window.__r3 = {};
-    R.sold = S.children.find((c) => c.isInstancedMesh && c.count === 44);
+    R.sold = S.children.find((c) => c.isInstancedMesh && c.material.type === 'MeshPhongMaterial' && c.count % 11 === 0 && c.count !== 63); R.np = R.sold.count / 11;      // parts per soldier: 4 (round 3) or 5 (arms added in the fix pass)
     R.chev = S.children.find((c) => c.isInstancedMesh && c.count === 10);
     R.trainBoxes = S.children.find((c) => c.isInstancedMesh && c.count === 62);
     R.wheels = S.children.find((c) => c.isInstancedMesh && c.count === 40);
@@ -32,10 +32,10 @@ async function install(page) {
     R.full = () => { const gl = R.gl(), W = gl.drawingBufferWidth, H = gl.drawingBufferHeight, b = new Uint8Array(W * H * 4); gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, b); return b; };
     // world centre of each soldier part from the live instance matrices: slot k, part p (0 base, 1 body, 2 head, 3 gun)
     const m4 = R.sold.matrix.clone(), v = new (Object.getPrototypeOf(R.sun.position).constructor)();
-    R.part = (k, p) => { R.sold.getMatrixAt(k * 4 + p, m4); v.setFromMatrixPosition(m4); const e = m4.elements; return { x: v.x, y: v.y, z: v.z, sy: Math.hypot(e[4], e[5], e[6]), upY: e[5] / (Math.hypot(e[4], e[5], e[6]) || 1) }; };
+    R.part = (k, p) => { R.sold.getMatrixAt(k * R.np + p, m4); v.setFromMatrixPosition(m4); const e = m4.elements; return { x: v.x, y: v.y, z: v.z, sy: Math.hypot(e[4], e[5], e[6]), upY: e[5] / (Math.hypot(e[4], e[5], e[6]) || 1) }; };
     R.slotOf = (pos) => { let best = -1, bd = 1e9; for (let k = 0; k < 11; k++) { const b = R.part(k, 0); const d = Math.hypot(b.x - pos[0], b.z - pos[2]) + Math.abs(b.y - pos[1]) * 0.3; if (d < bd) { bd = d; best = k; } } return bd < 2 ? best : -1; };
     // silhouette of slot k from the current probe view: pixels that change when its four instances are hidden
-    R.silhouette = (k) => { __game.render(); const A = R.full(); for (let p = 0; p < 4; p++) R.hide.add(k * 4 + p); __game.render(); const B = R.full(); R.hide.clear(); __game.render();
+    R.silhouette = (k) => { __game.render(); const A = R.full(); for (let p = 0; p < R.np; p++) R.hide.add(k * R.np + p); __game.render(); const B = R.full(); R.hide.clear(); __game.render();
       const gl = R.gl(), W = gl.drawingBufferWidth, H = gl.drawingBufferHeight; let n = 0, x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1;
       for (let i = 0; i < W * H; i++) { const j = i * 4; if (Math.abs(A[j] - B[j]) + Math.abs(A[j + 1] - B[j + 1]) + Math.abs(A[j + 2] - B[j + 2]) > 24) { n++; const x = i % W, y = (i / W) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
       return { px: n, w: n ? x1 - x0 + 1 : 0, h: n ? y1 - y0 + 1 : 0 }; };
