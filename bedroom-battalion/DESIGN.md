@@ -978,3 +978,9 @@ P2; decals not like tiles. From round 3: `soldier.bodyTint` 0.7; refresh the two
 - Ball, globe and pillow colliders stay as they are (colliders are frozen this round). These three are accepted exceptions to the 0.15 visual-fit rule. Possible collider reshape → LATER.md, round 5 at the earliest.
 - bed_top render cost is 2.70x of the 3x limit. 4B art must leave room there: soldiers instanced or merged per team, small effects pooled. If the worst view goes over 3x, the builder cuts a 4A detail before a 4B one.
 - 4A weak spots (flat ceiling, soft fort bricks, faint dust, hot shelf board, cushion-like pillows) wait for the visual tester's 4A notes and are fixed together with the 4B list.
+
+### 17.12 Lead decisions after 4B (2026-11-23)
+- The train engine runs cab-forward. Its colliders are frozen and the engine reads as a toy, so this is accepted.
+- No aim-down-sights for rifle, SMG or pistol. This holds the round 2 design (only the sniper scopes); viewmodels stay at hip.
+- Yellow letter blocks (`#F2C230`) are the closest room colour to Tan. In the fix pass, recolour them away from Tan, keeping red/blue/green primaries and no yellow or orange. No cover or floor surface may be within dE 25 of Tan `#D9A75A`.
+- There is no carpet in the room, so "carpet" in the impact list means fabric (the blanket and the rug, if any).

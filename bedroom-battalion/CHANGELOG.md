@@ -1261,3 +1261,249 @@ The extra views:
   - the budget numbers.
 - **Feel tester:** whether routes still read at a glance (book stairs, rulers, skateboard, strings, spring pad, P2), and whether
   the busier world hides soldiers.
+
+## Round 4B: soldiers, guns, train, effects, HUD and audio (DESIGN.md 17.5, 17.7, 17.8, 17.10, 17.11), with the R4A fixes
+
+What changed is the art, effects, HUD and audio. Colliders, waypoints and hit volumes are unchanged.
+
+New scripts:
+- `tests/builder_r4b_soldiers.cjs`: both teams, every pose, at 5, 20 and 60 units, plus the soldier fit.
+- `tests/builder_r4b_viewmodels.cjs`: every weapon at the hip, firing and reloading; the sniper half scoped and scoped; the
+  grenade hand.
+- `tests/builder_r4b_world.cjs`: the train; bullet marks on wood, fabric, plastic, book and card; grenade scorches.
+- `tests/builder_r4b_ui.cjs`: title, picker, HUD in a firefight, spectating, pause, round end and match end, at 1280 x 720
+  and 1920 x 1080.
+- `tests/builder_r4b_look.cjs`: cost per view, the share of each view clipped to white, and Tan contrast (dE).
+
+### R4A fixes, done first (FIXLIST "Round 4A early notes")
+
+- **R4A-1 render headroom.** Costed by turning one thing off at a time, interleaved frame by frame in one page:
+
+  | What was turned off | bed_top saved | spawn_tan saved |
+  | --- | --- | --- |
+  | Sunbeam | 0 to 10 ms | 0 to 10 ms |
+  | The atlas `textureGrad` lookup | about 120 ms | about 115 ms |
+  | The shadow map | about 110 ms | about 110 ms |
+
+  - **Atlas lookup.** The atlas now uses a plain lookup. The atlas mip chain is capped at level 3 (`art.atlasMaxLod`), so the
+    one coarse-mip pixel at each tile wrap stays inside the tile's own padding: no seam was seen in any screenshot.
+  - **Chunks.** The merged static art is split into 3 x 4 spatial chunks (`art.chunks`). Each chunk is recentred, so it is
+    frustum-culled and drawn front to back. Train cars are culled too.
+  - **Sunbeam.** Capped at a brightness of 0.22 (`art.beam.max`).
+  - **Result:** the 4A views now cost 1.08x to 1.59x of round 3, from 1.54x to 2.54x before (table below).
+- **R4A-2 over-bright.**
+  - Sun 3.0 to 2.4, and exposure 1.0 to 0.86.
+  - Wall stripe contrast halved.
+  - Paler surfaces toned down: the shelf `#EFE9DD` to `#DED6C8`, the sheet `#E8EEF5` to `#D9E1EB`, book pages `#F4EFE2` to `#E6DECB`.
+  - The beam is capped. It was the main source of clipping: the bright wash round the window.
+  - Pixels counted as clipped have two or more channels at 250 or above. Measured on the 4A snapshot, this gives 20.0 % for
+    bed_top and 5.9 % for spawn, close to the visual tester's 17.4 % and 5.5 %.
+
+  | View | 4A clipped % | 4B clipped % |
+  | --- | --- | --- |
+  | spawn_green | 5.89 | 0.23 |
+  | spawn_tan | 6.02 | 0.26 |
+  | bed_top | 19.99 | 0.23 |
+  | desk_top | 2.25 | 0.25 |
+  | shelf_top | 0.87 | 0.16 |
+  | floor_centre | 7.00 | 0.03 |
+  | under_bed | 0.67 | 0 |
+  | east_lane | 2.81 | 0.01 |
+  | west_lane | 4.50 | 0.03 |
+
+- **R4A-3 Tan on the floor.** Planks `#7A4E2E` / `#4A2E1A` became `#5E4535` / `#38261B`: browner and less orange. The team
+  colours are unchanged.
+  - **Method** (`builder_r4b_look.cjs`):
+    - A Tan soldier was placed standing and crouched at six spots: three sunlit floor spots, under the desk, under the bed, and
+      the east floor.
+    - The camera was at 20 and 60 units.
+    - Each soldier pixel was compared (CIE76 dE) with the same pixel rendered without the soldier.
+  - **4B:** the median of the per-case medians is 35.6, and the worst case is 26.2. The dE between the soldier's median colour
+    and the background's median colour is 34.4 at the median, 20.8 in the worst case.
+  - **With the old planks:** the same 4B soldiers measured 30.6 / 23.2, and 29.4 at the colour median.
+  - **On the 4A snapshot:** 36.1, but those are the old box soldiers, so the soldier shape is not the same and the two numbers
+    do not compare directly.
+  - **Sunlit floor at 20 units, per case, colour dE 4A to 4B:** standing 17.3 to 20.8, 17.2 to 27.8, 24.3 to 35.8; crouched
+    30.1 to 31.9, 36.3 to 43.3, 24.7 to 34.4.
+  - **60-unit cases:** only four had a clear line of sight (both under-desk and both under-bed spots). Their medians range from
+    25.4 to 39.3.
+- **R4A-4 art against colliders.** I re-cast the tester's rays with a three.js Raycaster on the live scene, from 1 and from 4
+  units outside each face centre (`sceneRaycast`, test only):
+
+  | Item | Result on this build |
+  | --- | --- |
+  | Marble on the tower top | **Fixed.** The marbles now sit in cups, 0.15 proud; the forward fit no longer lists them |
+  | `n.fort.wall.e1` south face, and the Tan mirror | First art hit is at the collider face (0.0) |
+  | Yo-yo south face | Art is 0.15 short |
+  | Ruin sills | First art is at the face. The hit 2.4 in front is the ruin's own south wall segment, which is a neighbouring collider |
+  | `s.tall.L3` west face | The 0.51 hit is the L3a climbing string at x 107.6. Strings are drawn, and are not bullet colliders, by design (DESIGN 4.4) |
+
+  I could not run the same rays on the 4A snapshot, which has no hook for it. So the tester's 1.0, 0.85 and 0.7 are not
+  reproduced here.
+- **R4A-5 style.**
+  - Fort bricks are crisper: bevel 0.045, darker joints (0.7), and a lighter top edge (1.18).
+  - Studs are bigger: radius 0.36, still 0.14 high, a shade darker.
+  - The skateboard has orange nose and tail caps.
+  - Every route lap from DESIGN 4.4 is drawn again. 4A had dropped them with the graybox.
+  - Dust motes are bigger and brighter in the beam.
+  - The ceiling is a gradient grid: brighter round the light, darker at the walls.
+
+### 4B: what was built
+
+- **Soldiers (17.5).** A moulded army man: boots, legs, belt with buckle and pouches, a tapered torso with crossed straps and a
+  pack, shoulder caps, a head with a nose, and a helmet with a rim.
+  - **Plastic:** one colour per team, with Phong sheen and darker vertex shades for belt, straps and boots. Mould seam lines run
+    along the legs, the torso sides and the helmet.
+  - **Moving:** the base shows only when standing still. While moving, the soldier hops (`soldier.hop` 0.1) with a slight rock.
+  - **Poses:**
+    - standing aim with the weapon's arms;
+    - kneeling: one knee down, upper body tilted and lowered into the crouch box;
+    - sniper scoped: leaning into the scope;
+    - climbing: arms up, rifle slung on the back.
+  - **Death:** the soldier stays rigid and tips over with its base. Chips fly in the team colour, and the body tints toward grey
+    by `bodyTint` 0.7 (17.10 carry-over).
+  - **Rendering:** each part is one InstancedMesh shared by both teams (instance colour = team plastic). Used instances are
+    packed each frame and `count` is set, so unused parts cost no draw call. Shadow depth programs are compiled at load. There
+    is no per-frame allocation (`concat` and `find` closures were removed from the loop).
+- **Guns (17.5).**
+  - **World guns:** moulded in the team plastic. Each has its own silhouette: rifle with a curved magazine, SMG with a long
+    magazine and a wire stock, sniper with a long barrel and a scope, pistol held two-handed.
+  - **Viewmodels:** rebuilt with green moulded hands (palm, thumb, finger ridges, sleeves). Light is baked into the vertex
+    colours, so the pass is still unlit:
+    - rifle: yellow handguard, curved magazine, wood stock;
+    - SMG: yellow shroud, long yellow magazine, wire stock;
+    - sniper: scope with yellow rings, bolt;
+    - pistol: yellow front, both hands;
+    - grenade: a red firecracker with a yellow band and fuse, in the green hand.
+  - Muzzle positions are unchanged, so the flash and the tracer start are unchanged.
+- **Train (17.5).** One merged toy-material mesh per car, culled and moved by its matrix.
+  - **Engine (cab forward, as the colliders have it):**
+    - a footplate and a rounded boiler filling the hood collider, with yellow bands;
+    - a chimney and a dome on top;
+    - the cab with windows and a roof, a windscreen, a headlight and a red cowcatcher.
+  - **Boxcar:** sliding door, trim, ladders.
+  - **Flatbed:** wood deck, stake pockets, a banded crate.
+  - **Gondola:** ribs, door posts, top rails.
+  - **Caboose:** windows, trim and a cupola.
+  - **Every car:** chassis, bogies, buffers and couplers.
+  - **Wheels:** 40 red wheels with spokes, hubs and crank pins, in one InstancedMesh. The engine has four coupling rods that
+    circle with the cranks, in a second InstancedMesh.
+- **Impacts (17.7).** A decal atlas of soft marks, one instanced quad mesh, a random turn each time. No black tiles at close range.
+  - **Marks by surface:** wood splinter, plastic dent with a stress ring, fabric scuff, book tear, card fibres, metal nick.
+  - **Grenade scorch:** a 3.2-unit soot mark on the surface under the burst.
+  - **Lift:** marks on fabric sit 0.13 out so the proud blanket art does not hide them.
+  - **Death chips:** plastic chips in the team colour, as before.
+- **HUD and menus (17.7).** CSS only.
+  - **Sizing:** sizes are in rem, and the root size follows the window (`clamp(10px, 0.95vh + 0.5vw, 26px)`). The crosshair and
+    the hit marker stay in pixels because the spread code places them in pixels.
+  - **Panels:** rounded brick panels with studs along the top in crayon colours, a chunky rounded system font, and an outlined
+    text style. A crayon squiggle sits under PAUSED.
+  - **Buttons:** studded bricks, with the PLAY button in green plastic.
+  - **Screens:** title, pause, picker, round end and match end all use the same look.
+  - **Title:** shows the 3D room with the camera drifting slowly round it (`art.titleCam`). The viewmodel is hidden on the title.
+- **Audio (17.8).**
+  - **Reverb:** a convolver with a synthesized 2.6 s stereo impulse. Sends go from the sniper, grenade, whistle, clack,
+    stingers, jingles, creaks and clatter, and from the train rumble.
+  - **Ambience:** a looping low room tone. Every 18 to 45 s a deep room creak or a bed creak plays.
+  - **Death:** a plastic clatter when the body lands.
+  - **Bullet impacts by surface** within 45 units: wood knock, fabric thump, plastic tick, book slap, card thud, metal ping.
+  - **UI:** a click on every button and picker option.
+  - Nobody has listened to any of this; it was only checked for names and for not throwing.
+
+### Measured (final build, 476,185 bytes)
+
+| Check | Result |
+| --- | --- |
+| Hashes | `colliderHash()` `ff03369f` before and after four full matches; waypoints `4f69a238`, hit volumes `a2308d9c`: identical to round 3 and 4A |
+| Routes | 18 of 18 ok walking and sprinting, same times. `validateWaypoints()` `[]`. 342 single-edge walks ok |
+| startNavTest, 10 bots, 10 minutes, seeds 1 and 2 | every kind, route and crossing used; 344 edge directions; 0 stuck, 0 rescues, 0 envelope seconds, 0 train pushes |
+| runMatch autoplay, recruit 1, regular 1 and 2, veteran 2 | all finished. Tan 5-3, Tan 5-2 (same as rounds 3 and 4A), Green 5-3, Tan 5-3. Stuck 0, idle 0, rescues 0, errors 0 |
+| Console errors | `[]` in every script |
+| Shader programs | 25 at load, at most 25 while a whole veteran match was rendered, 25 back on the title |
+| Growth over three matches | programs 25, textures 6, geometries 66 to 68 (effects first drawn) then flat. JS heap reads 64.8 MB at every point (Chrome rounds this figure) |
+| Load to `__game.ready` | 1,023 ms (round 3: 426, 4A: 1,028), median of 5 |
+
+Budget (17.9). Software rendering at 1280 x 720, all three builds in one session; render cost is the median of 12 frames:
+
+| View | Draw calls r3 / 4A / 4B (shadow pass included) | Triangles, all passes 4A / 4B | Main pass 4B | ms r3 / 4A / 4B | Ratio to r3, 4A / 4B |
+| --- | --- | --- | --- | --- | --- |
+| spawn_green | 14 / 23 / 82 | 167,818 / 206,406 | 132,960 | 134.1 / 265.3 / 175.9 | 1.98 / 1.31 |
+| spawn_tan | 14 / 23 / 82 | 167,818 / 206,406 | 132,960 | 154.3 / 295.7 / 202.2 | 1.92 / 1.31 |
+| bed_top | 14 / 23 / 77 | 167,818 / 197,525 | 124,079 | 137.2 / 348.4 / 200.1 | 2.54 / 1.46 |
+| desk_top | 14 / 23 / 78 | 167,818 / 190,243 | 116,797 | 123.7 / 274.2 / 196.6 | 2.22 / 1.59 |
+| shelf_top | 14 / 23 / 83 | 167,818 / 206,560 | 133,114 | 138.4 / 303.2 / 159.3 | 2.19 / 1.15 |
+| floor_centre | 14 / 23 / 75 | 167,818 / 189,214 | 115,768 | 142.0 / 320.8 / 200.0 | 2.26 / 1.41 |
+| under_bed | 14 / 23 / 66 | 167,818 / 166,255 | 92,809 | 132.7 / 203.7 / 152.5 | 1.54 / 1.15 |
+| east_lane | 14 / 23 / 79 | 167,818 / 198,405 | 124,959 | 152.5 / 273.7 / 169.8 | 1.79 / 1.11 |
+| west_lane | 14 / 23 / 80 | 167,818 / 198,880 | 125,434 | 167.0 / 300.7 / 181.0 | 1.80 / 1.08 |
+| Firefight, regular seed 21, 120 frames | max 15 / 24 / 93, mean 14.9 / 23.9 / 84.9 | max 167,902 / 239,182 | max 131,740 | median 150.3 / 287.1 / 186.7 (p90 165.4 / 328.4 / 223.8) | 1.91 / 1.24 |
+
+Draw calls rose because of the chunks and the soldier parts. 93 is under the 120 aim.
+
+| Texture | Size | Estimated MB with mips |
+| --- | --- | --- |
+| Atlas | 2048 x 2048 | 21.3 |
+| Floor | 1024 x 2048 | 10.7 |
+| Decal atlas | 512 x 256 | 0.67 |
+| Contact shadow | 64 x 64 | 0.02 |
+| Toon gradient | 3 x 1 | 0 |
+| Total | | 32.7 |
+
+One shadow-casting light, 2048 map.
+
+**Soldier fit against the hit volumes** (`soldierFit()`). Vertices of each part, in each pose, are measured against the body and
+head boxes of that stance. All numbers are the maximum distance outside.
+
+| Part | Out by | Note |
+| --- | --- | --- |
+| Base | 0.10 | |
+| Legs, standing | 0 | |
+| Legs, kneeling | 0.12 | |
+| Upper body, standing | 0.01 | |
+| Upper body, kneeling | 0.14 | |
+| Upper body, scoped | 0.09 | |
+| Arms and guns, standing | rifle 0.51, SMG 0.22, sniper 0.73, pistol 0.32 | |
+| Arms and guns, kneeling | rifle 0.59, SMG 0.30, sniper 0.80, pistol 0.41 | |
+| Arms and guns, scoped | rifle 0.57, SMG 0.28, sniper 0.79, pistol 0.38 | |
+| Climbing legs | 0.18 | |
+| Climbing upper body | 0.29 | All three climbing parts come from the round 3 rule that draws a climber 0.28 behind its hit box, flat against the string |
+| Climbing arms | 0.32 | Hands above the head while gripping |
+
+- **Guns:** they stick out ahead of the body box. Guns have never been hit volumes (the round 3 gun box was 0.5 out), so a
+  bullet passes through a gun barrel, as before.
+- **Everything else** is within 0.15.
+
+The art fit (`builder_r4a_fit.cjs`, final build) is unchanged from 4A except the marbles, which are gone from the list.
+- **Reverse check:** 171 of 30,169 samples miss: the globe and ball (accepted in 17.11), the four crayon tip ends, 2 brick
+  joint samples, and the paper ball at 0.16.
+- **Forward check:** 2,310 of 33,067 vertices. They are the same decoration list as 4A, plus the route laps that are drawn
+  again.
+
+### Screenshots looked at (`screenshots/round4/builder_r4b_*.png`)
+
+| Shots | Reads well | Weak |
+| --- | --- | --- |
+| Soldiers, 5 units, both teams | Army men read at once: helmets, crossed straps, bases, the kneeling soldier, the sniper at the scope, arms up on the string, a grey-tinted body tipped over with its base. Tan is clearly not Green | none noted |
+| Soldiers, 20 units | Every pose still reads by outline | none noted |
+| Soldiers, 60 units (`*_60m_zoom`, a 12° lens from the same 60-unit spot) | Green and Tan side by side are clearly apart | Tan stands in front of a yellow letter block there, and against that block it is the weaker contrast |
+| Viewmodels (hip, firing, reloading, the sniper half scoped and scoped, the grenade) | All four guns are distinct at a glance. The green hands read as moulded plastic | The pistol's hands are mostly below the frame |
+| Train side, front, from above | Blue cab-forward engine with yellow bands, chimney, dome, headlight and cowcatcher; red boxcar; yellow flatbed with a blue crate; orange gondola; purple caboose with cupola; red wheels | none noted |
+| HUD in a firefight, title (two drift moments), picker, spectating, pause, round end, match end, at 1280 and 1920 | One toy look; everything scales with the window | The bricks' studs are small at 1280 |
+| Impacts | Splinter marks on wood; scuffs on the blanket; dents with pale rings on the blue fort brick; small tears on book stairs; fibres on card; a soot splat from a grenade on the floor | There is no carpet in the room, so carpet was not tested (fabric is the blanket) |
+| Named views and extras, re-shot | Calmer light, browner floor, crisper fort bricks with visible studs, the gradient ceiling, a red skateboard with orange caps | Dust motes now show as white dots in the beam that can look like snow |
+
+### Design problems (for the lead)
+
+- **Yellow letter blocks against Tan.** The yellow letter blocks (`#F2C230`) are the closest colour to Tan in the room. A Tan
+  soldier in front of one is the lowest-contrast case seen. Swapping that block colour is a palette decision for you.
+- **The cab-forward engine.** The engine's colliders put the tall part (the cab) at the front, so the toy engine is cab-forward.
+  A classic boiler-first engine would need the collider order swapped.
+- **No ADS.** Only the sniper aims down sights (DESIGN 12), so there is no ADS pose for the rifle, SMG or pistol.
+
+### Known weak spots
+
+- **Not measured:** nothing was measured on real hardware. The audio has not been listened to.
+- **Seams:** the plain atlas lookup relies on the mip cap. If a tile's padding is too thin for a far mip, a faint seam could
+  show; none was seen.
+- **The tester's three ray outliers** (e1, yo-yo, sills) were not reproduced on this build. The 4A snapshot has no ray hook to
+  compare against (see R4A-4).

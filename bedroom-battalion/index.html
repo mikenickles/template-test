@@ -176,7 +176,8 @@ const CONFIG = {
   sim: { hz: 60, maxStepsPerFrame: 15 },
   input: { sensitivity: 0.0022, pitchLimit: 1.54 },
   room: { x: 120, y: 90, z: 160, wall: 2, outY: -5 },
-  light: { sunDir: [1, -1, 0.15], sunIntensity: 3.0, hemiIntensity: 3.0,
+  light: { sunDir: [1, -1, 0.15], sunIntensity: 2.4,       // R4A-2: 3.0 -> 2.4 (the whole floor is sunlit since 4A)
+           hemiIntensity: 3.0,
            shadowMap: 2048, shadowBias: -0.0005, shadowNormalBias: 0.02, shadowRadius: 2 },
   floor: { plank: 3.2, gap: 0.12, texPlanks: 4, texLength: 25.6 },
   route: { lap: 1.5, lapThick: 0.05 },             // route colour lapped onto the surface at every ramp, bridge and stair head
@@ -369,28 +370,29 @@ const CONFIG = {
     westX: 43, eastX: 77 },
   hud: { arcRadius: 64 },
   // ---- round 4A: the art pass (DESIGN 17.2 to 17.6). Every art number and colour; colours follow the section 13 palette ----
-  art: { atlas: 2048, pad: 8, letters: 8, atlasAniso: 1,               // anisotropic filtering on the atlas cost 100 to 200 ms a frame in software rendering
+  art: { atlas: 2048, pad: 8, letters: 8, atlasAniso: 1, atlasMaxLod: 3,               // anisotropic filtering on the atlas cost 100 to 200 ms a frame in software rendering
          bevel: 0.03, bevelMin: 0.03, bevelMax: 0.12, round: 0.3, softSeg: 2,           // bevel about 3 % of the size; soft edges never more than 0.36 (0.15 from the collider)
          toon: [0.62, 0.84, 1.0],                                            // 3-step gradient for the toy family
-         toneMapping: 'neutral', exposure: 1.0,                              // set once: Khronos neutral keeps palette colours, rolls off highlights
+         toneMapping: 'neutral', exposure: 0.86,                          // R4A-2: 1.0 -> 0.86 with the sun at 2.4                              // set once: Khronos neutral keeps palette colours, rolls off highlights
          shellShadow: false,                                                 // walls and ceiling do not cast, so the sun reaches the whole floor
          stepCap: 0.3, skirtBead: 0.36,
-         course: 1.1, brickLen: 2.4, brickBevel: 0.08, brickJoint: 0.78, brickMain: 0.72, brickVary: 0.05, blockBevel: 0.12,
-         studR: 0.3, studH: 0.14, studGap: 1.2, railJoint: 4,
+         course: 1.1, brickLen: 2.4, brickBevel: 0.045, brickJoint: 0.7, brickTop: 1.18, studShade: 0.84, brickMain: 0.72, brickVary: 0.05, blockBevel: 0.12,   // R4A-5: crisper bricks
+         studR: 0.36, studH: 0.14, studGap: 1.2, railJoint: 4,
          floorTex: { w: 1024, h: 2048, planks: 8 }, plankTones: [0.84, 0.92, 1.0, 1.07, 1.14],
          windowGlow: '#FFF6E6',
          vao: { band: 1.2, floor: 0.72, underBed: 0.42, underDesk: 0.72, underChair: 0.82 },        // vertex-colour occlusion
          ao: { contact: 0.38, margin: 0.5, marginK: 0.12, maxMargin: 2.2, underBed: 0.62, underBedEdge: 3, underDesk: 0.32, underDeskEdge: 4,
                underChair: 0.22, edge: 0.2, edgeWidth: 4, wallFoot: 3, corner: 0.18, cornerWidth: 5 },                    // contact shadow decals
+         chunks: [3, 4], ceiling: { grid: 8, centre: 1.06, edge: 0.84 },                                                    // R4A-1: static art split 3 x 4 over the room for culling
          titleCam: { centre: [60, 0, 80], radius: 36, squash: 1.25, height: 27, bob: 4, speed: 0.035, look: [60, 5, 80] },   // 4B title drift
          train: { bodyY: 0.75, wheelR: 0.38, crank: 0.16, cupola: 1.1 },              // round 4B toy consist
-         beam: { on: true, window: [36, 74, 58, 102], soft: 3, strength: 0.011, fade: 0.3 },       // window y0 y1 z0 z1
-         dust: { on: true, count: 420, inBeam: 0.8, size: 0.14, color: '#B9A68A', dim: 0.06 },
+         beam: { on: true, window: [36, 74, 58, 102], soft: 3, strength: 0.009, fade: 0.3, max: 0.22 },       // window y0 y1 z0 z1
+         dust: { on: true, count: 420, inBeam: 0.8, size: 0.3, color: '#E8D3A8', dim: 0.05 },     // R4A-5: bigger and brighter in the beam
          palette: {
            blanketStitch: '#9DB4E8', sheetStripe: '#8FA9D6', blanketEnd: 97,
            fortGreen: ['#2F6FD0', '#F0F0F0', '#8C97A6'], fortTan: ['#D43C2E', '#F0F0F0', '#8C97A6'], ruin: ['#F08A2A', '#7B4BB5', '#F0F0F0'],
            blocks: ['#D43C2E', '#2F6FD0', '#F2C230', '#7B4BB5', '#F08A2A'],
-           books: ['#C0392B', '#2E6DB4', '#8E44AD', '#E67E22', '#34495E'], pages: '#F4EFE2', bookBand: '#F2C230',
+           books: ['#C0392B', '#2E6DB4', '#8E44AD', '#E67E22', '#34495E'], pages: '#E6DECB', bookBand: '#F2C230',
            cardEdge: '#6E4F33', rail: '#6B7480', sleeper: '#5A3B22', railJoint: '#4B5058',
            ruler: '#F2C230', deck: '#E0281F', wheel: '#34495E', grip: '#3A404B', truck: '#9AA3AD',
            spring: '#E0281F', springCoil: '#B9BEC6', springBase: '#4B5058', domino: '#F4EFE2', dominoPip: '#1F2228',
@@ -410,9 +412,10 @@ const CONFIG = {
            flowerA: '#F29BB0', flowerB: '#F2C230', lawn: '#A9BE9A', pillow: '#EEF2F8' } },
   storageKey: 'bedroomBattalion.settings',
   color: {
-    haze: '#D6DEE8', wall: '#BFD3E0', trim: '#F2EFE6', ceiling: '#F5F2EA', plank: '#7A4E2E', plankGap: '#4A2E1A',
+    haze: '#D6DEE8', wall: '#BFD3E0', trim: '#F2EFE6', ceiling: '#F5F2EA', plank: '#5E4535', plankGap: '#38261B',     // R4A-3: browner, less orange planks (was #7A4E2E / #4A2E1A)
+    
     sun: '#FFE2B0', hemiSky: '#FFF8EC', hemiGround: '#D8CFC4',
-    bed: '#E9E4DA', bedUnder: '#6F6A63', blanket: '#3D5A99', sheet: '#E8EEF5', desk: '#8FA3B5', shelf: '#EFE9DD',
+    bed: '#E9E4DA', bedUnder: '#6F6A63', blanket: '#3D5A99', sheet: '#D9E1EB', desk: '#8FA3B5', shelf: '#DED6C8',
     fortGreen: '#2F6FD0', fortTan: '#D43C2E', ruin: '#7B4BB5',
     cardboard: '#8F6B47', route: '#FF8A1F', string: '#FFD21F', cover: '#9AA3AD', spare: '#B9BEC6', track: '#4B5058', sleeper: '#3A3E45',
     hud: '#FFFFFF', accent: '#FFD21F', danger: '#E0281F'
@@ -807,7 +810,8 @@ function stairs(id, x0, x1, zFoot, dir, n, rise, depth) {       // book stairs: 
     ibox(id + '.' + i, x0, x1, Math.min(za, zb), Math.max(za, zb), 0, rise * i, CONFIG.color.route, 'book');
   }
 }
-function lap(x0, x1, z0, z1, y) { vbox(x0, x1, z0, z1, y, y + CONFIG.route.lapThick, CONFIG.color.route); }   // visual only
+const LAPS = [];           // route laps, drawn by the art pass (R4A-5)
+function lap(x0, x1, z0, z1, y) { LAPS.push([x0, x1, z0, z1, y]); vbox(x0, x1, z0, z1, y, y + CONFIG.route.lapThick, CONFIG.color.route); }   // visual only
 const mz = (z0, z1, mirror) => (mirror ? [160 - z1, 160 - z0] : [z0, z1]);     // north-south mirror rule
 function boxNS(id, x0, x1, z0, z1, y0, y1, color, surface) {    // object that exists on both halves
   box('n.' + id, x0, x1, z0, z1, y0, y1, color, surface);
@@ -1092,17 +1096,25 @@ function canvasTexture(cv, name, opts = {}) {     // every canvas texture goes t
   ART.textures.push({ name, w: cv.width, h: cv.height, mips: tex.generateMipmaps !== false });
   return tex;
 }
-// One shader patch for every atlas material: uv is in tile repeats, atile is the tile's rect; fract() repeats inside the rect and
-// textureGrad keeps the mip level of the unwrapped uv, so there are no seam lines.
+// One shader patch for every atlas material: uv is in tile repeats, atile is the tile's rect; fract() repeats inside the rect.
+// R4A-1: a plain lookup (textureGrad cost about a third of the frame in software rendering). At a wrap the hardware picks a coarse
+// mip for one pixel; capping the atlas at mip atlasMaxLod keeps that pixel inside the tile's own padded colours, so no seam shows.
 function atlasMaterial(mat, key) {
   mat.onBeforeCompile = (sh) => {
     sh.vertexShader = 'attribute vec4 atile;\nvarying vec4 vATile;\n' + sh.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\n  vATile = atile;');
     sh.fragmentShader = 'varying vec4 vATile;\n' + sh.fragmentShader.replace('#include <map_fragment>',
       '#ifdef USE_MAP\n  vec2 aUv = vATile.xy + fract(vMapUv) * vATile.zw;\n' +
-      '  diffuseColor *= textureGrad(map, aUv, dFdx(vMapUv) * vATile.zw, dFdy(vMapUv) * vATile.zw);\n#endif');
+      '#ifdef ATLAS_GRAD\n  diffuseColor *= textureGrad(map, aUv, dFdx(vMapUv) * vATile.zw, dFdy(vMapUv) * vATile.zw);\n' +
+      '#else\n  diffuseColor *= texture2D(map, aUv);\n#endif\n#endif');      // R4A-1: plain lookup; the atlas mip chain is capped (atlasMaxLod) so wraps show no seam
   };
   mat.customProgramCacheKey = () => 'atlas-' + key;
   return mat;
+}
+function capAtlasLod() {                          // upload the atlas now and cap its mip chain (WebGL2 TEXTURE_MAX_LOD)
+  renderer.initTexture(ATLAS.tex);
+  const gl = renderer.getContext(), t = renderer.properties.get(ATLAS.tex).__webglTexture;
+  if (!t) return;
+  renderer.state.bindTexture(gl.TEXTURE_2D, t); gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_MAX_LOD, CONFIG.art.atlasMaxLod);
 }
 function toonGradient() {                        // DESIGN 17.2: a 3-step gradient for the toy family
   const s = CONFIG.art.toon, d = new Uint8Array(s.length * 4);
@@ -1159,6 +1171,32 @@ class MB {
     if (uv) q.forEach((p, i) => { p[3] = uv[i][0]; p[4] = uv[i][1]; });
     else { const [R, U] = faceAxes(n); const T_ = T || ART.white; q.forEach((p) => { p[3] = dot3(p, R) / (T_.su || 1); p[4] = dot3(p, U) / (T_.sv || 1); }); }
     this.tri3(q[0], q[1], q[2], lin3(col), T, false, n, n, n); this.tri3(q[0], q[2], q[3], lin3(col), T, false, n, n, n);
+  }
+  // R4A-1: split into spatial chunks by triangle centre (a grid over the room), each recentred on its own origin, so the renderer
+  // can frustum-cull off-screen parts and sort the chunks front to back (fewer pixels shaded twice)
+  chunks(nx, nz) {
+    const R = CONFIG.room, buckets = new Map();
+    for (let t = 0; t < this.p.length / 9; t++) {
+      const cx = (this.p[t * 9] + this.p[t * 9 + 3] + this.p[t * 9 + 6]) / 3, cz = (this.p[t * 9 + 2] + this.p[t * 9 + 5] + this.p[t * 9 + 8]) / 3;
+      const k = clamp(Math.floor(cx / R.x * nx), 0, nx - 1) * nz + clamp(Math.floor(cz / R.z * nz), 0, nz - 1);
+      let b = buckets.get(k); if (!b) buckets.set(k, b = []); b.push(t);
+    }
+    const out = [];
+    for (const tris of buckets.values()) {
+      const P = [], N = [], C = [], U = [], T = []; let sx = 0, sy = 0, sz = 0;
+      for (const t of tris) for (let v = 0; v < 3; v++) { sx += this.p[t * 9 + v * 3]; sy += this.p[t * 9 + v * 3 + 1]; sz += this.p[t * 9 + v * 3 + 2]; }
+      const n = tris.length * 3, o = [sx / n, sy / n, sz / n];
+      for (const t of tris) {
+        for (let j = 0; j < 9; j++) { P.push(this.p[t * 9 + j] - o[j % 3]); N.push(this.n[t * 9 + j]); C.push(this.c[t * 9 + j]); }
+        for (let j = 0; j < 6; j++) U.push(this.u[t * 6 + j]);
+        for (let j = 0; j < 12; j++) T.push(this.t[t * 12 + j]);
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+      g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); g.setAttribute('atile', new THREE.Float32BufferAttribute(T, 4));
+      g.computeBoundingSphere(); out.push({ geo: g, origin: o, tris: tris.length });
+    }
+    return out;
   }
   geometry() {
     const g = new THREE.BufferGeometry();
@@ -1263,9 +1301,11 @@ function chamferBox(mb, x0, x1, y0, y1, z0, z1, b, spec = {}) {
     const m0 = at(P[i0], P[j0], band), m1 = at(P[i1], P[j1], band);
     emit([P[i0], P[i1], m1, m0], n, col, T, f); emit([m0, m1, P[j1], P[j0]], n, col, T, f);
   };
+  let top = false;
   const edgeColor = (f) => {                      // bevel strips: explicit, else the face colour, else a coloured tile's own edge colour
     if (spec.edgeCol) return spec.edgeCol;
     let c = faceCol(f); const T = faceTile(f, 1, 1);
+    if (spec.edgeTopK && top) return shade(c, spec.edgeTopK);
     if (T && T.edge && c.toUpperCase() === '#FFFFFF') c = T.edge;
     return spec.edgeK ? shade(c, spec.edgeK) : c;
   };
@@ -1283,7 +1323,7 @@ function chamferBox(mb, x0, x1, y0, y1, z0, z1, b, spec = {}) {
     } else if (nz === 2) {
       const [a, c] = axes, o = [0, 1, 2].find((k) => k !== a && k !== c);
       const side = a === 1 ? c : a, f = fk(side, sg[side]);
-      const col = edgeColor(f);
+      top = sg[1] > 0; const col = edgeColor(f); top = false;
       const P = [];
       for (const t of [ilo[o], ihi[o]]) { const p = [0, 0, 0]; p[a] = outer(a); p[c] = inner(c); p[o] = t; P.push(p); }
       for (const t of [ihi[o], ilo[o]]) { const p = [0, 0, 0]; p[a] = inner(a); p[c] = outer(c); p[o] = t; P.push(p); }
@@ -1404,7 +1444,7 @@ function buildTiles() {
   tile('paint', 128, 128, (g, w, h) => { g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, w, h); noiseDots(g, w, h, rnd, 260, 3, ['#EDEDED', '#F6F6F6'], 0.7); }, [4, 4]);
   tile('wall', 256, 256, (g, w, h) => {          // faint vertical brush texture
     g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 90; i++) { g.fillStyle = rnd() < 0.5 ? '#F4F4F4' : '#F9F9F9'; g.fillRect(rnd() * w, 0, 1 + rnd() * 3, h); }
+    for (let i = 0; i < 90; i++) { g.fillStyle = rnd() < 0.5 ? '#F9F9F9' : '#FCFCFC'; g.fillRect(rnd() * w, 0, 1 + rnd() * 3, h); }     // R4A-2: half the stripe contrast
   }, [14, 14]);
   tile('plastic', 128, 128, (g, w, h) => { g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, w, h); noiseDots(g, w, h, rnd, 80, 2, ['#F3F3F3'], 0.8); }, [3, 3]);
   tile('weave', 128, 128, (g, w, h) => {         // fabric weave, tinted
@@ -1588,8 +1628,8 @@ function brickwork(mb, c, pal, rnd, opts = {}) {
     for (let i = 0; i < cuts.length - 1; i++) {
       const col = brickColor(pal, rnd), u0 = cuts[i], u1 = cuts[i + 1];
       const sk = j > 0 || c.y0 <= 0.01 ? { ny: 1 } : {};          // the underside stays where a wall sits over a slit
-      if (alongX) bev(mb, u0, u1, ya, yb, c.z0, c.z1, { col, tile: ART.tiles.plastic, skip: sk, edgeK: A.brickJoint }, A.brickBevel);
-      else bev(mb, c.x0, c.x1, ya, yb, u0, u1, { col, tile: ART.tiles.plastic, skip: sk, edgeK: A.brickJoint }, A.brickBevel);
+      if (alongX) bev(mb, u0, u1, ya, yb, c.z0, c.z1, { col, tile: ART.tiles.plastic, skip: sk, edgeK: A.brickJoint, edgeTopK: A.brickTop }, A.brickBevel);
+      else bev(mb, c.x0, c.x1, ya, yb, u0, u1, { col, tile: ART.tiles.plastic, skip: sk, edgeK: A.brickJoint, edgeTopK: A.brickTop }, A.brickBevel);
     }
     if (j === n - 1) ART.lastTopColor = pal[0];
   }
@@ -1600,7 +1640,7 @@ function studsOn(c, colFn, rnd, covered) {        // a grid of studs on the top 
   for (let i = 0; i < nx; i++) for (let k = 0; k < nz; k++) {
     const x = ox + i * g, z = oz + k * g;
     if (covered && covered.some((o) => x > o.x0 - A.studR && x < o.x1 + A.studR && z > o.z0 - A.studR && z < o.z1 + A.studR && Math.abs(o.y0 - c.y1) < 0.05)) continue;
-    ART.studs.push({ x, y: c.y1, z, col: colFn(rnd) });
+    ART.studs.push({ x, y: c.y1, z, col: shade(colFn(rnd), CONFIG.art.studShade) });
   }
 }
 function oquad(mb, a, b, c, d, nWant, col, T, uv) {    // quad with its winding set so the normal faces nWant
@@ -1618,7 +1658,15 @@ function artShell(M) {
   oquad(S, [0, 0, Z], [X, 0, Z], [X, Y, Z], [0, Y, Z], [0, 0, -1], C.wall, W);                   // south
   oquad(S, [X, 0, 0], [X, 0, Z], [X, Y, Z], [X, Y, 0], [-1, 0, 0], C.wall, W);                   // east
   for (const [z0, z1, y0, y1] of [[0, 58, 0, Y], [102, Z, 0, Y], [58, 102, 0, 36], [58, 102, 74, Y]]) oquad(S, [0, y0, z0], [0, y0, z1], [0, y1, z1], [0, y1, z0], [1, 0, 0], C.wall, W);
-  oquad(S, [0, Y, 0], [X, Y, 0], [X, Y, Z], [0, Y, Z], [0, -1, 0], C.ceiling, ART.tiles.paint);
+  const CG = CONFIG.art.ceiling, cc = lin(C.ceiling);           // R4A-5: the ceiling brightens toward the light and darkens to the walls
+  for (let i = 0; i < CG.grid; i++) for (let j = 0; j < CG.grid; j++) {
+    const x0 = X * i / CG.grid, x1 = X * (i + 1) / CG.grid, z0 = Z * j / CG.grid, z1 = Z * (j + 1) / CG.grid;
+    const k = (x, z) => { const d = Math.hypot((x - 60) / 60, (z - 80) / 80); return CG.edge + (CG.centre - CG.edge) * Math.max(0, 1 - d) ** 1.5; };
+    const q = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]].map(([x, z]) => [x, Y, z, x / 4, -z / 4, k(x, z)]);
+    const n = [0, -1, 0], T = ART.tiles.paint;
+    for (const [a, b, c2] of [[0, 1, 2], [0, 2, 3]]) { const A = q[a], B = q[b], Cc = q[c2];
+      S.vert(A[0], A[1], A[2], 0, -1, 0, cc.map((v) => v * A[5]), A[3], A[4], T); S.vert(B[0], B[1], B[2], 0, -1, 0, cc.map((v) => v * B[5]), B[3], B[4], T); S.vert(Cc[0], Cc[1], Cc[2], 0, -1, 0, cc.map((v) => v * Cc[5]), Cc[3], Cc[4], T); }
+  }
   // window reveal, painted view (glows warm), frame, sill and glazing bars
   oquad(S, [-2, 36, 58], [0, 36, 58], [0, 36, 102], [-2, 36, 102], [0, 1, 0], C.trim, ART.tiles.grainU);
   oquad(S, [-2, 74, 58], [0, 74, 58], [0, 74, 102], [-2, 74, 102], [0, -1, 0], C.wall, W);
@@ -1814,6 +1862,9 @@ function artDesk(M, rnd) {
     for (const wx of [87.0, 90.2]) { ty.xform(rotM(0, 0, Math.PI / 2, wx + 0.4, Math.max(0.42, yTop - 0.6), zz)); lathe(ty, 0, 0, [[0.42, -0.4], [0.42, 0.4]], { col: P.wheel, segs: 12, cap: [true, true] }); ty.xform(null); }
   }
   paintCollider('chair.skate', P.deck, P.grip);
+  for (const [x0, x1, z0, z1, y] of LAPS) bev(ty, x0, x1, y - 0.02, y + 0.05, z0, z1, { col: CONFIG.color.route, skip: { ny: 1 } }, 0.02);   // R4A-5: every route head keeps its orange lap
+  { const t = sk.thickness, h = (z) => sk.h0 + (sk.h1 - sk.h0) * (z - sk.z0) / (sk.z1 - sk.z0);              // orange nose and tail caps on the skateboard
+    for (const [za, zb] of [[sk.z0, sk.z0 + 0.8], [sk.z1 - 0.8, sk.z1]]) hexa(ty, [[sk.x0, h(za) - t, za], [sk.x1, h(za) - t, za], [sk.x1, h(zb) - t, zb], [sk.x0, h(zb) - t, zb], [sk.x0, h(za) + 0.04, za], [sk.x1, h(za) + 0.04, za], [sk.x1, h(zb) + 0.04, zb], [sk.x0, h(zb) + 0.04, zb]], { col: CONFIG.color.route }); }
   for (const id of ['desk.ruler.n', 'desk.ruler.s', 'desk.bridge.n', 'desk.bridge.s']) { hexa(ty, rampPoints(COL(id)), { col: { py: '#FFFFFF', side: P.ruler }, tile: { py: T.ruler, side: T.plastic } }); paintCollider(id, P.ruler); }
   for (const id of ['desk.ruler.n.prop', 'desk.ruler.s.prop']) {     // the book stacks under the rulers: lying books, the top one cut to the slope
     const c = COL(id), lowTop = Math.min(c.h0, c.h1), sr = artRng(id.length * 31);
@@ -1966,7 +2017,7 @@ function artCover(M) {
   const mr = COL('s.C-c.marble.ramp'), mt = COL('s.C-c.marble.tower');
   bev(ty, mr.x0, mr.x1, mr.y0, mr.y1, mr.z0, mr.z1, { col: { py: P.blocks[2], side: '#FFFFFF' }, tile: { py: T.plastic, side: T.marble }, skip: { ny: 1 } }, 0.15);
   bev(ty, mt.x0, mt.x1, mt.y0, mt.y1, mt.z0, mt.z1, { col: { py: P.blocks[4], side: '#FFFFFF' }, tile: { py: T.plastic, side: T.marble }, skip: { ny: 1 } }, 0.15);
-  for (const [x, y, z, col] of [[64.5, mr.y1 + 0.42, 108, P.marbles[0]], [66.6, mr.y1 + 0.42, 111, P.marbles[1]], [65.4, mt.y1 + 0.42, 114.5, P.marbles[2]]]) ellipsoid(ty, x, y, z, 0.42, 0.42, 0.42, { col, w: 12, h: 8 });
+  for (const [x, y, z, col] of [[64.5, mr.y1 - 0.27, 108, P.marbles[0]], [66.6, mr.y1 - 0.27, 111, P.marbles[1]], [65.4, mt.y1 - 0.27, 114.5, P.marbles[2]]]) ellipsoid(ty, x, y, z, 0.42, 0.42, 0.42, { col, w: 12, h: 8 });   // R4A-4: sunk in their cups, 0.15 proud
   paintCollider(mr.id, P.blocks[1]); paintCollider(mt.id, P.blocks[1]);
   const gb = COL('n.C-d.gamebox');                 // board game box with a lid rim and an abstract lid
   bev(pt, gb.x0 + 0.06, gb.x1 - 0.06, 0, gb.y1 - 0.6, gb.z0 + 0.06, gb.z1 - 0.06, { col: P.gameBoxSide, tile: T.card, skip: { ny: 1 } }, 0.06);
@@ -2095,10 +2146,10 @@ function makeBeam() {
   const B = CONFIG.art.beam, d = new THREE.Vector3(...CONFIG.light.sunDir);
   const mat = new THREE.ShaderMaterial({
     uniforms: { uDir: { value: d }, uWin: { value: new THREE.Vector4(B.window[0], B.window[1], B.window[2], B.window[3]) }, uSoft: { value: B.soft },
-      uColor: { value: new THREE.Color(CONFIG.color.sun) }, uStrength: { value: B.strength }, uFade: { value: B.fade } },
+      uColor: { value: new THREE.Color(CONFIG.color.sun) }, uStrength: { value: B.strength }, uFade: { value: B.fade }, uMax: { value: B.max } },
     vertexShader: 'varying vec3 vW; void main() { vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
     fragmentShader: BEAM_GLSL + `
-uniform vec3 uColor; uniform float uStrength, uFade; varying vec3 vW;
+uniform vec3 uColor; uniform float uStrength, uFade, uMax; varying vec3 vW;
 vec2 slab(float a, float da, float lo, float hi, vec2 r) {
   if (abs(da) < 1e-5) return (a >= lo && a <= hi) ? r : vec2(1.0, 0.0);
   float t1 = (lo - a) / da, t2 = (hi - a) / da; return vec2(max(r.x, min(t1, t2)), min(r.y, max(t1, t2)));
@@ -2114,7 +2165,7 @@ void main() {
   float len = L * length(D);
   vec3 m = C + D * (r.x + r.y) * 0.5;
   float a = inBeam(m) * (1.0 - uFade * clamp(m.x / 80.0, 0.0, 1.0));
-  gl_FragColor = vec4(uColor * (1.0 - exp(-len * uStrength)) * a, 1.0);
+  gl_FragColor = vec4(uColor * min(uMax, 1.0 - exp(-len * uStrength)) * a, 1.0);      // R4A-2: capped, so the beam never clips a pale wall
 }`,
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.BackSide, fog: false, toneMapped: false });
   const mesh = new THREE.Mesh(beamGeometry(), mat); mesh.renderOrder = 2; mesh.frustumCulled = false;
@@ -2140,7 +2191,7 @@ void main() {
   vec3 p = position + vec3(sin(t * 0.11 + s) * 1.6 + sin(t * 0.37 + s * 3.0) * 0.4, sin(t * 0.07 + s * 2.0) * 1.2 - 0.6 * fract(t * 0.01 + seed), cos(t * 0.09 + s * 1.7) * 1.6);
   vB = mix(uDim, 1.0, inBeam(p)) * (0.6 + 0.4 * sin(t * 1.3 + s * 5.0));
   vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_Position = projectionMatrix * mv;
-  gl_PointSize = clamp(uSize * uScale / max(0.5, -mv.z), 1.0, 9.0);
+  gl_PointSize = clamp(uSize * uScale / max(0.5, -mv.z), 2.0, 12.0);
 }`,
     fragmentShader: 'uniform vec3 uColor; varying float vB; void main() { float r = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.1, r) * vB; gl_FragColor = vec4(uColor * a, 1.0); }',
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false });
@@ -2157,6 +2208,7 @@ function buildArt(scene) {
   atlasInit(); buildTiles(); atlasPack();
   ATLAS.tex = canvasTexture(ATLAS.cv, 'art atlas', { aniso: CONFIG.art.atlasAniso });
   ATLAS.tex.minFilter = THREE.LinearMipmapLinearFilter;
+  capAtlasLod();
   ART.mats.paint = atlasMaterial(new THREE.MeshLambertMaterial({ map: ATLAS.tex, vertexColors: true }), 'lambert');
   ART.mats.toy = atlasMaterial(new THREE.MeshToonMaterial({ map: ATLAS.tex, vertexColors: true, gradientMap: toonGradient() }), 'toon');
   ART.mats.glow = atlasMaterial(new THREE.MeshBasicMaterial({ map: ATLAS.tex, vertexColors: true, fog: false }), 'basic');
@@ -2167,11 +2219,18 @@ function buildArt(scene) {
   const fam = (name, fn) => { const n0 = M.paint.p.length + M.toy.p.length + M.shell.p.length; fn(); ART.family[name] = (M.paint.p.length + M.toy.p.length + M.shell.p.length - n0) / 9; };
   fam('shell', () => artShell(M)); fam('bed', () => artBed(M, artRng(1))); fam('bear', () => artBear(M)); fam('bucket', () => artBucketAndSpares(M));
   fam('desk', () => artDesk(M, artRng(2))); fam('shelves', () => artShelves(M, artRng(3))); fam('forts', () => artForts(M)); fam('cover', () => artCover(M));
+  const CK = CONFIG.art.chunks;
   for (const k of ['shell', 'paint', 'toy', 'glow']) {
-    const mesh = new THREE.Mesh(M[k].geometry(), ART.mats[k === 'shell' ? 'paint' : k]);
-    mesh.castShadow = k === 'paint' || k === 'toy' || (k === 'shell' && CONFIG.art.shellShadow); mesh.receiveShadow = k !== 'glow'; mesh.frustumCulled = false; mesh.name = 'art.' + k;
-    mesh.renderOrder = k === 'shell' ? -1 : -3;    // opaque order: objects first, then the floor, then walls and ceiling, so the big shell faces are depth-rejected behind them
-    scene.add(mesh); ART.meshes.push(mesh); ART.tris[k] = M[k].p.length / 9;
+    const parts = k === 'glow' ? [{ geo: M[k].geometry(), origin: [0, 0, 0] }] : M[k].chunks(CK[0], CK[1]);
+    parts.forEach((P, i) => {
+      const mesh = new THREE.Mesh(P.geo, ART.mats[k === 'shell' ? 'paint' : k]);
+      mesh.position.set(P.origin[0], P.origin[1], P.origin[2]);
+      mesh.castShadow = k === 'paint' || k === 'toy' || (k === 'shell' && CONFIG.art.shellShadow); mesh.receiveShadow = k !== 'glow';
+      mesh.frustumCulled = k !== 'glow'; mesh.name = 'art.' + k; mesh.userData.chunk = i;
+      mesh.renderOrder = k === 'shell' ? -1 : -3;  // opaque order: objects first (nearest chunk first), then the floor, then walls and ceiling
+      scene.add(mesh); ART.meshes.push(mesh);
+    });
+    ART.tris[k] = M[k].p.length / 9; ART.chunkCount = (ART.chunkCount || 0) + parts.length;
   }
   const A = CONFIG.art, sg = new THREE.CylinderGeometry(A.studR, A.studR, A.studH, 10); sg.translate(0, A.studH / 2, 0);
   const sm = new THREE.MeshToonMaterial({ gradientMap: ART.mats.toy.gradientMap });
@@ -2850,7 +2909,7 @@ function buildTrainVisuals(scene) {
   const T = CONFIG.train, A = CONFIG.art.train, meshes = [];
   TRAIN.cars.forEach((car) => {
     const m = new THREE.Mesh(trainCarGeometry(car.type), ART.mats.toy);
-    m.matrixAutoUpdate = false; m.castShadow = m.receiveShadow = true; m.frustumCulled = false; m.name = 'train.' + car.type;
+    m.matrixAutoUpdate = false; m.castShadow = m.receiveShadow = true; m.frustumCulled = true; m.name = 'train.' + car.type;
     scene.add(m); meshes.push(m);
   });
   // wheels: red discs with a hub, spokes and a crank pin; rods: the engine's coupling rods
@@ -2881,20 +2940,20 @@ function updateTrainVisuals(time) {              // pose at the render time, so 
   const V = TRAIN.vis, T = CONFIG.train, A = CONFIG.art.train;
   if (!V) return;
   const head = trainHeadS(time);
-  TRAIN.rpose.forEach((o, i) => poseCar(o, head - i * (T.carLen + T.gap)));
-  V.cars.forEach((m, i) => { const P = TRAIN.rpose[i]; _tv.q.setFromAxisAngle(_tv.up, P.yaw); m.matrix.compose(_tv.v.set(P.x, 0, P.z), _tv.q, _tv.s); m.matrixWorldNeedsUpdate = true; });
+  for (let i = 0; i < TRAIN.rpose.length; i++) poseCar(TRAIN.rpose[i], head - i * (T.carLen + T.gap));
+  for (let i = 0; i < V.cars.length; i++) { const m = V.cars[i], P = TRAIN.rpose[i]; _tv.q.setFromAxisAngle(_tv.up, P.yaw); m.matrix.compose(_tv.v.set(P.x, 0, P.z), _tv.q, _tv.s); m.matrixWorldNeedsUpdate = true; }
   const spin = -(head % 1000) / A.wheelR;
-  V.wheels.forEach((o, i) => {
-    const P = TRAIN.rpose[o.car.i];
+  for (let i = 0; i < V.wheels.length; i++) {
+    const o = V.wheels[i], P = TRAIN.rpose[o.car.i];
     _tv.q.setFromAxisAngle(_tv.up, P.yaw); _tv.r.makeRotationX(spin);
     _tv.m.compose(_tv.v.set(P.x + o.u * P.fx + o.v * P.lx, T.wheelY, P.z + o.u * P.fz + o.v * P.lz), _tv.q, _tv.s).multiply(_tv.r);
     V.wheelMesh.setMatrixAt(i, _tv.m);
-  });
-  V.rods.forEach((o, i) => {                     // a coupling rod stays level and circles with the crank pins
-    const P = TRAIN.rpose[0], cu = -Math.sin(spin) * A.crank, cy = Math.cos(spin) * A.crank;
+  }
+  for (let i = 0; i < V.rods.length; i++) {      // a coupling rod stays level and circles with the crank pins
+    const o = V.rods[i], P = TRAIN.rpose[0], cu = -Math.sin(spin) * A.crank, cy = Math.cos(spin) * A.crank;
     _tv.q.setFromAxisAngle(_tv.up, P.yaw);
     V.rodMesh.setMatrixAt(i, _tv.m.compose(_tv.v.set(P.x + (o.u + cu) * P.fx + o.v * P.lx, T.wheelY + cy, P.z + (o.u + cu) * P.fz + o.v * P.lz), _tv.q, _tv.s));
-  });
+  }
   V.wheelMesh.instanceMatrix.needsUpdate = true; V.rodMesh.instanceMatrix.needsUpdate = true;
 }
 
@@ -5339,7 +5398,8 @@ function updateSoldierVisuals(alpha, realDt) {
   const K = CONFIG.soldier, S = _sm, V = viewSubject(), sh = K.shoulder;
   for (const k of SOLD.names) SOLD.parts[k].n = 0;
   const showMe = match.active && player.slot === CONFIG.bot.max && (V !== player || !!game.view);
-  for (const b of showMe ? bots.concat(player) : bots) {
+  for (let bi = 0, bn = bots.length + (showMe ? 1 : 0); bi < bn; bi++) {     // no per-frame allocation (17.9)
+    const b = bi < bots.length ? bots[bi] : player;
     if (b === V && b !== player && !game.view) continue;              // spectating: the watched bot's own model is hidden
     const x = lerp(b.px, b.x, alpha), y = lerp(b.py, b.y, alpha), z = lerp(b.pz, b.z, alpha), pose = soldierPose(b);
     let yaw = b.yaw, back = 0, lean = 0;
@@ -5371,7 +5431,7 @@ function updateSoldierVisuals(alpha, realDt) {
   // chevrons over living teammates (Green), billboarded toward the camera
   const C = K.chevron, ch = SOLD.chev;
   for (let i = 0; i < CONFIG.bot.max; i++) {
-    const b = bots.find((o) => o.slot === i);
+    let b = null; for (let j = 0; j < bots.length; j++) if (bots[j].slot === i) { b = bots[j]; break; }
     if (!b || !b.chevron || b.dead || game.view) { fxPut(ch, i, 0, -50, 0, 0, 0, 0); continue; }
     const cx = lerp(b.px, b.x, alpha), cy = lerp(b.py, b.y, alpha) + K.base[1] + K.body[1] + K.head + C.above, cz = lerp(b.pz, b.z, alpha);
     S.q.setFromEuler(S.e.set(0, Math.atan2(camera.position.x - cx, camera.position.z - cz), 0));
@@ -6137,13 +6197,19 @@ function init() {
     soldierFit: () => soldierFit(),
     artDebug: (o = {}) => {                       // test-only: hide art meshes by name ('art.paint', ...) or turn the shadow map off, to cost them
       for (const m of ART.meshes) m.visible = !(o.hide || []).includes(m.name);
+      if (o.shadowType) { renderer.shadowMap.type = { basic: THREE.BasicShadowMap, pcf: THREE.PCFShadowMap, pcfsoft: THREE.PCFSoftShadowMap, vsm: THREE.VSMShadowMap }[o.shadowType]; scene.traverse((m) => { if (m.material) m.material.needsUpdate = true; }); }
+      if (o.grad !== undefined) for (const k of ['paint', 'toy', 'glow']) { const m = ART.mats[k]; m.defines = m.defines || {}; if (o.grad) m.defines.ATLAS_GRAD = ''; else delete m.defines.ATLAS_GRAD; m.needsUpdate = true; }
+      if (o.shellShadow !== undefined) for (const m of ART.meshes) if (m.name === 'art.shell') { m.receiveShadow = !!o.shellShadow; m.material.needsUpdate = true; }
       if (o.aniso !== undefined) { ATLAS.tex.anisotropy = o.aniso; ATLAS.tex.needsUpdate = true; }
       if (o.floorAniso !== undefined) { world.floorMesh.material.map.anisotropy = o.floorAniso; world.floorMesh.material.map.needsUpdate = true; }
       if (o.shadow !== undefined) { renderer.shadowMap.enabled = !!o.shadow; scene.traverse((m) => { if (m.material) m.material.needsUpdate = true; }); }
       return ART.meshes.map((m) => m.name);
     },
     artGeometry: () => ART.meshes.filter((m) => m.isMesh && !m.isInstancedMesh && /^art\.(shell|paint|toy|glow|floor)$/.test(m.name))
-      .map((m) => ({ name: m.name, pos: m.geometry.attributes.position.array, index: m.geometry.index ? m.geometry.index.array : null })),
+      .map((m) => { const a = m.geometry.attributes.position.array, o = m.position, pos = new Float32Array(a.length); for (let i = 0; i < a.length; i += 3) { pos[i] = a[i] + o.x; pos[i + 1] = a[i + 1] + o.y; pos[i + 2] = a[i + 2] + o.z; }
+        return { name: m.name, pos, index: m.geometry.index ? m.geometry.index.array : null }; }),
+    sceneRaycast: (o, d, far) => { const rc = new THREE.Raycaster(new THREE.Vector3(...o), new THREE.Vector3(...d).normalize(), 0, far || 5);   // test-only: what a three.js ray meets first
+      const hits = rc.intersectObjects(scene.children, true).filter((h) => h.object.visible); return hits.slice(0, 3).map((h) => ({ name: h.object.name || h.object.type, distance: +h.distance.toFixed(3) })); },
     renderInfo: () => ({ programs: renderer.info.programs.length, textures: renderer.info.memory.textures, geometries: renderer.info.memory.geometries,
       calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, shadowMap: CONFIG.light.shadowMap, art: artStats() }),
     waypoints: WAYPOINTS,
