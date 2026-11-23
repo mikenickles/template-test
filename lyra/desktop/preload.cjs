@@ -39,6 +39,8 @@ contextBridge.exposeInMainWorld("lyraDesktop", {
     prefs: () => ipcRenderer.invoke("shell:prefs"),
     setPrefs: (p) => ipcRenderer.invoke("shell:setPrefs", p),
   },
+  // (0.63) money services that don't answer web pages (SimpleFIN, YNAB), through the main process
+  http: (url, init) => ipcRenderer.invoke("http:fetch", url, init),
   // Lyra's extension in your own browser (shell 5)
   browser: {
     listen: (on) => ipcRenderer.invoke("browser:listen", on),

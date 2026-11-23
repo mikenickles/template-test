@@ -10665,3 +10665,30 @@ html[data-ambient="on"] .es-hand { transform-origin: 0% 100%; animation: es-wave
 .avatar-stack.head-row.in-channel .channel-head svg { color: var(--mark); flex: none; }
 .avatar-stack.head-row.in-channel .head-words > .status-line { justify-content: center; }
 .app:not(.desk) .chat.in-channel .log { padding-top: calc(var(--inset-top) + 150px); }
+
+/* (0.63) connections: one list with each service's mark, connect right on the row */
+.conn-group { margin-top: 18px; }
+.conn-list { display: grid; }
+.conn-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line-strong); }
+.conn-row:last-child { border-bottom: 0; }
+.conn-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 2px 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.conn-ic { flex: none; width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: var(--surface); }
+.conn-ic svg { width: 22px; height: 22px; }
+.conn-words { display: grid; min-width: 0; }
+.conn-words b { font-weight: 600; font-size: 15px; }
+.conn-words span { font-size: 12.5px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conn-words span.bad { color: var(--danger, #c0392b); }
+.conn-on { flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; color: var(--good, #2f9e5b); padding-right: 4px; }
+.conn-on::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.conn-btn { flex: none; height: 34px; padding: 0 15px; font-size: 13.5px; }
+.conn-google { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 14px; padding: 12px 14px; border-radius: 18px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.conn-google:disabled { opacity: 0.6; }
+.conn-google-icons { flex: none; display: flex; }
+.conn-google-icons svg { width: 26px; height: 26px; padding: 5px; border-radius: 10px; background: var(--bg); box-shadow: 0 0 0 1px var(--line-strong); }
+.conn-google-icons svg + svg { margin-left: -6px; }
+.conn-google .t { display: grid; min-width: 0; }
+.conn-google .t b { font-weight: 600; font-size: 15px; }
+.conn-google .t span { font-size: 12.5px; color: var(--text-muted); }
+.lp-sheet-head .t svg { width: 24px; height: 24px; }
+.lyra-page .conn-group + .hint { margin: 10px 0 18px; }
+.lyra-page .lp-big { margin-top: 26px; }

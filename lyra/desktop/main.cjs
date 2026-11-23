@@ -309,6 +309,23 @@ ipcMain.handle("notify", (_e, title, body, hash) => {
   n.show();
 });
 
+// (0.63) requests for the money connectors, only to these hosts, HTTPS only, small bodies
+const HTTP_HOSTS = /^(?:[a-z0-9-]+\.)*simplefin\.org$|^api\.ynab\.com$/i;
+ipcMain.handle("http:fetch", async (_e, url, init) => {
+  let u;
+  try {
+    u = new URL(String(url));
+  } catch {
+    throw new Error("Not a web address.");
+  }
+  if (u.protocol !== "https:" || !HTTP_HOSTS.test(u.hostname)) throw new Error("Tomo can't make that request.");
+  const method = init?.method === "POST" ? "POST" : "GET";
+  const headers = {};
+  for (const [k, v] of Object.entries(init?.headers ?? {})) if (/^(authorization|accept|content-type|content-length)$/i.test(k) && typeof v === "string") headers[k] = v;
+  const body = method === "POST" && typeof init?.body === "string" ? init.body.slice(0, 10_000) : undefined;
+  const r = await net.fetch(u.toString(), { method, headers, body });
+  return { status: r.status, text: (await r.text()).slice(0, 5_000_000) };
+});
 ipcMain.handle("app:info", () => ({ version: app.getVersion(), platform: process.platform, arch: process.arch }));
 
 // ---------- window ----------

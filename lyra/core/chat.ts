@@ -1503,7 +1503,7 @@ export function doneLine(calls: { name: string; input: Record<string, unknown> }
 export function pastTense(label: string): string | null {
   const PAST: [RegExp, string][] = [
     [/^Searching\b/, "Searched"], [/^Checking\b/, "Checked"], [/^Reading\b/, "Read"], [/^Looking at\b/, "Looked at"],
-    [/^Opening\b/, "Opened"], [/^Clicking\b/, "Clicked"], [/^Typing\b/, "Typed"], [/^Picking\b/, "Picked"], [/^Going back\b/, "Went back"],
+    [/^Opening\b/, "Opened"], [/^Looking through\b/, "Looked through"], [/^Adding up\b/, "Added up"], [/^Clicking\b/, "Clicked"], [/^Typing\b/, "Typed"], [/^Picking\b/, "Picked"], [/^Going back\b/, "Went back"],
   ];
   for (const [re, to] of PAST) if (re.test(label)) return label.replace(re, to);
   return null;

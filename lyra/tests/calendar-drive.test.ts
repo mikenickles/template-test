@@ -102,6 +102,9 @@ describe("Calendar and Drive connectors", () => {
       // no sign-in for other services in this test platform
       ["spotify", "unavailable"],
       ["browser", "unavailable"],
+      // (0.63) money works anywhere, once a key is pasted in
+      ["bank", "not_connected"],
+      ["ynab", "not_connected"],
       ["phone", "unavailable"],
     ]);
     expect((await c.tools()).map((t) => t.name).sort()).toEqual(["calendar__list_calendars", "calendar__list_events", "drive__read_file", "drive__search_files"]);

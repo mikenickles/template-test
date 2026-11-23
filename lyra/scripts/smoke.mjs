@@ -125,13 +125,23 @@ try {
 
   check((await page.locator(".drawer-sections a").count()) === 1, "the phone drawer keeps only Settings");
   await page.locator(".topbar a.orb").click({ force: true });
-  await page.getByText("What Tomo can see").waitFor();
+  await page.locator(".conn-row").first().waitFor();
   check(true, "the chat's avatar opens the Tomo page");
-  check((await page.getByText("Phone app only").count()) === 3, "browser preview says Google connections need the Android app");
+  check((await page.locator(".conn-row .conn-ic svg").count()) === (await page.locator(".conn-row").count()), "each connection shows its own mark");
+  check((await page.getByRole("button", { name: "Phone app" }).count()) === 3, "browser preview says Google connections need the Android app");
+  check((await page.locator(".conn-group", { hasText: "Money" }).locator(".conn-row").count()) === 2, "a Money group offers bank accounts and YNAB");
+  await page.locator(".conn-row", { hasText: "Bank accounts" }).getByRole("button", { name: "Connect" }).click();
+  const bankSheet = page.getByRole("dialog", { name: "Bank accounts" });
+  await bankSheet.getByLabel("Setup token").fill("bm90IGEgdG9rZW4=");
+  await bankSheet.getByRole("button", { name: "Connect", exact: true }).click();
+  await page.getByText("doesn't look like a SimpleFIN setup token").waitFor();
+  check(await bankSheet.getByText("Move, send or pay money (there's no way to)").isVisible(), "connecting a bank says it's read only, and a wrong token is caught before anything is sent");
+  await shot("light-3b-bank-sheet");
+  await bankSheet.getByRole("button", { name: "Close", exact: true }).click();
   check(await page.getByText("Tomo's promise").isVisible(), "the Tomo page carries Tomo's promise");
   await shot("light-3-access");
   // a service opens a sheet with what Lyra can and can't do with it
-  await page.locator(".lp-svc", { hasText: "Mail" }).click();
+  await page.locator(".conn-row", { hasText: "Gmail" }).locator(".conn-main").click();
   const svc = page.getByRole("dialog", { name: "Mail" });
   check(await svc.getByText("Send, delete or change anything on its own").isVisible(), "a service's sheet says what Tomo never does with it");
   await svc.getByRole("button", { name: "Close", exact: true }).click();

@@ -9,15 +9,29 @@ import { Avatar } from "../LyraMark";
 import { PinnedList } from "./Pinned";
 import { notices, type NoticeApp } from "../platform";
 import { ask } from "../ask";
+import { BRAND } from "../BrandIcons";
 
 type GoogleId = "gmail" | "calendar" | "drive";
-type ServiceId = GoogleId | "contacts" | "notices" | "spotify" | "browser";
+type ServiceId = GoogleId | "contacts" | "notices" | "spotify" | "browser" | "bank" | "ynab";
 type BrowserStatus = Awaited<ReturnType<typeof api.browserStatus>>;
 type SpotifyState = Awaited<ReturnType<typeof api.spotifyState>>;
 
-const ICONS: Record<ServiceId, ReactNode> = { gmail: <Mail />, calendar: <Calendar />, drive: <File />, contacts: <People />, notices: <Bell />, spotify: <Music />, browser: <Globe /> };
+const ICONS: Record<ServiceId, ReactNode> = BRAND as Record<ServiceId, ReactNode>;
+/** (0.63) the full name in the connections list, and what it lets Tomo do in a few words */
+const LONG: Record<ServiceId, string> = { gmail: "Gmail", calendar: "Google Calendar", drive: "Google Drive", contacts: "Contacts", notices: "Phone notifications", spotify: "Spotify", browser: "Your browser", bank: "Bank accounts", ynab: "YNAB" };
+const WHAT: Record<ServiceId, string> = {
+  gmail: "Reads your mail · writes for your OK",
+  calendar: "Sees your schedule · adds for your OK",
+  drive: "Finds and reads your files",
+  contacts: "Finds people's numbers",
+  notices: "Reads what your apps tell you",
+  spotify: "What you play · plays music",
+  browser: "Uses pages in its own window",
+  bank: "Balances and spending, read only",
+  ynab: "Your budget and categories",
+};
 const NAMES: Record<GoogleId, string> = { gmail: "Gmail", calendar: "Google Calendar", drive: "Google Drive" };
-const SHORT: Record<ServiceId, string> = { gmail: "Mail", calendar: "Calendar", drive: "Files", contacts: "Contacts", notices: "Notifications", spotify: "Spotify", browser: "Browser" };
+const SHORT: Record<ServiceId, string> = { gmail: "Mail", calendar: "Calendar", drive: "Files", contacts: "Contacts", notices: "Notifications", spotify: "Spotify", browser: "Browser", bank: "Bank accounts", ynab: "YNAB" };
 const PROMISE: Record<GoogleId, string> = {
   gmail: "Tomo can now read your mail. It can't send, delete or change anything on its own.",
   calendar: "Tomo can now see your schedule. It can't add, change or answer events on its own.",
@@ -47,6 +61,13 @@ function abilities(id: ServiceId, state: AppState, spotify: SpotifyState | null)
       };
     case "contacts":
       return { yes: ["Look up one name when you mention someone"], no: ["Copy or upload your address book"] };
+    case "bank":
+      return {
+        yes: ["See balances on the accounts you link at SimpleFIN", "Read recent transactions and add up your spending"],
+        no: ["Move, send or pay money (there's no way to)", "Keep your bank login (SimpleFIN holds the link; Tomo keeps only its read-only key, on this device)"],
+      };
+    case "ynab":
+      return { yes: ["See this month's budget: what's left, what's overspent", "Read recent transactions and their categories"], no: ["Change your budget or add transactions"] };
     case "notices":
       return {
         yes: ["Read texts, chats and app alerts from the last two days", "Mention what's waiting when you ask or in a brief"],
@@ -129,7 +150,32 @@ export function Access({ state, setState, toast }: { state: AppState; setState: 
       ? [{ id: "browser" as const, on: !!state.browser && !!browser?.connected, status: !state.browser ? "Off" : browser?.connected ? "Connected" : "Waiting for your browser", tap: () => setOpen("browser") }]
       : []),
     ...(spotify ? [{ id: "spotify" as const, on: spotify.connected, status: spotify.connected ? "Connected" : spotify.available ? "Not connected" : "Phone or Windows app", tap: () => setOpen("spotify") }] : []),
+    ...(["bank", "ynab"] as const).map((id) => {
+      const c = state.connectors.find((x) => x.id === id);
+      return { id, on: c?.state === "connected", status: c?.state === "connected" ? "Connected" : "Not connected", tap: () => setOpen(id) };
+    }),
   ];
+  // (0.63) grouped: what's on first, then money, this phone, and the rest; each row connects in place
+  const MONEY: ServiceId[] = ["bank", "ynab"];
+  const PHONE: ServiceId[] = ["contacts", "notices"];
+  const groups = [
+    { name: "Connected", rows: tiles.filter((t) => t.on) },
+    { name: "Money", rows: tiles.filter((t) => !t.on && MONEY.includes(t.id)) },
+    { name: "On this phone", rows: tiles.filter((t) => !t.on && PHONE.includes(t.id)) },
+    { name: "Add more", rows: tiles.filter((t) => !t.on && !MONEY.includes(t.id) && !PHONE.includes(t.id)) },
+  ].filter((g) => g.rows.length);
+  const googleOff = google.filter((c) => c.state !== "connected" && c.state !== "unavailable");
+  const connectAll = async () => {
+    setBusy("gmail");
+    try {
+      setState(await api.connectGoogleAll());
+      setNotice({ tone: "good", title: "Google is connected", body: "Tomo can now read your mail, calendar and files. It can't send, delete or change anything on its own." });
+    } catch (e) {
+      setNotice({ tone: "bad", title: "Google didn't connect", body: (e as Error).message });
+    } finally {
+      setBusy(null);
+    }
+  };
   const connected = tiles.filter((t) => t.on).length;
 
   return (
@@ -140,8 +186,65 @@ export function Access({ state, setState, toast }: { state: AppState; setState: 
           <i className="lp-dot" aria-hidden="true" />
         </span>
         <h1 className="lp-name">Tomo</h1>
-        <p className="lp-status">Your chief of staff · here for you</p>
+        <p className="lp-status">{connected ? `${connected} connected · read only unless you say yes` : "Your chief of staff · connect what you use"}</p>
       </div>
+
+      {notice && (
+        <div className={`banner ${notice.tone}`} role={notice.tone === "bad" ? "alert" : "status"}>
+          <strong>{notice.title}</strong>
+          {notice.body}
+          {/Google on this computer/.test(notice.body) && (
+            <a className="banner-link" href="#/settings/sync?google">
+              Open Google setup
+            </a>
+          )}
+        </div>
+      )}
+
+      <PinnedList channelId={null} toast={toast} />
+
+      {account && <p className="lp-account">Google · {account} · read only</p>}
+      {googleOff.length >= 2 && (
+        <button className="conn-google" disabled={!!busy} onClick={() => void connectAll()}>
+          <span className="conn-google-icons" aria-hidden="true">
+            {BRAND.gmail}
+            {BRAND.calendar}
+            {BRAND.drive}
+          </span>
+          <span className="t">
+            <b>{busy ? "Opening Google…" : "Connect Google in one go"}</b>
+            <span>Mail, calendar and files with one sign-in</span>
+          </span>
+        </button>
+      )}
+      {groups.map((g) => (
+        <section className="section conn-group" key={g.name}>
+          <h2 className="section-label">
+            {g.name} {g.name === "Connected" && <span className="count">{g.rows.length}</span>}
+          </h2>
+          <div className="conn-list">
+            {g.rows.map((t) => (
+              <div key={t.id} className="conn-row">
+                <button className="conn-main" onClick={() => setOpen(t.id)} aria-label={`${LONG[t.id]}: details`}>
+                  <span className="conn-ic">{ICONS[t.id]}</span>
+                  <span className="conn-words">
+                    <b>{LONG[t.id]}</b>
+                    <span className={t.tone ? "bad" : undefined}>{t.on || t.tone ? t.status : WHAT[t.id]}</span>
+                  </span>
+                </button>
+                {t.on ? (
+                  <span className="conn-on">On</span>
+                ) : (
+                  <button className={`btn conn-btn${MONEY.includes(t.id) ? " ink" : ""}`} disabled={busy === t.id || t.status === "Phone app only"} onClick={t.tap}>
+                    {busy === t.id ? "Opening…" : PHONE.includes(t.id) ? "Turn on" : t.status === "Phone app only" ? "Phone app" : "Connect"}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+      {unavailable && <p className="hint">Google sign-in works in the Android app. This browser preview can't connect.</p>}
 
       {/* (0.54) the two places you go most, big; a number only once there is one */}
       <nav className="lp-big" aria-label="Tomo">
@@ -168,47 +271,6 @@ export function Access({ state, setState, toast }: { state: AppState; setState: 
           <Spark size={16} /> Soul
         </a>
       </nav>
-
-      {notice && (
-        <div className={`banner ${notice.tone}`} role={notice.tone === "bad" ? "alert" : "status"}>
-          <strong>{notice.title}</strong>
-          {notice.body}
-          {/Google on this computer/.test(notice.body) && (
-            <a className="banner-link" href="#/settings/sync?google">
-              Open Google setup
-            </a>
-          )}
-        </div>
-      )}
-
-      <PinnedList channelId={null} toast={toast} />
-
-      <section className="section">
-        <h2 className="section-label">
-          What Tomo can see {connected > 0 && <span className="count">{connected}</span>}
-        </h2>
-        {account && <p className="lp-account">Google · {account} · read only</p>}
-        <div className="lp-grid">
-          {tiles.map((t) => (
-            <button key={t.id} className={`lp-svc${t.on ? "" : " off"}`} disabled={busy === t.id} onClick={t.tap}>
-              <span className="t">{ICONS[t.id]}</span>
-              <span>
-                <span className="n">{SHORT[t.id]}</span>
-                <span className={`s${t.tone ? ` ${t.tone}` : ""}`}>
-                  <i />
-                  {t.status}
-                </span>
-              </span>
-            </button>
-          ))}
-          {tiles.length % 2 === 1 && (
-            <div className="lp-svc more" aria-hidden="true">
-              <Plus size={18} /> More soon
-            </div>
-          )}
-        </div>
-        {unavailable && <p className="hint">Google sign-in works in the Android app. This browser preview can't connect.</p>}
-      </section>
 
       <WithYourOk state={state} setState={setState} toast={toast} spotify={spotify} reloadSpotify={reloadSpotify} />
 
@@ -297,9 +359,19 @@ function ServiceSheet({
   };
 
   const can = abilities(id, state, spotify);
-  const on = id === "browser" ? !!state.browser : id === "notices" ? !!state.notices : id === "contacts" ? !!state.contacts : id === "spotify" ? !!spotify?.connected : google?.state === "connected";
+  const linked = state.connectors.find((c) => c.id === id)?.state === "connected";
+  const [token, setToken] = useState("");
+  const on = id === "bank" || id === "ynab" ? linked : id === "browser" ? !!state.browser : id === "notices" ? !!state.notices : id === "contacts" ? !!state.contacts : id === "spotify" ? !!spotify?.connected : google?.state === "connected";
   const sub =
-    id === "browser"
+    id === "bank"
+      ? linked
+        ? "Through SimpleFIN Bridge · read only"
+        : "Read only, through SimpleFIN Bridge"
+      : id === "ynab"
+      ? linked
+        ? "Your last-used budget · read only"
+        : "Read only, with a token from YNAB"
+      : id === "browser"
       ? state.browser
         ? "On this computer"
         : "Off"
@@ -401,6 +473,41 @@ function ServiceSheet({
           </div>
         )}
 
+        {id === "bank" && !linked && (
+          <div className="setup-box">
+            <ol className="setup-steps">
+              <li>
+                Open <b>beta-bridge.simplefin.org</b>, make an account and link your banks and cards there. SimpleFIN charges a small yearly fee.
+              </li>
+              <li>
+                Tap <b>New connection</b> (or Apps, then Connect) and copy the <b>setup token</b>.
+              </li>
+              <li>Paste it here. It works once, and Tomo keeps only a read-only key on this device.</li>
+            </ol>
+            <label className="action-field">
+              <span>Setup token</span>
+              <input value={token} onChange={(e) => setToken(e.target.value)} placeholder="A long line of letters and numbers" autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+            </label>
+          </div>
+        )}
+        {id === "ynab" && !linked && (
+          <div className="setup-box">
+            <ol className="setup-steps">
+              <li>
+                In YNAB on the web, open <b>Account settings</b>, then <b>Developer settings</b>.
+              </li>
+              <li>
+                Under Personal Access Tokens, tap <b>New token</b> and copy it.
+              </li>
+              <li>Paste it here. Tomo reads your last-used budget, and can't change it.</li>
+            </ol>
+            <label className="action-field">
+              <span>Personal access token</span>
+              <input value={token} onChange={(e) => setToken(e.target.value)} placeholder="Paste the token" autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+            </label>
+          </div>
+        )}
+
         {id === "spotify" && spotify?.available && !spotify.connected && (setup || !spotify.clientId) && (
           <div className="setup-box">
             <ol className="setup-steps">
@@ -428,6 +535,16 @@ function ServiceSheet({
           {id in NAMES && google?.state === "connected" && (
             <button className="btn quiet lp-bad" onClick={onDisconnect}>
               Disconnect
+            </button>
+          )}
+          {(id === "bank" || id === "ynab") && linked && (
+            <button className="btn quiet lp-bad" disabled={busy} onClick={() => void ask(`Disconnect ${SHORT[id]}? Tomo forgets its key on this device.`).then<unknown>((ok) => ok && run(() => (id === "bank" ? api.disconnectBank() : api.disconnectYnab()), `${SHORT[id]} disconnected`, true))}>
+              Disconnect
+            </button>
+          )}
+          {(id === "bank" || id === "ynab") && !linked && (
+            <button className="btn ink" disabled={busy || !token.trim()} onClick={() => void run(() => (id === "bank" ? api.connectBank(token) : api.connectYnab(token)), `${SHORT[id]} connected`, true)}>
+              {busy ? "Connecting…" : "Connect"}
             </button>
           )}
           {id === "spotify" && spotify?.connected && (

@@ -4,6 +4,9 @@
  * the Android app; tests and the browser preview run the same code.
  */
 import { awaySince, type AwayItem } from "./away.ts";
+import { BankCache, createBankServer, createYnabServer } from "./connectors/money/server.ts";
+import { claim as claimBank, type Http } from "./connectors/money/simplefin.ts";
+import { checkToken as checkYnabToken } from "./connectors/money/ynab.ts";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SqlJsStatic } from "sql.js";
 import { CHANNEL_ICONS, runTurn, type TurnEmitter, type TurnInbox, type Workspace } from "./chat.ts";
@@ -119,6 +122,8 @@ export interface Platform {
   notices?: NoticeSource & { access(): Promise<boolean> };
   /** (0.56) Lyra's extension in the user's own browser, through the Windows app: open and read pages. */
   browser?: BrowserLink & { listen(on: boolean): Promise<void> };
+  /** (0.63) a request made natively, past the web view's CORS (SimpleFIN); plain fetch when missing */
+  http?: Http;
   /** The phone's messaging app: opens a text ready to send (Android only). */
   sms?: { compose(number: string, body: string): Promise<void> };
   /** The phone's address book (Android only), searched by name. */
@@ -601,6 +606,7 @@ export class Lyra {
       drive: () => createDriveServer(this.tokenFor("drive"), this.fetch),
     };
     this.spotify = new SpotifyAuth(p.secrets, (...a) => this.fetch(...a));
+    this.bankCache = new BankCache(async () => (await p.secrets.get("bank.access")) ?? null, this.http);
     this.connectors = new Connectors([
       ...GOOGLE.map((g) => ({
         id: g.id,
@@ -641,6 +647,28 @@ export class Lyra {
         connected: () => getSetting(this.db, "browser") === "on",
         account: () => undefined,
         server: () => createBrowserServer(p.browser!, this.browserSession),
+      },
+      {
+        id: "bank",
+        label: "Bank accounts",
+        access: "Can see your bank and card balances and transactions, read only (it can never move money)",
+        allow: ["accounts", "transactions", "spending"],
+        labels: { accounts: "Checking your accounts", transactions: "Looking through your transactions", spending: "Adding up your spending" },
+        available: () => true,
+        connected: () => this.money.bank,
+        account: () => undefined,
+        server: () => createBankServer(this.bankCache, p.timeZone),
+      },
+      {
+        id: "ynab",
+        label: "YNAB",
+        access: "Can see your YNAB budget and its transactions, read only",
+        allow: ["budget", "budget_transactions"],
+        labels: { budget: "Checking your budget", budget_transactions: "Looking through your budget" },
+        available: () => true,
+        connected: () => this.money.ynab,
+        account: () => undefined,
+        server: () => createYnabServer(async () => (await p.secrets.get("ynab.token")) ?? null, this.http),
       },
       {
         id: "phone",
@@ -720,6 +748,7 @@ export class Lyra {
       setSetting(db, "soulRenamed", "1");
     }
     for (const k of SECRET_KEYS) lyra.keys[k] = (await p.secrets.get(`key.${k}`)) ?? undefined;
+    lyra.money = { bank: !!(await p.secrets.get("bank.access")), ynab: !!(await p.secrets.get("ynab.token")) };
     lyra.keys.openaiBaseUrl = getSetting(db, "openaiBaseUrl") || undefined;
     // (0.56) the Windows app listens for Lyra's browser extension only while it's turned on
     if (p.browser && getSetting(db, "browser") === "on") await p.browser.listen(true).catch(() => {});
@@ -2458,6 +2487,54 @@ export class Lyra {
     }
   }
 
+  // ---- (0.63) money, read only: bank accounts through SimpleFIN, and YNAB ----
+  /** which money connections this device holds (their secrets never sync) */
+  money = { bank: false, ynab: false };
+  readonly bankCache: BankCache;
+
+  /** native request when the platform has one (SimpleFIN doesn't answer web views), else fetch */
+  get http(): Http {
+    return (
+      this.p.http ??
+      (async (url, init) => {
+        const r = await this.fetch(url, { method: init.method, headers: init.headers, body: init.body });
+        return { status: r.status, text: await r.text() };
+      })
+    );
+  }
+
+  async connectBank(setupToken: string): Promise<AppState> {
+    const access = await claimBank(setupToken, this.http);
+    await this.p.secrets.set("bank.access", access);
+    this.money.bank = true;
+    this.bankCache.forget();
+    await this.connectors.reset();
+    return this.state();
+  }
+
+  async disconnectBank(): Promise<AppState> {
+    await this.p.secrets.remove("bank.access");
+    this.money.bank = false;
+    this.bankCache.forget();
+    await this.connectors.reset();
+    return this.state();
+  }
+
+  async connectYnab(token: string): Promise<AppState> {
+    await checkYnabToken(token, this.http);
+    await this.p.secrets.set("ynab.token", token.trim());
+    this.money.ynab = true;
+    await this.connectors.reset();
+    return this.state();
+  }
+
+  async disconnectYnab(): Promise<AppState> {
+    await this.p.secrets.remove("ynab.token");
+    this.money.ynab = false;
+    await this.connectors.reset();
+    return this.state();
+  }
+
   get spotifyLinked(): boolean {
     return !!this.spotifyLink;
   }
@@ -3141,6 +3218,26 @@ export class Lyra {
     let email = r.email ?? GOOGLE.map((x) => this.link(x.id)?.email).find(Boolean);
     if (!email && id === "gmail") email = await gmailProfile(this.tokenFor(id), this.fetch);
     setSetting(this.db, id, JSON.stringify({ email, connected_at: new Date().toISOString() } satisfies GmailLink));
+    await this.connectors.reset();
+    await this.db.flush();
+    return this.state();
+  }
+
+  /** (0.63) mail, calendar and files in one sign-in: one grant for all three read scopes */
+  async connectGoogleAll(): Promise<AppState> {
+    if (!this.p.google.available) throw new Error("Google sign-in works in the Android app, or on Windows once Google is set up there.");
+    const want = GOOGLE.filter((g) => !this.link(g.id));
+    if (!want.length) return this.state();
+    const r = await this.p.google.authorize(
+      want.map((g) => g.scope),
+      true,
+    );
+    const ok = want.filter((g) => grantIsAllowed(r.grantedScopes, g.scope));
+    if (!ok.length) throw new Error("Google didn't grant read-only access, so Tomo didn't keep it.");
+    let email = r.email ?? GOOGLE.map((x) => this.link(x.id)?.email).find(Boolean);
+    for (const g of ok) await this.tokenFor(g.id).invalidate();
+    if (!email && ok.some((g) => g.id === "gmail")) email = await gmailProfile(this.tokenFor("gmail"), this.fetch).catch(() => undefined);
+    for (const g of ok) setSetting(this.db, g.id, JSON.stringify({ email, connected_at: new Date().toISOString() } satisfies GmailLink));
     await this.connectors.reset();
     await this.db.flush();
     return this.state();

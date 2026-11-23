@@ -119,7 +119,7 @@ await page.route("https://gmail.googleapis.com/**", (r) => {
   return r.fulfill({ json: {} });
 });
 await page.goto("app://lyra/index.html#/access");
-await page.locator(".lp-svc", { hasText: "Mail" }).click();
+await page.locator(".conn-row", { hasText: "Gmail" }).getByRole("button", { name: "Connect" }).click();
 await page.getByText("Gmail is connected").waitFor();
 await page.getByRole("switch", { name: /Write emails/ }).click();
 await page.getByText("Tomo can write emails for your OK").waitFor();
@@ -226,7 +226,7 @@ await page.route("https://accounts.spotify.com/api/token", (r) => {
 });
 await page.route("https://api.spotify.com/v1/me", (r) => r.fulfill({ json: { id: "sam1", display_name: "Sam" } }));
 await page.goto("app://lyra/index.html#/access");
-await page.locator(".lp-svc", { hasText: "Spotify" }).click();
+await page.locator(".conn-row", { hasText: "Spotify" }).getByRole("button", { name: "Connect" }).click();
 const spotifySheet = page.getByRole("dialog", { name: "Spotify" });
 await spotifySheet.getByLabel("Client ID").fill("0123456789abcdef0123456789abcdef");
 await spotifySheet.getByRole("button", { name: "Connect", exact: true }).click();
@@ -262,7 +262,7 @@ check(true, "playback control is its own switch");
   const siteUrl = `http://127.0.0.1:${site.address().port}/orders`;
   await page.keyboard.press("Escape");
   await page.goto("app://lyra/index.html#/access");
-  await page.locator(".lp-svc", { hasText: "Browser" }).click();
+  await page.locator(".conn-row", { hasText: "Your browser" }).getByRole("button", { name: "Connect" }).click();
   await page.getByRole("switch", { name: /Let Tomo use your browser/ }).click();
   await page.getByText("Waiting for the extension…").waitFor();
   check((await page.getByRole("button", { name: "Show the extension's folder" }).count()) === 1, "turning it on shows how to add the extension");

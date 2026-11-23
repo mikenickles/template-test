@@ -9,7 +9,7 @@ import { BiometricAuth } from "@aparajita/capacitor-biometric-auth";
 import { SecureStorage } from "@aparajita/capacitor-secure-storage";
 import { Clipboard } from "@capacitor/clipboard";
 import { Share } from "@capacitor/share";
-import { Capacitor, registerPlugin } from "@capacitor/core";
+import { Capacitor, CapacitorHttp, registerPlugin } from "@capacitor/core";
 import { Directory, Encoding, Filesystem } from "@capacitor/filesystem";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import initSqlJs from "sql.js";
@@ -35,6 +35,8 @@ interface DesktopBridge {
   /** shell 4 and later: sign-in pages for other services (Spotify), back through 127.0.0.1 */
   oauth?: { loopback(url: string): Promise<{ redirectUri: string; returned: string }> };
   /** shell 5: Lyra's extension in the user's own browser */
+  /** (0.63) a request from the main process, for money services that don't answer web pages */
+  http?: (url: string, init: { method: string; headers?: Record<string, string>; body?: string }) => Promise<{ status: number; text: string }>;
   browser?: {
     listen(on: boolean): Promise<void>;
     status(): Promise<{ listening: boolean; connected: boolean; agent: string }>;
@@ -262,6 +264,17 @@ export async function createPlatform(): Promise<Platform> {
     ...(isNative ? { notices: phoneNotices } : {}),
     ...(isNative ? { oauth: phoneOAuth } : desk?.oauth ? { oauth: deskOAuth } : {}),
     ...(desk?.browser ? { browser: deskBrowser(desk.browser) } : {}),
+    // (0.63) SimpleFIN doesn't send CORS headers: on the phone it goes through Android's own HTTP, on Windows through the shell
+    ...(isNative
+      ? {
+          http: async (url: string, init: { method: "GET" | "POST"; headers?: Record<string, string>; body?: string }) => {
+            const r = await CapacitorHttp.request({ url, method: init.method, headers: init.headers ?? {}, data: init.body, responseType: "text" });
+            return { status: r.status, text: typeof r.data === "string" ? r.data : JSON.stringify(r.data) };
+          },
+        }
+      : desk?.http
+        ? { http: (url: string, init: { method: "GET" | "POST"; headers?: Record<string, string>; body?: string }) => desk.http!(url, init) }
+        : {}),
   };
 }
 
