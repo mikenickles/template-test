@@ -407,12 +407,7 @@ export function App() {
         status={wide ? <StatusLine state={state} className="in-side" /> : undefined}
       />
       <div className="shell" inert={drawer && !wide}>
-        {/* (0.57) gentle motion: a haze that drifts behind every page (Settings, Feel) */}
-        <div className="haze" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </div>
+        {/* (0.66.1) the drifting haze (0.57) is gone: every look is plain, with no wash behind the page */}
         {wide ? (
           <DeskBar route={route} channel={channel} back={back} />
         ) : (

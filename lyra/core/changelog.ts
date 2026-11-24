@@ -12,6 +12,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "0.66.1",
+    date: "2026-11-24",
+    notes: ["Fixed a peach wash at the top of Settings and other pages that stopped short under the top bar. The background is plain in every look now."],
+  },
+  {
     version: "0.66.0",
     date: "2026-11-24",
     notes: [

@@ -9885,7 +9885,8 @@ body[data-busy] .orb:has(.avatar)::after {
 
 /* ---- fixes from the first comparison ---- */
 /* (0.66) every look is calm now: the drifting haze is off everywhere */
-html .haze {
+html .haze,
+html[data-ambient="on"] .haze {
   display: none;
 }
 .tasks-head {

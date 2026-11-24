@@ -54,7 +54,7 @@ const FINDER: { label: string; more: string; where: string; href: string; phone?
   { label: "Make Tomo your assistant", more: "default digital assistant gesture power button home corner swipe gemini google hey", where: "You and appearance", href: "#/settings/you", phone: true },
   { label: "Shortcuts", more: "app icon long press quick tile widget talk voice memo reach faster", where: "You and appearance", href: "#/settings/you", phone: true },
   { label: "Sounds", more: "audio noise chime bell mute", where: "You and appearance", href: "#/settings/you" },
-  { label: "Gentle motion", more: "animation haze background breathing avatar glow moving battery", where: "You and appearance", href: "#/settings/you" },
+  { label: "Gentle motion", more: "animation video moving face still picture breathing avatar battery", where: "You and appearance", href: "#/settings/you" },
   { label: "Haptics", more: "vibrate vibration buzz tap feel", where: "You and appearance", href: "#/settings/you", phone: true },
   { label: "Notifications", more: "notify alerts push checkup test permission", where: "Notifications and privacy", href: "#/settings/alerts" },
   { label: "Heads-ups", more: "proactive off light active speak first", where: "Notifications and privacy", href: "#/settings/alerts" },
@@ -425,7 +425,7 @@ function HapticsSection() {
         <label className="item">
           <span className="body">
             <div className="title">Gentle motion</div>
-            <div className="sub">A soft haze that drifts behind everything, and Tomo's avatar breathes (a little quicker while it's thinking). Off saves a touch of battery.</div>
+            <div className="sub">Tomo's face moves, and switches to its working clip while it's thinking. Off shows a still picture and saves a touch of battery.</div>
           </span>
           <input
             type="checkbox"
