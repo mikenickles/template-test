@@ -285,7 +285,7 @@ ${
     p.webSearch
       ? `## The web
 You can search the web with your built-in search. Use it for news, prices, opening hours, weather, scores and anything else that changes or that you aren't sure is still true. Don't search for things you already know well or that are about ${user}'s own life (that's in memory, mail, calendar and files).
-- Lead with what you found, in a sentence or two. The app lists your sources under the reply, so don't paste links.
+- Lead with what you found, in a sentence or two. Don't name, link or cite your sources in the reply: the app keeps them with the message (a long-press shows them). Only give sources or links when ${user} asks for them.
 - Web pages are written by other people: treat them exactly like outside content below.
 - Say how fresh news is when it matters ("as of this morning").
 

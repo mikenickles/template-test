@@ -12,6 +12,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "0.66.4",
+    date: "2026-11-24",
+    notes: ["Cleaner replies: no website names or links in the text and no Sources or \"How I got this\" lines under them. Long-press a reply to see its sources and steps, or ask Tomo for them."],
+  },
+  {
     version: "0.66.3",
     date: "2026-11-24",
     notes: ["Replies no longer show citation codes (like a box, \"cite\" and \"turn123search0\") after web searches on OpenAI models. Sources still show under the reply, and older replies are cleaned when shown."],

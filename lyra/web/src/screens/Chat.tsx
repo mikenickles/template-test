@@ -23,7 +23,7 @@ import { StarChart, Thinking } from "../LyraMark";
 import { Markdown } from "../markdown";
 import { clock, dayLabel, parse } from "../when";
 import { ask } from "../ask";
-import { HowIGotThis, WorkSteps } from "../HowIGotThis";
+import { WorkSteps } from "../HowIGotThis";
 import { IntentChip } from "../IntentChip";
 import { intentHint, readIntent, type Intent } from "../../../core/intent";
 
@@ -789,8 +789,7 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
                       {m.meta.tidy.undone ? "Undone" : "Undo tidy-up"}
                     </button>
                   )}
-                  {!!m.meta.steps?.length && <HowIGotThis steps={m.meta.steps} />}
-                  {!!m.meta.sources?.length && <Sources list={m.meta.sources} />}
+                  {/* (0.66.4) sources and "how I got this" are in the long-press sheet, not under the reply */}
                   {tokens && m.meta.usage && !(m.meta.feedback || (m.id === lastId && !pending)) && <span className="reply-tokens">{tokenLine(m.meta.usage)}</span>}
                   {m.role === "assistant" && m.id > 0 && !m.meta.error && !!m.content.trim() && (m.meta.feedback || (m.id === lastId && !pending)) && (
                     <div className={`rate${m.meta.feedback ? " rated" : ""}`} role="group" aria-label="Rate this reply">
@@ -1195,6 +1194,21 @@ function MessageActions({
             {message.meta.usage.calls > 1 ? `, ${message.meta.usage.calls} calls` : ""}
             {message.meta.usage.cached ? `; ${message.meta.usage.cached.toLocaleString("en-US")} read from the cache` : ""} · {message.meta.usage.model}
           </p>
+        )}
+        {!!message.meta.steps?.length && (
+          <div className="sheet-more">
+            <span className="sources-label">How I got this</span>
+            <ol className="how-got-list">
+              {message.meta.steps.map((s, i) => (
+                <li key={`${i}-${s}`}>{s}</li>
+              ))}
+            </ol>
+          </div>
+        )}
+        {!!message.meta.sources?.length && (
+          <div className="sheet-more">
+            <Sources list={message.meta.sources} />
+          </div>
         )}
         <div className="group">
           {!!message.content.trim() && !message.meta.error && (

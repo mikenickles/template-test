@@ -42,3 +42,12 @@ describe("clean model text", () => {
     expect(r.parts[0]).toEqual({ type: "text", text: "Foggy." });
   });
 });
+
+describe("OpenAI's own citation links (0.66.4)", () => {
+  it("drops the auto links and keeps links written on purpose", () => {
+    const t = "Some labels say 1 every 2 to 4 hours. ([dailymed.nlm.nih.gov](https://dailymed.nlm.nih.gov/x?utm_source=openai))\n\nSkip nasal sprays. ([nccih.nih.gov](https://nccih.nih.gov/zinc?utm_source=openai), [nih.gov](https://nih.gov/a?utm_source=openai))";
+    expect(cleanModelText(t)).toBe("Some labels say 1 every 2 to 4 hours.\n\nSkip nasal sprays.");
+    expect(cleanModelText("See [the label](https://dailymed.nlm.nih.gov/x?utm_source=openai) first.")).toBe("See the label first.");
+    expect(cleanModelText("Here's the [recall notice](https://fda.gov/recall).")).toBe("Here's the [recall notice](https://fda.gov/recall).");
+  });
+});

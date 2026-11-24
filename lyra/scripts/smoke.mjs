@@ -815,10 +815,15 @@ try {
   check((await page.locator(".intent-chip").count()) === 0, "the chip goes once the message is sent");
   await page.getByPlaceholder("Message Tomo").fill("What's on my plate?");
   await page.getByRole("button", { name: "Send" }).click();
-  await page.getByRole("button", { name: /How I got this · 1 step/ }).click();
-  await page.locator(".how-got-list", { hasText: "Checked your tasks" }).waitFor();
+  const plate = page.locator(".reply", { hasText: /what's open on your list|list is clear/ }).last();
+  await plate.waitFor();
+  check((await page.locator(".how-got, .sources").count()) === 0, "replies are clean: no sources or steps under them");
+  await plate.click({ button: "right" });
+  const actions = page.getByRole("dialog", { name: "Message actions" });
+  await actions.locator(".how-got-list", { hasText: "Checked your tasks" }).waitFor();
   await shot("light-31c-how-i-got-this");
-  check(true, "a reply that looked things up says how, in plain steps you can open");
+  check(true, "a long-press shows how Tomo got the answer, in plain steps");
+  await page.keyboard.press("Escape");
   await page.locator(".status-pill", { hasText: /Reminder at/ }).waitFor({ timeout: 15_000 });
   check(true, "a reminder set in chat shows as what's next under Tomo's avatar");
   await page.getByPlaceholder("Message Tomo").fill("What's next?");

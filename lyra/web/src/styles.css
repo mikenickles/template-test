@@ -10684,3 +10684,16 @@ html[data-theme="sage"] .tabbar .tabbar-inner,
 html[data-theme="night"] .tabbar .tabbar-inner {
   background: color-mix(in srgb, var(--surface) 90%, transparent);
 }
+
+/* (0.66.4) sources and steps live in the long-press sheet, not under each reply */
+.sheet-more {
+  margin: 0 0 var(--s3);
+  display: grid;
+  gap: 6px;
+}
+.sheet-more .sources {
+  margin: 0;
+}
+.sheet-more .how-got-list {
+  margin: 0;
+}

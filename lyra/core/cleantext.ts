@@ -7,6 +7,12 @@
  */
 const MARKED = /[ \t]*[^]*/g;
 const PRIVATE = /[-]/g;
+/** OpenAI's web search also adds its own citation links, "([site.com](https://…?utm_source=openai))".
+ * Sources are kept with the message, so the reply stays clean; links written on purpose (no utm tag) stay. */
+const AUTO_LINK = String.raw`\[[^\]\n]{1,120}\]\(https?:\/\/[^)\s]*utm_source=openai[^)\s]*\)`;
+const AUTO_CITES = new RegExp(String.raw`[ \t]*\(\s*` + AUTO_LINK + String.raw`(?:\s*[,;]?\s*` + AUTO_LINK + String.raw`)*\s*\)`, "g");
+const AUTO_ONE = /\[([^\]\n]{1,120})\]\(https?:\/\/[^)\s]*utm_source=openai[^)\s]*\)/g;
+const DOMAIN = /^[\w.-]+\.[a-z]{2,}$/i;
 const BARE_IDS = /[ \t]*\b(?:cite|filecite|navlist|entity)?(?:turn\d+(?:search|forecast|news|view|fetch|open|find|image|product|finance|sports|time|calc|click)\d+)+\b/gi;
 
 export function cleanModelText(text: string): string {
@@ -14,6 +20,8 @@ export function cleanModelText(text: string): string {
   const out = text
     .replace(MARKED, "")
     .replace(PRIVATE, "")
+    .replace(AUTO_CITES, "")
+    .replace(AUTO_ONE, (_, label: string) => (DOMAIN.test(label.trim()) ? "" : label))
     .replace(BARE_IDS, "")
     .replace(/[ \t]+([.,;:!?)])/g, "$1")
     .replace(/[ \t]{2,}/g, " ")
