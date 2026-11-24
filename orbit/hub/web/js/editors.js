@@ -415,6 +415,7 @@ export function Settings({ state, notify, refresh, onClose, onIntro, onUpdate, p
       <div class="title-s">Away from home</div>
       <div class="body-s muted">${state.hub.remote?.length ? html`Your phone reaches this PC anywhere through Tailscale, at <span class="mono">${state.hub.remote[0]}</span>.` : 'Not set up. Install Tailscale on this PC and your phone and sign in to both with the same account; Treehouse notices within a minute.'}</div></div>
       ${!state.hub.remote?.length && html`<a class="pill" href="https://tailscale.com/download" target="_blank" rel="noopener noreferrer">Get Tailscale</a>`}</div></div>
+    ${onThisPC && html`<${Background} notify=${notify} />`}
 
           <div class="section-title">Updates</div>
     <div class="card">
@@ -742,4 +743,37 @@ function ScheduleForm({ room, schedule, onClose, onSave, onDelete, onRun }) {
     ${schedule && html`<button class="button secondary wide" style="margin-top:24px" onClick=${() => onRun(schedule)}>Run it now</button>
       <button class="button danger" style="margin-top:16px" onClick=${() => onDelete(schedule)}>Delete schedule</button>`}
   <//>`;
+}
+
+/**
+ * On a Windows PC: Treehouse runs with no window. Whether it starts with Windows, and a way to stop it; the
+ * Treehouse shortcut starts it again.
+ */
+function Background({ notify }) {
+  const [info, setInfo] = useState(null);
+  const [stopping, setStopping] = useState(false);
+  useEffect(() => { api.background().then(setInfo).catch(() => {}); }, []);
+  if (!info?.supported) return null;
+  const toggle = () => api.setStartWithWindows(!info.autostart).then(setInfo).catch((e) => notify(e.message));
+  const stop = () => {
+    if (!confirm('Stop Treehouse on this PC? Your phone and agents can\'t reach it until you open Treehouse again from its shortcut.')) return;
+    setStopping(true);
+    api.stopHub().catch(() => {});
+  };
+  return html`<div class="section-title">Running</div>
+    <div class="card">
+      <div class="row"><span style="flex:1;min-width:0">
+        <div class="title-s">${info.hidden ? 'Running in the background' : 'Running in a window'}</div>
+        <div class="body-s muted">${info.hidden
+          ? 'No window to keep open. Open Treehouse any time from its shortcut on your desktop or in the Start menu.'
+          : 'Keep that window open, or start Treehouse from its shortcut on your desktop or in the Start menu to run it with no window.'}</div></span></div>
+      <button class="row button-row" role="switch" aria-checked=${info.autostart} onClick=${toggle}>
+        <span style="flex:1;min-width:0;text-align:left"><div class="title-s">Start with Windows</div>
+          <div class="body-s muted">Treehouse starts in the background when you sign in, so your phone can always reach it.</div></span>
+        <${Switch} on=${info.autostart} /></button>
+      <div class="row"><span style="flex:1;min-width:0">
+        <div class="title-s">${stopping ? 'Treehouse is stopping' : 'Stop Treehouse'}</div>
+        <div class="body-s muted">${stopping ? 'Open it again from its shortcut when you need it.' : 'Your phone and agents can\'t reach it until you open it again.'}</div></span>
+        ${!stopping && html`<button class="pill" onClick=${stop}>Stop</button>`}</div>
+    </div>`;
 }

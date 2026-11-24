@@ -71,7 +71,7 @@ const JUST_PAIRED_MS = 60_000;
  * bearer token a phone receives when it pairs with the code shown on the PC.
  */
 export class Hub {
-  constructor({ store, providers, folders = new Folders(), prices = {}, name, onPairingCode = () => {}, updates = null, onRestart = null, feedUrl = null, google = new Google(), browser = null, log = () => {} }) {
+  constructor({ store, providers, folders = new Folders(), prices = {}, name, onPairingCode = () => {}, updates = null, onRestart = null, feedUrl = null, google = new Google(), browser = null, log = () => {}, background = null }) {
     this.store = store;
     // Updates saved in the updates folder; `onRestart` is how the hub restarts itself once one is installed.
     this.updates = updates ?? new Updates({
@@ -94,6 +94,8 @@ export class Hub {
     this.watchers = new Set(); // phones following every room, to notify when replies land
     // The user's Google account, connected from the PC, for agents with the "google" ability.
     this.google = google;
+    // Windows only: running with no window, starting with Windows, and stopping from the PC's page.
+    this.background = background;
     // The Treehouse browser: Chrome or Edge on this PC with its own profile, for agents with the "browser" ability.
     this.browser = browser ?? new Browser({ dataDir: store.dir });
     this.orchestrator = new Orchestrator({
@@ -866,6 +868,18 @@ export class Hub {
         this.store.save();
         res.setHeader('set-cookie', signInCookie(token));
         return { hub: { name: this.name, version: VERSION } };
+      }
+      if (route === 'GET /background') return this.background ? { supported: true, ...this.background.status() } : { supported: false };
+      if (route === 'PUT /background') {
+        if (!this.background) throw new HttpError(404, 'Starting with the computer is set up automatically only on Windows.');
+        this.background.setAutostart(Boolean((await this.#body(req)).autostart));
+        return { supported: true, ...this.background.status() };
+      }
+      if (route === 'POST /stop') {
+        if (!this.background) throw new HttpError(404, 'Stop Treehouse where you started it.');
+        // After the answer is on its way.
+        setTimeout(() => this.background.stop(), 300);
+        return { stopping: true };
       }
       if (route === 'GET /folders') return { folders: this.folders.list() };
       if (route === 'POST /folders') {

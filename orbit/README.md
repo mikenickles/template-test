@@ -107,7 +107,11 @@ Install [Node.js](https://nodejs.org) (the LTS version), then double-click
 - opens the pairing page in your browser (`http://localhost:8787/pair`) with a QR code, and
 - offers to start the hub automatically whenever you sign in to Windows.
 
-Keep its window open while you use Treehouse. On a Mac or Linux, run `npm start` in `hub/`.
+Then the window closes by itself: on Windows, Treehouse keeps running in the background with no window. A
+**Treehouse** shortcut on your desktop and in the Start menu starts it if needed and opens it. Settings,
+This PC, on the PC's Treehouse page turns "Start with Windows" on or off and can stop it. Its output goes to
+`hub.log` in `~/.orbit-hub`. To keep a window instead, run `Start Orbit.bat --window`. On a Mac or Linux,
+run `npm start` in `hub/`.
 
 If you skipped a step, you can redo it from the `hub` folder:
 `npm run firewall` (allow phones through Windows Firewall), `npm run autostart:on`

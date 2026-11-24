@@ -9,7 +9,12 @@ runs on the user's own devices.
 - **The hub** runs on the user's always-on PC (Windows, Mac or Linux). It's where everything happens: it
   calls the AI models, runs the conversations, keeps the history, and holds the API keys, the Google sign-in
   and shared folders. Conversations keep going on the PC while the phone is asleep. It starts with
-  "Start Orbit" on the PC (an old name kept for the file) and can start itself when the PC starts.
+  "Start Orbit" on the PC (an old name kept for the file) and can start itself when the PC starts. On Windows it
+  runs in the background with no window to keep open: after it starts, the window closes by itself. A
+  "Treehouse" shortcut on the desktop and in the Start menu starts it if needed and opens the desktop app. On
+  the PC's Treehouse page, Settings, This PC shows whether it's running in the background, turns "Start with
+  Windows" on or off, and has Stop. If the phone can't reach the PC, the hub isn't running: open Treehouse from
+  that shortcut on the PC.
 - **The phone app** (Android) pairs with the hub by scanning a QR code the PC shows, or by typing the PC's
   address and a six-digit code.
 - **The desktop app** is the same rooms and crew in a browser on the PC: open http://localhost:8787 (the PC's

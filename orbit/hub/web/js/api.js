@@ -94,6 +94,10 @@ export const api = {
   renamePc: (name) => request('PUT', '/api/hub', { name }),
   /** Allows or denies a big action an agent wants to take in the Treehouse browser. */
   decide: (id, allow) => request('POST', `/api/approvals/${id}`, { allow }),
+  /** Windows: Treehouse running with no window, starting with Windows, and stopping it. */
+  background: () => request('GET', '/local/background', undefined, local),
+  setStartWithWindows: (autostart) => request('PUT', '/local/background', { autostart }, local),
+  stopHub: () => request('POST', '/local/stop', {}, local),
   // Sharing a folder is for the PC itself only.
   pairInfo: () => request('GET', '/pair.json'),
   shareFolder: (path) => request('POST', '/local/folders', { path }, local),

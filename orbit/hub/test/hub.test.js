@@ -7,7 +7,7 @@ import { Store } from '../src/store.js';
 import { KeyCheck, ProviderError, Providers } from '../src/providers.js';
 import { qrTerminal, pairingLink } from '../src/qr.js';
 import { encodeCommand, ruleScript, ensureFirewall } from '../src/firewall.js';
-import { launcherScript } from '../src/autostart.js';
+import { iconFile, launcherScript } from '../src/autostart.js';
 import { Hub } from '../src/server.js';
 import { buildTranscript, findMentions } from '../src/orchestrator.js';
 
@@ -411,10 +411,52 @@ test('the firewall script decodes to the two rules, and is skipped off Windows',
   }
 });
 
-test('the sign-in launcher starts the hub minimized in the background', () => {
-  const script = launcherScript('C:\\Users\\me\\orbit\\hub');
-  assert.match(script, /start "Orbit hub" \/min ".*Start Orbit\.bat" --background/);
+test('the launcher starts the hub with no window unless it is running, and opens it when asked', () => {
+  const script = launcherScript({ dir: 'C:\\Users\\Jo "J" Smith\\hub', port: 8790, log: 'C:\\Users\\Jo\\.orbit-hub\\hub.log' });
   assert.ok(script.includes('\r\n'), 'Windows line endings');
+  // Window style 0: hidden. Input from nul, so the script's last "press any key" never waits.
+  assert.match(script, /shell\.Run "cmd \/c """.*Start Orbit\.bat"" --background < nul > ""C:\\Users\\Jo\\\.orbit-hub\\hub\.log"" 2>&1""", 0, False/);
+  assert.ok(script.includes('shell.Environment("Process")("ORBIT_HIDDEN") = "1"'), 'the hub knows it has no window');
+  assert.ok(script.includes('shell.CurrentDirectory = "C:\\Users\\Jo ""J"" Smith\\hub"'), 'quotes are doubled');
+  assert.ok(script.includes('request.open "GET", "http://127.0.0.1:8790/", False'), 'checks for a running hub first');
+  assert.ok(script.includes('shell.Run "http://localhost:8790/", 1, False'), 'with /open, opens Treehouse');
+});
+
+test('the shortcut icon is the app icon in an .ico', () => {
+  const png = fs.readFileSync(new URL('../web/icons/icon-192.png', import.meta.url));
+  const ico = iconFile(png);
+  assert.deepEqual([...ico.subarray(0, 8)], [0, 0, 1, 0, 1, 0, 192, 192]);
+  assert.equal(ico.readUInt32LE(14), png.length);
+  assert.equal(ico.readUInt32LE(18), 22);
+  assert.ok(ico.subarray(22).equals(png));
+});
+
+test('on Windows the PC page shows how Treehouse runs, turns starting with Windows on and off, and stops it', async (t) => {
+  const store = new Store(fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-hub-')));
+  store.isNew = false;
+  let autostart = false;
+  let stopped = 0;
+  const background = {
+    status: () => ({ autostart, hidden: true, log: 'hub.log' }),
+    setAutostart: (on) => { autostart = on; },
+    stop: () => { stopped++; },
+  };
+  const hub = new Hub({ store, providers: new Providers({}, {}), name: 'Test PC', background });
+  t.after(() => hub.close());
+  const port = await hub.listen(0, '127.0.0.1');
+  const local = (method, route, body) => fetch(`http://localhost:${port}${route}`, { method, headers: { 'x-orbit-local': '1', 'content-type': 'application/json' }, body: body && JSON.stringify(body) });
+  assert.deepEqual(await (await local('GET', '/local/background')).json(), { supported: true, autostart: false, hidden: true, log: 'hub.log' });
+  assert.equal((await (await local('PUT', '/local/background', { autostart: true })).json()).autostart, true);
+  assert.equal(autostart, true);
+  assert.equal((await fetch(`http://localhost:${port}/local/stop`, { method: 'POST' })).status, 403, 'only the page itself may stop it');
+  assert.deepEqual(await (await local('POST', '/local/stop')).json(), { stopping: true });
+  await new Promise((r) => setTimeout(r, 400));
+  assert.equal(stopped, 1);
+
+  const elsewhere = new Hub({ store: new Store(fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-hub-'))), providers: new Providers({}, {}), name: 'Mac' });
+  t.after(() => elsewhere.close());
+  const other = await elsewhere.listen(0, '127.0.0.1');
+  assert.deepEqual(await (await fetch(`http://localhost:${other}/local/background`)).json(), { supported: false });
 });
 
 test('the hub finds its home address and its Tailscale address, and tells the phone both', async (t) => {

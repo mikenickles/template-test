@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import readline from 'node:readline/promises';
@@ -18,6 +19,10 @@ const config = loadConfig();
 // Started from Windows sign-in: run quietly, no questions, no browser.
 const background = process.argv.includes('--background') || Boolean(process.env.ORBIT_NO_BROWSER);
 const interactive = process.stdin.isTTY && !background;
+// On Windows the hub moves itself to the background, with no window, unless asked to keep one.
+const keepWindow = process.argv.includes('--window') || Boolean(process.env.ORBIT_WINDOW);
+const windows = autostart.supported();
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const store = new Store(dataDir);
 const providers = new Providers(config.providers, process.env, (updated) => {
@@ -57,8 +62,80 @@ function restartForUpdate(version) {
 const hub = new Hub({
   store, providers, folders, prices: config.prices, name: config.name, onPairingCode: () => showPairing(), onRestart: restartForUpdate,
   feedUrl: feedUrl(hubDir, config), google, log: (line) => console.log(line),
+  // Running without a window: whether it starts with Windows, and stopping it from the Treehouse page.
+  background: windows ? {
+    status: () => ({ autostart: autostart.isEnabled(), hidden: autostart.isHidden(), log: autostart.logPath() }),
+    setAutostart: (on) => {
+      if (on) autostart.enable();
+      else autostart.disable();
+      config.autostart = on;
+      saveConfig(config);
+    },
+    stop: () => {
+      console.log('Stopped from the Treehouse page.');
+      hub.close();
+      process.exit(0);
+    },
+  } : null,
 });
-const port = await hub.listen(Number(process.env.PORT) || config.port);
+
+/**
+ * Listens on the hub's port. Started hidden right after a window handed over, the old hub may still be letting
+ * go of it for a moment, so a busy port is tried again for a little while.
+ */
+async function listen(wanted) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await hub.listen(wanted);
+    } catch (err) {
+      if (err.code !== 'EADDRINUSE') throw err;
+      // Started by hand while Treehouse already runs in the background: open it, and leave that one running.
+      if (!autostart.isHidden() && (await alreadyRunning(wanted))) {
+        console.log('Treehouse is already running in the background. Opening it...');
+        openInBrowser(`http://localhost:${wanted}`);
+        await sleep(1500);
+        closeWindow();
+        process.exit(0);
+      }
+      if (attempt >= 15) throw err;
+      await sleep(2000);
+    }
+  }
+}
+
+async function alreadyRunning(port) {
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/api/hub`, { signal: AbortSignal.timeout(2000) });
+    return res.ok && (await res.json()).app === 'orbit-hub';
+  } catch {
+    return false;
+  }
+}
+
+/** Started by Start Orbit.bat: closes its window too, rather than leaving "press any key" behind. */
+function closeWindow() {
+  if (!process.env.ORBIT_SUPERVISED) return;
+  try {
+    process.kill(process.ppid);
+  } catch {
+    // The window just stays until it's closed.
+  }
+}
+const port = await listen(Number(process.env.PORT) || config.port);
+
+// The launcher and the Treehouse shortcut, rewritten each start so they follow the hub. Starting with Windows
+// switches from the old minimized window to the hidden launcher by itself.
+if (windows) {
+  autostart.prepare(port);
+  if (autostart.isEnabled() || config.autostart) autostart.enable();
+  const firstTime = !config.shortcuts;
+  autostart.makeShortcuts({ desktop: firstTime }).then((made) => {
+    if (made && firstTime) {
+      config.shortcuts = true;
+      saveConfig(config);
+    }
+  });
+}
 hub.startDiscovery(config.discoveryPort, port);
 
 // The home network address first, and a Tailscale address for away from home if the PC has one.
@@ -116,19 +193,43 @@ if (!background && store.state.devices.length === 0) openInBrowser(pairPage);
 // First run on Windows: offer to start with the computer, so the hub is always there.
 if (interactive && autostart.supported() && config.autostart === undefined) {
   const prompt = readline.createInterface({ input: process.stdin, output: process.stdout });
-  const answer = (await prompt.question('Start the Treehouse hub automatically when you sign in to Windows? (Y/n) ')).trim().toLowerCase();
+  const answer = (await prompt.question('Start Treehouse automatically when you sign in to Windows? (Y/n) ')).trim().toLowerCase();
   prompt.close();
   config.autostart = answer !== 'n' && answer !== 'no';
   saveConfig(config);
   if (config.autostart) {
     autostart.enable();
-    console.log('Done. It will start minimized when you sign in. Turn this off with "npm run autostart:off".');
+    console.log('Done. It will start in the background when you sign in. Change this on the Treehouse page, Settings, This PC.');
   } else {
-    console.log('OK. You can turn it on later with "npm run autostart:on".');
+    console.log('OK. You can turn it on later on the Treehouse page, Settings, This PC.');
   }
 }
 
-console.log(`Keep this window open while you use Treehouse. Settings live in ${configFile}.`);
+/**
+ * Hands over to a copy of the hub with no window, through the launcher, then closes this window. Nothing is
+ * lost: the new copy reads the same data. If Windows won't run the launcher, this window keeps the hub.
+ */
+async function moveToBackground() {
+  console.log('');
+  console.log('Treehouse runs in the background from now on, so this window will close by itself.');
+  console.log('Open Treehouse any time from its shortcut on your desktop or in the Start menu.');
+  await sleep(interactive ? 8000 : 2000);
+  if (!fs.existsSync(autostart.launcherPath())) {
+    console.log(`Keep this window open while you use Treehouse. Settings live in ${configFile}.`);
+    return;
+  }
+  hub.close();
+  await sleep(500);
+  if (!(await autostart.startHidden())) {
+    console.log('Windows would not start Treehouse in the background. Double-click Start Orbit.bat to start it again.');
+    process.exit(1);
+  }
+  closeWindow();
+  process.exit(0);
+}
+
+if (windows && !autostart.isHidden() && !keepWindow) await moveToBackground();
+else console.log(`${!windows ? 'Treehouse is running.' : autostart.isHidden() ? 'Treehouse is running in the background.' : 'Keep this window open while you use Treehouse.'} Settings live in ${configFile}.`);
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
