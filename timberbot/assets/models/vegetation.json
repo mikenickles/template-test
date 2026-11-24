@@ -1,0 +1,44 @@
+{
+ "pine_a": {
+  "height": 10.0,
+  "trunkRadius": 0.199,
+  "crownRadius": 2.825
+ },
+ "pine_b": {
+  "height": 10.0,
+  "trunkRadius": 0.189,
+  "crownRadius": 2.617
+ },
+ "pine_c": {
+  "height": 10.0,
+  "trunkRadius": 0.219,
+  "crownRadius": 3.824
+ },
+ "oak_a": {
+  "height": 9.0,
+  "trunkRadius": 0.297,
+  "crownRadius": 4.548
+ },
+ "oak_b": {
+  "height": 9.0,
+  "trunkRadius": 0.223,
+  "crownRadius": 4.31
+ },
+ "birch_a": {
+  "height": 10.0,
+  "trunkRadius": 0.139,
+  "crownRadius": 3.017
+ },
+ "bush_a": {
+  "height": 1.487,
+  "crownRadius": 0.985
+ },
+ "fern_a": {
+  "height": 0.5,
+  "crownRadius": 0.8
+ },
+ "log_a": {
+  "length": 4.2,
+  "radius": 0.27
+ }
+}

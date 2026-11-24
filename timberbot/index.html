@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timberbot — Forest Harvest &amp; Build</title>
+<link rel="stylesheet" href="./style.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud">
+  <div id="inventory" class="panel">
+    <div class="slot" id="slot-wood"><span class="icon" id="icon-wood"></span><span class="num" id="n-wood">0</span><span class="lbl">Wood</span></div>
+    <div class="slot" id="slot-stone"><span class="icon" id="icon-stone"></span><span class="num" id="n-stone">0</span><span class="lbl">Stone</span></div>
+  </div>
+
+  <div id="topright">
+    <button id="btn-mute" class="chip" tabindex="-1" title="Mute / unmute (M)"></button>
+    <button id="btn-help" class="chip" tabindex="-1" title="Controls (H)"><span>Controls</span><kbd>H</kbd></button>
+    <button id="btn-qa" class="chip" tabindex="-1" title="QA overlay (T)"><span>QA</span><kbd>T</kbd></button>
+  </div>
+
+  <div id="qa" class="panel hidden"></div>
+
+  <div id="help" class="panel">
+    <h3>Controls</h3>
+    <ul>
+      <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / arrows <span>move (camera-relative)</span></li>
+      <li>Mouse drag or <kbd>Q</kbd><kbd>E</kbd> <span>orbit camera</span></li>
+      <li>Scroll wheel <span>zoom 5–20 m</span></li>
+      <li><kbd>Space</kbd> / left-click <span>harvest (range 3.5 m)</span></li>
+      <li><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> <span>build · <kbd>R</kbd> rotate</span></li>
+      <li>Right-click / <kbd>Esc</kbd> <span>cancel build</span></li>
+      <li><kbd>T</kbd> QA overlay · <kbd>M</kbd> mute · <kbd>H</kbd> hide</li>
+    </ul>
+  </div>
+
+  <div id="toast"></div>
+  <div id="prompt" class="hidden"></div>
+  <div id="buildhint" class="hidden"></div>
+  <div id="buildbar"></div>
+</div>
+
+<div id="loading">
+  <div class="load-card">
+    <div class="logo">TIMBER<span>BOT</span></div>
+    <p class="tag">Harvest the golden-hour forest. Build your camp.</p>
+    <div class="bar"><div id="load-bar"></div></div>
+    <div id="load-status">Starting…</div>
+    <button id="start" class="hidden">Click to start</button>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
