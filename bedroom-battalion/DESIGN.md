@@ -1007,3 +1007,149 @@ P2; decals not like tiles. From round 3: `soldier.bodyTint` 0.7; refresh the two
 - Dead soldiers tint toward cool grey `#7E8288`.
 - Sound is stereo-panned; enemy footsteps are audible within 25 units.
 - Heap: the bug tester measured the JS heap flat at about 9 MB, while the visual tester saw about 150 MB of process memory. Both are flat. The visual tester reports process memory in the re-check.
+
+## 18. Round 6: animated-film polish (user request, 2026-11-24)
+
+User request: guns look more real; the environment looks more real, like an animated feature film (Pixar was named
+as the style reference); more posters and kids' decor; a moving ceiling fan; a more real outside; "etc".
+User instruction: no tests and no tester passes. The user plays it after the build. The only check allowed is a static
+syntax parse of the module script (no running the game).
+
+Style reference only. Copy nothing from any film or brand: no characters, logos, named toys, signature props, or
+iconic wallpapers. In particular, no blue-sky cloud wallpaper and no cowboy or space-ranger toys. All poster
+content is invented.
+
+### 18.1 Rules that still hold
+- Gameplay frozen at commit 86e1a0c: collider hash `e2904076`, the current waypoint and hit-volume hashes, and every
+  CONFIG gameplay section. All new decor is either out of reach (walls above reachable heights, the ceiling, outside
+  the window) or flat (no more than 0.1 proud of the surface it sits on). Add no new colliders.
+- Readability (17.12 and 17.13) beats looks. Soldier outline stays. No surface that soldiers are seen against within
+  dE 25 of Tan `#D9A75A` or Green as rendered, sun or shade. Post effects (bloom, AO, grade) must not wash out or
+  darken soldiers. Clipping to white stays under 2 % in every named view.
+- One shadow-casting light. Everything procedural; the only external code is three@0.170.0 from jsDelivr
+  (`build/` plus `examples/jsm/` addons through an import map).
+- No file-size limit.
+
+### 18.2 Rendering: the animated-film look
+- **Materials:** physically based throughout (MeshStandard or MeshPhysical), replacing the 17.2 toon and Lambert look.
+  - Plastic toys: glossy, roughness 0.25 to 0.4, clearcoat on hero toys.
+  - Wood: satin, with grain in the normal and roughness maps.
+  - Fabric: sheen (quilt, curtains, pillows, rug).
+  - Paper: matte.
+  - Painted walls: eggshell.
+  - Metal: blued or brushed.
+- **Maps:** procedural normal and roughness maps from canvas height maps, in an atlas like 4A's.
+- **Soft wear:** rounded edges, soft wear on corners, slightly saturated colours, nothing pure black or pure white.
+- **Environment light:** a PMREM environment built from a small scene with the room's own colours, giving soft ambient
+  and reflections. Add a hemisphere fill and a warm bounce fill from the sunlit floor (no shadow).
+- **Sun and lamps:** the sun stays the one shadow light, with soft PCF or VSM shadows. The fan light kit is a soft
+  emissive glow, with an unshadowed point light if it is cheap.
+- **Post:** an EffectComposer chain.
+  - Outside pass (18.5), then room pass.
+  - GTAO on High.
+  - Bloom with a high threshold, so only the window, sun, bulbs and muzzle flash glow.
+  - A grade and vignette pass: warm highlights, soft lifted shadows, gentle vignette.
+  - AgX or ACES tone mapping.
+  - SMAA on High, FXAA on Medium.
+  - Title screen only: shallow depth of field.
+- **Quality presets** (pause and options menu):
+  - **Low:** no post, half-resolution shadow map, no normal maps.
+  - **Medium:** bloom, grade and FXAA.
+  - **High:** adds GTAO and SMAA.
+  - **Auto (default):** dynamic resolution from 0.6 to 1.0 of the window, steered by frame time, to hold 60 fps.
+- **Shader compile:** every material is compiled during loading (compileAsync), behind a loading bar. No new programs
+  mid-match.
+
+### 18.3 Guns: more real
+- **Real proportions and detail** (generic, unnamed designs). Gameplay numbers are unchanged.
+  - **Rifle:** a semi-auto battle rifle with a wood stock and handguard, a steel receiver, and a front sight post.
+  - **SMG:** compact, stick magazine, folding wire stock.
+  - **Sniper:** bolt action, wood stock, scope with lens glint.
+  - **Pistol:** steel semi-auto with a moving slide.
+  - **Grenade:** a frag grenade with a spoon and a ring pin. It replaces the firecracker.
+- **Materials:** blued steel (metalness about 0.9, roughness 0.35, darker in recesses, worn bright edges), wood with
+  grain, polymer grips with stipple normal.
+- **Animation:**
+  - The bolt or slide cycles on every shot.
+  - Shell casings eject: brass, pooled, bounce and roll, with a tink per surface.
+  - Reload swaps the magazine: the mag drops out and a new one goes in. The sniper reloads by working its bolt.
+  - Iron sights line up at hip on the rifle and pistol.
+  - Muzzle flash: a star-shaped flash sprite, a brief light, a smoke puff.
+- **Soldier models:** the guns on soldiers use the same design as a low-detail merged version.
+- **Hands:** they stay green moulded plastic, because the player is a plastic soldier.
+- **Screen coverage:** the viewmodel covers no more than about 8 % of the screen.
+
+### 18.4 Room and decor
+- **Walls:**
+  - Painted with a soft brushed normal.
+  - A wallpaper border band at about y 60: an invented pattern of rockets and stars, not clouds.
+  - A light switch, outlets with a plug-in nightlight, and a heating vent.
+- **Posters**, all invented, each a 1024 canvas, paper with a slight curl, taped or pinned. A loose corner flutters
+  in the fan breeze. Put them on walls above reachable surfaces where a lane looks at them, and keep their colours
+  under the 18.1 rule:
+  1. A retro rocket over a ringed planet, "BLAST OFF!".
+  2. A dinosaur chart, "Dinosaurs of Long Ago", with generic silhouettes.
+  3. The solar system in a row.
+  4. An alphabet chart, A to Z, with simple icons.
+  5. A stylised world map.
+  6. Two crayon drawings, taped crooked: one of a family, a house and the sun; one of a green and tan army-men battle.
+  7. A felt pennant for an invented team, "Maple Street Rockets".
+  8. A door sign: "KEEP OUT - BATTALION HQ", hand-lettered.
+  9. A height chart on the door frame, with pencil marks, a name and ages.
+  10. A cork board with pinned drawings, a "1st" ribbon, polaroids of abstract scenes, and a school timetable.
+- **Ceiling:**
+  - Glow-in-the-dark stars and a moon (pale yellow-green, a faint glow).
+  - A hanging planet mobile and a model plane on fishing line, both turning slowly in the fan breeze.
+- **Lights and bunting:** warm fairy lights along the top of one wall (bulbs bloom), and paper bunting across a corner.
+- **Window:**
+  - Curtains with tie-backs that sway gently.
+  - A potted plant and a jar of marbles on the sill. The sill may hold visuals only above the soldiers' reach; if
+    a soldier can reach it, those props stay flat.
+  - Glass with a faint reflection and a little dirt at the edges.
+- **Rug:** a soft play rug in cool blues and greys. It must not be green or tan. Flat, 0.08 tall, visual only. The
+  footstep sound may change on the rug by a visual-region lookup, not a collider surface.
+
+### 18.5 Outside the window
+- **Rendering:** the outside is a separate scene with its own camera, using the same position and rotation, near 1 and
+  far 30000. It is drawn first; the room pass then clears only depth. It is seen only through the window, so cull and
+  scissor to the window's screen rectangle when you can.
+- **Scale:** 1 room unit is about 3 cm, so the yard is at real scale.
+- **Sky:**
+  - Gradient sky dome with soft drifting clouds (an fbm shader).
+  - A sun disk and glow placed along the room's sun direction.
+  - Birds that fly across sometimes.
+- **Yard:**
+  - A lawn with mowing stripes and colour variation.
+  - A wooden picket fence.
+  - 4 to 6 lush trees with puffy clustered foliage, swaying in the wind (vertex shader).
+  - Bushes and flowers.
+  - A swing set that sways slightly.
+  - A neighbour's house with a roof, windows and a chimney.
+  - Distant rolling hills and a tree line with aerial haze. Room fog does not apply.
+- **Light:** the outside is brighter than the room, and the window blooms softly.
+
+### 18.6 Ceiling fan
+- **Placement:** it replaces the ceiling light at `(60, 90 → about 80, 80)`. A downrod, a motor housing, 5 wood blades
+  with about 20 units of reach, and a frosted bowl light kit. Two pull chains swing with the wobble.
+- **Motion:** turns at about 1.5 revolutions per second, with a very slight wobble. A faint translucent motion disc
+  sits at blade height.
+- **Shadow:** the fan casts in the sun shadow, so blade shadows sweep where the sun puts them, but only if those
+  shadows don't fall on a lane at play height. If they would, the fan doesn't cast.
+- **Breeze:** curtains, poster corners, bunting, the mobile, the plane and the dust motes all move with the breeze.
+- **Height:** the blades must sit above every reachable surface plus jump height. This is visual only.
+
+### 18.7 Audio (part of "etc")
+- **Fan:** a quiet hum with a slow tick.
+- **Outside:** birdsong and leaf rustle through the window, panned to the window and louder near it.
+- **Weapons:** casing tinks per surface, magazine-swap clicks, bolt and slide sounds.
+- **Room:** new sounds stay under the 17.13 rule. A rifle at 30 units stays louder than any ambient sound.
+
+### 18.8 Performance
+There is no measuring this round (18 intro), so design for it:
+- Merge or instance all decor into the 4A spatial chunks.
+- Keep posters in one atlas.
+- Pool everything.
+- No per-frame allocation.
+- Draw-call target under 300 on High.
+- Textures under 192 MB.
+- Every program compiled at load.
