@@ -31,9 +31,9 @@ const BUBBLE_CHOICES: { id: AppState["bubbles"]; label: string; about: string }[
 /** The whole look, as a mood. Each card previews itself. */
 const THEME_CHOICES: { id: AppState["theme"]; label: string; about: string }[] = [
   { id: "paper", label: "Quiet", about: "Ink on white, one accent. The default." },
-  { id: "zine", label: "Zine", about: "Photocopied: ink edges, hard shadows, grain." },
-  { id: "radio", label: "Night Radio", about: "Always dark, with a warm glow." },
-  { id: "film", label: "Film", about: "Faded and soft, with a little grain." },
+  { id: "linen", label: "Linen", about: "Warm off-white, like Tomo's shell." },
+  { id: "sage", label: "Sage", about: "Pale green-grey, like the backpack." },
+  { id: "night", label: "Night", about: "Always dark, even when your phone isn't." },
 ];
 
 /** Every setting by name, with a few other words people might type, and where it lives. */
@@ -44,8 +44,8 @@ const FINDER: { label: string; more: string; where: string; href: string; phone?
   { label: "Live voice", more: "talk call speak voice mode", where: "AI model", href: "#/settings/model" },
   { label: "Usage", more: "tokens cost spend money how much", where: "Usage", href: "#/settings/usage" },
   { label: "Your name", more: "call me who", where: "You and appearance", href: "#/settings/you" },
-  { label: "Look", more: "theme zine night radio film paper dark mode style grain", where: "You and appearance", href: "#/settings/you" },
-  { label: "Accent color", more: "colour lime orange theme", where: "You and appearance", href: "#/settings/you" },
+  { label: "Look", more: "theme quiet linen sage night paper dark mode style warm cream green", where: "You and appearance", href: "#/settings/you" },
+  { label: "Accent color", more: "colour orange burnt honey cocoa brown moss green pine denim blue plum graphite grey theme", where: "You and appearance", href: "#/settings/you" },
   { label: "Your messages", more: "bubble bubbles chat style", where: "You and appearance", href: "#/settings/you" },
   { label: "Text size", more: "font bigger smaller larger display zoom read", where: "You and appearance", href: "#/settings/you" },
   { label: "Avatar size", more: "lyra picture orb bigger smaller display", where: "You and appearance", href: "#/settings/you" },
@@ -80,15 +80,16 @@ const FINDER: { label: string; more: string; where: string; href: string; phone?
   { label: "Activity", more: "log history what lyra did", where: "Activity", href: "#/activity" },
 ];
 
+/** (0.66) colors taken from Tomo, and colors that sit well beside them */
 const ACCENT_CHOICES: { id: AppState["accent"]; label: string }[] = [
-  { id: "lime", label: "Lime" },
   { id: "orange", label: "Burnt orange" },
-  { id: "yellow", label: "Yellow" },
-  { id: "red", label: "Red" },
-  { id: "maroon", label: "Maroon" },
-  { id: "navy", label: "Navy" },
-  { id: "indigo", label: "Indigo" },
-  { id: "teal", label: "Teal" },
+  { id: "honey", label: "Honey" },
+  { id: "cocoa", label: "Cocoa" },
+  { id: "moss", label: "Moss" },
+  { id: "pine", label: "Pine" },
+  { id: "denim", label: "Denim" },
+  { id: "plum", label: "Plum" },
+  { id: "graphite", label: "Graphite" },
 ];
 
 const TITLES: Record<SettingsSection, string> = {
@@ -244,10 +245,15 @@ function YouSection({ state, setState, toast, run, busy }: Omit<Props, "section"
           {THEME_CHOICES.map((t) => (
             <label key={t.id} className="theme-style" data-theme={t.id}>
               <input type="radio" name="theme" value={t.id} checked={state.theme === t.id} disabled={busy} onChange={() => void run(() => api.saveSettings({ theme: t.id }), `${t.label} it is`)} />
+              {/* a tiny chat in the card's own look: Tomo, a reply, your message, the tab underline */}
               <span className="theme-sample" aria-hidden="true">
-                <i className="theme-dot" />
-                <i className="theme-line" />
-                <i className="theme-line short" />
+                <i className="ts-face" />
+                <span className="ts-lines">
+                  <i />
+                  <i />
+                </span>
+                <i className="ts-me" />
+                <i className="ts-tab" />
               </span>
               <span className="name">{t.label}</span>
               <span className="about">{t.about}</span>

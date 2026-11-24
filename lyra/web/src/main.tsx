@@ -8,12 +8,16 @@ import { applySizes } from "./sizes";
 
 applySizes(); // text and avatar size, before the first paint
 
-// Apply the saved accent before the first paint, so the app doesn't flash lime.
+// Apply the saved accent and look before the first paint, so the app doesn't flash another color.
+// (0.66) colors and looks from before 0.66 show as their closest new one until the settings load.
+const OLD_ACCENT: Record<string, string> = { lime: "moss", yellow: "honey", red: "orange", maroon: "plum", navy: "denim", indigo: "denim", teal: "pine" };
+const OLD_LOOK: Record<string, string> = { radio: "night", zine: "paper", film: "paper" };
 try {
   const accent = localStorage.getItem("lyra.accent");
-  if (accent) document.documentElement.dataset.accent = accent;
+  if (accent) document.documentElement.dataset.accent = OLD_ACCENT[accent] ?? accent;
   document.documentElement.dataset.bubbles = localStorage.getItem("lyra.bubbles") || "softer";
-  document.documentElement.dataset.theme = localStorage.getItem("lyra.theme") || "paper";
+  const look = localStorage.getItem("lyra.theme") || "paper";
+  document.documentElement.dataset.theme = OLD_LOOK[look] ?? look;
 } catch {
   // storage unavailable: the default accent shows until settings load
 }

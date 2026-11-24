@@ -34,7 +34,7 @@ describe("backup and restore", () => {
   it("moves chats, channels, notebooks and the soul to another phone, without keys or Google sign-ins", async () => {
     const oldPhone = memStores();
     const a = await Lyra.start(platform({ provider: new FakeProvider() }, oldPhone));
-    await a.saveSettings({ userName: "Sam", keys: { anthropic: "sk-ant-secret" }, accent: "teal" });
+    await a.saveSettings({ userName: "Sam", keys: { anthropic: "sk-ant-secret" }, accent: "pine" });
     await a.chat("Remember that Rowan's party is Saturday", noop);
     const rowan = await a.createChannel({ name: "Rowan", about: "Birthday" });
     await a.chat("The bounce house is booked", noop, rowan.id);
@@ -53,7 +53,7 @@ describe("backup and restore", () => {
     const c = await Lyra.start(platform({ provider: new FakeProvider() }, newPhone)); // the app restarts after a restore
     const s = c.state();
     expect(s.userName).toBe("Sam");
-    expect(s.accent).toBe("teal");
+    expect(s.accent).toBe("pine");
     expect(s.keys.anthropic).toBe(false);
     expect(s.connectors.find((x) => x.id === "gmail")?.state).toBe("not_connected");
     expect(c.messages(null).map((m) => m.content)[0]).toContain("Rowan's party");

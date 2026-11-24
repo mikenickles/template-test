@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { setSetting, type DB } from "../core/db.ts";
 import { Lyra } from "../core/lyra.ts";
 import { FakeProvider } from "../core/providers/fake.ts";
 import type { GenerateResult } from "../core/providers/types.ts";
@@ -96,8 +97,24 @@ describe("Spotify", () => {
   it("keeps the look you pick, and only looks it knows", async () => {
     const lyra = await Lyra.start(platform());
     expect(lyra.state().theme).toBe("paper");
-    expect((await lyra.saveSettings({ theme: "radio" })).theme).toBe("radio");
-    await expect(lyra.saveSettings({ theme: "vaporwave" })).rejects.toThrow(/look/);
+    expect((await lyra.saveSettings({ theme: "night" })).theme).toBe("night");
+    expect((await lyra.saveSettings({ theme: "linen" })).theme).toBe("linen");
+    await expect(lyra.saveSettings({ theme: "vaporwave" as never })).rejects.toThrow(/look/);
+    await expect(lyra.saveSettings({ theme: "radio" as never })).rejects.toThrow(/look/);
+  });
+
+  it("moves looks and colors from before 0.66 to the closest new ones (0.66)", async () => {
+    const lyra = await Lyra.start(platform());
+    const db = (lyra as unknown as { db: DB }).db;
+    setSetting(db, "theme", "radio");
+    setSetting(db, "accent", "lime");
+    expect(lyra.state()).toMatchObject({ theme: "night", accent: "moss" });
+    setSetting(db, "theme", "zine");
+    setSetting(db, "accent", "navy");
+    expect(lyra.state()).toMatchObject({ theme: "paper", accent: "denim" });
+    setSetting(db, "accent", "chartreuse");
+    expect(lyra.state().accent).toBe("orange");
+    expect(await lyra.setupSummary()).toMatch(/Quiet look \(choices: Quiet, Linen, Sage, Night\), Burnt orange accent/);
   });
 
   it("refuses a grant wider than asked for", async () => {

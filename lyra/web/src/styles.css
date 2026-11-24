@@ -11,10 +11,10 @@
   --text: #111111;
   --text-muted: #6b6b6b;
   --border: #ececec;
-  --accent: #c4ef4b;
-  --accent-ink: #131416;
-  --accent-soft: #e8f4c2;
-  --accent-text: #4b6a00;
+  --accent: #d2602a;
+  --accent-ink: #ffffff;
+  --accent-soft: #f7ddcc;
+  --accent-text: #a4441a;
   --good: #2e7d4f;
   --warn: #b7791f;
   --bad: #c2412d;
@@ -81,10 +81,10 @@
     --text: #f2f2f2;
     --text-muted: #9b9ba0;
     --border: #252528;
-    --accent: #cbf25c;
-    --accent-ink: #10130a;
-    --accent-soft: #2a3317;
-    --accent-text: #cbf25c;
+    --accent: #ec7a40;
+    --accent-ink: #1a0b04;
+    --accent-soft: #3a2116;
+    --accent-text: #f29462;
     --good: #5cc48a;
     --warn: #e0a940;
     --bad: #f07a68;
@@ -107,14 +107,8 @@
   }
 }
 
-/* accent colors the user can pick in Settings; set on <html>, and on each swatch to preview it */
-[data-accent="lime"] {
-  --accent: #c4ef4b;
-  --accent-ink: #131416;
-  --accent-soft: #e8f4c2;
-  --accent-text: #4b6a00;
-}
-
+/* (0.66) accent colors the user can pick in Settings, taken from Tomo itself; set on <html>, and on each swatch to preview it */
+/* Burnt orange: Tomo's scarf */
 [data-accent="orange"] {
   --accent: #d2602a;
   --accent-ink: #ffffff;
@@ -122,56 +116,63 @@
   --accent-text: #a4441a;
 }
 
-[data-accent="yellow"] {
-  --accent: #f3c331;
-  --accent-ink: #131416;
-  --accent-soft: #faedc0;
-  --accent-text: #866200;
+/* Honey: warm gold beside the orange */
+[data-accent="honey"] {
+  --accent: #c98a1b;
+  --accent-ink: #1a1204;
+  --accent-soft: #f6e6c4;
+  --accent-text: #8a5c00;
 }
 
-[data-accent="red"] {
-  --accent: #e0352e;
+/* Cocoa: brown from Tomo's shading */
+[data-accent="cocoa"] {
+  --accent: #7b4a2f;
   --accent-ink: #ffffff;
-  --accent-soft: #f9d7d5;
-  --accent-text: #b5231d;
+  --accent-soft: #efe2d8;
+  --accent-text: #6e3f25;
 }
 
-[data-accent="maroon"] {
-  --accent: #7d2230;
+/* Moss: Tomo's backpack */
+[data-accent="moss"] {
+  --accent: #5d6b26;
   --accent-ink: #ffffff;
-  --accent-soft: #f0dadd;
-  --accent-text: #7d2230;
+  --accent-soft: #e5ead2;
+  --accent-text: #4a5720;
 }
 
-[data-accent="navy"] {
-  --accent: #1e3a6b;
+/* Pine: a deeper forest green */
+[data-accent="pine"] {
+  --accent: #2f6650;
   --accent-ink: #ffffff;
-  --accent-soft: #dae2f0;
-  --accent-text: #1e3a6b;
+  --accent-soft: #d7e8e0;
+  --accent-text: #255443;
 }
 
-[data-accent="indigo"] {
-  --accent: #5a5bd8;
+/* Denim: soft blue, the orange's opposite */
+[data-accent="denim"] {
+  --accent: #3d5f8c;
   --accent-ink: #ffffff;
-  --accent-soft: #e2e2fb;
-  --accent-text: #4445b6;
+  --accent-soft: #dce5f0;
+  --accent-text: #34527a;
 }
 
-[data-accent="teal"] {
-  --accent: #13897b;
+/* Plum: dusky, pairs with moss */
+[data-accent="plum"] {
+  --accent: #7a4867;
   --accent-ink: #ffffff;
-  --accent-soft: #d2ede9;
-  --accent-text: #0c6a5f;
+  --accent-soft: #efdfe8;
+  --accent-text: #6b3d59;
+}
+
+/* Graphite: Tomo's face screen */
+[data-accent="graphite"] {
+  --accent: #414348;
+  --accent-ink: #ffffff;
+  --accent-soft: #e9e9ea;
+  --accent-text: #333539;
 }
 
 @media (prefers-color-scheme: dark) {
-  [data-accent="lime"] {
-    --accent: #cbf25c;
-    --accent-ink: #10130a;
-    --accent-soft: #232c14;
-    --accent-text: #cbf25c;
-  }
-
   [data-accent="orange"] {
     --accent: #ec7a40;
     --accent-ink: #1a0b04;
@@ -179,46 +180,53 @@
     --accent-text: #f29462;
   }
 
-  [data-accent="yellow"] {
-    --accent: #f6cc48;
-    --accent-ink: #1a1404;
-    --accent-soft: #332a10;
-    --accent-text: #f6cc48;
+  [data-accent="honey"] {
+    --accent: #e0a73a;
+    --accent-ink: #1a1204;
+    --accent-soft: #33270f;
+    --accent-text: #ebbb5c;
   }
 
-  [data-accent="red"] {
-    --accent: #f25c52;
-    --accent-ink: #1c0605;
-    --accent-soft: #3a1714;
-    --accent-text: #f6827a;
+  [data-accent="cocoa"] {
+    --accent: #c08a64;
+    --accent-ink: #1a0e07;
+    --accent-soft: #33231a;
+    --accent-text: #d4a483;
   }
 
-  [data-accent="maroon"] {
-    --accent: #c85a6d;
-    --accent-ink: #1a0609;
-    --accent-soft: #361b20;
-    --accent-text: #e3889a;
+  [data-accent="moss"] {
+    --accent: #a3b55a;
+    --accent-ink: #12160a;
+    --accent-soft: #262b16;
+    --accent-text: #b8c973;
   }
 
-  [data-accent="navy"] {
-    --accent: #7096da;
-    --accent-ink: #0a1020;
-    --accent-soft: #18233b;
-    --accent-text: #94b1e8;
+  [data-accent="pine"] {
+    --accent: #5fb08f;
+    --accent-ink: #06140e;
+    --accent-soft: #15302a;
+    --accent-text: #7cc4a6;
   }
 
-  [data-accent="indigo"] {
-    --accent: #8c8df2;
-    --accent-ink: #0d0d24;
-    --accent-soft: #23234b;
-    --accent-text: #a7a8f6;
+  [data-accent="denim"] {
+    --accent: #7d9fd0;
+    --accent-ink: #0a1120;
+    --accent-soft: #1a2538;
+    --accent-text: #9db8e0;
   }
 
-  [data-accent="teal"] {
-    --accent: #3dc3b1;
-    --accent-ink: #04140f;
-    --accent-soft: #13302c;
-    --accent-text: #62d4c4;
+  [data-accent="plum"] {
+    --accent: #c48aae;
+    --accent-ink: #1a0a14;
+    --accent-soft: #33202c;
+    --accent-text: #d6a5c4;
+  }
+
+  [data-accent="graphite"] {
+    --accent: #c9cbd0;
+    --accent-ink: #111214;
+    --accent-soft: #2a2b2e;
+    --accent-text: #dcdde1;
   }
 }
 
@@ -5631,7 +5639,7 @@ button.orb {
 
 /* ---------- artifacts: dashboards, in the app's own look ---------- */
 /* Marks use the user's accent: fills in --accent on a --surface-2 pill track (pale accents like
-   lime and yellow are under 3:1 on the card, so every bar and meter writes its value out), lines
+   honey is under 3:1 on the card, so every bar and meter writes its value out), lines
    and dots in --accent-text (3:1 or better in every accent, light and dark). Text stays in ink. */
 
 .artifact-filters {
@@ -7821,10 +7829,11 @@ button.lp-svc:active {
 
 
 /* =========================================================================
-   Looks (0.46): the whole app as a mood. Set on <html data-theme>, and on each
-   card of the picker so it previews itself. Paper is the original; Zine and Film
-   follow the phone's light/dark; Night Radio is always dark. The accent color and
-   the bubble style stay the user's own choice in every look.
+   Looks (0.66): four page tones on Quiet's rules (ink, hairlines, one small accent).
+   Set on <html data-theme>, and on each card of the picker so it previews itself.
+   Quiet (id "paper"), Linen and Sage follow the phone's light/dark; Night is always dark.
+   The accent color and the bubble style stay the user's own choice in every look;
+   look blocks never set --accent* (Night copies the dark accent values below).
    ========================================================================= */
 
 /* Quiet (id "paper"), restated so its picker card looks right inside another look */
@@ -7833,41 +7842,20 @@ button.lp-svc:active {
   --shadow: 0 1px 2px rgba(19, 20, 22, 0.04), 0 10px 30px rgba(19, 20, 22, 0.07);
 }
 
-/* ---- Zine: photocopied. Ink edges, hard shadows, tighter corners, typewriter labels, grain. ---- */
-[data-theme="zine"] {
-  --bg: #f2eee2; --surface: #fcf9ef; --surface-2: #e5e0d0; --text: #111111; --text-muted: #55524a; --border: #1c1c1c;
-  --good: #1f6b40; --warn: #9a6410; --bad: #b3301e;
-  --orb: #111111; --orb-edge: #111111; --orb-line: rgba(242, 238, 226, 0.5); --orb-star: #f2eee2; --chart-line: #1c1c1c;
-  --drawer-bg: #e8e3d3; --drawer-hover: rgba(17, 17, 17, 0.05); --drawer-active: rgba(17, 17, 17, 0.1); --drawer-active-edge: #111111;
-  --tree-line: #1c1c1c; --scrim: rgba(17, 17, 17, 0.45);
-  --shadow: 3px 3px 0 #111111;
-  --radius: 10px; --radius-sm: 6px;
-  --mono: ui-monospace, "SF Mono", "Roboto Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+/* ---- Linen: a warm off-white page with warm greys, like Tomo's shell ---- */
+[data-theme="linen"] {
+  --bg: #f8f5f0; --surface: #f0ebe3; --surface-2: #e6dfd4; --text: #221d18; --text-muted: #766c61; --border: #e6dfd5;
+  --chart-line: #d6cdbf; --drawer-bg: #f8f5f0; --drawer-hover: rgba(34, 29, 24, 0.04); --drawer-active: #f0ebe3; --tree-line: #d9d0c3;
+  --scrim: rgba(34, 29, 24, 0.28);
+  --shadow: 0 1px 2px rgba(60, 45, 30, 0.04), 0 10px 30px rgba(60, 45, 30, 0.08);
 }
 
-/* ---- Night Radio: always dark, plum-black with a warm amber glow from above. ---- */
-[data-theme="radio"] {
-  /* (0.50.3) the dark is tinted by --night, a color picked to pair with each accent (set with the accents below) */
-  --night: #7a3fa0;
-  --bg: color-mix(in srgb, var(--night) 12%, #0c0c0d); --surface: color-mix(in srgb, var(--night) 13%, #161617);
-  --surface-2: color-mix(in srgb, var(--night) 16%, #202022); --border: color-mix(in srgb, var(--night) 22%, #2b2b2e);
-  --text: #f2f0eb; --text-muted: color-mix(in srgb, var(--night) 18%, #a4a3a0);
-  --good: #6fcf97; --warn: #f0b24a; --bad: #f58270;
-  --orb: var(--surface); --orb-edge: color-mix(in srgb, var(--night) 30%, #38383b); --orb-line: rgba(242, 240, 235, 0.38); --orb-star: #f2f0eb;
-  --chart-line: color-mix(in srgb, var(--night) 28%, #444447);
-  --drawer-bg: color-mix(in srgb, var(--night) 9%, #080809); --drawer-hover: rgba(242, 240, 235, 0.05); --drawer-active: rgba(242, 240, 235, 0.09); --drawer-active-edge: rgba(242, 240, 235, 0.22);
-  --tree-line: color-mix(in srgb, var(--night) 26%, #3a3a3d); --scrim: rgba(0, 0, 0, 0.55);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 10px 34px color-mix(in srgb, var(--night) 14%, transparent);
-  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; --series-5: #d55181; --series-other: #6b7280;
-  color-scheme: dark;
-}
-
-/* ---- Film: faded and soft. Lower contrast, a warm cast, a little grain. ---- */
-[data-theme="film"] {
-  --bg: #ebe6db; --surface: #f4f0e6; --surface-2: #dfd9cb; --text: #2c2a26; --text-muted: #7b766b; --border: #d2cbbb;
-  --orb: #2c2a26; --orb-line: rgba(235, 230, 219, 0.42); --orb-star: #ebe6db; --chart-line: #b9b2a2;
-  --drawer-bg: #e0dacc; --tree-line: #bfb8a8; --scrim: rgba(44, 42, 38, 0.3);
-  --shadow: 0 1px 2px rgba(44, 42, 38, 0.03), 0 12px 34px rgba(70, 60, 44, 0.08);
+/* ---- Sage: a pale green-grey page that echoes the backpack ---- */
+[data-theme="sage"] {
+  --bg: #f3f5f0; --surface: #e9ede4; --surface-2: #dde3d6; --text: #1a1d17; --text-muted: #66705d; --border: #dfe4d8;
+  --chart-line: #cdd5c4; --drawer-bg: #f3f5f0; --drawer-hover: rgba(26, 29, 23, 0.04); --drawer-active: #e9ede4; --tree-line: #d2d9c9;
+  --scrim: rgba(26, 29, 23, 0.28);
+  --shadow: 0 1px 2px rgba(30, 40, 25, 0.04), 0 10px 30px rgba(30, 40, 25, 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -7875,204 +7863,136 @@ button.lp-svc:active {
     --bg: #0f0f10; --surface: #19191b; --surface-2: #242427; --text: #f2f2f2; --text-muted: #9b9ba0; --border: #252528;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
   }
-  [data-theme="zine"] {
-    --bg: #0e0e0e; --surface: #181818; --surface-2: #242424; --text: #f1ede0; --text-muted: #a9a598; --border: #8f8b7e;
-    --good: #5cc48a; --warn: #e0a940; --bad: #f07a68;
-    --orb: #181818; --orb-edge: #f1ede0; --orb-line: rgba(241, 237, 224, 0.45); --orb-star: #f1ede0; --chart-line: #8f8b7e;
-    --drawer-bg: #080808; --drawer-hover: rgba(241, 237, 224, 0.06); --drawer-active: rgba(241, 237, 224, 0.12); --drawer-active-edge: #f1ede0;
-    --tree-line: #8f8b7e; --scrim: rgba(0, 0, 0, 0.6);
-    --shadow: 3px 3px 0 rgba(241, 237, 224, 0.7);
+  [data-theme="linen"] {
+    --bg: #171411; --surface: #201c18; --surface-2: #2a2520; --text: #eee7dd; --text-muted: #a39787; --border: #2d2722;
+    --chart-line: #3d362f; --drawer-bg: #171411; --drawer-hover: rgba(238, 231, 221, 0.05); --drawer-active: #201c18; --tree-line: #3a332c;
+    --scrim: rgba(0, 0, 0, 0.45);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
   }
-  [data-theme="film"] {
-    --bg: #1b1a17; --surface: #242320; --surface-2: #2e2c28; --text: #ddd7ca; --text-muted: #9a948a; --border: #383530;
-    --orb: #242320; --orb-edge: #3d3a34; --orb-line: rgba(221, 215, 202, 0.36); --orb-star: #ddd7ca; --chart-line: #4a463e;
-    --drawer-bg: #141311; --tree-line: #45413a; --scrim: rgba(0, 0, 0, 0.45);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 34px rgba(0, 0, 0, 0.4);
+  [data-theme="sage"] {
+    --bg: #121511; --surface: #1a1e18; --surface-2: #242a21; --text: #e8ece3; --text-muted: #98a28e; --border: #262c23;
+    --chart-line: #363d32; --drawer-bg: #121511; --drawer-hover: rgba(232, 236, 227, 0.05); --drawer-active: #1a1e18; --tree-line: #333a2f;
+    --scrim: rgba(0, 0, 0, 0.45);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
   }
 }
 
-/* Night Radio is dark whatever the phone is set to: the dark accent and bubble colors, always */
-[data-theme="radio"][data-accent="lime"],
-[data-theme="radio"] [data-accent="lime"] {
-  --night: #7a3fa0;
-  --accent: #cbf25c;
-  --accent-ink: #10130a;
-  --accent-soft: #232c14;
-  --accent-text: #cbf25c;
+/* Linen and Sage: your grey bubbles and outlines take the page's tone */
+[data-theme="linen"][data-bubbles="softer"],
+[data-theme="linen"] [data-bubbles="softer"],
+[data-theme="sage"][data-bubbles="softer"],
+[data-theme="sage"] [data-bubbles="softer"] {
+  --me: color-mix(in srgb, var(--text) 6%, var(--bg));
+  --me-text: var(--text);
 }
-[data-theme="radio"][data-accent="orange"],
-[data-theme="radio"] [data-accent="orange"] {
-  --night: #2f6f9a;
+[data-theme="linen"][data-bubbles="neutral"],
+[data-theme="linen"] [data-bubbles="neutral"],
+[data-theme="sage"][data-bubbles="neutral"],
+[data-theme="sage"] [data-bubbles="neutral"] {
+  --me-line: color-mix(in srgb, var(--text) 13%, var(--bg));
+}
+
+/* ---- Night: always dark, in the graphite of Tomo's face screen ---- */
+[data-theme="night"] {
+  --bg: #16171a; --surface: #1f2024; --surface-2: #292a2f; --text: #eeeef0; --text-muted: #9a9ca3; --border: #2a2b30;
+  --good: #5cc48a; --warn: #e0a940; --bad: #f07a68;
+  --orb: #1f2024; --orb-edge: #34353b; --orb-line: rgba(238, 238, 240, 0.38); --orb-star: #eeeef0; --chart-line: #3a3b41;
+  --drawer-bg: #16171a; --drawer-hover: rgba(238, 238, 240, 0.05); --drawer-active: #1f2024; --drawer-active-edge: transparent;
+  --tree-line: #38393f; --scrim: rgba(0, 0, 0, 0.5);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; --series-5: #d55181; --series-other: #6b7280;
+  --accent: #ec7a40; --accent-ink: #1a0b04; --accent-soft: #3a2116; --accent-text: #f29462;
+  color-scheme: dark;
+}
+/* Night is dark whatever the phone is set to: the dark accent and bubble colors, always */
+[data-theme="night"][data-accent="orange"],
+[data-theme="night"] [data-accent="orange"],
+[data-accent="orange"] [data-theme="night"] {
   --accent: #ec7a40;
   --accent-ink: #1a0b04;
   --accent-soft: #3a2116;
   --accent-text: #f29462;
 }
-[data-theme="radio"][data-accent="yellow"],
-[data-theme="radio"] [data-accent="yellow"] {
-  --night: #4a4fb0;
-  --accent: #f6cc48;
-  --accent-ink: #1a1404;
-  --accent-soft: #332a10;
-  --accent-text: #f6cc48;
+[data-theme="night"][data-accent="honey"],
+[data-theme="night"] [data-accent="honey"],
+[data-accent="honey"] [data-theme="night"] {
+  --accent: #e0a73a;
+  --accent-ink: #1a1204;
+  --accent-soft: #33270f;
+  --accent-text: #ebbb5c;
 }
-[data-theme="radio"][data-accent="red"],
-[data-theme="radio"] [data-accent="red"] {
-  --night: #1f8a80;
-  --accent: #f25c52;
-  --accent-ink: #1c0605;
-  --accent-soft: #3a1714;
-  --accent-text: #f6827a;
+[data-theme="night"][data-accent="cocoa"],
+[data-theme="night"] [data-accent="cocoa"],
+[data-accent="cocoa"] [data-theme="night"] {
+  --accent: #c08a64;
+  --accent-ink: #1a0e07;
+  --accent-soft: #33231a;
+  --accent-text: #d4a483;
 }
-[data-theme="radio"][data-accent="maroon"],
-[data-theme="radio"] [data-accent="maroon"] {
-  --night: #3f7a5a;
-  --accent: #c85a6d;
-  --accent-ink: #1a0609;
-  --accent-soft: #361b20;
-  --accent-text: #e3889a;
+[data-theme="night"][data-accent="moss"],
+[data-theme="night"] [data-accent="moss"],
+[data-accent="moss"] [data-theme="night"] {
+  --accent: #a3b55a;
+  --accent-ink: #12160a;
+  --accent-soft: #262b16;
+  --accent-text: #b8c973;
 }
-[data-theme="radio"][data-accent="navy"],
-[data-theme="radio"] [data-accent="navy"] {
-  --night: #b0703a;
-  --accent: #7096da;
-  --accent-ink: #0a1020;
-  --accent-soft: #18233b;
-  --accent-text: #94b1e8;
+[data-theme="night"][data-accent="pine"],
+[data-theme="night"] [data-accent="pine"],
+[data-accent="pine"] [data-theme="night"] {
+  --accent: #5fb08f;
+  --accent-ink: #06140e;
+  --accent-soft: #15302a;
+  --accent-text: #7cc4a6;
 }
-[data-theme="radio"][data-accent="indigo"],
-[data-theme="radio"] [data-accent="indigo"] {
-  --night: #6f7f2a;
-  --accent: #8c8df2;
-  --accent-ink: #0d0d24;
-  --accent-soft: #23234b;
-  --accent-text: #a7a8f6;
+[data-theme="night"][data-accent="denim"],
+[data-theme="night"] [data-accent="denim"],
+[data-accent="denim"] [data-theme="night"] {
+  --accent: #7d9fd0;
+  --accent-ink: #0a1120;
+  --accent-soft: #1a2538;
+  --accent-text: #9db8e0;
 }
-[data-theme="radio"][data-accent="teal"],
-[data-theme="radio"] [data-accent="teal"] {
-  --night: #a33a5c;
-  --accent: #3dc3b1;
-  --accent-ink: #04140f;
-  --accent-soft: #13302c;
-  --accent-text: #62d4c4;
+[data-theme="night"][data-accent="plum"],
+[data-theme="night"] [data-accent="plum"],
+[data-accent="plum"] [data-theme="night"] {
+  --accent: #c48aae;
+  --accent-ink: #1a0a14;
+  --accent-soft: #33202c;
+  --accent-text: #d6a5c4;
 }
-[data-theme="radio"][data-bubbles="classic"],
-[data-theme="radio"] [data-bubbles="classic"] {
-  --me: #e4e7ec;
-  --me-text: #141310;
+[data-theme="night"][data-accent="graphite"],
+[data-theme="night"] [data-accent="graphite"],
+[data-accent="graphite"] [data-theme="night"] {
+  --accent: #c9cbd0;
+  --accent-ink: #111214;
+  --accent-soft: #2a2b2e;
+  --accent-text: #dcdde1;
 }
-[data-theme="radio"][data-bubbles="accent"],
-[data-theme="radio"] [data-bubbles="accent"] {
+[data-theme="night"][data-bubbles="classic"],
+[data-theme="night"] [data-bubbles="classic"] {
+  --me: #eeeef0;
+  --me-text: #16171a;
+}
+[data-theme="night"][data-bubbles="accent"],
+[data-theme="night"] [data-bubbles="accent"] {
   --me: color-mix(in srgb, var(--accent) 20%, var(--surface));
   --me-text: var(--text);
 }
-[data-theme="radio"][data-bubbles="neutral"],
-[data-theme="radio"] [data-bubbles="neutral"] {
+[data-theme="night"][data-bubbles="neutral"],
+[data-theme="night"] [data-bubbles="neutral"] {
   --me: var(--bg);
   --me-text: var(--text);
-  --me-line: color-mix(in srgb, var(--night) 30%, #3a3a3d);
+  --me-line: #3a3b41;
 }
-[data-theme="radio"][data-bubbles="softer"],
-[data-theme="radio"] [data-bubbles="softer"] {
-  --me: var(--surface-2);
+[data-theme="night"][data-bubbles="softer"],
+[data-theme="night"] [data-bubbles="softer"] {
+  --me: #26272c;
   --me-text: var(--text);
 }
-[data-theme="radio"] .badge,
-[data-theme="radio"] .voice-btn.end {
-  color: #130d10;
-}
-
-/* ---- what sits over the page: grain (Zine, Film) and the glow (Night Radio). Never in the way of a tap. ---- */
-html[data-theme="zine"] body::after,
-html[data-theme="film"] body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 400;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
-  opacity: 0.1;
-}
-html[data-theme="film"] body::after {
-  opacity: 0.075;
-}
-html[data-theme="film"] body::before,
-html[data-theme="radio"] body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 399;
-  pointer-events: none;
-}
-html[data-theme="film"] body::before {
-  /* a faded print: warm at the top, a little cool at the bottom */
-  background: linear-gradient(rgba(255, 196, 140, 0.07), transparent 45%, rgba(120, 160, 190, 0.05));
-}
-html[data-theme="radio"] body::before {
-  background: radial-gradient(120% 55% at 50% -12%, color-mix(in srgb, var(--night) 24%, transparent), transparent 70%);
-}
-
-/* ---- Zine details ---- */
-html[data-theme="zine"] .section-label,
-html[data-theme="zine"] .status-pill,
-html[data-theme="zine"] .stamp,
-html[data-theme="zine"] .day,
-html[data-theme="zine"] .lp-stat span,
-html[data-theme="zine"] .action-state {
-  font-family: var(--mono);
-  letter-spacing: 0.02em;
-}
-html[data-theme="zine"] .section-label {
-  letter-spacing: 0.08em;
-}
-html[data-theme="zine"] .avatar {
-  filter: grayscale(1) contrast(1.2);
-}
-html[data-theme="zine"] .group,
-html[data-theme="zine"] .lp-svc,
-html[data-theme="zine"] .lp-stats,
-html[data-theme="zine"] .action-card,
-html[data-theme="zine"] .dialog,
-html[data-theme="zine"] .sheet,
-html[data-theme="zine"] .composer form,
-html[data-theme="zine"] .tabbar-inner {
-  border: 1.5px solid var(--border);
-}
-html[data-theme="zine"] .group,
-html[data-theme="zine"] .lp-svc,
-html[data-theme="zine"] .lp-stats,
-html[data-theme="zine"] .action-card {
-  box-shadow: var(--shadow);
-}
-html[data-theme="zine"] .btn {
-  border-radius: 8px;
-}
-html[data-theme="zine"] .bubble {
-  border-radius: 12px 12px 2px 12px;
-}
-html[data-theme="zine"] .lp-promise {
-  border: 1.5px solid var(--border);
-  box-shadow: var(--shadow);
-}
-
-/* ---- Night Radio details: things that are lit, glow ---- */
-html[data-theme="radio"] .orb {
-  box-shadow:
-    inset 0 0 0 1px var(--orb-edge),
-    0 0 26px color-mix(in srgb, var(--accent) 22%, transparent);
-}
-html[data-theme="radio"] .send:not(:disabled),
-html[data-theme="radio"] .fab,
-html[data-theme="radio"] .btn.primary {
-  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 35%, transparent);
-}
-html[data-theme="radio"] .switch:checked {
-  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 40%, transparent);
-}
-
-/* ---- Film details ---- */
-html[data-theme="film"] .avatar {
-  filter: saturate(0.78) sepia(0.14) contrast(0.96);
+[data-theme="night"] .badge,
+[data-theme="night"] .voice-btn.end {
+  color: #141310;
 }
 
 /* ---- the picker (Settings, You and appearance, Look) ---- */
@@ -8113,33 +8033,49 @@ html[data-theme="film"] .avatar {
 }
 .theme-sample {
   display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
-  column-gap: 10px;
-  row-gap: 6px;
+  grid-template-columns: 22px 1fr;
+  gap: 7px 8px;
   align-items: center;
   width: 100%;
-  padding: 12px;
+  padding: 10px;
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: var(--bg);
   border: 1px solid var(--border);
-  box-shadow: var(--shadow);
 }
-.theme-dot {
-  grid-row: 1 / 3;
-  width: 26px;
-  height: 26px;
+.ts-face {
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--surface-2);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--accent);
 }
-.theme-line {
-  height: 6px;
+.ts-lines {
+  display: grid;
+  gap: 4px;
+}
+.ts-lines i {
+  height: 5px;
   border-radius: 3px;
   background: var(--text);
 }
-.theme-line.short {
-  width: 60%;
+.ts-lines i + i {
+  width: 62%;
   background: var(--text-muted);
+}
+.ts-me {
+  grid-column: 1 / -1;
+  justify-self: end;
+  width: 58%;
+  height: 14px;
+  border-radius: 8px 8px 3px 8px;
+  background: color-mix(in srgb, var(--text) 8%, var(--bg));
+}
+.ts-tab {
+  grid-column: 1 / -1;
+  width: 22px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
 }
 .theme-style .name {
   font-size: 14px;
@@ -8150,9 +8086,6 @@ html[data-theme="film"] .avatar {
   margin-top: -6px;
   font-size: 12px;
   color: var(--text-muted);
-}
-[data-theme="radio"] .theme-dot {
-  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 /* ---------- now playing (0.46): little bars in the status, and Lyra's headphones glow ---------- */
@@ -9077,9 +9010,6 @@ html[data-ambient="on"] .haze {
   --haze-b: color-mix(in srgb, color-mix(in srgb, var(--accent) 45%, #8fb6ff) 26%, transparent);
   --haze-c: color-mix(in srgb, color-mix(in srgb, var(--accent) 50%, #ffb38f) 22%, transparent);
 }
-html[data-theme="radio"][data-ambient="on"] .haze {
-  --haze-b: color-mix(in srgb, var(--night) 55%, transparent);
-}
 .haze i {
   position: absolute;
   width: 95vmax;
@@ -9125,9 +9055,6 @@ html[data-theme="radio"][data-ambient="on"] .haze {
   html[data-ambient="on"] .haze {
     opacity: 0.7;
   }
-}
-html[data-theme="radio"][data-ambient="on"] .haze {
-  opacity: 0.8;
 }
 /* task rows sit on the haze too; their Later / Done buttons show only once you swipe */
 html[data-ambient="on"] .swipe:not(.moved) .swipe-front {
@@ -9957,9 +9884,8 @@ body[data-busy] .orb:has(.avatar)::after {
 }
 
 /* ---- fixes from the first comparison ---- */
-/* Quiet is plain white: the drifting haze belongs to the other looks */
-html[data-theme="paper"] .haze,
-html:not([data-theme]) .haze {
+/* (0.66) every look is calm now: the drifting haze is off everywhere */
+html .haze {
   display: none;
 }
 .tasks-head {
@@ -10605,7 +10531,7 @@ html[data-ambient="on"] .tabbar:not(.floating) {
 .done-stamp.fresh { animation: stamp-down 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
 @keyframes stamp-down { 0% { opacity: 0; transform: rotate(-11deg) scale(2.1); } 60% { opacity: 0.95; transform: rotate(-11deg) scale(0.94); } 100% { opacity: 0.62; transform: rotate(-11deg) scale(1); } }
 @media (prefers-color-scheme: dark) { .done-stamp { mix-blend-mode: normal; --stamp-ink: color-mix(in srgb, var(--accent) 75%, #fff); } }
-[data-theme="radio"] .done-stamp { mix-blend-mode: normal; --stamp-ink: color-mix(in srgb, var(--accent) 75%, #fff); }
+[data-theme="night"] .done-stamp { mix-blend-mode: normal; --stamp-ink: color-mix(in srgb, var(--accent) 75%, #fff); }
 @media (prefers-reduced-motion: reduce) { .done-stamp.fresh { animation: none; } }
 
 /* empty scenes */

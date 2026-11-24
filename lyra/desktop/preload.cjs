@@ -38,6 +38,8 @@ contextBridge.exposeInMainWorld("lyraDesktop", {
   shell: {
     prefs: () => ipcRenderer.invoke("shell:prefs"),
     setPrefs: (p) => ipcRenderer.invoke("shell:setPrefs", p),
+    // (0.66) the title bar strip in the look's colors
+    titleColors: (c) => ipcRenderer.invoke("shell:titleColors", c),
   },
   // (0.63) money services that don't answer web pages (SimpleFIN, YNAB), through the main process
   http: (url, init) => ipcRenderer.invoke("http:fetch", url, init),

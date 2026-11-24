@@ -12,6 +12,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "0.66.0",
+    date: "2026-11-24",
+    notes: [
+      "New looks: Quiet stays, and Linen (warm off-white), Sage (pale green-grey) and Night (always dark) replace Zine, Night Radio and Film. Night Radio became Night; Zine and Film became Quiet.",
+      "New accent colors taken from Tomo: Burnt orange (now the default), Honey, Cocoa, Moss, Pine, Denim, Plum and Graphite. An old color moves to the closest new one (Lime to Moss, Navy to Denim, Teal to Pine…).",
+      "The Look picker shows a tiny chat in each look, and the Windows title bar follows the look.",
+    ],
+  },
+  {
     version: "0.65.2",
     date: "2026-11-24",
     notes: [

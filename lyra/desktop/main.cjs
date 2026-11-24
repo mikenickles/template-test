@@ -350,8 +350,14 @@ function startMenuShortcut() {
 }
 
 // Lyra draws its own title bar; Windows keeps its minimize, maximize and close buttons, in Lyra's colors.
+// (0.66) the page sends its look's page and ink colors (shell:titleColors); kept in prefs for the next start.
+const HEX = /^#[0-9a-f]{6}$/i;
 const themeColors = () =>
-  nativeTheme.shouldUseDarkColors ? { bg: "#0f0f10", symbol: "#f2f2f2" } : { bg: "#ffffff", symbol: "#111111" };
+  prefs.titleColors && HEX.test(prefs.titleColors.bg) && HEX.test(prefs.titleColors.symbol)
+    ? prefs.titleColors
+    : nativeTheme.shouldUseDarkColors
+      ? { bg: "#0f0f10", symbol: "#f2f2f2" }
+      : { bg: "#ffffff", symbol: "#111111" };
 const overlay = () => ({ color: themeColors().bg, symbolColor: themeColors().symbol, height: 52 });
 
 function createWindow(show = true) {
@@ -466,6 +472,18 @@ ipcMain.handle("shell:setPrefs", async (_e, p) => {
   updateTray();
   applyLogin();
   return { tray: prefs.tray, openAtLogin: prefs.openAtLogin };
+});
+
+ipcMain.handle("shell:titleColors", async (_e, c) => {
+  if (!c || !HEX.test(c.bg) || !HEX.test(c.symbol)) return false;
+  const same = prefs.titleColors?.bg === c.bg && prefs.titleColors?.symbol === c.symbol;
+  prefs.titleColors = { bg: c.bg, symbol: c.symbol };
+  if (win) {
+    win.setBackgroundColor(c.bg);
+    if (process.platform !== "darwin") win.setTitleBarOverlay?.(overlay());
+  }
+  if (!same) await savePrefs();
+  return true;
 });
 
 app.on("before-quit", () => (quitting = true));

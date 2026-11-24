@@ -24,7 +24,7 @@ import { SyncConflict } from "./screens/SyncSection";
 import { StatusLine } from "./StatusLine";
 import { AwaySheet } from "./Away";
 import { deliver } from "./attach";
-import { listen, appLock, isDesktop, notifier, shares } from "./platform";
+import { listen, appLock, isDesktop, notifier, shares, titleBarColors } from "./platform";
 import { File as FileIcon, Star, TasksIcon } from "./icons";
 
 export type Route =
@@ -321,7 +321,7 @@ export function App() {
     setToastBottom(top < innerHeight ? Math.round(innerHeight - top + 10) : null);
   }, [toastMsg]);
 
-  // The look (0.46): on <html>, remembered for the next launch's first paint. Night Radio is
+  // The look (0.46): on <html>, remembered for the next launch's first paint. Night is
   // always dark, so the phone's status bar icons go light with it.
   useEffect(() => {
     if (!state) return;
@@ -336,7 +336,7 @@ export function App() {
     // "Default" kept them dark in dark mode, so the look and the phone's setting decide it here.
     const dark = matchMedia("(prefers-color-scheme: dark)");
     const apply = () =>
-      void SystemBars.setStyle({ style: state.theme === "radio" || dark.matches ? SystemBarsStyle.Dark : SystemBarsStyle.Light }).catch(() => {});
+      void SystemBars.setStyle({ style: state.theme === "night" || dark.matches ? SystemBarsStyle.Dark : SystemBarsStyle.Light }).catch(() => {});
     apply();
     dark.addEventListener("change", apply);
     return () => dark.removeEventListener("change", apply);
@@ -352,6 +352,19 @@ export function App() {
       // fine: it's only to avoid a flash on start
     }
   }, [state?.accent]);
+
+  // (0.66) the Windows title bar follows the look, in light and dark
+  useEffect(() => {
+    if (!state || !isDesktop) return;
+    const dark = matchMedia("(prefers-color-scheme: dark)");
+    const send = () => {
+      const css = getComputedStyle(document.documentElement);
+      titleBarColors(css.getPropertyValue("--bg").trim(), css.getPropertyValue("--text").trim());
+    };
+    send();
+    dark.addEventListener("change", send);
+    return () => dark.removeEventListener("change", send);
+  }, [state?.theme]);
 
   // Same for the message bubble style.
   useEffect(() => {

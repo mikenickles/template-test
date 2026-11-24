@@ -12,7 +12,7 @@ describe("quiet stamps (0.53.2)", () => {
     setSetting(db, "trigger.seen.4", "x");
     expect(writes).toBe(0);
     expect(getSetting(db, "headsUpAt")).toBe("2");
-    setSetting(db, "accent", "lime");
+    setSetting(db, "accent", "moss");
     expect(writes).toBe(1);
   });
 });

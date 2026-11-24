@@ -45,7 +45,7 @@ interface DesktopBridge {
     onChange(fn: () => void): () => void;
   };
   /** shell 3 and later */
-  shell?: { prefs(): Promise<ShellPrefs>; setPrefs(p: Partial<ShellPrefs>): Promise<ShellPrefs> };
+  shell?: { prefs(): Promise<ShellPrefs>; setPrefs(p: Partial<ShellPrefs>): Promise<ShellPrefs>; titleColors?(c: { bg: string; symbol: string }): Promise<boolean> };
   updates: {
     info(): Promise<{ shellVersion: number; bundledVersion: string; runningVersion: string }>;
     installPack(bytes: Uint8Array): Promise<{ installed: boolean; needsFullInstall: boolean; version: string }>;
@@ -821,6 +821,13 @@ export interface BackgroundState {
   atLogin?: boolean;
   /** (0.53.2) phone only: minutes between background wake-ups (15, 30 or 60) */
   every?: number;
+}
+
+/** (0.66) desktop: the title bar strip (minimize, maximize, close) in the look's page and ink colors.
+ * A Windows app from before 0.66 doesn't have it and keeps its plain light/dark strip. */
+export function titleBarColors(bg: string, text: string): void {
+  if (!/^#[0-9a-f]{6}$/i.test(bg) || !/^#[0-9a-f]{6}$/i.test(text)) return;
+  void desk?.shell?.titleColors?.({ bg, symbol: text }).catch(() => {});
 }
 
 export const background = {

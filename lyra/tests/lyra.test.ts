@@ -28,10 +28,11 @@ describe("Tomo engine", () => {
   it("refuses a provider that isn't set up, and bad model names", async () => {
     const lyra = await Lyra.start(platform());
     await expect(lyra.saveSettings({ provider: "gemini" })).rejects.toThrow(/Gemini API key/);
-    expect(lyra.state().accent).toBe("lime");
+    expect(lyra.state().accent).toBe("orange");
     expect(lyra.state().notifications).toBe(true);
     expect((await lyra.saveSettings({ notifications: false })).notifications).toBe(false);
-    expect((await lyra.saveSettings({ accent: "maroon" })).accent).toBe("maroon");
+    expect((await lyra.saveSettings({ accent: "moss" })).accent).toBe("moss");
+    await expect(lyra.saveSettings({ accent: "lime" as never })).rejects.toThrow(/choices/);
     await expect(lyra.saveSettings({ accent: "chartreuse" })).rejects.toThrow(/choices/);
     expect(lyra.state().bubbles).toBe("softer");
     expect((await lyra.saveSettings({ bubbles: "accent" })).bubbles).toBe("accent");

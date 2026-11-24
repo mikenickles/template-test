@@ -226,15 +226,23 @@ export interface WeatherPlace {
   longitude: number;
 }
 
-/** Accent colors the user can pick in Settings. The colors themselves live in the app's stylesheet. */
-export const ACCENTS = ["lime", "orange", "yellow", "red", "maroon", "navy", "indigo", "teal"] as const;
+/** (0.66) Accent colors the user can pick in Settings, taken from Tomo (scarf, backpack, shading, face
+ * screen) and colors that sit well beside them. The colors themselves live in the app's stylesheet. */
+export const ACCENTS = ["orange", "honey", "cocoa", "moss", "pine", "denim", "plum", "graphite"] as const;
 export type Accent = (typeof ACCENTS)[number];
+export const ACCENT_NAMES: Record<Accent, string> = { orange: "Burnt orange", honey: "Honey", cocoa: "Cocoa", moss: "Moss", pine: "Pine", denim: "Denim", plum: "Plum", graphite: "Graphite" };
+/** colors from before 0.66, saved on a device or synced from an older one: the closest new color */
+export const OLD_ACCENTS: Record<string, Accent> = { lime: "moss", yellow: "honey", red: "orange", maroon: "plum", navy: "denim", indigo: "denim", teal: "pine" };
 /** Your message bubbles: softer ink (default), the accent's tint, soft neutral, or the original solid ink. */
 export const BUBBLES = ["softer", "accent", "neutral", "classic"] as const;
 export type Bubbles = (typeof BUBBLES)[number];
-/** The app's whole look, a mood: Paper (the original), Zine, Night Radio (always dark) or Film. Styles live in the stylesheet. */
-export const THEMES = ["paper", "zine", "radio", "film"] as const;
+/** (0.66) The app's look, a page tone on Quiet's rules: Quiet (id "paper"), Linen, Sage, or Night (always dark).
+ * Styles live in the stylesheet. */
+export const THEMES = ["paper", "linen", "sage", "night"] as const;
 export type Theme = (typeof THEMES)[number];
+export const THEME_NAMES: Record<Theme, string> = { paper: "Quiet", linen: "Linen", sage: "Sage", night: "Night" };
+/** looks from before 0.66: Night Radio became Night, Zine and Film became Quiet */
+export const OLD_THEMES: Record<string, Theme> = { radio: "night", zine: "paper", film: "paper" };
 
 export interface MemoryView {
   content: string;
@@ -1737,12 +1745,12 @@ export class Lyra {
 
   get theme(): Theme {
     const t = getSetting(this.db, "theme");
-    return (THEMES as readonly string[]).includes(t ?? "") ? (t as Theme) : "paper";
+    return (THEMES as readonly string[]).includes(t ?? "") ? (t as Theme) : (OLD_THEMES[t ?? ""] ?? "paper");
   }
 
   get accent(): Accent {
     const a = getSetting(this.db, "accent");
-    return (ACCENTS as readonly string[]).includes(a ?? "") ? (a as Accent) : "lime";
+    return (ACCENTS as readonly string[]).includes(a ?? "") ? (a as Accent) : (OLD_ACCENTS[a ?? ""] ?? "orange");
   }
 
   async saveSettings(patch: SettingsPatch): Promise<AppState> {
@@ -2614,7 +2622,7 @@ export class Lyra {
       `- Approval switches on the Tomo page (each action still waits for a tap on its card): write emails ${on(s.actions.email)}, add/change events ${on(s.actions.event)}, organize mail ${on(s.actions.archive)}, change Drive files ${on(s.actions.file)}${s.actions.text !== null ? `, texts ${on(s.actions.text)}` : ""}${s.browser !== null ? `, use the browser ${on(s.browser)}` : ""}${s.contacts !== null ? `, phone contacts ${on(s.contacts)}` : ""}${s.notices !== null ? `, phone notifications ${on(s.notices)}` : ""}.`,
       `- Heads-ups: ${p.level}${p.level !== "off" ? ` (every ${p.level === "active" ? "hour" : "4 hours"})` : ""}, quiet hours ${p.quietStart}–${p.quietEnd}, check-ins ${on(p.checkIns)}, mail watch ${on(p.mailWatch)}. Settings › Notifications. Phone notifications ${on(s.notifications)}.`,
       `- Life admin inbox scans ${on(this.lifeAdminOn)}, weekly memory tidy-up ${on(this.tidyOn)}, talk like ${s.userName} ${on(s.mirror)} (Settings › You).`,
-      `- Look: ${s.theme === "paper" ? "Quiet" : s.theme} look, ${s.accent} accent, ${s.bubbles} message bubbles; app lock ${on(s.appLock)}; weather for ${s.weatherPlace?.name ?? "no place set"}; live voice "${s.liveVoice}".`,
+      `- Look: ${THEME_NAMES[s.theme]} look (choices: ${THEMES.map((t) => THEME_NAMES[t]).join(", ")}), ${ACCENT_NAMES[s.accent]} accent (choices: ${ACCENTS.map((a) => ACCENT_NAMES[a]).join(", ")}), ${s.bubbles} message bubbles; app lock ${on(s.appLock)}; weather for ${s.weatherPlace?.name ?? "no place set"}; live voice "${s.liveVoice}".`,
       ...device.map((d) => `- ${d}`),
       `- The app: Tomo${this.p.version ? ` ${this.p.version}` : ""}, Android phone app and Windows app; updates come from the "Lyra Updates" folder in ${s.userName}'s Drive (Settings › About).`,
     ].join("\n");

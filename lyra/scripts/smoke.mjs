@@ -535,13 +535,42 @@ try {
   await shot("light-21-reaction");
 
   await page.goto(`${base}/#/settings/you`);
-  await page.locator(".swatch", { hasText: "Burnt orange" }).click();
-  await page.getByText("Burnt orange it is").waitFor();
-  check((await page.evaluate(() => document.documentElement.dataset.accent)) === "orange", "picking an accent color applies it");
+  await page.locator(".swatch").first().waitFor();
+  check((await page.evaluate(() => document.documentElement.dataset.accent)) === "orange", "burnt orange is the default accent");
+  check((await page.locator(".swatch").count()) === 8 && (await page.locator(".theme-style").count()) === 4, "eight accent colors and four looks to pick from");
+  await page.locator(".swatch", { hasText: "Moss" }).click();
+  await page.getByText("Moss it is").waitFor();
+  check((await page.evaluate(() => document.documentElement.dataset.accent)) === "moss", "picking an accent color applies it");
   await shot("light-22-accent-settings");
   await page.reload();
-  await page.getByRole("radio", { name: "Burnt orange" }).waitFor();
-  check((await page.getByRole("radio", { name: "Burnt orange" }).isChecked()) === true, "the accent color is saved");
+  await page.getByRole("radio", { name: "Moss" }).waitFor();
+  check((await page.getByRole("radio", { name: "Moss" }).isChecked()) === true, "the accent color is saved");
+  // ---- looks (0.66): Quiet, Linen, Sage, Night ----
+  const pageBg = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--bg").trim());
+  await page.locator(".theme-styles").scrollIntoViewIfNeeded();
+  await shot("light-70-looks");
+  await page.locator('.theme-style[data-theme="linen"]').click();
+  await page.getByText("Linen it is").waitFor();
+  check((await pageBg()) === "#f8f5f0", "Linen turns the page warm off-white");
+  await page.goto(`${base}/#/`);
+  await page.locator(".bubble").first().waitFor();
+  await shot("light-71-linen-chat");
+  await page.goto(`${base}/#/settings/you`);
+  await page.locator('.theme-style[data-theme="sage"]').click();
+  await page.getByText("Sage it is").waitFor();
+  check((await pageBg()) === "#f3f5f0", "Sage turns the page pale green-grey");
+  await page.locator('.theme-style[data-theme="night"]').click();
+  await page.getByText("Night it is").waitFor();
+  check((await pageBg()) === "#16171a", "Night is dark even with the phone in light mode");
+  await page.goto(`${base}/#/`);
+  await page.locator(".bubble").first().waitFor();
+  await shot("light-72-night-chat");
+  await page.goto(`${base}/#/settings/you`);
+  await page.locator('.theme-style[data-theme="paper"]').click();
+  await page.getByText("Quiet it is").waitFor();
+  await page.locator(".swatch", { hasText: "Burnt orange" }).click();
+  await page.getByText("Burnt orange it is").waitFor();
+  { const back = [await pageBg(), await page.evaluate(() => document.documentElement.dataset.theme), await page.evaluate(() => document.documentElement.dataset.accent)].join(" "); check(/^#fff(fff)? paper orange$/.test(back), `back to Quiet in burnt orange (${back})`); }
   // ---- your messages: four bubble styles ----
   check((await page.evaluate(() => document.documentElement.dataset.bubbles)) === "softer", "your messages start in the soft grey style");
   await page.getByText("Your messages").scrollIntoViewIfNeeded();
