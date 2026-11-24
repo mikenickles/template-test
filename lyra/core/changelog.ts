@@ -12,6 +12,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "0.66.3",
+    date: "2026-11-24",
+    notes: ["Replies no longer show citation codes (like a box, \"cite\" and \"turn123search0\") after web searches on OpenAI models. Sources still show under the reply, and older replies are cleaned when shown."],
+  },
+  {
     version: "0.66.2",
     date: "2026-11-24",
     notes: ["In Linen, Sage and Night, the message box and the bottom tab bar are a shade off the page so they stand out. Quiet is unchanged."],

@@ -1,3 +1,4 @@
+import { cleanModelText } from "../../core/cleantext";
 import type { ReactNode } from "react";
 
 /**
@@ -50,7 +51,8 @@ const tableCells = (r: string) => r.trim().replace(/^\||\|$/g, "").split("|").ma
 const kindOf = (r: string) => (TABLE_ROW.test(r) || TABLE_RULE.test(r) ? "table" : BULLET.test(r) ? "ul" : NUMBER.test(r) ? "ol" : r.startsWith(">") ? "quote" : "p");
 
 export function Markdown({ text }: { text: string }) {
-  const blocks = text.replace(/\r\n/g, "\n").split(/\n{2,}/);
+  // (0.66.3) replies saved before the cleanup can still carry citation markers
+  const blocks = cleanModelText(text).replace(/\r\n/g, "\n").split(/\n{2,}/);
   const out: ReactNode[] = [];
   blocks.forEach((block, b) => {
     const rows = block.split("\n").filter((r) => r.trim() !== "");
@@ -123,7 +125,7 @@ export function Markdown({ text }: { text: string }) {
  * tables, quotes and dividers. Still React elements only, never HTML.
  */
 export function DocMarkdown({ text }: { text: string }) {
-  const rows = text.replace(/\r\n?/g, "\n").split("\n");
+  const rows = cleanModelText(text).replace(/\r\n?/g, "\n").split("\n");
   const out: ReactNode[] = [];
   let i = 0;
   let k = 0;

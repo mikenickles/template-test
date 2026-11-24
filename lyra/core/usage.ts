@@ -2,6 +2,7 @@
  * Token usage, as each provider reports it: one row per day, model and kind of
  * work (chat, worker, routine). Days are the user's local days.
  */
+import { cleanModelText, streamCleaner } from "./cleantext.ts";
 import type { DB } from "./db.ts";
 import type { GenerateRequest, GenerateResult, ModelProvider } from "./providers/types.ts";
 
@@ -110,7 +111,15 @@ export function metered(provider: ModelProvider, source: UsageSource, db: DB, ti
     id: provider.id,
     model: provider.model,
     async generate(req: GenerateRequest, onText: (d: string) => void): Promise<GenerateResult> {
-      const result = await provider.generate(req, onText);
+      // (0.66.3) no machine marks (like OpenAI's citation markers) in what's shown or saved
+      const cleaner = streamCleaner();
+      const result = await provider.generate(req, (d) => {
+        const c = cleaner.push(d);
+        if (c) onText(c);
+      });
+      const rest = cleaner.flush();
+      if (rest) onText(rest);
+      result.parts = result.parts.map((p) => (p.type === "text" ? { ...p, text: cleanModelText(p.text) } : p));
       if (result.usage && (result.usage.input || result.usage.output)) {
         try {
           const day = localDay(new Date(), timeZone);
