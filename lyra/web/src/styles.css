@@ -10670,3 +10670,17 @@ html[data-ambient="off"] .tomo-face .tomo-still { opacity: 1; }
   color: var(--bg);
   box-shadow: none;
 }
+
+/* ---------- (0.66.2) Linen, Sage and Night: the message box and the tab bar sit a shade off the page.
+   Quiet stays as it is (white on white with a line). ---------- */
+html[data-theme="linen"] .composer-inner,
+html[data-theme="sage"] .composer-inner,
+html[data-theme="night"] .composer-inner {
+  background: var(--surface);
+  border-color: color-mix(in srgb, var(--text) 8%, var(--surface));
+}
+html[data-theme="linen"] .tabbar .tabbar-inner,
+html[data-theme="sage"] .tabbar .tabbar-inner,
+html[data-theme="night"] .tabbar .tabbar-inner {
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+}

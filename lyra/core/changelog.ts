@@ -12,6 +12,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "0.66.2",
+    date: "2026-11-24",
+    notes: ["In Linen, Sage and Night, the message box and the bottom tab bar are a shade off the page so they stand out. Quiet is unchanged."],
+  },
+  {
     version: "0.66.1",
     date: "2026-11-24",
     notes: ["Fixed a peach wash at the top of Settings and other pages that stopped short under the top bar. The background is plain in every look now."],
