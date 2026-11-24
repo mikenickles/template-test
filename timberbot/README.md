@@ -45,6 +45,16 @@ URL options: `?quality=0|1|2` locks the graphics level (default: 2, auto-steps d
 | `M` | Mute |
 | `H` | Hide the controls card |
 
+On a phone or tablet the controls are gestures (`src/touch.js`):
+
+| Gesture | Action |
+| --- | --- |
+| Thumb anywhere on the left side | A faint stick appears under it; push further to walk faster |
+| Drag on the right side | Look around |
+| Pinch | Zoom 5 – 20 m |
+| Tap | Harvest (tap a tree or boulder, or anywhere to hit the nearest one) |
+| Tap a build icon, drag, lift | Aim the ghost just above your fingertip, lift to place; a second-finger tap rotates it |
+
 ## Rules
 
 | | |
@@ -115,5 +125,6 @@ The scripted play-through drives real keyboard and mouse input and writes screen
 node serve.mjs 8123 &
 node qa/playtest.mjs qa/out 2                                        # needs Playwright; args: output dir, quality level
 node qa/playtest.mjs qa/out 0 http://localhost:8123/ grass=0.04     # fast variant for software GL (no GPU)
+node qa/touchtest.mjs qa/out                                         # phone controls in an emulated 390 x 844 touchscreen
 node qa/screenshots.mjs qa/out spawn,forest,camp 2                   # camera presets for visual review
 ```

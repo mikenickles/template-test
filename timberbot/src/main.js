@@ -10,8 +10,11 @@ import { Game } from './game.js';
 import { GameAudio } from './audio.js';
 import { Hud } from './hud.js';
 import { QA } from './qa.js';
+import { TouchControls } from './touch.js';
 
 const params = new URLSearchParams(location.search);
+const coarse = matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches;   // phone / tablet
+if (!params.has('grass') && coarse) OPTS.grassDensity = 0.6;
 if (params.has('grass')) OPTS.grassDensity = Math.min(2, Math.max(0, parseFloat(params.get('grass')) || 0));   // ?grass=0.1 for slow software renderers
 const $ = (id) => document.getElementById(id);
 const earlyErrors = [];
@@ -67,6 +70,7 @@ async function boot() {
   const audio = new GameAudio();
   const hud = new Hud();
   const game = new Game({ scene, camera, renderer, terrain, world, robot, fx, audio, hud, assets, mats, splat });
+  game.touch = new TouchControls(canvas, game, hud);
 
   // ---------------------------------------------------------------- quality management
   const quality = { level: 2, locked: params.has('quality'), shadowEvery: 1 };
@@ -85,11 +89,12 @@ async function boot() {
     renderer.setSize(w, h);
     env.resize(w, h, quality.pixelRatio);
     camera.aspect = w / h;
+    camera.fov = w / h < 1 ? 64 : 50;                 // portrait phones get a wider view
     camera.updateProjectionMatrix();
     fx.setViewport(renderer.getDrawingBufferSize(new THREE.Vector2()).y, camera.fov);
   }
   addEventListener('resize', resize);
-  applyQuality(quality.locked ? THREE.MathUtils.clamp(parseInt(params.get('quality'), 10) || 0, 0, 2) : 2);
+  applyQuality(quality.locked ? THREE.MathUtils.clamp(parseInt(params.get('quality'), 10) || 0, 0, 2) : coarse ? 1 : 2);
 
   qa = new QA({ renderer, terrain, world, game, robot, env, assets, quality });
   qa.shaderErrors = shaderErrors;
@@ -154,9 +159,11 @@ async function boot() {
     $('loading').classList.add('done');
     document.body.classList.add('playing');
     if (withAudio) audio.start();
+    game.touch.showHint();
     setTimeout(() => { $('loading').style.display = 'none'; }, 900);
   };
   $('load-status').textContent = 'Ready';
+  if (coarse) $('start').textContent = 'Tap to start';
   $('start').classList.remove('hidden');
   $('start').addEventListener('click', () => start(true));
   addEventListener('pointerdown', () => { if (game.started) audio.start(); }, { capture: true });

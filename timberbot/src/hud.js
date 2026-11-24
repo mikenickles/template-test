@@ -73,7 +73,10 @@ export class Hud {
     el.classList.remove('hidden');
     el.classList.toggle('bad', !ok);
     const def = this.game && this.game.build.type ? CFG.BUILD[this.game.build.type] : null;
-    el.innerHTML = `<b>${def ? def.name : 'Build'}</b> — ${text}<small>Left-click place · R rotate · Right-click / Esc cancel</small>`;
+    const help = document.body.classList.contains('touch')
+      ? 'Drag to aim · lift to place · second finger taps rotate · tap the icon again to cancel'
+      : 'Left-click place · R rotate · Right-click / Esc cancel';
+    el.innerHTML = `<b>${def ? def.name : 'Build'}</b> — ${text}<small>${help}</small>`;
   }
 
   setPrompt(html) {

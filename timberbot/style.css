@@ -124,3 +124,49 @@ kbd { display: inline-block; min-width: 20px; padding: 1px 5px; margin: 0 1px; b
   .build-btn { width: 112px; }
   .b-dims { display: none; }
 }
+
+/* ---------------------------------------------------------------- touch (phones, tablets)
+   Controls are gestures, so the chrome recedes: no key hints, small glass icons, and a
+   thumb-stick that only exists while a thumb is down. */
+body.touch { -webkit-user-select: none; -webkit-touch-callout: none; }
+body.touch #hud button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+body.touch #help, body.touch #btn-help, body.touch #hud kbd { display: none; }
+body.touch #inventory { left: max(10px, env(safe-area-inset-left, 0px)); top: max(10px, env(safe-area-inset-top, 0px)); padding: 4px; gap: 4px;
+  background: rgba(24, 19, 13, 0.34); border-color: rgba(255, 226, 170, 0.1); box-shadow: none; }
+body.touch .slot { min-width: 0; grid-template-columns: 24px auto; column-gap: 6px; padding: 3px 10px 3px 6px; background: none; }
+body.touch .slot .icon { width: 24px; height: 24px; }
+body.touch .slot .num { font-size: 17px; }
+body.touch .slot .lbl { font-size: 9px; }
+body.touch #topright { right: max(10px, env(safe-area-inset-right, 0px)); top: max(10px, env(safe-area-inset-top, 0px)); gap: 6px; }
+body.touch .chip { height: 32px; padding: 0 9px; background: rgba(24, 19, 13, 0.3); border-color: rgba(255, 226, 170, 0.1); }
+body.touch #btn-mute span { display: none; }
+body.touch #qa { top: calc(max(10px, env(safe-area-inset-top, 0px)) + 42px); right: max(10px, env(safe-area-inset-right, 0px)); max-width: calc(100vw - 20px); }
+
+body.touch #buildbar { left: auto; transform: none; right: max(10px, env(safe-area-inset-right, 0px)); bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  flex-direction: column; gap: 10px; }
+body.touch .build-btn { width: 50px; height: 50px; padding: 0; place-items: center; border-radius: 50%; background: rgba(24, 19, 13, 0.26);
+  border-color: rgba(255, 226, 170, 0.12); box-shadow: none; backdrop-filter: blur(6px); }
+body.touch .build-btn:hover { transform: none; }
+body.touch .build-btn .b-name, body.touch .build-btn .b-dims, body.touch .build-btn .b-cost { display: none; }
+body.touch .build-btn .b-icon { width: 32px; height: 26px; }
+body.touch .build-btn.active { background: rgba(92, 64, 22, 0.6); border-color: rgba(255, 196, 94, 0.8); box-shadow: 0 0 0 3px rgba(255, 196, 94, 0.18); }
+
+body.touch #prompt, body.touch #buildhint { bottom: max(18px, env(safe-area-inset-bottom, 0px)); font-size: 13px; padding: 6px 14px;
+  background: rgba(24, 19, 13, 0.32); border-color: rgba(255, 226, 170, 0.08); }
+body.touch #buildhint { white-space: normal; width: max-content; max-width: calc(100vw - 150px); }
+body.touch #toast { top: calc(max(10px, env(safe-area-inset-top, 0px)) + 52px); white-space: normal; max-width: calc(100vw - 40px); text-align: center; }
+
+#stick { position: fixed; left: 0; top: 0; width: 0; height: 0; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 2; }
+#stick.on { opacity: 1; transition-duration: 0.06s; }
+#stick .ring { position: absolute; left: -56px; top: -56px; width: 112px; height: 112px; border-radius: 50%;
+  border: 1.5px solid rgba(255, 246, 228, 0.16); background: radial-gradient(circle, rgba(255, 246, 228, 0.06), rgba(255, 246, 228, 0) 70%); }
+#stick .knob { position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 246, 228, 0.2);
+  box-shadow: 0 0 0 1px rgba(255, 246, 228, 0.26), 0 4px 14px rgba(0, 0, 0, 0.25); backdrop-filter: blur(4px); }
+.ripple { position: fixed; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; border: 1.5px solid rgba(255, 246, 228, 0.55);
+  pointer-events: none; animation: ripple 0.45s ease-out forwards; }
+@keyframes ripple { from { transform: scale(0.35); opacity: 0.9; } to { transform: scale(1.35); opacity: 0; } }
+#touchhint { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); display: grid; gap: 6px; justify-items: center; pointer-events: none;
+  color: rgba(255, 246, 228, 0.88); font-size: 13px; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); opacity: 0; transition: opacity 0.8s ease; }
+#touchhint.on { opacity: 1; }
+#touchhint span { padding: 4px 12px; border-radius: 14px; background: rgba(24, 19, 13, 0.3); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .ripple { animation-duration: 0.01s; } #stick, #touchhint { transition: none; } }

@@ -85,12 +85,15 @@ class Input {
     addEventListener('blur', clear);
     document.addEventListener('visibilitychange', () => { if (document.hidden) clear(); });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    // fingers are handled by TouchControls (src/touch.js); this class handles mouse and pen
     canvas.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch') return;
       this.ptr = { id: e.pointerId, button: e.button, x0: e.clientX, y0: e.clientY, lx: e.clientX, ly: e.clientY, drag: false };
       try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* synthetic events */ }
       this.mouse.x = e.clientX; this.mouse.y = e.clientY; this.mouse.inside = true;
     });
     addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'touch') return;
       this.mouse.x = e.clientX; this.mouse.y = e.clientY;
       this.mouse.inside = e.target === canvas;
       const p = this.ptr;
@@ -100,6 +103,7 @@ class Input {
       p.lx = e.clientX; p.ly = e.clientY;
     });
     const up = (e) => {
+      if (e.pointerType === 'touch') return;
       const p = this.ptr;
       if (!p) return;
       this.ptr = null;
@@ -354,7 +358,7 @@ export class Game {
       if (overlap(big, col)) return { ok: false, reason: 'Blocked by ' + ({ tree: 'a tree', boulder: 'a boulder', log: 'a fallen log', structure: 'another structure' }[col.ref?.type] || 'an obstacle') };
     }
     if (overlap(grow(fp, 0.05), { kind: 'circle', x: this.player.pos.x, z: this.player.pos.z, r: CFG.ROBOT_RADIUS })) return { ok: false, reason: 'Timberbot is standing there' };
-    return { ok: true, reason: 'Left-click to place' };
+    return { ok: true, reason: this.touch && this.touch.enabled ? 'Lift your finger to place' : 'Left-click to place' };
   }
 
   _updateGhost() {
@@ -363,7 +367,7 @@ export class Game {
     const ghost = this.ghosts[b.type];
     const hit = this.input.mouse.inside ? this.terrainUnder(this.input.mouse.x, this.input.mouse.y, b.pos) : null;
     b.hit = !!hit;
-    if (!hit) { ghost.visible = false; this.outline.visible = false; this.hud.setBuildHint('Point at the ground', false); return; }
+    if (!hit) { ghost.visible = false; this.outline.visible = false; this.hud.setBuildHint(this.touch && this.touch.enabled ? 'Touch the ground where it should go' : 'Point at the ground', false); return; }
     // QA: re-project the hit point; it must land under the cursor
     const s = this.screenOf(b.pos);
     b.rayErrPx = Math.hypot(s.x - this.input.mouse.x, s.y - this.input.mouse.y);
@@ -443,6 +447,9 @@ export class Game {
     const P = this.player, I = this.input, T = this.terrain;
     let f = (I.down('KeyW', 'ArrowUp') ? 1 : 0) - (I.down('KeyS', 'ArrowDown') ? 1 : 0);
     let r = (I.down('KeyD', 'ArrowRight') ? 1 : 0) - (I.down('KeyA', 'ArrowLeft') ? 1 : 0);
+    let mag = 1;
+    const st = this.touch && this.touch.stick;
+    if (st && st.active && st.mag > 0 && !f && !r) { f = st.y; r = st.x; mag = st.mag; }   // analog thumb-stick
     if (this.swing || !this.started) { f = 0; r = 0; }
     // strictly camera-relative basis on the ground plane
     const yaw = this.cam.yaw;
@@ -451,7 +458,7 @@ export class Game {
     const len = Math.hypot(dx, dz);
     if (len > 0) { dx /= len; dz /= len; }
     P.moveDir.set(dx, dz);
-    const tvx = dx * CFG.WALK_SPEED, tvz = dz * CFG.WALK_SPEED;
+    const tvx = dx * CFG.WALK_SPEED * mag, tvz = dz * CFG.WALK_SPEED * mag;
     const acc = 46 * dt, ex = tvx - P.vel.x, ez = tvz - P.vel.y, el = Math.hypot(ex, ez);
     if (el <= acc || el < 1e-9) P.vel.set(tvx, tvz); else P.vel.set(P.vel.x + ex / el * acc, P.vel.y + ez / el * acc);
     const ox = P.pos.x, oz = P.pos.z;
@@ -551,7 +558,7 @@ export class Game {
       this.ring.position.set(t.x, (t.type === 'tree' ? t.y : t.yCenter) + 0.12, t.z);
       this.terrain.normalAt(t.x, t.z, _v);
       this.ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), _v);
-      this.hud.setPrompt(`<b>Space</b> / <b>Click</b> — harvest ${t.type === 'tree' ? 'tree' : 'boulder'} <span class="pips">${'●'.repeat(t.hp)}${'○'.repeat(CFG.HITS_TO_DEPLETE - t.hp)}</span>`);
+      this.hud.setPrompt(`${this.touch && this.touch.enabled ? '<b>Tap</b>' : '<b>Space</b> / <b>Click</b>'} — harvest ${t.type === 'tree' ? 'tree' : 'boulder'} <span class="pips">${'●'.repeat(t.hp)}${'○'.repeat(CFG.HITS_TO_DEPLETE - t.hp)}</span>`);
     } else { this.ring.visible = false; this.hud.setPrompt(null); }
 
     // structures pop in
