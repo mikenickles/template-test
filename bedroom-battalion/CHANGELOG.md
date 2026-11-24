@@ -1632,3 +1632,161 @@ was skipped.
   - `validateWaypoints()` returned `[]`;
   - one `runMatch` (Regular, seed 1, autoplay) finished: Tan 5-2, 7 rounds, 0 stuck, 0 idle, 0 errors.
   - The script ran three times: the first two runs found the decal crash above (and a reporting slip in the script).
+
+## Round 6
+
+DESIGN 18, the user's animated-film polish pass. The user ordered no testing, so nothing was run. The only checks were
+static ones on the module script extracted from `index.html`:
+
+- `node --check` (it parses);
+- ESLint with `no-undef`, `no-dupe-keys` and `no-redeclare` (no undefined names, no duplicate keys).
+
+Gameplay is untouched:
+
+- colliders (hash `e2904076`), waypoints and hit volumes are as at 86e1a0c;
+- no CONFIG gameplay section changed; the new numbers live in `CONFIG.render`, `CONFIG.outside`, `CONFIG.fan` and
+  `CONFIG.decor`;
+- no decor adds a collider.
+
+### Rendering (18.2)
+
+- **Materials.** The room is physically based now.
+  - `MeshPhysicalMaterial` for the paint and toy families. It keeps the 4A atlas look-up and adds per-vertex roughness,
+    metalness, sheen and clearcoat (attribute `apbr`, per atlas tile in `CONFIG.render.pbr`).
+  - Fabrics get sheen and plastic gets clearcoat.
+  - The albedo is clamped to 0.012–0.86, so nothing is pure black or pure white.
+- **Normal maps.** Made at load from each tile's own luminance (a Sobel filter, with roughness variation in alpha), packed
+  like the colour atlas. The floor planks get their own, with grooves at the gaps.
+- **Other materials.** Studs, track, train wheels, targets, decals and soldiers are `MeshStandardMaterial`. The soldier
+  outline stays.
+- **Light.**
+  - A PMREM environment, built from a small box room in the room's colours.
+  - The hemisphere fill drops from 3.0 to 2.3, because the environment adds the rest.
+  - A warm unshadowed bounce light comes up from the floor.
+  - The sun is still the only shadow caster.
+- **Post chain** (r170 addons through an import map, loaded dynamically):
+  1. the outside, then the room;
+  2. GTAO (High);
+  3. the viewmodel;
+  4. depth of field (title only);
+  5. bloom (threshold 1.0);
+  6. grade and vignette;
+  7. OutputPass (ACES, exposure 0.72);
+  8. SMAA (High) or FXAA (Medium, Auto).
+- **If the addons fail to load,** the game draws without post-processing.
+- **Shaders.** Every program is compiled at load with `compileAsync`, behind a new loading screen. One warm-up frame runs
+  with every pass on.
+
+### Outside (18.5)
+
+- **Scene.** Its own scene and camera (near 1, far 30000), drawn first and scissored to the window's screen rectangle;
+  skipped when the window is off screen. The room is drawn over it after a depth clear.
+- **Sky.** A gradient dome with drifting fbm clouds, and a sun disk and glow along the room's sun direction.
+- **Yard, at real scale:**
+  - a lawn with mowing stripes;
+  - a picket fence;
+  - six swaying trees, plus bushes and flowers;
+  - a swing set that sways;
+  - the neighbour's house, with windows, a door and a chimney;
+  - hills with a tree line in aerial haze;
+  - a flock of birds every 18–45 s.
+- **Removed:** the painted window view.
+
+### Ceiling fan (18.6)
+
+- **Model.** It replaces the ceiling light: canopy, downrod, motor housing, five grained wood blades (reach 20) on metal
+  irons, a glowing frosted bowl and two swinging pull chains.
+- **Motion.** 1.5 turns a second, a slight wobble, and a faint motion disc.
+- **Light.** An unshadowed point light sits in the bowl.
+- **Shadow.** The fan casts none, by 18.6's own rule: the sun lights the whole floor, so the blade shadows would sweep
+  the lanes.
+- **Breeze.** It moves the curtains, poster corners, bunting, mobile, plane and dust motes.
+
+### Decor (18.4)
+
+All the content is invented, drawn on one 4096 canvas atlas.
+
+- **Posters and prints:**
+  1. the rocket "BLAST OFF!";
+  2. "Dinosaurs of Long Ago";
+  3. the solar system;
+  4. an alphabet chart;
+  5. a world map;
+  6. two crayon drawings, the family and the green-and-tan battle;
+  7. the "Maple Street Rockets" pennant;
+  8. the "KEEP OUT - BATTALION HQ" door sign;
+  9. a height chart on the door frame;
+  10. a cork board.
+- **How they hang.** Taped or pinned, with a slight curl; some have a loose corner that flutters. Lift + curl + flutter
+  stays at 0.1 or less.
+- **Walls:**
+  - a rockets-and-stars wallpaper border at y 58–62;
+  - a light switch, two outlets and a plug-in nightlight;
+  - a heating vent.
+- **Ceiling:**
+  - glow-in-the-dark stars and a moon;
+  - a planet mobile and a model plane, both turning slowly.
+- **Lights and bunting:** fairy lights along the top of the east wall (the bulbs bloom), and bunting across the north-west
+  corner.
+- **Window:**
+  - curtains with tie-backs that sway;
+  - a potted plant and a marble jar on the sill, which is above every soldier's reach;
+  - glass with a faint reflection and dirt at the edges.
+- **Rug.** A blue-grey play rug, 0.08 tall, inside the track loop. Footsteps and casings on it sound like fabric (a
+  region lookup, not a collider).
+- **Readability.** Decor colours were checked as palette values (CIE76, sRGB) to be at least dE 25 from Tan, Green and
+  their dark shades. Three exceptions:
+  - the crayon battle drawing, which is green and tan by design, small and high on the north wall;
+  - brass casings (dE 15 from Tan, small and short-lived);
+  - the viewmodel wood (25.4).
+
+### Guns (18.3)
+
+- **Models.** Generic real designs replace the toy guns, with the muzzles where they were:
+  - a semi-auto battle rifle: wood stock and handguards, steel receiver, front sight post and rear aperture;
+  - a compact SMG: ventilated shroud, stick magazine, folding wire stock;
+  - a bolt-action sniper: wood stock, scope with a clearcoated eyepiece lens;
+  - a steel pistol with a moving slide.
+- **Materials.** Blued steel with worn bright edges, grained wood, stippled polymer grips. The hands stay green plastic.
+- **Moving parts:**
+  - the bolt, op-rod or slide cycles on every shot;
+  - the pistol's slide locks back on an empty magazine;
+  - on a reload the magazine drops out and a new one goes in;
+  - the sniper lifts and draws its bolt after each shot and through its reload.
+- **Lighting.** The viewmodel pass has key, fill and rim lights, the room environment, and a muzzle-flash point light.
+- **Muzzle flash.**
+  - a star-burst sprite plus flame planes, bright enough to bloom;
+  - a brief point light in the room;
+  - a pooled smoke puff.
+- **Casings.** Instanced brass that bounces three times with a tink per surface, then rolls to a stop.
+- **Grenade.** A frag with a spoon and ring pin replaces the firecracker, in the hand and in flight.
+
+### Audio (18.7)
+
+- the fan's hum (pulsing at the blade-pass rate) and a slow tick;
+- leaf rustle and birdsong, panned to the window and louder near it;
+- casing tinks per surface;
+- bolt and slide clicks on every shot.
+
+The magazine-swap clicks are the existing reload recipes, timed to the new animation.
+
+### Quality presets and controls
+
+GRAPHICS on the title card and in the pause menu, saved with the other settings:
+
+- **Low:** no post-processing, half-resolution shadow map, no normal maps.
+- **Medium:** bloom, grade and FXAA.
+- **High:** adds GTAO and SMAA.
+- **Auto** (the default): Medium's chain at 0.6–1.0 of the full resolution, steered by the frame rate.
+
+There are no new key bindings.
+
+### Left out
+
+- The soldiers' own guns are still the round 4B low-detail shapes, not the new designs.
+- "Soft wear on corners" is only on the guns (bright worn bevels). Room toys rely on their bevels and the normal maps.
+- The curtains and rug use the decor material, without sheen.
+- Nothing was measured, against the 18.8 budgets or anything else:
+  - render cost, draw calls (target under 300 on High) and texture memory (estimated at about 155 MB);
+  - clipping and dE as rendered;
+  - viewmodel screen coverage.

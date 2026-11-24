@@ -1153,3 +1153,19 @@ There is no measuring this round (18 intro), so design for it:
 - Draw-call target under 300 on High.
 - Textures under 192 MB.
 - Every program compiled at load.
+
+### 18.9 Round 6 build notes (where the build differs from, or fills in, 18.1 to 18.8)
+- **Auto preset:** Medium's chain (bloom, grade, FXAA) at a drawing-buffer scale of 0.6 to 1.0. The scale steps down by 0.05
+  below 55 fps and steps back up after 3 s above 59 fps.
+- **Post order:** the viewmodel is drawn after GTAO, so room AO never darkens the gun.
+  - Transparent volumes and hulls are hidden from GTAO's and the depth of field's depth passes: the sunbeam, contact
+    shadows, decals, tracers, the soldier outlines and chevrons, the glass, the marble jar and the fan disc.
+- **Tone mapping:** ACES, `CONFIG.render.exposure` 0.72, unmeasured. AgX is one setting away (`CONFIG.render.toneMapping`).
+- **Fan shadow:** the fan does not cast. The walls do not cast either (17.6), so the sun lights the whole floor and the
+  blade shadows would land on lanes at play height.
+- **Soldier guns:** unchanged from round 4B. The new gun designs are on the viewmodels only.
+- **Sheen:** fabric sheen is on the room fabrics (quilt, pillows, sheet, socks, plush). The curtains and rug use the
+  decor material, without it.
+- **Outside greens:** blue-greens (`CONFIG.outside.leaf`), kept at least dE 25 from Green and its dark shade as palette
+  values.
+
