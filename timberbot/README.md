@@ -20,7 +20,8 @@ node serve.mjs            # http://localhost:8080/   (zero dependencies)
 From the repository root you can also use `npm run game`.
 
 URL options: `?quality=0|1|2` locks the graphics level (default: 2, auto-steps down if the frame rate stays under 30),
-`?qa` opens the diagnostics overlay, `?autostart` skips the start screen (no audio until the first input).
+`?qa` opens the diagnostics overlay, `?autostart` skips the start screen (no audio until the first input),
+`?grass=0.1` scales grass density (useful on software renderers).
 
 ## Controls
 
@@ -53,8 +54,8 @@ URL options: `?quality=0|1|2` locks the graphics level (default: 2, auto-steps d
 - Heightfield terrain, exactly 150 × 150 m, 0 – 8 m elevation inside the 120 × 120 m playable area.
 - 20 m spawn clearing at the origin (elevation < 1.5 m, no trees or boulders).
 - The outer 15 m rises into a rocky ridge packed with ~340 trees, 90 crags and undergrowth.
-- 136 harvestable trees (pines, broadleaf, birch; 6 – 14 m) and 50 mossy boulders (1 – 3 m).
-- ~115k instanced grass tufts, ferns, bushes, wildflowers, fallen logs, drifting pollen.
+- 136 harvestable trees (78 conifers, 58 broadleaf and birch; 6 – 14 m) and 50 mossy boulders (1 – 3 m).
+- ~78,000 instanced grass tufts, 520 ferns, 14 fallen logs, bushes, wildflower patches and 1,400 drifting pollen motes.
 
 All of these constants live in `src/config.js`, and the in-game QA overlay re-measures them live.
 
@@ -106,5 +107,7 @@ The scripted play-through drives real keyboard and mouse input and writes screen
 
 ```bash
 node serve.mjs 8123 &
-node qa/playtest.mjs qa/out 2      # needs Playwright; args: output dir, quality level
+node qa/playtest.mjs qa/out 2                                        # needs Playwright; args: output dir, quality level
+node qa/playtest.mjs qa/out 0 http://localhost:8123/ grass=0.04     # fast variant for software GL (no GPU)
+node qa/screenshots.mjs qa/out spawn,forest,camp 2                   # camera presets for visual review
 ```

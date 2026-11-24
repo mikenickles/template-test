@@ -6,6 +6,16 @@
 **Status**: New/empty repository — no application code has been added yet.
 **Remote**: `mikenickles/template-test`
 
+## Timberbot (`timberbot/`)
+
+A self-contained browser 3D game (Three.js r181, ES modules, no build step). It is independent of the Astro site.
+
+- Run: `npm run game` (or `node timberbot/serve.mjs`) and open http://localhost:8080/
+- Game code: `timberbot/src/`; every gameplay/world measurement lives in `timberbot/src/config.js`
+- Assets are generated, not hand-made: sources in `timberbot/pipeline/` (numpy + Blender `bpy`), outputs in `timberbot/assets/`. Regenerate with `timberbot/pipeline/build_all.sh` rather than editing `.glb`/`.webp` files
+- Test: `node timberbot/serve.mjs 8123 &` then `node timberbot/qa/playtest.mjs` (Playwright play-through with assertions); press `T` in game for the live QA overlay
+- Details: `timberbot/README.md`
+
 ## Getting Started
 
 This repository is freshly initialized. When project code is added, update this file with:
