@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "baseUrl": "..",
+    "paths": {
+      "three": ["vendor/three/build/three.module.js"],
+      "three/addons/*": ["vendor/three/addons/*"]
+    }
+  }
+}

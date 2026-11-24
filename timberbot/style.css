@@ -1,4 +1,6 @@
+/* The game has one deliberate look: a dark, warm HUD over the 3D scene. */
 :root {
+  color-scheme: dark;
   --ink: #f4ecdd;
   --dim: #c9bda6;
   --panel: rgba(24, 19, 13, 0.62);

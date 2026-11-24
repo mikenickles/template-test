@@ -37,8 +37,17 @@ const TEXTURES = {
 const MODELS = ['pine_a', 'pine_b', 'pine_c', 'oak_a', 'oak_b', 'birch_a', 'bush_a', 'fern_a', 'log_a',
   'boulder_a', 'boulder_b', 'boulder_c', 'timberbot', 'palisade', 'campfire', 'beacon'];
 
+// The single-file build (tools/build_single.py) embeds every asset in the page as
+// window.__TB_ASSETS, so the game can run from a double-clicked file with no server or fetch().
+function b64ToBuffer(b64) {
+  const bin = atob(b64), out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out.buffer;
+}
+
 export async function loadAssets(renderer, onProgress) {
-  const base = new URL('../assets/', import.meta.url).href;
+  const EMBED = typeof window !== 'undefined' ? window.__TB_ASSETS : null;
+  const base = EMBED ? '' : new URL('../assets/', import.meta.url).href;
   const tl = new THREE.TextureLoader();
   const gl = new GLTFLoader();
   const T = {}, M = {};
@@ -48,7 +57,7 @@ export async function loadAssets(renderer, onProgress) {
   const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   const jobs = [];
   for (const [name, srgb] of Object.entries(TEXTURES)) {
-    jobs.push(tl.loadAsync(`${base}textures/${name}.webp`).then((t) => {
+    jobs.push(tl.loadAsync(EMBED ? EMBED.textures[name] : `${base}textures/${name}.webp`).then((t) => {
       t.flipY = false;                      // glTF UV convention everywhere
       t.wrapS = t.wrapT = THREE.RepeatWrapping;
       t.anisotropy = aniso;
@@ -58,10 +67,12 @@ export async function loadAssets(renderer, onProgress) {
     }));
   }
   for (const name of MODELS) {
-    jobs.push(gl.loadAsync(`${base}models/${name}.glb`).then((g) => { M[name] = g.scene; g.scene.name = name; tick(); }));
+    const job = EMBED ? gl.parseAsync(b64ToBuffer(EMBED.models[name]), '') : gl.loadAsync(`${base}models/${name}.glb`);
+    jobs.push(job.then((g) => { M[name] = g.scene; g.scene.name = name; tick(); }));
   }
   let vegInfo = {};
-  jobs.push(fetch(`${base}models/vegetation.json`).then((r) => r.json()).then((j) => { vegInfo = j; tick(); }));
+  const veg = EMBED ? Promise.resolve(EMBED.vegetation) : fetch(`${base}models/vegetation.json`).then((r) => r.json());
+  jobs.push(veg.then((j) => { vegInfo = j; tick(); }));
   await Promise.all(jobs);
   return { T, M, vegInfo };
 }
