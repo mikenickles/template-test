@@ -26,6 +26,9 @@ const KEEP_NOTICES = 50;
 const MAX_FOLLOWUPS = 30;
 const MAX_WATCHES = 12;
 const HOUR = 60 * 60 * 1000;
+/** How often a watch may be checked: each check is a web search, so not more than every 15 minutes. */
+const MIN_WATCH_MINUTES = 15;
+const MAX_WATCH_MINUTES = 30 * 24 * 60;
 const DAY = 24 * HOUR;
 /** A brief more than this late (the PC was off) waits for tomorrow. */
 const BRIEF_GRACE = 3 * HOUR;
@@ -120,15 +123,22 @@ export const PROACTIVE_TOOLS = [
   {
     name: 'watch',
     description:
-      'Keep an eye on something on the web for the user, like a price, a product coming back in stock, a page changing, or news on a topic. It is checked every hour or every day, and you will tell the user in this chat when the condition is met or it changes. Only when the user asks for it or agrees.',
+      'Keep an eye on something on the web for the user, like a price, a product coming back in stock, a page changing, or news on a topic, checked as often as the user wants (every 15 minutes at most often), optionally at a set time of day. You will tell the user in this chat when the condition is met or it changes. Only when the user asks for it or agrees; follow any timing the user or your instructions give. To change an existing watch (how often, the time of day, or what it looks for), pass its id.',
     input_schema: {
       type: 'object',
       properties: {
+        id: { type: 'string', description: 'Only to change a watch you already have: its id from your instructions. Leave out for a new watch.' },
         what: { type: 'string', description: 'What to check, specific enough to search for: "the price of the Sony WH-1000XM6 at Best Buy".' },
         condition: { type: 'string', description: 'When to speak up, like "under $300". Leave empty to report meaningful changes.' },
-        every: { type: 'string', enum: ['hour', 'day'] },
+        every_minutes: {
+          type: 'integer',
+          minimum: MIN_WATCH_MINUTES,
+          maximum: MAX_WATCH_MINUTES,
+          description: 'How often to check, in minutes: 15, 30, 60 for hourly, 240 for every 4 hours, 1440 for daily, 10080 for weekly. Each check is a web search, so check only as often as the thing really changes. Defaults to daily.',
+        },
+        at_time: { type: 'string', description: 'A time of day to check, as 24-hour "HH:MM" on the PC\'s clock, like "07:30", for daily or less frequent checks. Leave out to check on the interval alone.' },
       },
-      required: ['what', 'every'],
+      required: [],
     },
   },
   {
@@ -250,7 +260,7 @@ export class Proactive {
       `- Be proactive: you can come back to the user later with follow_up, and keep an eye on things on the web with watch. Offer when it would genuinely help, like checking back before a deadline or watching a price, and use them when the user agrees. Today is ${today}.`,
     ];
     if (followups.length) lines.push(`  Follow-ups you have set: ${followups.map((f) => `${when(f.at)}: ${f.note}`).join('; ')}.`);
-    if (watches.length) lines.push(`  Things you are watching: ${watches.map((w) => `[id ${w.id}] ${w.what}${w.condition ? ` (when ${w.condition})` : ''}, every ${w.every}`).join('; ')}.`);
+    if (watches.length) lines.push(`  Things you are watching: ${watches.map((w) => `[id ${w.id}] ${w.what}${w.condition ? ` (when ${w.condition})` : ''}, every ${w.every}, next check ${when(w.nextCheckAt)}`).join('; ')}.`);
     return {
       prompt: lines.join('\n'),
       run: (name, input) => {
@@ -261,8 +271,7 @@ export class Proactive {
             return { text, isError: false, card: { type: 'followup', ref: made.id, time: made.at, note: made.note } };
           }
           if (name === 'watch') {
-            const text = this.#addWatch(agent, room, input ?? {});
-            const made = this.store.state.watches.at(-1);
+            const { text, watch: made } = this.#addWatch(agent, room, input ?? {});
             return { text, isError: false, card: { type: 'watch', ref: made.id, what: made.what, condition: made.condition ?? '', every: made.every ?? null } };
           }
           if (name === 'stop_watching') return { text: this.#stopWatch(agent, input ?? {}), isError: false };
@@ -293,26 +302,37 @@ export class Proactive {
   }
 
   #addWatch(agent, room, input) {
+    if (!this.#canCheckWeb()) throw new ProactiveError('Watching needs an Anthropic key on the hub, for web searches.');
+    const timing = watchTiming(input);
+    // Changing one the agent already has: when it's checked, and what it looks for if given.
+    if (input.id) {
+      const watch = this.store.state.watches.find((w) => w.id === clean(input.id, 40) && w.agentId === agent.id);
+      if (!watch) throw new ProactiveError('You have no watch with that id.');
+      if (clean(input.what, 300)) watch.what = clean(input.what, 300);
+      if (input.condition !== undefined) watch.condition = clean(input.condition, 200);
+      if (timing.given) Object.assign(watch, timing.fields, { nextCheckAt: nextWatchCheck(timing.fields, this.now()) });
+      this.store.save();
+      return { text: `Changed: watching "${watch.what}"${watch.condition ? ` for when ${watch.condition}` : ''}, checked every ${watch.every}; next check ${when(watch.nextCheckAt)}. Its id is ${watch.id}.`, watch };
+    }
     const what = clean(input.what, 300);
     if (!what) throw new ProactiveError('Say what to watch.');
-    if (!this.#canCheckWeb()) throw new ProactiveError('Watching needs an Anthropic key on the hub, for web searches.');
     if (this.store.state.watches.length >= MAX_WATCHES) throw new ProactiveError('The crew is already watching a lot. Stop a watch first.');
-    const every = input.every === 'hour' ? 'hour' : 'day';
     const watch = {
       id: crypto.randomUUID().slice(0, 8),
       agentId: agent.id,
       roomId: room.id,
       what,
       condition: clean(input.condition, 200),
-      every,
+      ...timing.fields,
       createdAt: this.now(),
-      nextCheckAt: this.now() + 60_000,
+      // The first look comes right away, unless it's set for a time of day.
+      nextCheckAt: timing.fields.at ? nextWatchCheck(timing.fields, this.now()) : this.now() + 60_000,
       lastCheckedAt: null,
       lastFinding: null,
     };
     this.store.state.watches.push(watch);
     this.store.save();
-    return `Watching "${what}"${watch.condition ? ` for when ${watch.condition}` : ''}, checked every ${every}. Its id is ${watch.id}.`;
+    return { text: `Watching "${what}"${watch.condition ? ` for when ${watch.condition}` : ''}, checked every ${watch.every}; first check ${when(watch.nextCheckAt)}. Its id is ${watch.id}.`, watch };
   }
 
   #stopWatch(agent, input) {
@@ -441,7 +461,7 @@ export class Proactive {
       this.removeWatch(watch.id);
       return;
     }
-    watch.nextCheckAt = now + (watch.every === 'hour' ? HOUR : DAY);
+    watch.nextCheckAt = nextWatchCheck(watch, now);
     this.store.save();
     if (!this.#canCheckWeb()) return;
     const result = await this.#check(watch, agent, room);
@@ -630,4 +650,46 @@ export class Proactive {
     this.store.save();
     return message;
   }
+}
+
+/**
+ * When a watch is checked, from what the agent asked for: every_minutes (15 minutes to 30 days) and an optional
+ * at_time ("HH:MM"), which makes the interval whole days. Older watches said just "hour" or "day".
+ */
+export function watchTiming(input = {}) {
+  const atMatch = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(String(input.at_time ?? '').trim());
+  if (input.at_time && !atMatch) throw new ProactiveError('Give the time of day as 24-hour HH:MM, like 07:30.');
+  let minutes = Number(input.every_minutes);
+  const given = Number.isFinite(minutes) || Boolean(atMatch) || input.every === 'hour' || input.every === 'day';
+  if (!Number.isFinite(minutes)) minutes = input.every === 'hour' ? 60 : 1440;
+  if (minutes < MIN_WATCH_MINUTES) throw new ProactiveError(`Watches are checked at most every ${MIN_WATCH_MINUTES} minutes, since each check is a web search.`);
+  minutes = Math.min(Math.round(minutes), MAX_WATCH_MINUTES);
+  const at = atMatch ? `${atMatch[1].padStart(2, '0')}:${atMatch[2]}` : null;
+  if (at) minutes = Math.max(1, Math.round(minutes / 1440)) * 1440;
+  return { given, fields: { everyMinutes: minutes, at, every: everyLabel(minutes, at) } };
+}
+
+/** "30 minutes", "2 hours", "day", "day at 7:30 am", "3 days": read after "every". */
+export function everyLabel(minutes, at = null) {
+  const days = minutes / 1440;
+  if (at) {
+    const [h, m] = at.split(':').map(Number);
+    const clock = `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`;
+    return `${days === 1 ? 'day' : `${days} days`} at ${clock}`;
+  }
+  if (minutes % 1440 === 0) return days === 1 ? 'day' : days === 7 ? 'week' : `${days} days`;
+  if (minutes % 60 === 0) return minutes === 60 ? 'hour' : `${minutes / 60} hours`;
+  return `${minutes} minutes`;
+}
+
+/** The next check after [now]: the interval from now, or the next [at] time of day, a whole number of days on. */
+export function nextWatchCheck(watch, now) {
+  const minutes = watch.everyMinutes ?? (watch.every === 'hour' ? 60 : 1440);
+  if (!watch.at) return now + minutes * 60_000;
+  const [h, m] = watch.at.split(':').map(Number);
+  const next = new Date(now);
+  next.setHours(h, m, 0, 0);
+  if (next.getTime() <= now) next.setDate(next.getDate() + 1);
+  // Every few days: the first one is the next time of day, then that many days apart.
+  return next.getTime() + (watch.lastCheckedAt ? Math.max(0, minutes / 1440 - 1) * DAY : 0);
 }

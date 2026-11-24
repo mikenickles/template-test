@@ -208,7 +208,7 @@ data class BriefSettings(val enabled: Boolean = false, val time: String = "08:00
 @Serializable
 data class FollowUp(val id: String = "", val agentId: String = "", val roomId: String = "", val at: Long = 0, val note: String = "")
 
-/** Something an agent keeps an eye on for the user, checked every [every] ("hour" or "day"). */
+/** Something an agent keeps an eye on for the user, checked every [every]: "hour", "day", "30 minutes", "day at 7:30 am"… */
 @Serializable
 data class Watch(
     val id: String = "",

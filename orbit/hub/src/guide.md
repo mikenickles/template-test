@@ -136,8 +136,10 @@ Agents set to Gentle (about once a day) or Active (a few times a day) look over 
 calendar and email if they have Google, and write to the user only when something is worth it. A quick, cheap
 model decides; usually the answer is no. Proactive agents can also:
 - **follow up** later, at a time they set (follow_up),
-- **watch** something on the web, like a price or a page, every hour or day, and speak up when it changes or a
-  condition is met (watch, stop_watching).
+- **watch** something on the web, like a price or a page, and speak up when it changes or a condition is met
+  (watch, stop_watching). The user picks how often, by telling the agent or in its instructions: anything from
+  every 15 minutes to every 30 days (each check is a small web search, so more often costs more), optionally at
+  a time of day, like "every morning at 7:30". Asking the agent changes an existing watch's timing too.
 
 One agent can write a **morning brief** at a set time, in its own room. Everything an agent writes on its own
 shows under "From your crew" on Home and as a phone notification. Settings, under Reaching out: who reaches out,

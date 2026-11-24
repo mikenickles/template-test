@@ -207,6 +207,40 @@ test('watches check the web and speak up when the condition is met', async (t) =
   assert.equal(h.store.state.watches.length, 0);
 });
 
+test('a watch is checked as often as asked, at a time of day if asked, and its timing can change', async (t) => {
+  const h = await start(t, { anthropic: true, checks: ['{"finding": "in stock", "notify": false}', '{"finding": "in stock", "notify": false}'] });
+  const scout = await h.agent('Scout');
+  const room = (await h.api('POST', '/api/rooms', { name: 'Deals', agentIds: [scout.id] })).body;
+  const tools = h.hub.proactive.toolsFor(scout, room);
+
+  const often = tools.run('watch', { what: 'Switch 3 stock at Target', every_minutes: 30 });
+  assert.equal(often.isError, false);
+  assert.match(often.text, /checked every 30 minutes/);
+  assert.equal(often.card.every, '30 minutes', 'the card says how often');
+  const watch = h.store.state.watches[0];
+  const now = Date.now();
+  await h.hub.proactive.tick(now + 2 * 60_000);
+  assert.ok(Math.abs(watch.nextCheckAt - (now + 2 * 60_000 + 30 * 60_000)) < 1000, 'next check in 30 minutes');
+
+  assert.equal(tools.run('watch', { what: 'x', every_minutes: 5 }).isError, true, 'no more often than every 15 minutes');
+  assert.equal(tools.run('watch', { what: 'x', at_time: '7am' }).isError, true, 'times are HH:MM');
+
+  // "Check it every morning at 7:30 instead."
+  const changed = tools.run('watch', { id: watch.id, at_time: '07:30' });
+  assert.equal(changed.isError, false);
+  assert.equal(h.store.state.watches.length, 1, 'changed, not added');
+  assert.equal(watch.every, 'day at 7:30 am');
+  const next = new Date(watch.nextCheckAt);
+  assert.deepEqual([next.getHours(), next.getMinutes()], [7, 30]);
+  assert.ok(watch.nextCheckAt > Date.now() && watch.nextCheckAt - Date.now() <= 24 * 60 * 60_000);
+  assert.match(h.hub.proactive.toolsFor(scout, room).prompt, /every day at 7:30 am, next check/);
+
+  // Older watches, made with "hour" or "day", keep working.
+  assert.equal(tools.run('watch', { what: 'old style', every: 'hour' }).card.every, 'hour');
+  assert.equal(tools.run('watch', { what: 'weekly', every_minutes: 10080 }).card.every, 'week');
+  assert.equal(tools.run('watch', { id: 'nope', every_minutes: 60 }).isError, true);
+});
+
 test('the morning brief arrives once a day, in its own room', async (t) => {
   const h = await start(t, {});
   const nova = await h.agent('Nova', { abilities: ['web'] });

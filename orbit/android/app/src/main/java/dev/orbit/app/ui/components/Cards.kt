@@ -364,7 +364,7 @@ private fun PlanCard(card: Card, avatar: AvatarSpec, agentName: String, now: Lon
             Column(Modifier.padding(start = 12.dp)) {
                 Text(if (followUp) "$agentName will check in" else "$agentName is watching", style = OrbitType.titleS, color = c.text)
                 Text(
-                    if (followUp) card.time?.let { followUpWhen(it, now, LocalZone.current) } ?: "" else if (card.every == "hour") "Checked every hour" else "Checked every day",
+                    if (followUp) card.time?.let { followUpWhen(it, now, LocalZone.current) } ?: "" else "Checked every ${card.every?.ifBlank { null } ?: "day"}",
                     style = OrbitType.caption,
                     color = c.textSecondary,
                 )
