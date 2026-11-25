@@ -44,7 +44,7 @@ export function clientDetail(name, input = {}) {
     return Number.isNaN(at) ? '' : new Date(at).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
   if (name === 'watch') return input.what;
-  if (name === 'stop_watching') return '';
+  if (name === 'stop_watching' || name === 'cancel_follow_up') return '';
   if (SELF_ACTIVITY[name]) return selfDetail(name, input);
   if (BROWSER_ACTIVITY[name]) return browserDetail(name, input);
   if (name === 'web_search') return input.query;

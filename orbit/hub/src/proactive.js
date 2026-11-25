@@ -108,17 +108,29 @@ export const PROACTIVE_TOOLS = [
   {
     name: 'follow_up',
     description:
-      'Come back to the user later, on your own: you will be woken at that time in this chat to follow up. Use it when you said you would check back, or before something the user has coming up. ' +
-      'Give either in_minutes or at (ISO 8601 in the user\'s time zone, like 2026-12-01T09:00), and a note for yourself about what to follow up on.',
+      'Come back to the user later, on your own: you will be woken at that time in this chat, with all your tools, to follow up. Use it when you said you would check back, or before something the user has coming up. ' +
+      'Give either in_minutes or at (ISO 8601 in the user\'s time zone, like 2026-12-01T09:00), and a note for yourself about what to do. ' +
+      'For regular updates ("tell me every 15 minutes how X is going", "send me a summary every morning"), add repeat_minutes: you will be woken that often until the user or you cancel it with cancel_follow_up.',
     input_schema: {
       type: 'object',
       properties: {
         in_minutes: { type: 'integer', minimum: 1, maximum: 259200 },
         at: { type: 'string' },
-        note: { type: 'string', description: 'What to follow up on, written for yourself.' },
+        note: { type: 'string', description: 'What to follow up on or report, written for yourself.' },
+        repeat_minutes: {
+          type: 'integer',
+          minimum: MIN_WATCH_MINUTES,
+          maximum: MAX_WATCH_MINUTES,
+          description: 'Repeat this often, in minutes (15 at least; 60 hourly, 1440 daily), for regular updates. Leave out for a one-time follow-up.',
+        },
       },
       required: ['note'],
     },
+  },
+  {
+    name: 'cancel_follow_up',
+    description: 'Cancel a follow-up or regular update, by the id listed in your instructions. Use it when the user asks you to stop, or the updates have done their job.',
+    input_schema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
   },
   {
     name: 'watch',
@@ -148,7 +160,7 @@ export const PROACTIVE_TOOLS = [
   },
 ].map((tool) => ({ ...tool, eager_input_streaming: true }));
 
-export const PROACTIVE_ACTIVITY = { follow_up: 'followup', watch: 'watch', stop_watching: 'watch_stop' };
+export const PROACTIVE_ACTIVITY = { follow_up: 'followup', cancel_follow_up: 'followup_cancel', watch: 'watch', stop_watching: 'watch_stop' };
 
 export class Proactive {
   /**
@@ -256,10 +268,12 @@ export class Proactive {
     const watches = mine(this.store.state.watches);
     const followups = mine(this.store.state.followups);
     const today = new Date(this.now()).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const { quietStart, quietEnd } = this.state;
+    const quiet = quietStart === quietEnd ? 'The user has no quiet hours.' : `The user's quiet hours are ${quietStart} to ${quietEnd}: regular updates and watches pause then and pick up after (one-time follow-ups still arrive); the user can change them in Settings, Reaching out, or ask you with change_settings.`;
     const lines = [
-      `- Be proactive: you can come back to the user later with follow_up, and keep an eye on things on the web with watch. Offer when it would genuinely help, like checking back before a deadline or watching a price, and use them when the user agrees. Today is ${today}.`,
+      `- Be proactive: you can come back to the user later with follow_up, send regular updates with follow_up and repeat_minutes, and keep an eye on things on the web with watch. Offer when it would genuinely help, like checking back before a deadline or watching a price, and use them when the user asks or agrees. When the user asks for updates every so often, use follow_up with repeat_minutes, not watch: a watch speaks up only when something changes or a condition is met. Never say you'll send updates without setting them up. ${quiet} Today is ${today}.`,
     ];
-    if (followups.length) lines.push(`  Follow-ups you have set: ${followups.map((f) => `${when(f.at)}: ${f.note}`).join('; ')}.`);
+    if (followups.length) lines.push(`  Follow-ups you have set: ${followups.map((f) => `[id ${f.id.slice(0, 8)}] ${f.repeatMinutes ? `every ${f.every}, next ${when(f.at)}` : when(f.at)}: ${f.note}`).join('; ')}.`);
     if (watches.length) lines.push(`  Things you are watching: ${watches.map((w) => `[id ${w.id}] ${w.what}${w.condition ? ` (when ${w.condition})` : ''}, every ${w.every}, next check ${when(w.nextCheckAt)}`).join('; ')}.`);
     return {
       prompt: lines.join('\n'),
@@ -268,7 +282,14 @@ export class Proactive {
           if (name === 'follow_up') {
             const text = this.#addFollowup(agent, room, input ?? {});
             const made = this.store.state.followups.at(-1);
-            return { text, isError: false, card: { type: 'followup', ref: made.id, time: made.at, note: made.note } };
+            return { text, isError: false, card: { type: 'followup', ref: made.id, time: made.at, note: made.note, every: made.every ?? null } };
+          }
+          if (name === 'cancel_follow_up') {
+            const id = clean(input?.id, 40);
+            const f = id && this.store.state.followups.find((x) => x.agentId === agent.id && x.id.startsWith(id));
+            if (!f) return { text: 'You have no follow-up with that id.', isError: true };
+            this.removeFollowup(f.id);
+            return { text: `Cancelled${f.repeatMinutes ? ` the updates every ${f.every}` : ' the follow-up'}: ${f.note}`, isError: false };
           }
           if (name === 'watch') {
             const { text, watch: made } = this.#addWatch(agent, room, input ?? {});
@@ -296,9 +317,20 @@ export class Proactive {
     if (this.store.state.followups.filter((f) => f.agentId === agent.id).length >= MAX_FOLLOWUPS) {
       throw new ProactiveError('You already have many follow-ups set. Let some pass first.');
     }
-    this.store.state.followups.push({ id: crypto.randomUUID(), agentId: agent.id, roomId: room.id, at, note, createdAt: this.now() });
+    let repeat = null;
+    if (input.repeat_minutes !== undefined && input.repeat_minutes !== null) {
+      const minutes = Number(input.repeat_minutes);
+      if (!Number.isFinite(minutes) || minutes < MIN_WATCH_MINUTES) throw new ProactiveError(`Regular updates can be every ${MIN_WATCH_MINUTES} minutes at most often.`);
+      repeat = Math.min(Math.round(minutes), MAX_WATCH_MINUTES);
+    }
+    const made = { id: crypto.randomUUID(), agentId: agent.id, roomId: room.id, at, note, createdAt: this.now() };
+    if (repeat) Object.assign(made, { repeatMinutes: repeat, every: everyLabel(repeat) });
+    this.store.state.followups.push(made);
     this.store.save();
-    return `Follow-up set for ${when(at)}. You'll be woken in this chat then.`;
+    const quiet = repeat && this.state.quietStart !== this.state.quietEnd ? ` They pause in quiet hours (${this.state.quietStart} to ${this.state.quietEnd}).` : '';
+    return repeat
+      ? `Regular updates set: first ${when(at)}, then every ${made.every}, until cancelled. Its id is ${made.id.slice(0, 8)}.${quiet}`
+      : `Follow-up set for ${when(at)}. You'll be woken in this chat then. Its id is ${made.id.slice(0, 8)}.`;
   }
 
   #addWatch(agent, room, input) {
@@ -386,12 +418,26 @@ export class Proactive {
         this.removeFollowup(f.id);
         continue;
       }
+      if (f.repeatMinutes) {
+        // Regular updates: the next one is set first, skipping any missed while the PC was off; quiet hours skip a turn.
+        const step = f.repeatMinutes * 60_000;
+        f.at += Math.max(1, Math.ceil((now - f.at + 1) / step)) * step;
+        this.store.save();
+        if (isQuiet(this.state, now)) continue;
+        if (this.orchestrator.runState(room.id).active) continue;
+        await this.reach(agent, room, [
+          `[System]: Time for the regular update the user asked for (every ${f.every}, since ${when(f.createdAt)}): "${f.note}".`,
+          'Give the user the update in a short message. Use your tools to get what\'s current (email, calendar, the web, files). If nothing has changed since your last update, say so in one line.',
+          `To stop these updates, call cancel_follow_up with id ${f.id.slice(0, 8)}.`,
+        ].join(' '), { kind: 'followup', label: `Every ${f.every}` }, { counts: false });
+        continue;
+      }
       if (this.orchestrator.runState(room.id).active) continue; // next tick
       this.removeFollowup(f.id);
       await this.reach(agent, room, [
         `[System]: You set a follow-up for now, on ${when(f.createdAt)}: "${f.note}".`,
         'Follow up with the user in a short message, picking up where things were left. Use your tools if they help (check the calendar or the web, say).',
-      ].join(' '), { kind: 'followup', label: 'Follow-up' });
+      ].join(' '), { kind: 'followup', label: 'Follow-up' }, { counts: false });
     }
   }
 
@@ -472,12 +518,13 @@ export class Proactive {
     this.store.save();
     // The first check sets a starting point, unless the condition is already met.
     if (!result.notify || (!previous && !watch.condition)) return;
-    if (!this.#underLimit(now) || this.orchestrator.runState(room.id).active) return;
+    // The user asked for this watch, so the daily limit (for check-ins nobody asked for) doesn't hold it back.
+    if (this.orchestrator.runState(room.id).active) return;
     await this.reach(agent, room, [
       `[System]: Something you're watching for the user needs their attention. Watch: "${watch.what}"${watch.condition ? `, telling them when ${watch.condition}` : ''}.`,
       `What the check just found: ${watch.lastFinding}${previous ? ` (before: ${previous})` : ''}.`,
       'Tell the user in a short message, with where you found it. If this watch has done its job, say you will stop watching and call stop_watching.',
-    ].join(' '), { kind: 'watch', label: watch.what });
+    ].join(' '), { kind: 'watch', label: watch.what }, { counts: false });
   }
 
   /** One web check for a watch, with a quick model. Null if it couldn't be done. */

@@ -133,18 +133,26 @@ is a guide agent (usually Nova) learning about the user, then creating a crew ar
 ## Proactive agents
 
 Agents set to Gentle (about once a day) or Active (a few times a day) look over recent chats, and the user's
-calendar and email if they have Google, and write to the user only when something is worth it. A quick, cheap
-model decides; usually the answer is no. Proactive agents can also:
-- **follow up** later, at a time they set (follow_up),
-- **watch** something on the web, like a price or a page, and speak up when it changes or a condition is met
-  (watch, stop_watching). The user picks how often, by telling the agent or in its instructions: anything from
-  every 15 minutes to every 30 days (each check is a small web search, so more often costs more), optionally at
-  a time of day, like "every morning at 7:30". Asking the agent changes an existing watch's timing too.
+calendar and email if they have Google, and write to the user unasked (check-ins) only when something is worth it.
+A quick, cheap model decides; usually the answer is no. Separately, every agent that uses tools does these when
+the user asks, whatever its Reaching out setting:
+- **follow up** once, at a time it sets (follow_up),
+- **send regular updates**, like "tell me every 15 minutes how the restock is going" or "a summary every
+  morning" (follow_up with repeat_minutes, 15 minutes at most often), with all its tools each time (email,
+  calendar, web, files), until the user or the agent cancels them (cancel_follow_up, or Cancel in the app),
+- **watch** something on the web, like a price or a page, and speak up only when it changes or a condition is
+  met (watch, stop_watching), checked from every 15 minutes to every 30 days, optionally at a time of day. Each
+  check is a small web search, so more often costs more. Asking the agent changes an existing watch's timing.
+For regular news, ask for updates; for "tell me when", ask for a watch.
 
 One agent can write a **morning brief** at a set time, in its own room. Everything an agent writes on its own
 shows under "From your crew" on Home and as a phone notification. Settings, under Reaching out: who reaches out,
-the morning brief, quiet hours (no check-ins then), a daily limit, and the follow-ups and watches agents have
-set, which the user can cancel.
+the morning brief, quiet hours, a daily limit, and the follow-ups, updates and watches agents have set, which the
+user can cancel. Quiet hours (9 pm to 8 am unless changed; "None" turns them off) pause check-ins, regular
+updates and watch checks, which pick up after; a one-time follow-up still arrives. The daily limit counts only
+check-ins nobody asked for; updates, follow-ups and watches the user asked for always come through.
+To make the crew as proactive as possible: set agents' Reaching out to Active, raise the check-ins limit, turn
+quiet hours off if updates should come overnight, and ask for regular updates rather than watches.
 
 ## Settings
 

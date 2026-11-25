@@ -98,6 +98,7 @@ test('an Ollama model uses the hub\'s tools, with calls that arrive in pieces', 
   const names = first.tools.map((tool) => tool.function.name);
   assert.ok(names.includes('treehouse_guide') && names.includes('remember') && names.includes('update_self'));
   assert.ok(!names.includes('web_search'), 'no web without the ability');
+  assert.ok(names.includes('follow_up') && names.includes('watch'), 'every agent with tools can follow up and watch when asked');
   assert.equal(first.tools[0].type, 'function');
   assert.ok(!first.messages[0].content.includes(GUIDE), 'with tools, the guide is read when needed');
 

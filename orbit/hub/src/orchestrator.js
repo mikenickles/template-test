@@ -771,7 +771,9 @@ export class Orchestrator {
     const abilities = resolveAbilities(agent, this.providers, this.folders, () => this.store.save(), {
       profile, force: intro ? ['memory'] : [], google: this.google, browser: this.browser,
     });
-    if (abilities?.proactiveOn && this.proactive) abilities.proactive = this.proactive.toolsFor(agent, room);
+    // Every agent with tools can follow up, send regular updates and watch things when the user asks; how often it
+    // reaches out unasked (check-ins) is its Reaching out setting.
+    if (abilities && this.proactive) abilities.proactive = this.proactive.toolsFor(agent, room);
     if (abilities?.browser) abilities.browser = abilities.browser.tools((request) => this.#ask(room, message, run, request));
     // Models other than Claude search through the hub: a quick Claude search when there's a key, and pages
     // fetched by the hub itself.

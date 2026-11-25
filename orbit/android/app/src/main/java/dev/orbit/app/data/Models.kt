@@ -168,6 +168,7 @@ data class Activity(
         const val KIND_FOLLOW_UP = "followup"
         const val KIND_WATCH = "watch"
         const val KIND_WATCH_STOP = "watch_stop"
+        const val KIND_FOLLOW_UP_CANCEL = "followup_cancel"
         const val KIND_GUIDE = "guide"
 
         // The Treehouse browser on the PC.
@@ -206,7 +207,8 @@ data class BriefSettings(val enabled: Boolean = false, val time: String = "08:00
 
 /** A time an agent promised to come back to the user, in a room. */
 @Serializable
-data class FollowUp(val id: String = "", val agentId: String = "", val roomId: String = "", val at: Long = 0, val note: String = "")
+/** [every] is set for regular updates ("15 minutes", "day"): [at] is then the next one. */
+data class FollowUp(val id: String = "", val agentId: String = "", val roomId: String = "", val at: Long = 0, val note: String = "", val every: String? = null)
 
 /** Something an agent keeps an eye on for the user, checked every [every]: "hour", "day", "30 minutes", "day at 7:30 am"… */
 @Serializable

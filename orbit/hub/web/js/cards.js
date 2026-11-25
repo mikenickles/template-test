@@ -167,7 +167,7 @@ function PlanCard({ card, agent, now, notify }) {
     <div class="tool-card-head">
       <${Portrait} spec=${agent?.avatar} size=${40} />
       <div><div class="title-s">${agent?.name ?? 'Your agent'} ${followUp ? 'will check in' : 'is watching'}</div>
-        <div class="caption ink">${followUp ? (card.time ? followUpWhen(card.time, now) : '') : `Checked every ${card.every || 'day'}`}</div></div>
+        <div class="caption ink">${followUp ? (card.every ? `Every ${card.every}` : card.time ? followUpWhen(card.time, now) : '') : `Checked every ${card.every || 'day'}`}</div></div>
     </div>
     ${detail && html`<p class="body-s muted plan-detail">${detail}</p>`}
   <//>`;

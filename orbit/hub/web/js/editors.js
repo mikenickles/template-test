@@ -551,18 +551,19 @@ function ProactiveSettings({ state, notify, refresh }) {
         <label class="body-s muted">From <select class="field" style="width:auto;display:inline-block;margin-left:6px;padding:6px 10px" value=${writer?.id ?? ''} onChange=${(e) => save({ brief: { agentId: e.currentTarget.value } })}>
           ${state.agents.map((a) => html`<option value=${a.id}>${a.name}</option>`)}</select></label></div>`}
       <div class="row" style="gap:12px;flex-wrap:wrap">
-        <span style="flex:1;min-width:140px"><div class="title-s">Quiet hours</div><div class="body-s muted">No check-ins then. Promised follow-ups still arrive.</div></span>
+        <span style="flex:1;min-width:140px"><div class="title-s">Quiet hours${settings.quietStart === settings.quietEnd ? ': none' : ''}</div><div class="body-s muted">No check-ins, regular updates or watch checks then; they pick up after. A one-time follow-up still arrives.</div></span>
         <input class="field mono" style="width:auto;padding:6px 10px" type="time" aria-label="Quiet from" value=${settings.quietStart} onChange=${(e) => save({ quietStart: e.currentTarget.value })} />
         <span class="muted">to</span>
         <input class="field mono" style="width:auto;padding:6px 10px" type="time" aria-label="Quiet until" value=${settings.quietEnd} onChange=${(e) => save({ quietEnd: e.currentTarget.value })} />
+        <${Pill} small label=${settings.quietStart === settings.quietEnd ? 'Set hours' : 'None'} onClick=${() => save(settings.quietStart === settings.quietEnd ? { quietStart: '21:00', quietEnd: '08:00' } : { quietStart: '00:00', quietEnd: '00:00' })} />
       </div>
-      <div class="row" style="gap:8px;flex-wrap:wrap"><span class="title-s" style="flex:1">At most</span>
-        ${[2, 4, 6, 10].map((n) => html`<${Pill} small label=${`${n} a day`} selected=${settings.dailyLimit === n} onClick=${() => save({ dailyLimit: n })} />`)}</div>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><span style="flex:1;min-width:140px"><div class="title-s">Check-ins at most</div><div class="body-s muted">Only for messages nobody asked for. Updates, follow-ups and watches you ask for always come through.</div></span>
+        ${[2, 6, 10, 20].map((n) => html`<${Pill} small label=${`${n} a day`} selected=${settings.dailyLimit === n} onClick=${() => save({ dailyLimit: n })} />`)}</div>
     </div>
     ${(plans.length > 0 || state.watches?.length > 0) && html`
       <div class="card" style="margin-top:12px">
         ${plans.map((f) => html`<div class="row"><${Icon} name="clock" /><div style="flex:1;min-width:0"><div class="title-s">${f.note}</div>
-          <div class="body-s muted">${byId[f.agentId]?.name ?? 'An agent'} · ${when(f.at)}</div></div>
+          <div class="body-s muted">${byId[f.agentId]?.name ?? 'An agent'} · ${f.every ? `every ${f.every}, next ${when(f.at)}` : when(f.at)}</div></div>
           <button class="label muted" onClick=${() => api.deleteFollowUp(f.id).then(refresh).catch((e) => notify(e.message))}>Cancel</button></div>`)}
         ${(state.watches ?? []).map((w) => html`<div class="row"><${Icon} name="bell" /><div style="flex:1;min-width:0"><div class="title-s">${w.what}${w.condition ? `, when ${w.condition}` : ''}</div>
           <div class="body-s muted">${byId[w.agentId]?.name ?? 'An agent'} checks every ${w.every}${w.lastFinding ? `. Last: ${w.lastFinding}` : ''}</div></div>

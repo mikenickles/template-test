@@ -171,27 +171,38 @@ fun ProactiveScreen(
             }
 
             SectionTitle("Quiet hours", Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = OrbitDimens.section, bottom = 0.dp))
-            Text(
-                "${settings.quietStart} to ${settings.quietEnd}",
-                Modifier.padding(horizontal = OrbitDimens.gutter),
-                style = OrbitType.display,
-                color = c.text,
-            )
+            val noQuiet = settings.quietStart == settings.quietEnd
+            Row(Modifier.padding(horizontal = OrbitDimens.gutter), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    if (noQuiet) "None" else "${settings.quietStart} to ${settings.quietEnd}",
+                    Modifier.weight(1f),
+                    style = OrbitType.display,
+                    color = c.text,
+                )
+                // Both ends the same hour means no quiet hours.
+                Pill(if (noQuiet) "Set hours" else "None", { save(if (noQuiet) settings.copy(quietStart = "21:00", quietEnd = "08:00") else settings.copy(quietStart = "00:00", quietEnd = "00:00")) })
+            }
             FieldLabel("From", Modifier.padding(start = OrbitDimens.gutter, top = 12.dp))
             HourRow((0..23).toList(), hourOf(settings.quietStart)) { save(settings.copy(quietStart = timeAt(it))) }
             FieldLabel("Until", Modifier.padding(start = OrbitDimens.gutter, top = 16.dp))
             HourRow((0..23).toList(), hourOf(settings.quietEnd)) { save(settings.copy(quietEnd = timeAt(it))) }
             Text(
-                "No check-ins then. A follow-up an agent promised for a set time still arrives.",
+                "No check-ins, regular updates or watch checks then; they pick up after. A one-time follow-up still arrives.",
                 Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = OrbitDimens.labelGap),
                 style = OrbitType.bodyS,
                 color = c.textTertiary,
             )
 
-            SectionTitle("At most", Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = OrbitDimens.section, bottom = 8.dp))
+            SectionTitle("Check-ins at most", Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = OrbitDimens.section, bottom = 8.dp))
             Row(Modifier.padding(horizontal = OrbitDimens.gutter), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                for (n in listOf(2, 4, 6, 10)) Pill("$n a day", { save(settings.copy(dailyLimit = n)) }, selected = settings.dailyLimit == n)
+                for (n in listOf(2, 6, 10, 20)) Pill("$n a day", { save(settings.copy(dailyLimit = n)) }, selected = settings.dailyLimit == n)
             }
+            Text(
+                "Only for messages nobody asked for. Updates, follow-ups and watches you ask for always come through.",
+                Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = OrbitDimens.labelGap),
+                style = OrbitType.bodyS,
+                color = c.textTertiary,
+            )
 
             if (state.followUps.isNotEmpty() || state.watches.isNotEmpty()) {
                 Column(Modifier.padding(horizontal = OrbitDimens.gutter)) {
@@ -205,7 +216,8 @@ fun ProactiveScreen(
                                     is FollowUp -> PlanRow(
                                         OrbitIcon.Clock,
                                         row.note,
-                                        "${state.agent(row.agentId)?.name ?: "An agent"} · ${followUpTime(row.at)}",
+                                        "${state.agent(row.agentId)?.name ?: "An agent"} · " +
+                                            (row.every?.let { "every $it, next ${followUpTime(row.at)}" } ?: followUpTime(row.at)),
                                         "Cancel",
                                     ) { onCancelFollowUp(row) }
                                     is Watch -> PlanRow(

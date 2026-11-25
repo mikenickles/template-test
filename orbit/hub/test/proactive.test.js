@@ -173,6 +173,43 @@ test('an agent books a follow-up, and is woken to send it', async (t) => {
   assert.equal((await h.api('DELETE', `/api/followups/${id}`)).body.followups.length, 0);
 });
 
+test('regular updates come as often as asked, past the daily limit, pause in quiet hours, and can be cancelled', async (t) => {
+  const h = await start(t, {});
+  const scout = await h.agent('Scout');
+  const room = (await h.api('POST', '/api/rooms', { name: 'Restock', agentIds: [scout.id] })).body;
+  await h.api('PUT', '/api/proactive', { dailyLimit: 1, quietStart: '00:00', quietEnd: '00:00' });
+  const tools = h.hub.proactive.toolsFor(scout, room);
+  assert.match(tools.prompt, /follow_up with repeat_minutes, not watch/);
+  assert.match(tools.prompt, /no quiet hours/);
+  assert.equal(tools.run('follow_up', { in_minutes: 15, repeat_minutes: 5, note: 'x' }).isError, true, 'every 15 minutes at most');
+
+  const made = tools.run('follow_up', { in_minutes: 15, repeat_minutes: 15, note: 'Report on the Switch 3 restock' });
+  assert.equal(made.isError, false);
+  assert.match(made.text, /then every 15 minutes, until cancelled/);
+  assert.equal(made.card.every, '15 minutes');
+  const updates = () => h.store.messages(room.id).filter((m) => m.proactive?.kind === 'followup').length;
+  const t0 = Date.now();
+  await h.hub.proactive.tick(t0 + 16 * 60_000);
+  assert.equal(updates(), 1);
+  assert.match(h.providers.calls.at(-1).messages.at(-1).content, /regular update the user asked for \(every 15 minutes/);
+  assert.equal(h.store.state.followups.length, 1, 'it keeps going');
+  await h.hub.proactive.tick(t0 + 31 * 60_000);
+  assert.equal(updates(), 2, 'the daily limit is only for check-ins nobody asked for');
+
+  // In quiet hours it skips a turn and carries on after.
+  const hour = new Date(t0 + 46 * 60_000).getHours();
+  const hh = (n) => `${String(n % 24).padStart(2, '0')}:00`;
+  await h.api('PUT', '/api/proactive', { quietStart: hh(hour), quietEnd: hh(hour + 1) });
+  await h.hub.proactive.tick(t0 + 46 * 60_000);
+  assert.equal(updates(), 2, 'quiet');
+  assert.ok(h.store.state.followups[0].at > t0 + 46 * 60_000, 'the next one is set');
+
+  const listed = h.hub.proactive.toolsFor(scout, room).prompt;
+  const id = /\[id ([0-9a-f]{8})\] every 15 minutes/.exec(listed)[1];
+  assert.equal(tools.run('cancel_follow_up', { id }).isError, false);
+  assert.equal(h.store.state.followups.length, 0);
+});
+
 test('watches check the web and speak up when the condition is met', async (t) => {
   const plain = await start(t, {});
   const nova0 = await plain.agent('Nova');

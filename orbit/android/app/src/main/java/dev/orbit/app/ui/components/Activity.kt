@@ -79,6 +79,7 @@ fun activityLabel(activity: Activity, live: Boolean = false): ActivityLabel {
         Activity.KIND_FOLLOW_UP -> ActivityLabel(if (live) "Setting a follow-up" else if (failed) "Couldn't set a follow-up" else "Will follow up", detail)
         Activity.KIND_WATCH -> ActivityLabel(if (live) "Setting up a watch" else if (failed) "Couldn't watch" else "Watching", detail)
         Activity.KIND_WATCH_STOP -> ActivityLabel(if (live) "Stopping a watch" else if (failed) "Couldn't stop a watch" else "Stopped watching", detail)
+        Activity.KIND_FOLLOW_UP_CANCEL -> ActivityLabel(if (live) "Cancelling updates" else if (failed) "Couldn't cancel updates" else "Cancelled updates", "")
         Activity.KIND_GUIDE -> ActivityLabel(if (live) "Reading the Treehouse guide" else if (failed) "Couldn't read the guide" else "Read the Treehouse guide", "")
         Activity.KIND_BROWSE -> ActivityLabel(if (live) "Opening" else if (failed) "Couldn't open" else "Opened", siteOf(detail))
         Activity.KIND_BROWSE_READ -> ActivityLabel(if (live) "Reading the page" else if (failed) "Couldn't read the page" else "Read the page", "")
@@ -114,6 +115,7 @@ fun activitySummary(activity: List<Activity>): String {
         if (count(Activity.KIND_FOLLOW_UP) > 0) add("set a follow-up")
         if (count(Activity.KIND_WATCH) > 0) add("started watching")
         if (count(Activity.KIND_WATCH_STOP) > 0) add("stopped a watch")
+        if (count(Activity.KIND_FOLLOW_UP_CANCEL) > 0) add("cancelled updates")
         if (count(Activity.KIND_GUIDE) > 0) add("read the Treehouse guide")
         if (count(Activity.KIND_BROWSE) + count(Activity.KIND_BROWSE_CLICK) + count(Activity.KIND_BROWSE_TYPE) > 0) add("used the browser")
         if (count(Activity.KIND_SELF) > 0) add("updated itself")
@@ -136,7 +138,7 @@ private fun iconFor(kind: String) = when (kind) {
     Activity.KIND_CALENDAR, Activity.KIND_CALENDAR_ADD -> OrbitIcon.Calendar
     Activity.KIND_DRIVE_SEARCH -> OrbitIcon.Search
     Activity.KIND_DRIVE_READ -> OrbitIcon.File
-    Activity.KIND_FOLLOW_UP -> OrbitIcon.Clock
+    Activity.KIND_FOLLOW_UP, Activity.KIND_FOLLOW_UP_CANCEL -> OrbitIcon.Clock
     Activity.KIND_WATCH, Activity.KIND_WATCH_STOP -> OrbitIcon.Bell
     Activity.KIND_GUIDE -> OrbitIcon.File
     Activity.KIND_BROWSE, Activity.KIND_BROWSE_READ, Activity.KIND_BROWSE_CLICK, Activity.KIND_BROWSE_TYPE -> OrbitIcon.Globe
