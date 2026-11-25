@@ -10697,3 +10697,42 @@ html[data-theme="night"] .tabbar .tabbar-inner {
 .sheet-more .how-got-list {
   margin: 0;
 }
+
+/* ---------- (0.66.5) glass on everything that floats over the chat, the same recipe as Tomo's pill:
+   the page color, see-through, with a 12-14px blur, a hairline and a soft shadow, so the chat shows
+   through softly as it scrolls underneath. Linen, Sage and Night keep their shade for the message
+   box and tab bar (0.66.2), now see-through too. ---------- */
+:root {
+  --glass: color-mix(in srgb, var(--bg) 80%, transparent);
+  --glass-shade: var(--glass);
+  --glass-blur: blur(13px) saturate(1.35);
+  --glass-edge: 0 0 0 1px var(--border), 0 4px 14px rgba(0, 0, 0, 0.07);
+}
+html[data-theme="linen"],
+html[data-theme="sage"],
+html[data-theme="night"] {
+  --glass-shade: color-mix(in srgb, var(--surface) 80%, transparent);
+}
+html[data-theme] .topbar .ring,
+html[data-theme] .topbar.floating .ring,
+html[data-theme] .topbar .ring:has(.initial),
+html[data-theme] .chat .jump {
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge);
+}
+html[data-theme] .chat .composer-inner,
+html[data-theme] .tabbar .tabbar-inner,
+html[data-theme] .intent-chip-btn {
+  background: var(--glass-shade);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+html[data-theme] .tabbar .tabbar-inner {
+  box-shadow: var(--glass-edge);
+}
+html[data-theme] .chat .composer-inner {
+  box-shadow: 0 0 0 1px var(--border), 0 10px 30px rgba(0, 0, 0, 0.07);
+  border-color: transparent;
+}

@@ -12,6 +12,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "0.66.5",
+    date: "2026-11-25",
+    notes: ["The round buttons, the message box, the tab bar and the little chips over the chat are frosted glass now, like Tomo's name pill: the chat shows through softly as it scrolls underneath."],
+  },
+  {
     version: "0.66.4",
     date: "2026-11-24",
     notes: ["Cleaner replies: no website names or links in the text and no Sources or \"How I got this\" lines under them. Long-press a reply to see its sources and steps, or ask Tomo for them."],
