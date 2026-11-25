@@ -1,5 +1,7 @@
 # From Chatbots to Autonomous Agents — deck build
 
+`contact-sheet.png` shows every slide as rendered in the final QA pass.
+
 `ai-agents-v1.pptx` is a 10-slide, 16:9 (13.333" × 7.5") executive deck. It is fully editable: native text, shapes, a native chart on slide 6, a native table on slide 8, and speaker notes on every slide.
 
 ## Rebuild
