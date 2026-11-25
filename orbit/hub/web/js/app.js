@@ -814,6 +814,20 @@ const STEPS = {
 /** Why an agent wrote on its own, beside its name. */
 const REACHED = { checkin: 'Checking in', followup: 'Following up', watch: 'Watching', brief: 'Morning brief' };
 const site = (url) => url.replace(/^https?:\/\/(www\.)?/, '').split(/[/?#]/)[0];
+
+/** The pages a reply drew on, kept out of the way: one small pill that opens a short list of them. */
+function Sources({ sources }) {
+  const [open, setOpen] = useState(false);
+  const sites = [...new Set(sources.map((s) => site(s.url)))];
+  return html`<div class=${`sources${open ? ' open' : ''}`}>
+    <button class="sources-toggle" aria-expanded=${open} title=${sites.join(', ')} onClick=${() => setOpen(!open)}>
+      <${Icon} name="globe" size=${13} />${sources.length === 1 ? sites[0] : `${sources.length} sources`}<${Icon} name="chevron" size=${13} />
+    </button>
+    ${open && html`<div class="source-list">${sources.map((s, i) => html`<a class="source-row" href=${s.url} target="_blank" rel="noopener noreferrer">
+      <span class="n">${i + 1}</span><span class="site">${site(s.url)}</span>${s.title && s.title !== site(s.url) && html`<span class="title">${s.title}</span>`}
+    </a>`)}</div>`}
+  </div>`;
+}
 const leaf = (path) => path.replace(/\/$/, '').split('/').pop() || path;
 function stepDetail(step) {
   switch (step.kind) {
@@ -966,9 +980,7 @@ function AgentMessage({ message, agent, showModel, mentions, continued = false, 
       ${working && html`<div class="thinking-dots" style=${`--wash:${tint(agent?.avatar)};--ink:${inkColor(agent?.avatar)}`} aria-label="Thinking"><i></i><i></i><i></i></div>`}
       ${message.status === 'error' && html`<div class="failure"><span class="dot"></span><div>${message.error || "This agent couldn't reply."}</div></div>`}
       ${message.status === 'stopped' && html`<div class="caption faint" style="margin-top:6px">Stopped</div>`}
-      ${!streaming && message.sources?.length > 0 && html`<div class="sources">${message.sources.map((s, i) => html`<a class="source" href=${s.url} target="_blank" rel="noopener noreferrer" title=${s.title}>
-        <span class="n">${i + 1}</span>${site(s.url)}
-      </a>`)}</div>`}
+      ${!streaming && message.sources?.length > 0 && html`<${Sources} sources=${message.sources} />`}
     </div>
   </div>`;
 }

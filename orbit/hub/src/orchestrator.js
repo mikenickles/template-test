@@ -147,7 +147,12 @@ export function buildSystemPrompt(agent, room, agents, abilities = null, profile
     if (abilities.web && abilities.hubWeb && !abilities.hubWeb.canSearch) {
       lines.push('- Read web pages with web_fetch, when you have an address. (Searching the web needs an Anthropic key on the hub.)');
     } else if (abilities.web) {
-      lines.push('- Search the web and read web pages. Use them for anything recent or that you are unsure of, and say where facts came from.');
+      lines.push('- Search the web and read web pages. Use them for anything recent or that you are unsure of.');
+    }
+    if (abilities.web) {
+      lines.push(
+        "- Keep answers from the web clean: the app shows your sources under the reply, so don't add a sources list or a \"what I checked\" section, and don't paste raw text from search results (addresses, listing blurbs, dates in odd formats). Write the answer in your own words; name a source only when it matters, like who said it or where to buy. If a few pages couldn't be read, say so in one short line at most.",
+      );
     }
     if (abilities.code) lines.push('- Run code in a sandbox, for calculations, working with data, and checking your work.');
     if (abilities.files) {

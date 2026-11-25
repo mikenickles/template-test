@@ -112,6 +112,8 @@ agent answers without them for half an hour and says so (it can't reach email, t
 tries again; switching the agent to a Claude model fixes it for good. Updating or restarting the PC also retries.
 - **Search the web**: look things up and read pages, with sources. Claude searches itself; other models search
   through a quick Claude search on the hub (it needs an Anthropic key) and read pages the hub fetches for them.
+  Answers stay clean: the pages a reply used sit under it as one small "Sources" button (or the site's name
+  when there's one), which opens the list; agents don't add their own sources sections.
 - **Run code**: calculate and work with data in a sandbox. Claude models only.
 - **Read your files**: read (never change) folders the user shared from the PC's Treehouse page.
 - **Remember things**: notes about the user that the whole crew shares, and the agent's own notes.

@@ -111,6 +111,7 @@ test('abilities pick the right tools and tell the agent what it can do', () => {
   const room = { name: 'Trip', mode: 'roundtable' };
   const prompt = buildSystemPrompt(agent, room, [agent], abilities);
   assert.match(prompt, /Search the web/);
+  assert.match(prompt, /shows your sources under the reply, so don't add a sources list/, 'answers stay clean');
   assert.match(prompt, /shared from their PC: Notes\. This is read only/);
   assert.doesNotMatch(prompt, /Run code/);
   const other = resolveAbilities({ ...agent, provider: 'openai', abilities: ['web', 'code', 'files'] }, providers, folders);

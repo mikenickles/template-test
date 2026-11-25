@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
+import dev.orbit.app.ui.theme.OrbitDimens
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -212,27 +214,63 @@ private fun ActivityLine(step: Activity, live: Boolean) {
     }
 }
 
-/** The pages a reply cites, as small numbered chips that open the page. */
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * The pages a reply drew on, kept out of the way: one small "Sources" pill under the reply, with the first few
+ * sites named. Tapping it opens a short list, one row per page, each opening the page.
+ */
 @Composable
 fun SourceChips(sources: List<Source>, modifier: Modifier = Modifier) {
     if (sources.isEmpty()) return
     val c = Orbit.colors
     val uri = LocalUriHandler.current
-    FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        sources.forEachIndexed { index, source ->
-            Row(
-                Modifier
-                    .tap(CircleShape, 0.94f) { runCatching { uri.openUri(source.url) } }
-                    .background(c.surfaceRaised)
-                    .border(1.dp, c.hairline, CircleShape)
-                    .heightIn(min = 28.dp)
-                    .padding(start = 9.dp, end = 11.dp)
-                    .semantics { contentDescription = "Source ${index + 1}: ${source.title.ifBlank { siteOf(source.url) }}" },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("${index + 1}", style = OrbitType.mono, color = c.textTertiary)
-                Text(siteOf(source.url), Modifier.padding(start = 6.dp), style = OrbitType.caption, color = c.textSecondary, maxLines = 1)
+    var open by rememberSaveable { mutableStateOf(false) }
+    val sites = sources.map { siteOf(it.url) }.distinct()
+    Column(modifier.animateContentSize(OrbitMotion.gentle())) {
+        Row(
+            Modifier
+                .tap(CircleShape, 0.96f) { open = !open }
+                .border(1.dp, c.hairline, CircleShape)
+                .heightIn(min = 30.dp)
+                .padding(start = 10.dp, end = 8.dp)
+                .semantics { contentDescription = if (open) "Hide sources" else "${sources.size} sources: ${sites.joinToString()}" },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OrbitIcon(OrbitIcon.Globe, size = 13.dp, tint = c.textTertiary)
+            Text(
+                if (sources.size == 1) sites.first() else "${sources.size} sources",
+                Modifier.padding(start = 6.dp),
+                style = OrbitType.caption,
+                color = c.textSecondary,
+                maxLines = 1,
+            )
+            OrbitIcon(OrbitIcon.Chevron, Modifier.padding(start = 3.dp).graphicsLayer { rotationZ = if (open) -90f else 90f }, size = 14.dp, tint = c.textTertiary)
+        }
+        if (open) {
+            Column(Modifier.padding(top = 6.dp)) {
+                sources.forEachIndexed { index, source ->
+                    Row(
+                        Modifier
+                            .tap(RoundedCornerShape(OrbitDimens.radiusS), 0.98f) { runCatching { uri.openUri(source.url) } }
+                            .heightIn(min = 36.dp)
+                            .padding(horizontal = 4.dp, vertical = 4.dp)
+                            .semantics { contentDescription = "Open ${source.title.ifBlank { siteOf(source.url) }}" },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("${index + 1}", style = OrbitType.mono, color = c.textTertiary)
+                        Text(siteOf(source.url), Modifier.padding(start = 10.dp), style = OrbitType.caption, color = c.textSecondary, maxLines = 1)
+                        val title = source.title.takeIf { it.isNotBlank() && it != siteOf(source.url) }
+                        if (title != null) {
+                            Text(
+                                title,
+                                Modifier.padding(start = 8.dp),
+                                style = OrbitType.caption,
+                                color = c.textTertiary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
             }
         }
     }
