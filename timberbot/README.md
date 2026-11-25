@@ -124,7 +124,7 @@ The scripted play-through drives real keyboard and mouse input and writes screen
 ```bash
 node serve.mjs 8123 &
 node qa/playtest.mjs qa/out 2                                        # needs Playwright; args: output dir, quality level
-node qa/playtest.mjs qa/out 0 http://localhost:8123/ grass=0.04     # fast variant for software GL (no GPU)
+PT_SIZE=640x360 node qa/playtest.mjs qa/out 0 http://localhost:8123/ grass=0.04   # fast variant for software GL (no GPU)
 node qa/touchtest.mjs qa/out                                         # phone controls in an emulated 390 x 844 touchscreen
 node qa/screenshots.mjs qa/out spawn,forest,camp 2                   # camera presets for visual review
 ```

@@ -21,7 +21,9 @@ const results = [];
 const check = (name, pass, detail = '') => { results.push({ name, pass: !!pass, detail }); console.log(`${pass ? 'PASS' : 'FAIL'}  ${name}  ${detail}`); };
 
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'] });
-const page = await browser.newPage({ viewport: { width: 1024, height: 576 }, deviceScaleFactor: 1 });
+// PT_SIZE=640x360 shrinks the window so a software-GL run finishes sooner (checks are resolution-independent).
+const [vw, vh] = (process.env.PT_SIZE || '1024x576').split('x').map(Number);
+const page = await browser.newPage({ viewport: { width: vw, height: vh }, deviceScaleFactor: 1 });
 const consoleErrors = [];
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') consoleErrors.push(`[${m.type()}] ${m.text()}`.slice(0, 400)); });
 page.on('pageerror', (e) => consoleErrors.push('[pageerror] ' + e.message));
@@ -74,12 +76,12 @@ let b = await state();
   check('W follows rotated camera', (dx * -Math.sin(a.yaw) + dz * -Math.cos(a.yaw)) / len > 0.97, `alignment ${((dx * -Math.sin(a.yaw) + dz * -Math.cos(a.yaw)) / len).toFixed(3)}`);
 }
 // mouse-drag orbit
-await page.mouse.move(512, 250); await page.mouse.down(); await page.mouse.move(690, 290, { steps: 6 }); await page.mouse.up();
+await page.mouse.move(vw / 2, vh * 0.43); await page.mouse.down(); await page.mouse.move(vw / 2 + 178, vh * 0.5, { steps: 6 }); await page.mouse.up();
 await frames(2);
 let c = await state();
 check('mouse drag orbits (and does not harvest)', Math.abs(c.yaw - b.yaw) > 0.3 && !c.swing, `yaw ${b.yaw.toFixed(2)} -> ${c.yaw.toFixed(2)}`);
 // zoom limits
-await page.mouse.move(512, 250);
+await page.mouse.move(vw / 2, vh * 0.43);
 for (let i = 0; i < 30; i++) await page.mouse.wheel(0, 240);
 await frames(2);
 check('zoom clamps at 20 m', Math.abs((await state()).dist - 20) < 1e-6);
