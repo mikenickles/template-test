@@ -80,13 +80,14 @@ the user to the Tokens page when they ask how to spend less.
 ## Home and search
 
 Home shows a greeting and who is replying right now, then notes from the crew as one card to swipe through
-(Open goes to the room, Dismiss takes it off Home), the crew (the one speaking is ringed in its color), and the
-rooms. At the bottom of Home on the phone, and at the top of the room list on the PC, **Search rooms and
-messages** finds any room by name or description, and any message with all the words typed, newest first.
+(Open goes to the room, Dismiss takes it off Home), and the rooms. On the phone the crew lives in a round button in
+the middle of the header, with three faces hopping in turn and how many agents there are on its corner: tapping it
+sends every character jumping out to line up over a frosted Home, with their names and roles and New agent below.
+Tap one to open its page; Done (or Back) sends them hopping home. On the PC the crew is in the sidebar.
+At the bottom of Home on the phone, and at the top of the room list on the PC, **Search rooms and messages** finds any room by name or description, and any message with all the words typed, newest first.
 The look is calm on purpose: plain dark or warm light surfaces, cards with a thin edge, and no tints or glows,
 so the characters are the only color. Agents appear as portraits: their character's head in a circle, one size,
-nothing breaking out of its box. The crew on Home is a line of faces (tap one to open that agent); each room shows
-one face, whoever is replying or spoke last, with "+2" on its corner for the others in it; messages have small
+nothing breaking out of its box. Each room on Home shows one face, whoever is replying or spoke last, with "+2" on its corner for the others in it; messages have small
 portraits. An agent's whole character appears on its own page and in a room while it's working out what to say,
 standing beside the chat until its words arrive. Color in text marks only who is replying right now. The header shows the
 PC's friendly name: "<first name>'s PC" once Treehouse knows the user's name, else the computer's own name. Rename

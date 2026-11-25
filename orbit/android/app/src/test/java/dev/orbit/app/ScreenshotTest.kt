@@ -175,6 +175,13 @@ class ScreenshotTest {
         HomeScreen(SampleData.app.copy(rooms = SampleData.app.rooms + SampleData.introRoom.copy(id = "r8", name = "Morning brief", intro = false, agentIds = listOf("a1"), updatedAt = now - 3_600_000)), {}, {}, {}, {}, {}, {}, now = now, roomsAsCards = true)
     }
     @Test fun homeLight() = shot("home-light", dark = false) { Home() }
+    /** The crew out of their button, lined up to edit. */
+    @Test fun homeCrew() = shot("home-crew") {
+        HomeScreen(SampleData.app, {}, {}, {}, {}, {}, {}, now = now, huddle = dev.orbit.app.ui.components.rememberCrewHuddle(open = true))
+    }
+    @Test fun homeCrewLight() = shot("home-crew-light", dark = false) {
+        HomeScreen(SampleData.app, {}, {}, {}, {}, {}, {}, now = now, huddle = dev.orbit.app.ui.components.rememberCrewHuddle(open = true))
+    }
     /** What the crew brought up on its own, on Home. */
     @Test fun homeNudges() = shot("home-nudges") { Home(SampleData.proactive) }
     @Test fun homeNudgesLight() = shot("home-nudges-light", dark = false) { Home(SampleData.proactive) }

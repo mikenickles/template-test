@@ -83,7 +83,11 @@ import dev.orbit.app.ui.components.AgentAvatar
 import dev.orbit.app.ui.components.AgentPortrait
 import dev.orbit.app.ui.components.MoreBadge
 import dev.orbit.app.ui.components.Hairline
-import dev.orbit.app.ui.components.LogoMark
+import dev.orbit.app.ui.components.CrewButton
+import dev.orbit.app.ui.components.CrewHuddle
+import dev.orbit.app.ui.components.CrewHuddleOverlay
+import dev.orbit.app.ui.components.behindCrewHuddle
+import dev.orbit.app.ui.components.rememberCrewHuddle
 import dev.orbit.app.ui.components.OrbitCard
 import dev.orbit.app.ui.components.ActionSheet
 import dev.orbit.app.ui.components.OrbitIcon
@@ -118,8 +122,6 @@ import java.util.Date
 import java.util.Locale
 
 private val RoomFace = 48.dp
-private val CrewItem = 68.dp
-private val CrewFace = 56.dp
 
 /** How round cards are. */
 private val CardRadius = 28.dp
@@ -153,6 +155,8 @@ fun HomeScreen(
     /** Rooms as cards in a grid rather than a list, and switching between the two. */
     roomsAsCards: Boolean = false,
     onRoomsAsCards: (Boolean) -> Unit = {},
+    /** The crew button and the lineup it opens. */
+    huddle: CrewHuddle = rememberCrewHuddle(),
 ) {
     val c = Orbit.colors
     val haptics = rememberHaptics()
@@ -169,7 +173,8 @@ fun HomeScreen(
     val pull = rememberPullToRefreshState()
 
     Scaffold(containerColor = c.bg) { padding ->
-      Box(Modifier.fillMaxSize().padding(padding)) {
+     Box(Modifier.fillMaxSize()) {
+      Box(Modifier.fillMaxSize().padding(padding).behindCrewHuddle(huddle, state.agents.size)) {
         PullToRefreshBox(
             isRefreshing = pulled && state.refreshing,
             onRefresh = {
@@ -181,7 +186,7 @@ fun HomeScreen(
             indicator = { RefreshIndicator(pull, pulled && state.refreshing) },
         ) {
             LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(bottom = 112.dp)) {
-                item(key = "header") { Header(state, onSettings) }
+                item(key = "header") { Header(state, huddle, onSettings) }
                 item(key = "greeting") { Greeting(state, now, Modifier.entrance(entrances, "greeting", 0)) }
                 item(key = "offline") {
                     AnimatedVisibility(state.offline, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
@@ -231,35 +236,6 @@ fun HomeScreen(
                     item(key = "add-key") { AddKeyNotice(onAddKey, Modifier.entrance(entrances, "add-key", 0)) }
                 }
 
-                if (state.agents.isNotEmpty() || !showIntro) item(key = "crew-title") {
-                    SectionTitle(
-                        "Crew",
-                        Modifier.padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter - 10.dp, top = OrbitDimens.section, bottom = 6.dp)
-                            .entrance(entrances, "crew-title", 0),
-                        count = state.agents.size,
-                    ) {
-                        Row(
-                            Modifier.height(40.dp).tap(CircleShape, 0.94f, onNewAgent).padding(horizontal = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            OrbitIcon(OrbitIcon.Plus, size = 16.dp, tint = c.textSecondary)
-                            Text("New agent", Modifier.padding(start = 6.dp), style = OrbitType.label, color = c.textSecondary)
-                        }
-                    }
-                }
-                if (state.agents.isNotEmpty()) item(key = "crew") {
-                    // The crew as a line of faces, one size, scrolling sideways when there are many. Their whole
-                    // characters are on their own pages.
-                    LazyRow(
-                        Modifier.fillMaxWidth().entrance(entrances, "crew", 1),
-                        contentPadding = PaddingValues(horizontal = OrbitDimens.gutter - 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        val speaking = state.rooms.filter { it.active }.mapNotNull { it.speaking }.toSet()
-                        items(state.agents, key = { it.id }) { agent -> CrewMember(agent, agent.id in speaking) { onEditAgent(agent) } }
-                    }
-                }
-
                 if (state.rooms.isNotEmpty() || !showIntro) item(key = "rooms-title") {
                     SectionTitle(
                         "Rooms",
@@ -306,6 +282,8 @@ fun HomeScreen(
             BottomBar(onSearch, onNewRoom, Modifier.align(Alignment.BottomCenter))
         }
       }
+      CrewHuddleOverlay(state.agents, huddle, onOpen = onEditAgent, onNewAgent = onNewAgent)
+     }
     }
     acting?.let { room ->
         ActionSheet(
@@ -329,22 +307,26 @@ fun HomeScreen(
 }
 
 @Composable
-private fun Header(state: AppState, onSettings: () -> Unit) {
+private fun Header(state: AppState, huddle: CrewHuddle, onSettings: () -> Unit) {
     val c = Orbit.colors
-    // The app's name and, on the right, the PC it's talking to.
-    Row(
+    // The app's name, the crew in the middle, and on the right the PC it's talking to.
+    Box(
         Modifier.fillMaxWidth().padding(start = OrbitDimens.gutter, end = OrbitDimens.gutter, top = 14.dp).height(48.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        LogoMark(size = 28.dp)
-        Text("Treehouse", Modifier.padding(start = 9.dp).weight(1f), style = OrbitType.titleM.copy(fontSize = OrbitType.titleL.fontSize * 0.9f), color = c.text)
+        Text(
+            "Treehouse",
+            Modifier.align(Alignment.CenterStart),
+            style = OrbitType.titleM.copy(fontSize = OrbitType.titleL.fontSize * 0.9f),
+            color = c.text,
+        )
+        if (state.agents.isNotEmpty()) CrewButton(state.agents, huddle, Modifier.align(Alignment.Center))
 
         // The hub is the app's one piece of infrastructure, so its status is also the way into settings.
         val online = state.loaded && !state.offline
         val interaction = remember { MutableInteractionSource() }
         Surface(
             onClick = onSettings,
-            modifier = Modifier.lift(CircleShape, 0.6f).pressScale(interaction),
+            modifier = Modifier.align(Alignment.CenterEnd).lift(CircleShape, 0.6f).pressScale(interaction),
             shape = CircleShape,
             color = c.surface,
             contentColor = c.text,
@@ -636,26 +618,6 @@ private fun AddKeyNotice(onAddKey: () -> Unit, modifier: Modifier) {
     }
 }
 
-/** One of the crew: their portrait and name. The one replying somewhere has the typing bubble and says so. */
-@Composable
-private fun CrewMember(agent: Agent, speaking: Boolean, onClick: () -> Unit) {
-    val c = Orbit.colors
-    Column(
-        Modifier.width(CrewItem).tap(RoundedCornerShape(OrbitDimens.radiusM), 0.94f, onClick).padding(top = 8.dp, bottom = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        AgentPortrait(agent.avatar, Modifier.shared(SharedKeys.agentAvatar(agent.id)), size = CrewFace, thinking = speaking)
-        Text(
-            if (speaking) "replying" else agent.name,
-            Modifier.padding(top = 6.dp, start = 2.dp, end = 2.dp),
-            style = OrbitType.label,
-            color = if (speaking) agent.avatar.textColor() else c.text,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
 /** List or cards, beside Rooms. */
 @Composable
 private fun ViewSwitch(cards: Boolean, onChange: (Boolean) -> Unit) {
@@ -912,23 +874,11 @@ private fun BoxScope.RefreshIndicator(state: PullToRefreshState, refreshing: Boo
     }
 }
 
-/** Placeholders laid out exactly like the crew row and room list, so nothing jumps when data lands. */
+/** Placeholders laid out exactly like the room list, so nothing jumps when data lands. */
 @Composable
 private fun HomeSkeleton(modifier: Modifier = Modifier) {
     val text = RoundedCornerShape(4.dp)
     Column(modifier) {
-        Box(
-            Modifier.padding(start = OrbitDimens.gutter, top = OrbitDimens.section, bottom = 6.dp).height(40.dp),
-            contentAlignment = Alignment.CenterStart,
-        ) { SkeletonBlock(64.dp, 16.dp, text) }
-        Row(Modifier.padding(start = OrbitDimens.gutter - 6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            repeat(5) {
-                Column(Modifier.width(CrewItem).padding(top = 8.dp, bottom = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    SkeletonBlock(CrewFace, CrewFace, CircleShape)
-                    SkeletonBlock(40.dp, 12.dp, text, Modifier.padding(top = 10.dp))
-                }
-            }
-        }
         Box(
             Modifier.padding(start = OrbitDimens.gutter, top = OrbitDimens.section, bottom = 2.dp).height(40.dp),
             contentAlignment = Alignment.CenterStart,

@@ -119,6 +119,18 @@ class MotionTest {
         HomeScreen(SampleData.app, {}, {}, {}, {}, {}, {}, now = SampleData.NOW)
     }
 
+    /** The crew button: everyone jumps out and lines up, then hops back in. */
+    @Test fun crewHuddle() = record("crew-huddle", 3600, fps = 20, dark = false) {
+        val huddle = dev.orbit.app.ui.components.rememberCrewHuddle()
+        LaunchedEffect(Unit) {
+            delay(300)
+            huddle.show()
+            delay(2300)
+            huddle.hide()
+        }
+        HomeScreen(SampleData.app, {}, {}, {}, {}, {}, {}, now = SampleData.NOW, huddle = huddle)
+    }
+
     /** Light theme: home opening. */
     @Test fun homeOpenLight() = record("home-open-light", 1600, fps = 10, dark = false) {
         HomeScreen(SampleData.app, {}, {}, {}, {}, {}, {}, now = SampleData.NOW)
