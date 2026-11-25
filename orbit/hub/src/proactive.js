@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { addUsage, emptyUsage } from './usage.js';
+import { mainOf } from './mainchat.js';
 
 /**
  * Agents that speak first. Four ways in:
@@ -11,7 +12,7 @@ import { addUsage, emptyUsage } from './usage.js';
  * - Follow-ups: an agent says "I'll check back Friday" and books it with the follow_up tool.
  * - Watches: an agent keeps an eye on something on the web (a price, a page, news) and speaks up when
  *   it changes or a condition is met.
- * - The morning brief: one agent writes a short daily note at a set time.
+ * - The morning brief: one agent writes a short daily note at a set time. With a main agent, it writes it, in the main chat.
  *
  * Every proactive message becomes a card on the app's Home ("From your crew") and a notification.
  * Quiet hours and a daily limit keep it from becoming noise; follow-ups the agent promised still
@@ -454,14 +455,15 @@ export class Proactive {
       this.store.save();
       return;
     }
-    const agent = this.store.agent(brief.agentId) ?? this.#guide();
+    const main = mainOf(this.store.state);
+    const agent = main ? this.store.agent(main.agentId) : this.store.agent(brief.agentId) ?? this.#guide();
     if (!agent || !this.#usable(agent)) return;
-    let room = this.store.state.rooms.find((r) => r.brief);
+    let room = main ? this.store.room(main.roomId) : this.store.state.rooms.find((r) => r.brief);
     if (!room) {
       room = { id: crypto.randomUUID(), name: 'Morning brief', agentIds: [agent.id], mode: 'roundtable', leadId: null, brief: true,
         description: 'A short daily note to start the day.', createdAt: now, updatedAt: now };
       this.store.state.rooms.push(room);
-    } else if (room.agentIds.join() !== agent.id) {
+    } else if (!room.main && room.agentIds.join() !== agent.id) {
       room.agentIds = [agent.id];
     }
     if (this.orchestrator.runState(room.id).active) return;
@@ -580,14 +582,19 @@ export class Proactive {
     s[dueAgent.id].next = now + this.#gap(dueAgent.proactive);
     s[dueAgent.id].last = now;
     this.store.save();
+    // The main agent looks over every room, and always writes in the main chat.
+    const main = mainOf(this.store.state);
+    const isMain = main?.agentId === dueAgent.id;
     const rooms = this.store.state.rooms
-      .filter((r) => r.agentIds.includes(dueAgent.id) && !r.brief)
+      .filter((r) => (isMain || r.agentIds.includes(dueAgent.id)) && !r.brief)
       .sort((a, b) => b.updatedAt - a.updatedAt)
-      .slice(0, 4);
+      .slice(0, isMain ? 6 : 4);
     if (!rooms.length) return;
     const decision = await this.#decide(dueAgent, rooms, now);
     if (!decision) return;
-    const room = rooms.find((r) => r.name.toLowerCase() === String(decision.room ?? '').toLowerCase()) ?? rooms[0];
+    const room = isMain
+      ? this.store.room(main.roomId)
+      : rooms.find((r) => r.name.toLowerCase() === String(decision.room ?? '').toLowerCase()) ?? rooms[0];
     if (this.orchestrator.runState(room.id).active) return;
     await this.reach(dueAgent, room, [
       '[System]: Nobody asked; you are reaching out to the user on your own, because you noticed something worth their attention:',

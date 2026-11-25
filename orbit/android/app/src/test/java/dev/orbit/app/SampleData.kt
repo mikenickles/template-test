@@ -34,6 +34,7 @@ import dev.orbit.app.data.Schedule
 import dev.orbit.app.data.ScheduledBy
 import dev.orbit.app.data.Message
 import dev.orbit.app.data.Preview
+import dev.orbit.app.data.MainAgent
 import dev.orbit.app.data.Profile
 import dev.orbit.app.data.Provider
 import dev.orbit.app.data.ReplyRef
@@ -131,6 +132,13 @@ object SampleData {
         watches = listOf(Watch("w1", "a1", "r2", "Flights to Kyoto in April", "under $700", "day", "Cheapest is $780 on ANA")),
         google = GoogleStatus(configured = true, connected = true, email = "alex@example.com"),
     )
+
+    /** Nova is the main agent, with the main chat pinned above the rooms. */
+    val mainRoom = Room(
+        "r0", "Main chat", listOf("a1"), updatedAt = NOW - 5 * 60_000, main = true,
+        preview = Preview("Nova", "Scout found the school board's agenda: it's posted Thursday. Want me to add the meeting to your calendar?"),
+    )
+    val withMain = app.copy(main = MainAgent("a1", "r0"), rooms = listOf(mainRoom) + app.rooms)
 
     /** The PC is holding a newer app and a newer hub. */
     val updatable = app.copy(

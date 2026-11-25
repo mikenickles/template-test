@@ -175,6 +175,13 @@ class ScreenshotTest {
         HomeScreen(SampleData.app.copy(rooms = SampleData.app.rooms + SampleData.introRoom.copy(id = "r8", name = "Morning brief", intro = false, agentIds = listOf("a1"), updatedAt = now - 3_600_000)), {}, {}, {}, {}, {}, {}, now = now, roomsAsCards = true)
     }
     @Test fun homeLight() = shot("home-light", dark = false) { Home() }
+    /** The main chat pinned above the rooms. */
+    @Test fun homeMain() = shot("home-main") { HomeScreen(SampleData.withMain, {}, {}, {}, {}, {}, {}, now = now) }
+    @Test fun homeMainLight() = shot("home-main-light", dark = false) { HomeScreen(SampleData.withMain, {}, {}, {}, {}, {}, {}, now = now, roomsAsCards = true) }
+    /** Before an agent becomes main: the rooms it can step out of. */
+    @Test fun mainAgentSheet() = shot("main-agent-sheet", dark = false) {
+        androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.background(dev.orbit.app.ui.theme.Orbit.colors.surface).padding(top = 24.dp, bottom = 24.dp)) { dev.orbit.app.ui.components.MainAgentChoice(nova, SampleData.app.rooms, SampleData.app::agent) {} }
+    }
     /** The crew out of their button, lined up to edit. */
     @Test fun homeCrew() = shot("home-crew") {
         HomeScreen(SampleData.app, {}, {}, {}, {}, {}, {}, now = now, huddle = dev.orbit.app.ui.components.rememberCrewHuddle(open = true))
@@ -488,6 +495,12 @@ class TallScreenshotTest {
 
     @Test fun agentEditor() = shot("agent-editor-full") {
         AgentEditorScreen(SampleData.nova, providers, { emptyList() }, {}, {}, {}, folders = SampleData.folders)
+    }
+    @Test fun agentEditorMain() = shot("agent-editor-main-full", dark = false) {
+        AgentEditorScreen(SampleData.nova, providers, { emptyList() }, {}, {}, {}, main = SampleData.withMain.main, rooms = SampleData.withMain.rooms, crew = SampleData.agents)
+    }
+    @Test fun agentEditorMakeMain() = shot("agent-editor-make-main-full") {
+        AgentEditorScreen(SampleData.pixel, providers, { emptyList() }, {}, {}, {}, main = SampleData.withMain.main, rooms = SampleData.withMain.rooms, crew = SampleData.agents)
     }
     @Test fun agentEditorOtherProviderLight() = shot("agent-editor-full-light", dark = false) {
         AgentEditorScreen(SampleData.mochi.copy(abilities = listOf("web")), providers, { emptyList() }, {}, {}, {})

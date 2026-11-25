@@ -214,7 +214,10 @@ function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate, onDelete,
     const timer = setTimeout(() => api.search(q, scope?.id).then(setFound).catch(() => setFound({ query: q, rooms: [], messages: [] })), 250);
     return () => clearTimeout(timer);
   }, [query, scope?.id]);
-  const rooms = [...state.rooms].sort((a, b) => b.updatedAt - a.updatedAt);
+  const rooms = [...state.rooms].filter((r) => !r.main).sort((a, b) => b.updatedAt - a.updatedAt);
+  // The main chat: the user and their main agent, who keeps up with every room. Pinned above the rooms.
+  const mainRoom = state.main && state.rooms.find((r) => r.id === state.main.roomId);
+  const mainAgent = mainRoom && byId[state.main.agentId];
   const intro = !state.profile?.notes?.length;
   const demo = !intro && !state.providers.some((p) => p.takesKey && p.configured);
   const guide = guideOf(state);
@@ -247,6 +250,16 @@ function Sidebar({ state, roomId, onOpen, onDialog, onIntro, onUpdate, onDelete,
         <div style="flex:1"><div class="title-s">Your crew is in demo mode</div><div class="body-s muted">Add an AI key to get real answers.</div></div>
         <${Icon} name="chevron" size=${18} />
       </button>`}
+      ${mainRoom && mainAgent && html`<div class="sidebar-title"><span class="overline">Main chat</span></div>
+        <div class="room-entry"><button class=${`room-item main-chat${mainRoom.id === roomId ? ' current' : ''}`} onClick=${() => onOpen(mainRoom.id)} aria-current=${mainRoom.id === roomId ? 'page' : null}>
+          <${Portrait} spec=${mainAgent.avatar} size=${40} thinking=${mainRoom.active} />
+          <div class="text">
+            <div class="top"><span class="name">${mainAgent.name}</span>${!mainRoom.active && html`<span class="caption faint">${ago(mainRoom.updatedAt)}</span>`}</div>
+            ${mainRoom.active
+              ? html`<div class="preview shimmer">${mainAgent.name} is replying</div>`
+              : html`<div class="preview">${mainRoom.preview ? mainRoom.preview.text : 'Keeps up with every room'}</div>`}
+          </div>
+        </button></div>`}
       <div class="sidebar-title">
         <span class="overline">Rooms</span>
         <button class="icon-button" aria-label="New room" title="New room" onClick=${() => onDialog({ type: 'room' })}><${Icon} name="plus" /></button>
@@ -316,7 +329,8 @@ function SearchResults({ found, byId, onOpen }) {
 function Members({ room, state, onClose, onMessage, onAdd }) {
   const byId = Object.fromEntries(state.agents.map((a) => [a.id, a]));
   const members = room.agentIds.map((id) => byId[id]).filter(Boolean);
-  const others = state.agents.filter((a) => !room.agentIds.includes(a.id));
+  // The main chat is always the user and their main agent.
+  const others = room.main ? [] : state.agents.filter((a) => !room.agentIds.includes(a.id));
   const row = (a, action) => html`<div class="member-row">
     <${Disc} spec=${a.avatar} size=${44} ring=${room.active && room.speaking === a.id} />
     <div class="text"><div class="title-s">${a.name} ${a.model && html`<span class="model-tag">${modelTag(a.model)}</span>`}</div>
@@ -501,7 +515,7 @@ function RecentRooms({ state, onOpen }) {
       // Private window: it just won't be remembered.
     }
   };
-  const rooms = [...state.rooms].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, cards ? 7 : 5);
+  const rooms = [...state.rooms].filter((r) => !r.main).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, cards ? 7 : 5);
   const crewOf = (room) => room.agentIds.map((id) => state.agents.find((a) => a.id === id)).filter(Boolean);
   const line = (room, crew) => {
     const talking = crew.find((a) => a.id === room.speaking);
@@ -702,6 +716,7 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
             ? html`<span class="dot"></span>Reconnecting to your hub`
             : run.active
               ? html`<span class="dot" style=${`background:${speaker ? inkColor(speaker.avatar) : 'var(--text-2)'}`}></span><span class="shimmer">${speaker ? `${speaker.name} is replying` : 'Working'}</span>`
+              : room.main ? 'Your main agent · keeps up with every room'
               : agents.length === 1 ? `Just you and ${agents[0].name}`
               : room.mode === 'auto' ? `Best fit · ${agents.map((a) => a.name).join(', ')}`
               : room.mode === 'lead' && lead ? `Led by ${lead.name}` : `Round table · ${agents.map((a) => a.name).join(', ')}`}
@@ -712,12 +727,12 @@ function RoomView({ room, state, onDialog, notify, onBack, onOpenRoom, onStale, 
       <button class="icon-button" aria-label="Room options" aria-expanded=${menu} onClick=${() => setMenu(!menu)}><${Icon} name="more" /></button>
       ${menu && html`<div class="menu" onMouseLeave=${() => setMenu(false)}>
         <button onClick=${() => { setMenu(false); onDialog({ type: 'room', room }); }}>Edit room</button>
-        <button onClick=${() => { setMenu(false); onDialog({ type: 'members', room }); }}>Members</button>
+        ${!room.main && html`<button onClick=${() => { setMenu(false); onDialog({ type: 'members', room }); }}>Members</button>`}
         <button onClick=${() => { setMenu(false); onDialog({ type: 'schedules', room }); }}>Schedules</button>
         <button onClick=${() => { setMenu(false); onDialog({ type: 'search-room', room }); }}>Search this room</button>
         <button onClick=${() => { setMenu(false); onDialog({ type: 'tokens', room }); }}>Tokens${contextTokens != null ? html`<span class="hint">${formatTokens(contextTokens)} per reply</span>` : ''}</button>
         <button onClick=${() => { setMenu(false); if (confirm(`Clear every message in ${room.name}?`)) act(() => api.clear(room.id)); }}>Clear chat</button>
-        <button class="danger" onClick=${() => { setMenu(false); onDelete(); }}>Delete room</button>
+        ${!room.main && html`<button class="danger" onClick=${() => { setMenu(false); onDelete(); }}>Delete room</button>`}
       </div>`}
     </header>
     <div class="messages-frame">
@@ -810,6 +825,9 @@ const STEPS = {
   browse_read: ['Reading the page', 'Read the page', "Couldn't read the page", 'globe'],
   browse_click: ['Clicking', 'Clicked', "Didn't click", 'globe'],
   browse_type: ['Typing', 'Typed', "Couldn't type", 'globe'],
+  room_read: ['Reading', 'Read', "Couldn't open", 'file'],
+  chat_search: ['Searching chats for', 'Searched chats for', 'Chat search failed for', 'search'],
+  room_post: ['Posting in', 'Posted in', "Couldn't post in", 'reply'],
 };
 /** Why an agent wrote on its own, beside its name. */
 const REACHED = { checkin: 'Checking in', followup: 'Following up', watch: 'Watching', brief: 'Morning brief' };
@@ -837,6 +855,9 @@ function stepDetail(step) {
     case 'browse_click': return 'on the page';
     case 'browse_type': return step.detail ? `“${step.detail}”` : 'on the page';
     case 'folder': return step.detail ? leaf(step.detail) : 'your shared folders';
+    case 'chat_search': return `“${step.detail}”`;
+    case 'room_read':
+    case 'room_post': return step.detail || 'a room';
     case 'file': return leaf(step.detail);
     case 'find': return `“${step.detail}”`;
     case 'code': return '';
@@ -877,6 +898,9 @@ function summary(activity) {
     count('guide') && 'read the Treehouse guide',
     count('self') && 'updated itself',
     count('settings') && 'changed settings',
+    count('room_read') && times(count('room_read'), 'read a room', 'read # rooms'),
+    count('chat_search') && 'searched your chats',
+    count('room_post') && times(count('room_post'), 'posted in a room', 'posted in # rooms'),
     count('browse') + count('browse_click') + count('browse_type') && 'used the browser',
   ].filter(Boolean);
   const text = parts.length <= 1 ? parts[0] ?? `used ${activity.length} tools` : `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`;

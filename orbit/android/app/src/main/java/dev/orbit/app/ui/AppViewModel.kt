@@ -17,6 +17,7 @@ import dev.orbit.app.data.Watch
 import dev.orbit.app.data.Nudge
 import dev.orbit.app.data.GoogleStatus
 import dev.orbit.app.data.BrowserStatus
+import dev.orbit.app.data.MainAgent
 import dev.orbit.app.data.isNewerVersion
 import dev.orbit.app.update.ApkInstaller
 import dev.orbit.app.data.Provider
@@ -68,8 +69,16 @@ data class AppState(
     val nudges: List<Nudge> = emptyList(),
     val google: GoogleStatus = GoogleStatus(),
     val browser: BrowserStatus = BrowserStatus(),
+    /** The user's main agent and its chat, if they've picked one. */
+    val main: MainAgent? = null,
 ) {
     fun agent(id: String?) = agents.firstOrNull { it.id == id }
+
+    /** The main chat, pinned on Home above the rooms. */
+    val mainRoom: Room? get() = main?.let { m -> rooms.firstOrNull { it.id == m.roomId } }
+
+    /** Every room but the main chat. */
+    val otherRooms: List<Room> get() = rooms.filterNot { it.main }
 
     /** The app version waiting on the PC, if it is newer than [installed]. Offered once the PC itself is current. */
     fun appUpdate(installed: String): String? =
@@ -193,6 +202,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     nudges = fresh.nudges,
                     google = fresh.google,
                     browser = fresh.browser,
+                    main = fresh.main,
                 )
             }
         }
@@ -572,6 +582,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun runSchedule(id: String, onStarted: () -> Unit) {
         viewModelScope.launch { if (hub { it.runSchedule(id) } != null) onStarted() }
+    }
+
+    /**
+     * Makes [agentId] the main agent, or none when null, stepping it out of the rooms in [leave]. [onDone] gets the
+     * main chat's id, or an error to show.
+     */
+    fun setMain(agentId: String?, leave: List<String>, onDone: (roomId: String?, error: String?) -> Unit) {
+        viewModelScope.launch {
+            val client = repo.client ?: return@launch onDone(null, "This phone isn't paired with a hub.")
+            try {
+                val result = client.setMain(agentId, leave)
+                reload()
+                onDone(result.room?.id, null)
+            } catch (e: HubException) {
+                if (e.status == 401) repo.unpair(notifyHub = false)
+                onDone(null, e.message ?: "That didn't work. Try again.")
+            }
+        }
     }
 
     fun deleteAgent(id: String, onDeleted: () -> Unit) {

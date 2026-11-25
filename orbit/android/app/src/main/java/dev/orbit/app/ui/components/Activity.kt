@@ -90,6 +90,12 @@ fun activityLabel(activity: Activity, live: Boolean = false): ActivityLabel {
         Activity.KIND_SELF -> ActivityLabel(if (live) "Updating its" else if (failed) "Couldn't update its" else "Updated its", detail.ifBlank { "settings" })
         Activity.KIND_ROOM -> ActivityLabel(if (live) "Making a room" else if (failed) "Couldn't make a room" else "Made a room", detail)
         Activity.KIND_SETTINGS -> ActivityLabel(if (live) "Changing" else if (failed) "Couldn't change" else "Changed", detail.ifBlank { "settings" })
+        Activity.KIND_ROOM_READ -> ActivityLabel(if (live) "Reading" else if (failed) "Couldn't open" else "Read", detail.ifBlank { "a room" })
+        Activity.KIND_CHAT_SEARCH -> ActivityLabel(
+            if (live) "Searching chats for" else if (failed) "Chat search failed for" else "Searched chats for",
+            "“$detail”",
+        )
+        Activity.KIND_ROOM_POST -> ActivityLabel(if (live) "Posting in" else if (failed) "Couldn't post in" else "Posted in", detail.ifBlank { "a room" })
         else -> ActivityLabel(if (live) "Working" else "Used a tool", detail)
     }
 }
@@ -123,6 +129,9 @@ fun activitySummary(activity: List<Activity>): String {
         if (count(Activity.KIND_SELF) > 0) add("updated itself")
         if (count(Activity.KIND_SETTINGS) > 0) add("changed settings")
         count(Activity.KIND_ROOM).takeIf { it > 0 }?.let { add(times(it, "made a room", "made # rooms")) }
+        count(Activity.KIND_ROOM_READ).takeIf { it > 0 }?.let { add(times(it, "read a room", "read # rooms")) }
+        if (count(Activity.KIND_CHAT_SEARCH) > 0) add("searched your chats")
+        count(Activity.KIND_ROOM_POST).takeIf { it > 0 }?.let { add(times(it, "posted in a room", "posted in # rooms")) }
     }.ifEmpty { listOf("used ${activity.size} tools") }
     val joined = if (parts.size == 1) parts[0] else parts.dropLast(1).joinToString(", ") + " and " + parts.last()
     return joined.replaceFirstChar { it.uppercase() }
@@ -146,6 +155,9 @@ private fun iconFor(kind: String) = when (kind) {
     Activity.KIND_BROWSE, Activity.KIND_BROWSE_READ, Activity.KIND_BROWSE_CLICK, Activity.KIND_BROWSE_TYPE -> OrbitIcon.Globe
     Activity.KIND_SELF, Activity.KIND_SETTINGS -> OrbitIcon.Check
     Activity.KIND_ROOM -> OrbitIcon.Plus
+    Activity.KIND_ROOM_READ -> OrbitIcon.File
+    Activity.KIND_CHAT_SEARCH -> OrbitIcon.Search
+    Activity.KIND_ROOM_POST -> OrbitIcon.Reply
     else -> OrbitIcon.More
 }
 

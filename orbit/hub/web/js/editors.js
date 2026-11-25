@@ -1,7 +1,7 @@
 // Making and changing things: agents, rooms, settings and schedules, each in a dialog.
 import { useEffect, useState } from '/vendor/hooks.mjs';
 import { api, onThisPC } from './api.js';
-import { Avatar, CHARACTERS, Portrait, characterOf, randomAvatar, tint } from './avatar.js';
+import { Avatar, CHARACTERS, GroupPortrait, Portrait, characterOf, randomAvatar, tint } from './avatar.js';
 import { Icon, Modal, Pill, Switch, formatCost, formatTokens, html } from './ui.js';
 
 const ABILITIES = [
@@ -140,6 +140,9 @@ export function AgentEditor({ agent, state, notify, onClose, onSaved, onChanged,
     </button>`;
     })}</div>
 
+    ${live && html`<div class="section-title">Main agent</div>
+      <${MainAgentPanel} agent=${live} state=${state} notify=${notify} onChanged=${onChanged} />`}
+
     <div class="section-title">Reaches out</div>
     <div style="display:flex;gap:8px">${LEVELS.map(([level, label]) => html`<${Pill} label=${label} selected=${proactive === level} onClick=${() => setProactive(level)} />`)}</div>
     <p class="body-s muted" style="margin:12px 0 0">${proactive === 'gentle'
@@ -164,6 +167,64 @@ export function AgentEditor({ agent, state, notify, onClose, onSaved, onChanged,
     <textarea class="field" rows="6" placeholder="How should this agent think, behave, and help the crew?" value=${instructions} onInput=${(e) => setInstructions(e.currentTarget.value)}></textarea>
     ${!fresh && html`<button class="button danger" style="margin-top:32px" onClick=${remove}>Delete agent</button>`}
   <//>`;
+}
+
+/**
+ * Whether this agent is the main agent, who keeps up with every room and has the main chat, and the way to make it
+ * main: first a list of the rooms it can step out of, since it sees them anyway, each ticked; then confirm.
+ */
+function MainAgentPanel({ agent, state, notify, onChanged }) {
+  const isMain = state.main?.agentId === agent.id;
+  const current = !isMain && state.agents.find((a) => a.id === state.main?.agentId);
+  const removable = state.rooms.filter((r) => !r.main && r.agentIds.includes(agent.id) && r.agentIds.length > 1);
+  const [choosing, setChoosing] = useState(false);
+  const [leave, setLeave] = useState(() => new Set(removable.map((r) => r.id)));
+  const [busy, setBusy] = useState(false);
+  const set = async (agentId, rooms = []) => {
+    setBusy(true);
+    try {
+      await api.setMain(agentId, rooms);
+      setChoosing(false);
+      onChanged();
+    } catch (e) {
+      notify(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const flip = (id) => {
+    const next = new Set(leave);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setLeave(next);
+  };
+  const names = (ids) => ids.map((id) => state.agents.find((a) => a.id === id)?.name).filter(Boolean);
+  return html`<div class="card" style="padding:16px">
+    <div class="title-s">${isMain ? `${agent.name} is your main agent` : `Make ${agent.name} your main agent`}</div>
+    <p class="body-s muted" style="margin:4px 0 14px">${isMain
+      ? `${agent.name} keeps up with every room, even ones they're not in, and has a chat with you at the top of the room list. Check-ins and the morning brief arrive there.`
+      : current
+        ? `${current.name} is your main agent now. ${agent.name} would take over the main chat and keep up with every room.`
+        : 'A main agent keeps up with every room, even ones they\'re not in, and gets a chat with you at the top of the room list. Ask them about anything going on anywhere.'}</p>
+    ${isMain
+      ? html`<button class="pill" disabled=${busy} onClick=${() => set(null)}>Stop being main agent</button>`
+      : !choosing
+        ? html`<button class="button" disabled=${busy} onClick=${() => (removable.length ? setChoosing(true) : set(agent.id))}>Make main agent</button>`
+        : html`<p class="body-s" style="margin:0 0 8px">${agent.name} sees every room now, so they don't need to sit in them. Take them out of:</p>
+          <div class="card" style="box-shadow:none">${removable.map((r) => {
+            const others = names(r.agentIds.filter((id) => id !== agent.id));
+            const stay = `${others.join(', ')} ${others.length === 1 ? 'stays' : 'stay'}`;
+            return html`<button class="ability" role="switch" aria-checked=${leave.has(r.id)} onClick=${() => flip(r.id)}>
+              <${GroupPortrait} specs=${r.agentIds.filter((id) => id !== agent.id).map((id) => state.agents.find((a) => a.id === id)?.avatar).filter(Boolean)} size=${32} />
+              <div style="flex:1"><div class="title-s">${r.name}</div><div class="body-s muted">${r.mode === 'lead' && r.leadId === agent.id ? `${agent.name} leads it · ${stay}` : stay}</div></div>
+              <${Switch} on=${leave.has(r.id)} />
+            </button>`;
+          })}</div>
+          <p class="note" style="margin-top:6px">Leave on the rooms where ${agent.name} does real work. They stay in rooms where they're the only agent.</p>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="button" disabled=${busy} onClick=${() => set(agent.id, removable.filter((r) => leave.has(r.id)).map((r) => r.id))}>${leave.size ? `Make main agent, leave ${leave.size} ${leave.size === 1 ? 'room' : 'rooms'}` : 'Make main agent'}</button>
+            <button class="button secondary" disabled=${busy} onClick=${() => setChoosing(false)}>Cancel</button>
+          </div>`}
+  </div>`;
 }
 
 export function RoomEditor({ room, state, notify, onClose, onSaved }) {
@@ -222,7 +283,7 @@ export function RoomEditor({ room, state, notify, onClose, onSaved }) {
     <textarea id="room-description" class="field" rows="3" maxlength="2000" value=${description} onInput=${(e) => setDescription(e.currentTarget.value)}
       placeholder="What this room is for, and rules for everyone in it. For example: We're planning a trip to Japan in April. Keep replies short."></textarea>
     <p class="note" style="margin-top:6px">Every agent in this room reads it before answering.</p>
-    <div class="section-title">Crew</div>
+    ${!room?.main && html`<div class="section-title">Crew</div>
     ${state.agents.length
       ? html`<div style="display:flex;flex-wrap:wrap;gap:8px">${state.agents.map((a) => html`<${Pill} label=${a.name} selected=${members.includes(a.id)} onClick=${() => toggle(a.id)}><${Portrait} spec=${a.avatar} size=${24} /><//>`)}</div>`
       : html`<p class="muted">Make an agent first, then put it in a room.</p>`}
@@ -236,8 +297,8 @@ export function RoomEditor({ room, state, notify, onClose, onSaved }) {
       ? 'Only the agent or two best suited to each message answer it. Talk to the whole group ("what do you all think?") and everyone joins in.'
       : mode === 'lead' ? 'The lead answers first, brings in the others with @mentions, then sums up.' : 'Everyone answers in turn.'} Mention someone with @ to ask them directly.</p>
     ${mode === 'lead' && members.length > 1 && html`<label class="field-label" style="margin-top:18px">Lead</label>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">${members.map((id) => state.agents.find((a) => a.id === id)).filter(Boolean).map((a) => html`<${Pill} label=${a.name} selected=${a.id === lead} onClick=${() => setLeadId(a.id)}><${Portrait} spec=${a.avatar} size=${24} /><//>`)}</div>`}
-    ${!fresh && html`<button class="button danger" style="margin-top:32px" onClick=${remove}>Delete room</button>`}
+      <div style="display:flex;flex-wrap:wrap;gap:8px">${members.map((id) => state.agents.find((a) => a.id === id)).filter(Boolean).map((a) => html`<${Pill} label=${a.name} selected=${a.id === lead} onClick=${() => setLeadId(a.id)}><${Portrait} spec=${a.avatar} size=${24} /><//>`)}</div>`}`}
+    ${!fresh && !room.main && html`<button class="button danger" style="margin-top:32px" onClick=${remove}>Delete room</button>`}
   <//>`;
 }
 

@@ -78,6 +78,10 @@ import dev.orbit.app.ui.components.AgentAvatar
 import dev.orbit.app.ui.components.BarAction
 import dev.orbit.app.ui.components.Characters
 import dev.orbit.app.ui.components.DangerRow
+import dev.orbit.app.ui.components.MainAgentPanel
+import dev.orbit.app.ui.components.MainAgentSheet
+import dev.orbit.app.data.MainAgent
+import dev.orbit.app.data.Room
 import dev.orbit.app.ui.components.FieldLabel
 import dev.orbit.app.ui.components.Hairline
 import dev.orbit.app.ui.components.IconPill
@@ -131,9 +135,27 @@ fun AgentEditorScreen(
     /** Whether the user's Google account is connected on the PC, and as whom. */
     google: GoogleStatus = GoogleStatus(),
     browser: BrowserStatus = BrowserStatus(),
+    /** The main agent now, the rooms it could step out of, and the crew, for "Make main agent". */
+    main: MainAgent? = null,
+    rooms: List<Room> = emptyList(),
+    crew: List<Agent> = emptyList(),
+    /** Makes an agent main (null for none), leaving the rooms given. [onDone] gets an error to show, or null. */
+    onSetMain: (agentId: String?, leave: List<String>, onDone: (String?) -> Unit) -> Unit = { _, _, _ -> },
 ) {
     val c = Orbit.colors
     val haptics = rememberHaptics()
+    var choosingMain by remember { mutableStateOf(false) }
+    var settingMain by remember { mutableStateOf(false) }
+    var mainError by remember { mutableStateOf<String?>(null) }
+    val setMain = { agentId: String?, leave: List<String> ->
+        settingMain = true
+        mainError = null
+        onSetMain(agentId, leave) { error ->
+            settingMain = false
+            mainError = error
+            if (error == null) haptics.confirm()
+        }
+    }
     val start = remember(initial?.id) {
         initial ?: defaultProvider(providers).let { provider ->
             Agent(
@@ -353,6 +375,26 @@ fun AgentEditorScreen(
                             browses,
                             supported,
                         ) { browses = it }
+                    }
+                }
+            }
+
+            // A saved agent can become the main agent, who keeps up with every room.
+            if (initial != null) {
+                Group("Main agent")
+                Gutter {
+                    val isMain = main?.agentId == initial.id
+                    MainAgentPanel(
+                        initial, isMain, crew.firstOrNull { it.id == main?.agentId && !isMain }, settingMain,
+                        onMake = { choosingMain = true },
+                        onStop = { setMain(null, emptyList()) },
+                    )
+                    mainError?.let { Text(it, Modifier.padding(top = 8.dp, start = 4.dp), style = OrbitType.bodyS, color = c.danger) }
+                }
+                if (choosingMain) {
+                    MainAgentSheet(initial, rooms, { id -> crew.firstOrNull { it.id == id } }, onDismiss = { choosingMain = false }) { leave ->
+                        choosingMain = false
+                        setMain(initial.id, leave)
                     }
                 }
             }

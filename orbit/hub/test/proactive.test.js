@@ -302,6 +302,27 @@ test('the morning brief arrives once a day, in its own room', async (t) => {
   assert.equal(h.store.messages(room.id).length, 1, 'once a day');
 });
 
+test('with a main agent, the morning brief comes from it, in the main chat', async (t) => {
+  const h = await start(t, {});
+  const nova = await h.agent('Nova', { abilities: ['web'] });
+  const tike = await h.agent('Tike', { abilities: ['web'] });
+  const other = (await h.api('POST', '/api/rooms', { name: 'Trip', agentIds: [tike.id] })).body;
+  await h.api('POST', `/api/rooms/${other.id}/messages`, { text: 'Book the Kyoto hotel.' });
+  await h.hub.orchestrator.idle(other.id);
+  await h.api('PUT', '/api/proactive', { brief: { enabled: true, time: '07:00', agentId: tike.id } });
+  const { main } = (await h.api('PUT', '/api/main', { agentId: nova.id })).body;
+  await h.hub.orchestrator.idle(main.roomId);
+
+  const morning = new Date();
+  morning.setHours(7, 5, 0, 0);
+  await h.hub.proactive.tick(morning.getTime());
+  assert.ok(!h.store.state.rooms.some((r) => r.brief), 'no separate brief room');
+  const brief = h.store.messages(main.roomId).at(-1);
+  assert.equal(brief.proactive.kind, 'brief');
+  assert.equal(brief.author.name, 'Nova');
+  assert.match(h.providers.calls.at(-1).messages.at(-1).content, /Trip/);
+});
+
 test('deleting an agent or room takes its follow-ups, watches and cards with it', async (t) => {
   const h = await start(t, {});
   const nova = await h.agent('Nova');

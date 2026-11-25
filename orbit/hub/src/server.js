@@ -16,6 +16,7 @@ import { LEVELS, Proactive, ProactiveError } from './proactive.js';
 import { Google, GoogleError } from './google.js';
 import { Browser, BrowserError } from './browser.js';
 import { SelfError, planRoom } from './self.js';
+import { HELLO_PROMPT, MainError, mainOf, setMain } from './mainchat.js';
 import { ABILITIES, Orchestrator } from './orchestrator.js';
 import { ProviderError } from './errors.js';
 import { PAIR_PAGE } from './pairpage.js';
@@ -425,6 +426,7 @@ export class Hub {
           nudges: this.proactive.nudges(),
           google: this.google.status(),
           browser: this.browser.status(),
+          main: mainOf(this.store.state),
         };
       case 'GET /api/events':
         return this.#follow(req, res);
@@ -621,6 +623,8 @@ export class Hub {
         return agent;
       }
       case 'DELETE /api/agents/:id': {
+        // Without its agent, the main chat becomes an ordinary chat.
+        if (this.store.state.main?.agentId === id) setMain(this.store, null);
         this.store.state.agents = this.store.state.agents.filter((a) => a.id !== id);
         this.proactive.forget({ agentId: id });
         for (const room of this.store.state.rooms) {
@@ -660,13 +664,34 @@ export class Hub {
         this.store.save();
         return this.#roomView(room);
       }
+      // The main agent: who it is (null for none), and the rooms it steps out of now that it sees them all anyway.
+      case 'PUT /api/main': {
+        const body = await this.#body(req);
+        // No agent (null or empty) turns the main agent off.
+        if (body.agentId != null && typeof body.agentId !== 'string') throw new HttpError(400, 'Say which agent.');
+        const agentId = body.agentId || null;
+        let result;
+        try {
+          result = setMain(this.store, agentId, body.leave ?? []);
+        } catch (err) {
+          if (err instanceof MainError) throw new HttpError(400, err.message);
+          throw err;
+        }
+        // A new main chat opens with a hello from its agent (a demo agent would only echo the prompt).
+        const greeter = this.store.agent(agentId);
+        if (result.created && greeter && this.providers.kindOf?.(greeter.provider) !== 'demo') this.orchestrator.reachOut(result.room.id, agentId, HELLO_PROMPT, null);
+        return { main: mainOf(this.store.state), room: result.room ? this.#roomView(result.room) : null, left: result.left };
+      }
       case 'PUT /api/rooms/:id': {
         const room = this.#requireRoom(id);
         Object.assign(room, this.#roomFields(await this.#body(req), room));
+        // The main chat stays just the user and the main agent.
+        if (room.main && this.store.state.main) Object.assign(room, { agentIds: [this.store.state.main.agentId], mode: 'roundtable', leadId: null });
         this.store.save();
         return this.#roomView(room);
       }
       case 'DELETE /api/rooms/:id': {
+        if (this.store.room(id)?.main) throw new HttpError(400, "Your main chat stays while you have a main agent. To turn it off, open your main agent and choose Stop being main agent.");
         this.orchestrator.stop(id);
         this.scheduler.forgetRoom(id);
         this.proactive.forget({ roomId: id });

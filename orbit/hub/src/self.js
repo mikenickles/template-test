@@ -135,6 +135,8 @@ export function snapshot({ store, providers, google = null, folders = null, hub 
     const level = a.proactive && a.proactive !== 'off' ? `, reaches out: ${a.proactive}` : '';
     lines.push(`- ${a.name}${a.role ? ` (${a.role})` : ''}: ${a.model} on ${a.provider}; abilities: ${(a.abilities ?? []).join(', ') || 'none'}${level}.`);
   }
+  const mainAgent = state.main && store.agent(state.main.agentId);
+  lines.push('', `Main agent: ${mainAgent ? `${mainAgent.name}, who keeps up with every room and has the main chat with the user` : 'none (the user can pick one on an agent\'s page)'}.`);
   lines.push('', 'Rooms:');
   for (const r of state.rooms) {
     const members = r.agentIds.map((id) => store.agent(id)?.name).filter(Boolean).join(', ');
@@ -227,6 +229,9 @@ export function changeSettings(room, input, { store, proactive }) {
   if (input.room_description !== undefined) {
     room.description = String(input.room_description ?? '').trim().slice(0, 2000);
     changed.push('room description');
+  }
+  if (room.main && (input.add_members?.length || input.remove_members?.length || input.room_mode !== undefined || input.room_lead !== undefined)) {
+    throw new SelfError("This is the main chat: it's always just the user and their main agent. Make a new room with create_room instead.");
   }
   for (const name of Array.isArray(input.add_members) ? input.add_members : []) {
     const agent = byName(agents, name);

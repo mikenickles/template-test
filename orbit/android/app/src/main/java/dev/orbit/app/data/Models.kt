@@ -121,6 +121,8 @@ data class Room(
     val intro: Boolean = false,
     /** What the room is for, and rules every agent in it follows. */
     val description: String = "",
+    /** The main chat: just the user and their main agent, who keeps up with every room. */
+    val main: Boolean = false,
 ) {
     companion object {
         /** Best fit: only the agents suited to each message answer it. */
@@ -179,6 +181,9 @@ data class Activity(
         const val KIND_SELF = "self"
         const val KIND_SETTINGS = "settings"
         const val KIND_ROOM = "room"
+        const val KIND_ROOM_READ = "room_read"
+        const val KIND_CHAT_SEARCH = "chat_search"
+        const val KIND_ROOM_POST = "room_post"
     }
 }
 
@@ -396,7 +401,16 @@ data class HubState(
     val nudges: List<Nudge> = emptyList(),
     val google: GoogleStatus = GoogleStatus(),
     val browser: BrowserStatus = BrowserStatus(),
+    val main: MainAgent? = null,
 )
+
+/** The user's main agent, who keeps up with every room, and its chat with the user. */
+@Serializable
+data class MainAgent(val agentId: String = "", val roomId: String = "")
+
+/** What making an agent the main agent did: its chat, and the rooms it stepped out of. */
+@Serializable
+data class MainResult(val main: MainAgent? = null, val room: Room? = null, val left: List<String> = emptyList())
 
 /** Whether agents are replying in a room right now, and who has the floor. */
 @Serializable

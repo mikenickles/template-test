@@ -45,6 +45,8 @@ export const api = {
 
   saveAgent: (agent) => (agent.id ? request('PUT', `/api/agents/${agent.id}`, agent) : request('POST', '/api/agents', agent)),
   deleteAgent: (id) => request('DELETE', `/api/agents/${id}`),
+  /** Makes an agent the main agent (null for none), stepping it out of the rooms in leave. */
+  setMain: (agentId, leave = []) => request('PUT', '/api/main', { agentId, leave }),
   addMemory: (agentId, text) => request('POST', `/api/agents/${agentId}/memory`, { text }),
   removeMemory: (agentId, noteId) => request('DELETE', `/api/agents/${agentId}/memory/${noteId}`),
   saveRoom: (room) => (room.id ? request('PUT', `/api/rooms/${room.id}`, room) : request('POST', '/api/rooms', room)),

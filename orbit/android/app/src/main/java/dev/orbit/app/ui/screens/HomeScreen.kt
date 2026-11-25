@@ -236,39 +236,49 @@ fun HomeScreen(
                     item(key = "add-key") { AddKeyNotice(onAddKey, Modifier.entrance(entrances, "add-key", 0)) }
                 }
 
-                if (state.rooms.isNotEmpty() || !showIntro) item(key = "rooms-title") {
+                // The main chat: the user and their main agent, who keeps up with every room. Pinned above the rooms.
+                val mainRoom = state.mainRoom
+                val mainAgent = state.agent(state.main?.agentId)
+                if (mainRoom != null && mainAgent != null) item(key = "main-chat") {
+                    MainChatCard(
+                        mainRoom, mainAgent, now,
+                        Modifier.padding(horizontal = GlassInset).padding(top = OrbitDimens.section).animateItem().entrance(entrances, "main-chat", 2),
+                    ) { onOpenRoom(mainRoom) }
+                }
+                val rooms = state.otherRooms
+                if (rooms.isNotEmpty() || !showIntro) item(key = "rooms-title") {
                     SectionTitle(
                         "Rooms",
                         Modifier.padding(horizontal = OrbitDimens.gutter).padding(top = OrbitDimens.section, bottom = 2.dp)
                             .entrance(entrances, "rooms-title", 2),
-                        count = state.rooms.size,
+                        count = rooms.size,
                     ) {
-                        if (state.rooms.size > 1) ViewSwitch(roomsAsCards, onRoomsAsCards)
+                        if (rooms.size > 1) ViewSwitch(roomsAsCards, onRoomsAsCards)
                     }
                 }
-                if (state.rooms.isEmpty() && !showIntro) {
+                if (rooms.isEmpty() && !showIntro) {
                     item(key = "rooms-empty") {
                         EmptyRooms(state.agents, Modifier.entrance(entrances, "rooms-empty", 3), onNewRoom = onNewRoom, onNewAgent = onNewAgent)
                     }
                 }
                 // Each room is its own frosted card in its crew's colors: in a list, or as a grid of cards.
-                if (state.rooms.isNotEmpty()) item(key = "rooms") {
+                if (rooms.isNotEmpty()) item(key = "rooms") {
                     val hold = { room: Room ->
                         haptics.tick()
                         acting = room
                     }
                     AnimatedContent(
-                        roomsAsCards && state.rooms.size > 1,
+                        roomsAsCards && rooms.size > 1,
                         Modifier.fillMaxWidth().padding(horizontal = GlassInset).padding(top = 14.dp).animateItem().entrance(entrances, "rooms", 3),
                         transitionSpec = { fadeIn(tween(220, delayMillis = 90)) togetherWith fadeOut(tween(90)) },
                         label = "rooms",
                     ) { cards ->
                         if (cards) {
-                            RoomGrid(state.rooms, state::agent, now, onLongClick = hold, onOpen = onOpenRoom)
+                            RoomGrid(rooms, state::agent, now, onLongClick = hold, onOpen = onOpenRoom)
                         } else {
                             // One card, rooms parted by hairlines.
                             Column(Modifier.fillMaxWidth().quietCard(RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp))) {
-                                state.rooms.forEachIndexed { i, room ->
+                                rooms.forEachIndexed { i, room ->
                                     if (i > 0) Hairline(Modifier.padding(start = 16.dp + RoomFace + 14.dp))
                                     RoomRow(room, room.agentIds.mapNotNull(state::agent), now, onLongClick = { hold(room) }) { onOpenRoom(room) }
                                 }
@@ -726,6 +736,37 @@ private fun RoomGrid(rooms: List<Room>, agentOf: (String) -> Agent?, now: Long, 
                 if (pair.size == 1) Spacer(Modifier.weight(1f))
             }
         }
+    }
+}
+
+/** The main chat, pinned on Home: the main agent's face, a word on what it does, and the latest line. */
+@Composable
+private fun MainChatCard(room: Room, agent: Agent, now: Long, modifier: Modifier, onClick: () -> Unit) {
+    val c = Orbit.colors
+    val shape = RoundedCornerShape(CardRadius)
+    Column(
+        modifier
+            .fillMaxWidth()
+            .quietCard(shape)
+            .tap(shape, 0.985f, onClick)
+            .padding(16.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            AgentPortrait(
+                agent.avatar,
+                Modifier.shared(SharedKeys.roomMember(room.id, agent.id)),
+                size = 52.dp,
+                thinking = room.active && room.speaking == agent.id,
+            )
+            Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                Text(agent.name, style = OrbitType.titleM, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("Your main chat · keeps up with every room", style = OrbitType.bodyS, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            if (!room.active) {
+                Text(relativeTime(room.updatedAt, now), Modifier.align(Alignment.Top).padding(start = 8.dp), style = OrbitType.caption, color = c.textTertiary)
+            }
+        }
+        RoomLine(room, listOf(agent), Modifier.padding(top = 12.dp), lines = 2)
     }
 }
 

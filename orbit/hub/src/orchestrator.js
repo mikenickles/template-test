@@ -7,6 +7,7 @@ import { addUsage, emptyUsage } from './usage.js';
 import { GOOGLE_PROMPT, runGoogleTool } from './google.js';
 import { BROWSER_PROMPT } from './browser.js';
 import { APP_SUMMARY, GUIDE, SELF_PROMPT, modelOf, selfTools } from './self.js';
+import { mainOf, mainPrompt, mainTools } from './mainchat.js';
 
 /** Upper bound on agent replies per user message, so @mention chains can't loop forever. */
 export const MAX_TURNS = 12;
@@ -92,7 +93,11 @@ export function resolveAbilities(agent, providers, folders, save = () => {}, { p
   };
 }
 
-export function buildSystemPrompt(agent, room, agents, abilities = null, profile = null) {
+/**
+ * [main]: the main agent's job and overview (its text, from mainPrompt) when this agent is the main agent, or the main
+ * agent's name when it's someone else, so the crew knows who keeps up with everything.
+ */
+export function buildSystemPrompt(agent, room, agents, abilities = null, profile = null, main = null) {
   const teammates = agents.filter((a) => a.id !== agent.id);
   const isLead = room.mode === 'lead' && (room.leadId === agent.id || (!room.leadId && agents[0]?.id === agent.id));
   const lines = [
@@ -132,6 +137,10 @@ export function buildSystemPrompt(agent, room, agents, abilities = null, profile
   }
   if (room.description?.trim()) {
     lines.push('', 'About this room, from the user (keep to it):', room.description.trim());
+  }
+  if (main?.prompt) lines.push(main.prompt);
+  else if (main?.name) {
+    lines.push('', `${main.name} is the user's main agent: they keep up with every room, including this one, and may pass notes in. The user can ask ${main.name} about anything in their main chat.`);
   }
   if (profile?.name || profile?.notes?.length) {
     lines.push('', "About the user, as your whole crew knows them (use it where it helps; don't recite it):");
@@ -377,6 +386,20 @@ export class Orchestrator {
       return agents.filter((a) => a.id === agentId);
     });
     return true;
+  }
+
+  /**
+   * The main agent's note in another room: it shows there as the main agent's message, and the members it @mentions
+   * answer, unless the room is already busy. Returns who answers and whether the room was busy.
+   */
+  relay(roomId, agent, text) {
+    const room = this.store.room(roomId);
+    if (!room) return { answering: [], busy: false };
+    this.#append(roomId, { type: 'agent', agentId: agent.id, name: agent.name, model: agent.model }, text, 'done', { relayed: true });
+    if (this.runs.has(roomId)) return { answering: [], busy: true };
+    const mentioned = findMentions(text, this.#roomAgents(room).filter((a) => a.id !== agent.id));
+    if (mentioned.length) this.#start(roomId, () => mentioned);
+    return { answering: mentioned.map((a) => a.name), busy: false };
   }
 
   /** Has one agent open a room, speaking first. False if the room is busy. */
@@ -794,6 +817,15 @@ export class Orchestrator {
         },
       });
     }
+    // The main agent keeps up with every room: an overview with each reply, and with tools, reading, searching and posting.
+    const main = mainOf(this.store.state);
+    const isMain = main?.agentId === agent.id;
+    if (abilities && isMain) {
+      abilities.overseer = mainTools(this.store, { mainRoomId: main.roomId, post: (target, text) => this.relay(target.id, agent, text) });
+    }
+    const mainInfo = isMain
+      ? { prompt: mainPrompt(this.store, agent, room, { tools: Boolean(abilities) }) }
+      : main ? { name: this.store.agent(main.agentId)?.name } : null;
     if (abilities && intro) {
       abilities.crew = {
         run: (input) => {
@@ -831,9 +863,9 @@ export class Orchestrator {
       const text = await this.providers.stream({
         provider: agent.provider,
         model: agent.model,
-        system: buildSystemPrompt(agent, room, agents, abilities, profile),
+        system: buildSystemPrompt(agent, room, agents, abilities, profile, mainInfo),
         // For a model that turns out not to take tools: the same agent, told about the app without them.
-        plainSystem: claude ? undefined : buildSystemPrompt(agent, room, agents, null, profile),
+        plainSystem: claude ? undefined : buildSystemPrompt(agent, room, agents, null, profile, isMain ? { prompt: mainPrompt(this.store, agent, room) } : mainInfo),
         messages: transcript,
         signal: run.abort.signal,
         agent,

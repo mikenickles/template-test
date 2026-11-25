@@ -69,6 +69,10 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
     @Serializable
     private data class NameBody(val name: String)
 
+    /** An empty [agentId] turns the main agent off. */
+    @Serializable
+    private data class MainBody(val agentId: String, val leave: List<String>)
+
     @Serializable
     private data class PairBody(val code: String, val deviceName: String)
 
@@ -205,6 +209,10 @@ class HubClient(private val route: HubRoute, private val token: String? = null) 
 
     /** Results of scheduled runs since [since] (milliseconds), and the hub's clock now. */
     suspend fun notices(since: Long): Notices = call("GET", "/api/notices?since=$since")
+
+    /** Makes [agentId] the main agent (null for none), stepping it out of the rooms in [leave]. */
+    suspend fun setMain(agentId: String?, leave: List<String>): MainResult =
+        call("PUT", "/api/main", OrbitJson.encodeToString(MainBody(agentId.orEmpty(), leave)))
 
     suspend fun deleteAgent(id: String) {
         call<Unit>("DELETE", "/api/agents/$id")

@@ -29,8 +29,8 @@ android {
         applicationId = "dev.orbit.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 44
-        versionName = "0.39.0"
+        versionCode = 45
+        versionName = "0.40.0"
     }
 
     signingConfigs {

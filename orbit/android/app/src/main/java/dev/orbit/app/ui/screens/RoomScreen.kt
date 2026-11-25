@@ -442,14 +442,15 @@ fun RoomScreen(
                     state.messages.size.takeIf { it > 0 }?.let { if (it == 1) "1 message" else "$it messages" },
                 ).filterNotNull().joinToString(" · "),
                 leading = { GroupPortrait(agents.map { it.avatar }, size = 44.dp) },
-                actions = listOf(
-                    SheetAction("Edit room", OrbitIcon.Edit, hint = "Name, mode, description", onClick = onEdit),
-                    SheetAction("Members", OrbitIcon.Person, hint = if (agents.size == 1) "1 agent" else "${agents.size} agents") { showingMembers = true },
+                // The main chat is always the user and their main agent, and stays while it's the main chat.
+                actions = listOfNotNull(
+                    SheetAction("Edit room", OrbitIcon.Edit, hint = if (room.main) "Name, description" else "Name, mode, description", onClick = onEdit),
+                    if (room.main) null else SheetAction("Members", OrbitIcon.Person, hint = if (agents.size == 1) "1 agent" else "${agents.size} agents") { showingMembers = true },
                     SheetAction("Schedules", OrbitIcon.Clock, hint = if (scheduleCount == 0) "" else "$scheduleCount on", onClick = onSchedules),
                     SheetAction("Search this room", OrbitIcon.Search, onClick = onSearchRoom),
                     SheetAction("Tokens", OrbitIcon.Chart, hint = contextTokens?.let { "${formatTokens(it.toLong())} per reply" } ?: "", onClick = onTokens),
                     SheetAction("Clear chat", OrbitIcon.Retry, onClick = onClear),
-                    SheetAction("Delete room", OrbitIcon.Trash, danger = true) { confirmingDelete = true },
+                    if (room.main) null else SheetAction("Delete room", OrbitIcon.Trash, danger = true) { confirmingDelete = true },
                 ),
             )
         }
@@ -714,6 +715,7 @@ private fun RoomBar(
                     targetState = when {
                         speaker != null -> RoomStatus("${speaker.name} is replying", speaker.avatar.inkColor(c.isDark))
                         state.run.active -> RoomStatus("Working", c.textTertiary)
+                        room.main -> RoomStatus("Your main agent · keeps up with every room", null)
                         agents.size == 1 -> RoomStatus("Just you and ${agents[0].name}", null)
                         room.mode == Room.MODE_AUTO -> RoomStatus("Best fit · ${agents.joinToString(", ") { it.name }}", null)
                         room.mode == Room.MODE_LEAD -> RoomStatus("Led by ${agents.firstOrNull { it.id == room.leadId }?.name ?: agents.firstOrNull()?.name ?: "the first agent"}", null)
@@ -1408,7 +1410,7 @@ internal fun MembersSheet(
             statusColor = if (replying) agent.avatar.textColor() else c.textTertiary,
         ) { Pill("Message", onClick = { onMessage(agent) }) }
     }
-    val others = everyone.filter { it.id !in room.agentIds }
+    val others = if (room.main) emptyList() else everyone.filter { it.id !in room.agentIds }
     if (others.isNotEmpty()) {
         Hairline(Modifier.padding(horizontal = OrbitDimens.gutter, vertical = 8.dp))
         Text(

@@ -8,12 +8,13 @@ import { PROACTIVE_ACTIVITY, PROACTIVE_TOOLS } from './proactive.js';
 import { SELF_ACTIVITY, SELF_TOOLS, selfDetail } from './self.js';
 import { checkUrl, isPublicAddress } from './addresses.js';
 import { BROWSER_ACTIVITY, BROWSER_TOOLS, browserDetail } from './browser.js';
+import { MAIN_ACTIVITY, MAIN_TOOLS, mainDetail } from './mainchat.js';
 
 export { isPublicAddress };
 
 /**
  * The tools the hub runs itself, whatever the model: shared folders, memory, hiring, Google, follow-ups and
- * watches, the Treehouse guide and changing settings. Claude gets web search and code from Anthropic's side;
+ * watches, the Treehouse guide and changing settings, and the main agent's reading and posting across rooms. Claude gets web search and code from Anthropic's side;
  * other models get web search and page reading from the hub (HUB_WEB_TOOLS).
  */
 
@@ -32,7 +33,7 @@ export const HUB_WEB_TOOLS = [
 const HUB_WEB_ACTIVITY = { web_search: 'search', web_fetch: 'page' };
 
 /** Hub-run tools, and what each looks like in the chat. */
-export const CLIENT_ACTIVITY = { ...FOLDER_ACTIVITY, ...MEMORY_ACTIVITY, ...GOOGLE_ACTIVITY, ...PROACTIVE_ACTIVITY, ...SELF_ACTIVITY, ...HUB_WEB_ACTIVITY, ...BROWSER_ACTIVITY };
+export const CLIENT_ACTIVITY = { ...FOLDER_ACTIVITY, ...MEMORY_ACTIVITY, ...GOOGLE_ACTIVITY, ...PROACTIVE_ACTIVITY, ...SELF_ACTIVITY, ...HUB_WEB_ACTIVITY, ...BROWSER_ACTIVITY, ...MAIN_ACTIVITY };
 
 /** The words shown beside a hub-run tool in the chat. */
 export function clientDetail(name, input = {}) {
@@ -47,6 +48,7 @@ export function clientDetail(name, input = {}) {
   if (name === 'stop_watching' || name === 'cancel_follow_up') return '';
   if (SELF_ACTIVITY[name]) return selfDetail(name, input);
   if (BROWSER_ACTIVITY[name]) return browserDetail(name, input);
+  if (MAIN_ACTIVITY[name]) return mainDetail(name, input);
   if (name === 'web_search') return input.query;
   if (name === 'web_fetch') return input.url;
   return input.path;
@@ -64,6 +66,7 @@ export function clientTools(abilities = {}) {
   if (abilities.browser) tools.push(...BROWSER_TOOLS);
   if (abilities.proactive) tools.push(...PROACTIVE_TOOLS);
   if (abilities.self) tools.push(...SELF_TOOLS);
+  if (abilities.overseer) tools.push(...MAIN_TOOLS);
   return tools;
 }
 
@@ -87,6 +90,7 @@ export async function runClientTool(abilities, name, input = {}) {
   if (abilities.browser && BROWSER_ACTIVITY[name]) return abilities.browser.run(name, input);
   if (abilities.proactive && PROACTIVE_ACTIVITY[name]) return abilities.proactive.run(name, input);
   if (abilities.self && SELF_ACTIVITY[name]) return abilities.self.run(name, input);
+  if (abilities.overseer && MAIN_ACTIVITY[name]) return abilities.overseer.run(name, input);
   return { text: `There is no tool called "${name}".`, isError: true };
 }
 

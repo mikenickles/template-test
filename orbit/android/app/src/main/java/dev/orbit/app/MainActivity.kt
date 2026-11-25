@@ -383,6 +383,10 @@ private fun MainNav(vm: AppViewModel, state: AppState, session: Session, snackba
                 onRemoveMemory = { note -> agent?.let { vm.removeMemory(it.id, note.id) } },
                 google = state.google,
                 browser = state.browser,
+                main = state.main,
+                rooms = state.rooms,
+                crew = state.agents,
+                onSetMain = { agentId, leave, done -> vm.setMain(agentId, leave) { _, error -> done(error) } },
             )
         }
         screen("roomEdit?id={id}", arguments = OptionalId) { entry ->

@@ -177,7 +177,8 @@ fun CrewButton(agents: List<Agent>, huddle: CrewHuddle, modifier: Modifier = Mod
             hopFace = -1
             return@LaunchedEffect
         }
-        val random = Random(System.nanoTime())
+        // Random-looking, but the same sequence each time, so screenshots stay steady.
+        val random = Random(faces.joinToString { it.id }.hashCode())
         while (true) {
             var next = random.nextInt(faces.size)
             if (faces.size > 1 && next == hopFace) next = (next + 1 + random.nextInt(faces.size - 1)) % faces.size

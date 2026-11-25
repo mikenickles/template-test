@@ -156,6 +156,9 @@ fun RoomEditorScreen(
                 color = c.textTertiary,
             )
 
+            // The main chat is always the user and their main agent: no mode, crew or deleting here.
+            val isMain = initial?.main == true
+            if (!isMain) {
             Spacer(Modifier.height(OrbitDimens.section))
             FieldLabel("Who answers")
             // The cards take the height of the tallest one.
@@ -207,7 +210,9 @@ fun RoomEditorScreen(
                 }
             }
 
-            if (onDelete != null) {
+            }
+
+            if (onDelete != null && !isMain) {
                 Spacer(Modifier.height(40.dp))
                 DangerRow("Delete room", onDelete)
             }

@@ -127,6 +127,21 @@ tries again; switching the agent to a Claude model fixes it for good. Updating o
 Every agent knows which model it runs on and its teammates' models. Treehouse was called Orbit before, so older
 messages and notes may say Orbit; it's the same app.
 
+## The main agent and the main chat
+
+The user can make one agent their **main agent**: open the agent (from the crew button on Home, or the crew list
+on the PC) and choose **Make main agent**. The main agent keeps up with every room, including the ones it isn't in,
+and gets a **main chat** with the user, just the two of them, pinned at the top of Home on the phone and of the
+room list on the PC. Every reply the main agent writes comes with an overview of all the rooms (who's in each,
+when it was last active, its running summary and latest messages). With tools, it can also read any room in full
+(read_room), search every chat (search_chats) and post a note into a room as itself (post_to_room); members it
+@mentions there answer, and with no mention the note just waits there. Agents in other rooms know who the main
+agent is. Since it sees every room anyway, making an agent main offers to take it out of the rooms it was in just
+to keep up (it stays where it's the only agent); the user unticks the ones where it should keep working. With a
+main agent, check-ins from it and the morning brief arrive in the main chat. The main chat can't be deleted or
+given other members while it's the main chat; **Stop being main agent** on the agent's page turns it into an
+ordinary chat, and making another agent main hands the chat over. Deleting the main agent does the same.
+
 ## What the crew knows about the user
 
 "About you" (Settings) holds the user's name and facts every agent knows, in every room. Agents add to it as
@@ -148,7 +163,7 @@ the user asks, whatever its Reaching out setting:
   check is a small web search, so more often costs more. Asking the agent changes an existing watch's timing.
 For regular news, ask for updates; for "tell me when", ask for a watch.
 
-One agent can write a **morning brief** at a set time, in its own room. Everything an agent writes on its own
+One agent can write a **morning brief** at a set time, in its own room (with a main agent, the main agent writes it in the main chat). Everything an agent writes on its own
 shows under "From your crew" on Home and as a phone notification. Settings, under Reaching out: who reaches out,
 the morning brief, quiet hours, a daily limit, and the follow-ups, updates and watches agents have set, which the
 user can cancel. Quiet hours (9 pm to 8 am unless changed; "None" turns them off) pause check-ins, regular
