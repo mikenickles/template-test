@@ -222,7 +222,7 @@ async function main() {
     text(s, "stat-hero", "100+", { x: MX, y: 1.8, w: 5.4, h: 2.5, fontFace: SERIF, fontSize: 150, bold: true, color: C.accent1, valign: "bottom" });
     text(s, "body-stat", "steps in one agent task", { x: MX, y: 4.42, w: 5.4, h: 0.45, fontSize: 24, bold: true, color: C.text1, valign: "top" });
     text(s, "body-stat", "vs. a single turn for a chat reply", { x: MX, y: 4.92, w: 5.4, h: 0.4, fontSize: 18, color: C.accent3, valign: "top" });
-    text(s, "label-note", "Illustrative; varies by task", { x: MX, y: 5.68, w: 5.4, h: 0.28, fontSize: 12, italic: true, color: C.accent3, valign: "middle" });
+    text(s, "label-note", "Illustrative; varies by task", { x: MX, y: 5.55, w: 5.4, h: 0.28, fontSize: 12, italic: true, color: C.accent3, valign: "middle" });
 
     // Right: step trace — one dot vs. a 100-dot waffle
     const x0 = 6.75, pitch = 0.296, dot = 0.2;
@@ -265,7 +265,7 @@ async function main() {
   {
     const s = content("How Agents Work", "LLM VS. AGENT", "Agents trade one-shot answers for closed loops");
     const top = 1.95, headH = 0.78, rowH = 0.93, rows0 = top + headH;
-    const llm = { x: 3.75, w: 4.0 }, agt = { x: 8.05, w: CW - (8.05 - MX) };
+    const llm = { x: 3.45, w: 4.05 }, agt = { x: 7.9, w: CW - (7.9 - MX) };
     const cardH = headH + 4 * rowH + 0.12;
     shape(s, "card", S.ROUNDED_RECTANGLE, { x: llm.x, y: top, w: llm.w, h: cardH, rectRadius: 0.12, fill: { color: HEX.sand } });
     shape(s, "card", S.ROUNDED_RECTANGLE, { x: agt.x, y: top, w: agt.w, h: cardH, rectRadius: 0.12, fill: { color: C.background1 }, line: { color: C.accent1, width: 1.5 }, shadow: shadow() });
@@ -285,7 +285,7 @@ async function main() {
       const y = rows0 + i * rowH, cy = y + rowH / 2;
       shape(s, "deco-iconbg", S.OVAL, { x: MX, y: cy - 0.27, w: 0.54, h: 0.54, fill: { color: C.accent4 } });
       s.addImage({ data: ic, x: MX + 0.13, y: cy - 0.14, w: 0.28, h: 0.28, objectName: uid("icon"), altText: `${dim} icon` });
-      text(s, "body-dim", dim, { x: MX + 0.75, y: cy - 0.22, w: 2.3, h: 0.44, fontSize: 18, bold: true, color: C.text1, valign: "middle" });
+      text(s, "body-dim", dim, { x: MX + 0.75, y: cy - 0.22, w: 1.95, h: 0.44, fontSize: 18, bold: true, color: C.text1, valign: "middle" });
       for (const [col, str, colr] of [[llm, a, C.accent3], [agt, b, C.text1]]) {
         shape(s, "rule", S.LINE, { x: col.x + 0.35, y, w: col.w - 0.7, h: 0, line: { color: C.accent6, width: 0.75 } });
         text(s, "body-cell", str, { x: col.x + 0.35, y: cy - 0.22, w: col.w - 0.7, h: 0.44, fontSize: 18, color: colr, valign: "middle" });
@@ -360,8 +360,8 @@ async function main() {
     text(s, "label-checks", "TYPICAL CHECKS", { x: rx, y: 4.42, w: rw, h: 0.28, fontSize: 12, bold: true, charSpacing: 2, color: C.accent3, valign: "middle" });
     ["Tests", "Schemas", "Critic model"].forEach((chip, i) => {
       const cw = 0.35 + chip.length * 0.105;
-      shape(s, "card", S.ROUNDED_RECTANGLE, { x: rx, y: 4.82 + i * 0.47, w: cw, h: 0.36, rectRadius: 0.18, fill: { color: C.accent5 } });
-      text(s, "label-chip", chip, { x: rx, y: 4.82 + i * 0.47, w: cw, h: 0.36, fontSize: 14, color: C.text1, align: "center", valign: "middle" });
+      shape(s, "card", S.ROUNDED_RECTANGLE, { x: rx, y: 4.82 + i * 0.52, w: cw, h: 0.36, rectRadius: 0.18, fill: { color: C.accent5 } });
+      text(s, "label-chip", chip, { x: rx, y: 4.82 + i * 0.52, w: cw, h: 0.36, fontSize: 14, color: C.text1, align: "center", valign: "middle" });
     });
     s.addNotes("Goal in, checked result out. Inside, the loop: plan, call a tool, observe what happened, verify against the goal — and iterate when a check fails. Verification is the step most teams under-invest in.");
   }
@@ -408,7 +408,7 @@ async function main() {
     ];
     const font = "+mn-lt";
     s.addChart(pres.charts.BAR, data, {
-      x: MX, y: 1.85, w: 8.1, h: 4.75, objectName: uid("chart"),
+      x: 0.5, y: 1.85, w: 8.3, h: 4.75, objectName: uid("chart"),
       barDir: "col", barGrouping: "clustered", barGapWidthPct: 55, barOverlapPct: -8,
       chartColors: [HEX.pine, HEX.chartGray, HEX.verm],
       showTitle: true, title: "Illustrative framework model · relative index (0–10)",
@@ -449,7 +449,7 @@ async function main() {
       { role: "Reviewer", frag: "Approves against\nthe goal", ic: I.review },
     ];
     const handoffs = ["Spec", "Draft", "Report"];
-    const cw = 2.3, gap = (CW - 4 * cw) / 3, y = 2.0, ch = 2.55, midY = y + ch / 2;
+    const cw = 2.3, gap = (CW - 4 * cw) / 3, y = 2.0, ch = 2.4, midY = y + ch / 2;
     const xs = steps.map((_, i) => MX + i * (cw + gap));
     steps.forEach((st, i) => {
       const x = xs[i];
@@ -516,12 +516,12 @@ async function main() {
     // Left: pull-quote panel with a faint orbit echo
     const px = MX, py = 1.95, pw = 4.2, ph = 4.6;
     shape(s, "card", S.ROUNDED_RECTANGLE, { x: px, y: py, w: pw, h: ph, rectRadius: 0.14, fill: { color: C.accent4 } });
-    const ocx = px + pw - 0.95, ocy = py + ph - 0.95;
+    const ocx = px + pw - 1.15, ocy = py + ph - 1.15;
     [0.6, 0.38].forEach((r) => shape(s, "deco-ring", S.OVAL, { x: ocx - r, y: ocy - r, w: 2 * r, h: 2 * r, line: { color: HEX.pineRing, width: 1.25 } }));
     shape(s, "deco-arc", S.ARC, { x: ocx - 0.6, y: ocy - 0.6, w: 1.2, h: 1.2, angleRange: [278, 22], line: { color: C.accent2, width: 2.5, endArrowType: "triangle" } });
     shape(s, "deco-node", S.OVAL, { x: ocx - 0.08, y: ocy - 0.68, w: 0.16, h: 0.16, fill: { color: C.accent1 } });
     text(s, "label-quote", "THE BOTTOM LINE", { x: px + 0.45, y: py + 0.45, w: pw - 0.9, h: 0.28, fontSize: 12, bold: true, charSpacing: 3, color: HEX.deepPine, valign: "middle" });
-    text(s, "stat-quote", "Reliability is\nengineered,\nnot prompted.", { x: px + 0.45, y: py + 0.9, w: pw - 0.9, h: 2.0, fontFace: SERIF, fontSize: 30, bold: true, color: HEX.deepPine, valign: "top" });
+    text(s, "stat-quote", "Reliability is\nengineered,\nnot prompted.", { x: px + 0.45, y: py + 0.9, w: pw - 0.9, h: 1.7, fontFace: SERIF, fontSize: 30, bold: true, color: HEX.deepPine, valign: "top" });
 
     const rx = 5.35, rw = W - MX - rx;
     const items = [
@@ -546,7 +546,7 @@ async function main() {
   {
     const s = pres.addSlide({ masterName: "DARK_CLOSING", sectionTitle: "Close" });
     orbit(s, W / 2, 1.85, 0.8, { sweep: [278, 262], labels: false }); // closed loop, no labels: the statement says it
-    s.addText("Agents that plan, act, and verify turn AI from answers into outcomes.", { placeholder: "title" });
+    s.addText("Agents that plan, act, and verify\nturn AI from answers into outcomes.", { placeholder: "title" });
     text(s, "label-qa", "QUESTIONS & DISCUSSION", { x: 2.67, y: 5.0, w: 8, h: 0.4, fontSize: 18, bold: true, charSpacing: 4, color: HEX.nightVerm, align: "center", valign: "middle" });
     text(s, "label-sign", "From Chatbots to Autonomous Agents  ·  Executive Briefing 2026", { x: 2.67, y: 6.45, w: 8, h: 0.3, fontSize: 14, color: HEX.nightMuted, align: "center", valign: "middle" });
     s.addNotes("Close the loop: the opening showed the loop half-drawn; here it is complete. Invite questions on where to pilot agents first and what guardrails to require.");
