@@ -5,3 +5,4 @@ backyard-air-rescue/www/
 backyard-air-rescue/android/build/
 backyard-air-rescue/android/debug.keystore
 !backyard-air-rescue/dist/
+backyard-air-rescue/media/.frames-*/
