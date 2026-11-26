@@ -140,7 +140,7 @@
   body.touch #spect { bottom: auto; top: 28%; }
   body.touch #hint { bottom: auto; top: 30%; }
   body.touch #picker { top: 50%; transform: translate(-50%, -50%); }
-  body.touch #picker .opt { width: 120px; min-height: 64px; padding: 14px 0; margin: 0 6px; font-size: 16px; }
+  body.touch #picker .opt { width: auto; min-width: 96px; min-height: 64px; padding: 14px 12px; margin: 4px 5px; font-size: 16px; box-sizing: border-box; }   /* room for more primaries */
   body.touch .btn, body.touch .btn.small { min-height: 48px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; }
   body.touch .btn.small { padding: 0.5rem 0.9rem; margin: 0.35rem 0.25rem; }
   body.touch .overlay .box { max-height: calc(100dvh - 16px); overflow-y: auto; touch-action: pan-y; box-sizing: border-box; }
@@ -587,9 +587,9 @@ const CONFIG = {
   touch: { stickR: 60, dead: 0.12, sprintAt: 0.9, dirAt: 0.38,                // move stick: radius (CSS px), dead zone, sprint and digital thresholds
            look: 0.0052, accel: 0.35, accelFrom: 0.6, accelMax: 1.8,           // rad per CSS px at sensitivity 1; mild acceleration above accelFrom px/ms
            scoped: 0.4, assist: 0.5, assistDeg: 3, assistHz: 10,             // scoped look and aim assist (look-speed slowdown near a visible enemy)
-           autoDeg: 0, autoPulse: 0.1,                                       // auto-fire: on the enemy under the crosshair; semi-automatics pulse
+           autoPulse: 0.1, autoSplash: 1.5,                                  // 19.7 auto-fire: semi-automatics pulse; splash weapons hold fire within 1.5x splash
            sizes: { S: 56, M: 68, L: 80 }, fire: 1.4, gap: 12, edge: 18,     // buttons (CSS px), the fire button's scale, spacing and edge margin
-           tapMove: 10, tapTime: 0.3,                                        // a look touch shorter and stiller than this is a tap (next teammate)
+           tapMove: 10, tapTime: 0.2, doubleTap: 0.3,                        // 19.7: a tap is under 0.2 s and 10 px; two within 0.3 s toggle ADS
            haptics: { hit: [12], damage: [30], kill: [18, 50, 18] } },
   pad: { dead: 0.18, lookDead: 0.15, curve: 2, yaw: 3.2, pitch: 2.2, trigger: 0.35,   // 19.5 standard mapping; look in rad/s at full tilt
          rumble: { hit: [60, 0.2, 0.4], damage: [120, 0.6, 0.3], kill: [160, 0.5, 0.8] } },   // ms, strong, weak
@@ -933,7 +933,7 @@ const DEVICE = {
   ios: /iPhone|iPad|iPod/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1),
   mobile: false, lowTex: false };
 DEVICE.mobile = DEVICE.coarse || DEVICE.ios || /Android|Mobile|Silk|Kindle/i.test(UA);
-const TOUCH = { on: false, el: null, stick: null, knob: null, btns: {}, slots: [], playing: null, scopeShown: null, wkey: '', assistNear: false, assistT: 0,
+const TOUCH = { lastTap: -1e9, on: false, el: null, stick: null, knob: null, btns: {}, slots: [], playing: null, scopeShown: null, wkey: '', assistNear: false, assistT: 0,
   autoOn: false, autoT: 0, lastHitT: 0, lastHealth: 100, sa: { t: 0, r: 0, b: 0, l: 0 }, probe: null, boardT: 0, portrait: false };
 for (let i = 0; i < 10; i++) TOUCH.slots.push({ id: -1, role: '', x0: 0, y0: 0, x: 0, y: 0, t0: 0, t: 0, moved: 0, btn: null });
 const PAD = { active: false, index: -1, now: new Uint8Array(18), prev: new Uint8Array(18), sprint: false, focus: null, lastPoll: 0 };
@@ -974,8 +974,8 @@ function layoutTouch() {
   const B = TOUCH.btns;
   place(B.fire, 0, 0, fs); place(B.jump, r1, 180, bs); place(B.crouch, r1, 135, bs); place(B.reload, r1, 90, bs); place(B.grenade, r2, 158, bs); place(B.scope, r2, 112, bs);
   document.body.classList.toggle('lefty', lefty);
-  document.body.style.setProperty('--ta', String(clamp((settings.balpha || 55) / 100, 0.15, 1)));
-  document.body.style.setProperty('--sr', CONFIG.touch.stickR + 'px');
+  TOUCH.el.style.setProperty('--ta', String(clamp((settings.balpha || 55) / 100, 0.15, 1)));
+  TOUCH.el.style.setProperty('--sr', CONFIG.touch.stickR + 'px');
   updateOrientation();
 }
 function updateOrientation() {                     // 19.1: landscape only on a touch screen
@@ -994,9 +994,9 @@ function touchLook(dx, dy, dtMs) {
   player.yaw = wrapAngle(player.yaw - dx * s);
   player.pitch = clamp(player.pitch - dy * s, -CONFIG.input.pitchLimit, CONFIG.input.pitchLimit);
 }
-function lookScale() {                             // shared by touch and controller look: fov, scope and aim assist
-  const A = arsenal, scoped = A.scope > 0.5 ? CONFIG.touch.scoped : 1;
-  return camera.fov / CONFIG.camera.fovVertical * scoped * (settings.assist && TOUCH.assistNear ? CONFIG.touch.assist : 1);
+function lookScale() {                             // shared by touch and controller look: 0.4x in a scope, else the fov ratio (as the mouse); aim assist
+  const A = arsenal, W = CONFIG.weapons[A.current], k = A.scope > 0.5 && W.scopeFov ? CONFIG.touch.scoped : camera.fov / CONFIG.camera.fovVertical;
+  return k * (settings.assist && TOUCH.assistNear ? CONFIG.touch.assist : 1);
 }
 function touchDown(e) {
   if (e.pointerType !== 'touch') return;
@@ -1010,7 +1010,7 @@ function touchDown(e) {
     S.role = 'btn:' + b.dataset.b; S.btn = b; b.classList.add('on');
     const k = b.dataset.b;
     if (k === 'crouch') { tinput.crouch = !tinput.crouch; b.classList.toggle('lit', tinput.crouch); }
-    else if (k === 'scope') { tinput.scope = !tinput.scope; b.classList.toggle('lit', tinput.scope); }
+    else if (k === 'scope') setADS(!tinput.scope);                                     // the button is an alternative to the double tap
     else if (k === 'fire') tinput.fire = true;
     else if (k === 'jump') tinput.jump = true;
     else if (k === 'reload') tinput.reload = true;
@@ -1020,6 +1020,17 @@ function touchDown(e) {
     St.style.left = Math.round(S.x0) + 'px'; St.style.top = Math.round(S.y0) + 'px'; St.classList.add('on'); TOUCH.knob.style.transform = 'translate(0px, 0px)';
   } else S.role = 'look';
 }
+// 19.7: taps on the look area. Dead: next teammate. Alive: a double tap toggles ADS (the one `scope` input, which every gun's ADS
+// reads; in round 7 only the sniper has a scope), and a single tap while in ADS leaves it.
+function lookTap(t) {
+  const K = CONFIG.touch;
+  if (match.active && player.dead) { spectateNext(); TOUCH.lastTap = -1e9; return; }
+  if (tinput.scope) { setADS(false); TOUCH.lastTap = -1e9; return; }
+  if ((t - TOUCH.lastTap) / 1000 <= K.doubleTap) { setADS(adsCapable()); TOUCH.lastTap = -1e9; return; }
+  TOUCH.lastTap = t;
+}
+function adsCapable() { const W = CONFIG.weapons[arsenal.current]; return !!(W && (W.scopeFov || W.adsFov)); }   // round 8 gives every gun adsFov
+function setADS(on) { tinput.scope = !!on; if (TOUCH.btns.scope) TOUCH.btns.scope.classList.toggle('lit', tinput.scope); }
 function slotRole(role) { for (const S of TOUCH.slots) if (S.id >= 0 && S.role === role) return S; return null; }
 function touchMove(e) {
   if (e.pointerType !== 'touch') return;
@@ -1044,7 +1055,7 @@ function touchUp(e) {
   const K = CONFIG.touch, role = S.role, btn = S.btn;
   S.id = -1; S.role = ''; S.btn = null;                // free the slot first, so the checks below only see the other fingers
   if (role === 'move') { tinput.analog = false; tinput.ax = tinput.ay = 0; tinput.forward = tinput.back = tinput.left = tinput.right = tinput.sprint = false; TOUCH.stick.classList.remove('on', 'run'); }
-  else if (role === 'look') { if (e.type === 'pointerup' && S.moved < K.tapMove && (e.timeStamp - S.t0) / 1000 < K.tapTime && match.active && player.dead && game.phase === 'playing') spectateNext(); }   // tap: next teammate
+  else if (role === 'look' && e.type === 'pointerup' && S.moved < K.tapMove && (e.timeStamp - S.t0) / 1000 < K.tapTime && game.phase === 'playing') lookTap(e.timeStamp);   // drags never count
   else if (btn) {
     const k = btn.dataset.b; btn.classList.remove('on');
     if (k === 'fire') { if (!slotRole('btn:fire')) tinput.fire = false; }
@@ -1054,16 +1065,17 @@ function touchUp(e) {
 // Per frame (allocation-free): aim assist at assistHz, auto-fire, haptics, the SCOPE button, the weapon bar, the frame state
 function updateTouch(realDt) {
   const K = CONFIG.touch, playing = game.phase === 'playing';
-  if (TOUCH.playing !== playing) { TOUCH.playing = playing; document.body.classList.toggle('playing', playing); if (!playing) { releaseTouch(); tinput.scope = false; } }
+  if (TOUCH.playing !== playing) { TOUCH.playing = playing; document.body.classList.toggle('playing', playing); if (!playing) { releaseTouch(); setADS(false); } }
   const active = TOUCH.on || PAD.active;
   TOUCH.assistT -= realDt || 0;
   if (TOUCH.assistT <= 0) { TOUCH.assistT = 1 / K.assistHz; TOUCH.assistNear = active && settings.assist && playing && enemyNearCrosshair(K.assistDeg); }
   // auto-fire (accessibility): on while the crosshair is on a visible enemy; semi-automatics pulse the trigger
   let auto = false;
-  if (active && settings.autofire && playing && match.active && !player.dead && !matchFrozen()) {
-    const B = viewBasis(player.yaw, player.pitch); _vb.x = B.fx; _vb.y = B.fy; _vb.z = B.fz;
-    if (raycastWorld(player.x, player.y + player.eye, player.z, _vb.x, _vb.y, _vb.z, CONFIG.gun.range, player) && RH.soldier && RH.soldier.team !== 'green') {
-      TOUCH.autoT += realDt || 0; auto = CONFIG.weapons[arsenal.current].auto || (TOUCH.autoT % (K.autoPulse * 2)) < K.autoPulse;
+  if (TOUCH.on && settings.autofire && playing && match.active && !player.dead && !matchFrozen() && !arsenal.gAim) {    // grenades never auto-fire
+    const B = viewBasis(player.yaw, player.pitch), W = CONFIG.weapons[arsenal.current]; _vb.x = B.fx; _vb.y = B.fy; _vb.z = B.fz;
+    if (raycastWorld(player.x, player.y + player.eye, player.z, _vb.x, _vb.y, _vb.z, CONFIG.gun.range, player) && RH.soldier && RH.soldier.team !== 'green'
+        && !(W.splash && RH.t < W.splash * K.autoSplash)) {                         // 19.7: a splash weapon (the bazooka) holds fire near its own blast
+      TOUCH.autoT += realDt || 0; auto = W.auto || (TOUCH.autoT % (K.autoPulse * 2)) < K.autoPulse;
     } else TOUCH.autoT = 0;
   }
   tinput.autoFire = auto;
@@ -1074,8 +1086,8 @@ function updateTouch(realDt) {
   if (player.health < TOUCH.lastHealth - 0.01 && match.active) haptic('damage');
   TOUCH.lastHealth = player.health;
   if (!TOUCH.on) return;
-  const sniper = A.current === 'sniper';
-  if (TOUCH.scopeShown !== sniper) { TOUCH.scopeShown = sniper; TOUCH.btns.scope.style.display = sniper ? 'flex' : 'none'; if (!sniper) { tinput.scope = false; TOUCH.btns.scope.classList.remove('lit'); } }
+  const ads = adsCapable();                        // SCOPE shows for any gun that can aim down sights (the sniper in round 7)
+  if (TOUCH.scopeShown !== ads) { TOUCH.scopeShown = ads; TOUCH.btns.scope.style.display = ads ? 'flex' : 'none'; if (!ads) setADS(false); }
   const wk = A.primary + '|' + A.current;
   if (wk !== TOUCH.wkey) { TOUCH.wkey = wk; const P = $('wbP'), Q = $('wbS'); P.textContent = CONFIG.weapons[A.primary].label; P.classList.toggle('sel', A.current !== 'pistol'); Q.classList.toggle('sel', A.current === 'pistol'); }
   if (TOUCH.boardT > 0) { TOUCH.boardT -= realDt || 0; if (TOUCH.boardT <= 0) $('board').style.display = 'none'; }
@@ -1113,7 +1125,7 @@ function showBoard() {                             // 19.2: tap the score for th
 function toast(text) { const T = $('toast'); if (!T) return; T.textContent = text; T.style.display = 'block'; clearTimeout(toast.timer); toast.timer = setTimeout(() => { T.style.display = 'none'; }, 2500); }
 // 19.1: Play on a touch screen goes fullscreen and locks landscape where the browser allows it (Android); iOS gets a one-time hint
 function goFullscreen() {
-  const lock = () => { try { const o = screen.orientation; if (o && o.lock) o.lock('landscape').catch(() => {}); } catch (err) { /* not supported */ } };
+  const lock = () => { try { const o = window.screen && window.screen.orientation; if (o && o.lock) o.lock('landscape').catch(() => {}); } catch (err) { /* not supported */ } };
   try {
     const el = document.documentElement, rq = el.requestFullscreen || el.webkitRequestFullscreen;
     if (rq && !(document.fullscreenElement || document.webkitFullscreenElement)) { const p = rq.call(el, { navigationUI: 'hide' }); if (p && p.then) p.then(lock, () => {}); else lock(); }
@@ -1667,6 +1679,11 @@ function atlasPack() {                            // shelf packing, tallest tile
     t.rect = [X / S, 1 - (Y + t.h) / S, t.w / S, t.h / S]; delete t.draw;
   }
 }
+function downCanvas(cv, w, h) {                    // 19.4: a smaller copy of a canvas, for the Mobile preset's textures
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(cv, 0, 0, w, h);
+  return c;
+}
 function canvasTexture(cv, name, opts = {}) {     // every canvas texture goes through here, so the budget can list it
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = opts.linear ? THREE.NoColorSpace : THREE.SRGBColorSpace;
@@ -1689,11 +1706,11 @@ function atlasMaterial(mat, key) {
   mat.customProgramCacheKey = () => 'atlas-' + key;
   return mat;
 }
-function capAtlasLod(tex = ATLAS.tex) {           // upload the atlas now and cap its mip chain (WebGL2 TEXTURE_MAX_LOD)
+function capAtlasLod(tex = ATLAS.tex, lod = DEVICE.lowTex ? CONFIG.art.atlasMaxLod - 1 : CONFIG.art.atlasMaxLod) {           // upload the atlas now and cap its mip chain (WebGL2 TEXTURE_MAX_LOD)
   renderer.initTexture(tex);
   const gl = renderer.getContext(), t = renderer.properties.get(tex).__webglTexture;
   if (!t) return;
-  renderer.state.bindTexture(gl.TEXTURE_2D, t); gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_MAX_LOD, CONFIG.art.atlasMaxLod);
+  renderer.state.bindTexture(gl.TEXTURE_2D, t); gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_MAX_LOD, lod);
 }
 
 // ---- fake ambient occlusion in the vertex colours: a dark band at floor contact, and the spaces under the bed, desk and chair ----
@@ -2300,7 +2317,7 @@ function makeFloorTexture() {
     g.fillStyle = CONFIG.color.plankGap; for (const j of joints) g.fillRect(x0, j - gap * 0.4, pw, gap * 0.8);
   }
   g.fillStyle = CONFIG.color.plankGap; for (let i = 0; i <= n; i++) g.fillRect(i * pw - gap / 2, 0, gap, H);
-  const tex = canvasTexture(cv, 'floor planks', { repeat: true, aniso: 8 });
+  const k = DEVICE.lowTex ? CONFIG.render.mobileTex.floor : 1, tex = canvasTexture(k < 1 ? downCanvas(cv, Math.round(W * k), Math.round(H * k)) : cv, 'floor planks', { repeat: true, aniso: 8 });   // 19.4
   return tex;
 }
 
@@ -2799,10 +2816,10 @@ function updateArt(realDt) {                       // per frame: no allocation (
 // ---- assemble: four merged meshes (shell, paint, toys, glow), studs and track instanced, the floor, contact shadows, beam and dust ----
 function buildArt(scene) {
   atlasInit(); buildTiles(); atlasPack(); tilePbr();
-  ATLAS.tex = canvasTexture(ATLAS.cv, 'art atlas', { aniso: CONFIG.art.atlasAniso });
+  ATLAS.tex = canvasTexture(DEVICE.lowTex ? downCanvas(ATLAS.cv, CONFIG.render.mobileTex.atlas, CONFIG.render.mobileTex.atlas) : ATLAS.cv, 'art atlas', { aniso: CONFIG.art.atlasAniso });   // 19.4
   ATLAS.tex.minFilter = THREE.LinearMipmapLinearFilter;
   capAtlasLod();
-  try { RENDER.nrm.atlas = atlasNormalTexture(); capAtlasLod(RENDER.nrm.atlas); } catch (err) { RENDER.nrm.atlas = null; r6fail('atlas normal map', err); }
+  if (!DEVICE.lowTex) try { RENDER.nrm.atlas = atlasNormalTexture(); capAtlasLod(RENDER.nrm.atlas); } catch (err) { RENDER.nrm.atlas = null; r6fail('atlas normal map', err); }
   ART.mats.paint = pbrMaterial('paint');            // round 6 (18.2): physically based, replacing 17.2's Lambert and toon
   ART.mats.toy = pbrMaterial('toy');
   ART.mats.glow = atlasMaterial(new THREE.MeshBasicMaterial({ map: ATLAS.tex, vertexColors: true, fog: false }), 'basic');
@@ -2839,7 +2856,7 @@ function buildArt(scene) {
   fg.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, R.x / fw, 0, R.x / fw, R.z / fh, 0, R.z / fh], 2));
   fg.setIndex([0, 2, 1, 0, 3, 2]);
   const ftex = makeFloorTexture(), fmat = new THREE.MeshStandardMaterial({ map: ftex, roughness: CONFIG.render.roughness.floor, metalness: 0 });   // 18.2: satin varnish
-  try { RENDER.nrm.floor = canvasNormalTexture(ftex.image, CONFIG.render.normal.floor, 'floor normals'); RENDER.nrm.floor.repeat.copy(ftex.repeat); fmat.normalMap = RENDER.nrm.floor; RENDER.nrmMats.push({ mat: fmat, tex: RENDER.nrm.floor }); } catch (err) { r6fail('floor normal map', err); }
+  if (!DEVICE.lowTex) try { RENDER.nrm.floor = canvasNormalTexture(ftex.image, CONFIG.render.normal.floor, 'floor normals'); RENDER.nrm.floor.repeat.copy(ftex.repeat); fmat.normalMap = RENDER.nrm.floor; RENDER.nrmMats.push({ mat: fmat, tex: RENDER.nrm.floor }); } catch (err) { r6fail('floor normal map', err); }
   world.floorMesh = new THREE.Mesh(fg, fmat);
   world.floorMesh.receiveShadow = true; world.floorMesh.name = 'art.floor'; world.floorMesh.renderOrder = -2; scene.add(world.floorMesh); ART.meshes.push(world.floorMesh);
   const ao = artAO(); ao.name = 'art.ao'; scene.add(ao); ART.meshes.push(ao); RENDER.noAO.push(ao);
@@ -3088,33 +3105,37 @@ function postSize() {
 // 18.2 quality presets (settings.quality): Low (no post, half shadow map, no normal maps), Medium (bloom, grade, FXAA), High
 // (adds GTAO and SMAA), Auto (Medium's chain at a drawing-buffer scale of 0.6 to 1.0 steered by the frame rate)
 function applyQuality(q) {
-  const P = CONFIG.render.presets[q] ? CONFIG.render.presets[q] : CONFIG.render.presets.auto;
   RENDER.quality = CONFIG.render.presets[q] ? q : 'auto';
+  RENDER.eff = RENDER.quality === 'auto' && DEVICE.mobile ? 'mobile' : RENDER.quality;          // 19.4: Auto is Mobile on a phone or tablet
+  const P = CONFIG.render.presets[RENDER.eff];
   if (!renderer) return;
   const L = CONFIG.light, size = Math.round(L.shadowMap * P.shadowScale), sun = world.sun;
   if (sun && sun.shadow.mapSize.x !== size) { sun.shadow.mapSize.set(size, size); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
   setNormalMaps(!!P.normalMaps);
   RENDER.post = !!(P.post && RENDER.composer);
-  if (RENDER.passes) { const S = RENDER.passes; S.gtao.enabled = !!P.gtao; S.smaa.enabled = !!P.smaa; S.fxaa.enabled = !!P.fxaa; }
+  if (RENDER.passes) { const S = RENDER.passes; S.gtao.enabled = !!P.gtao; S.smaa.enabled = !!P.smaa; S.fxaa.enabled = !!P.fxaa; S.bloom.enabled = P.bloom !== false; S.grade.enabled = P.grade !== false; }
   RENDER.linOut.value = RENDER.post ? 1 : 0;
+  if (FAN.light) FAN.light.visible = P.fanLight !== false;                                       // 19.4: Mobile keeps the fan lamp emissive only
+  if (ART.dust) ART.dust.geometry.setDrawRange(0, P.dustHalf ? Math.floor(CONFIG.art.dust.count / 2) : Infinity);
+  RENDER.casingCap = P.casingCap || 0; RENDER.decalCap = P.decalCap || 0;
   RENDER.scale = 1; RENDER.dyn.good = 0; RENDER.dyn.t = 0; RENDER.dyn.n = 0; RENDER.dyn.sum = 0;
   applyPixelRatio();
 }
 function applyPixelRatio() {
   if (!renderer) return;
-  const pr = Math.min(window.devicePixelRatio || 1, CONFIG.render.maxPixelRatio) * RENDER.scale;
+  const P = CONFIG.render.presets[RENDER.eff || RENDER.quality] || {}, pr = Math.min(window.devicePixelRatio || 1, P.maxPR || CONFIG.render.maxPixelRatio) * RENDER.scale;
   if (Math.abs(renderer.getPixelRatio() - pr) > 1e-3) renderer.setPixelRatio(pr);
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   postSize();
 }
 function tickDynRes(real) {                       // Auto: every dynRes.every s, step the scale down below `below` fps, back up after upAfter s above `above`
-  const P = CONFIG.render.presets[RENDER.quality], D = CONFIG.render.dynRes, S = RENDER.dyn;
+  const P = CONFIG.render.presets[RENDER.eff || RENDER.quality], D = CONFIG.render.dynRes, S = RENDER.dyn;
   if (!P || !P.dyn || !(real > 0) || game.phase === 'paused') return;
   S.t += real; S.n++; S.sum += real;
   if (S.t < D.every) return;
   const fps = S.n / S.sum; S.t = 0; S.n = 0; S.sum = 0;
   let s = RENDER.scale;
-  if (fps < D.below) { s = Math.max(D.min, s - D.step); S.good = 0; }
+  if (fps < D.below) { s = Math.max(P.dynMin || D.min, s - D.step); S.good = 0; }
   else if (fps > D.above) { S.good += D.every; if (S.good >= D.upAfter) { s = Math.min(D.max, s + D.step); S.good = 0; } }
   else S.good = 0;
   if (Math.abs(s - RENDER.scale) > 1e-3) { RENDER.scale = s; applyPixelRatio(); }
@@ -3149,10 +3170,10 @@ async function compileEverything() {
   camera.position.set(60, 2, 30); camera.lookAt(60, 2, 40);
   try {
     if (RENDER.composer) {                         // every post pass once (GTAO, SMAA, FXAA, depth of field), whatever the preset
-      const S = RENDER.passes, keep = { g: S.gtao.enabled, s: S.smaa.enabled, f: S.fxaa.enabled };
-      S.gtao.enabled = S.smaa.enabled = S.fxaa.enabled = S.bokeh.enabled = true; RENDER.vmOn = true;
+      const S = RENDER.passes, keep = { g: S.gtao.enabled, s: S.smaa.enabled, f: S.fxaa.enabled, b: S.bloom.enabled, r: S.grade.enabled };
+      S.gtao.enabled = S.smaa.enabled = S.fxaa.enabled = S.bokeh.enabled = S.bloom.enabled = S.grade.enabled = true; RENDER.vmOn = true;
       RENDER.composer.render(0.016);
-      S.gtao.enabled = keep.g; S.smaa.enabled = keep.s; S.fxaa.enabled = keep.f; S.bokeh.enabled = false;
+      S.gtao.enabled = keep.g; S.smaa.enabled = keep.s; S.fxaa.enabled = keep.f; S.bloom.enabled = keep.b; S.grade.enabled = keep.r; S.bokeh.enabled = false;
     }
     drawScenes(null);
     renderer.autoClear = false; renderer.clearDepth(); renderer.render(vm.scene, vm.cam); renderer.autoClear = true;
@@ -3256,7 +3277,7 @@ function swayRange(mb, v0, yLo, yHi, phase) {      // per vertex [weight, phase]
 }
 function outTrees(st, fol, rnd) {
   const O = CONFIG.outside, y0 = O.ground;
-  O.trees.forEach(([x, z, h], ti) => {
+  O.trees.slice(0, DEVICE.lowTex ? 3 : O.trees.length).forEach(([x, z, h], ti) => {     // 19.4: three trees on Mobile
     const tr = h * 0.045, crown = h * 0.32, cy = y0 + h * 0.68;
     lathe(st, x, z, [[tr * 1.5, y0 - 2], [tr * 1.1, y0 + h * 0.08], [tr, y0 + h * 0.45], [tr * 0.7, y0 + h * 0.62]], { col: O.trunk, segs: 10 });
     for (let b = 0; b < 4; b++) { const a = b * 1.7 + ti, L = h * 0.2; limb(st, [x, y0 + h * 0.42, z], [x + Math.cos(a) * L, y0 + h * 0.64, z + Math.sin(a) * L], tr * 0.8, tr * 0.8, O.trunk); }
@@ -3274,7 +3295,7 @@ function outBushes(fol, rnd) {
   for (let b = 0; b < O.bushes; b++) {
     const z = F.z0 + 200 + rnd() * (F.z1 - F.z0 - 400), x = F.x + 14 + rnd() * 10, v0 = fol.p.length / 3, col = O.bush[b % O.bush.length];
     for (let c = 0; c < 5; c++) { const rr = 12 + rnd() * 12; ellipsoid(fol, x + (rnd() - 0.5) * 30, y0 + rr * 0.7, z + (rnd() - 0.5) * 34, rr, rr * 0.8, rr, { col, w: 8, h: 6, colFn: (n) => shade(col, 0.8 + 0.3 * Math.max(0, n[1])) }); }
-    for (let f = 0; f < 9; f++) { const fc = O.flowers[Math.floor(rnd() * O.flowers.length)]; ellipsoid(fol, x - 16 + rnd() * 6, y0 + 2 + rnd() * 6, z + (rnd() - 0.5) * 40, 1.8, 1.8, 1.8, { col: fc, w: 6, h: 4 }); }
+    for (let f = 0; f < (DEVICE.lowTex ? 4 : 9); f++) { const fc = O.flowers[Math.floor(rnd() * O.flowers.length)]; ellipsoid(fol, x - 16 + rnd() * 6, y0 + 2 + rnd() * 6, z + (rnd() - 0.5) * 40, 1.8, 1.8, 1.8, { col: fc, w: 6, h: 4 }); }
     swayRange(fol, v0, y0, y0 + 40, b * 2.3);
   }
 }
@@ -3632,7 +3653,8 @@ const DRAW = {
       const e = Math.min(x, y, w - 1 - x, h - 1 - y) / (w * 0.5), i = (y * w + x) * 4, a = 0.07 + 0.32 * Math.pow(1 - Math.min(1, e * 2.4), 2) + (rnd() < 0.01 ? 0.15 : 0);
       img.data[i] = 205; img.data[i + 1] = 210; img.data[i + 2] = 214; img.data[i + 3] = Math.round(Math.min(1, a) * 255);
     }
-    const T = g.getTransform(); g.putImageData(img, Math.round(T.e), Math.round(T.f));
+    const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h; tmp.getContext('2d').putImageData(img, 0, 0);
+    g.drawImage(tmp, 0, 0);                                                         // through the transform, so it scales on Mobile
   },
   vent(g, w, h) { g.fillStyle = '#E6E4DE'; g.fillRect(0, 0, w, h); g.fillStyle = '#4A4E56'; for (let x = 28; x < w - 28; x += 22) g.fillRect(x, 22, 10, h - 44); g.strokeStyle = '#B9B6AE'; g.lineWidth = 6; g.strokeRect(4, 4, w - 8, h - 8); },
   plate(g, w, h) { g.fillStyle = '#EEECE6'; dRound(g, 6, 6, w - 12, h - 12, 12); g.fill(); g.fillStyle = '#C9C6BE'; g.fillRect(w / 2 - 12, h / 2 - 34, 24, 68); g.fillStyle = '#F7F6F2'; g.fillRect(w / 2 - 10, h / 2 - 34, 20, 34); g.fillStyle = '#9A978F'; for (const y of [20, h - 20]) { g.beginPath(); g.arc(w / 2, y, 5, 0, 7); g.fill(); } },
@@ -3659,9 +3681,9 @@ const DRAW = {
   },
 };
 function buildDecorAtlas() {
-  const S = CONFIG.decor.atlas, cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const S = CONFIG.decor.atlas, PX = DEVICE.lowTex ? CONFIG.render.mobileTex.decor : S, cv = document.createElement('canvas'); cv.width = cv.height = PX;   // 19.4: 2048 on Mobile
   const g = cv.getContext('2d'), rnd = artRng(18018);
-  g.clearRect(0, 0, S, S);
+  g.clearRect(0, 0, PX, PX); g.setTransform(PX / S, 0, 0, PX / S, 0, 0);            // cells stay in 4096 units
   for (const k in DCELL) {
     const [x, y, w, h] = DCELL[k];
     g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip(); g.translate(x, y);
@@ -5284,7 +5306,7 @@ const _dq = new THREE.Quaternion();
 function spawnDecal(x, y, z, nx, ny, nz, surface, scorch) {
   const F = CONFIG.fx, m = fx.decalMesh, cell = DECAL_CELLS[scorch ? 'scorch' : surface] !== undefined ? DECAL_CELLS[scorch ? 'scorch' : surface] : 0;
   let k;
-  if (scorch) { k = F.decals + fx.scorchNext; fx.scorchNext = (fx.scorchNext + 1) % F.scorches; fx.lastScorch = [+x.toFixed(2), +y.toFixed(2), +z.toFixed(2)]; } else { k = fx.decalNext; fx.decalNext = (k + 1) % F.decals; }
+  if (scorch) { k = F.decals + fx.scorchNext; fx.scorchNext = (fx.scorchNext + 1) % F.scorches; fx.lastScorch = [+x.toFixed(2), +y.toFixed(2), +z.toFixed(2)]; } else { k = fx.decalNext; fx.decalNext = (k + 1) % Math.min(F.decals, RENDER.decalCap || F.decals); }
   const size = scorch ? F.scorchSize : (F.decalSizes[surface] || F.decalSize);
   _fx.q.setFromUnitVectors(_fx.z, _fx.n.set(nx, ny, nz)); _fx.q.multiply(_dq.setFromAxisAngle(_fx.z, Math.random() * Math.PI * 2));
   const lift = scorch ? 0.03 : F.decalLift[surface] || 0.02;     // fabric art stands up to 0.1 proud of its collider: the mark sits on it
@@ -5293,7 +5315,7 @@ function spawnDecal(x, y, z, nx, ny, nz, surface, scorch) {
   m.instanceMatrix.needsUpdate = true;
 }
 function spawnCasing(x, y, z, vx, vy, vz, floor, surf) {
-  const k = fx.casingNext; fx.casingNext = (k + 1) % fx.casings.length;
+  const k = fx.casingNext; fx.casingNext = (k + 1) % Math.min(fx.casings.length, RENDER.casingCap || fx.casings.length);   // 19.4 Mobile: 12
   const C = fx.casings[k];
   C.x = x; C.y = y; C.z = z; C.vx = vx * (0.8 + 0.4 * Math.random()); C.vy = vy * (0.8 + 0.4 * Math.random()); C.vz = vz * (0.8 + 0.4 * Math.random());
   C.floor = floor; C.bounced = 0; C.life = CONFIG.fx.casingLife; C.spin = Math.random() * 6; C.roll = 0; C.rollA = 0; C.yaw = 0;
@@ -7512,13 +7534,18 @@ function simTick() {
 const ui = { canvas: null, title: null, go: null, hud: null, health: null, healthBox: null, hint: null, debug: null, lastHealth: -1, debugTimer: 0,
   ticks: null, hitm: null, scope: null, wname: null, mag: null, res: null, gren: null, last: '', mkey: '', fkey: '', ckey: '', pkey: '', skey: '' };
 // Settings persist in localStorage (wrapped: the game works without it). Sensitivity multiplies CONFIG.input.sensitivity.
-const settings = { sensitivity: 1, volume: 50, difficulty: 'regular', pick: 'rifle', quality: 'auto' };   // round 6: quality preset (18.2)
+const settings = { sensitivity: 1, volume: 50, difficulty: 'regular', pick: 'rifle', quality: 'auto',   // round 6: quality preset (18.2)
+  tsens: 1, psens: 1, assist: true, autofire: true, haptics: true, lefty: false, bsize: 'M', balpha: 55, fps: 60 };   // round 7 (19.2, 19.7): touch and controller options
 function loadSettings() {
   try { const s = JSON.parse(window.localStorage.getItem(CONFIG.storageKey) || 'null'); if (s && typeof s === 'object') for (const k in settings) if (k in s) settings[k] = s[k]; } catch (err) { /* no storage: defaults */ }
   settings.sensitivity = clamp(+settings.sensitivity || 1, 0.2, 3); settings.volume = clamp(Math.round(+settings.volume), 0, 100);
   if (!CONFIG.difficulty[settings.difficulty]) settings.difficulty = 'regular';
   if (!['rifle', 'smg', 'sniper'].includes(settings.pick)) settings.pick = 'rifle';
   if (!CONFIG.render.presets[settings.quality]) settings.quality = 'auto';
+  settings.tsens = clamp(+settings.tsens || 1, 0.3, 3); settings.psens = clamp(+settings.psens || 1, 0.3, 3); settings.balpha = clamp(Math.round(+settings.balpha || 55), 20, 100);
+  if (!CONFIG.touch.sizes[settings.bsize]) settings.bsize = 'M';
+  settings.fps = +settings.fps === 30 ? 30 : 60;
+  for (const k of ['assist', 'autofire', 'haptics', 'lefty']) settings[k] = settings[k] === true || settings[k] === 'true';
   match.pick = settings.pick; applySettings();
 }
 function saveSettings() { try { window.localStorage.setItem(CONFIG.storageKey, JSON.stringify(settings)); } catch (err) { /* ignore */ } }
@@ -7530,6 +7557,8 @@ function syncSettingsUI() {
   for (const [s, v] of [['tVol', 'tVolV'], ['pVol', 'pVolV']]) { $(s).value = settings.volume; $(v).textContent = settings.volume; }
   for (const el of $('tDiff').children) el.classList.toggle('sel', el.dataset.d === settings.difficulty);
   for (const id of ['tQual', 'pQual']) for (const el of $(id).children) el.classList.toggle('sel', el.dataset.q === settings.quality);
+  for (const el of document.querySelectorAll('#opts [data-k]')) el.classList.toggle('sel', String(settings[el.dataset.k]) === el.dataset.v);   // round 7 options
+  for (const [s, v, k, f] of [['oTSens', 'oTSensV', 'tsens', 1], ['oPSens', 'oPSensV', 'psens', 1], ['oAlpha', 'oAlphaV', 'balpha', 0]]) { $(s).value = settings[k]; $(v).textContent = f ? (+settings[k]).toFixed(1) : settings[k] + '%'; }
 }
 function initUI() {
   ui.canvas = $('view'); ui.title = $('title'); ui.go = $('titleGo'); ui.hud = $('hud');
@@ -7861,6 +7890,7 @@ function frame(now) {
   if (real > 0) game.fps = game.fps ? lerp(game.fps, 1 / real, 0.1) : 1 / real;
   let alpha = 1;
   if (game.phase === 'paused' && document.pointerLockElement === ui.canvas) resumeGame();     // never paused with the pointer locked
+  updateTouch(real); pollPad(real);                // round 7: before the simulation steps, so this frame's touch and controller input count
   if (game.phase === 'playing' && game.timeScale > 0) {
     accumulator += real * game.timeScale;
     let n = 0;
@@ -7868,7 +7898,6 @@ function frame(now) {
     if (accumulator >= DT) accumulator = 0;          // drop the backlog rather than spiral
     alpha = accumulator / DT;
   }
-  updateTouch(real); pollPad(real);                // round 7 (before the render, so this frame's look shows)
   renderFrame(alpha, real);
   tickDynRes(real);
   updateHUD(real);
@@ -7951,6 +7980,7 @@ function walkPath(ids, opts = {}) {
 function init() {
   const lt0 = performance.now(); ART.load = {};
   initUI();
+  DEVICE.lowTex = DEVICE.mobile && (settings.quality === 'auto' || settings.quality === 'mobile');   // 19.4: Mobile builds smaller textures
   const canvas = ui.canvas;
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.shadowMap.enabled = true;

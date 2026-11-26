@@ -1790,3 +1790,116 @@ There are no new key bindings.
   - render cost, draw calls (target under 300 on High) and texture memory (estimated at about 155 MB);
   - clipping and dE as rendered;
   - viewmodel screen coverage.
+
+## Round 7
+
+DESIGN 19 (phones, tablets and controllers), with the user's 19.7 changes. Nothing was run, as ordered. The only checks
+were static ones on the module script extracted from `index.html`:
+
+- `node --check` (it parses);
+- ESLint with `no-undef`, `no-dupe-keys` and `no-redeclare` (clean).
+
+Gameplay is unchanged:
+
+- colliders (`e2904076`), waypoints, hit volumes and the CONFIG gameplay sections;
+- bots;
+- the mouse and keyboard paths, including pointer lock, Esc and click to resume.
+
+Touch and the controller only write two new virtual inputs, `tinput` and `pinput`, which `readInput` merges like
+`vinput`. A stick also carries an analogue direction and walk speed (`analog`, `ax`, `ay`). `moveActorInner` reads these
+only when they are set, which only happens for the player, and only while no movement key is held. All the new numbers
+are in `CONFIG.touch` and `CONFIG.pad`.
+
+### Page and lifecycle (19.1)
+
+- **Touch UI.** Shown on a coarse pointer or the first touch. It hides on a mouse move or key press and comes back on
+  the next touch.
+- **Page.**
+  - New viewport and home-screen web-app tags, sized with `100dvh`.
+  - `touch-action: none` on the canvas, the touch layer and the HUD; `overscroll-behavior: none`.
+  - No callouts, context menu, pinch gestures or double-tap zoom.
+  - The HUD and controls are padded by the safe-area insets.
+- **Landscape.** Portrait shows a "TURN YOUR PHONE SIDEWAYS" card and pauses.
+- **Play** goes fullscreen and locks landscape where allowed (Android).
+- **iOS** gets a one-time "Add to Home Screen for full screen" hint.
+- **No pointer lock on touch.** A pause button sits top-left.
+- **Pausing.** Hiding the page or `pagehide` pauses touch and controller play.
+- **Audio** resumes on the first touch.
+- **WebGL context loss** pauses and shows the loading screen. On restore, the atlas mip caps, the PMREM environment and
+  the shadow map are rebuilt and every program recompiled. Touch play then resumes without a reload; mouse play waits
+  for a click.
+
+### Touch controls (19.2, with 19.7)
+
+- **Move.** A floating stick on the left half, radius 60 with a 12 % dead zone and analogue walk. Past 90 % it sprints,
+  and the ring turns orange. Pushing forward climbs a string, as W does.
+- **Look.** Drag on the right half: sensitivity slider, mild acceleration, 0.4x in a scope. A drag that starts on FIRE
+  also aims.
+- **Buttons** in a thumb arc (FIRE largest):
+  - JUMP;
+  - CROUCH (toggle);
+  - RELOAD;
+  - GRENADE (hold to aim, release to throw);
+  - SCOPE, shown for guns that can aim down sights.
+- **Each finger** is tracked by its pointer id, so moving, looking and buttons all work at once.
+- **Double-tap ADS** (19.7).
+  - Two taps within 0.3 s, each under 0.2 s and 10 px, toggle the one `scope` input. In round 7 that drives the
+    sniper's scope.
+  - A single tap in ADS exits it.
+  - Drags never count as taps.
+  - The SCOPE button is an alternative.
+  - Tapping while dead switches to the next teammate.
+- **Weapon bar.** Tap the primary or PISTOL (during freeze, the primary tap cycles the pick). Tap the top bar for a
+  scoreboard.
+- **Aim assist** (default on). For touch and controller look: 0.5x look speed within 3 degrees of a visible enemy. No
+  snap and no pull; bots are unaffected.
+- **Auto-fire** (now on by default for touch, 19.7). It fires while the crosshair is on a visible enemy, pulsing for
+  semi-automatics. It never throws a grenade, and a weapon with `splash` holds fire within 1.5x its splash (for round
+  8's bazooka).
+- **Haptics.** Vibration on a hit given, damage taken, and a double pulse on a kill; controller rumble where the browser
+  supports it.
+
+### Menus and HUD (19.3)
+
+- **Tap targets.** Buttons at least 48 px on touch.
+- **Freeze pick.** Large tap cards that also fit more primaries.
+- **Touch HUD layout.**
+  - Health and the weapon bar top-left, ammo top-right.
+  - A compact match bar top centre, with callouts under it.
+  - A two-line kill feed.
+  - Nothing at the bottom, under the thumbs.
+- **Title screen.** It scrolls on short screens; the keyboard help is hidden on touch, and PLAY is big.
+- **OPTIONS** (title card and pause menu):
+  - touch look and controller look sensitivity;
+  - aim assist, auto-fire and haptics;
+  - left-handed (mirrors the controls);
+  - button size S, M or L, and button opacity;
+  - frame cap 60 or 30.
+
+### Mobile preset (19.4)
+
+- **Picked by Auto** on phones and tablets, or chosen as MOBILE.
+- **Settings:**
+  - pixel ratio min(devicePixelRatio, 1.5), with a dynamic scale from 0.5 to 1.0;
+  - FXAA only;
+  - a 1024 shadow map and no normal maps;
+  - half the dust motes;
+  - the fan lamp emissive only;
+  - casing pool 12 and decal pool 32.
+- **When it applies at load,** it also builds:
+  - the art atlas at 1024, the poster atlas at 2048 and the floor at half size, with no normal maps generated;
+  - three trees and half the flowers.
+- **Memory.** About 60 MB of textures estimated; not measured.
+- **Shaders.** Its programs are compiled at load when it is the preset in use.
+
+### Controller (19.5)
+
+- **Mapping** (Gamepad API, standard mapping, hot-plug with a toast):
+  - left stick: analogue move; click to sprint until the stick re-centres;
+  - right stick: look, with a dead zone, a curve and aim assist;
+  - RT: fire; LT: aim down sights (scope);
+  - A: jump; B: crouch (toggle); X: reload; RB: grenade;
+  - Y or D-pad: switch weapon, or the pick during freeze;
+  - Back: scoreboard; Start: pause.
+- **Menus.** The D-pad moves a highlight, A presses, and B or Start goes back or resumes.
+- **Disconnecting** mid-game pauses.

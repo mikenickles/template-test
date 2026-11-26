@@ -1256,6 +1256,35 @@ unchanged (collider hash `e2904076`). No tests run, as in round 6 (the user play
 - **Look and menus:** aim assist as for touch. The D-pad and A navigate the menus.
 - **Hot-plug:** a controller can be connected or disconnected at any time.
 
+### 19.6 Round 7 build notes (deviations and choices; numbers in `CONFIG.touch` and `CONFIG.pad`)
+- **Analogue walk:**
+  - A stick sets the digital flags (for strings and the sprint rule) and an analogue direction and magnitude.
+  - The player's walk speed scales with the magnitude. Sprint, past 90 %, is full speed.
+  - The keyboard and bots never set the analogue fields.
+- **Scoped look:** 0.4x replaces the fov ratio only in a scope (`scopeFov`). Otherwise touch and controller look use the
+  fov ratio, as the mouse does.
+- **Auto-fire:**
+  - It is a touch option only; the controller has its triggers.
+  - Splash weapons hold fire by a generic `splash` check, ready for 20.2.
+- **Frame cap:** "60" leaves the display's own rate; "30" caps.
+- **Pausing:**
+  - Hidden-page pause applies to touch and controller play.
+  - Mouse play already pauses when the page loses the pointer lock.
+- **Mobile preset:**
+  - Smaller textures, fewer trees and fewer flowers are decided at load. Choosing MOBILE by hand later changes the passes,
+    shadow map, normal maps, dust, pools and fan light, but texture sizes only after a reload.
+  - Bloom and the grade pass are off ("FXAA only").
+- **Controller:**
+  - B toggles crouch, matching the touch CROUCH button.
+  - Back opens a mid-match scoreboard, which is new: touch opens it by tapping the top bar, and there is no keyboard
+    binding.
+  - Sliders are not reachable from the controller.
+- **Room for round 8:**
+  - The `scope` input is the single ADS action.
+  - The SCOPE button and the double tap check `scopeFov || adsFov`.
+  - Picker cards flex for more primaries.
+  - The touch HUD keeps the top centre for a mode-specific bar.
+
 ### 19.7 User changes to round 7 (2026-11-26, override 19.2)
 - **Auto-fire is ON by default on touch.** The user likes it: the gun fires while the crosshair is on a visible enemy.
   - It stays an option in the settings.
