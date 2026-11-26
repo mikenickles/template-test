@@ -1903,3 +1903,122 @@ are in `CONFIG.touch` and `CONFIG.pad`.
   - Back: scoreboard; Start: pause.
 - **Menus.** The D-pad moves a highlight, A presses, and B or Start goes back or resumes.
 - **Disconnecting** mid-game pauses.
+
+## Round 8
+
+DESIGN 20 (ADS on every gun, the bazooka and the band gun, capture the flag), built as written, with the deviations
+listed in DESIGN 20.7. Nothing was run, as ordered. The only checks were static ones on the module script extracted
+from `index.html`:
+
+- `node --check` (it parses);
+- ESLint with `no-undef`, `no-dupe-keys` and `no-redeclare` (clean).
+
+The colliders are untouched (`e2904076`). Flags, stands and pickup zones are visuals and distance checks only.
+Elimination plays as before, apart from ADS and the two new primaries. New numbers are in `CONFIG.weapons`
+(`adsFov`, `adsSpread`, `adsMove`, `adsIn`, `bazooka`, `band`), `CONFIG.adsKick`, `CONFIG.primaries`,
+`CONFIG.viewmodel.models[*].ads`, `CONFIG.ai` and `CONFIG.ctf`.
+
+### Aim down sights (20.1)
+
+- **One action.** The `scope` input is the ADS action for every gun: hold right mouse, double-tap on touch (the
+  button now reads AIM), or LT on a controller.
+- **Effect:**
+  - The camera fov blends to the gun's `adsFov`, and the viewmodel moves to its sight pose.
+  - Spread and move speed scale by the gun's numbers, and kick is 0.7x.
+  - The sniper keeps its scope overlay; the other guns never hide the viewmodel.
+- **Breaks** on sprint, reload, draw, climb and grenade aim.
+- **Bots** don't use ADS.
+
+### New primaries (20.2)
+
+- **Picker.** It gains `4 BAZOOKA` and `5 BAND GUN` (keys 1 to 5, the cards, or Y on a controller).
+- **Projectiles:**
+  - A pool of 16 in flight, plus 24 leftover bands.
+  - Each tick sweeps a ray with `raycastWorld`, which hits soldiers and targets but not the shooter.
+  - Nothing is allocated per tick.
+- **Bazooka:**
+  - **Look:** a shoulder-fired steel tube with a sight, two grips, a shoulder rest and a rocket in the front. The
+    rocket slides in on reload.
+  - **Rocket:** 80 u/s, a smoke trail, and a back-blast puff.
+  - **Hit:**
+    - Direct hit 150.
+    - Splash radius 8, from 110 down to 15, through the grenade's `blastDamage` with its line-of-sight rule. The
+      function now takes the radius and damage as arguments; the grenade's numbers are unchanged.
+    - Self-damage 0.5x.
+    - Scorch decal, flash and shake within 45.
+  - **Bots** aim at the feet with lead. They switch to the pistol under 10, and hold fire with a teammate inside the
+    predicted splash.
+- **Band gun:**
+  - **Look:** a wooden frame, a clothes-peg trigger and a band wheel that turns with each shot.
+  - **Band:** 160 u/s, gravity 30, damage 34 with headMult.
+  - **Bounce:** once, at 0.7x damage.
+  - **Leftovers:** a band settles onto the surface below where it lands (not on the train) and fades after 20 s.
+  - **Noise:** bots hear it within 25 only.
+  - **Bots** lead the target.
+- **Elimination bots:**
+  - The Centre role (the anchor) picks the bazooka 1 time in 5.
+  - The West and East roles (the flanks) pick the band gun 1 time in 4.
+- **Sounds:** shots, reloads, band hit and rocket burst for both weapons, and four flag stings.
+
+### Capture the flag (20.3)
+
+- **MODE row.** The title card has a MODE row (ELIMINATION or CAPTURE THE FLAG), saved with the settings. Rematch keeps
+  the mode.
+- **Match:**
+  - One long round after the usual 5 s freeze.
+  - First to 3 captures, or the most after 10:00.
+  - A tie goes to up to 3:00 of sudden-death overtime; if still tied, a DRAW.
+- **Stands** at `(55, 0, 11)` and `(55, 0, 149)`: an 0.08 base plate, a 6 pole and a waving cloth (a vertex shader).
+- **Pickup, capture and return** are 1.5 distance checks.
+- **Respawn:**
+  - 5 s after death, at the team spawn point farthest from any enemy that can see it.
+  - 2 s of protection, which firing or throwing ends.
+  - The picker shows during the wait with the countdown, and the last pick is the default.
+- **Dropped flag:**
+  - It drops where the carrier died, by a ray down onto the surface below.
+  - It returns home at once if it lands on the train, finds nothing below, or is more than 6 from any waypoint.
+  - Otherwise it returns after 20 s, or when its own team touches it.
+- **Resets.** Mode, timer, flags, carriers, respawn timers and projectiles reset on every start, rematch and return to
+  the title.
+
+### The carrier (20.4)
+
+- **On the body:**
+  - A flag on their back, 3.6 tall.
+  - A pulsing HDR glow in the flag's colour, 2.8 px (twice the 1.4 outline), that blooms where bloom is on.
+  - A 28 % see-through silhouette with the depth test off.
+- **Beam:** additive, from the carrier to the ceiling, with no fog. It is hidden from the GTAO and depth-of-field
+  passes, and from the carrier's own first-person view.
+- **Speed:** 0.9x. The carrier can sprint, and a human carrier can shoot.
+- **Sound:** a flag flap loop heard within 30.
+- **Events:** each has a sting, a banner and a callout.
+- **Bots:**
+  - A visible carrier is the top target, with 1.5x engage ranges.
+  - The defender, the midfield and one attacker cut the carrier off toward its stand.
+  - The two nearest teammates escort within 8.
+
+### CTF bots (20.5)
+
+- **Roles:** two attackers by the west and east lanes, a midfield, a defender and a high or sniper role, each with
+  its primaries. Attackers may pick the band gun; the defender may pick the bazooka.
+- **Planning:**
+  - Each bot replans every 1.5 s and at once on any flag event.
+  - A path already heading to the same node is kept.
+- **Guards** patrol their post, with short look rounds.
+- **Carriers:**
+  - They run home.
+  - If their own flag is away, they patrol their own stand.
+- **Respawned bots** take the first role their team is missing.
+
+### CTF HUD (20.6)
+
+- **Top bar:** captures, flag status (HOME, TAKEN, DROPPED n) and the clock, with OVERTIME when it applies. Tap it on
+  touch for the scoreboard.
+- **Markers:** both flags or their carriers, with the distance. Off screen they clamp to the edge with an arrow.
+- **Banners:** event banners, and "YOU HAVE THE FLAG - RETURN TO BASE" with an arrow to your own stand.
+- **Respawn:** "Respawn in N" in the spectator text.
+- **End of match:** the match-end card shows the captures, or DRAW.
+- **Reports and test hooks:**
+  - `matchReport()` adds `mode` and `captures`.
+  - `__game.startMatch({ mode: 'ctf' })` and `runMatch({ mode: 'ctf' })` start a CTF match.
+  - Without a mode, both start elimination, as before.

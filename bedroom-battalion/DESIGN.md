@@ -1417,3 +1417,49 @@ Bots don't use ADS. Their aim model is unchanged.
 - **Banners and timers:** "YOU HAVE THE FLAG - RETURN TO BASE", with an arrow to your own stand, and a respawn
   countdown.
 - **Layout:** it all fits the phone layout (19.3).
+
+### 20.7 Round 8 build notes (deviations and choices; numbers in `CONFIG.weapons`, `CONFIG.ai` and `CONFIG.ctf`)
+- **ADS:**
+  - Sprint now also breaks the sniper scope, so every gun follows one rule.
+  - Draw breaks ADS too, as it did the scope.
+  - The bazooka uses the table's 0.15x spread in ADS (1.5 to 0.225 degrees). The text's "0.2 degrees" is the same
+    thing, rounded.
+- **Elimination roles for the new guns.** "Anchor or defender" is the Centre role (bazooka, 1 in 5); "flank" is the
+  West and East roles (band gun, 1 in 4).
+- **Rocket:**
+  - A direct hit gives 150 to the soldier hit, who takes no splash on top.
+  - At the end of its 4 s life, or on leaving the room, it is gone without a burst.
+- **Bands:**
+  - A band that hits a soldier drops below the hit point.
+  - Leftovers settle onto the surface below and are never left on the train.
+- **Spawn protection** ends on firing or on throwing a grenade. Falls still hurt.
+- **Respawn points.** The team's elimination spawn points (the player's and the bots'). The one whose nearest enemy
+  with a line of sight to it is farthest wins, with a small random tie-break.
+- **"Every bot always knows where both carriers are."** This drives movement: chasers and escorts path to the
+  carrier's true position. Shooting the carrier still needs line of sight, through the normal perception.
+- **Bot carriers don't stop to fight.** They skip engage, retreat and turning to a hit, and only run. Bots face where
+  they walk, so they can't shoot while running. A human carrier can sprint and shoot as written.
+- **Cut-off.** A chaser farther than 18 from the carrier paths to the point halfway between the carrier and the
+  carrier's stand. Closer than that, it paths straight at the carrier.
+- **Escorts.** Exactly the two nearest teammates escort. An attacker that is not escorting holds midfield while its
+  team has the flag, rather than walking to the empty stand.
+- **Guards** (defender, midfield, high, and a carrier waiting at its stand) patrol between the nodes of their post,
+  with 1.2 to 2.6 s look rounds, rather than standing still. This keeps the 16.11 liveness rule.
+- **Replans and the last metres:**
+  - Periodic replans keep a path already heading to the same node, so a bot does not turn back to a node behind it.
+  - The last metres to a flag or stand are walked straight, for up to 4 s. A spot the bot fails to reach is skipped
+    for 5 s, and the bot patrols in the meantime.
+- **Respawned bots** take the first role their team is missing, and re-roll the special primary.
+- **HUD:**
+  - Flag status shows as text chips (HOME, TAKEN, DROPPED with its countdown), not icons.
+  - Distances read in "m", one room unit to the metre.
+  - The marker for the flag on your own back is hidden; the banner says it.
+  - Markers also show during the freeze.
+- **First person.** The carried flag and the beam are hidden in the carrier's own first-person view, since the camera
+  is inside the beam. Everyone else sees both.
+- **Draw.** The match-end card reads DRAW, with the losing jingle.
+- **Stands.** The base plate has a radius of 1.6, about the pickup zone. Green's overlaps the low end of the fort ramp,
+  0.5 from the stand (visual only); Tan's mirrors it.
+- **Soldier guns.** The third-person models of the bazooka and band gun are low detail. The viewmodels are the
+  detailed ones.
+- **Controls.** The touch SCOPE button now reads AIM. On a controller, Y cycles the pick while waiting to respawn.
