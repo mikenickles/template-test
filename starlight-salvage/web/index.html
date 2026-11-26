@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Starlight Salvage</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1640; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; font-family: ui-rounded, "Nunito", "Trebuchet MS", system-ui, sans-serif; }
+  #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #hud { position: fixed; inset: 0; pointer-events: none; --u: clamp(5px, 1.55vmin, 11px); opacity: 0; transition: opacity .6s; color: #4a3520; }
+  body.ready #hud { opacity: 1; }
+  #loading { position: fixed; inset: 0; display: grid; place-items: center; background: #1a1640; transition: opacity .5s; }
+  #loading i { width: 15vmin; height: 15vmin; border-radius: 50%; border: 2vmin solid #fff8; border-top-color: #e2202c; animation: spin 1s linear infinite; }
+  body.ready #loading { opacity: 0; pointer-events: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* soft vignette over the 3D view */
+  #grade { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(150% 130% at 50% 45%, rgba(0, 0, 0, 0) 60%, rgba(20, 10, 60, .35) 100%); }
+
+  /* cargo hold */
+  #cargo { position: absolute; left: calc(env(safe-area-inset-left) + var(--u) * 2); top: calc(env(safe-area-inset-top) + var(--u) * 2); display: flex; gap: calc(var(--u) * 1.6); padding: calc(var(--u) * 1.1) calc(var(--u) * 2); border-radius: calc(var(--u) * 6); background: #fff9ecd9; box-shadow: 0 calc(var(--u) * .5) 0 #0002, 0 0 0 calc(var(--u) * .45) #fff; align-items: center; pointer-events: auto; }
+  .chip { display: flex; align-items: center; gap: calc(var(--u) * .8); font-size: calc(var(--u) * 3.6); font-weight: 800; }
+  .chip i { width: calc(var(--u) * 3.6); height: calc(var(--u) * 3.6); border-radius: 50%; box-shadow: inset 0 calc(var(--u) * -.5) 0 #0003, 0 0 0 calc(var(--u) * .35) #fff; }
+  .chip b { min-width: 1.2ch; }
+  .chip.pop { animation: pop .7s cubic-bezier(.3, 1.8, .5, 1); }
+  #cargo.resetting { animation: nope .35s infinite; opacity: .6; }
+  @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.5) rotate(-6deg); } 100% { transform: scale(1); } }
+
+  /* top right: workshop button and the oxygen bar */
+  #topright { position: absolute; right: calc(env(safe-area-inset-right) + var(--u) * 2); top: calc(env(safe-area-inset-top) + var(--u) * 2); display: flex; align-items: center; gap: calc(var(--u) * 1.6); }
+  .round { border-radius: 50%; pointer-events: auto; touch-action: none; display: grid; place-items: center; background: #fff9ec; box-shadow: 0 0 0 calc(var(--u) * .55) #fff, 0 calc(var(--u) * .6) calc(var(--u) * 1.2) #0004; transition: transform .15s, opacity .3s; position: relative; }
+  .round:active { transform: scale(.9); }
+  .round svg { width: 62%; height: 62%; }
+  #shopBtn { width: calc(var(--u) * 8); height: calc(var(--u) * 8); }
+  #shopBtn.can { background: #ffe07a; animation: throb .8s ease-in-out infinite; }
+  #shopBtn.can::after { content: ""; position: absolute; right: -4%; top: -4%; width: 34%; height: 34%; border-radius: 50%; background: #35c96f; box-shadow: 0 0 0 calc(var(--u) * .35) #fff; }
+  body[data-mode="eva"] #shopBtn { opacity: .45; }
+  #o2 { width: calc(var(--u) * 20); height: calc(var(--u) * 3); border-radius: calc(var(--u) * 2); background: #ffffff50; box-shadow: 0 0 0 calc(var(--u) * .45) #fff; overflow: hidden; opacity: 0; transition: opacity .3s; }
+  #o2.on { opacity: 1; }
+  #o2fill { height: 100%; width: 100%; background: linear-gradient(90deg, #59d8ff, #bff1ff); border-radius: inherit; }
+  #o2.low #o2fill { background: #ffb347; }
+
+  /* the big action button: winch in the ship, hand grapple on a spacewalk */
+  #winch { position: absolute; right: calc(env(safe-area-inset-right) + var(--u) * 4); bottom: calc(env(safe-area-inset-bottom) + var(--u) * 4); width: calc(var(--u) * 21); height: calc(var(--u) * 21); border-radius: 50%; pointer-events: auto; touch-action: none;
+    background: radial-gradient(circle at 35% 28%, #fff3a8, #ffcf2e 48%, #f5a400); box-shadow: 0 calc(var(--u) * 1.1) 0 #b96f00, 0 calc(var(--u) * 1.6) calc(var(--u) * 2.4) #0005, inset 0 0 0 calc(var(--u) * .9) #fff; display: grid; place-items: center; transition: transform .08s, filter .3s; filter: saturate(.75) brightness(.96); }
+  #winch svg { width: 58%; height: 58%; transition: transform .25s; grid-area: 1 / 1; }
+  #winch .i-hand, body[data-mode="eva"] #winch .i-hook { display: none; }
+  body[data-mode="eva"] #winch .i-hand { display: block; }
+  #winch.carry svg { transform: translateY(8%) scale(1.04); }
+  #winch.carry .cargo { opacity: 1; }
+  .cargo { opacity: 0; transition: opacity .2s; }
+  #winch.ready { filter: none; animation: throb .7s ease-in-out infinite; }
+  #winch.ready::before, #winch.letgo::before { content: ""; position: absolute; inset: calc(var(--u) * -1.6); border-radius: 50%; border: calc(var(--u) * .9) solid #fff; animation: halo .9s ease-out infinite; }
+  #winch.letgo { filter: none; background: radial-gradient(circle at 35% 28%, #dcffe4, #4fdc8c 48%, #1f9a55); box-shadow: 0 calc(var(--u) * .2) 0 #146b3a, inset 0 0 0 calc(var(--u) * .9) #fff; }
+  #winch.busy { filter: saturate(.55) brightness(.9); }
+  #winch.down { transform: translateY(calc(var(--u) * .9)) scale(.96); box-shadow: 0 calc(var(--u) * .2) 0 #b96f00, inset 0 0 0 calc(var(--u) * .9) #fff; animation: none; }
+  .nope { animation: nope .35s !important; }
+  @keyframes throb { 50% { transform: scale(1.09); } }
+  @keyframes halo { 0% { transform: scale(.92); opacity: .95; } 100% { transform: scale(1.28); opacity: 0; } }
+  @keyframes nope { 25% { transform: translateX(-6%); } 75% { transform: translateX(6%); } }
+
+  /* spacewalk button: step out / come home */
+  #eva { position: absolute; right: calc(env(safe-area-inset-right) + var(--u) * 27); bottom: calc(env(safe-area-inset-bottom) + var(--u) * 4); width: calc(var(--u) * 12); height: calc(var(--u) * 12); }
+  #eva.off { opacity: .45; }
+  #eva .i-home, body[data-mode="eva"] #eva .i-out { display: none; }
+  body[data-mode="eva"] #eva .i-home { display: block; }
+  #eva.recall { background: #bff1ff; animation: throb .7s ease-in-out infinite; }
+
+  /* floating joystick */
+  #joy { position: absolute; left: 0; top: 0; width: 0; height: 0; opacity: 0; transition: opacity .15s; --r: clamp(44px, 17vmin, 90px); }
+  #joy.on { opacity: 1; }
+  #joy::before { content: ""; position: absolute; left: calc(var(--r) * -1.15); top: calc(var(--r) * -1.15); width: calc(var(--r) * 2.3); height: calc(var(--r) * 2.3); border-radius: 50%; background: #ffffff38; border: calc(var(--u) * .6) solid #ffffffd0; box-sizing: border-box; }
+  #knob { position: absolute; left: calc(var(--r) * -.5); top: calc(var(--r) * -.5); width: var(--r); height: var(--r); border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #ffe9e9 40%, #ff6b6b); box-shadow: 0 calc(var(--u) * .6) calc(var(--u) * 1.2) #0004; }
+
+  /* wordless hints */
+  .hand { position: absolute; width: calc(var(--u) * 9); height: calc(var(--u) * 9); opacity: 0; transition: opacity .4s; }
+  .hand::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: #fff; opacity: .92; box-shadow: 0 0 0 calc(var(--u) * 1) #ffffff66, 0 calc(var(--u) * .5) calc(var(--u) * 1.5) #0004; }
+  #hintMove { left: 16vw; bottom: 22vh; opacity: 1; animation: drag 2.6s ease-in-out infinite; }
+  #hintMove.gone { opacity: 0; animation: none; }
+  #hintMove::after { content: ""; position: absolute; left: 50%; top: 50%; width: calc(var(--u) * 26); height: calc(var(--u) * 26); margin: calc(var(--u) * -13); border-radius: 50%; border: calc(var(--u) * .6) dashed #ffffffb0; box-sizing: border-box; animation: undrag 2.6s ease-in-out infinite; }
+  @keyframes drag { 0%, 12% { transform: translate(0, 0) scale(1.15); } 22% { transform: translate(0, 0) scale(.9); } 55%, 70% { transform: translate(9vmin, -9vmin) scale(.9); } 100% { transform: translate(0, 0) scale(1.15); } }
+  @keyframes undrag { 0%, 22% { transform: translate(0, 0); } 55%, 70% { transform: translate(-9vmin, 9vmin); } 100% { transform: translate(0, 0); } }
+  #hintTap { right: calc(env(safe-area-inset-right) + var(--u) * 10); bottom: calc(env(safe-area-inset-bottom) + var(--u) * 10); }
+  #hintTap.on { opacity: 1; animation: hold 2.2s ease-in-out infinite; }
+  @keyframes hold { 0%, 100% { transform: translate(18%, 30%) scale(1.25); } 18%, 82% { transform: translate(0, 0) scale(.85); } }
+
+  /* off-screen pointer */
+  #edge { position: absolute; left: 0; top: 0; width: 0; height: 0; opacity: 0; transition: opacity .25s; }
+  #edge.on { opacity: 1; }
+  #edge svg { position: absolute; left: calc(var(--u) * -5); top: calc(var(--u) * -5); width: calc(var(--u) * 10); height: calc(var(--u) * 10); filter: drop-shadow(0 calc(var(--u) * .4) calc(var(--u) * .5) #0005); }
+  #edge path { fill: #ffa81f; stroke: #fff; stroke-width: 3.5; stroke-linejoin: round; }
+
+  /* "+2 Metal" */
+  #toast { position: absolute; left: 50%; top: calc(env(safe-area-inset-top) + var(--u) * 3); transform: translate(-50%, -260%); padding: calc(var(--u) * 1.2) calc(var(--u) * 3); border-radius: calc(var(--u) * 5); background: #fff9ec; box-shadow: 0 0 0 calc(var(--u) * .45) #fff, 0 calc(var(--u) * .6) calc(var(--u) * 1.4) #0004; font-size: calc(var(--u) * 3.4); font-weight: 800; white-space: nowrap; transition: transform .35s cubic-bezier(.3, 1.6, .5, 1); }
+  #toast.on { transform: translate(-50%, 0); }
+
+  /* workshop */
+  #shop { position: absolute; left: 50%; top: 50%; width: min(92vw, calc(var(--u) * 86)); max-height: 88vh; overflow: auto; box-sizing: border-box; transform: translate(-50%, -50%) scale(.85); opacity: 0; pointer-events: none; padding: calc(var(--u) * 2.4) calc(var(--u) * 3); border-radius: calc(var(--u) * 4); background: #fff9ecf5; box-shadow: 0 0 0 calc(var(--u) * .6) #fff, 0 calc(var(--u) * 2) calc(var(--u) * 5) #0007; transition: opacity .2s, transform .3s cubic-bezier(.3, 1.6, .5, 1); font-size: calc(var(--u) * 2.9); }
+  #shop.on { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; }
+  #shop h2 { margin: 0 0 calc(var(--u) * 1); font-size: calc(var(--u) * 4.4); }
+  #shop h3 { margin: calc(var(--u) * 1.2) 0 calc(var(--u) * .6); font-size: calc(var(--u) * 2.6); text-transform: uppercase; letter-spacing: .08em; opacity: .6; }
+  #shop .row { display: flex; align-items: center; gap: calc(var(--u) * 2); padding: calc(var(--u) * 1) calc(var(--u) * 2); border-radius: calc(var(--u) * 2.5); background: #fff; margin-bottom: calc(var(--u) * 1); }
+  #shop .row > div:first-child { flex: 1; min-width: 0; }
+  #shop .row small { display: block; opacity: .65; font-size: .82em; }
+  #shop .row.done { background: #e9f8ee; }
+  #shop .tick { color: #1f9a55; font-weight: 800; }
+  #shop .costs { display: flex; gap: calc(var(--u) * 1.2); }
+  #shop .cost { display: inline-flex; align-items: center; gap: calc(var(--u) * .6); font-weight: 800; white-space: nowrap; }
+  #shop .cost i { width: calc(var(--u) * 2.4); height: calc(var(--u) * 2.4); border-radius: 50%; }
+  #shop .cost.no { opacity: .5; }
+  #shop button { font: inherit; font-weight: 800; color: #4a2a00; border: 0; border-radius: calc(var(--u) * 3); padding: calc(var(--u) * 1.3) calc(var(--u) * 2.6); background: #ffcf2e; box-shadow: 0 calc(var(--u) * .5) 0 #b96f00; touch-action: none; }
+  #shop button:disabled { background: #e2dccd; box-shadow: none; color: #9a917f; }
+  #shop button.close { position: absolute; right: calc(var(--u) * 2); top: calc(var(--u) * 2); width: calc(var(--u) * 6.5); height: calc(var(--u) * 6.5); padding: 0; border-radius: 50%; font-size: calc(var(--u) * 4.4); line-height: 1; background: #fff; box-shadow: 0 calc(var(--u) * .5) 0 #0002; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="grade"></div>
+<div id="hud">
+  <div id="cargo" aria-label="Cargo hold"></div>
+  <div id="topright">
+    <div id="o2" aria-label="Oxygen"><div id="o2fill"></div></div>
+    <div id="shopBtn" class="round" role="button" aria-label="Workshop">
+      <svg viewBox="0 0 48 48" fill="none" stroke="#7a3d00" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M30 8a9 9 0 0 0-8.500 12L8 33.500a4.600 4.600 0 0 0 6.500 6.500L28 26.500A9 9 0 0 0 40 18l-6 3-4-4z"/></svg>
+    </div>
+  </div>
+  <div id="toast"></div>
+  <div id="joy"><div id="knob"></div></div>
+  <div id="edge"><svg viewBox="0 0 48 48"><path d="M8 8 L42 24 L8 40 L15 24 Z"/></svg></div>
+  <div id="hintMove" class="hand"></div>
+  <div id="eva" class="round" role="button" aria-label="Spacewalk">
+    <svg class="i-out" viewBox="0 0 48 48" fill="none" stroke="#7a3d00" stroke-width="4.500" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="15" r="9" fill="#fff"/><path d="M19 15a5 4 0 0 1 10 0" stroke="#ffb020"/><path d="M14 44V34a10 10 0 0 1 20 0v10"/></svg>
+    <svg class="i-home" viewBox="0 0 48 48" fill="none" stroke="#7a3d00" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 24L24 9l17 15"/><path d="M13 21v18h22V21"/></svg>
+  </div>
+  <div id="winch" role="button" aria-label="Winch">
+    <svg class="i-hook" viewBox="0 0 64 64" fill="none" stroke="#7a3d00" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M34 3v15"/><circle cx="34" cy="22" r="5" fill="#e2202c" stroke="none"/>
+      <path d="M34 27v11a11 11 0 0 1-22 0v-2"/>
+      <circle class="cargo" cx="23" cy="52" r="8" fill="#fff" stroke="#7a3d00" stroke-width="4"/>
+    </svg>
+    <svg class="i-hand" viewBox="0 0 64 64" fill="#fff" stroke="#7a3d00" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 34V16a4 4 0 0 1 8 0v-4a4 4 0 0 1 8 0v4a4 4 0 0 1 8 0v6a4 4 0 0 1 8 0v16c0 12-7 20-17 20-9 0-14-5-19-14l-5-9a4 4 0 0 1 7-4z"/>
+    </svg>
+  </div>
+  <div id="hintTap" class="hand"></div>
+  <div id="shop" role="dialog" aria-label="Workshop"></div>
+</div>
+<div id="loading"><i></i></div>
+<script src="game.js"></script>
+</body>
+</html>

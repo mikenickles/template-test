@@ -1,0 +1,16 @@
+{
+  "name": "starlight-salvage",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A cozy 3D space salvage game built on the Backyard Air Rescue flight and winch model. Prototype.",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "watch": "node tools/build.mjs --watch",
+    "playtest": "node tools/playtest.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "three": "^0.170.0"
+  }
+}
