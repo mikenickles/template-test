@@ -56,6 +56,8 @@ export function makeAudio() {
     robot() { [660, 880, 520, 990].forEach((f, i) => tone(f, 0.09, { type: 'square', vol: 0.1, delay: i * 0.1 })); },
     chime() { [523, 659, 784, 1047].forEach((f, i) => { tone(f, 0.5, { type: 'triangle', vol: 0.2, delay: i * 0.09 }); tone(f * 2, 0.4, { vol: 0.06, delay: i * 0.09 }); }); },
     fanfare() { [523, 523, 659, 784, 659, 784, 1047, 1319, 1568].forEach((f, i) => { tone(f, i > 5 ? 0.9 : 0.3, { type: 'triangle', vol: 0.2, delay: i * 0.16 }); tone(f / 2, 0.3, { type: 'sine', vol: 0.12, delay: i * 0.16 }); }); },
+    tink() { tone(1800, 0.06, { type: 'triangle', vol: 0.09 }); tone(1350, 0.08, { type: 'sine', vol: 0.06, delay: 0.03 }); },
+    uhoh() { tone(520, 0.18, { type: 'triangle', vol: 0.16, to: 470 }); tone(400, 0.32, { type: 'triangle', vol: 0.16, to: 300, delay: 0.2 }); },
     splash() { noise(0.3, { vol: 0.25, freq: 1800, type: 'bandpass' }); },
   };
 

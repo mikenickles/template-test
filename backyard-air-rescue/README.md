@@ -3,7 +3,8 @@
 A gentle, wordless 3D game for small kids. Fly a tiny cherry-red rescue helicopter around an
 oversized backyard and winch three stranded toys back to the landing pad: a teddy in the flower
 bed, a rubber duck on the pond and a tin robot on top of the play structure. No crashes, timers,
-fuel or reading. After all three are safe it turns into free flight, and the toys can be picked
+fuel or reading. The winch takes some skill: line the hook up yourself, and keep holding the button
+all the way home or the toy drops. After all three are safe it turns into free flight, and the toys can be picked
 up again for joyrides.
 
 ![gameplay](media/gameplay.png)
@@ -25,7 +26,8 @@ The APK is debug-signed: fine for sideloading, not for the Play Store.
 | | |
 |---|---|
 | Drag anywhere on the left side | A floating joystick appears under the thumb. The helicopter leans first, then goes; let go and it brakes into a hover. |
-| Big yellow button | Near a toy: steadies the helicopter and lowers the hook. Carrying a toy: sets it down (on the pad = rescued). It pulses when it will do something. |
+| Hold the big yellow button | The hook goes down while you hold it and reels back up when you let go. It only clicks onto a toy if it reaches the toy's loop lined up and not swinging; the ring under the toy turns green when the hook is right above it. If it is a little off, the hook bumps the toy's head with a "tink". |
+| Keep holding all the way home | Let go before the toy is over the pad and it drops (softly; go hook it again). Let go over the pad, when the button turns green, and it is set down and counted. In free flight after all three, letting go sets a toy down gently anywhere. |
 | Bouncing arrows | Orange = a toy to rescue, green = bring it here. An arrow at the screen edge points to the next one when it is out of view. |
 
 ## Build it yourself

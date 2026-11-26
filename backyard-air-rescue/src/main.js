@@ -22,8 +22,12 @@ const FLY = {
 };
 const G = 16;                 // cable gravity for the empty hook; each toy brings its own (heavier = calmer swing)
 const STOW = 0.42;
-const PICK_R = 5.5;           // forgiving pickup radius
-const PAD_R = 6.5;            // forgiving drop-off radius
+const PICK_R = 3.5;           // close enough that the button starts pulsing
+const CATCH_R = 0.45;         // the hook must be this close to the toy's loop to click on
+const CATCH_SPEED = 2.6;      // ...and not swinging faster than this
+const MAX_LEN = 9;            // longest the cable reels out
+const PAD_R = 6.5;            // edge pointer / pad marker range
+const PAD_DROP_R = 4.0;       // let go with the toy this close to the pad centre and it is set down gently
 const CAM_OFF = new THREE.Vector3(0, 6.6, 12.6);
 
 // ---------------------------------------------------------------- renderer
@@ -58,6 +62,7 @@ const heli = {
 };
 const heliShadow = blobShadow(1.5, 0.38); scene.add(heliShadow);
 const toyShadow = blobShadow(0.95, 0.4); scene.add(toyShadow); toyShadow.visible = false;
+const hookShadow = blobShadow(0.32, 0.55); scene.add(hookShadow);
 
 // ---------------------------------------------------------------- toys
 const toys = [makeTeddy(), makeDuck(), makeRobot()].map((t, i) => {
@@ -74,7 +79,7 @@ robot.group.position.set(L.tower.x, L.tower.platY, L.tower.z + 0.3); robot.rest 
 const hook = makeHook(); scene.add(hook);
 const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 1, 6), new THREE.MeshStandardMaterial({ color: 0xfaf6ea, roughness: 0.6 }));
 cable.castShadow = true; scene.add(cable);
-const winch = { state: 'idle', len: STOW, bob: heli.pos.clone().add(new THREE.Vector3(0, -1.2, 0)), vel: new THREE.Vector3(), toy: null, target: null, timer: 0, hold: null, rest: 0, moving: 0, tension: 0, liftAt: -9, floor: 0 };
+const winch = { state: 'idle', len: STOW, bob: heli.pos.clone().add(new THREE.Vector3(0, -1.2, 0)), vel: new THREE.Vector3(), toy: null, target: null, timer: 0, hold: null, rest: 0, moving: 0, tension: 0, liftAt: -9, floor: 0, held: false, bumped: false, lastTink: -9 };
 const anchor = new THREE.Vector3();
 
 const markers = toys.map(() => makeMarker(0xffa81f));
@@ -135,10 +140,17 @@ addEventListener('pointerdown', (e) => {
 addEventListener('pointermove', (e) => { if (e.pointerId === joy.id) setJoy(e.clientX - joy.bx, e.clientY - joy.by); });
 const endJoy = (e) => { if (e.pointerId === joy.id) { joy.id = null; input.x = input.y = 0; hud.joy.classList.remove('on'); } };
 addEventListener('pointerup', endJoy); addEventListener('pointercancel', endJoy);
-hud.btn.addEventListener('pointerdown', (e) => { e.preventDefault(); audio.start(); hud.btn.classList.add('down'); pressWinch(); });
-['pointerup', 'pointercancel', 'pointerleave'].forEach((n) => hud.btn.addEventListener(n, () => hud.btn.classList.remove('down')));
+let winchPointer = null;
+hud.btn.addEventListener('pointerdown', (e) => {
+  e.preventDefault(); audio.start();
+  winchPointer = e.pointerId; try { hud.btn.setPointerCapture(e.pointerId); } catch (_) {}
+  pressWinch();
+});
+const endWinch = (e) => { if (e.pointerId === winchPointer) { winchPointer = null; winch.held = false; } };
+hud.btn.addEventListener('pointerup', endWinch); hud.btn.addEventListener('pointercancel', endWinch);
+addEventListener('blur', () => { winchPointer = null; winch.held = false; });
 addEventListener('keydown', (e) => { if (e.code === 'Space' && !e.repeat) { audio.start(); pressWinch(); } keys[e.code] = true; });
-addEventListener('keyup', (e) => { keys[e.code] = false; });
+addEventListener('keyup', (e) => { if (e.code === 'Space') winch.held = false; keys[e.code] = false; });
 for (const n of ['touchstart', 'touchmove', 'gesturestart', 'contextmenu', 'dblclick']) document.addEventListener(n, (e) => e.preventDefault(), { passive: false });
 function readInput() {
   if (scripted) return scripted;
@@ -157,24 +169,72 @@ function nearestToy() {
   for (const t of toys) { if (!pickable(t)) continue; const d = hdist(heli.pos, t.group.position); if (d < bd) { bd = d; best = t; } }
   return best;
 }
-const nearPad = () => hdist(heli.pos, L.pad) < PAD_R;
+function hookFloor(x, z) {
+  if (Math.abs(x - L.tower.x) < 2.7 && Math.abs(z - L.tower.z) < 2.7) return L.tower.platY + 0.15;
+  if (Math.abs(x - L.shed.x) < L.shed.w / 2 + 0.9 && Math.abs(z - L.shed.z) < L.shed.d / 2 + 0.8) return L.shed.h + 1.5;
+  if (Math.hypot(x - L.pad.x, z - L.pad.z) < L.pad.r) return L.pad.y + 0.15;
+  return 0.15;
+}
 function toyTop(t, out) { return out.copy(t.group.position).setY(t.group.position.y + t.height); }
 const tmpTop = new THREE.Vector3();
 
 function pressWinch() {
-  if (!heli.flying) { heli.flying = true; return; }
-  if (winch.state !== 'idle') return;
-  if (winch.toy) {
-    let hx, hz;
-    if (!game.free && nearPad()) { hx = L.pad.x; hz = L.pad.z; }
-    else { hx = heli.pos.x + heli.vel.x * 0.35; hz = heli.pos.z + heli.vel.z * 0.35; }
-    const rest = restHeight(hx, hz);
-    if (rest === null) { audio.sfx.boop(); hud.btn.classList.remove('nope'); void hud.btn.offsetWidth; hud.btn.classList.add('nope'); return; }
-    winch.hold = { x: hx, z: hz }; winch.rest = rest; winch.state = 'lower'; winch.timer = 0; winch.landed = false;
-  } else {
-    const t = nearestToy();
-    if (t) { winch.target = t; winch.state = 'reach'; winch.timer = 0; winch.hold = { x: t.group.position.x, z: t.group.position.z }; }
-    else { winch.state = 'dip'; winch.timer = 0; audio.sfx.boop(); }
+  winch.held = true;
+  if (!heli.flying) heli.flying = true;
+}
+
+/** Where a dropped toy ends up: straight below, or the nearest spot it can rest on. */
+function landingSpot(x, z) {
+  const ok = (px, pz) => px > -32 && px < 32 && pz > -30 && pz < 26 && restHeight(px, pz) !== null;
+  if (ok(x, z)) return [x, z];
+  for (let r = 0.5; r < 10; r += 0.5) for (let k = 0; k < 16; k++) {
+    const a = (k / 16) * Math.PI * 2, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r;
+    if (ok(px, pz)) return [px, pz];
+  }
+  return [L.pad.x + 5, L.pad.z + 3];
+}
+
+function dropToy(t) {
+  // let go too early: the toy tumbles down and has to be fetched again
+  const p = t.group.position, v = winch.vel;
+  const [sx, sz] = landingSpot(p.x + v.x * 0.4, p.z + v.z * 0.4);
+  const rest = restHeight(sx, sz), g = 20, vy = Math.min(v.y, 2), hgt = Math.max(0, p.y - rest);
+  t.fall = { from: p.clone(), to: new THREE.Vector3(sx, rest, sz), vy, g, t: 0, dur: (vy + Math.sqrt(vy * vy + 2 * g * hgt)) / g, spin: (Math.random() < 0.5 ? -1 : 1) * 5 };
+  t.state = 'falling'; t.rest = rest;
+  winch.toy = null; winch.state = 'idle'; winch.vel.set(0, 0, 0);
+  audio.sfx.uhoh();
+}
+
+function landToy(t) {
+  t.state = 'placed'; t.fall = null;
+  t.floaty = t.rest < 0.05 && inPond(t.group.position.x, t.group.position.z);
+  t.group.quaternion.identity(); t.yaw = 0; t.sqV = 10;
+  audio.sfx.pomf(); if (t.floaty) audio.sfx.splash();
+  if (!game.free && !t.rescued && hdist(t.group.position, L.pad) < L.pad.r) rescue(t);
+}
+
+function letGo() {
+  const t = winch.toy, p = t.group.position;
+  const overPad = hdist(p, L.pad) < PAD_DROP_R;
+  if (!game.free && !t.rescued && !overPad) return dropToy(t);
+  // over the pad (or anywhere during free flight): set it down gently
+  const hx = overPad && !game.free ? L.pad.x + clamp(p.x - L.pad.x, -1.5, 1.5) : p.x, hz = overPad && !game.free ? L.pad.z + clamp(p.z - L.pad.z, -1.5, 1.5) : p.z;
+  const rest = restHeight(hx, hz);
+  if (rest === null) return dropToy(t);
+  winch.hold = { x: hx, z: hz }; winch.rest = rest; winch.state = 'lower'; winch.timer = 0; winch.landed = false;
+}
+
+function tryCatch() {
+  for (const t of toys) {
+    if (!pickable(t)) continue;
+    toyTop(t, tmpTop);
+    const dx = hdist(winch.bob, tmpTop), dy = winch.bob.y - tmpTop.y;
+    if (dx < CATCH_R && dy > -0.35 && dy < 0.35 && winch.vel.length() < CATCH_SPEED) {
+      winch.bob.copy(tmpTop); winch.vel.set(0, 0, 0); winch.len = anchor.distanceTo(tmpTop);
+      winch.target = t; winch.state = 'grab'; winch.timer = 0; t.wiggle = 1; game.usedWinch = true;
+      audio.sfx.click(); later(0.16, () => audio.sfx[t.name]());
+      return;
+    }
   }
 }
 
@@ -183,27 +243,23 @@ function updateWinch(dt) {
   const before = w.len;
   const reel = (target, speed) => { w.len = w.len < target ? Math.min(target, w.len + speed * dt) : Math.max(target, w.len - speed * dt); return w.len === target; };
   switch (w.state) {
-    case 'idle': reel(w.toy ? w.toy.carry.len : STOW, w.toy ? 1.6 : 5); break;
-    case 'dip': if (w.timer < 0.45) reel(2.4, 5.5); else if (reel(STOW, 5.5)) w.state = 'idle'; break;
-    case 'reach': {
-      const t = w.target; toyTop(t, tmpTop);
-      w.hold.x = tmpTop.x; w.hold.z = tmpTop.z;
-      const need = Math.max(STOW, anchor.y - tmpTop.y);
-      const there = reel(need, 6.5);
-      if ((there && hdist(anchor, tmpTop) < 1.2 && w.bob.distanceTo(tmpTop) < 0.7) || w.timer > 3) {
-        w.bob.copy(tmpTop); w.vel.set(0, 0, 0); w.len = anchor.distanceTo(tmpTop);
-        w.state = 'grab'; w.timer = 0; t.wiggle = 1; game.usedWinch = true;
-        audio.sfx.click(); later(0.16, () => audio.sfx[t.name]());
-      }
+    case 'idle':
+      if (w.toy) {
+        reel(w.toy.carry.len, game.time - w.liftAt < 1.5 ? 3.6 : 1.6);
+        if (!w.held) letGo();
+      } else if (w.held && heli.flying) {
+        // pay out only as far as whatever is below (no slack piling up on the grass)
+        reel(Math.min(MAX_LEN, anchor.y - hookFloor(w.bob.x, w.bob.z) + 0.2), 3.2);
+        tryCatch();
+        if (w.bumped && game.time - w.lastTink > 0.45) { w.lastTink = game.time; audio.sfx.tink(); }
+      } else reel(STOW, 5);
       break;
-    }
     case 'grab': {
       toyTop(w.target, tmpTop); w.bob.copy(tmpTop); w.vel.set(0, 0, 0); w.len = Math.max(w.len, anchor.distanceTo(tmpTop));
-      if (w.timer > 0.5) { w.toy = w.target; w.target = null; w.toy.state = 'hanging'; w.toy.floaty = false; w.state = 'lift'; w.hold = null; w.liftAt = game.time; w.floor = w.toy.rest + w.toy.height;
+      if (w.timer > 0.5) { w.toy = w.target; w.target = null; w.toy.state = 'hanging'; w.toy.floaty = false; w.state = 'idle'; w.hold = null; w.liftAt = game.time; w.floor = w.toy.rest + w.toy.height;
         heli.yVel -= w.toy.carry.mass * 15; } // a heavy toy tugs the helicopter down as it takes the weight
       break;
     }
-    case 'lift': if (reel(Math.min(w.len, w.toy.carry.len), 3.6)) w.state = 'idle'; break;
     case 'lower': {
       const t = w.toy;
       // steady first, then lower: wait until we're hovering over the spot
@@ -287,11 +343,6 @@ function cableStep(h) {
   v2.copy(w.bob);
   w.vel.y -= c.g * h;
   w.vel.multiplyScalar(Math.exp(-dampK * h));
-  if (w.state === 'reach') { // the hook homes in on the toy's loop: forgiving for small hands
-    toyTop(w.target, tmpTop);
-    const k = smoothstep(3.5, 0.5, w.bob.y - tmpTop.y) * 60;
-    w.vel.x += ((tmpTop.x - w.bob.x) * k - w.vel.x * 6) * h; w.vel.z += ((tmpTop.z - w.bob.z) * k - w.vel.z * 6) * h;
-  }
   w.bob.addScaledVector(w.vel, h);
   dHat.copy(w.bob).sub(anchor);
   let len = dHat.length(); if (len < 1e-5) { dHat.set(0, -1, 0); len = 1e-5; } else dHat.multiplyScalar(1 / len);
@@ -308,6 +359,19 @@ function cableStep(h) {
     w.vel.copy(w.bob).sub(v2).multiplyScalar(1 / h);
     const vr = w.vel.dot(dHat), vt2 = Math.max(0, w.vel.lengthSq() - vr * vr);
     tension = c.g * Math.max(0, -dHat.y) + vt2 / Math.max(0.5, w.len);
+  }
+  if (!toy) {
+    // the empty hook rests on whatever is below it, including the top of a toy that isn't lined up
+    w.bumped = false;
+    const fl = hookFloor(w.bob.x, w.bob.z);
+    if (w.bob.y < fl) { w.bob.y = fl; if (w.vel.y < 0) w.vel.y = 0; w.vel.x *= 0.9; w.vel.z *= 0.9; }
+    for (const t of toys) {
+      if (t.state === 'hanging' || t.state === 'falling' || t.state === 'hop') continue;
+      toyTop(t, tmpTop);
+      if (hdist(w.bob, tmpTop) < 0.75 && w.bob.y < tmpTop.y && w.bob.y > tmpTop.y - t.height) {
+        w.bob.y = tmpTop.y; if (w.vel.y < 0) { if (w.vel.y < -0.6) w.bumped = true; w.vel.y = 0; }
+      }
+    }
   }
   // still standing where it was found until the cable takes the weight
   if (toy && game.time - w.liftAt < 1.2 && w.bob.y < w.floor) { w.bob.y = w.floor; w.vel.y = Math.max(0, w.vel.y); tension = 0; }
@@ -360,6 +424,12 @@ function update(dt) {
   cable.scale.set(1, Math.max(0.01, cl), 1);
   cable.quaternion.setFromUnitVectors(UP, v1.copy(anchor).sub(winch.bob).normalize());
   hook.position.copy(winch.bob); hook.quaternion.copy(cable.quaternion);
+  hookShadow.visible = !winch.toy && winch.len > 1;
+  if (hookShadow.visible) {
+    let sy = hookFloor(winch.bob.x, winch.bob.z) - 0.1;
+    for (const toy of toys) { if (toy.state === 'hanging') continue; toyTop(toy, tmpTop); if (hdist(winch.bob, tmpTop) < 0.75 && tmpTop.y < winch.bob.y + 0.1) sy = Math.max(sy, tmpTop.y + 0.02); }
+    hookShadow.position.set(winch.bob.x, sy, winch.bob.z);
+  }
 
   // --- toys
   toys.forEach((toy, i) => {
@@ -376,6 +446,14 @@ function update(dt) {
       g.quaternion.copy(q1).multiply(q2);
       g.position.copy(winch.bob).addScaledVector(v1, -toy.height);
       if (winch.state === 'lower' && g.position.y < winch.rest) g.position.y = winch.rest;
+    } else if (toy.state === 'falling') {
+      const f = toy.fall; f.t += dt;
+      const u = Math.min(1, f.t / Math.max(0.05, f.dur));
+      g.position.x = lerp(f.from.x, f.to.x, u); g.position.z = lerp(f.from.z, f.to.z, u);
+      g.position.y = Math.max(f.to.y, f.from.y + f.vy * f.t - 0.5 * f.g * f.t * f.t);
+      g.rotation.set(Math.sin(f.t * 7) * 0.5, toy.yaw, f.t * f.spin);
+      mood = 'hang';
+      if (u >= 1) { g.position.copy(f.to); landToy(toy); }
     } else if (toy.state === 'hop') {
       toy.hopT += dt; const u = Math.min(1, toy.hopT / 1.1);
       g.position.lerpVectors(toy.hopFrom, toy.home, u * u * (3 - 2 * u));
@@ -396,9 +474,13 @@ function update(dt) {
     m.g.visible = show;
     if (show) {
       m.g.position.set(g.position.x, toy.rest + 0.06, g.position.z);
+      // get out of the way while the hook is coming down to this toy
+      m.arrow.visible = !(winch.held && !winch.toy && hdist(heli.pos, g.position) < PICK_R + 1);
       m.arrow.position.y = toy.height + 0.9 + Math.abs(Math.sin(t * 3.2 + i)) * 0.7;
       m.arrow.rotation.y = t * 1.5;
       const s = 2.0 + Math.sin(t * 3.2 + i) * 0.25; m.ring.scale.set(s, s, 1);
+      toyTop(toy, tmpTop);
+      m.ring.material.color.set(hdist(winch.bob, tmpTop) < CATCH_R && winch.len > 1 ? 0x35d07f : 0xffa81f);
     }
   });
   toyShadow.visible = !!winch.toy;
@@ -429,7 +511,7 @@ function update(dt) {
   life.update(dt, t, heli.pos, wash);
 
   // --- camera: glides after the helicopter, never turns
-  const busy = winch.state === 'reach' || winch.state === 'grab' || winch.state === 'lower' || winch.state === 'release';
+  const busy = (winch.held && !winch.toy) || winch.state === 'grab' || winch.state === 'lower' || winch.state === 'release';
   cam.zoom = damp(cam.zoom, !heli.flying ? 0.8 : busy ? 0.84 : 1, 2.2, dt);
   cam.x = damp(cam.x, heli.pos.x + heli.vel.x * 0.32, 3.6, dt); cam.z = damp(cam.z, heli.pos.z + heli.vel.z * 0.32, 3.6, dt);
   cam.y = damp(cam.y, heli.pos.y - (winch.toy ? 0.9 : 0), 1.7, dt);
@@ -441,12 +523,14 @@ function update(dt) {
 const cam = { x: heli.pos.x, y: heli.pos.y, z: heli.pos.z, zoom: 0.8, fit: 1 };
 
 function updateHud(t) {
-  const canGrab = !winch.toy && winch.state === 'idle' && heli.flying && !!nearestToy();
-  const canDrop = !!winch.toy && winch.state === 'idle' && !game.free && nearPad();
-  hud.btn.classList.toggle('ready', canGrab || canDrop);
-  hud.btn.classList.toggle('busy', winch.state !== 'idle' && winch.state !== 'lift');
+  const canGrab = !winch.toy && !winch.held && winch.state === 'idle' && heli.flying && !!nearestToy();
+  const letGoNow = !!winch.toy && winch.state === 'idle' && (game.free || hdist(winch.toy.group.position, L.pad) < PAD_DROP_R);
+  hud.btn.classList.toggle('ready', canGrab);
+  hud.btn.classList.toggle('letgo', letGoNow);
+  hud.btn.classList.toggle('down', winch.held);
+  hud.btn.classList.toggle('busy', winch.state === 'lower' || winch.state === 'release');
   hud.btn.classList.toggle('carry', !!winch.toy);
-  hud.hintTap.classList.toggle('on', (canGrab && !game.usedWinch) || (canDrop && !game.delivered));
+  hud.hintTap.classList.toggle('on', canGrab && !game.usedWinch);
   // edge pointer toward the next thing to do
   let target = null;
   if (!game.free && heli.flying) {
@@ -511,7 +595,8 @@ window.__game = {
   draw() { renderer.render(scene, camera); },
   script(x, y) { scripted = x === null ? null : { x, y }; },
   press: pressWinch,
+  hold(on) { if (on) pressWinch(); else winch.held = false; },
   info: () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, dpr: renderer.getPixelRatio() }),
-  state: () => ({ t: game.time, pos: heli.pos.toArray(), vel: heli.vel.toArray(), tilt: heli.tilt.toArray(), winch: winch.state, len: winch.len, carrying: winch.toy ? winch.toy.name : null, rescued: game.rescued, free: game.free,
+  state: () => ({ t: game.time, pos: heli.pos.toArray(), vel: heli.vel.toArray(), tilt: heli.tilt.toArray(), winch: winch.state, len: winch.len, carrying: winch.toy ? winch.toy.name : null, held: winch.held, rescued: game.rescued, free: game.free,
     bob: winch.bob.toArray(), toys: toys.map((t) => ({ name: t.name, state: t.state, rescued: t.rescued, pos: t.group.position.toArray() })) }),
 };

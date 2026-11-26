@@ -37,6 +37,8 @@
   .cargo { opacity: 0; transition: opacity .2s; }
   #winch.ready { filter: none; animation: throb .7s ease-in-out infinite; }
   #winch.ready::before { content: ""; position: absolute; inset: calc(var(--u) * -1.6); border-radius: 50%; border: calc(var(--u) * .9) solid #fff; animation: halo .9s ease-out infinite; }
+  #winch.letgo { filter: none; background: radial-gradient(circle at 35% 28%, #dcffe4, #4fdc8c 48%, #1f9a55); box-shadow: 0 calc(var(--u) * .2) 0 #146b3a, inset 0 0 0 calc(var(--u) * .9) #fff; }
+  #winch.letgo::before { content: ""; position: absolute; inset: calc(var(--u) * -1.6); border-radius: 50%; border: calc(var(--u) * .9) solid #fff; animation: halo .9s ease-out infinite; }
   #winch.busy { filter: saturate(.55) brightness(.9); }
   #winch.down { transform: translateY(calc(var(--u) * .9)) scale(.96); box-shadow: 0 calc(var(--u) * .2) 0 #b96f00, inset 0 0 0 calc(var(--u) * .9) #fff; animation: none; }
   #winch.nope { animation: nope .35s; }
@@ -59,8 +61,8 @@
   @keyframes drag { 0%, 12% { transform: translate(0, 0) scale(1.15); } 22% { transform: translate(0, 0) scale(.9); } 55%, 70% { transform: translate(9vmin, -9vmin) scale(.9); } 100% { transform: translate(0, 0) scale(1.15); } }
   @keyframes undrag { 0%, 22% { transform: translate(0, 0); } 55%, 70% { transform: translate(-9vmin, 9vmin); } 100% { transform: translate(0, 0); } }
   #hintTap { right: calc(env(safe-area-inset-right) + var(--u) * 10); bottom: calc(env(safe-area-inset-bottom) + var(--u) * 10); }
-  #hintTap.on { opacity: 1; animation: tap .9s ease-in-out infinite; }
-  @keyframes tap { 0%, 100% { transform: translate(18%, 30%) scale(1.25); } 50% { transform: translate(0, 0) scale(.85); } }
+  #hintTap.on { opacity: 1; animation: hold 2.2s ease-in-out infinite; }
+  @keyframes hold { 0%, 100% { transform: translate(18%, 30%) scale(1.25); } 18%, 82% { transform: translate(0, 0) scale(.85); } }
 
   /* off-screen pointer */
   #edge { position: absolute; left: 0; top: 0; width: 0; height: 0; opacity: 0; transition: opacity .25s; }

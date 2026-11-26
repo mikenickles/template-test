@@ -15,19 +15,26 @@ await d.stick(0.5, 0.5); await d.step(100);
 await d.flyTo(toy.pos[0], toy.pos[2], 11);
 d.record(frames);
 await d.flyTo(toy.pos[0], toy.pos[2], 3.2);
-await d.step(20);
-await d.tapWinch();
-await d.waitFor((q) => q.carrying === who && q.winch === 'idle', 8);
-await d.step(20);
-// show off the cable: accelerate, stop, reverse, sharp turn
+const tx = toy.pos[0], tz = toy.pos[2];
+// line up the hook, then hold the button and keep it lined up until it clicks on
+for (let i = 0; i < 60; i++) { const e = await d.hover(tx, tz, 3); const q = await d.state(); if (e < 0.2 && Math.hypot(q.vel[0], q.vel[2]) < 0.25) break; }
+await d.holdWinch();
+let shotTaken = false;
+for (let i = 0; i < 300; i++) {
+  await d.hover(tx, tz, 3); const q = await d.state();
+  if (!shotTaken && q.len > 2.2) { await d.shot(join(media, 'lining-up.png')); shotTaken = true; }
+  if (q.carrying === who && q.winch === 'idle') break;
+}
+await d.release(); await d.step(20);
+// still holding: show off the cable (accelerate, stop, reverse, sharp turn), then home to the pad
 const away = Math.sign(L.pad.x - toy.pos[0]) || 1;
 await d.stick(away, 0); await d.step(55);
 await d.release(); await d.step(50);
 await d.stick(-away, 0.2); await d.step(40);
 await d.stick(0, -1); await d.step(35);
-await d.flyTo(L.pad.x, L.pad.z, 4.2);
-await d.step(15);
-await d.tapWinch();
+await d.flyTo(L.pad.x, L.pad.z, 1.6);
+await d.step(25);
+await d.releaseWinch();
 await d.waitFor((q) => q.toys.find((t) => t.name === who).state === 'home', 9);
 await d.step(70);
 d.record(null);

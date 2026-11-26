@@ -15,16 +15,16 @@ await touch('touchStart', [{ x: 150, y: 290, id: 1 }]);
 await touch('touchMove', [{ x: 215, y: 290, id: 1 }]);
 await page.waitForTimeout(3500);
 const a = await page.evaluate(() => window.__game.state());
-// second finger taps the winch while the first still steers
+// second finger holds the winch while the first still steers
 const b = await page.locator('#winch').boundingBox();
 await touch('touchStart', [{ x: 215, y: 290, id: 1 }, { x: b.x + b.width / 2, y: b.y + b.height / 2, id: 2 }]);
-await page.waitForTimeout(250);
+await page.waitForTimeout(900);
 const mid = await page.evaluate(() => window.__game.state());
 await touch('touchEnd', [{ x: 215, y: 290, id: 1 }]);
 await touch('touchEnd', []);
 await page.waitForTimeout(1500);
 const c = await page.evaluate(() => window.__game.state());
 console.log('flew right with one thumb:', a.pos[0] > 4, `x=${a.pos[0].toFixed(1)} alt=${a.pos[1].toFixed(1)}`);
-console.log('second finger worked the winch while steering:', mid.winch !== 'idle', mid.winch);
+console.log('second finger holds the winch while steering:', mid.held && mid.len > 1, `cable ${mid.len.toFixed(2)} u`);
 console.log('released → hover:', Math.hypot(c.vel[0], c.vel[2]) < 0.5, 'errors:', errors.length);
 await browser.close();
