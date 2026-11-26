@@ -1255,3 +1255,136 @@ unchanged (collider hash `e2904076`). No tests run, as in round 6 (the user play
   - Start: pause.
 - **Look and menus:** aim assist as for touch. The D-pad and A navigate the menus.
 - **Hot-plug:** a controller can be connected or disconnected at any time.
+
+### 19.7 User changes to round 7 (2026-11-26, override 19.2)
+- **Auto-fire is ON by default on touch.** The user likes it: the gun fires while the crosshair is on a visible enemy.
+  - It stays an option in the settings.
+  - Grenades never auto-fire.
+  - The bazooka (20.2) does not auto-fire at a target within 1.5x its splash radius.
+- **Double-tap aims down sights.** A double tap on the look area (two taps within 300 ms, each under 200 ms and moving
+  under 10 px) toggles ADS. A single tap while in ADS exits it. Drags never count as taps.
+  - In round 7 this drives the existing sniper scope.
+  - Round 8 (20.1) gives every gun ADS, and the same control works for all of them.
+  - The on-screen SCOPE button stays as an alternative.
+
+## 20. Round 8: ADS for every gun, new weapons, capture the flag (user request, 2026-11-26)
+
+User request: tap twice to aim down sights, tap again to exit; add a bazooka and a rubber band gun; add capture the
+flag with each team's flag in its base. The flag carrier must stand out *much* more, so everyone goes after them.
+
+This round is a gameplay change. The colliders stay frozen (hash `e2904076`): flags, stands and pickup zones are
+visual plus distance checks, not colliders. The elimination mode plays exactly as before, apart from ADS and the two
+new primaries. No tests, as in rounds 6 and 7.
+
+### 20.1 Aim down sights on every gun
+- **Controls:** right mouse (hold), touch double-tap toggle (19.7), gamepad LT. The sniper keeps its scope (scopeFov 20).
+- **Effect:** ADS lerps the camera fov and brings the viewmodel's sights to the centre. Look sensitivity already scales
+  with fov.
+- **Kick:** recoil kick is 0.7x while in ADS. ADS breaks on sprint, reload, climb and grenade, as the scope does now.
+
+| Gun | ADS fov | Spread x | Move speed x | Time in (s) |
+| --- | --- | --- | --- | --- |
+| Rifle | 50 | 0.35 | 0.65 | 0.18 |
+| SMG | 58 | 0.6 | 0.8 | 0.14 |
+| Pistol | 60 | 0.5 | 0.85 | 0.12 |
+| Bazooka | 50 | 0.15 | 0.6 | 0.25 |
+| Band gun | 58 | 0.5 | 0.8 | 0.15 |
+| Sniper | 20 (scope, unchanged) | as now | as now | as now |
+
+Bots don't use ADS. Their aim model is unchanged.
+
+### 20.2 New primaries (realistic look per 18.3; picked at freeze like the others)
+- **Bazooka:**
+  - **Look:** a shoulder-fired steel tube with a sight, grips and a rocket.
+  - **Rocket:**
+    - Speed 80 u/s, no gravity, 4 s life.
+    - Direct hit 150 damage.
+    - Splash radius 8: 110 at the centre, falling linearly to 15 at the edge. Line of sight from the blast centre is
+      required, as for the grenade.
+    - Self-damage 0.5x.
+  - **Firing:**
+    - Mag 1, reserve 4, reload 2.6 s, draw 0.8 s.
+    - Spread: 1.5 degrees hip, 0.2 degrees ADS.
+    - Kick up 4.
+    - Move speed 0.85x while it is equipped.
+  - **Effects:** smoke trail, back-blast puff, a big burst with a scorch decal, and shake in a 45 radius.
+- **Rubber band gun (label BAND GUN):**
+  - **Look:** a real wooden ratchet band gun: a wooden frame, a clothes-peg trigger, and a band wheel that turns.
+  - **Firing:**
+    - Semi-auto, interval 0.3 s.
+    - Mag 10, reserve 40, reload 1.6 s (bands loaded onto the wheel).
+    - Spread 0.4 degrees.
+  - **Band:**
+    - A projectile: speed 160 u/s, gravity 30 u/s².
+    - Damage 34; headMult applies.
+    - Bounces once off any surface, at 0.7x damage after the bounce.
+  - **Quiet:** its shot alerts bots within 25 units only.
+  - **Leftovers:** spent bands lie where they land (pool 24, fade after 20 s).
+  - **Sound:** a twang and a snap.
+- **Bots:**
+  - Bazooka: the anchor or defender role picks it 1 time in 5. Bots aim at the feet and lead the target, and never fire
+    with the target within 10, or with a teammate within the splash radius of the predicted impact.
+  - Band gun: the flank role picks it 1 time in 4, leading the target.
+  - Difficulty aim error applies as for the other guns.
+
+### 20.3 Capture the flag
+- **Mode select:** a MODE row on the title card offers ELIMINATION or CAPTURE THE FLAG, saved with the settings.
+  Difficulty applies to both modes.
+- **Flags:**
+  - Green's stand is at `(55, 0, 11)`, inside the Green fort near the back wall. Tan's mirror is at `(55, 0, 149)`.
+  - Each stand has a flat base plate (at most 0.1 proud), a pole about 6 tall, and a waving cloth in the team colour.
+  - Pickup and capture use a 1.5 radius distance check on the soldier's position.
+- **Scoring:**
+  - **Win:** first to 3 captures, or the most captures after 10:00. A tie goes to sudden-death overtime of up to 3:00,
+    where the next capture wins. If still tied, the match is a draw.
+  - **Capture:** you capture by carrying the enemy flag to your own stand while your own flag is at home.
+- **Respawn:**
+  - 5 s after death, at your team's spawn point farthest from any visible enemy.
+  - 2 s of spawn protection, which firing ends.
+  - The weapon pick shows during the wait and defaults to the last pick.
+  - The match starts with the usual 5 s freeze.
+- **Dropped flag:**
+  - When the carrier dies, the flag drops where they died and settles onto the surface below.
+  - An enemy of the flag picks it up by touching it; the owner team returns it home by touching it.
+  - It returns home on its own after 20 s.
+  - It returns at once if it lands more than 6 from any waypoint, or on the train.
+
+### 20.4 The flag carrier stands out MUCH more
+- **On the body:**
+  - A big flag on a pole on their back, about twice soldier height, waving.
+  - A pulsing, emissive outline in the flag's colour, twice the normal outline width, that blooms.
+- **Beam:** a light beam in the flag's colour, from the carrier up to the ceiling, additive and seen from anywhere in
+  the room.
+- **Through walls:**
+  - A flag icon with the distance, over the carrier, shown on every screen at all times.
+  - An arrow at the screen edge when the carrier is off-screen.
+  - A faint see-through silhouette (depth test off).
+- **Speed:** the carrier moves at 0.9x speed and can still sprint and shoot.
+- **Sound:**
+  - A looping flag flap near the carrier, heard within 30.
+  - Stings with banners and callouts: "Flag taken!", "Flag dropped", "Flag returned", "Flag captured!".
+- **Bots:**
+  - Every bot always knows where both carriers are.
+  - For enemy bots, a visible carrier is the top target, and their engage ranges are 1.5x against the carrier.
+  - Three of the five enemy bots switch to hunting the carrier, pathing to cut them off on the way to their stand.
+  - Two friendly bots escort the carrier within 8.
+
+### 20.5 CTF bots
+- **Roles per team:**
+  - 2 attackers, who take the flag by different lanes;
+  - 1 midfield, at the ruin or centre;
+  - 1 defender, at its own stand;
+  - 1 high or sniper, on overwatch.
+- **Own flag taken:** the defender, the midfield and one attacker chase the carrier, as in 20.4.
+- **Own flag dropped:** the nearest bot goes to return it.
+- **Bot carrying the flag:** it paths home by its route. If its own flag is not home, it holds at its stand while the
+  others recover the flag.
+- **Liveness:** the 16.11 rule applies. Respawned bots pick their role again.
+
+### 20.6 CTF HUD
+- **Top bar:** captures for Green and Tan, a flag status icon for each team (home, taken, or dropped with its
+  countdown), and the match timer.
+- **Markers:** both flags, or their carriers, always have an on-screen marker with the distance.
+- **Banners and timers:** "YOU HAVE THE FLAG - RETURN TO BASE", with an arrow to your own stand, and a respawn
+  countdown.
+- **Layout:** it all fits the phone layout (19.3).

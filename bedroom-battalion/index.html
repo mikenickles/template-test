@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Battalion">
+<meta name="theme-color" content="#1C1828">
 <title>Bedroom Battalion</title>
 <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }</script>
 <style>
@@ -101,6 +106,56 @@
   .set { margin: 0.7rem 0; font-size: 1rem; font-weight: 700; } .set input { vertical-align: middle; width: 13rem; margin: 0 0.7rem; accent-color: var(--accent); } .set span { display: inline-block; min-width: 2.8rem; text-align: left; color: var(--accent); }
   #pause { background: rgba(20,16,30,.55); }
   #pause .box { padding: 1.4rem 2.4rem 1.2rem; --stud: var(--crayonO); }
+  /* ---- round 7 (DESIGN 19): phones and tablets. Everything below applies on a touch screen (body.touch) unless noted ---- */
+  html, body { height: 100%; height: 100dvh; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; }
+  #view, #touch, #hud { touch-action: none; }
+  #saProbe { position: fixed; left: 0; top: 0; visibility: hidden; pointer-events: none; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  #touch { position: fixed; inset: 0; display: none; --ta: 0.55; --sr: 60px; }
+  body.touch.playing #touch { display: block; }
+  #tStick { position: absolute; width: calc(var(--sr) * 2); height: calc(var(--sr) * 2); margin: calc(var(--sr) * -1) 0 0 calc(var(--sr) * -1); border-radius: 50%;
+    border: 3px solid rgba(255,255,255,.6); background: rgba(20,16,30,.2); display: none; pointer-events: none; opacity: var(--ta); box-sizing: border-box; }
+  #tStick.on { display: block; } #tStick.run { border-color: var(--crayonO); box-shadow: 0 0 0 3px rgba(240,138,42,.45); }
+  #tKnob { position: absolute; left: 28%; top: 28%; width: 44%; height: 44%; border-radius: 50%; background: rgba(255,255,255,.75); }
+  .tb { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 50%; box-sizing: border-box; background: rgba(28,24,40,.55);
+    border: 3px solid rgba(255,255,255,.6); color: #FFFFFF; font-weight: 900; letter-spacing: 0.04em; opacity: var(--ta); text-shadow: 0 1px 0 var(--ink); }
+  .tb.big { background: rgba(212,60,46,.6); } .tb.on { transform: scale(0.92); background: rgba(255,210,31,.5); } .tb.lit { border-color: var(--accent); color: var(--accent); }
+  #tPause, #wbar, #board { display: none; pointer-events: auto; }
+  body.touch #tPause { display: flex; align-items: center; justify-content: center; position: absolute; left: calc(env(safe-area-inset-left) + 8px); top: calc(env(safe-area-inset-top) + 8px);
+    width: 48px; height: 48px; font-size: 18px; font-weight: 900; letter-spacing: 2px; border-radius: 12px; }
+  body.touch #wbar { display: flex; gap: 6px; position: absolute; left: calc(env(safe-area-inset-left) + 8px); top: calc(env(safe-area-inset-top) + 64px); }
+  #wbar span { min-width: 72px; height: 48px; padding: 0 10px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 10px;
+    background: var(--panel); border: 2px solid rgba(255,255,255,.35); font-size: 13px; font-weight: 800; letter-spacing: 1px; }
+  #wbar span.sel { border-color: var(--accent); color: var(--accent); }
+  body.touch #mbar { pointer-events: auto; top: calc(env(safe-area-inset-top) + 6px); padding: 0.25rem 1rem 0.3rem; }
+  body.touch #mround, body.touch #mbar > div:last-child { display: none; }
+  #board { position: absolute; left: 50%; top: calc(env(safe-area-inset-top) + 4.6rem); transform: translateX(-50%); padding: 0.5rem 0.9rem; font-size: 13px; }
+  #board table { border-collapse: separate; border-spacing: 0 2px; } #board td, #board th { padding: 2px 10px; text-align: left; } #board th { color: var(--accent); }
+  #board tr.g td:first-child { color: #49C866; } #board tr.t td:first-child { color: #F0BE6E; }
+  body.touch #health { left: calc(env(safe-area-inset-left) + 64px); top: calc(env(safe-area-inset-top) + 8px); bottom: auto; font-size: 1.6rem; padding: 0.3rem 0.8rem; }
+  body.touch #ammo { right: calc(env(safe-area-inset-right) + 8px); top: calc(env(safe-area-inset-top) + 8px); bottom: auto; padding: 0.3rem 0.8rem; }
+  body.touch #ammo .count { font-size: 1.6rem; }
+  body.touch #feed { right: calc(env(safe-area-inset-right) + 8px); top: calc(env(safe-area-inset-top) + 5rem); font-size: max(12px, 0.85rem); }
+  body.touch #feed div:nth-child(n+3) { display: none; }
+  body.touch #callouts { left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 4.6rem); text-align: center; font-size: max(12px, 0.85rem); }
+  body.touch #spect { bottom: auto; top: 28%; }
+  body.touch #hint { bottom: auto; top: 30%; }
+  body.touch #picker { top: 50%; transform: translate(-50%, -50%); }
+  body.touch #picker .opt { width: 120px; min-height: 64px; padding: 14px 0; margin: 0 6px; font-size: 16px; }
+  body.touch .btn, body.touch .btn.small { min-height: 48px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; }
+  body.touch .btn.small { padding: 0.5rem 0.9rem; margin: 0.35rem 0.25rem; }
+  body.touch .overlay .box { max-height: calc(100dvh - 16px); overflow-y: auto; touch-action: pan-y; box-sizing: border-box; }
+  body.touch #title { justify-content: flex-start; overflow-y: auto; touch-action: pan-y; box-sizing: border-box;
+    padding: calc(env(safe-area-inset-top) + 10px) env(safe-area-inset-right) 16px env(safe-area-inset-left); }
+  body.touch #title h1 { font-size: 2.6rem; margin-bottom: 0.3rem; } body.touch #title .sub { margin-bottom: 0.3rem; } body.touch #title .keys { display: none; }
+  body.touch #title .go { margin: 0.2rem 0 0.5rem; } body.touch #tPlay { font-size: 1.9rem; min-height: 64px; padding: 0.8rem 3.6rem; }
+  body.touch .set input { width: 10rem; }
+  .btn.pfocus { outline: 3px solid var(--accent); outline-offset: 3px; }
+  #opts { z-index: 20; background: rgba(20,16,30,.62); } #opts .box { padding: 1.1rem 1.6rem 0.9rem; --stud: var(--crayonP); }
+  #opts h2 { font-size: 2rem; font-weight: 900; letter-spacing: 0.3rem; margin: 0 0 0.4rem; } #opts .note { font-size: max(12px, 0.8rem); opacity: .8; margin-top: 0.3rem; }
+  #rotate { position: fixed; inset: 0; z-index: 40; display: none; align-items: center; justify-content: center; text-align: center; background: #1C1828; }
+  #rotate .box { padding: 1.4rem 1.8rem; } #rotate h2 { font-size: 1.6rem; letter-spacing: 0.15rem; margin: 0 0 0.5rem; }
+  #iosHint { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 12px); transform: translateX(-50%); z-index: 30; display: none; padding: 0.5rem 0.9rem; font-size: 14px; font-weight: 700; white-space: nowrap; }
+  #toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 12px); transform: translateX(-50%); z-index: 35; display: none; padding: 0.45rem 1rem; font-size: 14px; font-weight: 800; pointer-events: none; }
   /* round 6: the loading screen (every shader compiles behind it) */
   #loading { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: #1C1828; }
   #loading .lbox { padding: 1.6rem 2.6rem 1.3rem; text-align: center; --stud: var(--crayonB); }
@@ -115,8 +170,13 @@
 </head>
 <body>
 <canvas id="view"></canvas>
+<div id="saProbe"></div>
+<div id="touch"><div id="tStick"><i id="tKnob"></i></div><div class="tb big" data-b="fire">FIRE</div><div class="tb" data-b="jump">JUMP</div><div class="tb" data-b="crouch">CROUCH</div><div class="tb" data-b="reload">RELOAD</div><div class="tb" data-b="grenade">GRENADE</div><div class="tb" data-b="scope">SCOPE</div></div>
 <div id="loading"><div class="lbox brick"><div class="lttl">BEDROOM BATTALION</div><div class="lbar"><i id="loadBar"></i></div><div id="loadMsg">Loading</div></div></div>
 <div id="hud">
+  <div id="tPause" class="brick">II</div>
+  <div id="wbar"><span id="wbP">RIFLE</span><span id="wbS">PISTOL</span></div>
+  <div id="board" class="brick ol"></div>
   <div id="scope"><i class="h"></i><i class="v"></i></div>
   <div id="crosshair"><i class="v"></i><i class="v"></i><i class="h"></i><i class="h"></i></div>
   <div id="hitm"><i></i><i></i></div>
@@ -141,7 +201,8 @@
 <div id="pause" class="overlay ol"><div class="box brick"><h2>PAUSED</h2><span class="squig"></span><div class="btn" id="pResume">RESUME</div><div class="hint" id="pHint">Click anywhere to resume</div>
   <div class="set">Mouse sensitivity <input type="range" id="pSens" min="0.2" max="3" step="0.1"><span id="pSensV"></span></div>
   <div class="set">Master volume <input type="range" id="pVol" min="0" max="100" step="1"><span id="pVolV"></span></div>
-  <div class="set" id="pQual">GRAPHICS <span class="btn small" data-q="low">LOW</span><span class="btn small" data-q="medium">MEDIUM</span><span class="btn small" data-q="high">HIGH</span><span class="btn small" data-q="auto">AUTO</span></div>
+  <div class="set" id="pQual">GRAPHICS <span class="btn small" data-q="low">LOW</span><span class="btn small" data-q="medium">MEDIUM</span><span class="btn small" data-q="high">HIGH</span><span class="btn small" data-q="mobile">MOBILE</span><span class="btn small" data-q="auto">AUTO</span></div>
+  <div class="btn small" id="pOpts">OPTIONS</div>
   <div class="btn small" id="pQuit">QUIT TO TITLE</div></div></div>
 <div id="title">
   <h1>BEDROOM <span>BATTALION</span></h1>
@@ -150,9 +211,10 @@
   <div id="titleGo" style="display:none"></div>
   <div class="card brick">
   <div class="set" id="tDiff"><span class="btn small" data-d="recruit">RECRUIT</span><span class="btn small" data-d="regular">REGULAR</span><span class="btn small" data-d="veteran">VETERAN</span></div>
-  <div class="set" id="tQual">GRAPHICS <span class="btn small" data-q="low">LOW</span><span class="btn small" data-q="medium">MEDIUM</span><span class="btn small" data-q="high">HIGH</span><span class="btn small" data-q="auto">AUTO</span></div>
+  <div class="set" id="tQual">GRAPHICS <span class="btn small" data-q="low">LOW</span><span class="btn small" data-q="medium">MEDIUM</span><span class="btn small" data-q="high">HIGH</span><span class="btn small" data-q="mobile">MOBILE</span><span class="btn small" data-q="auto">AUTO</span></div>
   <div class="set">Mouse sensitivity <input type="range" id="tSens" min="0.2" max="3" step="0.1"><span id="tSensV"></span></div>
   <div class="set">Master volume <input type="range" id="tVol" min="0" max="100" step="1"><span id="tVolV"></span></div>
+  <div class="btn small" id="tOpts">OPTIONS</div>
   <div class="keys">
     <b>W A S D</b> move &nbsp; <b>Mouse</b> look &nbsp; <b>Shift</b> sprint &nbsp; <b>Space</b> jump &nbsp; <b>C</b> or <b>Ctrl</b> crouch<br>
     Yellow strings: walk into one to grab it, <b>W</b> climbs, <b>S</b> descends, <b>Space</b> lets go<br>
@@ -162,6 +224,21 @@
   </div>
   </div>
 </div>
+<div id="opts" class="overlay ol"><div class="box brick"><h2>OPTIONS</h2><span class="squig"></span>
+  <div class="set">Touch look <input type="range" id="oTSens" min="0.3" max="3" step="0.1"><span id="oTSensV"></span></div>
+  <div class="set">Controller look <input type="range" id="oPSens" min="0.3" max="3" step="0.1"><span id="oPSensV"></span></div>
+  <div class="set">AIM ASSIST <span class="btn small" data-k="assist" data-v="true">ON</span><span class="btn small" data-k="assist" data-v="false">OFF</span></div>
+  <div class="set">AUTO-FIRE <span class="btn small" data-k="autofire" data-v="true">ON</span><span class="btn small" data-k="autofire" data-v="false">OFF</span></div>
+  <div class="set">HAPTICS <span class="btn small" data-k="haptics" data-v="true">ON</span><span class="btn small" data-k="haptics" data-v="false">OFF</span></div>
+  <div class="set">HANDS <span class="btn small" data-k="lefty" data-v="false">RIGHT</span><span class="btn small" data-k="lefty" data-v="true">LEFT</span></div>
+  <div class="set">BUTTONS <span class="btn small" data-k="bsize" data-v="S">S</span><span class="btn small" data-k="bsize" data-v="M">M</span><span class="btn small" data-k="bsize" data-v="L">L</span></div>
+  <div class="set">Button opacity <input type="range" id="oAlpha" min="20" max="100" step="5"><span id="oAlphaV"></span></div>
+  <div class="set">FRAME CAP <span class="btn small" data-k="fps" data-v="60">60</span><span class="btn small" data-k="fps" data-v="30">30 BATTERY</span></div>
+  <div class="note">Aim assist slows touch and controller look near an enemy. Auto-fire shoots while the crosshair is on one.</div>
+  <div class="btn" id="oClose">DONE</div></div></div>
+<div id="rotate"><div class="box brick"><h2>TURN YOUR PHONE SIDEWAYS</h2><div>Bedroom Battalion plays in landscape.</div></div></div>
+<div id="iosHint" class="brick">Add to Home Screen for full screen <span class="btn small" id="iosOk">OK</span></div>
+<div id="toast" class="brick"></div>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 
@@ -476,7 +553,10 @@ const CONFIG = {
       low:    { label: 'LOW',    post: false, shadowScale: 0.5, normalMaps: false, gtao: false, smaa: false, fxaa: false, dyn: false },
       medium: { label: 'MEDIUM', post: true,  shadowScale: 1,   normalMaps: true,  gtao: false, smaa: false, fxaa: true,  dyn: false },
       high:   { label: 'HIGH',   post: true,  shadowScale: 1,   normalMaps: true,  gtao: true,  smaa: true,  fxaa: false, dyn: false },
-      auto:   { label: 'AUTO',   post: true,  shadowScale: 1,   normalMaps: true,  gtao: false, smaa: false, fxaa: true,  dyn: true } } },
+      auto:   { label: 'AUTO',   post: true,  shadowScale: 1,   normalMaps: true,  gtao: false, smaa: false, fxaa: true,  dyn: true },   // on a phone or tablet Auto is Mobile
+      mobile: { label: 'MOBILE', post: true,  shadowScale: 0.5, normalMaps: false, gtao: false, smaa: false, fxaa: true,  dyn: true,   // 19.4
+                bloom: false, grade: false, maxPR: 1.5, dynMin: 0.5, fanLight: false, dustHalf: true, casingCap: 12, decalCap: 32 } },
+    mobileTex: { atlas: 1024, decor: 2048, floor: 0.5 } },             // 19.4: built smaller at load when the Mobile preset applies there
   outside: { on: true, near: 1, far: 30000, ground: -15,              // 18.5: 1 room unit is about 3 cm; the lawn sits 0.45 m under the floor
     window: [0, -2, 36, 74, 58, 102],                                  // x inner, x outer, y0, y1, z0, z1: the opening the outside is seen through
     sun: { color: '#FFF1D8', intensity: 4.2 }, hemi: { sky: '#CFE3F7', ground: '#7C9457', intensity: 1.9 },
@@ -503,6 +583,16 @@ const CONFIG = {
            rug: { x: 60, z: 80, rx: 13, rz: 26, h: 0.08 },             // a soft play rug, flat and visual only; footsteps on it sound like fabric
            glass: { opacity: 1, roughness: 0.06 },
            audio: { birds: 0.03, rustle: 0.008, birdEvery: [3, 9], ref: 30 } },
+  // ---- round 7 (DESIGN 19): phones, tablets and controllers. Input only: they feed the same input the keyboard and the bots use ----
+  touch: { stickR: 60, dead: 0.12, sprintAt: 0.9, dirAt: 0.38,                // move stick: radius (CSS px), dead zone, sprint and digital thresholds
+           look: 0.0052, accel: 0.35, accelFrom: 0.6, accelMax: 1.8,           // rad per CSS px at sensitivity 1; mild acceleration above accelFrom px/ms
+           scoped: 0.4, assist: 0.5, assistDeg: 3, assistHz: 10,             // scoped look and aim assist (look-speed slowdown near a visible enemy)
+           autoDeg: 0, autoPulse: 0.1,                                       // auto-fire: on the enemy under the crosshair; semi-automatics pulse
+           sizes: { S: 56, M: 68, L: 80 }, fire: 1.4, gap: 12, edge: 18,     // buttons (CSS px), the fire button's scale, spacing and edge margin
+           tapMove: 10, tapTime: 0.3,                                        // a look touch shorter and stiller than this is a tap (next teammate)
+           haptics: { hit: [12], damage: [30], kill: [18, 50, 18] } },
+  pad: { dead: 0.18, lookDead: 0.15, curve: 2, yaw: 3.2, pitch: 2.2, trigger: 0.35,   // 19.5 standard mapping; look in rad/s at full tilt
+         rumble: { hit: [60, 0.2, 0.4], damage: [120, 0.6, 0.3], kill: [160, 0.5, 0.8] } },   // ms, strong, weak
   storageKey: 'bedroomBattalion.settings',
   color: {
     haze: '#D6DEE8', wall: '#BFD3E0', trim: '#F2EFE6', ceiling: '#F5F2EA', plank: '#5E4535', plankGap: '#38261B',     // R4A-3: browner, less orange planks (was #7A4E2E / #4A2E1A)
@@ -758,22 +848,30 @@ function tickMoveAudio() {
 const keys = Object.create(null);                                   // real keyboard, by KeyboardEvent.code
 const vinput = { forward: false, back: false, left: false, right: false, jump: false, sprint: false, crouch: false, fire: false, scope: false, grenade: false, reload: false };
 const INPUT_NAMES = Object.keys(vinput);
-const inp = { forward: false, back: false, left: false, right: false, jump: false, sprint: false, crouch: false, fire: false, scope: false, grenade: false, reload: false };
+// round 7: touch controls (tinput) and the controller (pinput) are more virtual input; analog / ax / ay carry a stick's direction and
+// walk speed (tickPlayer reads them only for the player, and only while no movement key is held)
+const tinput = { forward: false, back: false, left: false, right: false, jump: false, sprint: false, crouch: false, fire: false, scope: false, grenade: false, reload: false, analog: false, ax: 0, ay: 0, autoFire: false };
+const pinput = { forward: false, back: false, left: false, right: false, jump: false, sprint: false, crouch: false, fire: false, scope: false, grenade: false, reload: false, analog: false, ax: 0, ay: 0 };
+const inp = { forward: false, back: false, left: false, right: false, jump: false, sprint: false, crouch: false, fire: false, scope: false, grenade: false, reload: false, analog: false, ax: 0, ay: 0 };
 const GAME_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space',
   'ShiftLeft', 'ShiftRight', 'KeyC', 'ControlLeft', 'ControlRight', 'Backquote', 'KeyR', 'KeyG', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5']);
 const WEAPON_KEYS = { Digit2: 'pistol' };       // round 3B: keys 3 to 5 no longer pick weapons (the freeze-time pick does)
 const PICK_KEYS = { Digit1: 'rifle', Digit2: 'smg', Digit3: 'sniper' };
 
 function readInput(out) {
-  out.forward = vinput.forward || !!keys.KeyW || !!keys.ArrowUp;
-  out.back = vinput.back || !!keys.KeyS || !!keys.ArrowDown;
-  out.left = vinput.left || !!keys.KeyA || !!keys.ArrowLeft;
-  out.right = vinput.right || !!keys.KeyD || !!keys.ArrowRight;
-  out.jump = vinput.jump || !!keys.Space;
-  out.sprint = vinput.sprint || !!keys.ShiftLeft || !!keys.ShiftRight;
-  out.crouch = vinput.crouch || !!keys.KeyC || !!keys.ControlLeft || !!keys.ControlRight;
-  out.fire = vinput.fire || !!keys.Mouse0; out.scope = vinput.scope || !!keys.Mouse2;
-  out.grenade = vinput.grenade || !!keys.KeyG; out.reload = vinput.reload || !!keys.KeyR;
+  const T = tinput, G = pinput;
+  out.forward = vinput.forward || !!keys.KeyW || !!keys.ArrowUp || T.forward || G.forward;
+  out.back = vinput.back || !!keys.KeyS || !!keys.ArrowDown || T.back || G.back;
+  out.left = vinput.left || !!keys.KeyA || !!keys.ArrowLeft || T.left || G.left;
+  out.right = vinput.right || !!keys.KeyD || !!keys.ArrowRight || T.right || G.right;
+  out.jump = vinput.jump || !!keys.Space || T.jump || G.jump;
+  out.sprint = vinput.sprint || !!keys.ShiftLeft || !!keys.ShiftRight || T.sprint || G.sprint;
+  out.crouch = vinput.crouch || !!keys.KeyC || !!keys.ControlLeft || !!keys.ControlRight || T.crouch || G.crouch;
+  out.fire = vinput.fire || !!keys.Mouse0 || T.fire || T.autoFire || G.fire; out.scope = vinput.scope || !!keys.Mouse2 || T.scope || G.scope;
+  out.grenade = vinput.grenade || !!keys.KeyG || T.grenade || G.grenade; out.reload = vinput.reload || !!keys.KeyR || T.reload || G.reload;
+  const kb = vinput.forward || vinput.back || vinput.left || vinput.right || !!(keys.KeyW || keys.KeyS || keys.KeyA || keys.KeyD || keys.ArrowUp || keys.ArrowDown || keys.ArrowLeft || keys.ArrowRight);
+  const A = G.analog ? G : T;                      // round 7: a stick's analogue direction, unless a movement key is held
+  out.analog = !kb && A.analog; out.ax = out.analog ? A.ax : 0; out.ay = out.analog ? A.ay : 0;
   return out;
 }
 function clearKeys() { for (const k in keys) delete keys[k]; }
@@ -822,6 +920,330 @@ function syncPauseToLock() {
   const locked = document.pointerLockElement === ui.canvas;
   if (locked) { game.lockWanted = false; if (game.phase === 'paused') resumeGame(); else if (game.phase === 'title') { game.phase = 'playing'; hideTitle(); } return; }
   if (game.phase === 'playing' && game.pointerLock && !(match.active && match.phase === 'matchEnd')) pauseGame();
+}
+
+// =====================================================================================================
+// 4b. TOUCH, CONTROLLER AND PHONE PAGE  (round 7, DESIGN 19). Touch controls and the gamepad only write tinput / pinput, which
+//     readInput merges with the keyboard exactly as vinput is; analogue movement rides along (input.analog, ax, ay). Aim assist is
+//     a look-speed slowdown for touch and controller look only. Mouse, keyboard, pointer lock, Esc and click-to-resume are as before.
+// =====================================================================================================
+const UA = navigator.userAgent || '';
+const DEVICE = {
+  coarse: !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches),
+  ios: /iPhone|iPad|iPod/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1),
+  mobile: false, lowTex: false };
+DEVICE.mobile = DEVICE.coarse || DEVICE.ios || /Android|Mobile|Silk|Kindle/i.test(UA);
+const TOUCH = { on: false, el: null, stick: null, knob: null, btns: {}, slots: [], playing: null, scopeShown: null, wkey: '', assistNear: false, assistT: 0,
+  autoOn: false, autoT: 0, lastHitT: 0, lastHealth: 100, sa: { t: 0, r: 0, b: 0, l: 0 }, probe: null, boardT: 0, portrait: false };
+for (let i = 0; i < 10; i++) TOUCH.slots.push({ id: -1, role: '', x0: 0, y0: 0, x: 0, y: 0, t0: 0, t: 0, moved: 0, btn: null });
+const PAD = { active: false, index: -1, now: new Uint8Array(18), prev: new Uint8Array(18), sprint: false, focus: null, lastPoll: 0 };
+const _vb = { x: 0, y: 0, z: 0 };
+
+function setTouchUI(on) {
+  if (TOUCH.on === on) return;
+  TOUCH.on = on;
+  document.body.classList.toggle('touch', on);
+  if (!on) releaseTouch();
+  layoutTouch();
+}
+function releaseTouch() {                          // all fingers up: nothing stays held
+  for (const S of TOUCH.slots) { if (S.btn) S.btn.classList.remove('on'); S.id = -1; S.role = ''; S.btn = null; }
+  tinput.forward = tinput.back = tinput.left = tinput.right = tinput.jump = tinput.sprint = tinput.fire = tinput.grenade = tinput.reload = false;
+  tinput.analog = false; tinput.ax = tinput.ay = 0;
+  if (TOUCH.stick) { TOUCH.stick.classList.remove('on', 'run'); }
+}
+function safeInsets() {                            // env(safe-area-inset-*) as numbers, through a hidden probe
+  const P = TOUCH.probe, S = TOUCH.sa; if (!P) return S;
+  const cs = getComputedStyle(P);
+  S.t = parseFloat(cs.paddingTop) || 0; S.r = parseFloat(cs.paddingRight) || 0; S.b = parseFloat(cs.paddingBottom) || 0; S.l = parseFloat(cs.paddingLeft) || 0;
+  return S;
+}
+// The thumb arc: FIRE in the corner, JUMP, CROUCH and RELOAD on an inner ring, GRENADE and SCOPE on an outer one (mirrored when
+// left-handed). Laid out on resize and when the options change, never per frame.
+function layoutTouch() {
+  if (!TOUCH.el) return;
+  const K = CONFIG.touch, sa = safeInsets(), bs = K.sizes[settings.bsize] || K.sizes.M, fs = Math.round(bs * K.fire), W = window.innerWidth, H = window.innerHeight;
+  const lefty = !!settings.lefty, cx = lefty ? sa.l + K.edge + fs / 2 : W - sa.r - K.edge - fs / 2, cy = H - sa.b - K.edge - fs / 2;
+  const r1 = fs / 2 + bs / 2 + K.gap, r2 = r1 + bs + K.gap - 2;
+  const place = (el, r, deg, size) => {
+    if (!el) return;
+    const a = deg * Math.PI / 180, x = cx + (lefty ? -1 : 1) * Math.cos(a) * r, y = cy - Math.sin(a) * r;
+    el.style.width = el.style.height = size + 'px'; el.style.left = Math.round(x - size / 2) + 'px'; el.style.top = Math.round(y - size / 2) + 'px';
+    el.style.fontSize = Math.max(12, Math.round(size * 0.2)) + 'px';
+  };
+  const B = TOUCH.btns;
+  place(B.fire, 0, 0, fs); place(B.jump, r1, 180, bs); place(B.crouch, r1, 135, bs); place(B.reload, r1, 90, bs); place(B.grenade, r2, 158, bs); place(B.scope, r2, 112, bs);
+  document.body.classList.toggle('lefty', lefty);
+  document.body.style.setProperty('--ta', String(clamp((settings.balpha || 55) / 100, 0.15, 1)));
+  document.body.style.setProperty('--sr', CONFIG.touch.stickR + 'px');
+  updateOrientation();
+}
+function updateOrientation() {                     // 19.1: landscape only on a touch screen
+  const portrait = TOUCH.on && window.innerHeight > window.innerWidth;
+  if (portrait !== TOUCH.portrait) { TOUCH.portrait = portrait; $('rotate').style.display = portrait ? 'flex' : 'none'; }
+  if (portrait && game.phase === 'playing') pauseGame();
+}
+function slotOf(id) { for (const S of TOUCH.slots) if (S.id === id) return S; return null; }
+function freeSlot() { for (const S of TOUCH.slots) if (S.id < 0) return S; return null; }
+// Touch look: CSS px to radians with the sensitivity, a mild acceleration, 0.4x scoped, slowed by aim assist near an enemy
+function touchLook(dx, dy, dtMs) {
+  if (game.phase !== 'playing') return;
+  const K = CONFIG.touch, d = Math.hypot(dx, dy), v = d / Math.max(1, dtMs);
+  const acc = 1 + K.accel * clamp((v - K.accelFrom) / K.accelFrom, 0, K.accelMax);
+  const s = K.look * (settings.tsens || 1) * acc * lookScale();
+  player.yaw = wrapAngle(player.yaw - dx * s);
+  player.pitch = clamp(player.pitch - dy * s, -CONFIG.input.pitchLimit, CONFIG.input.pitchLimit);
+}
+function lookScale() {                             // shared by touch and controller look: fov, scope and aim assist
+  const A = arsenal, scoped = A.scope > 0.5 ? CONFIG.touch.scoped : 1;
+  return camera.fov / CONFIG.camera.fovVertical * scoped * (settings.assist && TOUCH.assistNear ? CONFIG.touch.assist : 1);
+}
+function touchDown(e) {
+  if (e.pointerType !== 'touch') return;
+  e.preventDefault();                               // no compatibility mouse events, no zoom or callout
+  setTouchUI(true); audioUnlock();
+  const S = freeSlot(); if (!S) return;
+  try { TOUCH.el.setPointerCapture(e.pointerId); } catch (err) { /* capture is a nicety */ }
+  S.id = e.pointerId; S.x0 = S.x = e.clientX; S.y0 = S.y = e.clientY; S.t0 = S.t = e.timeStamp; S.moved = 0; S.btn = null;
+  const b = e.target && e.target.closest ? e.target.closest('.tb') : null, W = window.innerWidth, stickSide = settings.lefty ? e.clientX > W / 2 : e.clientX < W / 2;
+  if (b) {
+    S.role = 'btn:' + b.dataset.b; S.btn = b; b.classList.add('on');
+    const k = b.dataset.b;
+    if (k === 'crouch') { tinput.crouch = !tinput.crouch; b.classList.toggle('lit', tinput.crouch); }
+    else if (k === 'scope') { tinput.scope = !tinput.scope; b.classList.toggle('lit', tinput.scope); }
+    else if (k === 'fire') tinput.fire = true;
+    else if (k === 'jump') tinput.jump = true;
+    else if (k === 'reload') tinput.reload = true;
+    else if (k === 'grenade') tinput.grenade = true;
+  } else if (stickSide && !slotRole('move')) {
+    S.role = 'move'; const St = TOUCH.stick;
+    St.style.left = Math.round(S.x0) + 'px'; St.style.top = Math.round(S.y0) + 'px'; St.classList.add('on'); TOUCH.knob.style.transform = 'translate(0px, 0px)';
+  } else S.role = 'look';
+}
+function slotRole(role) { for (const S of TOUCH.slots) if (S.id >= 0 && S.role === role) return S; return null; }
+function touchMove(e) {
+  if (e.pointerType !== 'touch') return;
+  const S = slotOf(e.pointerId); if (!S) return;
+  e.preventDefault();
+  const dx = e.clientX - S.x, dy = e.clientY - S.y, dt = e.timeStamp - S.t;
+  S.x = e.clientX; S.y = e.clientY; S.t = e.timeStamp; S.moved += Math.abs(dx) + Math.abs(dy);
+  if (S.role === 'move') {
+    const K = CONFIG.touch, R = K.stickR; let ox = S.x - S.x0, oy = S.y - S.y0; const l = Math.hypot(ox, oy);
+    if (l > R) { ox *= R / l; oy *= R / l; }
+    TOUCH.knob.style.transform = 'translate(' + Math.round(ox) + 'px, ' + Math.round(oy) + 'px)';
+    const m = Math.min(1, l / R), k = m <= K.dead ? 0 : (m - K.dead) / (1 - K.dead), ax = l > 0 ? ox / R : 0, ay = l > 0 ? -oy / R : 0, n = m > 0 ? k / m : 0;
+    tinput.analog = k > 0; tinput.ax = ax * n; tinput.ay = ay * n;          // direction and walk speed (analogue)
+    tinput.forward = tinput.ay > K.dirAt; tinput.back = tinput.ay < -K.dirAt; tinput.right = tinput.ax > K.dirAt; tinput.left = tinput.ax < -K.dirAt;   // strings and sprint read these
+    const run = m >= K.sprintAt && tinput.ay > 0; tinput.sprint = run; TOUCH.stick.classList.toggle('run', run);
+  } else if (S.role === 'look' || S.role === 'btn:fire') touchLook(dx, dy, dt);   // a drag that starts on FIRE also aims
+}
+function touchUp(e) {
+  if (e.pointerType !== 'touch') return;
+  const S = slotOf(e.pointerId); if (!S) return;
+  e.preventDefault(); audioUnlock();
+  const K = CONFIG.touch, role = S.role, btn = S.btn;
+  S.id = -1; S.role = ''; S.btn = null;                // free the slot first, so the checks below only see the other fingers
+  if (role === 'move') { tinput.analog = false; tinput.ax = tinput.ay = 0; tinput.forward = tinput.back = tinput.left = tinput.right = tinput.sprint = false; TOUCH.stick.classList.remove('on', 'run'); }
+  else if (role === 'look') { if (e.type === 'pointerup' && S.moved < K.tapMove && (e.timeStamp - S.t0) / 1000 < K.tapTime && match.active && player.dead && game.phase === 'playing') spectateNext(); }   // tap: next teammate
+  else if (btn) {
+    const k = btn.dataset.b; btn.classList.remove('on');
+    if (k === 'fire') { if (!slotRole('btn:fire')) tinput.fire = false; }
+    else if (k === 'jump') tinput.jump = false; else if (k === 'reload') tinput.reload = false; else if (k === 'grenade') tinput.grenade = false;
+  }
+}
+// Per frame (allocation-free): aim assist at assistHz, auto-fire, haptics, the SCOPE button, the weapon bar, the frame state
+function updateTouch(realDt) {
+  const K = CONFIG.touch, playing = game.phase === 'playing';
+  if (TOUCH.playing !== playing) { TOUCH.playing = playing; document.body.classList.toggle('playing', playing); if (!playing) { releaseTouch(); tinput.scope = false; } }
+  const active = TOUCH.on || PAD.active;
+  TOUCH.assistT -= realDt || 0;
+  if (TOUCH.assistT <= 0) { TOUCH.assistT = 1 / K.assistHz; TOUCH.assistNear = active && settings.assist && playing && enemyNearCrosshair(K.assistDeg); }
+  // auto-fire (accessibility): on while the crosshair is on a visible enemy; semi-automatics pulse the trigger
+  let auto = false;
+  if (active && settings.autofire && playing && match.active && !player.dead && !matchFrozen()) {
+    const B = viewBasis(player.yaw, player.pitch); _vb.x = B.fx; _vb.y = B.fy; _vb.z = B.fz;
+    if (raycastWorld(player.x, player.y + player.eye, player.z, _vb.x, _vb.y, _vb.z, CONFIG.gun.range, player) && RH.soldier && RH.soldier.team !== 'green') {
+      TOUCH.autoT += realDt || 0; auto = CONFIG.weapons[arsenal.current].auto || (TOUCH.autoT % (K.autoPulse * 2)) < K.autoPulse;
+    } else TOUCH.autoT = 0;
+  }
+  tinput.autoFire = auto;
+  // haptics: a hit given, damage taken, a double pulse on a kill
+  const A = arsenal;
+  if (A.hitT > TOUCH.lastHitT + 1e-6) haptic(A.hitKill ? 'kill' : 'hit');
+  TOUCH.lastHitT = A.hitT;
+  if (player.health < TOUCH.lastHealth - 0.01 && match.active) haptic('damage');
+  TOUCH.lastHealth = player.health;
+  if (!TOUCH.on) return;
+  const sniper = A.current === 'sniper';
+  if (TOUCH.scopeShown !== sniper) { TOUCH.scopeShown = sniper; TOUCH.btns.scope.style.display = sniper ? 'flex' : 'none'; if (!sniper) { tinput.scope = false; TOUCH.btns.scope.classList.remove('lit'); } }
+  const wk = A.primary + '|' + A.current;
+  if (wk !== TOUCH.wkey) { TOUCH.wkey = wk; const P = $('wbP'), Q = $('wbS'); P.textContent = CONFIG.weapons[A.primary].label; P.classList.toggle('sel', A.current !== 'pistol'); Q.classList.toggle('sel', A.current === 'pistol'); }
+  if (TOUCH.boardT > 0) { TOUCH.boardT -= realDt || 0; if (TOUCH.boardT <= 0) $('board').style.display = 'none'; }
+}
+function enemyNearCrosshair(deg) {                 // a living enemy within deg of the view direction, with a clear line from the eye
+  if (!match.active || player.dead) return false;
+  const B = viewBasis(player.yaw, player.pitch), fx = B.fx, fy = B.fy, fz = B.fz, ex = player.x, ey = player.y + player.eye, ez = player.z, c = Math.cos(deg * DEG);
+  for (let i = 0; i < bots.length; i++) {
+    const b = bots[i];
+    if (b.dead || b.team === 'green') continue;
+    const dx = b.x - ex, dy = b.y + 1.1 - ey, dz = b.z - ez, d = Math.hypot(dx, dy, dz);
+    if (d < 0.5 || (dx * fx + dy * fy + dz * fz) / d < c) continue;
+    if (losClear(ex, ey, ez, b.x, b.y + 1.1, b.z)) return true;
+  }
+  return false;
+}
+function haptic(kind) {
+  if (!settings.haptics) return;
+  try {
+    if (TOUCH.on && navigator.vibrate) navigator.vibrate(CONFIG.touch.haptics[kind]);
+    if (PAD.active && PAD.index >= 0) {
+      const gp = navigator.getGamepads ? navigator.getGamepads()[PAD.index] : null, R = CONFIG.pad.rumble[kind];
+      if (gp && gp.vibrationActuator && gp.vibrationActuator.playEffect) gp.vibrationActuator.playEffect('dual-rumble', { duration: R[0], strongMagnitude: R[1], weakMagnitude: R[2] }).catch(() => {});
+    }
+  } catch (err) { /* haptics are optional */ }
+}
+function showBoard() {                             // 19.2: tap the score for the scoreboard (also the controller's Back button)
+  const el = $('board');
+  if (!match.active || el.style.display === 'block') { el.style.display = 'none'; TOUCH.boardT = 0; return; }
+  const rows = match.soldiers.slice().sort((a, b) => (a.team === b.team ? (b.kills || 0) - (a.kills || 0) : a.team === 'green' ? -1 : 1));
+  el.innerHTML = '<table><tr><th>SOLDIER</th><th>KILLS</th><th>DEATHS</th></tr>' +
+    rows.map((s) => '<tr class="' + (s.team === 'green' ? 'g' : 't') + '"><td>' + s.name + '</td><td>' + (s.kills || 0) + '</td><td>' + (s.deaths || 0) + '</td></tr>').join('') + '</table>';
+  el.style.display = 'block'; TOUCH.boardT = 5;
+}
+function toast(text) { const T = $('toast'); if (!T) return; T.textContent = text; T.style.display = 'block'; clearTimeout(toast.timer); toast.timer = setTimeout(() => { T.style.display = 'none'; }, 2500); }
+// 19.1: Play on a touch screen goes fullscreen and locks landscape where the browser allows it (Android); iOS gets a one-time hint
+function goFullscreen() {
+  const lock = () => { try { const o = screen.orientation; if (o && o.lock) o.lock('landscape').catch(() => {}); } catch (err) { /* not supported */ } };
+  try {
+    const el = document.documentElement, rq = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (rq && !(document.fullscreenElement || document.webkitFullscreenElement)) { const p = rq.call(el, { navigationUI: 'hide' }); if (p && p.then) p.then(lock, () => {}); else lock(); }
+    else lock();
+  } catch (err) { /* fullscreen is optional */ }
+}
+function iosHint() {
+  if (!DEVICE.ios || !TOUCH.on) return;
+  const standalone = navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  let seen = false; try { seen = window.localStorage.getItem(CONFIG.storageKey + '.ioshint') === '1'; } catch (err) { /* no storage */ }
+  if (standalone || seen) return;
+  $('iosHint').style.display = 'block';
+}
+// 19.5 controller (Gamepad API, standard mapping), polled once a frame; hot-plug at any time
+const PB = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, LS: 10, RS: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
+function pollPad(realDt) {
+  if (!navigator.getGamepads) return;
+  let gp = null;
+  try { const L = navigator.getGamepads(); for (let i = 0; i < L.length; i++) { const g = L[i]; if (g && g.connected) { if (!gp || g.mapping === 'standard') gp = g; if (g.mapping === 'standard') break; } } } catch (err) { return; }
+  if (!gp) { if (PAD.index >= 0) padGone(); return; }
+  PAD.index = gp.index;
+  const K = CONFIG.pad, N = PAD.now, P = PAD.prev, bt = gp.buttons, ax = gp.axes;
+  let any = false;
+  for (let i = 0; i < 16; i++) { const b = bt[i]; N[i] = b && (b.pressed || b.value > 0.5) ? 1 : 0; if (N[i]) any = true; }
+  const rt = bt[PB.RT] ? bt[PB.RT].value : 0, lt = bt[PB.LT] ? bt[PB.LT].value : 0;
+  const lx = ax[0] || 0, ly = ax[1] || 0, rx = ax[2] || 0, ry = ax[3] || 0;
+  if (Math.hypot(lx, ly) > K.dead || Math.hypot(rx, ry) > K.lookDead || rt > K.trigger || lt > K.trigger) any = true;
+  if (any && !PAD.active) { PAD.active = true; if (TOUCH.on) setTouchUI(false); }
+  const hit = padHit, O = $('opts');
+  const menu = (O && O.style.display === 'flex') || game.phase !== 'playing' || (match.active && match.phase === 'matchEnd');
+  if (menu) { padClear(); padMenu(); }
+  else {
+    // move: radial dead zone, analogue walk; the left stick click sprints until the stick comes back to the middle
+    const m = Math.min(1, Math.hypot(lx, ly)), k = m <= K.dead ? 0 : (m - K.dead) / (1 - K.dead), n = m > 0 ? k / m : 0;
+    pinput.analog = k > 0; pinput.ax = lx * n; pinput.ay = -ly * n;
+    const D = CONFIG.touch.dirAt;
+    pinput.forward = pinput.ay > D; pinput.back = pinput.ay < -D; pinput.right = pinput.ax > D; pinput.left = pinput.ax < -D;
+    if (hit(PB.LS)) PAD.sprint = true;
+    if (k <= 0.1) PAD.sprint = false;
+    pinput.sprint = PAD.sprint && pinput.ay > 0;
+    // look: dead zone, response curve, rad/s at full tilt, scoped and assisted like touch
+    const rm = Math.min(1, Math.hypot(rx, ry));
+    if (rm > K.lookDead) {
+      const kk = Math.pow((rm - K.lookDead) / (1 - K.lookDead), K.curve) / rm, s = (settings.psens || 1) * lookScale() * (realDt || 0);
+      player.yaw = wrapAngle(player.yaw - rx * kk * K.yaw * s);
+      player.pitch = clamp(player.pitch - ry * kk * K.pitch * s, -CONFIG.input.pitchLimit, CONFIG.input.pitchLimit);
+    }
+    pinput.fire = rt > K.trigger; pinput.scope = lt > K.trigger;
+    pinput.jump = !!N[PB.A]; pinput.reload = !!N[PB.X]; pinput.grenade = !!N[PB.RB];
+    if (hit(PB.B)) pinput.crouch = !pinput.crouch;
+    if (hit(PB.Y) || hit(PB.LEFT) || hit(PB.RIGHT)) { if (match.active && match.phase === 'freeze' && !player.autoplay) cyclePick(); else cycleWeapon(); }
+    if (hit(PB.A) && match.active && player.dead) spectateNext();
+    if (hit(PB.BACK)) showBoard();
+    if (hit(PB.START)) pauseGame();
+  }
+  P.set(N);
+}
+function padHit(i) { return PAD.now[i] === 1 && PAD.prev[i] === 0; }
+function padClear() { pinput.forward = pinput.back = pinput.left = pinput.right = pinput.jump = pinput.sprint = pinput.fire = pinput.scope = pinput.grenade = pinput.reload = false; pinput.analog = false; pinput.ax = pinput.ay = 0; PAD.sprint = false; }
+function padGone() { padClear(); pinput.crouch = false; PAD.index = -1; if (PAD.active) { PAD.active = false; if (game.phase === 'playing' && !game.pointerLock) pauseGame(); } PAD.prev.fill(0); }
+// Menus with the controller: the D-pad moves a highlight over the visible buttons, A presses, B goes back, Start resumes
+function padMenu() {
+  if (!PAD.active) return;
+  const hit = padHit, O = $('opts'), box = O && O.style.display === 'flex' ? O : game.phase === 'title' ? $('title') : game.phase === 'paused' ? $('pause') : match.active && match.phase === 'matchEnd' ? $('matchEnd') : null;
+  if (!box) return;
+  const dir = hit(PB.UP) || hit(PB.LEFT) ? -1 : hit(PB.DOWN) || hit(PB.RIGHT) ? 1 : 0;
+  if (dir || hit(PB.A) || !PAD.focus || !box.contains(PAD.focus)) {
+    const L = Array.prototype.filter.call(box.querySelectorAll('.btn'), (el) => el.offsetParent !== null);
+    if (!L.length) return;
+    let i = L.indexOf(PAD.focus);
+    if (i < 0) i = 0; else i = (i + dir + L.length) % L.length;
+    if (PAD.focus !== L[i]) { if (PAD.focus) PAD.focus.classList.remove('pfocus'); PAD.focus = L[i]; PAD.focus.classList.add('pfocus'); }
+    if (hit(PB.A)) { audioUnlock(); PAD.focus.click(); }
+  }
+  if (hit(PB.B)) { if (O && O.style.display === 'flex') closeOptions(); else if (game.phase === 'paused') padResume(); }
+  if (hit(PB.START) && game.phase === 'paused') padResume();
+}
+function padResume() { game.pointerLock = false; resumeGame(); }       // a controller needs no pointer lock
+function openOptions() { syncSettingsUI(); $('opts').style.display = 'flex'; }
+function closeOptions() { $('opts').style.display = 'none'; }
+// 19.1 lifecycle: hide pauses (touch or controller play), the first touch resumes audio, a lost WebGL context pauses and is rebuilt
+function initTouch(canvas) {
+  TOUCH.el = $('touch'); TOUCH.stick = $('tStick'); TOUCH.knob = $('tKnob'); TOUCH.probe = $('saProbe');
+  for (const el of TOUCH.el.querySelectorAll('.tb')) TOUCH.btns[el.dataset.b] = el;
+  const T = TOUCH.el;
+  T.addEventListener('pointerdown', touchDown, { passive: false });
+  T.addEventListener('pointermove', touchMove, { passive: false });
+  T.addEventListener('pointerup', touchUp, { passive: false });
+  T.addEventListener('pointercancel', touchUp, { passive: false });
+  window.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') { setTouchUI(true); audioUnlock(); } }, true);
+  window.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' && TOUCH.on && (e.movementX || e.movementY)) setTouchUI(false); });
+  window.addEventListener('keydown', () => { if (TOUCH.on) setTouchUI(false); });
+  for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) document.addEventListener(ev, (e) => { if (TOUCH.on || e.type !== 'dblclick') e.preventDefault(); }, { passive: false });
+  document.addEventListener('contextmenu', (e) => { if (TOUCH.on) e.preventDefault(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && (TOUCH.on || PAD.active) && game.phase === 'playing') pauseGame(); });
+  window.addEventListener('pagehide', () => { if ((TOUCH.on || PAD.active) && game.phase === 'playing') pauseGame(); });
+  window.addEventListener('resize', () => layoutTouch());
+  window.addEventListener('orientationchange', () => setTimeout(layoutTouch, 200));
+  window.addEventListener('gamepadconnected', () => toast('Controller connected'));
+  window.addEventListener('gamepaddisconnected', () => { toast('Controller disconnected'); padGone(); });
+  canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); RENDER.lost = true; RENDER.lostPlaying = game.phase === 'playing'; if (game.phase === 'playing') pauseGame(); setLoading('Restoring the graphics', 0.5); }, false);
+  canvas.addEventListener('webglcontextrestored', () => { restoreGPU(); }, false);
+  $('tPause').addEventListener('click', (e) => { e.stopPropagation(); pauseGame(); });
+  $('mbar').addEventListener('click', () => showBoard());
+  $('board').addEventListener('click', () => showBoard());
+  $('wbP').addEventListener('click', (e) => { e.stopPropagation(); if (match.active && match.phase === 'freeze' && !player.autoplay) cyclePick(); else selectWeapon(arsenal.primary); });
+  $('wbS').addEventListener('click', (e) => { e.stopPropagation(); selectWeapon('pistol'); });
+  $('iosOk').addEventListener('click', () => { $('iosHint').style.display = 'none'; try { window.localStorage.setItem(CONFIG.storageKey + '.ioshint', '1'); } catch (err) { /* no storage */ } });
+  for (const id of ['tOpts', 'pOpts']) $(id).addEventListener('click', (e) => { e.stopPropagation(); openOptions(); });
+  $('oClose').addEventListener('click', (e) => { e.stopPropagation(); closeOptions(); });
+  $('opts').addEventListener('click', (e) => { if (e.target === $('opts')) closeOptions(); });
+  for (const el of document.querySelectorAll('#opts [data-k]')) el.addEventListener('click', (e) => {
+    e.stopPropagation(); const k = el.dataset.k, v = el.dataset.v;
+    setSetting(k, v === 'true' ? true : v === 'false' ? false : /^\d+$/.test(v) ? +v : v); layoutTouch();
+  });
+  for (const [id, k] of [['oTSens', 'tsens'], ['oPSens', 'psens'], ['oAlpha', 'balpha']]) $(id).addEventListener('input', (e) => { setSetting(k, +e.target.value); layoutTouch(); });
+  setTouchUI(DEVICE.coarse);
+  layoutTouch();
+}
+async function restoreGPU() {                      // webglcontextrestored: three re-uploads lazily; redo the raw-GL and render-target parts
+  try {
+    const lod = DEVICE.lowTex ? CONFIG.art.atlasMaxLod - 1 : CONFIG.art.atlasMaxLod;
+    capAtlasLod(ATLAS.tex, lod); if (RENDER.nrm.atlas) capAtlasLod(RENDER.nrm.atlas, lod);
+    try { if (RENDER.env) RENDER.env.dispose(); } catch (err) { /* already gone */ }
+    applyEnvironment();
+    if (world.sun && world.sun.shadow.map) { world.sun.shadow.map.dispose(); world.sun.shadow.map = null; }
+    await compileEverything();
+  } catch (err) { r6fail('restoring the graphics', err); }
+  RENDER.lost = false; hideLoading();
+  if (game.phase === 'paused' && RENDER.lostPlaying && !game.pointerLock) resumeGame();
 }
 
 // =====================================================================================================
@@ -4250,7 +4672,7 @@ function tickPlayer(dt) {
     moveActor(p, NO_INPUT, dt); return;
   }
   readInput(inp);
-  if (matchFrozen()) { inp.forward = inp.back = inp.left = inp.right = inp.jump = inp.sprint = inp.fire = inp.grenade = inp.reload = inp.scope = false; }   // freeze: nobody moves or fires
+  if (matchFrozen()) { inp.forward = inp.back = inp.left = inp.right = inp.jump = inp.sprint = inp.fire = inp.grenade = inp.reload = inp.scope = false; inp.analog = false; }   // freeze: nobody moves or fires
   moveActor(p, inp, dt);
   if (match.active) updateHitVolumes(p);
 }
@@ -4262,7 +4684,7 @@ function moveActor(p, I, dt) {
 function moveActorInner(p, I, dt) {
   const M = CONFIG.move, P = CONFIG.player, r = P.radius;
   const gWas = p.onGround ? p.ground : null;
-  if (p.fwdLock) { if (I.forward) I.forward = false; else p.fwdLock = false; }   // after topping out a string, forward must be released
+  if (p.fwdLock) { if (I.forward) { I.forward = false; if (I.analog && I.ay > 0) I.ay = 0; } else p.fwdLock = false; }   // after topping out a string, forward must be released
   p.noGrabT = Math.max(0, p.noGrabT - dt);
   p.warped = false; p.sprinting = false;
   p.grabCooldown = Math.max(0, p.grabCooldown - dt);
@@ -4281,13 +4703,14 @@ function moveActorInner(p, I, dt) {
   else {
     // wish direction from input and yaw (yaw 0 faces north, positive turns left)
     const sy = Math.sin(p.yaw), cy = Math.cos(p.yaw);
-    const f = (I.forward ? 1 : 0) - (I.back ? 1 : 0), s = (I.right ? 1 : 0) - (I.left ? 1 : 0);
+    let f = (I.forward ? 1 : 0) - (I.back ? 1 : 0), s = (I.right ? 1 : 0) - (I.left ? 1 : 0), amag = 1;
+    if (I.analog) { f = I.ay; s = I.ax; amag = Math.min(1, Math.hypot(f, s)); }   // round 7: a touch or controller stick sets direction and walk speed
     let wx = -sy * f + cy * s, wz = -cy * f - sy * s;
     const wl = Math.hypot(wx, wz), has = wl > 0;
     if (has) { wx /= wl; wz /= wl; }
     const sprinting = I.sprint && f > 0 && !p.crouching;         // sprint only forward
     p.sprinting = sprinting && p.onGround;
-    const speed = p.crouching ? M.crouch : sprinting ? M.sprint : M.walk;
+    const speed = (p.crouching ? M.crouch : sprinting ? M.sprint : M.walk) * (sprinting ? 1 : amag);
     if (p.onGround || has) {
       const rate = p.onGround ? (has ? speed / M.groundAccelTime : M.sprint / M.groundStopTime) : M.airControl * speed / M.groundAccelTime;
       let tx = has ? wx * speed : 0, tz = has ? wz * speed : 0;
@@ -7112,7 +7535,7 @@ function initUI() {
   ui.canvas = $('view'); ui.title = $('title'); ui.go = $('titleGo'); ui.hud = $('hud');
   ui.health = $('healthNum'); ui.healthBox = $('health'); ui.hint = $('hint'); ui.debug = $('debug');
   ui.ticks = $('crosshair').children; ui.hitm = $('hitm'); ui.scope = $('scope'); ui.wname = $('wname'); ui.mag = $('mag'); ui.res = $('res'); ui.gren = $('gren');
-  $('tPlay').addEventListener('click', () => { audioUnlock(); startMatch({ difficulty: settings.difficulty, pointerLock: true }); });
+  $('tPlay').addEventListener('click', () => { audioUnlock(); if (TOUCH.on) goFullscreen(); startMatch({ difficulty: settings.difficulty, pointerLock: !TOUCH.on }); });
   for (const el of $('tDiff').children) el.addEventListener('click', () => { setSetting('difficulty', el.dataset.d); });
   for (const id of ['tQual', 'pQual']) for (const el of $(id).children) el.addEventListener('click', (e) => { e.stopPropagation(); setSetting('quality', el.dataset.q); });
   for (const id of ['tSens', 'pSens']) $(id).addEventListener('input', (e) => setSetting('sensitivity', +e.target.value));
@@ -7129,6 +7552,7 @@ function initUI() {
   loadSettings();
 }
 function requestLock() {
+  if (TOUCH.on || !ui.canvas.requestPointerLock) { game.pointerLock = false; game.lockWanted = false; return; }   // round 7: no pointer lock on touch
   game.pointerLock = true; game.lockWanted = true;
   try { const p = ui.canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { game.lockWanted = false; }); }
   catch (err) { game.lockWanted = false; }
@@ -7148,7 +7572,7 @@ function pauseGame() {
   if (game.phase !== 'playing') return;
   game.phase = 'paused'; game.unlockAt = performance.now();
   clearKeys();
-  $('pause').style.display = 'flex'; syncSettingsUI(); $('pHint').textContent = 'Click anywhere to resume';
+  $('pause').style.display = 'flex'; syncSettingsUI(); $('pHint').textContent = TOUCH.on ? 'Tap RESUME to play' : 'Click anywhere to resume';
   if (document.pointerLockElement) document.exitPointerLock();
 }
 // Round 5: browsers refuse a new pointer lock for about a second after Esc. A click inside that window waits for it (the prompt
@@ -7430,6 +7854,8 @@ function renderFrame(alpha, realDt) {
 }
 function frame(now) {
   requestAnimationFrame(frame);
+  if (settings.fps === 30 && now - (game.lastRender || 0) < 1000 / 30 - 3) return;      // round 7: the 30 fps battery saver
+  game.lastRender = now;
   const real = Math.min(0.25, Math.max(0, (now - lastFrame) / 1000));
   lastFrame = now;
   if (real > 0) game.fps = game.fps ? lerp(game.fps, 1 / real, 0.1) : 1 / real;
@@ -7442,6 +7868,7 @@ function frame(now) {
     if (accumulator >= DT) accumulator = 0;          // drop the backlog rather than spiral
     alpha = accumulator / DT;
   }
+  updateTouch(real); pollPad(real);                // round 7 (before the render, so this frame's look shows)
   renderFrame(alpha, real);
   tickDynRes(real);
   updateHUD(real);
@@ -7561,6 +7988,8 @@ function init() {
   applyEnvironment();                               // 18.2: the PMREM room environment for the room and the viewmodels
   respawnPlayer();
   initInput(canvas);
+  initTouch(canvas);                                // round 7: touch controls, controller, phone page and lifecycle
+  iosHint();
   onResize();
   window.addEventListener('resize', onResize);
   buildPost();                                      // 18.2: the composer chain (needs the addons; without them the game draws straight)
