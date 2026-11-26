@@ -190,7 +190,7 @@
   <div id="callouts" class="ol"></div>
   <div id="arcs"><i></i><i></i><i></i><i></i><i></i><i></i></div>
   <div id="picker" class="ol"><div class="ttl">CHOOSE YOUR PRIMARY</div>
-    <div class="opt" data-w="rifle">1 RIFLE<small>all-round</small></div><div class="opt" data-w="smg">2 SMG<small>close range</small></div><div class="opt" data-w="sniper">3 SNIPER<small>long range</small></div>
+    <div class="opt" data-w="rifle">1 RIFLE<small>all-round</small></div><div class="opt" data-w="smg">2 SMG<small>close range</small></div><div class="opt" data-w="sniper">3 SNIPER<small>long range</small></div><div class="opt" data-w="bazooka">4 BAZOOKA<small>splash</small></div><div class="opt" data-w="band">5 BAND GUN<small>quiet</small></div>
     <div id="pickCount">5</div></div>
   <div id="spect" class="ol brick"></div>
   <pre id="debug"></pre>
@@ -281,18 +281,32 @@ const CONFIG = {
   weapons: {   // interval = seconds between shots; spread in degrees (half angle); falloff [full to, down by, factor]
     rifle:  { label: 'RIFLE', damage: 26, interval: 60 / 600, auto: true, mag: 30, reserve: 90, reload: 2.2,
               spread: 0.5, bloom: 0.35, spreadMax: 3.0, recover: 7, recoverDelay: 0.16, kickUp: 0.9, kickSide: 0.25,
-              falloff: [60, 120, 0.7], draw: 0.45, shake: 0.004, vmKick: 0.05 },
+              falloff: [60, 120, 0.7], draw: 0.45, shake: 0.004, vmKick: 0.05,
+              adsFov: 50, adsSpread: 0.35, adsMove: 0.65, adsIn: 0.18 },                // round 8 (20.1): aim down sights
     smg:    { label: 'SMG', damage: 25, interval: 60 / 900, auto: true, mag: 40, reserve: 120, reload: 2.0,
               spread: 1.0, bloom: 0.20, spreadMax: 3.5, moveMult: 1.15,      // moveMult replaces gun.spreadMult.move for this gun
               recover: 9, recoverDelay: 0.12, kickUp: 0.55, kickSide: 0.35,
-              falloff: [25, 70, 0.45], draw: 0.35, shake: 0.003, vmKick: 0.028 },
+              falloff: [25, 70, 0.45], draw: 0.35, shake: 0.003, vmKick: 0.028,
+              adsFov: 58, adsSpread: 0.6, adsMove: 0.8, adsIn: 0.14 },
     sniper: { label: 'SNIPER', damage: 90, interval: 1.3, auto: false, mag: 5, reserve: 15, reload: 3.0,
               spread: 3.0, scopedSpread: 0.05, scopedMove: 1.5, scopedAir: 4.0, bloom: 0, spreadMax: 3.0, recover: 0, recoverDelay: 0, kickUp: 3.5, kickSide: 0.4,
               falloff: null, draw: 0.7, shake: 0.022, vmKick: 0.16, tracerWidth: 0.07, tracerLife: 0.2, scopeFov: 20, scopeIn: 0.2, scopeDrop: 0.5, boltSound: 0.4 },
     pistol: { label: 'PISTOL', damage: 30, interval: 0.18, auto: false, mag: 12, reserve: 36, reload: 1.4,
               spread: 0.6, bloom: 0.6, spreadMax: 3.0, recover: 8, recoverDelay: 0.12, kickUp: 1.4, kickSide: 0.2,
-              falloff: [30, 70, 0.5], draw: 0.25, shake: 0.005, vmKick: 0.08 }
+              falloff: [30, 70, 0.5], draw: 0.25, shake: 0.005, vmKick: 0.08,
+              adsFov: 60, adsSpread: 0.5, adsMove: 0.85, adsIn: 0.12 },
+    // ---- round 8 (20.2): projectile primaries. projectile: the pool they fly in; carrySpeed: move speed while equipped ----
+    bazooka: { label: 'BAZOOKA', projectile: 'rocket', damage: 150, interval: 1.0, auto: false, mag: 1, reserve: 4, reload: 2.6,
+               spread: 1.5, bloom: 0, spreadMax: 1.5, recover: 0, recoverDelay: 0, kickUp: 4, kickSide: 0.6, falloff: null, draw: 0.8, shake: 0.03, vmKick: 0.16,
+               adsFov: 50, adsSpread: 0.15, adsMove: 0.6, adsIn: 0.25, carrySpeed: 0.85,
+               speed: 80, gravity: 0, life: 4, splash: 8, splashMax: 110, splashMin: 15, selfK: 0.5, shakeRange: 45, shakeAmp: 0.06 },
+    band:    { label: 'BAND GUN', projectile: 'band', damage: 34, interval: 0.3, auto: false, mag: 10, reserve: 40, reload: 1.6,
+               spread: 0.4, bloom: 0.15, spreadMax: 1.2, recover: 6, recoverDelay: 0.15, kickUp: 0.5, kickSide: 0.12, falloff: null, draw: 0.4, shake: 0.002, vmKick: 0.03,
+               adsFov: 58, adsSpread: 0.5, adsMove: 0.8, adsIn: 0.15,
+               speed: 160, gravity: 30, life: 3, bounceK: 0.7, hearRange: 25 }
   },
+  adsKick: 0.7,                                   // 20.1: recoil kick while in ADS (not the sniper's scope)
+  primaries: ['rifle', 'smg', 'sniper', 'bazooka', 'band'],   // the freeze-time pick, in key order 1 to 5
   grenade: { count: 1, speed: 18, upDeg: 10, restitution: 0.45, friction: 0.8, fuse: 2, damage: 140, radius: 7, body: 0.16,
              restSpeed: 0.7, bounceSound: 1.5, burstParticles: 44, burstShake: 0.05, shakeRange: 40, arcSteps: 60, color: '#E0281F',
              hideNear: 2.5,                                         // the thrown grenade is not drawn until this far from the eye
@@ -321,7 +335,8 @@ const CONFIG = {
   viewmodel: { fov: 55, pos: [0.21, -0.2, -0.46], kickDecay: 16, swayAmp: 0.008, swayFreq: 9, reloadDip: 0.1, reloadTilt: 0.25, drawDrop: 0.45,
     body: '#3A4048', dark: '#23272D', accent: '#F2C230', wood: '#8A5A32',
     light: { dir: [-0.35, 0.75, 0.55], ambient: 0.5, diffuse: 0.55, top: 0.12, spec: 0.22, shine: 24 },   // 4B: baked into the viewmodel colours
-    models: { rifle: { muzzle: -0.62 }, smg: { muzzle: -0.36 }, sniper: { muzzle: -0.9 }, pistol: { muzzle: -0.22, dy: 0.05 } },   // dy: 17.12 follow-up, the pistol and its hands sit higher   // 4B: models are built in vmGun; the muzzle is in model space
+    models: { rifle: { muzzle: -0.62, ads: [0, -0.052, -0.3] }, smg: { muzzle: -0.36, ads: [0, -0.035, -0.28] }, sniper: { muzzle: -0.9 }, pistol: { muzzle: -0.22, dy: 0.05, ads: [0, -0.05, -0.3] },
+              bazooka: { muzzle: -0.6, dy: 0.06, ads: [0.055, -0.085, -0.26] }, band: { muzzle: -0.48, ads: [0, -0.06, -0.3] } },   // round 8: ads = the gun's place with its sights on the centre   // dy: 17.12 follow-up, the pistol and its hands sit higher   // 4B: models are built in vmGun; the muzzle is in model space
     // round 3: a green plastic hand holding the red firecracker, shown while a grenade is aimed (the gun drops out of view)
     hand: '#2FA84A', handDark: '#1F7A36', grenade: '#E0281F', fuse: '#FFD21F', handPos: [0.2, -0.19, -0.42], handRise: 0.12,
   },
@@ -442,7 +457,8 @@ const CONFIG = {
         // 16.11 awareness: hits and near misses (within nearMiss of the bot) turn it in every state; gunshots turn bots without a target
         nearMiss: 3, lookTime: 0.7, grenadeFlee: 8, fleeDist: 8.5,
         coverMin: 3, coverPeeks: 2, engageQuiet: 6, highQuiet: 10, highQuietRange: 80, rideSetupWait: 8,   // round 5
-        engageRange: { smg: 40, pistol: 50, rifle: 90, sniper: 1e9 }, closeReplan: 3,
+        engageRange: { smg: 40, pistol: 50, rifle: 90, sniper: 1e9, bazooka: 70, band: 55 }, closeReplan: 3,
+        bazookaMin: 10, bazookaPick: 0.2, bandPick: 0.25, carrierRange: 1.5, carrierPrefer: 0.25,   // 20.2 and 20.4
         searchFresh: 45, searchDistK: 0.25,
         grenadeMin: 10, grenadeMax: 25, grenadeCooldown: 6, grenadeHit: 2.5, grenadeFresh: 3, sniperMin: 12, tacticalReload: 0.5,
         strafeSwap: [0.5, 1.0], holdScan: 0.6, holdScanSpeed: 0.5,
@@ -856,7 +872,7 @@ const inp = { forward: false, back: false, left: false, right: false, jump: fals
 const GAME_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space',
   'ShiftLeft', 'ShiftRight', 'KeyC', 'ControlLeft', 'ControlRight', 'Backquote', 'KeyR', 'KeyG', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5']);
 const WEAPON_KEYS = { Digit2: 'pistol' };       // round 3B: keys 3 to 5 no longer pick weapons (the freeze-time pick does)
-const PICK_KEYS = { Digit1: 'rifle', Digit2: 'smg', Digit3: 'sniper' };
+const PICK_KEYS = { Digit1: 'rifle', Digit2: 'smg', Digit3: 'sniper', Digit4: 'bazooka', Digit5: 'band' };   // round 8: 4 and 5 for the new primaries
 
 function readInput(out) {
   const T = tinput, G = pinput;
@@ -4732,7 +4748,9 @@ function moveActorInner(p, I, dt) {
     if (has) { wx /= wl; wz /= wl; }
     const sprinting = I.sprint && f > 0 && !p.crouching;         // sprint only forward
     p.sprinting = sprinting && p.onGround;
-    const speed = (p.crouching ? M.crouch : sprinting ? M.sprint : M.walk) * (sprinting ? 1 : amag);
+    const A8 = p.arsenal, W8 = A8 ? CONFIG.weapons[A8.current] : null;        // round 8: ADS (20.1), a carried bazooka (20.2), the flag carrier (20.4)
+    const gearK = (W8 && W8.carrySpeed ? W8.carrySpeed : 1) * (W8 && W8.adsMove && A8.scope > 0 ? lerp(1, W8.adsMove, A8.scope) : 1) * (p.flagCarry ? CONFIG.ctf.carrierSpeed : 1);
+    const speed = (p.crouching ? M.crouch : sprinting ? M.sprint : M.walk) * (sprinting ? 1 : amag) * gearK;
     if (p.onGround || has) {
       const rate = p.onGround ? (has ? speed / M.groundAccelTime : M.sprint / M.groundStopTime) : M.airControl * speed / M.groundAccelTime;
       let tx = has ? wx * speed : 0, tz = has ? wz * speed : 0;
@@ -4888,7 +4906,7 @@ function currentSpread(S = player) {
   else if (p.sprinting) m = M.sprint;
   else if (moving) m = W.moveMult || M.move;
   if (p.crouching) m *= M.crouch;
-  return s * m;
+  return s * m * (W.adsSpread && A.scope > 0 ? lerp(1, W.adsSpread, A.scope) : 1);      // 20.1: ADS tightens the spread
 }
 // Impact particles must contrast with the face they come from: the surface colour unless it is too close to the face colour.
 const _impactCache = new Map();
@@ -4913,6 +4931,7 @@ function viewBasis(yaw, pitch) {
 const teamColor = (t) => (t === 'green' ? CONFIG.target.green : CONFIG.target.tan);
 function fireShot(S = player) {
   if (S.brain) S.brain.lastShotT = game.time;
+  S.protectT = 0;                                  // 20.3: firing ends spawn protection
   const A = S.arsenal, name = A.current, W = CONFIG.weapons[name], g = A.guns[name], p = S, G = CONFIG.gun, L = CONFIG.input.pitchLimit, me = S === player;
   const spread = currentSpread(S), B = viewBasis(p.yaw, p.pitch);
   const a = Math.tan(spread * DEG * Math.sqrt(rnd(A))), ph = rnd(A) * Math.PI * 2, ca = a * Math.cos(ph), sa = a * Math.sin(ph);
@@ -4925,7 +4944,8 @@ function fireShot(S = player) {
   const e = { weapon: name, hit: null, zone: null, damage: 0, distance: hit ? +dist.toFixed(3) : null, kind: null, surface: null, spread: +spread.toFixed(3) };
   if (!me) e.by = S.id;
   let killed = false;
-  if (hit && RH.target) {
+  if (W.projectile) { e.kind = 'projectile'; launchProjectile(S, name, ox, oy, oz, hx, hy, hz, me); }       // 20.2: rockets and bands fly
+  else if (hit && RH.target) {
     const T = RH.target, dmg = W.damage * falloffFactor(W, dist) * (RH.zone === 'head' ? G.headMult : 1);
     e.hit = T.id; e.zone = RH.zone; e.damage = +dmg.toFixed(2); e.kind = 'target'; e.surface = 'plastic';
     killed = damageTarget(T, dmg, RH.zone, hx, hy, hz);
@@ -4947,13 +4967,13 @@ function fireShot(S = player) {
     impactSound(c.surface, hx, hy, hz);
   }
   logShot(e);
-  if (me) spawnCasing(ox + brx * 0.34 + bfx * 0.8, oy - 0.22 + bfy * 0.8, oz + brz * 0.34 + bfz * 0.8, brx * 2.6 + p.vx, 2.2, brz * 2.6 + p.vz, p.y, p.surface);
+  if (me && !W.projectile) spawnCasing(ox + brx * 0.34 + bfx * 0.8, oy - 0.22 + bfy * 0.8, oz + brz * 0.34 + bfz * 0.8, brx * 2.6 + p.vx, 2.2, brz * 2.6 + p.vz, p.y, p.surface);
   sfxS(S, 'shot_' + name);
   if (me && !player.autoplayCam && name !== 'sniper') sfx('action_' + name, 1, 1, 0.035);       // 18.7: the bolt or slide cycling
   if (me && (e.kind === 'target' || (e.kind === 'soldier' && e.damage > 0))) sfx(killed ? 'kill' : 'hit');
   if (typeof onGunshot === 'function') { onGunshot(S); onShotPath(S, ox, oy, oz, hx, hy, hz); }
   // recoil: the view kicks, then part of the kick returns over 0.25 s
-  const up = W.kickUp * DEG, side = (rnd(A) * 2 - 1) * W.kickSide * DEG;
+  const ak = W.adsFov && A.scope > 0.5 ? CONFIG.adsKick : 1, up = W.kickUp * DEG * ak, side = (rnd(A) * 2 - 1) * W.kickSide * DEG * ak;   // 20.1: 0.7x kick in ADS
   p.pitch = clamp(p.pitch + up, -L, L); p.yaw = wrapAngle(p.yaw + side);
   A.recP += up * G.recoilReturn; A.recY += side * G.recoilReturn;
   A.recRateP = A.recP / G.recoilReturnTime; A.recRateY = Math.abs(A.recY) / G.recoilReturnTime;
@@ -4964,7 +4984,8 @@ function fireShot(S = player) {
   A.cool = (W.auto ? Math.max(A.cool, -DT) : 0) + W.interval;       // automatic fire keeps exact cadence across ticks
   // tracer: from the current gun's muzzle after the kick; none at all while scoped (round 3 carry-over 1). Bots: from their gun.
   const tl = Math.min(dist, G.tracerLen);
-  if (me && !player.autoplayCam) { if (A.scope <= 0.6) { muzzleWorld(_mw); spawnTracer(_mw.x, _mw.y, _mw.z, ox + dx * tl, oy + dy * tl, oz + dz * tl, W); spawnSmoke(_mw.x, _mw.y, _mw.z); } }
+  if (W.projectile) { if (name === 'bazooka') spawnSmoke(ox - bfx * 0.9, oy - 0.1, oz - bfz * 0.9); }    // a projectile has no tracer; the bazooka's back-blast
+  else if (me && !player.autoplayCam) { if (!(W.scopeFov && A.scope > 0.6)) { muzzleWorld(_mw); spawnTracer(_mw.x, _mw.y, _mw.z, ox + dx * tl, oy + dy * tl, oz + dz * tl, W); spawnSmoke(_mw.x, _mw.y, _mw.z); } }
   else spawnTracer(ox + brx * 0.32 + bfx * 0.7, oy - 0.45 + bfy * 0.7, oz + brz * 0.32 + bfz * 0.7, ox + dx * tl, oy + dy * tl, oz + dz * tl, W);
   return e;
 }
@@ -5011,15 +5032,17 @@ function tickArsenal(S, I, dt) {
   if (A.gAim) { if (I.grenade) A.gHold += dt; else { A.gAim = false; throwGrenadeNow(S); } }
   A.gHeld = I.grenade;
   // sniper scope: held on right mouse, drops for the first part of the bolt cycle
-  const wantScope = !!W.scopeFov && I.scope && A.reloadT <= 0 && A.drawT <= 0 && A.scopeLock <= 0 && !A.gAim && !p.climbing;
-  A.scope = approach(A.scope, wantScope ? 1 : 0, dt / (W.scopeIn || 0.2));
+  // round 8 (20.1): the one `scope` input aims down sights on every gun (the sniper's is its scope); sprint, reload, climb and
+  // grenade break it. A.scope is the 0..1 ADS blend for all guns.
+  const wantScope = !!(W.scopeFov || W.adsFov) && I.scope && A.reloadT <= 0 && A.drawT <= 0 && A.scopeLock <= 0 && !A.gAim && !p.climbing && !p.sprinting;
+  A.scope = approach(A.scope, wantScope ? 1 : 0, dt / (W.scopeIn || W.adsIn || 0.2));
   if (A.press > 0 || (W.auto && I.fire)) pullTrigger(pressed, S, I);
   else if (A.cool < 0) A.cool = 0;
 }
 const NO_INPUT = (() => { const o = {}; for (const k of INPUT_NAMES) o[k] = false; return o; })();
 function tickWeapons(dt) {
   if (!player.dead) tickArsenal(player, player.autoplay && match.active ? (matchFrozen() ? NO_INPUT : player.input) : matchFrozen() ? NO_INPUT : inp, dt);
-  tickGrenades(dt); if (game.range) tickTargets(dt); tickFx(dt);
+  tickGrenades(dt); tickProjectiles(dt); if (game.range) tickTargets(dt); tickFx(dt);
 }
 
 // ---- grenade (toy firecracker) -------------------------------------------------------------------------------
@@ -5092,6 +5115,7 @@ function grenadeTrainPush(o) {
 }
 function throwGrenadeNow(S = player) {
   const A = S.arsenal;
+  S.protectT = 0;
   if (A.grenades <= 0) return false;
   A.grenades--;
   const o = grenadeStart({ fuse: CONFIG.grenade.fuse, owner: S }, S);
@@ -5099,11 +5123,12 @@ function throwGrenadeNow(S = player) {
   if (typeof onGrenadeThrown === 'function') onGrenadeThrown(S, o);
   return true;
 }
-function blastDamage(bx, by, bz, cx, cy, cz) {      // linear from the centre to 0 at the radius; blocked by any collider in between
-  const K = CONFIG.grenade, dx = cx - bx, dy = cy - by, dz = cz - bz, d = Math.hypot(dx, dy, dz);
-  if (d >= K.radius) return 0;
+function blastDamage(bx, by, bz, cx, cy, cz, R, d0, d1) {   // linear from d0 at the centre to d1 at the radius; blocked by any collider in between
+  const K = CONFIG.grenade, rad = R || K.radius, a = d0 === undefined ? K.damage : d0, e = d1 === undefined ? 0 : d1;   // round 8: the rocket passes its own
+  const dx = cx - bx, dy = cy - by, dz = cz - bz, d = Math.hypot(dx, dy, dz);
+  if (d >= rad) return 0;
   if (d > 0.05 && raycastWorld(bx, by, bz, dx / d, dy / d, dz / d, d - 0.02, false)) return 0;
-  return K.damage * (1 - d / K.radius);
+  return lerp(a, e, d / rad);
 }
 function burstGrenade(o) {
   const K = CONFIG.grenade, bx = o.x, by = o.y + 0.1, bz = o.z;
@@ -5573,6 +5598,11 @@ function poseViewmodel(p = player) {      // places the current gun model of sol
   const rl = A.reloadT > 0 ? Math.sin(Math.PI * (1 - A.reloadT / W.reload)) : 0, dr = A.drawT > 0 ? A.drawT / W.draw : 0, aim = A.gAim ? 1 : 0;
   g.position.set(V.pos[0] + Math.sin(t) * V.swayAmp * sp, V.pos[1] + (V.models[A.current].dy || 0) + Math.abs(Math.cos(t)) * V.swayAmp * sp - rl * V.reloadDip - (dr + aim) * V.drawDrop, V.pos[2] + A.kick);
   g.rotation.set(A.kick * 1.4 - rl * V.reloadTilt - dr * 0.8, 0, rl * 0.35 * V.reloadTilt / 0.5);   // R4-5: a partial dip, about half the gun stays on screen
+  const MD = V.models[A.current], ak = MD.ads && W.adsFov ? A.scope * A.scope * (3 - 2 * A.scope) : 0;   // 20.1: ADS brings the sights to the centre
+  if (ak > 0) {
+    g.position.set(lerp(g.position.x, MD.ads[0], ak), lerp(g.position.y, MD.ads[1] - rl * V.reloadDip, ak), lerp(g.position.z, MD.ads[2] + A.kick * 0.6, ak));
+    g.rotation.set(lerp(g.rotation.x, A.kick * 0.5, ak), 0, lerp(g.rotation.z, 0, ak));
+  }
   return g;
 }
 // World point that appears on screen where the viewmodel's muzzle is: the muzzle in viewmodel space is projected with the
@@ -5618,7 +5648,7 @@ function animateGun(g, A) {
 // Pose the viewmodel for this frame; false when none is drawn (title, named views, scoped, dead)
 function prepareViewmodel() {
   const P = viewSubject(), A = P.arsenal || arsenal, V = CONFIG.viewmodel;
-  if (game.view || game.phase === 'title' || A.scope > 0.6 || P.dead) { if (vm.flashLight) vm.flashLight.intensity = 0; return false; }
+  if (game.view || game.phase === 'title' || (CONFIG.weapons[A.current].scopeFov && A.scope > 0.6) || P.dead) { if (vm.flashLight) vm.flashLight.intensity = 0; return false; }   // only a scope hides the gun
   for (const k in vm.guns) vm.guns[k].visible = k === A.current;
   vm.hand.visible = A.gAim;
   if (A.gAim) {                                  // the gun drops away (poseViewmodel) and the hand rises with the grenade
@@ -6663,7 +6693,7 @@ function perceive(b) {
 function onGunshot(S) {                          // a gunshot within hearRange reveals the shooter's position to enemies
   if (!match.active || match.phase !== 'live') return;
   if (match.stats) match.stats.shots[S.team]++;
-  const R = CONFIG.ai.hearRange;
+  const W = S.arsenal ? CONFIG.weapons[S.arsenal.current] : null, R = W && W.hearRange ? W.hearRange : CONFIG.ai.hearRange;   // 20.2: the band gun is quiet
   for (const b of match.soldiers) {
     if (b.dead || !b.brain || b.team === S.team) continue;
     if (Math.hypot(b.x - S.x, b.y - S.y, b.z - S.z) > R) continue;
@@ -7077,7 +7107,7 @@ function separateSoldiers() {
 //      teams (the instance colour is the team plastic): the base, legs per pose, the upper body (belt, torso with straps and pack,
 //      head, helmet), the arms with the gun per weapon, and the arms raised for climbing. Each frame the parts in use are packed to
 //      the front and `count` is set, so a part nobody uses costs no draw call. Hit volumes are unchanged (updateHitVolumes). ----
-const SOLD = { parts: {}, chev: null, names: ['base', 'legsStand', 'legsKneel', 'legsClimb', 'upper', 'arms_rifle', 'arms_smg', 'arms_sniper', 'arms_pistol', 'arms_climb'] };
+const SOLD = { parts: {}, chev: null, names: ['base', 'legsStand', 'legsKneel', 'legsClimb', 'upper', 'arms_rifle', 'arms_smg', 'arms_sniper', 'arms_pistol', 'arms_bazooka', 'arms_band', 'arms_climb'] };
 const SV = { W: '#FFFFFF', D1: '#D2D2D2', D2: '#AFAFAF', G: '#C4C4C4', G2: '#A6A6A6' };     // vertex shades on the team plastic
 function limb(mb, a, b, w, d, col, bv) {           // a bevelled bar from point a to point b, w across, d deep
   const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], L = Math.hypot(dx, dy, dz) || 1e-3;
@@ -7540,7 +7570,7 @@ function loadSettings() {
   try { const s = JSON.parse(window.localStorage.getItem(CONFIG.storageKey) || 'null'); if (s && typeof s === 'object') for (const k in settings) if (k in s) settings[k] = s[k]; } catch (err) { /* no storage: defaults */ }
   settings.sensitivity = clamp(+settings.sensitivity || 1, 0.2, 3); settings.volume = clamp(Math.round(+settings.volume), 0, 100);
   if (!CONFIG.difficulty[settings.difficulty]) settings.difficulty = 'regular';
-  if (!['rifle', 'smg', 'sniper'].includes(settings.pick)) settings.pick = 'rifle';
+  if (!CONFIG.primaries.includes(settings.pick)) settings.pick = 'rifle';
   if (!CONFIG.render.presets[settings.quality]) settings.quality = 'auto';
   settings.tsens = clamp(+settings.tsens || 1, 0.3, 3); settings.psens = clamp(+settings.psens || 1, 0.3, 3); settings.balpha = clamp(Math.round(+settings.balpha || 55), 20, 100);
   if (!CONFIG.touch.sizes[settings.bsize]) settings.bsize = 'M';
@@ -7621,12 +7651,12 @@ function resumeGame() {
   lastFrame = performance.now(); accumulator = 0;
 }
 function pickPrimary(w) {
-  if (!['rifle', 'smg', 'sniper'].includes(w)) return false;
+  if (!CONFIG.primaries.includes(w)) return false;
   setSetting('pick', w);
   if (match.active && match.phase === 'freeze' && !player.autoplay) { arsenal.primary = w; selectWeapon(w); }
   return true;
 }
-function cyclePick() { const L = ['rifle', 'smg', 'sniper']; return pickPrimary(L[(L.indexOf(match.pick) + 1) % 3]); }
+function cyclePick() { const L = CONFIG.primaries; return pickPrimary(L[(L.indexOf(match.pick) + 1) % L.length]); }
 const TEAM_NAME = { green: 'GREEN', tan: 'TAN' };
 const REASONS = { eliminated: (w) => (w === 'green' ? 'Tan eliminated' : 'Green eliminated'), time: () => 'More soldiers standing at 0:00',
   health: () => 'More total health after three replays', damage: () => 'Equal health: more damage dealt this round',
@@ -7709,8 +7739,9 @@ function updateWeaponHUD() {
   }
   ui.hitm.style.display = A.hitT > 0 ? 'block' : 'none';
   if (A.hitT > 0) ui.hitm.className = A.hitKill ? 'kill' : '';
-  ui.scope.style.display = A.scope > 0.01 ? 'block' : 'none';
-  if (A.scope > 0.01) ui.scope.style.opacity = A.scope;
+  const sco = W.scopeFov ? A.scope : 0;              // round 8: the scope overlay is the sniper's only; ADS uses the gun's own sights
+  ui.scope.style.display = sco > 0.01 ? 'block' : 'none';
+  if (sco > 0.01) ui.scope.style.opacity = sco;
   const key = A.current + (A.reloadT > 0 ? 'r' : '') + g.mag + '/' + g.reserve + '/' + A.grenades;
   if (key !== ui.last) {
     ui.last = key;
@@ -7835,7 +7866,7 @@ const _look = new THREE.Vector3();
 function applyLiveConfig() {      // CONFIG.camera and CONFIG.fog are re-read every frame, so hook changes show on the next render
   const C = CONFIG.camera, F = CONFIG.fog;
   const SA = viewSubject().arsenal || arsenal, W = CONFIG.weapons[SA.current], k = SA.scope * SA.scope * (3 - 2 * SA.scope);
-  const fov = W.scopeFov && !game.view ? lerp(C.fovVertical, W.scopeFov, k) : C.fovVertical;        // sniper scope narrows the view
+  const zf = W.scopeFov || W.adsFov, fov = zf && !game.view ? lerp(C.fovVertical, zf, k) : C.fovVertical;        // the sniper scope and (20.1) ADS narrow the view
   if (camera.fov !== fov || camera.near !== C.near || camera.far !== C.far) {
     camera.fov = fov; camera.near = C.near; camera.far = C.far;
     camera.updateProjectionMatrix();
@@ -7876,7 +7907,7 @@ function renderFrame(alpha, realDt) {
   updateArt(realDt);
   updateFan(realDt || 0); updateDecor(); updateOutside(realDt || 0); updateSmoke(realDt || 0);     // round 6
   const MA = arsenal;                              // 18.3: a brief light at the player's muzzle (a grenade burst keeps the light first)
-  if (MA.flash > 0 && !player.dead && !game.view && game.phase !== 'title' && MA.scope <= 0.6 && fx.light.intensity === 0) { muzzleWorld(_mw); fx.light.position.set(_mw.x, _mw.y, _mw.z); fx.light.intensity = CONFIG.render.muzzle.light; }
+  if (MA.flash > 0 && !player.dead && !game.view && game.phase !== 'title' && !(CONFIG.weapons[MA.current].scopeFov && MA.scope > 0.6) && fx.light.intensity === 0) { muzzleWorld(_mw); fx.light.position.set(_mw.x, _mw.y, _mw.z); fx.light.intensity = CONFIG.render.muzzle.light; }
   renderPipeline(realDt);
   game.drawCalls = renderer.info.render.calls;
   game.triangles = renderer.info.render.triangles;
