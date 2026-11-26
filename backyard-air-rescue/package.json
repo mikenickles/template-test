@@ -8,10 +8,12 @@
     "build": "node tools/build.mjs",
     "watch": "node tools/build.mjs --watch",
     "playtest": "node tools/playtest.mjs",
+    "physics-test": "node tools/physics-test.mjs",
     "capture": "node tools/capture.mjs",
     "apk": "npm run build && bash android/build-apk.sh"
   },
   "devDependencies": {
+    "@dimforge/rapier3d-compat": "^0.19.3",
     "esbuild": "^0.25.0",
     "three": "^0.170.0"
   }

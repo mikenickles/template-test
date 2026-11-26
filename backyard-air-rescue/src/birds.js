@@ -46,7 +46,7 @@ function makeBird(pal) {
 // places a bird can land: lawn spots (where it hops and pecks) and perches
 function perchSpots() {
   const s = [];
-  for (const [x, z] of [[-12, 4], [-2, -4], [6, 14], [-20, -2], [18, 6], [-6, 16], [28, -14], [32, 6], [48, 2], [38, -18], [58, -6], [66, 14], [-26, 18], [12, -20]]) s.push({ x, y: 0, z, ground: true });
+  for (const [x, z] of [[-12, 4], [-2, -4], [6, 14], [-20, -2], [18, 6], [-6, 16], [28, -14], [30, 10], [48, 2], [38, -18], [58, -6], [66, 14], [-26, 18], [12, -20]]) s.push({ x, y: 0, z, ground: true });
   for (let x = -28; x < 70; x += 9) s.push({ x: x + rr(-2, 2), y: 5.25, z: -33.55, ground: false });                 // back fence rail
   s.push({ x: L.shed.x - 1.8, y: 7.15, z: L.shed.z + 0.3, ground: false }, { x: L.shed.x + 1.2, y: 7.15, z: L.shed.z - 0.6, ground: false }); // shed ridge
   s.push({ x: L.tower.x - 2.5, y: 9.08, z: L.tower.z + 2.5, ground: false }, { x: L.tower.x + 2.5, y: 9.08, z: L.tower.z + 2.5, ground: false }); // tower posts

@@ -23,6 +23,13 @@ export const L = {
   apple: { x: 64, z: -23 },
   hammock: { x: 42, z: 3, half: 3.6, pivotY: 4.2, drop: 2.75 },
   blanket: { w: 8.0, d: 5.0 },
+  // physics playground
+  blocks: { x: -12, z: -16 },
+  pyramid: { x: 64, z: -1 },
+  domino: { x0: 24.5, z0: -6, x1: 33.5, z1: 6 },
+  cans: { x: -26, z: -6 },
+  tramp: { x: 1, z: -15, r: 2.7, matY: 1.25 },
+  seesaw: { x: 29, z: 19.5, half: 4.2, pivotY: 1.05 },
   line: { x: 43, z: -26, half: 5.2 },
   sunDir: new THREE.Vector3(-0.5, 0.66, -0.45).normalize(),
   baseAlt: 6,
@@ -34,6 +41,10 @@ const OBSTACLES = [
   { x: L.tower.x, z: -12.6, r: 2.2, top: 4.4 },
   { x: L.shed.x, z: L.shed.z, r: 4.4, top: 8.0 },
   { x: L.apple.x, z: L.apple.z, r: 3.6, top: 11.2 },
+  // carry toys over the trampoline and the seesaw so they come down onto them, not through them
+  { x: L.tramp.x, z: L.tramp.z, r: 2.6, top: 1.5 },
+  { x: L.seesaw.x - 2, z: L.seesaw.z, r: 2.4, top: 2.2 },
+  { x: L.seesaw.x + 2, z: L.seesaw.z, r: 2.4, top: 2.2 },
 ];
 // Things it slides around.
 export const PUSHERS = [
@@ -54,8 +65,11 @@ export function inPond(x, z, grow = 0) {
   const dx = (x - L.pond.x) / (L.pond.rx + grow), dz = (z - L.pond.z) / (L.pond.rz + grow);
   return dx * dx + dz * dz < 1;
 }
+/** Extra places to land (the trampoline mat, the seesaw plank), registered by the playground. */
+export const restHooks = [];
 /** Height a toy rests at if set down here, or null if it can't be set down. */
 export function restHeight(x, z) {
+  for (const h of restHooks) { const v = h(x, z); if (v !== undefined) return v; }
   const t = L.tower, s = L.shed;
   if (Math.abs(x - t.x) < 3.6 && z > t.z - 3.6 && z < -5.2) return null;
   if (Math.abs(x - s.x) < s.w / 2 + 1 && Math.abs(z - s.z) < s.d / 2 + 1.2) return null;
@@ -83,6 +97,7 @@ function noGrass(x, z) {
   if (Math.abs(x - L.tower.x) < 1.6 && z > -9 && z < -4.6) return true;
   if (Math.hypot(x - L.tree.x, z - L.tree.z) < 4.2) return true;
   if (Math.abs(x - L.home.x) < L.blanket.w / 2 + 0.2 && Math.abs(z - L.home.z) < L.blanket.d / 2 + 0.2) return true;
+  if (Math.abs(x - L.cans.x) < 1.9 && Math.abs(z - L.cans.z) < 0.9) return true;
   for (const sx of [-1, 1]) if (Math.hypot(x - L.hammock.x - sx * L.hammock.half, z - L.hammock.z) < 0.5) return true;
   for (const [sx, sz] of [[8.0, -4.9], [6.9, -3.2], [6.2, -1.4], [5.9, 0.4]]) if (Math.hypot(x - sx, z - sz) < 1.0) return true;
   if (Math.abs(x - L.planter.x) < L.planter.w / 2 + 0.5 && Math.abs(z - L.planter.z) < L.planter.d / 2 + 0.5) return true;

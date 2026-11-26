@@ -21,6 +21,18 @@ What there is to do, roughly in the order a child meets it:
 6. **Sunset:** when the toys, garden and picnic are all done, the sun goes down, fireflies come out,
    and a green arrow asks you to land on the pad. Hover over it and the helicopter lands itself.
 
+**Physics playground** (real rigid-body physics, offline):
+
+- **Things to knock over:** a block tower by the sandbox, a block pyramid in the garden, a winding
+  domino run, and a pyramid of tin cans on a little table. Swing whatever is on the winch through
+  them (or drop something on them) and they crash down; a few seconds later they float back into
+  place by themselves. The heavy robot plows straight through; light toys bounce off.
+- **Trampoline:** let go of a toy over it and it boings high into the air and lands somewhere silly.
+  Hover low over it with an empty hook and the helicopter bounces too.
+- **Seesaw catapult:** a plush bunny sits on one end. Drop something on the raised end (a pink ring
+  invites you) and she flies across the yard. The heavier the thing and the higher you drop it from,
+  the further she goes; she always hops back to her seat afterwards. The robot sends her furthest.
+
 **Time of day:** tap the sun button in the top-right corner to switch between a warm **morning**
 (low golden sun, morning haze and light beams, pollen drifting in the air, lots of butterflies
 visiting the flowers, birds hopping on the lawn and singing), the original **afternoon**, and
@@ -35,7 +47,7 @@ counter in the top-left corner for three seconds to start over.
 ![watering](media/watering.png)
 ![sunset](media/sunset.png)
 
-Clip of the winch: [`media/winch-teddy.mp4`](media/winch-teddy.mp4)
+Clips: [`media/physics.mp4`](media/physics.mp4) (knock-downs, seesaw, trampoline) and [`media/winch-teddy.mp4`](media/winch-teddy.mp4) (the winch)
 
 ## Install on an Android phone or tablet
 
@@ -64,7 +76,8 @@ The APK is debug-signed: fine for sideloading, not for the Play Store.
 npm install
 npm run build          # bundles src/ + three.js into www/ (open www/index.html in a browser to play; WASD/arrows + space)
 npm run apk            # www/ -> dist/BackyardAirRescue.apk   (needs JDK 17+ and ANDROID_SDK_ROOT with platforms;android-34 + build-tools;34.0.0)
-npm run playtest       # automated phone-size run-through (needs Playwright + Chromium)
+npm run playtest       # automated phone-size run-through of the whole game (needs Playwright + Chromium)
+node tools/physics-test.mjs   # knock-downs, trampoline and seesaw checks
 node tools/capture.mjs # re-records media/winch-teddy.mp4 from real gameplay
 ```
 
@@ -73,9 +86,12 @@ node tools/capture.mjs # re-records media/winch-teddy.mp4 from real gameplay
 - `src/models.js` – helicopter and the three toys
 - `src/picnic.js` – picnic basket, apples, the hammock
 - `src/garden.js` – east garden, thirsty plants, paddling pool, the bucket
+- `src/physics.js` – the Rapier physics world: block tower, pyramid, dominoes, cans, and solid stand-ins for carried toys
+- `src/playground.js` – trampoline, seesaw catapult, the bunny
 - `src/birds.js` – birds on the lawn, fence and roofs, and the passing flock
 - `src/life.js` – leaves, beach ball, pinwheels, butterflies, confetti
 - `src/audio.js` – all sound is synthesised at runtime (no audio files)
 - `android/` – a ~60-line full-screen WebView shell and a Gradle-free build script
 
-Everything is generated in code: there are no downloaded models, textures or sounds.
+Everything is generated in code: there are no downloaded models, textures or sounds. The one
+library besides three.js is the Rapier physics engine, bundled into the game file.

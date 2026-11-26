@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { clamp, lerp, damp, dampAngle, smoothstep, blobShadow } from './util.js';
 import { L, PUSHERS, buildWorld, cruiseAlt, restHeight, inPond } from './world.js';
-import { makeHeli, makeTeddy, makeDuck, makeRobot, makeKite, makeBall, makeBoat, makeDoll, makeAcorn, makeHook, makeMarker } from './models.js';
+import { makeHeli, makeTeddy, makeDuck, makeRobot, makeKite, makeBall, makeBoat, makeDoll, makeBunny, makeAcorn, makeHook, makeMarker } from './models.js';
+import { initPhysics } from './physics.js';
+import { buildPlayground } from './playground.js';
 import { makeBasket, buildApples, buildHammock, APPLES } from './picnic.js';
 import { buildLife } from './life.js';
 import { buildBirds } from './birds.js';
@@ -67,7 +69,7 @@ scene.add(H.root);
 const heli = {
   pos: new THREE.Vector3(L.pad.x, L.pad.y + H.skidY * 0.92, L.pad.z),
   vel: new THREE.Vector3(), tilt: new THREE.Vector2(), tiltVel: new THREE.Vector2(),
-  yaw: 0.85, yVel: 0, hang: 0.7, flying: false, rotor: 0.12, comp: 0, loadF: 0, react: new THREE.Vector2(),
+  yaw: 0.85, yVel: 0, hang: 0.7, squash: 0, squashV: 0, flying: false, rotor: 0.12, comp: 0, loadF: 0, react: new THREE.Vector2(),
 };
 const heliShadow = blobShadow(1.5, 0.38); scene.add(heliShadow);
 const toyShadow = blobShadow(0.95, 0.4); scene.add(toyShadow); toyShadow.visible = false;
@@ -107,7 +109,14 @@ bucket.group.position.set(L.bucket.x, 0, L.bucket.z); scene.add(bucket.group);
 // the picnic basket waits on the blanket
 const basket = Object.assign(makeBasket(), extra(), { state: 'placed', rest: 0.1, yaw: 0 });
 basket.group.position.copy(blanketC); scene.add(basket.group);
-const things = [...toys, bucket, basket];
+// the seesaw's passenger: a plush bunny who always hops back to her seat
+const bunny = Object.assign(makeBunny(), extra(), { state: 'placed', isBunny: true, yaw: 0 });
+bunny.group.position.set(L.seesaw.x - 3.4, 2, L.seesaw.z); scene.add(bunny.group);
+const things = [...toys, bucket, basket, bunny];
+const playground = buildPlayground(scene, audio, life, { landingSpot });
+// real rigid-body physics (blocks, dominoes, cans) starts up asynchronously; the game waits for it before the first frame
+let phys = null;
+const physReady = initPhysics(scene, audio, life).then((p) => { phys = p; }).catch((e) => console.warn('physics unavailable', e));
 teddy.group.position.set(L.bed.x, 0.3, L.bed.z); teddy.rest = 0.3;
 duck.group.position.set(L.pond.x - 0.4, 0.02, L.pond.z + 0.2); duck.rest = 0.02; duck.floaty = true; duck.yaw = -0.5;
 robot.group.position.set(L.tower.x, L.tower.platY, L.tower.z + 0.3); robot.rest = L.tower.platY;
@@ -138,7 +147,7 @@ padMarker.g.position.set(L.pad.x, L.pad.y + 0.03, L.pad.z);
 
 const timers = [];
 const later = (sec, fn) => timers.push({ at: game.time + sec, fn });
-const game = { time: 0, rescued: 0, free: false, celebrate: -1, usedWinch: false, delivered: false, gardenDone: 0, pourTick: 0, round: 1, picnic: false, finale: null, tod: 0, todTarget: 0, acorns: 0, paint: 0, shakeT: 0 };
+const game = { time: 0, rescued: 0, free: false, celebrate: -1, usedWinch: false, delivered: false, heliBounces: 0, gardenDone: 0, pourTick: 0, round: 1, picnic: false, finale: null, tod: 0, todTarget: 0, acorns: 0, paint: 0, shakeT: 0 };
 
 // ---------------------------------------------------------------- HUD
 const hud = { joy: $('joy'), knob: $('knob'), btn: $('winch'), slots: [...document.querySelectorAll('.slot')], edge: $('edge'), hintMove: $('hintMove'), hintTap: $('hintTap'), star: $('star'), pips: [...document.querySelectorAll('#garden .pip')], counter: $('counter'), acornPips: [...document.querySelectorAll('#acorns i')], swatches: [...document.querySelectorAll('#paints .sw')], applebar: $('applebar'), ap: [...document.querySelectorAll('#applebar i')], bigstar: $('bigstar'), tod: $('tod'), grade: [...document.querySelectorAll('#grade > div')], gstar: $('gstar'), water: $('water'), wd: [...document.querySelectorAll('#water i')] };
@@ -219,6 +228,7 @@ function nearestToy() {
   return best;
 }
 function hookFloor(x, z) {
+  { const f = playground.floor(x, z); if (f !== undefined) return f; }
   if (Math.abs(x - L.tower.x) < 2.7 && Math.abs(z - L.tower.z) < 2.7) return L.tower.platY + 0.15;
   const hw = L.shed.w / 2 + 0.9;
   if (Math.abs(x - L.shed.x) < hw && Math.abs(z - L.shed.z) < L.shed.d / 2 + 0.8) return L.shed.h + 0.3 + 3.0 * (1 - Math.abs(x - L.shed.x) / hw);
@@ -256,7 +266,8 @@ function landingSpot(x, z) {
 function dropToy(t) {
   // let go too early: the toy tumbles down and has to be fetched again
   const p = t.group.position, v = winch.vel;
-  const [sx, sz] = landingSpot(p.x + v.x * 0.4, p.z + v.z * 0.4);
+  // straight down onto the seesaw or trampoline if it's right underneath; otherwise carried forward a little by the swing
+  const [sx, sz] = playground.catches(p.x, p.z) ? [p.x, p.z] : landingSpot(p.x + v.x * 0.4, p.z + v.z * 0.4);
   const rest = restHeight(sx, sz), g = 20, vy = Math.min(v.y, 2), hgt = Math.max(0, p.y - rest);
   t.fall = { from: p.clone(), to: new THREE.Vector3(sx, rest, sz), vy, g, t: 0, dur: (vy + Math.sqrt(vy * vy + 2 * g * hgt)) / g, spin: (Math.random() < 0.5 ? -1 : 1) * 5 };
   t.state = 'falling'; t.rest = rest;
@@ -272,8 +283,10 @@ function dropToy(t) {
   audio.sfx.uhoh();
 }
 
-function landToy(t) {
-  t.state = 'placed'; t.fall = null;
+function landToy(t, impact = 3) {
+  t.fall = null;
+  if (playground.landed(t, impact) === 'bounce') return;
+  t.state = 'placed';
   t.floaty = t.rest < 0.05 && inPond(t.group.position.x, t.group.position.z);
   t.group.quaternion.identity(); t.yaw = 0; t.sqV = 10;
   audio.sfx.pomf(); if (t.floaty) audio.sfx.splash();
@@ -342,6 +355,7 @@ function updateWinch(dt) {
         t.group.position.set(w.bob.x, w.rest, w.bob.z); t.group.quaternion.identity(); t.yaw = 0; t.sqV = 7;
         audio.sfx.pomf(); if (t.floaty) audio.sfx.splash();
         w.toy = null; w.state = 'release'; w.timer = 0;
+        if (playground.landed(t, 2.5) === 'bounce') break;
         if (!game.free && !t.rescued && hdist(t.group.position, L.pad) < L.pad.r + 0.8) rescue(t);
         if (t.isBasket && hdist(t.group.position, L.home) < 3) deliverBasket();
       }
@@ -619,6 +633,29 @@ function load() {
   ['pointerup', 'pointercancel', 'pointerleave'].forEach((n) => hud.counter.addEventListener(n, stop));
 }
 
+// ---------------------------------------------------------------- physics coupling
+const _pc = new Map(), _push = new THREE.Vector3();
+function physicsStep(dt) {
+  const k = phys.plan(dt);
+  if (!k) return;
+  const sdt = k / 60;
+  for (const th of things) {
+    let c = null;
+    if (th.state === 'hanging' || th.state === 'falling') {
+      c = _pc.get(th) || new THREE.Vector3(); _pc.set(th, c);
+      if (th.state === 'hanging') c.set(winch.bob.x, winch.bob.y - th.height * 0.55, winch.bob.z);
+      else c.set(th.group.position.x, th.group.position.y + th.height * 0.5, th.group.position.z);
+    }
+    phys.drive(th, c, sdt);
+  }
+  phys.step(k, game.time, (x, z) => !!winch.toy && Math.hypot(winch.bob.x - x, winch.bob.z - z) < 7);
+  // whatever is on the winch gets shoved back by what it hits: a light toy bounces off, a heavy one barely notices
+  if (winch.toy && winch.toy.state === 'hanging') {
+    const d = phys.pushedBy(winch.toy, _push);
+    if (d && d.lengthSq() > 1e-5) { winch.bob.add(d); winch.vel.addScaledVector(d, 0.7 / sdt); if (winch.vel.length() > 25) winch.vel.setLength(25); }
+  }
+}
+
 function rescue(t) {
   if (!t.isToy) return;
   t.rescued = true; game.rescued++; game.delivered = true; t.happy = 5;
@@ -683,11 +720,17 @@ function flightStep(h, inp) {
   const hangT = winch.toy ? winch.toy.carry.len + winch.toy.height : 0.7;
   if (game.time - winch.liftAt > 0.9) heli.hang += (hangT - heli.hang) * Math.min(1, h * 2.2);
   const hang = heli.hang;
-  const target = heli.flying ? cruiseAlt(p.x, p.z, hang) : L.pad.y + H.skidY * 0.92;
+  const TR = playground.tramp, matTop = L.tramp.matY + H.skidY * 0.92 - TR.dip;
+  let target = heli.flying ? cruiseAlt(p.x, p.z, hang) : L.pad.y + H.skidY * 0.92;
+  if (heli.flying && TR.heliPull) target = matTop - 0.3;
   heli.comp += (heli.loadF - heli.comp) * Math.min(1, h / 0.75);
   const K = heli.flying && game.time < takeoffUntil ? 3.2 : 10;
   heli.yVel += ((target - p.y) * K - 5.6 * heli.yVel - (heli.loadF - heli.comp)) * h;
   p.y += heli.yVel * h;
+  if (TR.heliPull && p.y < matTop + 0.05 && heli.yVel < 0) {
+    heli.yVel = 15; TR.kick(5); TR.cool = game.time + 0.55; TR.heliPull = false;
+    audio.sfx.boing(1); heli.squashV = -9; game.heliBounces++;
+  }
 }
 let takeoffUntil = 0;
 
@@ -759,7 +802,9 @@ function update(dt) {
 
   updateWinch(dt);
   const n = Math.max(1, Math.ceil(dt / (1 / 120))), h = dt / n;
+  { const TR = playground.tramp; TR.heliPull = heli.flying && !winch.toy && winch.state === 'idle' && !winch.held && playground.heliOver(heli.pos) && Math.hypot(heli.vel.x, heli.vel.z) < 3.5 && t > TR.cool; }
   for (let i = 0; i < n; i++) { flightStep(h, inp); cableStep(h); }
+  if (phys) physicsStep(dt);
 
   // --- helicopter pose
   if (mag > 0.2 && heli.flying && !winch.hold) heli.yaw = dampAngle(heli.yaw, Math.atan2(inp.x, inp.y), FLY.yawRate, dt);
@@ -767,6 +812,8 @@ function update(dt) {
   v1.set(heli.tilt.y, 0, -heli.tilt.x); if (lean > 1e-4) v1.normalize(); else v1.set(1, 0, 0);
   q1.setFromAxisAngle(v1, lean * FLY.maxLean); q2.setFromAxisAngle(UP, heli.yaw);
   H.body.quaternion.copy(q1).multiply(q2);
+  heli.squashV += (-heli.squash * 120 - heli.squashV * 9) * dt; heli.squash += heli.squashV * dt;
+  H.body.scale.set(0.92 * (1 - heli.squash * 0.4), 0.92 * (1 + heli.squash), 0.92 * (1 - heli.squash * 0.4));
   const bob = heli.flying ? Math.sin(t * 1.9) * 0.07 * heli.rotor : 0;
   H.root.position.set(heli.pos.x + (heli.flying ? Math.sin(t * 1.3) * 0.03 : 0), heli.pos.y + bob, heli.pos.z);
   H.rotor.rotation.y += heli.rotor * 34 * dt; H.tailRotor.rotation.x += heli.rotor * 50 * dt;
@@ -793,6 +840,7 @@ function update(dt) {
     hookShadow.position.set(winch.bob.x, sy, winch.bob.z);
   }
 
+  playground.update(dt, t, things, bunny, winch.toy, heli.pos);
   const thirstyCount = garden.thirsty().length;
   // --- toys and the bucket
   things.forEach((toy, i) => {
@@ -818,7 +866,9 @@ function update(dt) {
       g.position.y = Math.max(f.to.y, f.from.y + f.vy * f.t - 0.5 * f.g * f.t * f.t);
       g.rotation.set(Math.sin(f.t * 7) * 0.5, toy.yaw, f.t * f.spin);
       mood = 'hang';
-      if (u >= 1) { g.position.copy(f.to); landToy(toy); }
+      if (u >= 1) { g.position.copy(f.to); landToy(toy, Math.abs(f.vy - f.g * f.t)); }
+    } else if (toy.state === 'hopping') {
+      // posed by the playground while she hops home
     } else if (toy.state === 'stranded' && toy.idle) {
       toy.idle(t, dt);
       g.rotation.z += Math.sin(t * 38) * 0.2 * toy.wiggle;
@@ -841,7 +891,7 @@ function update(dt) {
     toy.anim(at + i, mood);
     // rescue marker
     const loose = toy.state !== 'hanging' && toy.state !== 'falling' && !winch.toy;
-    const m = markers[i], show = toy.isBucket ? loose && thirstyCount > 0 : toy.isBasket ? loose && !game.picnic : !game.free && !toy.rescued && loose && toy.appear >= 1;
+    const m = markers[i], show = toy.isBunny ? false : toy.isBucket ? loose && thirstyCount > 0 : toy.isBasket ? loose && !game.picnic : !game.free && !toy.rescued && loose && toy.appear >= 1;
     m.g.visible = show;
     if (show) {
       m.g.position.set(g.position.x, toy.rest + 0.06, g.position.z);
@@ -982,13 +1032,14 @@ function boot() {
   update(1 / 60); renderer.render(scene, camera);
   document.body.classList.add('ready');
   if (!MANUAL) requestAnimationFrame((n) => { last = n; requestAnimationFrame(frame); });
+  window.__game = testHooks;
 }
-boot();
+physReady.then(boot);
 document.addEventListener('visibilitychange', () => { last = performance.now(); });
 
 // Hooks for the automated playtest (tools/playtest.mjs) – not used by the game itself.
-window.__game = {
-  heli, winch, toys, game, L, bucket, garden, basket, acorns,
+const testHooks = {
+  heli, winch, toys, game, L, bucket, garden, basket, acorns, bunny, playground, get phys() { return phys; },
   advance(dt, steps = 1, draw = true) { for (let i = 0; i < steps; i++) update(dt); if (draw) renderer.render(scene, camera); },
   draw() { renderer.render(scene, camera); },
   script(x, y) { scripted = x === null ? null : { x, y }; },
@@ -1004,6 +1055,8 @@ window.__game = {
     bucket: { state: bucket.state, water: bucket.water, pos: bucket.group.position.toArray(), loop: toyTop(bucket, new THREE.Vector3()).toArray() },
     basket: { state: basket.state, held: basket.held.length, pos: basket.group.position.toArray(), loop: toyTop(basket, new THREE.Vector3()).toArray() },
     apples: orchard.apples.map((a) => ({ state: a.state, pos: a.pos.toArray() })), acorns: acorns.map((a) => ({ got: a.got, pos: a.home.toArray() })),
-    paint: game.paint, round: game.round, picnic: game.picnic, finale: game.finale, dusk: clamp(game.tod - 1, 0, 1), tod: game.tod, butterflies: life.butterflies(), birds: birds.count(), flying: heli.flying, gardenDone: game.gardenDone, plants: garden.plants.map((p) => ({ x: p.x, z: p.z, bloomed: p.target === 1, progress: p.progress })),
+    paint: game.paint, round: game.round, picnic: game.picnic, physics: phys ? phys.report() : null, saw: { theta: playground.saw.theta, A: playground.saw.seats.A?.name || null, B: playground.saw.seats.B?.name || null, last: playground.saw.lastLaunch || null }, trampBounces: playground.tramp.bounces, heliBounces: game.heliBounces, alt: heli.pos.y,
+    bunnyState: { state: bunny.state, pos: bunny.group.position.toArray(), seat: bunny.seat || null },
+    finale: game.finale, dusk: clamp(game.tod - 1, 0, 1), tod: game.tod, butterflies: life.butterflies(), birds: birds.count(), flying: heli.flying, gardenDone: game.gardenDone, plants: garden.plants.map((p) => ({ x: p.x, z: p.z, bloomed: p.target === 1, progress: p.progress })),
     bob: winch.bob.toArray(), toys: toys.map((t) => ({ name: t.name, state: t.state, rescued: t.rescued, pos: t.group.position.toArray(), loop: toyTop(t, new THREE.Vector3()).toArray() })) }),
 };

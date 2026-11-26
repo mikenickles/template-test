@@ -290,6 +290,35 @@ export function makeDoll() {
   return { name: 'doll', group: g, height: H, anim, carry: { len: 2.3, damp: 1.8, mass: 0.05, spring: 0, g: 28 } };
 }
 
+export function makeBunny() {
+  // plush bunny who rides the seesaw; hops back to it after every flight
+  const g = new THREE.Group(), H = 1.95, fur = M(0xfff4f8, { r: 0.85, env: 0.3 }), pink = M(0xffa6c8, { r: 0.7 });
+  put(g, sph(0.5), fur, [0, 0.52, 0], null, [1, 1.05, 0.95]);
+  put(g, sph(0.3), M(0xffe0ec, { r: 0.85 }), [0, 0.48, 0.3], null, [1, 1.1, 0.5]);
+  put(g, sph(0.2), fur, [0, 0.25, -0.45]);
+  const head = new THREE.Group(); head.position.set(0, 1.18, 0.05); g.add(head);
+  put(head, sph(0.4), fur, [0, 0, 0], null, [1.05, 0.95, 0.95]);
+  eye(head, -0.14, 0.06, 0.33); eye(head, 0.14, 0.06, 0.33);
+  put(head, sph(0.06), pink, [0, -0.06, 0.38], null, [1.2, 0.8, 0.8], false);
+  for (const sx of [-1, 1]) put(head, sph(0.07), M(0xffb0c8, { r: 0.7 }), [sx * 0.24, -0.1, 0.3], null, [1, 0.6, 0.5], false);
+  const ears = [];
+  for (const sx of [-1, 1]) {
+    const e = new THREE.Group(); e.position.set(sx * 0.15, 0.3, -0.02); head.add(e);
+    put(e, new THREE.CapsuleGeometry(0.1, 0.42, 4, 10), fur, [0, 0.3, 0], null, [1, 1, 0.6]);
+    put(e, new THREE.CapsuleGeometry(0.05, 0.34, 4, 8), pink, [0, 0.3, 0.05], null, [1, 1, 0.4], false);
+    ears.push(e);
+  }
+  for (const sx of [-1, 1]) { put(g, sph(0.15), fur, [sx * 0.42, 0.62, 0.12]); put(g, sph(0.17), fur, [sx * 0.24, 0.12, 0.3], null, [1, 0.6, 1.4]); }
+  loop(g, H);
+  const anim = (t, mood) => {
+    const k = mood === 'hang' ? 1 : mood === 'happy' ? 0.7 : 0.25;
+    ears[0].rotation.z = 0.2 + Math.sin(t * 6) * 0.25 * k; ears[1].rotation.z = -0.2 - Math.sin(t * 6 + 1) * 0.25 * k;
+    ears.forEach((e) => (e.rotation.x = mood === 'hang' ? -0.5 : Math.sin(t * 1.3) * 0.1));
+    head.rotation.z = Math.sin(t * 1.1) * 0.08;
+  };
+  return { name: 'bunny', group: g, height: H, anim, carry: { len: 2.2, damp: 1.6, mass: 0.05, spring: 0, g: 26 } };
+}
+
 /** Golden acorn hidden around the yard. */
 export function makeAcorn() {
   const g = new THREE.Group();

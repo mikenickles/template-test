@@ -74,6 +74,17 @@ export function makeAudio() {
     pour() { noise(0.14, { vol: 0.07, freq: 2600, type: 'bandpass' }); },
     grow() { tone(392, 0.5, { type: 'triangle', vol: 0.18, to: 1175 }); [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.4, { type: 'triangle', vol: 0.14, delay: 0.35 + i * 0.08 })); },
     splash() { noise(0.3, { vol: 0.25, freq: 1800, type: 'bandpass' }); },
+    clack(kind, s, hitByToy) {
+      if (kind === 'can') { const f = 1500 + Math.random() * 900; tone(f, 0.25, { type: 'triangle', vol: 0.06 * s }); tone(f * 1.52, 0.18, { vol: 0.03 * s }); noise(0.03, { vol: 0.12 * s, freq: 5000, type: 'highpass' }); }
+      else { const f = (kind === 'domino' ? 900 : 520) + Math.random() * 200; tone(f, 0.07, { type: 'triangle', vol: 0.12 * s, to: f * 0.7 }); noise(0.025, { vol: 0.14 * s, freq: 2400, type: 'bandpass' }); }
+      if (hitByToy) tone(200, 0.12, { vol: 0.12 * s, to: 120 });
+    },
+    cheer() { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone(f, 0.22, { type: 'triangle', vol: 0.12, delay: i * 0.08 })); for (let i = 0; i < 6; i++) noise(0.12, { vol: 0.05, freq: 1800 + i * 300, type: 'bandpass', delay: 0.1 + i * 0.09 }); },
+    rebuild() { for (let i = 0; i < 8; i++) tone(900 + i * 140, 0.12, { type: 'sine', vol: 0.05, delay: i * 0.07 }); },
+    boing(s = 1) { tone(140, 0.45, { type: 'sine', vol: 0.3 * s, to: 520 }); tone(280, 0.35, { type: 'triangle', vol: 0.08 * s, to: 900, delay: 0.03 }); },
+    thunk(s = 1) { tone(110, 0.2, { type: 'sine', vol: 0.3 * s, to: 70 }); noise(0.08, { vol: 0.15 * s, freq: 500 }); },
+    whoosh(k = 1) { noise(0.5, { vol: 0.14 + 0.1 * k, freq: 1200, type: 'bandpass' }); tone(300, 0.5, { type: 'sine', vol: 0.1, to: 1200 + 600 * k }); },
+    hop() { tone(500, 0.08, { type: 'sine', vol: 0.08, to: 800 }); },
     flutter() { for (let i = 0; i < 5; i++) noise(0.05, { vol: 0.09, freq: 1400, type: 'bandpass', delay: i * 0.045 }); },
     alarm() { const b = 3400 + Math.random() * 600; for (let i = 0; i < 3; i++) tone(b, 0.05, { vol: 0.05, to: b * 0.8, delay: 0.05 + i * 0.08 }); },
     flockSong() { for (let i = 0; i < 6; i++) { const b = 2600 + Math.random() * 1600; tone(b, 0.07, { vol: 0.03, to: b * 1.25, delay: i * 0.16 + Math.random() * 0.05 }); } },
