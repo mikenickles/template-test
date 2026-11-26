@@ -1529,3 +1529,92 @@ clash by moving the end.
 - **Riding:** bots shoot a visible target while riding, with air aim error.
 - **CTF:** attackers and carriers may route by zip.
 - **Liveness:** the 16.11 rule holds; a bot never waits at a zip top.
+
+## 22. Round 10: health regen and "feeling powerful" (user request, 2026-11-27)
+
+The user asked for health regen after 10 s, plus every item from the "feeling powerful" list:
+- kill streaks;
+- a slow-motion final-kill replay;
+- blasts that launch soldiers;
+- breakable cover.
+
+This is a gameplay change. Nothing runs, as before: `node --check` and ESLint only.
+
+### 22.1 Health regen
+- **Rule:** after 10 s without taking damage, health regenerates at 15 HP/s up to 100. Taking any damage restarts the
+  10 s wait.
+- **Who:** the player and every bot, in both modes.
+- **HUD:** the health bar glows softly while it regenerates. The low-health effects (if they exist) fade as health
+  returns.
+- **Bots:** a bot under 50 HP with no visible enemy prefers to hold cover until regen completes. This is a wait with
+  a purpose, so the 16.11 liveness clock pauses while the bot is regenerating, with a cap of 10 s.
+
+### 22.2 Kill streaks
+- **Earning:** kills in a row without dying. Assists don't count. The count resets on death; in elimination it
+  carries across rounds while you survive.
+- **Ready rewards:** a reward is banked at the moment you reach its count, and you can hold one of each.
+- **Use:** Q, the touch STREAK button (it appears when a reward is ready), or the controller D-pad up. Each use fires
+  the most recently earned reward.
+- **HUD:** ready rewards show as icons by the weapon bar. Banners announce "SCOUT PLANE READY" and the like. Both
+  teams hear stings when a reward is used.
+
+| Streak | Reward | What it does |
+| --- | --- | --- |
+| 3 | **Paper-plane scout** | A folded paper plane glides across the room from your team's side. For 10 s every enemy shows as a red marker through walls on your team's HUDs. Shooting the plane (HP 60) ends it early. |
+| 5 | **RC car bomb** | A toy RC car drives off from your feet. You drive it (move and look as normal, camera behind the car, max 22 u/s) while your soldier stands still and can be shot. Fire detonates it, and so does contact with an enemy or the end of its 15 s. Blast: 150 at the centre, radius 9, the bazooka's line-of-sight rule. If your soldier is hit, control snaps back and the car blows up where it is. Floor and ramps only, no climbing. |
+| 7 | **Rubber-band barrage** | You aim at a spot in sight within 120 and fire to mark it. After 2 s, 24 bands rain over 3 s within radius 10 of the mark, 40 damage each, visible arcing from your team's shelf. Enemies see the marked circle on the floor, so they have about 2 s to run. |
+
+- **Bots** earn streaks too:
+  - They launch the scout at once.
+  - They drive the RC car along floor walk edges to the nearest reachable enemy and detonate within 3. If no enemy is
+    reachable on the floor, they keep the car.
+  - They aim the barrage at the largest enemy group they have seen in the last 5 s.
+- **CTF:** the flag carrier can't drive an RC car, because the carrier has to keep moving.
+
+### 22.3 Slow-motion final kill
+- **When it plays:**
+  - in elimination, after the kill that ends a round;
+  - in CTF, after the winning capture, and after a flag-carrier kill that stops a capture within 5 of the stand.
+- **Recording:** a preallocated ring buffer records the last 4 s of every soldier's transform and pose, plus
+  projectiles, the flags, the train and effects triggers, at 30 Hz. It is interpolated on playback, with no per-frame
+  allocation.
+- **Replay:** 3 s of slow motion at 0.3x, ending 0.5 s after the kill.
+  - **Camera:** a cinematic orbit that starts behind the killer, swings to frame both the killer and the victim, and
+    holds on the victim's tumble.
+  - **Look:** letterbox bars, a "FINAL KILL" title with the killer's name, the depth of field from the title screen,
+    and slowed, pitched-down audio.
+- **Skip and timing:** tap, click or any key skips it. The replay runs during the existing gap between rounds and
+  does not lengthen the match clock.
+
+### 22.4 Blasts launch soldiers (rigid plastic, not floppy ragdolls)
+- **Dead soldiers become rigid bodies:**
+  - a box approximating the figure and its base;
+  - position, velocity and angular velocity, with gravity;
+  - they bounce off colliders (restitution 0.35, friction 0.6);
+  - they settle and sleep under 0.3 u/s.
+- **Launch:**
+  - Bullets give a small push of 2 u/s.
+  - Blasts (grenade, bazooka, RC car) launch bodies away from the centre at up to 30 u/s with a strong spin.
+  - Bodies clatter on every bounce, with sound per surface. At most 10 bodies are live, then they are pooled.
+- **Living soldiers:** a blast pushes them back. The impulse is 0.15 x damage taken (u/s), capped at 14, plus 4 upward.
+  - It knocks riders off zip lines (21.2).
+  - It knocks soldiers off ledges: being blasted off the bed is intended.
+  - Bots recover through the usual off-graph return to the nearest node.
+
+### 22.5 Breakable cover (explosives only)
+- **Damage:** grenades, the bazooka, the RC car and barrage bands damage these pieces; bullets only leave decals.
+  - **Letter blocks**, HP 200: they topple into 2 or 3 tumbling block bodies, as in 22.4.
+  - **Floor book stacks used as cover**, HP 200: the books spill flat.
+  - **Fort wall segments** between the pillars (not the pillars or the tower), HP 300: they chip in two stages, first
+    the top half, then down to rubble.
+  - Other floor cover pieces may be breakable if they meet the rules below.
+- **Rules that keep navigation sound:**
+  - Breaking only removes or lowers colliders, never adds them.
+  - Rubble is walkable: no more than the step-up height, or visual only.
+  - Debris is visual only.
+  - Nothing that is part of a route or supports a waypoint edge can break: book stairs, strings, ruler bridges, ramps,
+    zip anchors, fort towers, the ruin platform, and anything a waypoint stands on.
+  - Bots treat broken cover as gone: they drop cover points on it and replan.
+- **Reset:** everything rebuilds at each round start in elimination. In CTF a piece rebuilds 45 s after it breaks,
+  but only once no soldier is standing in it.
+- **Collider hash:** `colliderHash()` reports the intact map. A new `__game.brokenCover()` lists the broken pieces.
