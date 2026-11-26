@@ -2022,3 +2022,62 @@ Elimination plays as before, apart from ADS and the two new primaries. New numbe
   - `matchReport()` adds `mode` and `captures`.
   - `__game.startMatch({ mode: 'ctf' })` and `runMatch({ mode: 'ctf' })` start a CTF match.
   - Without a mode, both start elimination, as before.
+
+## Round 9
+
+DESIGN 21, zip lines. Nothing was run, as ordered. The static checks were:
+
+- `node --check` on the module script extracted from `index.html` (it parses);
+- ESLint with `no-undef`, `no-dupe-keys` and `no-redeclare` (clean);
+- the 21.1 clearance check.
+
+The clearance check is a standalone node script (in the session scratchpad, not in the repository) that does not load the
+game. It copies the CONFIG literal and the collider-building functions out of `index.html`, with the visuals stubbed out,
+and builds the collider list. It then samples each ride against every collider and the train's swept footprint, and sweeps
+the new walk edges as `validateWaypoints` does. On the round 8 file it reproduces `e2904076`. Numbers and deviations are in
+DESIGN 21.5.
+
+- **Colliders:** eight new `cyl` posts (`zip.<line>.post.top` / `.post.bottom`). Collider hash **`cb059ceb`** (was
+  `e2904076`), set by design, not run (DESIGN 8).
+- **The lines** (`CONFIG.zip.lines`; feet start and landing):
+  - zip.bed `(35.7, 18, 79)` to `(57.85, 1.2, 79)`;
+  - zip.desk `(94.3, 26, 81)` to `(62.15, 1.2, 81)`;
+  - zip.green `(107.3, 40, 40)` to `(66.5, 0, 61.5)`;
+  - zip.tan `(107.3, 40, 120)` to `(66.5, 0, 98.5)`.
+
+  Every end except the two shelf starts' z moved from 21.1 to clear the furniture. The tan landing in 21.1 was inside
+  `s.C-f.block`.
+- **Clearance:** each hanging rider clears every collider by at least 0.300. The feet are at least 1.21 above the train's
+  top where a line crosses the track.
+- **Riding** (21.2):
+  - JUMP (Space, touch JUMP, controller A) within 2 of a line's start grabs it.
+  - The ride starts at 8 u/s, speeds up by g sin(slope) and is capped at 28. It takes 1.65 s on the bed line, 2.10 s on
+    the desk line and 2.80 s on the shelf lines.
+  - JUMP again lets go with the momentum, and the fall is a normal fall. The end puts the rider on the landing with a
+    small push.
+  - Riders can look anywhere and fire at the air spread. ADS and crouch are off.
+  - Any blast damage knocks a rider off; death drops the body. A body in the way lets go, so nobody is ever stuck on a
+    line.
+  - Any number of riders share a line. A flag carrier keeps the glow and beam.
+- **Look** (21.3):
+  - A white and route-orange striped cord with a 0.4 sag.
+  - At the top, a pencil taped to the furniture with a big orange eraser (the route cap) and a spool-and-bottle-cap
+    trolley hanging ready.
+  - At the bottom, a pencil in flat blue modelling clay.
+  - Each rider gets its own trolley, from an instanced pool of 11.
+- **Sound:**
+  - A clack on grab and another on letting go, positional for everyone else.
+  - A sawtooth-and-noise whirr whose pitch follows the nearest rider's speed.
+  - Enemy bots within 25 hear the grab.
+- **Bots** (21.4):
+  - New nodes `z.<line>.top` and `z.<line>.bot`, plus `z.bed.plat` and `z.desk.plat`, with walk links into the graph.
+  - One-way `zip` edges, costed by the ride time.
+  - A* uses zip edges only when the caller allows them. A bot with a brain standing on furniture (y 15 or more) allows them
+    in 0.7 of its plans; floor bots never do.
+  - Bots grab with the virtual JUMP and shoot while riding. A failed grab repaths within 1.2 s.
+  - The nav test can pick a zip edge as its least-used edge.
+- **HUD and controls:**
+  - "JUMP to zip" in range, "JUMP to let go" while riding.
+  - The touch JUMP button shows a zip icon and ZIP in range, and LET GO while riding.
+  - The title help gains a zip line line, and its freeze-pick line now lists 4 bazooka and 5 band gun.
+- **Reports and test hooks:** `matchReport()` stats gain `zips`; `__game.zipLines()` lists the lines.

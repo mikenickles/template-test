@@ -118,6 +118,10 @@
   #tKnob { position: absolute; left: 28%; top: 28%; width: 44%; height: 44%; border-radius: 50%; background: rgba(255,255,255,.75); }
   .tb { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 50%; box-sizing: border-box; background: rgba(28,24,40,.55);
     border: 3px solid rgba(255,255,255,.6); color: #FFFFFF; font-weight: 900; letter-spacing: 0.04em; opacity: var(--ta); text-shadow: 0 1px 0 var(--ink); }
+  .tb.zip { border-color: var(--crayonO); background: rgba(240,138,42,.5); padding-top: 18%; }     /* round 9 (21.2): the zip icon: a striped line with a trolley */
+  .tb.zip::before { content: ''; position: absolute; left: 14%; right: 14%; top: 26%; height: 4px; border-radius: 2px; transform: rotate(-22deg);
+    background: repeating-linear-gradient(90deg, #FFFFFF 0 5px, #FF8A1F 5px 10px); box-shadow: 0 1px 0 var(--ink); }
+  .tb.zip::after { content: ''; position: absolute; left: 44%; top: 25%; width: 12%; height: 12%; border-radius: 50%; background: #FFFFFF; border: 2px solid var(--ink); }
   .tb.big { background: rgba(212,60,46,.6); } .tb.on { transform: scale(0.92); background: rgba(255,210,31,.5); } .tb.lit { border-color: var(--accent); color: var(--accent); }
   #tPause, #wbar, #board { display: none; pointer-events: auto; }
   body.touch #tPause { display: flex; align-items: center; justify-content: center; position: absolute; left: calc(env(safe-area-inset-left) + 8px); top: calc(env(safe-area-inset-top) + 8px);
@@ -236,8 +240,9 @@
   <div class="keys">
     <b>W A S D</b> move &nbsp; <b>Mouse</b> look &nbsp; <b>Shift</b> sprint &nbsp; <b>Space</b> jump &nbsp; <b>C</b> or <b>Ctrl</b> crouch<br>
     Yellow strings: walk into one to grab it, <b>W</b> climbs, <b>S</b> descends, <b>Space</b> lets go<br>
+    Orange-striped zip lines: <b>Space</b> by the pencil at the top rides one down, <b>Space</b> again lets go (you can shoot on the way)<br>
     <b>Left mouse</b> fire &nbsp; <b>Right mouse</b> scope &nbsp; <b>R</b> reload &nbsp; <b>1</b> primary &nbsp; <b>2</b> pistol &nbsp; <b>Wheel</b> swap &nbsp; <b>G</b> hold to aim a grenade, release to throw<br>
-    Freeze time: <b>1</b> rifle &nbsp; <b>2</b> SMG &nbsp; <b>3</b> sniper (or click) &nbsp;&nbsp; Dead: <b>left click</b> next teammate &nbsp;&nbsp; <b>Esc</b> pause &nbsp; <b>`</b> debug overlay<br>
+    Freeze time: <b>1</b> rifle &nbsp; <b>2</b> SMG &nbsp; <b>3</b> sniper &nbsp; <b>4</b> bazooka &nbsp; <b>5</b> band gun (or click) &nbsp;&nbsp; Dead: <b>left click</b> next teammate &nbsp;&nbsp; <b>Esc</b> pause &nbsp; <b>`</b> debug overlay<br>
     Five Green against five Tan. First to five rounds. No respawns.
   </div>
   </div>
@@ -278,6 +283,18 @@ const CONFIG = {
            drawAbove: 2 },      // strings are drawn this far above their top surface so they show from on top
   fall: { safe: 10, perUnit: 5 },
   spring: { launchVel: [-4.5, 31, 0] },
+  // ---- round 9 (DESIGN 21): zip lines, one-way, top to bottom. from / to: where the rider's feet start and land; the line runs
+  //      hang above the feet and sags sag at the middle. Ends moved from 21.1 to clear the furniture (DESIGN 21.5). top / bottom:
+  //      the waypoint nodes (a bot grabs at top). Posts stand postBack (in plan) behind the start and beyond the landing. ----
+  zip: { hang: 2.4, grab: 2, v0: 8, vMax: 28, sag: 0.4, endPush: 2.5, snap: 0.12, regrab: 0.6, postBack: 1.05, postR: 0.15, postTop: 0.45,
+         cordR: 0.075, stripe: 0.55, clay: [0.75, 0.08], hearRange: 25,
+         botChance: 0.7, botUpY: 15, botGrabTime: 1.2, botBan: 20,                    // 21.4: 0.7 per plan, only for bots up on furniture
+         whirr: { gain: 0.06, f0: 170, fk: 24, ref: 6, range: 45 },
+         lines: [
+           { id: 'zip.bed',   from: [35.7, 18, 79],   to: [57.85, 1.2, 79],  top: 'z.bed.top',   bottom: 'z.bed.bot', postBackB: 0.85 },   // the pillar is 1.15 past the landing
+           { id: 'zip.desk',  from: [94.3, 26, 81],   to: [62.15, 1.2, 81],  top: 'z.desk.top',  bottom: 'z.desk.bot', postBackB: 0.85 },
+           { id: 'zip.green', from: [107.3, 40, 40],  to: [66.5, 0, 61.5],   top: 'z.green.top', bottom: 'z.green.bot' },
+           { id: 'zip.tan',   from: [107.3, 40, 120], to: [66.5, 0, 98.5],   top: 'z.tan.top',   bottom: 'z.tan.bot' }] },
   camera: { fovVertical: 75, near: 0.05, far: 400 },   // read live every frame
   fog: { near: 20, far: 320 },                      // read live every frame, like camera
   sim: { hz: 60, maxStepsPerFrame: 15 },
@@ -428,6 +445,8 @@ const CONFIG = {
       reload_band:   [{ k: 'n', t: 'bandpass', f: 2400, q: 4, d: 0.02, g: 0.3 }, { k: 'n', t: 'bandpass', f: 2400, q: 4, d: 0.02, g: 0.3, at: 0.3 }, { k: 'n', t: 'bandpass', f: 2400, q: 4, d: 0.02, g: 0.3, at: 0.6 }, { k: 'n', t: 'bandpass', f: 2400, q: 4, d: 0.02, g: 0.3, at: 0.9 }, { k: 'n', t: 'bandpass', f: 2600, q: 4, d: 0.02, g: 0.3, at: 1.2 }],
       band_hit:      [{ k: 'n', t: 'bandpass', f: 1500, q: 2, d: 0.03, g: 0.25 }, { k: 'o', t: 'triangle', f: 400, f1: 260, d: 0.04, g: 0.1 }],
       rocket_boom:   [{ k: 'n', t: 'lowpass', f: 2200, f1: 180, d: 0.7, g: 1.0 }, { k: 'o', t: 'square', f: 120, f1: 35, d: 0.35, g: 0.7 }, { k: 'n', t: 'highpass', f: 3000, d: 0.04, g: 0.5, at: 0.06 }, { k: 'n', t: 'bandpass', f: 400, q: 0.6, d: 1.4, g: 0.25, at: 0.1 }],
+      zip_grab:      [{ k: 'o', t: 'square', f: 1250, f1: 620, d: 0.04, g: 0.22 }, { k: 'n', t: 'bandpass', f: 2600, q: 3, d: 0.035, g: 0.3 }, { k: 'o', t: 'triangle', f: 380, f1: 300, d: 0.06, g: 0.12, at: 0.03 }],
+      zip_off:       [{ k: 'o', t: 'square', f: 900, f1: 450, d: 0.04, g: 0.2 }, { k: 'n', t: 'bandpass', f: 1900, q: 3, d: 0.04, g: 0.28 }],
       flag_taken:    [{ k: 'o', t: 'square', f: 660, d: 0.1, g: 0.22 }, { k: 'o', t: 'square', f: 880, d: 0.1, g: 0.22, at: 0.11 }, { k: 'o', t: 'square', f: 1175, d: 0.22, g: 0.22, at: 0.22 }],
       flag_dropped:  [{ k: 'o', t: 'triangle', f: 700, f1: 500, d: 0.25, g: 0.3 }, { k: 'o', t: 'triangle', f: 500, f1: 380, d: 0.3, g: 0.28, at: 0.24 }],
       flag_returned: [{ k: 'o', t: 'triangle', f: 523, d: 0.12, g: 0.26 }, { k: 'o', t: 'triangle', f: 784, d: 0.2, g: 0.26, at: 0.13 }],
@@ -862,6 +881,18 @@ function updateAmbience6(ctx, dt) {
   }
   const fd = ambDist(F.x, F.hub, F.z), fg = F.on ? F.hum * Math.min(1, 40 / Math.max(1, fd)) : 0;
   amb6.fanG.gain.setTargetAtTime(fg, t, 0.2);
+  if (!amb6.zipG) {                               // round 9 (21.3): a zip trolley's whirr, pitch rising with speed, from the nearest rider
+    const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 200; const og = ctx.createGain(); og.gain.value = 0.35; o.connect(og);
+    const src = ctx.createBufferSource(); src.buffer = audio.noise; src.loop = true; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 1.5;
+    const g = ctx.createGain(); g.gain.value = 0; og.connect(g); src.connect(bp); bp.connect(g);
+    if (ctx.createStereoPanner) { const pn = ctx.createStereoPanner(); g.connect(pn); pn.connect(audio.out); amb6.zipP = pn; } else g.connect(audio.out);
+    o.start(); src.start(); amb6.zipG = g; amb6.zipO = o; amb6.zipF = bp;
+  }
+  { const ZW = CONFIG.zip.whirr; let zd = Infinity, zr = null;
+    for (let i = 0; i < ACTORS.length; i++) { const a = ACTORS[i]; if (!a.zip || a.zip.snap > 0) continue; const d = ambDist(a.x, a.y + 2.4, a.z); if (d < zd) { zd = d; zr = a; } }
+    const zv = zr ? zr.zip.v : 0;
+    amb6.zipG.gain.setTargetAtTime(zr && zd < ZW.range ? ZW.gain * Math.min(1, ZW.ref / Math.max(1, zd)) * (0.45 + 0.55 * zv / CONFIG.zip.vMax) : 0, t, 0.05);
+    if (zr) { amb6.zipO.frequency.setTargetAtTime(ZW.f0 + ZW.fk * zv, t, 0.05); amb6.zipF.frequency.setTargetAtTime(500 + 70 * zv, t, 0.05); if (amb6.zipP) amb6.zipP.pan.setTargetAtTime(clamp(panAt(zr.x, zr.y + 2.4, zr.z), -1, 1), t, 0.05); } }
   if (!amb6.flapG) {                              // round 8 (20.4): a carried flag flaps (filtered noise, fluttered at 7 Hz), heard within flapRange
     const src = ctx.createBufferSource(); src.buffer = audio.noise; src.loop = true; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 700; bp.Q.value = 1.2;
     const am = ctx.createGain(); am.gain.value = 0.6; const lfo = ctx.createOscillator(); lfo.frequency.value = 7; const lg = ctx.createGain(); lg.gain.value = 0.4; lfo.connect(lg); lg.connect(am.gain); lfo.start();
@@ -1147,6 +1178,8 @@ function updateTouch(realDt) {
   if (player.health < TOUCH.lastHealth - 0.01 && match.active) haptic('damage');
   TOUCH.lastHealth = player.health;
   if (!TOUCH.on) return;
+  const zj = player.zip ? 'off' : zipNear(player) >= 0 ? 'zip' : '';                 // 21.2: the JUMP button wears a zip icon at a line's start
+  if (TOUCH.zipK !== zj && TOUCH.btns.jump) { TOUCH.zipK = zj; const J = TOUCH.btns.jump; J.classList.toggle('zip', zj === 'zip'); J.textContent = zj === 'zip' ? 'ZIP' : zj === 'off' ? 'LET GO' : 'JUMP'; }
   const ads = adsCapable();                        // SCOPE shows for any gun that can aim down sights (the sniper in round 7)
   if (TOUCH.scopeShown !== ads) { TOUCH.scopeShown = ads; TOUCH.btns.scope.style.display = ads ? 'flex' : 'none'; if (!ads) setADS(false); }
   const wk = A.primary + '|' + A.current;
@@ -1462,6 +1495,22 @@ function stairs(id, x0, x1, zFoot, dir, n, rise, depth) {       // book stairs: 
 const LAPS = [];           // route laps, drawn by the art pass (R4A-5)
 function lap(x0, x1, z0, z1, y) { LAPS.push([x0, x1, z0, z1, y]); vbox(x0, x1, z0, z1, y, y + CONFIG.route.lapThick, CONFIG.color.route); }   // visual only
 const mz = (z0, z1, mirror) => (mirror ? [160 - z1, 160 - z0] : [z0, z1]);     // north-south mirror rule
+// ---- round 9 (21.1): zip line geometry. S and E are the line points over the start and the landing; the ride runs S to E and sags
+//      sag * 4t(1-t); the cord runs on, straight, to the top post (postBack behind S in plan) and the bottom post (beyond E) ----
+const ZIP = { lines: [] };
+function zipGeom(L, Z) {
+  const S = [L.from[0], L.from[1] + Z.hang, L.from[2]], E = [L.to[0], L.to[1] + Z.hang, L.to[2]];
+  const dx = E[0] - S[0], dy = E[1] - S[1], dz = E[2] - S[2], len = Math.hypot(dx, dy, dz), hl = Math.hypot(dx, dz);
+  const hx = dx / hl, hz = dz / hl, k = -dy / hl, pb = Z.postBack, pbB = L.postBackB || Z.postBack;
+  const A = [S[0] - hx * pb, S[1] + k * pb, S[2] - hz * pb], B = [E[0] + hx * pbB, E[1] - k * pbB, E[2] + hz * pbB];
+  return { id: L.id, top: L.top, bottom: L.bottom, from: L.from, to: L.to, S, E, A, B, len, hx, hz, sin: -dy / len, yaw: Math.atan2(hx, hz),
+    postA: { x: A[0], z: A[2], y0: L.from[1], y1: A[1] + Z.postTop }, postB: { x: B[0], z: B[2], y0: L.to[1], y1: B[1] + Z.postTop } };
+}
+function zipAt(G, t, Z, out) {                    // the rider's feet at ride fraction t (0 at the start, 1 at the landing)
+  out.x = G.S[0] + (G.E[0] - G.S[0]) * t; out.z = G.S[2] + (G.E[2] - G.S[2]) * t;
+  out.y = G.S[1] + (G.E[1] - G.S[1]) * t - Z.sag * 4 * t * (1 - t) - Z.hang;
+  return out;
+}
 function boxNS(id, x0, x1, z0, z1, y0, y1, color, surface) {    // object that exists on both halves
   box('n.' + id, x0, x1, z0, z1, y0, y1, color, surface);
   box('s.' + id, x0, x1, 160 - z1, 160 - z0, y0, y1, color, surface);
@@ -1646,6 +1695,15 @@ function buildWorld(scene, renderer) {
   box('m.E-d.toybox', 81.4, 85, 78.5, 81.5, 0, 2.5, CONFIG.color.cardboard, 'card');      // 16.11: closes the fort-to-fort east corridor
   box('tunnel.wall.w', 72.6, 73.6, 68, 92, 0, 6.5, G, 'card'); box('tunnel.wall.e', 80.4, 81.4, 68, 92, 0, 6.5, G, 'card');
   box('tunnel.roof', 72.6, 81.4, 68, 92, 6.5, 8, G, 'card');      // round 3: underside 6.5, so a rider standing on a 5-high roof is scraped off
+
+  // ---- round 9 (21.3): zip line posts, a pencil at each end (small cylinders; the clay under the bottom pencil is flat, no collider) ----
+  ZIP.lines.length = 0;
+  for (const L of CONFIG.zip.lines) {
+    const Gz = zipGeom(L, CONFIG.zip), r = CONFIG.zip.postR;
+    ZIP.lines.push(Gz);
+    cyl(L.id + '.post.top', Gz.postA.x, Gz.postA.z, r, Gz.postA.y0, Gz.postA.y1, RT, 'wood');
+    cyl(L.id + '.post.bottom', Gz.postB.x, Gz.postB.z, r, Gz.postB.y0, Gz.postB.y1, RT, 'wood');
+  }
 
   // ---- 7. train track (visual only in round 1: no collider, no bumps) ----
   const TK = CONFIG.track, seg = TRACK.length / Math.round(TRACK.length / TK.sleeperGap), a = {}, b = {};
@@ -2562,6 +2620,72 @@ function artStrings(M) {
   pt.xform(rotM(0, Math.atan2(dx, dz), 0, s.x, 0, s.z)); bev(pt, -0.08, 0.08, 0, 0.12, 0, L, { col: CONFIG.color.string }, 0.03); pt.xform(null);
 }
 
+// ---- round 9 (21.3) zip lines: a taut cord in white and route-orange stripes (the climbing strings are plain yellow), sagging a little
+//      along the ride and straight on to each post. Top: a pencil taped to the furniture with a big orange eraser (the route cap, read
+//      from across the room) and a spool-and-bottle-cap trolley hanging ready. Bottom: a pencil in a flat lump of modelling clay. ----
+const _zq = new THREE.Quaternion(), _zv = new THREE.Vector3(), _zy = new THREE.Vector3(0, 1, 0);
+function rodAB(mb, a, b, r, col, segs) {          // a round rod from point a to point b
+  const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], l = Math.hypot(dx, dy, dz);
+  if (l < 1e-4) return;
+  _zq.setFromUnitVectors(_zy, _zv.set(dx / l, dy / l, dz / l));
+  mb.xform(new THREE.Matrix4().compose(new THREE.Vector3(a[0], a[1], a[2]), _zq, new THREE.Vector3(1, 1, 1)));
+  lathe(mb, 0, 0, [[r, 0], [r, l]], { col, segs: segs || 6 });
+  mb.xform(null);
+}
+function trolleyParts(mb) {                        // local frame: the cord point at the origin, +z along the line in plan, the strap down
+  mb.xform(rotM(0, 0, Math.PI / 2, 0, -0.17, 0));      // the spool rolls on the cord: its axis across the line, the core's top on the cord
+  lathe(mb, 0, 0, [[0.36, -0.26], [0.36, -0.17], [0.17, -0.16], [0.17, 0.16], [0.36, 0.17], [0.36, 0.26]], { col: '#F4D7A1', segs: 14, cap: [true, true] });
+  mb.xform(null);
+  lathe(mb, 0, 0, [[0.25, -0.6], [0.25, -0.45], [0.2, -0.43]], { col: '#D43C2E', segs: 14, cap: [true, true] });     // the bottle cap
+  bev(mb, -0.045, 0.045, -1.02, -0.43, -0.045, 0.045, { col: '#2B2F36' }, 0.015);                                       // the strap
+  bev(mb, -0.32, 0.32, -1.1, -0.98, -0.06, 0.06, { col: CONFIG.color.route }, 0.03);                                   // the handle
+}
+function zipPencil(mb, x, z, y0, y1, eraser) {    // a hexagonal pencil standing up; the top one wears the orange route cap
+  const r = CONFIG.zip.postR;
+  lathe(mb, x, z, [[r, y0], [r, y1 - (eraser ? 0.52 : 0.14)]], { col: '#F2C230', segs: 6, cap: [true, !eraser] });
+  if (eraser) {
+    lathe(mb, x, z, [[r + 0.015, y1 - 0.52], [r + 0.015, y1 - 0.4]], { col: '#B9BEC6', segs: 10 });
+    lathe(mb, x, z, [[0.32, y1 - 0.4], [0.32, y1 - 0.08], [0.24, y1]], { col: CONFIG.color.route, segs: 12, cap: [true, true] });
+  } else lathe(mb, x, z, [[r, y1 - 0.14], [r * 0.7, y1 - 0.02], [0.02, y1]], { col: '#F4D7A1', segs: 6 });
+}
+function artZip(M) {
+  const Z = CONFIG.zip, pt = M.paint, RT = CONFIG.color.route, q = { x: 0, y: 0, z: 0 };
+  for (const G of ZIP.lines) {
+    const pts = [G.A], n = Math.max(2, Math.ceil(G.len / Z.stripe));
+    for (let i = 0; i <= n; i++) { zipAt(G, i / n, Z, q); pts.push([q.x, q.y + Z.hang, q.z]); }
+    pts.push(G.B);
+    for (let i = 0; i < pts.length - 1; i++) rodAB(pt, pts[i], pts[i + 1], Z.cordR, i % 2 ? RT : '#FFFFFF', 6);
+    const a = G.postA, b = G.postB;
+    zipPencil(pt, a.x, a.z, a.y0, a.y1, true);
+    lathe(pt, a.x, a.z, [[0.24, a.y0], [0.24, a.y0 + 0.45]], { col: '#E8E2CF', segs: 10, cap: [false, true] });         // tape round the foot
+    pt.xform(rotM(0, G.yaw, 0, a.x, a.y0, a.z)); bev(pt, -0.2, 0.2, 0, 0.025, -0.6, 0.6, { col: '#E8E2CF' }, 0.008); pt.xform(null);   // and across the top
+    pt.xform(rotM(0, G.yaw, 0, G.S[0], G.S[1], G.S[2])); trolleyParts(pt); pt.xform(null);                           // the trolley, ready
+    zipPencil(pt, b.x, b.z, b.y0, b.y1, false);
+    lathe(pt, b.x, b.z, [[Z.clay[0], b.y0], [Z.clay[0] * 0.8, b.y0 + Z.clay[1]], [0.22, b.y0 + Z.clay[1] + 0.02]], { col: '#3FA9F5', segs: 14, cap: [false, true] });   // flat clay
+  }
+}
+// One trolley per rider, on the line over the rider's head (21.2: the soldier hangs from its handle)
+const ZIPV = { mesh: null, n: 0 };
+function buildZipRiders(scene) {
+  const mb = new MB('zip.trolley', false); trolleyParts(mb);
+  const g = mb.geometry(); g.deleteAttribute('atile'); g.deleteAttribute('apbr');
+  const m = new THREE.InstancedMesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0 }), CONFIG.bot.max + 1);
+  for (let i = 0; i < m.count; i++) fxPut(m, i, 0, -50, 0, 0, 0, 0);
+  m.frustumCulled = false; m.castShadow = true; m.name = 'zip.riders'; scene.add(m); ZIPV.mesh = m;
+}
+function updateZipVisuals(alpha) {                 // per render frame, allocation-free
+  const m = ZIPV.mesh; if (!m) return;
+  let k = 0;
+  for (let i = 0; i < ACTORS.length && k < m.count; i++) {
+    const a = ACTORS[i]; if (!a.zip) continue;
+    _fx.q.setFromAxisAngle(_zy, ZIP.lines[a.zip.i].yaw);
+    fxPut(m, k++, lerp(a.px, a.x, alpha), lerp(a.py, a.y, alpha) + CONFIG.zip.hang, lerp(a.pz, a.z, alpha), 1, 1, 1, _fx.q);
+  }
+  for (let i = k; i < ZIPV.n; i++) fxPut(m, i, 0, -50, 0, 0, 0, 0);
+  if (k || ZIPV.n) m.instanceMatrix.needsUpdate = true;
+  ZIPV.n = k;
+}
+
 // ---- 17.3 shelves: painted boards and posts; books upright and flat; globe, trophy, piggy bank, plant, alarm clock; book stairs,
 //      landings and the stair guards of tall upright books ----
 function artShelves(M, rnd) {
@@ -2891,6 +3015,7 @@ function buildArt(scene) {
   const fam = (name, fn) => { const n0 = M.paint.p.length + M.toy.p.length + M.shell.p.length; fn(); ART.family[name] = (M.paint.p.length + M.toy.p.length + M.shell.p.length - n0) / 9; };
   fam('shell', () => artShell(M)); fam('bed', () => artBed(M, artRng(1))); fam('bear', () => artBear(M)); fam('bucket', () => artBucketAndSpares(M));
   fam('desk', () => artDesk(M, artRng(2))); fam('shelves', () => artShelves(M, artRng(3))); fam('forts', () => artForts(M)); fam('cover', () => artCover(M)); fam('decor', () => { try { artDecor(M); } catch (err) { r6fail('3D decor', err); } });
+  fam('zip', () => { try { artZip(M); } catch (err) { r6fail('the zip line art', err); } });      // round 9 (21.3)
   const CK = CONFIG.art.chunks;
   for (const k of ['shell', 'paint', 'toy', 'glow']) {
     const parts = k === 'glow' ? [{ geo: M[k].geometry(), origin: [0, 0, 0] }] : M[k].chunks(CK[0], CK[1]);
@@ -4646,7 +4771,7 @@ const player = {
   px: 60, py: 0, pz: 20,                       // previous tick, for interpolated rendering
   height: CONFIG.player.height, eye: CONFIG.player.eye, peye: CONFIG.player.eye,
   onGround: true, ground: null, surface: 'wood', crouching: false,
-  climbing: null, climbNeedRelease: false, grabCooldown: 0,
+  climbing: null, climbNeedRelease: false, grabCooldown: 0, zip: null, zipS: null,
   health: CONFIG.player.health, peakY: 0, coyote: 0, jumpBuf: 0, jumpHeld: false,
   launched: false, launchX: 0, launchZ: 0, warped: false, sprinting: false, fwdLock: false, noGrab: null, noGrabT: 0,
   stepOff: 0, pstepOff: 0, moved: 0, safe: { x: 60, y: 0, z: 20 }, carryVx: 0, carryVz: 0, wedgeT: 0, id: 'player', team: 'green', name: 'You'
@@ -4665,7 +4790,7 @@ function placeActor(p, x, y, z, yaw, pitch) {
   p.vx = p.vy = p.vz = 0;
   if (yaw !== undefined && yaw !== null) p.yaw = wrapAngle(yaw);
   if (pitch !== undefined && pitch !== null) p.pitch = clamp(pitch, -CONFIG.input.pitchLimit, CONFIG.input.pitchLimit);
-  p.climbing = null; p.launched = false; p.stepOff = p.pstepOff = 0; p.peakY = y; p.coyote = 0; p.jumpBuf = 0; p.moved = 0;
+  p.climbing = null; p.zip = null; p.launched = false; p.stepOff = p.pstepOff = 0; p.peakY = y; p.coyote = 0; p.jumpBuf = 0; p.moved = 0;
   p.warped = true; p.fwdLock = false; p.noGrab = null; p.noGrabT = 0; p.wedgeT = 0; p.carryVx = p.carryVz = 0;
   const g = groundBelow(x, z, P.radius, y + 0.05, y + 0.05);
   p.onGround = g.c !== null && y - g.y < 0.05;
@@ -4744,6 +4869,71 @@ function tickClimb(p, I, dt) {
   }
 }
 
+// ---- round 9 (21.2): zip lines. JUMP within grab of a line's start grabs it (a short snap onto the start); the line carries the rider,
+//      v0 growing by g sin(slope) up to vMax; JUMP lets go early with the momentum (a normal fall, normal fall damage); the end lets
+//      go with a little push onto the landing. The body box hangs below the line as usual; a blast knocks a rider off (damageSoldier);
+//      anything in the way lets go, so a ride never leaves a soldier stuck. Riders do not collide with each other. ----
+const _zp = { x: 0, y: 0, z: 0 };
+function zipNear(p) {                             // the line whose start this soldier stands within grab of, or -1
+  if (p.dead || p.zip || p.climbing || !p.onGround || p.grabCooldown > 0) return -1;
+  const g = CONFIG.zip.grab;
+  for (let i = 0; i < ZIP.lines.length; i++) { const F = ZIP.lines[i].from; if (Math.hypot(F[0] - p.x, F[1] - p.y, F[2] - p.z) <= g) return i; }
+  return -1;
+}
+function tryGrabZip(p) {
+  const i = zipNear(p);
+  if (i < 0) return false;
+  const K = CONFIG.zip, Z = p.zipS || (p.zipS = { i: 0, s: 0, v: 0, snap: 0, fx: 0, fy: 0, fz: 0 });
+  Z.i = i; Z.s = 0; Z.v = K.v0; Z.snap = K.snap; Z.fx = p.x; Z.fy = p.y; Z.fz = p.z;
+  p.zip = Z; p.jumpBuf = 0; p.coyote = 0; p.onGround = false; p.ground = null; p.launched = false; p.crouching = false; p.vx = p.vy = p.vz = 0;
+  sfxS(p, 'zip_grab'); zipHeard(p);
+  if (match.active && match.stats && match.stats.zips) match.stats.zips[p.team]++;
+  return true;
+}
+function tickZip(p, dt) {
+  const Z = p.zip, K = CONFIG.zip, G = ZIP.lines[Z.i];
+  p.crouching = false; p.height = CONFIG.player.height;
+  if (p.dead) { zipLetGo(p, 'dead'); return; }      // the body falls
+  if (Z.snap > 0) {                                 // the short slide from where the grab happened onto the line's start
+    Z.snap = Math.max(0, Z.snap - dt); const k = 1 - Z.snap / K.snap;
+    p.x = lerp(Z.fx, G.from[0], k); p.y = lerp(Z.fy, G.from[1], k); p.z = lerp(Z.fz, G.from[2], k); p.vx = p.vy = p.vz = 0; p.jumpBuf = 0;
+    return;
+  }
+  if (p.jumpBuf > 0) { p.jumpBuf = 0; zipLetGo(p, 'jump'); return; }
+  Z.v = Math.min(K.vMax, Z.v + CONFIG.move.gravity * G.sin * dt);
+  Z.s += Z.v * dt;
+  if (Z.s >= G.len) { zipLetGo(p, 'end'); return; }
+  zipAt(G, Z.s / G.len, K, _zp);
+  if (!volumeFree(_zp.x, _zp.z, CONFIG.player.radius, _zp.y + 0.05, _zp.y + p.height)) { zipLetGo(p, 'blocked'); return; }   // never stuck on a line
+  p.vx = (_zp.x - p.x) / dt; p.vy = (_zp.y - p.y) / dt; p.vz = (_zp.z - p.z) / dt;
+  p.x = _zp.x; p.y = _zp.y; p.z = _zp.z;
+}
+function zipLetGo(p, why) {
+  const K = CONFIG.zip, G = ZIP.lines[p.zip.i];
+  p.zip = null; p.grabCooldown = K.regrab; p.onGround = false; p.ground = null; p.coyote = 0; p.launched = false; p.jumpBuf = 0;
+  if (why === 'end') {                              // onto the landing with a little forward push
+    p.x = G.to[0]; p.y = G.to[1]; p.z = G.to[2]; p.vx = G.hx * K.endPush; p.vz = G.hz * K.endPush; p.vy = 0;
+    const g = groundBelow(p.x, p.z, CONFIG.player.radius, p.y + 0.05, p.y + 0.05);
+    if (g.c && p.y - g.y < 0.06) { p.y = g.y; p.onGround = true; p.ground = g.c; }
+  }
+  p.peakY = p.y;                                    // a fall from here is an ordinary fall
+  if (!p.dead) sfxS(p, 'zip_off');
+  const e = p.edges && p.edges[p.pi - 1];          // a bot on a zip edge: on at the bottom node, or a new path from where it let go
+  if (e && e.kind === 'zip' && !p.dead) { if (why === 'end') botReached(p); else botRepath(p, 'zip'); }
+  p.zipTry = 0;
+}
+function zipRideTime(G) {                         // seconds from the start to the landing (the snap included)
+  const K = CONFIG.zip, a = CONFIG.move.gravity * G.sin, t1 = (K.vMax - K.v0) / a, s1 = K.v0 * t1 + 0.5 * a * t1 * t1;
+  return K.snap + (s1 >= G.len ? (-K.v0 + Math.sqrt(K.v0 * K.v0 + 2 * a * G.len)) / a : t1 + (G.len - s1) / K.vMax);
+}
+function zipHeard(S) {                            // the grab's clack tells enemies within hearRange where the rider is (as a quiet gunshot)
+  if (!match.active || match.phase !== 'live') return;
+  for (const b of match.soldiers) {
+    if (b.dead || !b.brain || b.team === S.team || Math.hypot(b.x - S.x, b.y - S.y, b.z - S.z) > CONFIG.zip.hearRange) continue;
+    const H = b.brain.heard || (b.brain.heard = { x: 0, y: 0, z: 0, t: 0 }); H.x = S.x; H.y = S.y; H.z = S.z; H.t = game.time;
+  }
+}
+
 // True when the ground found is a step up that the player has no head room to take.
 function stepRefused(p, x, z, g) {
   return g.c !== null && g.y > p.y + 0.02 && !volumeFree(x, z, CONFIG.player.radius, g.y + CONFIG.move.stepUp, g.y + p.height);
@@ -4775,7 +4965,7 @@ function moveActorInner(p, I, dt) {
   p.jumpHeld = I.jump;
 
   // crouch: standing up needs head room
-  if (I.crouch) p.crouching = true;
+  if (I.crouch && !p.zip) p.crouching = true;      // a zip rider hangs standing (21.2)
   else if (p.crouching && volumeFree(p.x, p.z, r, p.y + (p.onGround ? M.stepUp : M.airStep), p.y + P.height)) p.crouching = false;
   p.height = p.crouching ? P.crouchHeight : P.height;
   p.eye = approach(p.eye, p.crouching ? P.crouchEye : P.eye, P.eyeLerp * dt);
@@ -4783,6 +4973,8 @@ function moveActorInner(p, I, dt) {
   if (Math.abs(p.stepOff) < 1e-3) p.stepOff = 0;
 
   if (p.climbing) tickClimb(p, I, dt);
+  else if (p.zip) tickZip(p, dt);                  // round 9 (21.2): riding a zip line
+  else if (p.jumpBuf > 0 && tryGrabZip(p)) { /* JUMP at a line's start grabbed it; the ride moves from the next tick */ }
   else {
     // wish direction from input and yaw (yaw 0 faces north, positive turns left)
     const sy = Math.sin(p.yaw), cy = Math.cos(p.yaw);
@@ -5079,7 +5271,7 @@ function tickArsenal(S, I, dt) {
   // sniper scope: held on right mouse, drops for the first part of the bolt cycle
   // round 8 (20.1): the one `scope` input aims down sights on every gun (the sniper's is its scope); sprint, reload, climb and
   // grenade break it. A.scope is the 0..1 ADS blend for all guns.
-  const wantScope = !!(W.scopeFov || W.adsFov) && I.scope && A.reloadT <= 0 && A.drawT <= 0 && A.scopeLock <= 0 && !A.gAim && !p.climbing && !p.sprinting;
+  const wantScope = !!(W.scopeFov || W.adsFov) && I.scope && A.reloadT <= 0 && A.drawT <= 0 && A.scopeLock <= 0 && !A.gAim && !p.climbing && !p.sprinting && !p.zip;
   A.scope = approach(A.scope, wantScope ? 1 : 0, dt / (W.scopeIn || W.adsIn || 0.2));
   if (A.press > 0 || (W.auto && I.fire)) pullTrigger(pressed, S, I);
   else if (A.cool < 0) A.cool = 0;
@@ -5310,7 +5502,7 @@ function buildFx(scene) {
   fx.light.position.set(0, -50, 0); scene.add(fx.light);
   for (let i = 0; i < 4; i++) fx.blasts.push({ x: 0, y: 0, z: 0, t: 0, on: false });
   RENDER.noAO.push(fx.add, fx.sphere);
-  buildFx6(scene); buildProjectiles(scene);
+  buildFx6(scene); buildProjectiles(scene); buildZipRiders(scene);
 }
 function spawnRing(x, y, z) {      // horizontal ring of sparks at constant speed, so it stops exactly at the blast radius
   const K = CONFIG.grenade, v = K.radius / K.ringLife;
@@ -6063,6 +6255,14 @@ function buildWaypoints() {
   for (const id in CONFIG.rides) N[CONFIG.rides[id].a] = CONFIG.rides[id].wait.slice();
   add('walk', 'w.ride.w>s.c.x w.ride.e>n.c.y');
   for (const id in CONFIG.rides) E.push({ a: CONFIG.rides[id].a, b: CONFIG.rides[id].b, kind: 'ride', oneWay: true, ride: id });
+  // round 9 (21.4): zip lines. A top node beside each start (within grab of it, clear of the top post), a bottom node on each landing,
+  // walk links into the graph (clear of the bottom posts and the ruin pillar), and one-way zip edges, top to bottom
+  Object.assign(N, { 'z.bed.top': [34.5, 18, 80], 'z.bed.bot': [57.85, 1.2, 79], 'z.bed.plat': [58.2, 1.2, 77.6],
+    'z.desk.top': [95.5, 26, 82], 'z.desk.bot': [62.15, 1.2, 81], 'z.desk.plat': [62.4, 1.2, 78.4],
+    'z.green.top': [109, 40, 40.3], 'z.green.bot': [66.5, 0, 61.5], 'z.tan.top': [109, 40, 119.7], 'z.tan.bot': [66.5, 0, 98.5] });
+  add('walk', `z.bed.top>m.bed.e z.bed.bot>z.bed.plat z.bed.plat>m.plat z.desk.top>m.desk z.desk.bot>z.desk.plat z.desk.plat>m.plat
+    z.green.top>n.ss2.b z.green.bot>n.c.y z.tan.top>s.ts2.b z.tan.bot>s.c.y`);
+  CONFIG.zip.lines.forEach((L, i) => E.push({ a: L.top, b: L.bottom, kind: 'zip', oneWay: true, zip: i }));
 }
 // One node list per route in DESIGN.md section 4.4
 // Edge removed in round 1 pass 2: w.5 - ub.e (both halves). Cover block W-c (33..36, 69..72 and its mirror) sits on that leg, and
@@ -6144,6 +6344,7 @@ function buildNav() {
     const A = N[e.a], B = N[e.b];
     e.key = e.a + '>' + e.b; e.len = d3(A, B);
     if (e.kind === 'ride') { const R = CONFIG.rides[e.ride]; e.cost = d3(R.wait, R.step) + d3(R.step, B); R.sBoard = trackS(R.x, R.boardZ); }
+    else if (e.kind === 'zip') e.cost = zipRideTime(ZIP.lines[e.zip]) * CONFIG.move.walk;      // 21.4: the ride time, in walking units
     else e.cost = edgeCost(e, e.len);
     if (e.kind === 'cross') {                    // the stretch of track this crossing passes over (unwrapped round its first point)
       let lo = Infinity, hi = -Infinity, ref = null;
@@ -6202,7 +6403,7 @@ function astar(fromId, toId, opts = {}) {
   const s = NAV.index[fromId], goal = NAV.index[toId];
   if (s === undefined || goal === undefined) return null;
   const ride = !!opts.ride, cross = !!opts.cross, key = s * 4096 + goal;
-  if (!ride && !cross && NAV.cache.has(key)) return NAV.cache.get(key);
+  if (!ride && !cross && !opts.zip && NAV.cache.has(key)) return NAV.cache.get(key);
   const P = NAV.pos, G = P[goal], g = NAV.g, f = NAV.f, mark = NAV.mark, closed = NAV.closed, heap = NAV.heap, stamp = ++NAV.stamp;
   const h = (i) => Math.hypot(P[i][0] - G[0], P[i][1] - G[1], P[i][2] - G[2]);
   const t0 = opts.time !== undefined ? opts.time : game.time, spd = CONFIG.move.walk, B = CONFIG.bot;
@@ -6218,6 +6419,7 @@ function astar(fromId, toId, opts = {}) {
     if (u === goal) { found = true; break; }
     for (const L of NAV.adj[u]) {
       let c = L.e.cost;
+      if (L.e.kind === 'zip' && !opts.zip) continue;   // 21.4: zip lines only when the caller allows them
       if (opts.avoid && opts.avoid[L.e.key]) continue;
       if (L.e.kind === 'ride') {
         if (!ride || (opts.avoid && opts.avoid[L.e.ride])) continue;
@@ -6239,7 +6441,7 @@ function astar(fromId, toId, opts = {}) {
     nodes.reverse(); edges.reverse();
     res = { nodes, edges, cost: g[goal] };
   }
-  if (!ride && !cross) NAV.cache.set(key, res);
+  if (!ride && !cross && !opts.zip) NAV.cache.set(key, res);
   return res;
 }
 // ---- bots ----
@@ -6274,7 +6476,7 @@ function spawnBot(team, nodeId, opts = {}) {
     id: 'bot.' + (++botSeq), name: opts.name || (team === 'green' ? 'Green ' : 'Tan ') + n, team, slot, weapon: 'rifle',
     x: pos[0], y: pos[1], z: pos[2], vx: 0, vy: 0, vz: 0, yaw: team === 'green' ? Math.PI : 0, pitch: 0, px: pos[0], py: pos[1], pz: pos[2],
     height: P.height, eye: P.eye, peye: P.eye, onGround: true, ground: null, surface: null, crouching: false,
-    climbing: null, climbNeedRelease: false, grabCooldown: 0, health: CONFIG.bot.hp, hp: CONFIG.bot.hp, peakY: pos[1], coyote: 0, jumpBuf: 0, jumpHeld: false,
+    climbing: null, climbNeedRelease: false, grabCooldown: 0, zip: null, zipS: null, health: CONFIG.bot.hp, hp: CONFIG.bot.hp, peakY: pos[1], coyote: 0, jumpBuf: 0, jumpHeld: false,
     launched: false, launchX: 0, launchZ: 0, warped: false, sprinting: false, fwdLock: false, noGrab: null, noGrabT: 0,
     stepOff: 0, pstepOff: 0, moved: 0, safe: { x: pos[0], y: pos[1], z: pos[2] }, carryVx: 0, carryVz: 0, wedgeT: 0, navTest: !!opts.navTest
   };
@@ -6370,6 +6572,7 @@ function damageSoldier(b, dmg, zone, attacker, weapon, extra) {
   if (b.protectT > game.time && attacker !== b && zone !== 'fall') return { dealt: 0, killed: false, protected: true };   // 20.3: 2 s of spawn protection
   const atk = attacker ? attacker.team : null;
   if (atk && atk === b.team && attacker !== b) return { dealt: 0, killed: false, friendly: true };
+  if (b.zip && zone === 'blast' && dmg > 0) zipLetGo(b, 'blast');      // 21.2: a grenade or bazooka blast knocks a rider off the line
   if (b === player) {
     if (game.god && match.active) return { dealt: 0, killed: false, god: true };
     if (match.active && match.stats && attacker && zone !== 'fall' && zone !== 'blast') { match.stats.hits++; if (zone === 'head') match.stats.headHits++; }
@@ -6593,6 +6796,7 @@ function botThink(b, dt) {
   const e = b.edges[b.pi - 1], B = nodeXYZ(b.path[b.pi]), A = nodeXYZ(b.path[b.pi - 1]);
   b.node = b.path[b.pi - 1]; b.nextNode = b.path[b.pi]; b.edge = e;
   if (e.kind === 'ride') { botRide(b, e, dt); return; }
+  if (e.kind === 'zip') { botZip(b, e, dt); return; }
   if (e.kind === 'cross' && !b.crossing) {
     if (!crossSafe(e)) { if (b.botState !== 'wait_cross') nav.crossWaits = (nav.crossWaits || 0) + 1; b.botState = 'wait_cross'; nav.crossWaitTime = (nav.crossWaitTime || 0) + dt; if (A) holdAt(b, A); b.stuckT = 0; b.stuckRef = Infinity; return; }
     b.crossing = true;
@@ -6603,6 +6807,19 @@ function botThink(b, dt) {
   if (b.strafeT > 0 && !b.climbing) { I.left = b.strafeDir < 0; I.right = b.strafeDir > 0; }
   if (b.jumpNow) { I.jump = true; b.jumpNow = false; }
   botStuck(b, dt, B);
+}
+// 21.4: at a zip top a bot presses the same virtual JUMP as the player. It never waits there: no grab within botGrabTime and it
+// repaths without lines (and leaves lines alone for botBan s). Riding, the line does the moving and the brain only shoots.
+function botZip(b, e, dt) {
+  const I = b.input, K = CONFIG.zip, F = ZIP.lines[e.zip].from;
+  b.stuckT = 0; b.stuckRef = Infinity;
+  if (b.zip) { b.botState = 'zip'; return; }
+  b.botState = 'zip_grab'; if (b.brain) b.brain.activeT = game.time;
+  b.zipTry = (b.zipTry || 0) + dt;
+  if (b.zipTry > K.botGrabTime) { b.zipTry = 0; b.zipBan = game.time + K.botBan; botRepath(b, 'zip'); return; }
+  const d = Math.hypot(F[0] - b.x, F[1] - b.y, F[2] - b.z);
+  if (d > K.grab - 0.15) { aimYaw(b, F[0], F[2]); I.forward = true; return; }       // a step toward the start (it is pressed well before the edge)
+  if (zipNear(b) === e.zip && !b.jumpHeld) I.jump = true;                           // only this line's grab: never a plain jump
 }
 // ---- nav test (3A): bots walk forever between nodes picked so every edge kind, route, ride and crossing gets used ----
 function navNextTask(b) {
@@ -6802,7 +7019,7 @@ function pathFromHere(b, goal, extra) {
     start = reachableStart(b, cands);
     if (!start) { const ok = cands.find(([id]) => { const P = WAYPOINTS.nodes[id]; return !segmentInEnvelope(b.x, b.y, b.z, P[0], P[2]); }); start = ok ? ok[0] : cands.length ? cands[0][0] : b.lastNode; }
   }
-  let res = extra && extra.res ? extra.res : astar(start, goal, { cross: true });
+  let res = extra && extra.res ? extra.res : astar(start, goal, { cross: true, zip: zipAllowed(b, extra) });
   if (extra && extra.res && extra.res.nodes[0] !== start) { const lead = astar(start, extra.res.nodes[0], { cross: true }); res = lead ? appendPath(lead, extra.res) : null; }
   if (!res) return false;
   b.ride = null; b.crossing = false; b.goal = goal;
@@ -6810,6 +7027,11 @@ function pathFromHere(b, goal, extra) {
   else { const pseudo = { a: '@', b: start, kind: 'walk', key: '(from here)>' + start, pseudo: true, oneWay: true }; b.path = ['@'].concat(res.nodes); b.edges = [pseudo].concat(res.edges); }
   b.pi = 1; b.stuckT = 0; b.stuckRef = Infinity; b.stuckStage = 0;
   return true;
+}
+function zipAllowed(b, extra) {                  // 21.4: a bot up on the bed, desk or shelves takes a line on its best path 0.7 of its plans
+  if (extra && extra.zip !== undefined) return extra.zip;
+  if (!b.brain || b.y < CONFIG.zip.botUpY || b.zipBan > game.time) return false;
+  return brnd() < CONFIG.zip.botChance;
 }
 function stopMoving(b) { b.path = [b.lastNode]; b.edges = []; b.pi = 1; }
 function nearestNodeLevel(x, y, z) { return nearestNode(x, y, z); }
@@ -7168,6 +7390,7 @@ function relocate(b) {
 // 16.11 liveness: may this bot stand still right now?
 function stillAllowed(b) {
   const B = b.brain, AI = CONFIG.ai, now = game.time;
+  if (b.zip) return true;                          // riding a zip line
   if (B.phase === 'hold' && B.state === 'hold' && !pushTime(b)) return true;
   if (B.phase === 'ctf' && B.guard && B.guardUntil > now) return true;        // 20.5: a guard's short look round (shorter than idleLimit)
   if ((B.state === 'cover' || B.state === 'retreat') && B.atCover && (B.vis || now - Math.max(B.lastSeenT, B.coverT) <= AI.retreatCalm || now - B.coverT < AI.coverMin + AI.peekCrouch[1] * AI.coverPeeks)) return true;
@@ -7217,6 +7440,7 @@ function closeIn(b, T) {
 function brainTick(b, dt) {
   const B = b.brain, I = b.input, AI = CONFIG.ai, D = diffP(), now = game.time;
   if (matchFrozen()) { b.botState = 'freeze'; return true; }
+  if (b.zip) return brainZip(b, dt);              // round 9 (21.4): riding a zip line
   if (B.throwT > 0) {                            // a grenade throw in progress: aim, hold, release
     B.throwT--; b.yaw = B.throwYaw; b.pitch = B.throwPitch; I.grenade = B.throwT > 0; b.botState = B.state; B.activeT = now;
     return true;
@@ -7325,6 +7549,18 @@ function brainTick(b, dt) {
   }
   b.botState = B.state;
   return false;
+}
+function brainZip(b, dt) {                         // 21.4: on a line a bot only looks and shoots a visible target (air aim error); the line moves it
+  const B = b.brain, AI = CONFIG.ai, now = game.time;
+  B.activeT = now; b.botState = 'zip';
+  const every = Math.max(1, Math.round(CONFIG.sim.hz / AI.losHz)), tick = Math.round(now * CONFIG.sim.hz);
+  if ((tick + b.slotP) % every === 0) perceive(b);
+  const T = B.target && !B.target.dead ? B.target : null;
+  if (!T || !B.vis || b.flagCarry) return true;    // a flag carrier keeps running (20.5)
+  const d = Math.hypot(T.x - b.x, T.y - b.y, T.z - b.z);
+  if (d > (AI.engageRange[b.arsenal.current] || 1e9) * (T.flagCarry ? AI.carrierRange : 1)) { aimAt(b, T.x, T.y + 1.2, T.z); return true; }
+  engage(b, T, dt, false);
+  return true;
 }
 function peek(b, T, dt, atCover) {               // crouch in cover; stand to fire a burst; crouch again
   const B = b.brain, AI = CONFIG.ai, I = b.input;
@@ -7624,7 +7860,7 @@ function startMatch(opts = {}) {
   Object.assign(match, { active: true, phase: 'freeze', round: 0, score: { green: 0, tan: 0 }, difficulty: diff, seed, autoplay: !!opts.autoplay, replays: 0, rounds: [],
     kills: [], winner: null, spec: null, roundKills: [], stuck0: stuckLog.length, rescue0: trainRescueLog.length, idle0: idleLog.length, endReason: '', t0: game.time,
     stats: { shots: { green: 0, tan: 0 }, hits: 0, headHits: 0, kills: 0, headKills: 0, grenades: { green: 0, tan: 0 }, rides: { green: 0, tan: 0 },
-      crossings: { green: 0, tan: 0 }, rideTries: 0, rideGiveUps: 0, rideAtWait: 0, envTime: 0 },
+      crossings: { green: 0, tan: 0 }, zips: { green: 0, tan: 0 }, rideTries: 0, rideGiveUps: 0, rideAtWait: 0, envTime: 0 },
     laneUse: { green: newLane(), tan: newLane() }, highGround: { green: 0, tan: 0 } });
   killFeed.length = 0; callouts.length = 0; botLog.length = 0; dmgArcs.length = 0;
   const p = player;
@@ -7824,7 +8060,7 @@ function matchReport(errs, wall) {
     highGroundTime: Object.assign({}, match.highGround), errors: errs || [], simSeconds: +(game.time - match.t0).toFixed(1), wallSeconds: wall !== undefined ? +(wall / 1000).toFixed(2) : null,
     stats: { kills: S.kills, headKills: S.headKills, headshotKillShare: S.kills ? +(S.headKills / S.kills).toFixed(3) : 0, hits: S.hits, headHits: S.headHits,
       headshotHitShare: S.hits ? +(S.headHits / S.hits).toFixed(3) : 0, shots: S.shots, grenades: S.grenades, rides: S.rides, rideTries: S.rideTries,
-      rideGiveUps: S.rideGiveUps, rideAtWait: S.rideAtWait, crossings: S.crossings, envelopeSeconds: +S.envTime.toFixed(2) },
+      rideGiveUps: S.rideGiveUps, rideAtWait: S.rideAtWait, crossings: S.crossings, zips: S.zips, envelopeSeconds: +S.envTime.toFixed(2) },
     soldiers: match.soldiers.map((s) => ({ name: s.name, team: s.team, kills: s.kills || 0, deaths: s.deaths || 0, role: s.role || null })),
     mode: match.mode || 'elim', captures: match.ctf ? Object.assign({}, match.ctf.caps) : null,
     finished: match.phase === 'matchEnd' };
@@ -8476,7 +8712,9 @@ function updateHUD(realDt) {
   const p = player, S = hudSubject(), h = Math.ceil(S === player ? p.health : S.hp);
   updateMatchHUD();
   if (h !== ui.lastHealth) { ui.lastHealth = h; ui.health.textContent = h; ui.healthBox.classList.toggle('low', h <= 30); }   // R4-5: keep the brick panel class
-  ui.hint.style.display = p.climbing ? 'block' : 'none';
+  if (ui.hintClimb === undefined) ui.hintClimb = ui.hint.innerHTML;
+  const hk = p.climbing ? 'climb' : p.zip ? 'off' : zipNear(p) >= 0 && game.phase === 'playing' ? 'zip' : '';      // 21.2
+  if (hk !== ui.hintK) { ui.hintK = hk; ui.hint.innerHTML = hk === 'zip' ? 'JUMP to zip' : hk === 'off' ? 'JUMP to let go' : ui.hintClimb; ui.hint.style.display = hk ? 'block' : 'none'; }
   ui.hud.style.visibility = game.view || game.phase === 'title' ? 'hidden' : 'visible';
   updateWeaponHUD();
   if (!game.debug) return;
@@ -8601,7 +8839,7 @@ function renderFrame(alpha, realDt) {
     camera.rotation.set(p.pitch + (Math.random() - 0.5) * 2 * sh, p.yaw + (Math.random() - 0.5) * 2 * sh, (Math.random() - 0.5) * sh, 'YXZ');
   }
   updateSoldierVisuals(alpha, realDt);
-  updateArt(realDt); updateProjectileVisuals(); updateCTFVisuals(alpha);
+  updateArt(realDt); updateProjectileVisuals(); updateCTFVisuals(alpha); updateZipVisuals(alpha);
   updateFan(realDt || 0); updateDecor(); updateOutside(realDt || 0); updateSmoke(realDt || 0);     // round 6
   const MA = arsenal;                              // 18.3: a brief light at the player's muzzle (a grenade burst keeps the light first)
   if (MA.flash > 0 && !player.dead && !game.view && game.phase !== 'title' && !(CONFIG.weapons[MA.current].scopeFov && MA.scope > 0.6) && fx.light.intensity === 0) { muzzleWorld(_mw); fx.light.position.set(_mw.x, _mw.y, _mw.z); fx.light.intensity = CONFIG.render.muzzle.light; }
@@ -8809,6 +9047,7 @@ function init() {
     setDebug: (on) => setDebug(on),
     colliders: COLLIDERS,
     colliderHash: () => colliderHash(),
+    zipLines: () => ZIP.lines.map((G) => ({ id: G.id, from: G.from.slice(), to: G.to.slice(), top: G.top, bottom: G.bottom, length: +G.len.toFixed(2), rideTime: +zipRideTime(G).toFixed(2) })),
     audioOffline: (ev, sec) => audioOffline(ev, sec),
     soldierFit: () => soldierFit(),
     artDebug: (o = {}) => {                       // test-only: hide art meshes by name ('art.paint', ...) or turn the shadow map off, to cost them

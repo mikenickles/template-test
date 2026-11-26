@@ -253,6 +253,10 @@ Primitives: `box` (axis-aligned), `ramp` (axis-aligned footprint, linear height 
 - Round 3 adds oriented boxes for the train cars only.
 - Round 5 adds the under-desk chicane (`m.desk.chicane.n`, `m.desk.chicane.s`, section 4.2) and moves the paper ball, so
   `colliderHash()` changes from `ff03369f` (rounds 3 and 4) to `e2904076`.
+- Round 9 adds the eight zip line posts, `zip.<line>.post.top` and `zip.<line>.post.bottom` (small cylinders, section 21.3),
+  so `colliderHash()` changes from `e2904076` to **`cb059ceb`**. This is set by design, not run. A standalone script built the
+  collider list from the collider-building code copied out of `index.html`, without loading the game, and computed the hash.
+  The same script gives `e2904076` for the round 8 list.
 - Falling out of the room must be impossible: if the player leaves the room box or drops below y -5,
   put them back at their last grounded position.
 
@@ -260,7 +264,7 @@ Primitives: `box` (axis-aligned), `ramp` (axis-aligned footprint, linear height 
 
 Nodes are `(x, y, z)`. Edge kinds: `walk`, `ramp` (walk on a slope or stairs), `jump`, `climb` (string),
 `launch` (spring pad, one way), `cross` (crosses the track; bots check for the train in round 3),
-`drop` (one way down).
+`drop` (one way down), and from round 9 `zip` (one way, a zip line from its top node to its bottom node; section 21.4).
 
 The builder may move a node by up to 2 units to clear geometry, and must list every moved node in CHANGELOG.md.
 `__game.validateWaypoints()` sweeps the player capsule along every walk edge and reports blocked ones.
@@ -1618,3 +1622,80 @@ This is a gameplay change. Nothing runs, as before: `node --check` and ESLint on
 - **Reset:** everything rebuilds at each round start in elimination. In CTF a piece rebuilds 45 s after it breaks,
   but only once no soldier is standing in it.
 - **Collider hash:** `colliderHash()` reports the intact map. A new `__game.brokenCover()` lists the broken pieces.
+
+### 21.5 Round 9 build notes (deviations and choices; numbers in `CONFIG.zip`)
+- **Ends moved** (all within 8; the shelf pair is still mirrored in z, and the two ruin landings in the point mirror):
+
+  | Line | From | To | Why |
+  | --- | --- | --- | --- |
+  | zip.bed | `(35.7, 18, 79)` (was x 31) | `(57.85, 1.2, 79)` (was x 57.5) | The start was 4 inside the bed edge, so the descending body cut through the bed's edge. It now starts 0.7 past the edge, and a grab snaps the rider there in 0.12 s. The landing moved so the body is 0.3 above the platform's edge on touchdown. |
+  | zip.desk | `(94.3, 26, 81)` (was x 96) | `(62.15, 1.2, 81)` (was x 62.5) | As for the bed. The line still passes under the chair back, through the gap above the seat. |
+  | zip.green | `(107.3, 40, 40)` (was x 110) | `(66.5, 0, 61.5)` (was `(64, 0, 69)`, a move of 7.9) | The start had the same edge problem as the bed. The old landing put the bottom post on the n.c.5 to n.r.ne walk edge. |
+  | zip.tan | `(107.3, 40, 120)` | `(66.5, 0, 98.5)` | The mirror of zip.green. The old landing `(64, 0, 91)` was inside `s.C-f.block` (64..67, 90..93), which is not mirrored on the Green side. |
+- **Clearance** (a standalone node script over the collider list copied out of `index.html`, sampling the ride every 0.02
+  units; body box 0.8 x 1.8 x 0.8 hung from the line, sag included). The landing surface is skipped only while the body is
+  wholly over its top.
+  - zip.bed: closest 0.300, to the bed slab at the start and to its own bottom post at the end.
+    - Ruin west wall north part 1.04, west sill 2.83, platform edge 0.32, pillar 0.75.
+    - Over the track, the feet are 3.87 above the train's top.
+  - zip.desk: closest 0.300, to the desk top at the start.
+    - Chair back 0.34, chair seat 0.93, tunnel roof 0.49, ruin east wall 1.14, platform edge 0.33, pillar 0.75.
+    - Over the track, the feet are 4.05 above the train.
+  - zip.green and zip.tan: closest 0.300, to their own shelf's L2 board at the start.
+    - Desk top and desk legs 7.00, ruler bridges 14.41, ruler ramps 14.39, skateboard 9.17, tunnel 8.05.
+    - Over the track, the feet are 1.21 above the train's top. This is the tightest margin against the 1 required.
+- **Line height and sag.** The ride follows the drawn sag (0.4 at the middle) so the trolley stays on the cord. The cord
+  goes on straight to each post.
+- **Posts:**
+  - The top pencil stands 1.05 behind the start in plan; the bottom one stands 1.05 beyond the landing, or 0.85 for the two
+    ruin lines, so it clears the pillar.
+  - Both are `cyl` colliders of radius 0.15. The clay is visual only.
+  - The orange route cap is the top pencil's big eraser.
+  - A player launched from the north strip of the spring pad (z 78.5 to 79.55) can graze the zip.bed top pencil at
+    `(34.65, 79)` on the way over the bed edge. Bots launch from the pad's centre (z 80), 1.0 from the pencil.
+- **Ride times** (from `v0` 8, growing by g sin(slope) with g 22, capped at 28; the 0.12 s grab snap included):
+  - zip.bed 1.65 s, which is under the "2 to 3 s" of 21.2 because the line is short;
+  - zip.desk 2.10 s;
+  - the shelf lines 2.80 s.
+- **Grab:**
+  - Within 2 (in 3D) of the start, standing on the ground, with no grab cooldown.
+  - JUMP then grabs instead of jumping.
+  - After letting go, a line can't be grabbed for 0.6 s.
+- **Letting go:**
+  - **Early:** JUMP, a blast, death, or anything in the body's way (a `volumeFree` test every tick). The rider keeps the
+    line's velocity and falls, with normal fall damage from the height where they let go.
+  - **At the end:** the rider is put on the landing with a push of 2.5 along the line.
+- **Blast knock-off.** There was no blast knock-off to reuse. It is new, in `damageSoldier`: any blast damage to a rider
+  lets go. Teammates' blasts do no damage, so they don't knock riders off.
+- **On the line:**
+  - Crouch is ignored and ADS is off.
+  - Firing uses the air spread (the existing `!onGround` rule); reloading and switching weapons work.
+  - Grenades are allowed. 21.2 lists only the gun, but does not forbid them.
+- **Bots:**
+  - The 0.7 chance is rolled per plan in `pathFromHere`, only for a bot with a brain standing 15 or more up (bed, desk,
+    chair seat, shelves). Bots on the floor never consider lines, so their plans and the seeded random sequence are as
+    before.
+  - A zip edge costs its ride time times walk speed. That is less than its straight-line distance, so A* may miss the
+    very best route through a line, but it always finds a path.
+  - **At a top:** a bot presses JUMP only when this line's grab is available. With no grab within 1.2 s it repaths
+    without lines and leaves lines alone for 20 s, so it never waits at a top.
+  - **Riding:** a bot perceives and shoots a visible target in range with the normal aim error. Its own movement raises
+    that error, which gives the air aim error. A flag carrier only rides.
+  - **Afterwards:** at the bottom the zip edge counts as reached. After an early let-go, the bot repaths from where it
+    lands.
+- **New nodes:** `z.<line>.top` beside each start (1.56 to 1.73 from it), `z.<line>.bot` at each landing, and
+  `z.bed.plat` / `z.desk.plat` on the platform.
+  - **Walk links:** `z.bed.top`-`m.bed.e`, `z.desk.top`-`m.desk`, `z.green.top`-`n.ss2.b`, `z.tan.top`-`s.ts2.b`,
+    `z.bed.bot`-`z.bed.plat`-`m.plat`, `z.desk.bot`-`z.desk.plat`-`m.plat`, `z.green.bot`-`n.c.y`, `z.tan.bot`-`s.c.y`.
+  - **Checks:** the script swept all ten new walk links as `validateWaypoints` does: the standing capsule, ground under
+    every 0.1 step, no blocker between step height and head height. All pass. It also checked every older walk and cross
+    edge against the new posts; none comes near.
+  - **The sweep itself:** run over the 149 older edges, it flags none, which agrees with the game's validator.
+- **Sound:**
+  - Clacks on grab and on letting go, heard from the rider's position.
+  - One whirr voice follows the rider nearest the listener, with pitch rising with speed.
+  - The grab's clack also tells enemy bots within 25 where the rider is, as a quiet gunshot does.
+- **HUD:** "JUMP to zip" in range, and "JUMP to let go" while riding.
+- **Touch:** the JUMP button shows a striped-line icon with ZIP in range, and reads LET GO while riding.
+- **Match stats:** `matchReport()` stats gain `zips` per team.
+- **Test hook:** `__game.zipLines()` lists the lines, with their lengths and ride times.
