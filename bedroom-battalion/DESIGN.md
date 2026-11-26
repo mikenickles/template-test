@@ -1463,3 +1463,69 @@ Bots don't use ADS. Their aim model is unchanged.
 - **Soldier guns.** The third-person models of the bazooka and band gun are low detail. The viewmodels are the
   detailed ones.
 - **Controls.** The touch SCOPE button now reads AIM. On a controller, Y cycles the pick while waiting to respawn.
+
+## 21. Round 9: zip lines (user request, 2026-11-27)
+
+User request: zip lines from tall areas that take you down into the centre. This changes the map and the waypoints,
+so the collider hash changes. Record the new hash in section 8. As before, nothing runs (the user tests). The builder
+may check the lines' clearance by hand, or with a standalone script over the collider numbers, without running the
+game.
+
+### 21.1 The four lines (one-way, top to bottom)
+Points are where the rider's feet start and land. The line itself runs 2.4 above the feet. The builder may move an
+end by up to 8 units to clear the furniture, but each pair must stay mirrored.
+
+| Line | From (top) | To (landing) | Notes |
+| --- | --- | --- | --- |
+| zip.bed | bed top `(31, 18, 79)` | ruin centre platform `(57.5, 1.2, 79)` | neutral; passes the ruin's west sill gap |
+| zip.desk | desk top `(96, 26, 81)` | ruin centre platform `(62.5, 1.2, 81)` | neutral; must clear the chair back |
+| zip.green | small shelf L2 `(110, 40, 40)` | floor `(64, 0, 69)` | Green's corner |
+| zip.tan | tall shelf L2 `(110, 40, 120)` | floor `(64, 0, 91)` | Tan's corner, mirroring zip.green. Not from L3, which would give Tan more height |
+
+**Clearance:** a hanging rider (the body box hung below the line) clears every collider by at least 0.3 along the
+whole ride. Where a line crosses the track, the rider's feet must be at least 1 above the train's highest part. Fix a
+clash by moving the end.
+
+### 21.2 Riding
+- **Grab:** stand within 2 of a line's top anchor and press JUMP. Space, the touch JUMP button and controller A all
+  work; while in range, the touch JUMP button shows a zip icon. The HUD shows "JUMP to zip".
+- **Ride:** the soldier hangs from a handle below the line.
+  - Speed starts at 8 u/s and grows by g·sin(slope), capped at 28 u/s. Rides last about 2 to 3 s.
+  - You can look anywhere and fire your current gun at the air spread. ADS is off during the ride; reload is
+    allowed.
+- **Let go:** press JUMP again to let go early, keeping your momentum and falling normally. Fall damage is the same as
+  any other fall.
+- **Finish:** at the bottom you let go on your own, with a little forward momentum, and land.
+- **Taking fire:**
+  - The rider's hit volume is the normal body box, hung below the line.
+  - A rider can be shot and killed; the body falls.
+  - A grenade or bazooka blast that hits a rider knocks them off.
+- **Riders:** any number can share a line; riders do not collide with each other.
+- **CTF:** a flag carrier can ride, keeping the glow and beam.
+
+### 21.3 Look and sound
+- **The line:** a taut white-and-orange striped cord, clearly different from the yellow climbing strings, with a
+  small sag drawn in.
+- **Top anchor:** a pencil post taped to the furniture, with a plastic spool-and-bottle-cap trolley hanging ready.
+- **Bottom anchor:** a pencil in a lump of modelling clay. The posts get small cylinder colliders and the clay is
+  flat.
+- **Route accents:** an orange route cap at each top so the start can be read from across the room, and the
+  trolley reads at 60 units.
+- **Sound:**
+  - a clack on grab;
+  - a whirr whose pitch rises with speed;
+  - a clack when letting go.
+  
+  Other soldiers hear it from the rider's position.
+
+### 21.4 Bots
+- **Waypoint edges:** a new edge kind `zip`, one-way from top node to bottom node. Its cost is the ride time. Add top
+  and bottom nodes next to the existing graph and link them with walk edges. validateWaypoints must still pass,
+  but by design, not by running it.
+- **When bots ride:**
+  - Bots grab with the same virtual JUMP input as the player.
+  - Bots on the bed, desk or shelves use a line when it is on their best path. They do so with a chance of 0.7 per
+    plan, so not everyone rides.
+- **Riding:** bots shoot a visible target while riding, with air aim error.
+- **CTF:** attackers and carriers may route by zip.
+- **Liveness:** the 16.11 rule holds; a bot never waits at a zip top.
