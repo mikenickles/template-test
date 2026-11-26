@@ -21,9 +21,16 @@ What there is to do, roughly in the order a child meets it:
 6. **Sunset:** when the toys, garden and picnic are all done, the sun goes down, fireflies come out,
    and a green arrow asks you to land on the pad. Hover over it and the helicopter lands itself.
 
-Progress (rescues, garden, picnic, acorns, paint) is saved on the phone. **Grown-ups:** hold the toy
+**Time of day:** tap the sun button in the top-right corner to switch between a warm **morning**
+(low golden sun, morning haze and light beams, pollen drifting in the air, lots of butterflies
+visiting the flowers, birds hopping on the lawn and singing), the original **afternoon**, and
+**evening** (golden light, fireflies, crickets; the butterflies and birds go home). Birds flutter off
+when the helicopter comes close and land somewhere else; now and then a little flock flies over.
+
+Progress (rescues, garden, picnic, acorns, paint, time of day) is saved on the phone. **Grown-ups:** hold the toy
 counter in the top-left corner for three seconds to start over.
 
+![morning](media/morning.png)
 ![gameplay](media/gameplay.png)
 ![watering](media/watering.png)
 ![sunset](media/sunset.png)
@@ -66,6 +73,7 @@ node tools/capture.mjs # re-records media/winch-teddy.mp4 from real gameplay
 - `src/models.js` – helicopter and the three toys
 - `src/picnic.js` – picnic basket, apples, the hammock
 - `src/garden.js` – east garden, thirsty plants, paddling pool, the bucket
+- `src/birds.js` – birds on the lawn, fence and roofs, and the passing flock
 - `src/life.js` – leaves, beach ball, pinwheels, butterflies, confetti
 - `src/audio.js` – all sound is synthesised at runtime (no audio files)
 - `android/` – a ~60-line full-screen WebView shell and a Gradle-free build script

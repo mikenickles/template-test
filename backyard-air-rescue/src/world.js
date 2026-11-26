@@ -106,12 +106,12 @@ function buildSky(scene, renderer) {
   const top = new THREE.Color(0x6fb6ee), mid = new THREE.Color(0xffe2b8), low = new THREE.Color(0xffc98f);
   const skyMat = new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { top: { value: top }, mid: { value: mid }, low: { value: low }, sun: { value: L.sunDir } },
+    uniforms: { top: { value: top }, mid: { value: mid }, low: { value: low }, sun: { value: L.sunDir }, glow: { value: new THREE.Color(0xffd18c) } },
     vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
-    fragmentShader: `uniform vec3 top; uniform vec3 mid; uniform vec3 low; uniform vec3 sun; varying vec3 vD;
+    fragmentShader: `uniform vec3 top; uniform vec3 mid; uniform vec3 low; uniform vec3 sun; uniform vec3 glow; varying vec3 vD;
       void main(){ vec3 d = normalize(vD); float h = d.y;
         vec3 c = mix(mid, top, smoothstep(0.0, 0.55, h)); c = mix(low, c, smoothstep(-0.25, 0.08, h));
-        float s = max(dot(d, sun), 0.0); c += vec3(1.0,0.82,0.55) * (pow(s, 24.0)*0.9 + pow(s, 400.0)*6.0);
+        float s = max(dot(d, sun), 0.0); c += glow * (pow(s, 6.0)*0.25 + pow(s, 24.0)*0.9 + pow(s, 400.0)*6.0);
         gl_FragColor = vec4(c, 1.0); }`,
   });
   const sky = new THREE.Mesh(new THREE.SphereGeometry(400, 24, 12), skyMat);
@@ -136,15 +136,32 @@ function buildSky(scene, renderer) {
   sc.left = -74; sc.right = 74; sc.top = 66; sc.bottom = -52; sc.near = 10; sc.far = 260;
   sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.06;
   scene.add(sun, sun.target);
-  const day = { top: top.clone(), mid: mid.clone(), low: low.clone(), sun: sun.color.clone(), sunI: sun.intensity, hemiI: hemi.intensity, hemiSky: hemi.color.clone(), fog: scene.fog.color.clone() };
-  const dusk = { top: new THREE.Color(0x5a63b8), mid: new THREE.Color(0xffa98a), low: new THREE.Color(0xff8d6a), sun: new THREE.Color(0xffa066), sunI: 2.5, hemiI: 1.0, hemiSky: new THREE.Color(0xc4b4ff), fog: new THREE.Color(0xe6a088) };
-  function setDusk(k) {
-    top.copy(day.top).lerp(dusk.top, k); mid.copy(day.mid).lerp(dusk.mid, k); low.copy(day.low).lerp(dusk.low, k);
-    sun.color.copy(day.sun).lerp(dusk.sun, k); sun.intensity = lerp(day.sunI, dusk.sunI, k);
-    hemi.intensity = lerp(day.hemiI, dusk.hemiI, k); hemi.color.copy(day.hemiSky).lerp(dusk.hemiSky, k);
-    scene.fog.color.copy(day.fog).lerp(dusk.fog, k);
+  // ---- time of day: warm morning, afternoon, evening (blended continuously, 0..2)
+  const C = (h) => new THREE.Color(h), V = (x, y, z) => new THREE.Vector3(x, y, z).normalize();
+  const P = [
+    { top: C(0x8fcaf4), mid: C(0xffedd2), low: C(0xffd6ae), glow: C(0xffe0a8), dir: V(0.74, 0.4, 0.32), sun: C(0xffdca6), sunI: 3.7,
+      hemiSky: C(0xd6e8ff), hemiGround: C(0x93b354), hemiI: 1.32, fog: C(0xfdecd6), near: 32, far: 165, exp: 1.06, tree: 0.5, beam: 1, mist: 1 },
+    { top: C(0x6fb6ee), mid: C(0xffe2b8), low: C(0xffc98f), glow: C(0xffd18c), dir: V(-0.5, 0.66, -0.45), sun: C(0xffd296), sunI: 3.9,
+      hemiSky: C(0xa9ccff), hemiGround: C(0x7c9a48), hemiI: 1.15, fog: C(0xf7dcae), near: 55, far: 170, exp: 1.02, tree: 1, beam: 0.12, mist: 0 },
+    { top: C(0x5a63b8), mid: C(0xffa98a), low: C(0xff8d6a), glow: C(0xff9a5a), dir: V(-0.8, 0.34, 0.14), sun: C(0xffac72), sunI: 2.5,
+      hemiSky: C(0xdcd6ff), hemiGround: C(0x86a05c), hemiI: 1.22, fog: C(0xe6a088), near: 42, far: 160, exp: 1.0, tree: 0.25, beam: 0.4, mist: 0.3 },
+  ];
+  const cur = { tree: 1, beam: 0, mist: 0, tint: new THREE.Color() };
+  const target = new THREE.Vector3(18, 0, -4);
+  function setTime(tod) {
+    const i = Math.min(1, Math.floor(clamp(tod, 0, 2))), k = smoothstep(0, 1, clamp(tod - i, 0, 1)), a = P[i], b = P[i + 1];
+    top.copy(a.top).lerp(b.top, k); mid.copy(a.mid).lerp(b.mid, k); low.copy(a.low).lerp(b.low, k);
+    skyMat.uniforms.glow.value.copy(a.glow).lerp(b.glow, k);
+    L.sunDir.copy(a.dir).lerp(b.dir, k).normalize();
+    sun.position.copy(L.sunDir).multiplyScalar(110).add(target);
+    sun.color.copy(a.sun).lerp(b.sun, k); sun.intensity = lerp(a.sunI, b.sunI, k);
+    hemi.color.copy(a.hemiSky).lerp(b.hemiSky, k); hemi.groundColor.copy(a.hemiGround).lerp(b.hemiGround, k); hemi.intensity = lerp(a.hemiI, b.hemiI, k);
+    scene.fog.color.copy(a.fog).lerp(b.fog, k); scene.fog.near = lerp(a.near, b.near, k); scene.fog.far = lerp(a.far, b.far, k);
+    renderer.toneMappingExposure = lerp(a.exp, b.exp, k);
+    cur.tree = lerp(a.tree, b.tree, k); cur.beam = lerp(a.beam, b.beam, k); cur.mist = lerp(a.mist, b.mist, k);
+    cur.tint.copy(sun.color);
   }
-  return { sun, hemi, setDusk };
+  return { sun, hemi, setTime, cur };
 }
 
 // ---------------------------------------------------------------- ground
@@ -257,6 +274,7 @@ function buildGrass(scene, uniforms, count) {
 
 // ---------------------------------------------------------------- flowers
 const flowers = [];
+const _x = new THREE.Vector3(), _z = new THREE.Vector3(), _m4 = new THREE.Matrix4(), _white = new THREE.Color(0xffffff);
 const stemMat = () => M(0x4d9c3c, { r: 0.7 });
 function makeFlower(type, color, height) {
   const root = new THREE.Group(), bend = new THREE.Group();
@@ -432,17 +450,22 @@ function buildTree(scene, dyn) {
     c.globalCompositeOperation = 'destination-out'; c.fillStyle = g2; c.fillRect(0, 0, w, h);
   });
   const shafts = [];
-  const sd = L.sunDir;
-  for (const [x, z, w, o] of [[-13, -15, 3.2, 0.2], [-6, -11, 2.4, 0.16], [-16, -8, 2.8, 0.18], [-2, -17, 2.0, 0.13], [-10, -3, 2.2, 0.14]]) {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 30), new THREE.MeshBasicMaterial({ map: shaftTex, transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
-    // plane's long axis along the light direction, facing the camera (south)
-    m.position.set(x + sd.x * 11, 11 * sd.y, z + sd.z * 11);
-    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), sd);
-    m.rotateY(0.9);
-    m.renderOrder = 5;
-    scene.add(m); shafts.push({ m, o, ph: rnd() * 6 });
-  }
+  const mkShaft = (x, z, w, o, kind, len = 30) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, len), new THREE.MeshBasicMaterial({ map: shaftTex, transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+    m.renderOrder = 5; scene.add(m); shafts.push({ m, o, x, z, kind, ph: rnd() * 6 });
+  };
+  for (const [x, z, w, o] of [[-13, -15, 3.2, 0.2], [-6, -11, 2.4, 0.16], [-16, -8, 2.8, 0.18], [-2, -17, 2.0, 0.13], [-10, -3, 2.2, 0.14]]) mkShaft(x, z, w, o, 'tree');
+  // long beams through the morning haze
+  for (const [x, z, w, o] of [[-18, 4, 5, 0.2], [-4, -14, 4, 0.17], [8, 10, 5.5, 0.18], [24, -4, 4.5, 0.18], [36, 12, 5.5, 0.17], [50, -12, 5, 0.18], [62, 6, 4.5, 0.15], [16, -22, 4, 0.15]]) mkShaft(x, z, w, o, 'beam', 44);
   dyn.shafts = shafts;
+  // low morning mist drifting over the lawn and pond
+  const mistTex = canvasTex(128, 64, (c, w, h) => { const gr = c.createRadialGradient(w / 2, h / 2, 2, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = gr; c.fillRect(0, 0, w, h); });
+  dyn.mist = [];
+  for (const [x, y, z, sx] of [[-20, 1.2, -29, 26], [6, 1.4, -30, 30], [34, 1.2, -29, 28], [60, 1.3, -28, 24], [L.pond.x, 0.9, L.pond.z, 20], [-24, 1.1, 8, 18], [44, 1.0, 14, 22], [58, 1.0, -2, 18], [-4, 1.0, 20, 22]]) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: mistTex, transparent: true, opacity: 0, depthWrite: false, color: 0xfff6ea }));
+    sp.scale.set(sx, sx * 0.22, 1); sp.position.set(x, y, z); sp.renderOrder = 4; scene.add(sp);
+    dyn.mist.push({ sp, x, ph: rnd() * 6 });
+  }
   // tire swing
   const sw = new THREE.Group(); sw.position.set(L.swing.x, 12.6, L.swing.z); scene.add(sw);
   const rope = M(0xe6d2a0, { r: 1 });
@@ -723,7 +746,21 @@ export function buildWorld(scene, renderer, uniforms, quality) {
     }
     dyn.beacon.material.emissiveIntensity = 0.6 + 1.6 * Math.max(0, Math.sin(t * 3));
     dyn.padLights.forEach((m, i) => { m.material.emissiveIntensity = 0.3 + 1.6 * Math.max(0, Math.sin(t * 4 - i * 0.785)); });
-    for (const s of dyn.shafts) s.m.material.opacity = s.o * (0.75 + 0.25 * Math.sin(t * 0.6 + s.ph)) * (1 - (dyn.duskK || 0) * 0.7);
+    // sun shafts: long axis along the light, face turned toward the camera
+    const sd = L.sunDir, cur = lights.cur;
+    for (const s of dyn.shafts) {
+      const w = s.kind === 'tree' ? cur.tree : cur.beam, op = s.o * w * (0.75 + 0.25 * Math.sin(t * 0.6 + s.ph));
+      s.m.visible = op > 0.004; if (!s.m.visible) continue;
+      s.m.material.opacity = op; s.m.material.color.copy(cur.tint).lerp(_white, 0.35);
+      const up = s.kind === 'tree' ? 11 : 14;
+      s.m.position.set(s.x + sd.x * up, sd.y * up, s.z + sd.z * up);
+      if (dyn.cam) {
+        _z.copy(dyn.cam.position).sub(s.m.position); _z.addScaledVector(sd, -_z.dot(sd)).normalize();
+        _x.crossVectors(sd, _z).normalize();
+        s.m.quaternion.setFromRotationMatrix(_m4.makeBasis(_x, sd, _z));
+      }
+    }
+    for (const m of dyn.mist) { m.sp.material.opacity = cur.mist * 0.42 * (0.8 + 0.2 * Math.sin(t * 0.3 + m.ph)); m.sp.visible = cur.mist > 0.01; m.sp.position.x = m.x + Math.sin(t * 0.05 + m.ph) * 3; }
   }
-  return { update, lights, setDusk(k) { dyn.duskK = k; lights.setDusk(k); } };
+  return { update, lights, setTime: lights.setTime, setCamera(c) { dyn.cam = c; }, flowerHeads: () => flowers.map((f) => new THREE.Vector3(f.position.x, f.position.y + f.userData.h * 0.96, f.position.z)) };
 }

@@ -51,6 +51,11 @@ export async function launch({ width = 844, height = 390, scale = 1, query = 'ma
     /** Finger 2 on the winch button. */
     async holdWinch() { if (!fingers.has(2)) { fingers.set(2, { x: btn.x + btn.width / 2, y: btn.y + btn.height / 2 }); await send('touchStart'); } },
     async releaseWinch() { if (fingers.has(2)) await lift(2); },
+    /** Tap an on-screen button with a third finger. */
+    async tap(selector) {
+      const b = await page.locator(selector).boundingBox();
+      fingers.set(3, { x: b.x + b.width / 2, y: b.y + b.height / 2 }); await send('touchStart'); await d.step(2); await lift(3);
+    },
     async tapWinch() { await d.holdWinch(); await d.step(4); await d.releaseWinch(); },
     // fly like a child would: push toward the target, let go when close
     async flyTo(x, z, near = 2.0, maxSecs = 14) {

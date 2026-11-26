@@ -66,6 +66,24 @@
   #paints .sw.sel { transform: scale(1.2); box-shadow: 0 0 0 calc(var(--u) * .5) #fff, 0 0 0 calc(var(--u) * 1.1) #ffd23f, 0 calc(var(--u) * .5) calc(var(--u) * 1) #0004; }
   #paints .sw.locked { display: none; }
   #paints:not(.any) { display: none; }
+  /* time of day button */
+  #row2 { display: flex; gap: calc(var(--u) * 1.4); align-items: center; }
+  #tod { width: calc(var(--u) * 7); height: calc(var(--u) * 7); border-radius: 50%; pointer-events: auto; touch-action: none; box-shadow: 0 0 0 calc(var(--u) * .55) #fff, 0 calc(var(--u) * .6) calc(var(--u) * 1.2) #0004; transition: transform .15s; }
+  #tod:active { transform: scale(.9); }
+  #tod svg { width: 100%; height: 100%; display: none; border-radius: 50%; animation: pop .5s cubic-bezier(.3, 1.8, .5, 1); }
+  #tod[data-t="morning"] .i-morning, #tod[data-t="afternoon"] .i-afternoon, #tod[data-t="evening"] .i-evening { display: block; }
+  /* colour grade over the 3D view: a light leak from the sun's side and a soft vignette */
+  #grade { position: fixed; inset: 0; pointer-events: none; }
+  #grade > div { position: absolute; inset: 0; opacity: 0; }
+  #grade > div::before, #grade > div::after { content: ""; position: absolute; inset: 0; }
+  #grade > div::before { mix-blend-mode: screen; }
+  .g0::before { background: radial-gradient(110% 95% at 100% 0%, rgba(255, 205, 130, .42), rgba(255, 220, 160, .12) 45%, rgba(255, 220, 160, 0) 70%); }
+  .g0::after { background: radial-gradient(150% 130% at 55% 45%, rgba(0, 0, 0, 0) 58%, rgba(110, 70, 30, .2) 100%); }
+  .g1::before { background: radial-gradient(90% 80% at 0% 0%, rgba(255, 230, 170, .18), rgba(255, 230, 170, 0) 60%); }
+  .g1::after { background: radial-gradient(150% 130% at 50% 45%, rgba(0, 0, 0, 0) 65%, rgba(40, 50, 30, .14) 100%); }
+  .g2::before { background: radial-gradient(110% 100% at 0% 20%, rgba(255, 150, 90, .38), rgba(255, 140, 120, .1) 50%, rgba(255, 140, 120, 0) 75%); }
+  .g2::after { background: radial-gradient(150% 130% at 55% 40%, rgba(0, 0, 0, 0) 52%, rgba(60, 30, 80, .3) 100%); }
+
   /* the big "you did it" star */
   #bigstar { position: absolute; left: 50%; top: 42%; width: 34vmin; height: 34vmin; margin: -17vmin; opacity: 0; transform: scale(.2) rotate(-40deg); transition: opacity .5s, transform .9s cubic-bezier(.3, 1.6, .5, 1); filter: drop-shadow(0 1vmin 2vmin #0005); }
   #bigstar.on { opacity: 1; transform: scale(1) rotate(0); }
@@ -117,6 +135,7 @@
 </head>
 <body>
 <canvas id="c"></canvas>
+<div id="grade"><div class="g0"></div><div class="g1"></div><div class="g2"></div></div>
 <div id="hud">
   <div id="counter">
     <div class="slot"><img alt=""></div>
@@ -137,7 +156,14 @@
   <div id="applebar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
   <div id="topright">
     <div id="acorns"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div id="row2">
     <div id="paints"><span class="sw sel" style="--c:#dc1f2e"></span><span class="sw locked" style="--c:#2f80ed"></span><span class="sw locked" style="--c:#8f5bd6"></span><span class="sw locked" style="--c:linear-gradient(135deg,#fff2b0,#ffc23a 45%,#d99a10)"></span></div>
+    <div id="tod" role="button" aria-label="Time of day" data-t="morning">
+      <svg class="i-morning" viewBox="0 0 48 48"><rect width="48" height="48" rx="24" fill="#ffd9c2"/><path d="M6 31h36" stroke="#ff9a6a" stroke-width="3" stroke-linecap="round"/><path d="M13 31a11 11 0 0 1 22 0z" fill="#ffc928"/><g stroke="#ffb020" stroke-width="3" stroke-linecap="round"><path d="M24 11v4M11 17l3 3M37 17l-3 3M7 24h3M38 24h3"/></g><path d="M10 37h28M15 42h18" stroke="#9fd18a" stroke-width="3" stroke-linecap="round"/></svg>
+      <svg class="i-afternoon" viewBox="0 0 48 48"><rect width="48" height="48" rx="24" fill="#bfe4ff"/><circle cx="24" cy="24" r="9" fill="#ffc928"/><g stroke="#ffb020" stroke-width="3" stroke-linecap="round"><path d="M24 7v5M24 36v5M7 24h5M36 24h5M12 12l3.500 3.500M32.500 32.500L36 36M36 12l-3.500 3.500M15.500 32.500L12 36"/></g></svg>
+      <svg class="i-evening" viewBox="0 0 48 48"><rect width="48" height="48" rx="24" fill="#5a63b8"/><path d="M28 11a13 13 0 1 0 9 22 11 11 0 0 1-9-22z" fill="#fff2b0"/><g fill="#ffe680"><circle cx="13" cy="15" r="1.800"/><circle cx="36" cy="14" r="1.500"/><circle cx="16" cy="34" r="1.300"/></g></svg>
+    </div>
+    </div>
   </div>
   <div id="bigstar"><svg viewBox="0 0 48 48"><path d="M24 4l6 13 14 1.6-10.5 9.4 3 14L24 34.8 11.500 42l3-14L4 18.600 18 17z" fill="#ffc928" stroke="#fff" stroke-width="2.500" stroke-linejoin="round"/></svg></div>
   <div id="joy"><div id="knob"></div></div>

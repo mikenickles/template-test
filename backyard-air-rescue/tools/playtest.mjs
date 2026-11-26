@@ -38,8 +38,22 @@ async function hoverUntil(x, z, pred, maxSecs = 9) {
   return d.state();
 }
 
-// ---- 1. flying
+// ---- 0. a warm morning, and the time-of-day button
 let s = await d.state();
+check('starts on a warm morning with butterflies and birds about', s.tod === 0 && s.butterflies >= 12 && s.birds >= 6, `${s.butterflies} butterflies, ${s.birds} birds`);
+await d.tap('#tod'); await d.step(300);
+s = await d.state(); const aft = { b: s.butterflies, tod: s.tod };
+await d.tap('#tod'); await d.step(600);
+s = await d.state(); const eve = { b: s.butterflies, birds: s.birds, tod: s.tod };
+await d.shot(join(out, 'evening.png'));
+await d.tap('#tod'); await d.step(420);
+s = await d.state();
+check('sun button: morning → afternoon → evening → morning', Math.abs(aft.tod - 1) < 0.01 && Math.abs(eve.tod - 2) < 0.01 && s.tod === 0, `afternoon ${aft.b} butterflies; evening ${eve.b} butterflies, ${eve.birds} birds; back to morning ${s.butterflies}`);
+check('butterflies and birds go home in the evening, fireflies instead', eve.b === 0 && eve.birds === 0 && aft.b < 12);
+await d.shot(join(out, 'morning.png'));
+
+// ---- 1. flying
+s = await d.state();
 const y0 = s.pos[1];
 await d.stick(0.6, 0.2); await d.step(90); await d.release(); await d.step(60);
 s = await d.state();
@@ -160,7 +174,7 @@ console.log(`      (${f(await minutes())} game-minutes for the scripted run)`);
 const bloomedBefore = (await d.state()).plants.map((p) => p.bloomed).join(); // plants slowly get thirsty again, so compare like for like
 await d.page.reload(); await d.page.waitForFunction(() => window.__game);
 s = await d.state();
-const same = { rescues: s.rescued === 7 && s.free && s.toys.every((t) => t.state === 'home'), picnic: s.picnic && s.basket.held === 8, acorns: s.acorns.every((a) => a.got), paint: s.paint === 3, garden: s.gardenDone > 0 && s.plants.map((p) => p.bloomed).join() === bloomedBefore };
+const same = { time: Math.abs(s.tod - 2) < 0.01, rescues: s.rescued === 7 && s.free && s.toys.every((t) => t.state === 'home'), picnic: s.picnic && s.basket.held === 8, acorns: s.acorns.every((a) => a.got), paint: s.paint === 3, garden: s.gardenDone > 0 && s.plants.map((p) => p.bloomed).join() === bloomedBefore };
 check('reopened: rescues, garden, picnic, acorns and paint are remembered', Object.values(same).every(Boolean), Object.entries(same).filter(([, v]) => !v).map(([k]) => 'lost ' + k).join(', '));
 await d.page.goto(d.page.url().replace('manual', 'manual&fresh')); await d.page.waitForFunction(() => window.__game);
 s = await d.state();

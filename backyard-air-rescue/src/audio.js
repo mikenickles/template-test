@@ -74,7 +74,18 @@ export function makeAudio() {
     pour() { noise(0.14, { vol: 0.07, freq: 2600, type: 'bandpass' }); },
     grow() { tone(392, 0.5, { type: 'triangle', vol: 0.18, to: 1175 }); [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.4, { type: 'triangle', vol: 0.14, delay: 0.35 + i * 0.08 })); },
     splash() { noise(0.3, { vol: 0.25, freq: 1800, type: 'bandpass' }); },
+    flutter() { for (let i = 0; i < 5; i++) noise(0.05, { vol: 0.09, freq: 1400, type: 'bandpass', delay: i * 0.045 }); },
+    alarm() { const b = 3400 + Math.random() * 600; for (let i = 0; i < 3; i++) tone(b, 0.05, { vol: 0.05, to: b * 0.8, delay: 0.05 + i * 0.08 }); },
+    flockSong() { for (let i = 0; i < 6; i++) { const b = 2600 + Math.random() * 1600; tone(b, 0.07, { vol: 0.03, to: b * 1.25, delay: i * 0.16 + Math.random() * 0.05 }); } },
   };
+  // birdsong: a few different singers so the dawn chorus doesn't repeat
+  const SONGS = [
+    () => { const b = 2300 + Math.random() * 700; [0, 1, 2, 1, 3].forEach((k, i) => tone(b * (1 + k * 0.12), 0.11, { vol: 0.04, to: b * (1.08 + k * 0.12), delay: i * 0.14 })); },   // robin warble
+    () => { const b = 3100 + Math.random() * 300; tone(b, 0.28, { vol: 0.045 }); tone(b * 0.84, 0.32, { vol: 0.045, delay: 0.34 }); },                                    // "fee-bee"
+    () => { const b = 2800 + Math.random() * 1200; for (let i = 0; i < 6; i++) tone(b + i * 90, 0.045, { vol: 0.03, delay: i * 0.06 }); },                              // finch trill
+    () => { const b = 2400 + Math.random() * 1400, n = 2 + Math.floor(Math.random() * 3); for (let i = 0; i < n; i++) tone(b, 0.09, { vol: 0.035, to: b * (1.2 + Math.random() * 0.3), delay: i * 0.13 }); },
+  ];
+  let birdRate = 1, crickets = 0, nextCricket = 1;
 
   function update(dt, rotorSpeed, speed01, winchMoving) {
     if (!ctx) return;
@@ -85,14 +96,14 @@ export function makeAudio() {
     hum.frequency.setTargetAtTime(40 + rotorSpeed * 30 + speed01 * 10, t, 0.1);
     winchGain.gain.setTargetAtTime(winchMoving ? 0.045 : 0, t, 0.04);
     winchOsc.frequency.setTargetAtTime(winchMoving > 0 ? 150 : 215, t, 0.05);
-    nextBird -= dt;
-    if (nextBird < 0) {
-      nextBird = 4 + Math.random() * 7;
-      const base = 2400 + Math.random() * 1400, n = 2 + Math.floor(Math.random() * 3);
-      for (let i = 0; i < n; i++) tone(base, 0.09, { vol: 0.035, to: base * (1.2 + Math.random() * 0.3), delay: i * 0.13 });
+    nextBird -= dt * birdRate;
+    if (nextBird < 0) { nextBird = 2.5 + Math.random() * 5; SONGS[Math.floor(Math.random() * SONGS.length)](); }
+    if (crickets > 0.05) {
+      nextCricket -= dt;
+      if (nextCricket < 0) { nextCricket = 0.5 + Math.random() * 1.2; const f = 4200 + Math.random() * 500; for (let i = 0; i < 3; i++) tone(f, 0.04, { type: 'square', vol: 0.008 * crickets, delay: i * 0.07 }); }
     }
   }
   // go quiet the moment the app is backgrounded
   document.addEventListener('visibilitychange', () => { if (ctx) document.hidden ? ctx.suspend() : ctx.resume(); });
-  return { start, sfx, update };
+  return { start, sfx, update, setTime(tod) { birdRate = tod <= 1 ? 2.4 - tod * 1.4 : Math.max(0.05, 1 - (tod - 1)); crickets = Math.max(0, tod - 1.3) / 0.7; } };
 }

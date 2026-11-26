@@ -4,6 +4,7 @@ import { L, PUSHERS, buildWorld, cruiseAlt, restHeight, inPond } from './world.j
 import { makeHeli, makeTeddy, makeDuck, makeRobot, makeKite, makeBall, makeBoat, makeDoll, makeAcorn, makeHook, makeMarker } from './models.js';
 import { makeBasket, buildApples, buildHammock, APPLES } from './picnic.js';
 import { buildLife } from './life.js';
+import { buildBirds } from './birds.js';
 import { buildGarden, makeBucket } from './garden.js';
 import { makeAudio } from './audio.js';
 
@@ -56,6 +57,9 @@ const garden = buildGarden(scene);
 const orchard = buildApples(scene);
 const hammock = buildHammock(scene);
 const audio = makeAudio();
+const birds = buildBirds(scene, audio);
+life.setFlowers(world.flowerHeads());
+world.setCamera(camera);
 
 // ---------------------------------------------------------------- helicopter
 const H = makeHeli();
@@ -134,10 +138,10 @@ padMarker.g.position.set(L.pad.x, L.pad.y + 0.03, L.pad.z);
 
 const timers = [];
 const later = (sec, fn) => timers.push({ at: game.time + sec, fn });
-const game = { time: 0, rescued: 0, free: false, celebrate: -1, usedWinch: false, delivered: false, gardenDone: 0, pourTick: 0, round: 1, picnic: false, finale: null, duskK: 0, acorns: 0, paint: 0, shakeT: 0 };
+const game = { time: 0, rescued: 0, free: false, celebrate: -1, usedWinch: false, delivered: false, gardenDone: 0, pourTick: 0, round: 1, picnic: false, finale: null, tod: 0, todTarget: 0, acorns: 0, paint: 0, shakeT: 0 };
 
 // ---------------------------------------------------------------- HUD
-const hud = { joy: $('joy'), knob: $('knob'), btn: $('winch'), slots: [...document.querySelectorAll('.slot')], edge: $('edge'), hintMove: $('hintMove'), hintTap: $('hintTap'), star: $('star'), pips: [...document.querySelectorAll('#garden .pip')], counter: $('counter'), acornPips: [...document.querySelectorAll('#acorns i')], swatches: [...document.querySelectorAll('#paints .sw')], applebar: $('applebar'), ap: [...document.querySelectorAll('#applebar i')], bigstar: $('bigstar'), gstar: $('gstar'), water: $('water'), wd: [...document.querySelectorAll('#water i')] };
+const hud = { joy: $('joy'), knob: $('knob'), btn: $('winch'), slots: [...document.querySelectorAll('.slot')], edge: $('edge'), hintMove: $('hintMove'), hintTap: $('hintTap'), star: $('star'), pips: [...document.querySelectorAll('#garden .pip')], counter: $('counter'), acornPips: [...document.querySelectorAll('#acorns i')], swatches: [...document.querySelectorAll('#paints .sw')], applebar: $('applebar'), ap: [...document.querySelectorAll('#applebar i')], bigstar: $('bigstar'), tod: $('tod'), grade: [...document.querySelectorAll('#grade > div')], gstar: $('gstar'), water: $('water'), wd: [...document.querySelectorAll('#water i')] };
 function makeThumbs() {
   // Render each toy once into its counter slot so the HUD matches the 3D toys exactly.
   const r = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
@@ -176,7 +180,7 @@ function setJoy(dx, dy) {
 }
 addEventListener('pointerdown', (e) => {
   audio.start();
-  if (e.target.closest('#winch, #paints, #counter')) return;
+  if (e.target.closest('#winch, #paints, #counter, #tod')) return;
   if (joy.id === null && e.clientX < innerWidth * 0.6) {
     joy.id = e.pointerId; joy.bx = e.clientX; joy.by = e.clientY;
     hud.joy.classList.add('on'); setJoy(0, 0);
@@ -536,13 +540,7 @@ function updateAcorns(dt, t) {
 // ---------------------------------------------------------------- sunset finale
 const allDone = () => game.free && game.gardenDone > 0 && game.picnic;
 function updateFinale(dt, t) {
-  if (!game.finale && allDone()) { game.finale = 'dusk'; later(0.5, () => audio.sfx.chime()); }
-  const k = game.finale === 'dusk' || game.finale === 'landing' || game.finale === 'done' ? 1 : 0;
-  if (Math.abs(game.duskK - k) > 0.001 || (k && game.duskK < 1)) {
-    game.duskK = Math.min(1, Math.max(0, game.duskK + Math.sign(k - game.duskK) * dt * 0.12));
-    world.setDusk(game.duskK); life.setFireflies(smoothstep(0.4, 1, game.duskK));
-    renderer.toneMappingExposure = 1.02 - game.duskK * 0.02;
-  }
+  if (!game.finale && allDone()) { game.finale = 'dusk'; setTimeTarget(2, true); later(0.5, () => audio.sfx.chime()); }
   // come home: hover over the pad and the helicopter lands itself
   if (game.finale === 'dusk' && heli.flying && !winch.toy && winch.state === 'idle' && hdist(heli.pos, L.pad) < 2.4 && heli.vel.length() < 1.6) { heli.flying = false; game.finale = 'landing'; }
   if (game.finale === 'landing') {
@@ -558,13 +556,35 @@ function updateFinale(dt, t) {
   if (finaleMarker.g.visible) { finaleMarker.arrow.position.y = 2.4 + Math.abs(Math.sin(t * 3.2)) * 0.8; finaleMarker.arrow.rotation.y = t * 1.5; const s = 3.5 + Math.sin(t * 3.2) * 0.3; finaleMarker.ring.scale.set(s, s, 1); }
 }
 
+// ---------------------------------------------------------------- time of day
+const TOD_NAMES = ['morning', 'afternoon', 'evening'];
+function applyTime() {
+  const td = game.tod;
+  world.setTime(td); life.setTime(td); birds.setTime(td); audio.setTime(td);
+  life.setFireflies(smoothstep(1.4, 2, td));
+  const w = [Math.max(0, 1 - td), Math.max(0, 1 - Math.abs(td - 1)), Math.max(0, td - 1)];
+  hud.grade.forEach((el, i) => (el.style.opacity = w[i].toFixed(3)));
+}
+function updateTime(dt) {
+  const d = game.todTarget - game.tod;
+  if (Math.abs(d) > 1e-4) { game.tod += Math.sign(d) * Math.min(Math.abs(d), dt * 0.3); applyTime(); }
+}
+function setTimeTarget(i, quiet) {
+  game.todTarget = i; hud.tod.dataset.t = TOD_NAMES[i];
+  if (!quiet) { audio.sfx.chime(); save(); }
+}
+hud.tod.addEventListener('pointerdown', (e) => {
+  e.preventDefault(); e.stopPropagation(); audio.start();
+  setTimeTarget((Math.round(game.todTarget) + 1) % 3);
+});
+
 // ---------------------------------------------------------------- saving (on the phone, offline)
 const SAVE_KEY = 'backyard-air-rescue-v1';
 function save() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       rescued: toys.filter((x) => x.rescued).map((x) => x.name), round: game.round, plants: garden.plants.map((p) => p.target), gardenDone: game.gardenDone,
-      acorns: acorns.map((a) => a.got), paint: game.paint, picnic: game.picnic, finale: game.finale === 'done' || game.finale === 'over',
+      acorns: acorns.map((a) => a.got), paint: game.paint, picnic: game.picnic, tod: Math.round(game.todTarget), finale: game.finale === 'done' || game.finale === 'over',
     }));
   } catch (_) { /* no storage: the game still plays, it just won't remember */ }
 }
@@ -589,6 +609,7 @@ function load() {
     orchard.apples.forEach((a, i) => { a.state = 'basket'; a.anim = null; a.slot = basket.slots[i]; basket.held.push(a); });
   }
   if (d.finale) game.finale = 'over';
+  if (d.tod != null) { setTimeTarget(d.tod, true); game.tod = d.tod; }
 }
 // grown-ups: hold the toy counter for three seconds to start over
 {
@@ -843,6 +864,7 @@ function update(dt) {
   updateApples(dt, t);
   updateAcorns(dt, t);
   updateFinale(dt, t);
+  updateTime(dt);
   const padOn = !game.free && !!winch.toy && winch.toy.isToy;
   padMarker.g.visible = padOn;
   if (padOn) { padMarker.arrow.position.y = 2.4 + Math.abs(Math.sin(t * 3.2)) * 0.8; padMarker.arrow.rotation.y = t * 1.5; const s = 3.5 + Math.sin(t * 3.2) * 0.3; padMarker.ring.scale.set(s, s, 1); }
@@ -865,6 +887,7 @@ function update(dt) {
   life.update(dt, t, heli.pos, wash);
   garden.update(dt, t, heli.pos, wash);
   hammock.update(dt, t, heli.pos, wash);
+  birds.update(dt, t, heli.pos, heli.flying);
 
   // --- camera: glides after the helicopter, never turns
   const busy = (winch.held && !winch.toy) || winch.state === 'grab' || winch.state === 'lower' || winch.state === 'release';
@@ -954,6 +977,8 @@ function frame(now) {
 }
 function boot() {
   load();
+  hud.tod.dataset.t = TOD_NAMES[Math.round(game.todTarget)];
+  applyTime();
   update(1 / 60); renderer.render(scene, camera);
   document.body.classList.add('ready');
   if (!MANUAL) requestAnimationFrame((n) => { last = n; requestAnimationFrame(frame); });
@@ -967,8 +992,11 @@ window.__game = {
   advance(dt, steps = 1, draw = true) { for (let i = 0; i < steps; i++) update(dt); if (draw) renderer.render(scene, camera); },
   draw() { renderer.render(scene, camera); },
   script(x, y) { scripted = x === null ? null : { x, y }; },
-  dusk() { game.finale = 'dusk'; game.duskK = 0.999; },
+  setTime(i) { setTimeTarget(i, true); game.tod = i; applyTime(); },
+  dusk() { game.finale = 'dusk'; game.todTarget = 2; game.tod = 1.999; },
+  time(i) { setTimeTarget(i, true); game.tod = i - (i ? 0.001 : -0.001); },
   round2() { if (game.round < 2) { game.round = 2; startRound2(false); } },
+  debugLife: () => ({ flies: life.debugFlies(), heads: life.debugHeads(), birds: birds.debug() }),
   press: pressWinch,
   hold(on) { if (on) pressWinch(); else winch.held = false; },
   info: () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, dpr: renderer.getPixelRatio() }),
@@ -976,6 +1004,6 @@ window.__game = {
     bucket: { state: bucket.state, water: bucket.water, pos: bucket.group.position.toArray(), loop: toyTop(bucket, new THREE.Vector3()).toArray() },
     basket: { state: basket.state, held: basket.held.length, pos: basket.group.position.toArray(), loop: toyTop(basket, new THREE.Vector3()).toArray() },
     apples: orchard.apples.map((a) => ({ state: a.state, pos: a.pos.toArray() })), acorns: acorns.map((a) => ({ got: a.got, pos: a.home.toArray() })),
-    paint: game.paint, round: game.round, picnic: game.picnic, finale: game.finale, dusk: game.duskK, flying: heli.flying, gardenDone: game.gardenDone, plants: garden.plants.map((p) => ({ x: p.x, z: p.z, bloomed: p.target === 1, progress: p.progress })),
+    paint: game.paint, round: game.round, picnic: game.picnic, finale: game.finale, dusk: clamp(game.tod - 1, 0, 1), tod: game.tod, butterflies: life.butterflies(), birds: birds.count(), flying: heli.flying, gardenDone: game.gardenDone, plants: garden.plants.map((p) => ({ x: p.x, z: p.z, bloomed: p.target === 1, progress: p.progress })),
     bob: winch.bob.toArray(), toys: toys.map((t) => ({ name: t.name, state: t.state, rescued: t.rescued, pos: t.group.position.toArray(), loop: toyTop(t, new THREE.Vector3()).toArray() })) }),
 };
