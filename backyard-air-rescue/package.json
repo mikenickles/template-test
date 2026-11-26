@@ -1,0 +1,18 @@
+{
+  "name": "backyard-air-rescue",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A gentle 3D rescue-helicopter game for small kids. Offline Android (WebView) build.",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "watch": "node tools/build.mjs --watch",
+    "playtest": "node tools/playtest.mjs",
+    "capture": "node tools/capture.mjs",
+    "apk": "npm run build && bash android/build-apk.sh"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "three": "^0.170.0"
+  }
+}

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6fc3f5"/><stop offset="0.62" stop-color="#ffe7b0"/></linearGradient>
+    <radialGradient id="body" cx="0.38" cy="0.3" r="0.8"><stop offset="0" stop-color="#ff6a5c"/><stop offset="0.55" stop-color="#e2202c"/><stop offset="1" stop-color="#b40f22"/></radialGradient>
+    <clipPath id="r"><rect x="8" y="8" width="176" height="176" rx="44"/></clipPath>
+  </defs>
+  <g clip-path="url(#r)">
+    <rect width="192" height="192" fill="url(#sky)"/>
+    <ellipse cx="96" cy="196" rx="150" ry="62" fill="#7cc447"/>
+    <ellipse cx="150" cy="188" rx="80" ry="40" fill="#5fae34"/>
+    <!-- tail -->
+    <path d="M70 92 L28 78 L22 52 L36 54 L44 72 L74 80 Z" fill="#c9172a" stroke="#c9172a" stroke-width="6" stroke-linejoin="round"/>
+    <!-- skids -->
+    <path d="M70 140 H140 M84 124 l-6 16 M124 124 l6 16" stroke="#fff8ee" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <!-- body -->
+    <ellipse cx="104" cy="98" rx="46" ry="38" fill="url(#body)"/>
+    <path d="M62 112 a46 38 0 0 0 84 0 Z" fill="#fff8ee"/>
+    <!-- window -->
+    <path d="M104 68 a34 30 0 0 1 40 30 l-40 2 Z" fill="#c9eeff" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>
+    <!-- eyes + smile -->
+    <circle cx="124" cy="116" r="7" fill="#fff"/><circle cx="126" cy="116" r="3.500" fill="#1c1c24"/>
+    <circle cx="143" cy="111" r="6" fill="#fff"/><circle cx="145" cy="111" r="3" fill="#1c1c24"/>
+    <path d="M128 127 q8 5 15 -2" stroke="#1c1c24" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <!-- rotor -->
+    <rect x="100" y="48" width="8" height="14" rx="3" fill="#3a3f4a"/>
+    <ellipse cx="104" cy="46" rx="74" ry="8" fill="#ffffff" opacity="0.55"/>
+    <rect x="34" y="42" width="140" height="8" rx="4" fill="#3a3f4a"/>
+    <rect x="34" y="42" width="22" height="8" rx="4" fill="#ffcf3a"/><rect x="152" y="42" width="22" height="8" rx="4" fill="#ffcf3a"/>
+    <circle cx="104" cy="46" r="8" fill="#ffcf3a"/>
+    <!-- hook -->
+    <path d="M104 136 v16 a9 9 0 0 1 -18 0" stroke="#ffcf3a" stroke-width="6" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>

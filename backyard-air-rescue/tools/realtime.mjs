@@ -1,0 +1,30 @@
+// Sanity check of the real (un-stepped) game loop with real touch events, including two fingers at once.
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
+import { root } from './driver.mjs';
+const { chromium, devices } = createRequire(import.meta.url)('playwright');
+const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
+const page = await ctx.newPage();
+const errors = []; page.on('pageerror', (e) => errors.push(e.message));
+await page.goto('file://' + join(root, 'www/index.html') + '?q=low&dpr=0.6');
+await page.waitForFunction(() => window.__game);
+const cdp = await ctx.newCDPSession(page);
+const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts });
+await touch('touchStart', [{ x: 150, y: 290, id: 1 }]);
+await touch('touchMove', [{ x: 215, y: 290, id: 1 }]);
+await page.waitForTimeout(3500);
+const a = await page.evaluate(() => window.__game.state());
+// second finger taps the winch while the first still steers
+const b = await page.locator('#winch').boundingBox();
+await touch('touchStart', [{ x: 215, y: 290, id: 1 }, { x: b.x + b.width / 2, y: b.y + b.height / 2, id: 2 }]);
+await page.waitForTimeout(250);
+const mid = await page.evaluate(() => window.__game.state());
+await touch('touchEnd', [{ x: 215, y: 290, id: 1 }]);
+await touch('touchEnd', []);
+await page.waitForTimeout(1500);
+const c = await page.evaluate(() => window.__game.state());
+console.log('flew right with one thumb:', a.pos[0] > 4, `x=${a.pos[0].toFixed(1)} alt=${a.pos[1].toFixed(1)}`);
+console.log('second finger worked the winch while steering:', mid.winch !== 'idle', mid.winch);
+console.log('released → hover:', Math.hypot(c.vel[0], c.vel[2]) < 0.5, 'errors:', errors.length);
+await browser.close();
