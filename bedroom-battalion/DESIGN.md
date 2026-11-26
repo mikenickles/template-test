@@ -1169,3 +1169,89 @@ There is no measuring this round (18 intro), so design for it:
 - **Outside greens:** blue-greens (`CONFIG.outside.leaf`), kept at least dE 25 from Green and its dark shade as palette
   values.
 
+
+## 19. Round 7: phones and tablets (user request, 2026-11-26)
+
+User request: "make this game work really well with phone". Touch is input only: gameplay, bots and colliders are
+unchanged (collider hash `e2904076`). No tests run, as in round 6 (the user plays it); a static parse is the only check.
+
+### 19.1 Detection and page
+- **Touch UI:** shown when the primary pointer is coarse or the first input is a touch. It hides on the first mouse
+  move or key press, and comes back on the next touch. Mouse and keyboard keep working exactly as before.
+- **Landscape only:** in portrait, show a "Turn your phone sideways" card and pause the game.
+- **Fullscreen:** Play requests fullscreen, plus `screen.orientation.lock('landscape')` where supported (Android).
+  - On iOS, add the home-screen web-app meta tags.
+  - Show a one-time hint: "Add to Home Screen for full screen".
+- **Viewport and gestures:**
+  - Viewport meta: `width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover`.
+  - Size with `100dvh`.
+  - Set `touch-action: none` and `user-select: none` on the game, and `overscroll-behavior: none`.
+  - Block the context menu, iOS `gesturestart`, double-tap zoom and long-press callouts.
+  - Pad the HUD and controls by `env(safe-area-inset-*)`.
+- **No pointer lock on touch.** Pause and resume use the on-screen pause button.
+- **Lifecycle:**
+  - Pause on `visibilitychange` (hidden) and `pagehide`.
+  - Resume the AudioContext on the first touch.
+  - Handle `webglcontextlost` and `webglcontextrestored`: pause, rebuild GPU resources, and resume without a
+    reload.
+
+### 19.2 Touch controls (right-handed default; "Left-handed" swaps sides)
+- **Move:** a floating stick on the left half. It appears where the thumb lands, radius about 60 CSS px, with a 12 %
+  dead zone and analogue walk. Pushing past 90 % of the radius sprints, shown by the stick ring turning orange.
+  Pushing forward on a climbable climbs, as W does.
+- **Look:** drag anywhere on the right half that is not a button.
+  - Touch sensitivity slider, with a mild acceleration curve.
+  - Scoped sensitivity is 0.4x.
+  - A drag that starts on FIRE also looks while firing.
+- **Buttons** (at least 56 CSS px, in a thumb arc on the right, semi-transparent, with a pressed state):
+  - FIRE (largest);
+  - JUMP;
+  - CROUCH (toggle);
+  - RELOAD;
+  - GRENADE;
+  - SCOPE (shown only with the sniper).
+- **Weapon switch:** tap a weapon icon in the HUD bar.
+- **Pause and scores:** pause button top-left, inside the safe area. Tap the score to see the scoreboard.
+- **Aim assist** (touch and gamepad only, default on, toggle in options):
+  - Look speed slows to 0.5x while the crosshair is within about 3 degrees of a visible enemy.
+  - No snap and no pull. Bots are unaffected.
+- **Auto-fire** (off by default, accessibility option): fires while the crosshair is on a visible enemy.
+- **Haptics** (`navigator.vibrate`, toggle): short pulses on a hit given, on damage taken, and a double pulse on a kill.
+- **Options:** touch sensitivity, aim assist, auto-fire, haptics, left-handed, button size (S, M, L), button opacity,
+  and frame cap (60, or 30 as battery saver). Saved with the other settings.
+
+### 19.3 Menus and HUD on small screens
+- **Tap targets:** every control is at least 48 CSS px.
+- **Weapon pick:** the freeze-time pick becomes a row of large tap cards.
+- **HUD layout:** the HUD is laid out so that none of it sits under the thumbs or the controls.
+- **Text:** at least 12 CSS px, and nothing overlaps at a 640x360 CSS viewport.
+- **Title screen:** a large PLAY button. The difficulty and graphics rows are tap-sized.
+
+### 19.4 Phone performance
+- **Mobile preset:** graphics Auto picks it on touch or mobile devices. It can also be chosen by hand.
+  - Pixel ratio min(devicePixelRatio, 1.5), times a dynamic scale from 0.5 to 1.0.
+  - Post: FXAA only. No GTAO, no SMAA, and no bloom, or bloom at half resolution if cheap.
+  - 1024 shadow map, and no normal maps.
+  - Atlases downscaled to 1024, and the poster atlas to 2048.
+  - Half the dust motes. The outside drops to 3 trees and half the flowers.
+  - The fan lamp is emissive only, with no point light.
+  - Casing pool 12, decal pool 32.
+- **Targets:** 60 fps on a mid-range 2022 phone, with the 30 fps cap as a fallback. Texture memory under 96 MB, so
+  iOS Safari does not kill the tab.
+- **Shader compile:** the Mobile preset's programs are compiled at load like the others.
+
+### 19.5 Gamepad (cheap, and it helps phones and tablets with a controller)
+- **API:** the Gamepad API, standard mapping.
+- **Mapping:**
+  - Left stick: move; click it to sprint.
+  - Right stick: look.
+  - RT: fire.
+  - LT: scope.
+  - A: jump.
+  - B: crouch.
+  - X: reload.
+  - RB: grenade.
+  - Y or D-pad: switch weapon.
+  - Start: pause.
+- **Look and menus:** aim assist as for touch. The D-pad and A navigate the menus.
+- **Hot-plug:** a controller can be connected or disconnected at any time.
