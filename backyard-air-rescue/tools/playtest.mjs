@@ -9,7 +9,20 @@ const results = [];
 const check = (name, ok, detail = '') => { results.push({ name, ok }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
 const f = (n) => n.toFixed(2);
 const L = await d.page.evaluate(() => window.__game.L);
-const top = async (name) => { const t = (await d.state()).toys.find((x) => x.name === name); const h = { teddy: 1.98, duck: 1.66, robot: 2.3 }[name]; return [t.pos[0], t.pos[1] + h, t.pos[2]]; };
+const top = async (name) => {
+  const st = await d.state();
+  if (name === 'bucket') return [st.bucket.pos[0], st.bucket.pos[1] + 1.75, st.bucket.pos[2]];
+  const t = st.toys.find((x) => x.name === name); const h = { teddy: 1.98, duck: 1.66, robot: 2.3 }[name]; return [t.pos[0], t.pos[1] + h, t.pos[2]];
+};
+/** Hover the hanging bucket over a spot until a condition holds. */
+async function hoverUntil(x, z, pred, maxSecs = 9) {
+  await d.flyTo(x, z, 3);
+  for (let i = 0; i < maxSecs * 20; i++) { await d.hover(x, z, 3); if (pred(await d.state())) break; }
+  await d.release();
+  return d.state();
+}
+const fill = (spot) => hoverUntil(spot.x, spot.z, (q) => q.bucket.water >= 2.95);
+const water = (i) => hoverUntil(P[i].x, P[i].z, (q) => q.plants[i].bloomed || q.bucket.water < 0.01, 7);
 const toyState = async (name) => (await d.state()).toys.find((x) => x.name === name);
 
 // 1. take-off
@@ -45,6 +58,22 @@ async function deliver(name) {
   await d.releaseWinch();
   return d.waitFor((q) => q.toys.find((t) => t.name === name).state === 'home', 9);
 }
+
+// 2b. the bucket: hook it, fill it at the pond, water the two potted plants
+const P = (await d.state()).plants;
+s = await hook('bucket');
+check('bucket: lined up + held → hooks like a toy', s.carrying === 'bucket');
+s = await fill(L.pond);
+check('bucket dips itself into the pond and fills', s.bucket.water >= 2.95, `water ${f(s.bucket.water)}/3`);
+s = await water(0);
+check('hovering over a thirsty plant pours and it blooms', s.plants[0].bloomed && s.bucket.water < 2.1 && s.bucket.water > 1.8, `water left ${f(s.bucket.water)}/3`);
+s = await water(1);
+check('second pot blooms from the same bucket', s.plants[1].bloomed, `${s.plants.filter((q) => q.bloomed).length}/8 in bloom, water left ${f(s.bucket.water)}`);
+await d.shot(join(out, 'watering.png'));
+await d.flyTo(-4, 6, 2); await d.releaseWinch(); await d.step(3);
+s = await d.state();
+check('letting go of the bucket drops it and spills the water', s.bucket.state === 'falling' && s.bucket.water === 0);
+await d.waitFor((q) => q.bucket.state === 'placed', 4);
 
 // 3. no auto-connect: hold the button with the hook 1.4 units off the loop
 {
@@ -110,6 +139,20 @@ await d.flyTo(-6, 14, 2); await d.step(40); await d.releaseWinch();
 s = await d.waitFor((q) => !q.carrying && q.winch === 'idle', 8);
 const duck = s.toys[1];
 check('free flight: carry a toy anywhere and set it down gently', !s.carrying && duck.state === 'placed', `duck at ${f(duck.pos[0])}, ${f(duck.pos[2])}`);
+
+// 9. finish the garden: refill at the paddling pool as needed
+await d.releaseWinch(); await d.step(120);
+s = await hook('bucket');
+for (let i = 2; i < 8; i++) {
+  if ((await d.state()).bucket.water < 0.95) await fill(L.pool);
+  s = await water(i);
+  if (!s.plants[i].bloomed) { await fill(L.pool); s = await water(i); }
+}
+await d.step(150);
+s = await d.state();
+check('whole garden watered: all 8 plants in bloom', s.plants.every((q) => q.bloomed), `${s.plants.filter((q) => q.bloomed).length}/8`);
+await d.shot(join(out, 'garden.png'));
+await d.releaseWinch(); await d.step(200);
 
 await d.stick(-1, -1); await d.step(600); s = await d.state(); await d.release();
 check('cannot leave the yard or get stuck', s.pos[0] > -33 && s.pos[2] > -30 && s.pos.every(Number.isFinite));

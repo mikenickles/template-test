@@ -93,7 +93,7 @@ export function buildLife(scene) {
         l.v.x += Math.sin(t * 3 + l.ph) * 1.2 * dt; // flutter
         l.p.addScaledVector(l.v, dt);
         l.r.x += l.w.x * dt; l.r.y += l.w.y * dt; l.r.z += l.w.z * dt;
-        l.p.x = clamp(l.p.x, -33.5, 33.5); l.p.z = clamp(l.p.z, -31.5, 38);
+        l.p.x = clamp(l.p.x, -33.5, L.east - 1.5); l.p.z = clamp(l.p.z, -31.5, 38);
         const floor = inPond(l.p.x, l.p.z) ? 0.1 : 0.06;
         if (l.p.y <= floor) { l.p.y = floor; if (l.v.length() < 1.2) { l.air = false; l.v.set(0, 0, 0); l.r.x = -Math.PI / 2; l.r.y = 0; } else { l.v.y = Math.abs(l.v.y) * 0.25; } }
       }
@@ -107,7 +107,7 @@ export function buildLife(scene) {
       bs.v.x += (dx / d) * k * 14 * dt; bs.v.z += (dz / d) * k * 14 * dt;
       bs.v.multiplyScalar(Math.exp(-0.9 * dt));
       p.x += bs.v.x * dt; p.z += bs.v.z * dt;
-      if (p.x < -32 || p.x > 32) { bs.v.x *= -0.6; p.x = clamp(p.x, -32, 32); }
+      if (p.x < -32 || p.x > L.east - 3) { bs.v.x *= -0.6; p.x = clamp(p.x, -32, L.east - 3); }
       if (p.z < -30 || p.z > 26) { bs.v.z *= -0.6; p.z = clamp(p.z, -30, 26); }
       for (const o of [{ x: L.tree.x, z: L.tree.z, r: 4.6 }, { x: L.shed.x, z: L.shed.z, r: 4.8 }, { x: L.tower.x, z: L.tower.z, r: 4.2 }]) {
         const ox = p.x - o.x, oz = p.z - o.z, od = Math.hypot(ox, oz);

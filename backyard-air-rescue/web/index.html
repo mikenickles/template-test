@@ -28,6 +28,21 @@
   @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.45) rotate(-8deg); } 100% { transform: scale(1); } }
   @keyframes twirl { 50% { transform: rotate(18deg) scale(1.12); } }
 
+  /* garden counter */
+  #garden { position: absolute; left: calc(env(safe-area-inset-left) + var(--u) * 2); top: calc(env(safe-area-inset-top) + var(--u) * 14.5); display: flex; gap: calc(var(--u) * .8); padding: calc(var(--u) * .9) calc(var(--u) * 1.4); border-radius: calc(var(--u) * 4); background: #fff9ecd9; box-shadow: 0 calc(var(--u) * .4) 0 #0002, 0 0 0 calc(var(--u) * .4) #fff; align-items: center; }
+  #garden svg { width: calc(var(--u) * 3.2); height: calc(var(--u) * 3.6); }
+  .pip { width: calc(var(--u) * 2.6); height: calc(var(--u) * 2.6); border-radius: 50%; background: #d9d3c4; box-shadow: inset 0 calc(var(--u) * .3) 0 #0002; transition: background .4s, transform .5s cubic-bezier(.3, 1.8, .5, 1); }
+  .pip.on { background: radial-gradient(circle, #ffd23f 32%, #ff6fa8 36%); transform: scale(1.25); box-shadow: none; }
+  #gstar { width: 0; height: calc(var(--u) * 3.6); overflow: hidden; transition: width .5s; }
+  #gstar.on { width: calc(var(--u) * 3.6); }
+  #gstar svg { width: calc(var(--u) * 3.6); height: 100%; animation: twirl 3s ease-in-out infinite; }
+  /* water left in the bucket */
+  #water { position: absolute; right: calc(env(safe-area-inset-right) + var(--u) * 6.5); bottom: calc(env(safe-area-inset-bottom) + var(--u) * 27.5); display: flex; gap: calc(var(--u) * .9); opacity: 0; transition: opacity .3s; }
+  #water.on { opacity: 1; }
+  #water i { width: calc(var(--u) * 4.2); height: calc(var(--u) * 4.2); border-radius: 0 50% 50% 50%; transform: rotate(45deg); background: #ffffff70; box-shadow: 0 0 0 calc(var(--u) * .45) #fff; transition: background .25s; }
+  #water i.on { background: #35b8f5; }
+  #edge.water path { fill: #2f9bff; }
+
   /* winch button */
   #winch { position: absolute; right: calc(env(safe-area-inset-right) + var(--u) * 4); bottom: calc(env(safe-area-inset-bottom) + var(--u) * 4); width: calc(var(--u) * 21); height: calc(var(--u) * 21); border-radius: 50%; pointer-events: auto; touch-action: none;
     background: radial-gradient(circle at 35% 28%, #fff3a8, #ffcf2e 48%, #f5a400); box-shadow: 0 calc(var(--u) * 1.1) 0 #b96f00, 0 calc(var(--u) * 1.6) calc(var(--u) * 2.4) #0005, inset 0 0 0 calc(var(--u) * .9) #fff; display: grid; place-items: center; transition: transform .08s, filter .3s; filter: saturate(.75) brightness(.96); }
@@ -81,6 +96,12 @@
     <div class="slot"><img alt=""></div>
     <div id="star"><svg viewBox="0 0 48 48"><path d="M24 4l6 13 14 1.6-10.5 9.4 3 14L24 34.8 11.500 42l3-14L4 18.600 18 17z" fill="#ffc928" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg></div>
   </div>
+  <div id="garden">
+    <svg viewBox="0 0 32 36"><path d="M16 2 C16 2 4 16 4 23 a12 12 0 0 0 24 0 C28 16 16 2 16 2z" fill="#35b8f5" stroke="#fff" stroke-width="2.500"/></svg>
+    <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+    <div id="gstar"><svg viewBox="0 0 48 48"><path d="M24 4l6 13 14 1.6-10.5 9.4 3 14L24 34.8 11.500 42l3-14L4 18.600 18 17z" fill="#ffc928" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg></div>
+  </div>
+  <div id="water"><i></i><i></i><i></i></div>
   <div id="joy"><div id="knob"></div></div>
   <div id="edge"><svg viewBox="0 0 48 48"><path d="M8 8 L42 24 L8 40 L15 24 Z"/></svg></div>
   <div id="hintMove" class="hand"></div>

@@ -13,7 +13,15 @@ export const L = {
   pond: { x: 15, z: 14, rx: 8.5, rz: 5.8 },
   bed: { x: -17, z: 11, r: 6 },
   sandbox: { x: -8, z: -8, s: 6 },
-  bounds: { x0: -30, x1: 30, z0: -27, z1: 24 },
+  bounds: { x0: -30, x1: 69, z0: -27, z1: 24 },
+  east: 74.4,                                   // east fence (the yard grew a garden)
+  bucket: { x: 1.2, z: -5.6 },
+  pots: [{ x: 14.8, z: -4.4 }, { x: -13.5, z: 1.5 }],
+  planter: { x: 52, z: -16, w: 14, d: 4.2 },
+  patch: { x: 56, z: 8, r: 5 },
+  pool: { x: 41, z: 17, r: 3.6, y: 0.8 },
+  apple: { x: 64, z: -23 },
+  line: { x: 43, z: -26, half: 5.2 },
   sunDir: new THREE.Vector3(-0.5, 0.66, -0.45).normalize(),
   baseAlt: 6,
 };
@@ -23,6 +31,7 @@ const OBSTACLES = [
   { x: L.tower.x, z: L.tower.z, r: 4.2, top: 8.9 },
   { x: L.tower.x, z: -12.6, r: 2.2, top: 4.4 },
   { x: L.shed.x, z: L.shed.z, r: 4.4, top: 7.3 },
+  { x: L.apple.x, z: L.apple.z, r: 3.6, top: 11.2 },
 ];
 // Things it slides around.
 export const PUSHERS = [
@@ -49,6 +58,10 @@ export function restHeight(x, z) {
   if (Math.abs(x - t.x) < 3.6 && z > t.z - 3.6 && z < -5.2) return null;
   if (Math.abs(x - s.x) < s.w / 2 + 1 && Math.abs(z - s.z) < s.d / 2 + 1.2) return null;
   if (Math.hypot(x - L.tree.x, z - L.tree.z) < 4.6) return null;
+  if (Math.hypot(x - L.apple.x, z - L.apple.z) < 1.6) return null;
+  for (const p of L.pots) if (Math.hypot(x - p.x, z - p.z) < 1.5) return null;
+  if (Math.abs(x - L.planter.x) < L.planter.w / 2 + 0.3 && Math.abs(z - L.planter.z) < L.planter.d / 2 + 0.3) return 0.95;
+  if (Math.hypot(x - L.pool.x, z - L.pool.z) < L.pool.r + 0.8) return Math.hypot(x - L.pool.x, z - L.pool.z) < L.pool.r - 0.8 ? 0.5 : null;
   if (Math.hypot(x - L.pad.x, z - L.pad.z) < L.pad.r) return L.pad.y;
   if (inPond(x, z, -0.3)) return 0.02;
   if (Math.abs(x - L.sandbox.x) < 3 && Math.abs(z - L.sandbox.z) < 3) return 0.38;
@@ -67,7 +80,12 @@ function noGrass(x, z) {
   if (Math.hypot(x - L.tree.x, z - L.tree.z) < 4.2) return true;
   if (Math.abs(x - L.home.x) < 2.7 && Math.abs(z - L.home.z) < 2.0) return true;
   for (const [sx, sz] of [[8.0, -4.9], [6.9, -3.2], [6.2, -1.4], [5.9, 0.4]]) if (Math.hypot(x - sx, z - sz) < 1.0) return true;
-  if (Math.abs(x) > 34.2 || z < -32.2) return true;
+  if (Math.abs(x - L.planter.x) < L.planter.w / 2 + 0.5 && Math.abs(z - L.planter.z) < L.planter.d / 2 + 0.5) return true;
+  if (Math.hypot(x - L.patch.x, z - L.patch.z) < L.patch.r) return true;
+  if (Math.hypot(x - L.pool.x, z - L.pool.z) < L.pool.r + 0.9) return true;
+  if (Math.hypot(x - L.apple.x, z - L.apple.z) < 1.1) return true;
+  for (const p of L.pots) if (Math.hypot(x - p.x, z - p.z) < 1.2) return true;
+  if (x < -34.2 || x > L.east - 1.2 || z < -32.2) return true;
   return false;
 }
 
@@ -106,11 +124,11 @@ function buildSky(scene, renderer) {
   const hemi = new THREE.HemisphereLight(0xa9ccff, 0x7c9a48, 1.15);
   scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xffd296, 3.9);
-  sun.position.copy(L.sunDir).multiplyScalar(90);
-  sun.target.position.set(-2, 0, -4);
+  sun.position.copy(L.sunDir).multiplyScalar(110).add(new THREE.Vector3(18, 0, -4));
+  sun.target.position.set(18, 0, -4);
   sun.castShadow = true;
   const sc = sun.shadow.camera;
-  sc.left = -52; sc.right = 52; sc.top = 62; sc.bottom = -50; sc.near = 10; sc.far = 220;
+  sc.left = -74; sc.right = 74; sc.top = 66; sc.bottom = -52; sc.near = 10; sc.far = 260;
   sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.06;
   scene.add(sun, sun.target);
   return { sun, hemi };
@@ -149,6 +167,16 @@ function buildGround(scene) {
     patch(L.shed.x, L.shed.z + 1, 5.2, 4.6, 'rgba(190,165,115,0.9)');
     patch(L.swing.x, L.swing.z, 2.4, 2.4, 'rgba(170,140,95,0.85)', 0.5);
     patch(L.sandbox.x, L.sandbox.z, 4.6, 4.6, 'rgba(215,190,130,0.8)');
+    patch(L.planter.x, L.planter.z, L.planter.w / 2 + 2.5, L.planter.d / 2 + 2.5, 'rgba(190,165,115,0.85)', 0.5);
+    patch(L.patch.x, L.patch.z, L.patch.r + 1.2, L.patch.r + 1.2, 'rgba(96,62,40,1)', 0.15);
+    patch(L.pool.x, L.pool.z, L.pool.r + 2.4, L.pool.r + 2.4, 'rgba(150,200,110,0.9)');
+    patch(L.apple.x, L.apple.z, 4, 4, 'rgba(120,96,60,0.7)', 0.6);
+    // worn garden path from the rescue shed out to the east garden
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    for (const [lw, col] of [[4.4, 'rgba(214,190,140,0.55)'], [3.0, 'rgba(226,204,156,0.9)']]) {
+      g.strokeStyle = col; g.lineWidth = lw * k; g.beginPath(); g.moveTo(px(14), pz(-1.5));
+      g.bezierCurveTo(px(24), pz(4), px(30), pz(-9), px(40), pz(-5)); g.bezierCurveTo(px(48), pz(-2), px(50), pz(-9), px(57), pz(-9)); g.stroke();
+    }
   }, { aniso: 8 });
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(S, S), new THREE.MeshStandardMaterial({ map: tex, roughness: 1, envMapIntensity: 0.15 }));
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true;
@@ -197,7 +225,7 @@ function buildGrass(scene, uniforms, count) {
   const cA = new THREE.Color(0x62b136), cB = new THREE.Color(0x9fd94e), cC = new THREE.Color(0xc2d95a);
   let n = 0, guard = 0;
   while (n < count && guard++ < count * 4) {
-    const x = rr(-34.5, 34.5), z = rr(-32.5, 40);
+    const x = rr(-34.5, L.east - 1), z = rr(-32.5, 40);
     if (noGrass(x, z)) continue;
     const patchy = 0.5 + 0.5 * Math.sin(x * 0.31 + Math.sin(z * 0.23) * 2) * Math.cos(z * 0.27);
     const s = rr(0.8, 1.3), h = rr(0.34, 0.66) * (0.8 + patchy * 0.35);
@@ -281,7 +309,8 @@ function buildFlowerBed(scene) {
   }
   // a few wanderers along the fence and around the yard
   const extra = [[-31, -8, 'sun'], [-31.5, -3, 'daisy'], [-31, 2, 'sun'], [-28, -14, 'daisy'], [30.5, 2, 'daisy'], [31, -3, 'tulip'], [31, 6, 'sun'],
-    [-4, -29.5, 'daisy'], [1, -30, 'tulip'], [6, -29.5, 'sun'], [11, -30, 'daisy'], [-9, 19, 'tulip'], [-6, 21, 'daisy'], [27, 21, 'tulip'], [-27, 22, 'daisy'], [-11, -29.5, 'tulip']];
+    [-4, -29.5, 'daisy'], [1, -30, 'tulip'], [6, -29.5, 'sun'], [11, -30, 'daisy'], [-9, 19, 'tulip'], [-6, 21, 'daisy'], [27, 21, 'tulip'], [-27, 22, 'daisy'], [-11, -29.5, 'tulip'],
+    [36, -30, 'tulip'], [55, -30, 'daisy'], [59, -29.5, 'sun'], [71, -12, 'daisy'], [71.5, 2, 'sun'], [71, 13, 'tulip'], [66, 21.5, 'daisy'], [50, 22, 'tulip'], [34, 23, 'sun']];
   for (const [x, z, type] of extra) {
     const f = makeFlower(type, pick(cols[type]), type === 'sun' ? rr(3.8, 4.4) : rr(2.4, 3.2));
     f.position.set(x, 0, z); f.rotation.y = rnd() * 6.28; scene.add(f);
@@ -573,8 +602,8 @@ function buildFence(scene) {
   sh.moveTo(-0.62, 0); sh.lineTo(-0.62, 6.1); sh.quadraticCurveTo(-0.6, 6.7, 0, 7.2); sh.quadraticCurveTo(0.6, 6.7, 0.62, 6.1); sh.lineTo(0.62, 0); sh.closePath();
   const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.22, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 1 });
   const spots = [];
-  for (let x = -35; x <= 35.01; x += 1.42) spots.push([x, -33.4, 0]);
-  for (let z = -32; z <= 42; z += 1.42) { spots.push([-35.4, z, Math.PI / 2]); spots.push([35.4, z, -Math.PI / 2]); }
+  for (let x = -35; x <= L.east + 0.01; x += 1.42) spots.push([x, -33.4, 0]);
+  for (let z = -32; z <= 42; z += 1.42) { spots.push([-35.4, z, Math.PI / 2]); spots.push([L.east, z, -Math.PI / 2]); }
   const mesh = new THREE.InstancedMesh(geo, M(0xffe9c4, { r: 0.6 }), spots.length);
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), col = new THREE.Color();
   spots.forEach(([x, z, ry], i) => {
@@ -586,20 +615,20 @@ function buildFence(scene) {
   mesh.castShadow = true; mesh.receiveShadow = true; scene.add(mesh);
   const railM = M(0xf2dfbf, { r: 0.7 });
   for (const y of [1.6, 5.0]) {
-    put(scene, new THREE.BoxGeometry(71, 0.4, 0.2), railM, [0, y, -33.6]);
+    put(scene, new THREE.BoxGeometry(L.east + 36, 0.4, 0.2), railM, [(L.east - 35) / 2, y, -33.6]);
     put(scene, new THREE.BoxGeometry(0.2, 0.4, 76), railM, [-35.6, y, 5]);
-    put(scene, new THREE.BoxGeometry(0.2, 0.4, 76), railM, [35.6, y, 5]);
+    put(scene, new THREE.BoxGeometry(0.2, 0.4, 76), railM, [L.east + 0.2, y, 5]);
   }
   // soft neighbourhood behind the fence
   const blob = new THREE.IcosahedronGeometry(1, 2), mats = [M(0x4d9a3e, { r: 0.9, env: 0.2 }), M(0x6fb548, { r: 0.9, env: 0.2 }), M(0x3d8a44, { r: 0.9, env: 0.2 })];
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 22; i++) {
     const x = -52 + i * 7 + rr(-2, 2), r = rr(5, 9);
     put(scene, blob, mats[i % 3], [x, r * 0.75 + rr(0, 3), -41 - rr(0, 10)], [rnd(), rnd(), 0], [r, r * 0.85, r], false);
   }
   for (let i = 0; i < 9; i++) {
     const r = rr(5, 8);
     put(scene, blob, mats[i % 3], [-44 - rr(0, 6), r * 0.8, -30 + i * 8], null, [r, r * 0.85, r], false);
-    put(scene, blob, mats[(i + 1) % 3], [44 + rr(0, 6), r * 0.8, -30 + i * 8], null, [r, r * 0.85, r], false);
+    put(scene, blob, mats[(i + 1) % 3], [L.east + 9 + rr(0, 6), r * 0.8, -30 + i * 8], null, [r, r * 0.85, r], false);
   }
   // neighbour's house peeking over
   const hs = new THREE.Group(); hs.position.set(16, 0, -52); scene.add(hs);
