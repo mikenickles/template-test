@@ -1,0 +1,11 @@
+{
+  "name": "bedroom-battalion-android",
+  "private": true,
+  "description": "Android wrapper (Capacitor) for bedroom-battalion/index.html",
+  "scripts": { "build:apk": "bash build-apk.sh" },
+  "dependencies": {
+    "@capacitor/android": "8.6.3",
+    "@capacitor/cli": "8.6.3",
+    "@capacitor/core": "8.6.3"
+  }
+}

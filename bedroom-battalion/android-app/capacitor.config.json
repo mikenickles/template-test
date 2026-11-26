@@ -1,0 +1,6 @@
+{
+  "appId": "app.bedroombattalion.game",
+  "appName": "Bedroom Battalion",
+  "webDir": "www",
+  "android": { "backgroundColor": "#D6DEE8", "allowMixedContent": false }
+}

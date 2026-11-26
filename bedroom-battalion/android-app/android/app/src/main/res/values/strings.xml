@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Bedroom Battalion</string>
+    <string name="title_activity_main">Bedroom Battalion</string>
+    <string name="package_name">app.bedroombattalion.game</string>
+    <string name="custom_url_scheme">app.bedroombattalion.game</string>
+</resources>
