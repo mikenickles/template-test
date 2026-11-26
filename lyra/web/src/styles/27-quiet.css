@@ -1,0 +1,1022 @@
+/* =========================================================================
+   QUIET (0.58): the redesign. Ink on white, hairlines, one accent as a small mark.
+   Built to match the Quiet mockups screen by screen; everything above still
+   provides structure, this block re-dresses it. Other looks (Zine, Night Radio,
+   Film) keep their own tokens on top of this.
+   ========================================================================= */
+
+/* ---- type ---- */
+h1,
+h2,
+.page-head h1,
+.page-title {
+  font-family: var(--display);
+}
+.page-head h1,
+.page-title {
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+/* ---- the haze: a faint wash at the very top, nothing behind the content ---- */
+html[data-ambient="on"] .haze {
+  opacity: 0.32;
+  height: 46dvh;
+  margin-bottom: -46dvh;
+  -webkit-mask-image: linear-gradient(#000, transparent);
+  mask-image: linear-gradient(#000, transparent);
+}
+html[data-ambient="on"] .topbar:not(.floating),
+html[data-ambient="on"] .tabbar:not(.floating) {
+  background: var(--bg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* ---- top bar: plain icons, the initial in a thin ring ---- */
+.topbar {
+  padding: calc(var(--inset-top) + 14px) 16px 10px;
+}
+.ring,
+.topbar.floating .ring {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+}
+.ring:hover {
+  background: var(--drawer-hover);
+}
+.topbar .initial,
+.topbar.floating .ring:has(.initial) {
+  color: var(--text);
+}
+.topbar .ring:has(.initial) {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line-strong);
+}
+.topbar .initial {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ---- Lyra in the top bar: face, name and status in a row ---- */
+:root {
+  --orb-sm: 40px;
+}
+[data-avatar="small"] {
+  --orb-sm: 34px;
+}
+[data-avatar="large"] {
+  --orb-sm: 52px;
+}
+.avatar-stack.head-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+.head-words {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+.head-name {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--text);
+  text-decoration: none;
+}
+.head-words .status-line {
+  position: static;
+  transform: none;
+}
+.head-words .status-pill {
+  padding: 0;
+  gap: 6px;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 450;
+  color: var(--text-muted);
+}
+.status-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--mark);
+}
+.status-dot.live {
+  background: var(--mark);
+  box-shadow: none;
+  animation: quiet-live 2s ease-in-out infinite;
+}
+@keyframes quiet-live {
+  50% {
+    opacity: 0.25;
+  }
+}
+.orb,
+.orb:has(.avatar) {
+  box-shadow: none;
+}
+.chat .log {
+  padding-top: calc(var(--inset-top) + 84px);
+}
+.chat.in-channel .log {
+  padding-top: calc(var(--inset-top) + 150px);
+}
+
+/* the ring around Lyra breathes out and fades, in the accent */
+html[data-ambient="on"] .orb:has(.avatar),
+html[data-ambient="on"] body[data-busy] .orb:has(.avatar) {
+  animation: none;
+}
+html[data-ambient="on"] .orb:has(.avatar)::before {
+  inset: -4px;
+  z-index: 0;
+  background: none;
+  border: 1.5px solid var(--mark);
+  animation: quiet-breathe 3.6s ease-in-out infinite;
+}
+html[data-ambient="on"] body[data-busy] .orb:has(.avatar)::before {
+  animation-duration: 1.6s;
+}
+@keyframes quiet-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0;
+  }
+}
+body[data-busy] .orb:has(.avatar)::after {
+  display: none;
+}
+
+/* ---- the conversation ---- */
+.day {
+  margin: var(--s5) 0 var(--s3);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-faint);
+}
+.day svg {
+  display: none;
+}
+.day::before,
+.day::after {
+  background: var(--border);
+}
+.bubble {
+  border-radius: 20px;
+  padding: 10px 16px;
+  line-height: 1.4;
+  box-shadow: inset 0 0 0 1px var(--me-line, transparent);
+}
+.reply {
+  padding-left: 0;
+  line-height: 1.45;
+}
+.reply::before,
+.reply.error::before {
+  display: none;
+}
+.row.lyra > :not(.reply) {
+  margin-left: 0;
+}
+
+/* buttons Lyra suggests: thin pills */
+.suggestions {
+  margin-left: 0;
+  gap: 8px;
+}
+.suggestion {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 20px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 450;
+  box-shadow: none;
+}
+.suggestion:hover {
+  border-color: var(--faint);
+  background: var(--bg);
+}
+
+/* what Lyra did (a reminder, a saved note): a thin card with a small dot */
+.note {
+  border-radius: 16px;
+  border-color: var(--border);
+  background: var(--bg);
+  padding: 10px 14px;
+  color: var(--text);
+}
+
+/* ---- the message box: two levels, words on top, buttons underneath ---- */
+.composer {
+  padding: 0 14px 6px;
+}
+.composer-inner,
+.chat .composer-inner {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto auto;
+  align-items: center;
+  column-gap: 6px;
+  row-gap: 0;
+  padding: 14px 10px 10px 18px;
+  border-radius: 28px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
+}
+.composer-inner::before,
+.composer-inner::after {
+  display: none;
+}
+.composer-inner > .replying,
+.composer-inner > .drafts {
+  grid-column: 1 / -1;
+  margin: 0 8px 10px 0;
+}
+.composer-inner > .replying {
+  grid-row: 1;
+}
+.composer-inner > .drafts {
+  grid-row: 2;
+}
+.composer textarea {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  padding: 0 8px 10px 0;
+  min-height: 34px;
+  line-height: 24px;
+  font-size: 16px;
+}
+.composer textarea::placeholder {
+  color: var(--text-faint);
+}
+.composer-inner > .attach {
+  grid-column: 1;
+  grid-row: 4;
+}
+.composer-inner > .web-toggle {
+  grid-column: 2;
+  grid-row: 4;
+}
+.composer-inner > .composer-gap {
+  grid-column: 3;
+  grid-row: 4;
+}
+.composer-inner > .talk {
+  grid-column: 4;
+  grid-row: 4;
+}
+.composer-inner > .send {
+  grid-column: 5;
+  grid-row: 4;
+}
+.attach,
+.talk,
+.send {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+.attach {
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--text);
+  place-items: center;
+}
+.web-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 20px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  white-space: nowrap;
+  transition: background var(--ease), border-color var(--ease), color var(--ease);
+}
+.web-toggle.on {
+  border-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: 550;
+}
+.talk {
+  background: var(--fill);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+}
+.send,
+.send:disabled {
+  background: var(--text);
+  color: var(--bg);
+}
+.send:disabled {
+  opacity: 0.22;
+}
+.send.stop {
+  background: var(--text);
+  color: var(--bg);
+}
+
+/* ---- the tab bar: three words, the one you're on underlined in the accent ---- */
+.chat {
+  --tabbar-h: calc(var(--inset-bottom) + 62px);
+}
+.tabbar {
+  padding: 0 24px calc(var(--inset-bottom) + 12px);
+}
+.tabbar:not(.floating) {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.tabbar.floating {
+  background: var(--bg);
+}
+.tabbar-inner,
+.tabbar.floating .tabbar-inner {
+  max-width: none;
+  padding: 0;
+  gap: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.tabbar-item,
+.tabbar-item.on {
+  flex-direction: column;
+  gap: 5px;
+  min-height: 44px;
+  padding-top: 4px;
+  border-radius: 0;
+  background: none;
+  font-size: 12px;
+  font-weight: 450;
+  color: var(--text-faint);
+}
+.tabbar-item.on {
+  font-weight: 600;
+  color: var(--text);
+}
+.tabbar-item > svg,
+.tabbar-icon > svg {
+  display: none;
+}
+.tabbar-icon {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  margin-left: 18px;
+}
+.tabbar-icon .badge {
+  position: static;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  box-shadow: none;
+}
+.tabbar-inner > .slide-pill {
+  background: none;
+  box-shadow: none;
+}
+.tabbar-inner > .slide-pill::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 18px;
+  height: 3px;
+  margin-left: -9px;
+  border-radius: 2px;
+  background: var(--mark);
+}
+
+/* ---- Tasks: a big title, tabs underlined, a ready card, plain rows ---- */
+.tasks-head {
+  margin: 6px 0 18px;
+}
+.tasks-head .page-title {
+  margin: 0 0 14px;
+}
+.seg-tabs,
+.tasks-head .seg-tabs {
+  display: flex;
+  gap: 28px;
+  padding: 0 0 10px;
+  border-radius: 0;
+  background: none;
+  border-bottom: 1px solid var(--border);
+}
+.seg-tabs button,
+.seg-tabs button.on {
+  min-height: 0;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font-size: 15px;
+  font-weight: 450;
+  color: var(--text-faint);
+}
+.seg-tabs button.on {
+  font-weight: 600;
+  color: var(--text);
+}
+.seg-tabs > .slide-pill {
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+.seg-tabs > .slide-pill::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -11px;
+  height: 2px;
+  background: var(--text);
+}
+.section-label,
+.task-group .section-label {
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-faint);
+}
+.section-label .count::before {
+  content: "· ";
+}
+.task-group + .task-group {
+  margin-top: 26px;
+}
+.ready-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 18px;
+  margin-bottom: 8px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--surface);
+}
+.ready-label {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.ready-card .ready-body {
+  gap: 6px;
+  color: inherit;
+  text-decoration: none;
+}
+.ready-card .task-title {
+  font-family: var(--display);
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+.ready-card .task-sub {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.ready-progress {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  overflow: hidden;
+}
+.ready-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--text);
+  transition: width 1.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.ready-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.ready-actions .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
+  height: 46px;
+  border-radius: 23px;
+  white-space: nowrap;
+  font-size: 15px;
+}
+.task-row {
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 14px;
+}
+.task-group .swipe:last-child .task-row,
+.task-group > .task-row:last-child {
+  border-bottom: 0;
+}
+.task-check {
+  color: var(--faint);
+}
+.task-check svg {
+  width: 24px;
+  height: 24px;
+}
+.task-row.done .task-check {
+  color: var(--text);
+}
+.task-title {
+  font-size: 16px;
+  font-weight: 450;
+}
+.task-sub {
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+/* buttons: ink for the main one, a thin outline for the rest */
+.btn {
+  border-radius: 999px;
+  font-weight: 500;
+}
+.btn.primary {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+  font-weight: 600;
+}
+.btn.quiet,
+.btn:not(.primary):not(.danger):not(.link) {
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* the + button: an ink circle */
+.fab {
+  width: 56px;
+  height: 56px;
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+/* switches: ink when on */
+.switch:checked {
+  background: var(--text);
+  border-color: var(--text);
+}
+
+/* ---- Artifacts: tiles with the title underneath ---- */
+.artifact-filters,
+.activity-filters.artifact-filters {
+  gap: 28px;
+  margin: 2px 0 18px;
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.activity-filters.artifact-filters button,
+.activity-filters.artifact-filters button.on {
+  height: auto;
+  padding: 0 0 10px;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-size: 15px;
+  font-weight: 450;
+  color: var(--text-faint);
+}
+.activity-filters.artifact-filters button.on {
+  font-weight: 600;
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 var(--text);
+}
+.art-grid {
+  gap: 18px 14px;
+}
+.art-card,
+.art-card:hover {
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.art-preview {
+  height: 150px;
+  border-radius: 18px;
+}
+.art-preview.dash {
+  background: var(--surface);
+}
+.art-preview.doc {
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.art-stat {
+  font-family: var(--display);
+  letter-spacing: -0.02em;
+}
+.art-bars i {
+  background: var(--text);
+}
+.art-bars i:first-child {
+  background: var(--mark);
+}
+.art-body {
+  padding: 0 2px;
+}
+.art-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+.art-meta {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* ---- the menu ---- */
+.drawer-head {
+  gap: 12px;
+  padding: 4px 2px 18px;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.drawer-head .drawer-orb {
+  width: 44px;
+  height: 44px;
+}
+.drawer-title {
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.drawer-search {
+  height: 44px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--fill);
+  box-shadow: none;
+}
+.star-row {
+  border-radius: 16px;
+}
+.star-row.active,
+.star-row.everything.active {
+  background: var(--surface);
+  box-shadow: none;
+}
+.star-row .star {
+  width: 8px;
+  height: 8px;
+  background: var(--bg);
+  border: 1.5px solid var(--faint);
+  box-shadow: none;
+}
+.star-row .star.vega,
+.star-row .star.bright {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  background: var(--mark);
+}
+.star-row.active .star:not(.vega) {
+  border-color: var(--text);
+}
+.star-name {
+  font-size: 16px;
+  font-weight: 500;
+}
+.star-row.active .star-name,
+.everything .star-name {
+  font-weight: 600;
+}
+.star-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.constellation-lines polyline {
+  stroke: var(--line-strong);
+  stroke-width: 1.2;
+}
+.star-row.add .star-name {
+  color: var(--text-muted);
+}
+.new-pill {
+  background: var(--text);
+  color: var(--bg);
+}
+.drawer-sections.single {
+  border-top: 1px solid var(--border);
+}
+
+/* ---- fixes from the first comparison ---- */
+/* (0.66) every look is calm now: the drifting haze is off everywhere */
+html .haze,
+html[data-ambient="on"] .haze {
+  display: none;
+}
+.tasks-head {
+  display: block;
+}
+.task-group.g-ready > .section-label {
+  display: none;
+}
+.drawer-head,
+.drawer-head:hover,
+a.drawer-head {
+  background: none;
+  box-shadow: none;
+}
+
+/* ---- the Lyra page ---- */
+.lp-head {
+  gap: 4px;
+}
+.lp-name {
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.lp-status {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.lp-big {
+  gap: 12px;
+}
+.lp-big-card {
+  gap: 2px;
+  padding: 16px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: none;
+}
+.lp-big-card .c {
+  display: none;
+}
+.lp-big-card .n {
+  font-size: 13px;
+  font-weight: 450;
+  color: var(--text-muted);
+}
+.lp-big-card .s {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.lp-chip {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  background: var(--bg);
+  box-shadow: none;
+  font-size: 14px;
+  font-weight: 450;
+}
+.lp-chip svg {
+  display: none;
+}
+.lp-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.lp-svc,
+.lp-svc.off {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg);
+  box-shadow: none;
+  text-align: left;
+}
+.lp-svc.off {
+  border-style: dashed;
+  border-color: var(--line-strong);
+}
+.lp-svc .t,
+.lp-svc.more {
+  display: none;
+}
+.lp-svc .n {
+  font-size: 14px;
+  font-weight: 600;
+}
+.lp-svc .s {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.lp-svc .s i {
+  width: 7px;
+  height: 7px;
+  background: var(--mark);
+}
+.lp-svc.off .s i {
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--faint);
+}
+.lp-promise {
+  border: 0;
+  background: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* ---- Settings: plain rows, a grey circle for each icon ---- */
+.settings-search {
+  height: 46px;
+  border: 0;
+  border-radius: 23px;
+  background: var(--fill);
+  box-shadow: none;
+}
+.group.settings-home {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+}
+.settings-home .item {
+  min-height: 64px;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  background: none;
+}
+.settings-home .item:last-child {
+  border-bottom: 0;
+}
+.settings-home .item:hover,
+.settings-home .item:active {
+  background: none;
+}
+.settings-home .tile {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--fill);
+  color: var(--text);
+}
+.settings-home .title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.settings-home .sub {
+  font-size: 13px;
+  color: var(--text-faint);
+}
+.settings-home .chev {
+  color: var(--faint);
+}
+
+/* ---- Activity: a title, three numbers between lines, a timeline ---- */
+.activity-orb {
+  display: none;
+}
+.activity-head {
+  margin: 6px 0 18px;
+}
+.activity-name {
+  font-family: var(--display);
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.activity-status {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.activity-stats {
+  gap: 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: none;
+}
+.activity-stats > div {
+  padding: 12px 0 12px 14px;
+  border-left: 1px solid var(--border);
+  background: none;
+  border-radius: 0;
+}
+.activity-stats > div:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.activity-stats b {
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 600;
+}
+.activity-stats span {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+.activity-filters button {
+  height: 36px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  font-size: 14px;
+  font-weight: 450;
+}
+.activity-filters button.on {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+.activity-card {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.activity-row {
+  border-radius: 0;
+}
+.activity-day-head {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+/* ---- (0.58.1) the conversation runs up toward the top, fading and blurring as it goes; (0.58.2) nothing
+   shows behind the phone's status bar, and the part under Lyra's name is faint and well blurred ---- */
+.chat .log {
+  --fade: linear-gradient(
+    transparent 0,
+    transparent calc(var(--inset-top) + 6px),
+    rgba(0, 0, 0, 0.14) calc(var(--inset-top) + 34px),
+    rgba(0, 0, 0, 0.45) calc(var(--inset-top) + 76px),
+    #000 calc(var(--inset-top) + 124px),
+    #000 calc(100% - var(--below) - 40px),
+    rgba(0, 0, 0, 0.4) calc(100% - var(--below) + 20px),
+    rgba(0, 0, 0, 0.1) 100%
+  );
+}
+.app:not(.desk) .chat::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: calc(var(--inset-top) + 116px);
+  z-index: 4;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(9px);
+  backdrop-filter: blur(9px);
+  -webkit-mask-image: linear-gradient(#000 55%, transparent);
+  mask-image: linear-gradient(#000 55%, transparent);
+}

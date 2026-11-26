@@ -1,0 +1,295 @@
+/*
+ * Lyra (0.58): "Quiet". Ink on white, thin lines, one accent used sparingly
+ * (a dot, an underline, the ring around Lyra). Inter for text, Inter Tight for titles.
+ * The screens themselves are re-dressed in the "QUIET" block at the end of this file.
+ */
+
+:root {
+  --bg: #ffffff;
+  --surface: #f6f7f2;
+  --surface-2: #ececea;
+  --text: #111111;
+  --text-muted: #6b6b6b;
+  --border: #ececec;
+  --accent: #d2602a;
+  --accent-ink: #ffffff;
+  --accent-soft: #f7ddcc;
+  --accent-text: #a4441a;
+  --good: #2e7d4f;
+  --warn: #b7791f;
+  --bad: #c2412d;
+
+  /* your messages: a light grey bubble by default (Settings, You and appearance, Your messages) */
+  --me: #f3f3f3;
+  --me-text: #111111;
+  --me-line: transparent;
+  /* the accent as a small mark (a dot, an underline): a touch deeper than the accent so it shows on white */
+  --mark: color-mix(in srgb, var(--accent) 70%, var(--accent-text));
+  /* (0.58) greys made from the text and page colors, so they work in light, dark and every look */
+  --line-strong: color-mix(in srgb, var(--text) 11%, var(--bg));
+  --fill: color-mix(in srgb, var(--text) 5%, var(--bg));
+  --faint: color-mix(in srgb, var(--text) 28%, var(--bg));
+  --text-faint: color-mix(in srgb, var(--text) 52%, var(--bg));
+  --orb: #131416;
+  --orb-edge: transparent;
+  --orb-line: rgba(243, 241, 234, 0.42);
+  --orb-star: #f3f1ea;
+  --chart-line: #d4d4d0;
+  --drawer-w: min(82vw, 340px);
+  --drawer-bg: #ffffff;
+  --drawer-hover: rgba(17, 17, 17, 0.04);
+  --drawer-active: #f6f7f2;
+  --drawer-active-edge: transparent;
+  --tree-line: #dadada;
+  --scrim: rgba(17, 17, 17, 0.28);
+
+  --font: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: "Inter Tight Variable", "Inter Variable", Inter, system-ui, sans-serif;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 20px;
+  --text-xl: 28px;
+  --text-hero: 44px;
+
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 72px;
+
+  --radius: 20px;
+  --radius-sm: 12px;
+  --shadow: 0 1px 2px rgba(17, 17, 17, 0.03), 0 10px 30px rgba(17, 17, 17, 0.07);
+  --content: 680px;
+  --ease: 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* Capacitor injects --safe-area-inset-* on Android; browsers use env() */
+  --inset-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --inset-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f0f10;
+    --surface: #19191b;
+    --surface-2: #242427;
+    --text: #f2f2f2;
+    --text-muted: #9b9ba0;
+    --border: #252528;
+    --accent: #ec7a40;
+    --accent-ink: #1a0b04;
+    --accent-soft: #3a2116;
+    --accent-text: #f29462;
+    --good: #5cc48a;
+    --warn: #e0a940;
+    --bad: #f07a68;
+
+    --me: #232326;
+    --me-text: #f2f2f2;
+    --orb: #1b1a16;
+    --orb-edge: #33302a;
+    --orb-line: rgba(238, 235, 227, 0.38);
+    --orb-star: #eeebe3;
+    --chart-line: #3a3a3e;
+    --drawer-bg: #0f0f10;
+    --drawer-hover: rgba(242, 242, 242, 0.05);
+    --drawer-active: #19191b;
+    --drawer-active-edge: transparent;
+    --tree-line: #333337;
+    --scrim: rgba(0, 0, 0, 0.45);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+  }
+}
+
+/* (0.66) accent colors the user can pick in Settings, taken from Tomo itself; set on <html>, and on each swatch to preview it */
+/* Burnt orange: Tomo's scarf */
+[data-accent="orange"] {
+  --accent: #d2602a;
+  --accent-ink: #ffffff;
+  --accent-soft: #f7ddcc;
+  --accent-text: #a4441a;
+}
+
+/* Honey: warm gold beside the orange */
+[data-accent="honey"] {
+  --accent: #c98a1b;
+  --accent-ink: #1a1204;
+  --accent-soft: #f6e6c4;
+  --accent-text: #8a5c00;
+}
+
+/* Cocoa: brown from Tomo's shading */
+[data-accent="cocoa"] {
+  --accent: #7b4a2f;
+  --accent-ink: #ffffff;
+  --accent-soft: #efe2d8;
+  --accent-text: #6e3f25;
+}
+
+/* Moss: Tomo's backpack */
+[data-accent="moss"] {
+  --accent: #5d6b26;
+  --accent-ink: #ffffff;
+  --accent-soft: #e5ead2;
+  --accent-text: #4a5720;
+}
+
+/* Pine: a deeper forest green */
+[data-accent="pine"] {
+  --accent: #2f6650;
+  --accent-ink: #ffffff;
+  --accent-soft: #d7e8e0;
+  --accent-text: #255443;
+}
+
+/* Denim: soft blue, the orange's opposite */
+[data-accent="denim"] {
+  --accent: #3d5f8c;
+  --accent-ink: #ffffff;
+  --accent-soft: #dce5f0;
+  --accent-text: #34527a;
+}
+
+/* Plum: dusky, pairs with moss */
+[data-accent="plum"] {
+  --accent: #7a4867;
+  --accent-ink: #ffffff;
+  --accent-soft: #efdfe8;
+  --accent-text: #6b3d59;
+}
+
+/* Graphite: Tomo's face screen */
+[data-accent="graphite"] {
+  --accent: #414348;
+  --accent-ink: #ffffff;
+  --accent-soft: #e9e9ea;
+  --accent-text: #333539;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-accent="orange"] {
+    --accent: #ec7a40;
+    --accent-ink: #1a0b04;
+    --accent-soft: #3a2116;
+    --accent-text: #f29462;
+  }
+
+  [data-accent="honey"] {
+    --accent: #e0a73a;
+    --accent-ink: #1a1204;
+    --accent-soft: #33270f;
+    --accent-text: #ebbb5c;
+  }
+
+  [data-accent="cocoa"] {
+    --accent: #c08a64;
+    --accent-ink: #1a0e07;
+    --accent-soft: #33231a;
+    --accent-text: #d4a483;
+  }
+
+  [data-accent="moss"] {
+    --accent: #a3b55a;
+    --accent-ink: #12160a;
+    --accent-soft: #262b16;
+    --accent-text: #b8c973;
+  }
+
+  [data-accent="pine"] {
+    --accent: #5fb08f;
+    --accent-ink: #06140e;
+    --accent-soft: #15302a;
+    --accent-text: #7cc4a6;
+  }
+
+  [data-accent="denim"] {
+    --accent: #7d9fd0;
+    --accent-ink: #0a1120;
+    --accent-soft: #1a2538;
+    --accent-text: #9db8e0;
+  }
+
+  [data-accent="plum"] {
+    --accent: #c48aae;
+    --accent-ink: #1a0a14;
+    --accent-soft: #33202c;
+    --accent-text: #d6a5c4;
+  }
+
+  [data-accent="graphite"] {
+    --accent: #c9cbd0;
+    --accent-ink: #111214;
+    --accent-soft: #2a2b2e;
+    --accent-text: #dcdde1;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+  background: none;
+  padding: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--accent-text);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

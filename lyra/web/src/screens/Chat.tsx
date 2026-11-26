@@ -1,9 +1,9 @@
+
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { api, onChange, sendChat, type Channel, type MemoryNote, type Message, type TaskNote } from "../api";
-import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chart, Chevron, Close, File as FileIcon, Minus, Wave, More, Pin, Plus, Spark, Stop, TasksIcon, ThumbDown, ThumbUp } from "../icons";
+import { api, onChange, sendChat, type Channel, type MemoryNote, type Message } from "../api";
+import { ArrowDown, ArrowUp, ArrowUpRight, ChannelIcon, Chart, Chevron, Close, File as FileIcon, Wave, More, Pin, Plus, Stop, ThumbDown, ThumbUp } from "../icons";
 import { haptic } from "../haptics";
 import { sound } from "../sounds";
-import { FEEDBACK_REASONS } from "../../../core/style";
 import { noteOf, onIncoming, prepare, prepareShared, strip, takeIncoming, type Draft } from "../attach";
 import { MAX_ATTACHMENTS } from "../../../core/attachments";
 import { copyText, isNative, liveVoice } from "../platform";
@@ -14,11 +14,10 @@ import { ScanCard } from "../ScanCard";
 import { WidgetCard } from "../WidgetCard";
 import { SetupCard } from "../Setup";
 import { markSeen } from "../seen";
-import { Pencil, Refresh, Reply as ReplyIcon, Star } from "../icons";
+import { Refresh, Star } from "../icons";
 import { excerptOf, splitQuote, withQuote } from "../../../core/quote";
 import { showTokens, tokenLine } from "../tokens";
 import { setChatStatus } from "../StatusLine";
-import { STATUS_LABEL } from "./Tasks";
 import { StarChart, Thinking } from "../LyraMark";
 import { Markdown } from "../markdown";
 import { clock, dayLabel, parse } from "../when";
@@ -26,6 +25,9 @@ import { ask } from "../ask";
 import { WorkSteps } from "../HowIGotThis";
 import { IntentChip } from "../IntentChip";
 import { intentHint, readIntent, type Intent } from "../../../core/intent";
+import { starters, CHANNEL_STARTERS, greeting } from "./chat/starters";
+import { Notes, TaskNotes } from "./chat/Notes";
+import { WhySheet, DID, MessageActions } from "./chat/MessageActions";
 
 interface Pending {
   reply: string;
@@ -33,15 +35,6 @@ interface Pending {
   notes: MemoryNote[];
   /** (0.62) what Tomo has looked at so far */
   steps: string[];
-}
-
-/** First things to say. The inbox one only once mail is connected. */
-const starters = (mail: boolean) => [mail ? "What's new in my inbox?" : "What can you do for me?", "What do you know about me so far?", "Remember that I prefer short replies"];
-const CHANNEL_STARTERS = ["What's still open here?", "Sum up where this stands", "What have we decided so far?"];
-
-function greeting(now = new Date()): string {
-  const h = now.getHours();
-  return h < 5 ? "Up late" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 }
 
 interface ChatProps {
@@ -54,7 +47,6 @@ interface ChatProps {
   /** a message to scroll to and highlight (from search) */
   focus?: number;
 }
-
 
 /** Skip re-rendering the whole conversation unless something it shows changed (e.g. while the menu slides). */
 export const Chat = memo(ChatView, (a, b) => {
@@ -1032,246 +1024,6 @@ function ChatView({ userName, toast, channel, onTasksChanged, hasOpenAI, focus }
             </>
           )}
         </form>
-      </div>
-    </div>
-  );
-}
-
-function Notes({ notes, onAction }: { notes: MemoryNote[]; onAction?: (i: number, a: "undo" | "accept" | "dismiss") => void }) {
-  return (
-    <div className="notes">
-      {notes.map((n, i) => {
-        const section = n.section.toLowerCase();
-        const target = !n.notebookLabel || n.notebookLabel === "Memory" ? section : `${n.notebookLabel}, ${section}`;
-        if (n.kind === "suggested")
-          return (
-            <div className="ask" key={i}>
-              <div className="label">
-                <Spark size={14} /> Save to {target}?
-              </div>
-              <div className="fact">{n.text}</div>
-              <div className="actions">
-                <button className="btn primary" disabled={!onAction} onClick={() => onAction?.(i, "accept")}>
-                  Save
-                </button>
-                <button className="btn quiet" disabled={!onAction} onClick={() => onAction?.(i, "dismiss")}>
-                  Skip
-                </button>
-              </div>
-            </div>
-          );
-        const verb = n.kind === "saved" ? `Saved to ${target}` : n.kind === "removed" ? `Removed from ${target}` : "Not saved";
-        return (
-          <div className={`note${n.undone ? " undone" : ""}`} key={i}>
-            {n.kind === "removed" || n.kind === "dismissed" ? <Minus size={16} /> : <Spark size={16} />}
-            <span className="what">
-              <b>{verb}</b> · {n.text}
-            </span>
-            {onAction && !n.undone && (n.kind === "saved" || n.kind === "removed") && (
-              <button className="link-btn" onClick={() => onAction(i, "undo")}>
-                Undo
-              </button>
-            )}
-            {n.undone && <span className="pill">Undone</span>}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function TaskNotes({ notes }: { notes: TaskNote[] }) {
-  return (
-    <div className="notes">
-      {notes.map((n, i) => (
-        <a className="note task-note" key={i} href={`#/t/${n.id}`}>
-          <TasksIcon size={16} />
-          <span className="what">
-            <b>{n.kind === "created" ? "Task added" : "Task updated"}</b> · {n.title}
-            {n.kind === "updated" && ` · ${STATUS_LABEL[n.status as keyof typeof STATUS_LABEL] ?? n.status}`}
-          </span>
-          <Chevron size={16} className="chev" />
-        </a>
-      ))}
-    </div>
-  );
-}
-
-function Sources({ list }: { list: { url: string; title: string }[] }) {
-  const host = (u: string) => {
-    try {
-      return new URL(u).hostname.replace(/^www\./, "");
-    } catch {
-      return u;
-    }
-  };
-  return (
-    <div className="sources" aria-label="Sources">
-      <span className="sources-label">Sources</span>
-      {list.map((s) => (
-        <a key={s.url} className="source" href={s.url} target="_blank" rel="noreferrer noopener" title={s.title}>
-          {host(s.url)}
-        </a>
-      ))}
-    </div>
-  );
-}
-
-/** After a thumbs down: what was off? One tap, a few words, or skip. */
-function WhySheet({ onSend }: { onSend: (why: string) => void }) {
-  const [picked, setPicked] = useState<string[]>([]);
-  const [more, setMore] = useState("");
-  const why = [...picked, more.trim()].filter(Boolean).join("; ");
-  useEffect(() => {
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && onSend("");
-    addEventListener("keydown", esc);
-    return () => removeEventListener("keydown", esc);
-  }, [onSend]);
-  return (
-    <div className="dialog-layer sheet-layer" role="presentation">
-      <button className="dialog-scrim" aria-label="Skip" tabIndex={-1} onClick={() => onSend("")} />
-      <div className="sheet why-sheet" role="dialog" aria-modal="true" aria-label="What was off?">
-        <h2 className="why-title">What was off?</h2>
-        <p className="why-sub">Tomo learns from this, so the next replies fit you better.</p>
-        <div className="why-chips">
-          {FEEDBACK_REASONS.map((r) => (
-            <button
-              key={r}
-              className={`why-chip${picked.includes(r) ? " on" : ""}`}
-              aria-pressed={picked.includes(r)}
-              onClick={() => {
-                haptic.select();
-                setPicked((p) => (p.includes(r) ? p.filter((x) => x !== r) : [...p, r]));
-              }}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-        <input className="field" placeholder="Anything else? (optional)" value={more} maxLength={160} onChange={(e) => setMore(e.target.value)} />
-        <div className="dialog-actions">
-          <button className="btn quiet" onClick={() => onSend("")}>
-            Skip
-          </button>
-          <button className="btn ink" disabled={!why} onClick={() => onSend(why)}>
-            Send
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** What a reply's meta holds when Lyra did something with it (or posted it unasked): those can't be taken back by Try again. */
-const DID = ["memory", "tasks", "worker", "routine", "voice", "reminder", "actions", "checkIn", "tidy", "skills", "docs", "placeReminder", "scan", "people", "headsUp", "lifeAdmin"] as const;
-
-function MessageActions({
-  message,
-  canEdit,
-  canRetry,
-  onAct,
-  onClose,
-}: {
-  message: Message;
-  canEdit: boolean;
-  canRetry: boolean;
-  onAct: (what: "copy" | "pin" | "delete" | "up" | "down" | "edit" | "retry" | "reply") => void;
-  onClose: () => void;
-}) {
-  useEffect(() => {
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    addEventListener("keydown", esc);
-    return () => removeEventListener("keydown", esc);
-  }, [onClose]);
-  return (
-    <div className="dialog-layer sheet-layer" role="presentation">
-      <button className="dialog-scrim" aria-label="Close" tabIndex={-1} onClick={onClose} />
-      <div className="sheet" role="dialog" aria-modal="true" aria-label="Message actions">
-        <p className="sheet-preview">{splitQuote(message.content).text.replace(/[*`#>]/g, "").slice(0, 160)}</p>
-        {message.meta.usage && (
-          <p className="sheet-usage">
-            This reply: {(message.meta.usage.input + message.meta.usage.output).toLocaleString("en-US")} tokens ({message.meta.usage.input.toLocaleString("en-US")} read, {message.meta.usage.output.toLocaleString("en-US")} written)
-            {message.meta.usage.calls > 1 ? `, ${message.meta.usage.calls} calls` : ""}
-            {message.meta.usage.cached ? `; ${message.meta.usage.cached.toLocaleString("en-US")} read from the cache` : ""} · {message.meta.usage.model}
-          </p>
-        )}
-        {!!message.meta.steps?.length && (
-          <div className="sheet-more">
-            <span className="sources-label">How I got this</span>
-            <ol className="how-got-list">
-              {message.meta.steps.map((s, i) => (
-                <li key={`${i}-${s}`}>{s}</li>
-              ))}
-            </ol>
-          </div>
-        )}
-        {!!message.meta.sources?.length && (
-          <div className="sheet-more">
-            <Sources list={message.meta.sources} />
-          </div>
-        )}
-        <div className="group">
-          {!!message.content.trim() && !message.meta.error && (
-            <button className="item" onClick={() => onAct("reply")} autoFocus>
-              <span className="body">
-                <div className="title">Reply</div>
-              </span>
-              <ReplyIcon size={18} />
-            </button>
-          )}
-          <button className="item" onClick={() => onAct("copy")}>
-            <span className="body">
-              <div className="title">Copy</div>
-            </span>
-          </button>
-          {canEdit && (
-            <button className="item" onClick={() => onAct("edit")}>
-              <span className="body">
-                <div className="title">Edit and send again</div>
-              </span>
-              <Pencil size={18} />
-            </button>
-          )}
-          {canRetry && (
-            <button className="item" onClick={() => onAct("retry")}>
-              <span className="body">
-                <div className="title">Try again</div>
-              </span>
-              <Refresh size={18} />
-            </button>
-          )}
-          <button className="item" onClick={() => onAct("pin")}>
-            <span className="body">
-              <div className="title">{message.meta.pinned ? "Unpin" : "Pin"}</div>
-            </span>
-          </button>
-          {message.role === "assistant" && (
-            <>
-              <button className="item" onClick={() => onAct("up")}>
-                <span className="body">
-                  <div className="title">{message.meta.feedback?.rating === "up" ? "Undo good reply" : "Good reply"}</div>
-                </span>
-                <ThumbUp size={18} />
-              </button>
-              <button className="item" onClick={() => onAct("down")}>
-                <span className="body">
-                  <div className="title">{message.meta.feedback?.rating === "down" ? "Undo not quite" : "Not quite"}</div>
-                </span>
-                <ThumbDown size={18} />
-              </button>
-            </>
-          )}
-          <button
-            className="item"
-            onClick={() => {
-              void ask("Delete this message? Tomo will forget it was said, but anything it saved to memory stays.").then<unknown>((ok) => ok && onAct("delete"));
-            }}
-          >
-            <span className="body">
-              <div className="title bad">Delete</div>
-            </span>
-          </button>
-        </div>
       </div>
     </div>
   );

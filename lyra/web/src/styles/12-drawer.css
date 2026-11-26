@@ -1,0 +1,362 @@
+/* =========================================================================
+   Redesign: the channel menu as a constellation
+   ========================================================================= */
+
+.drawer-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  margin: 0 var(--s1) var(--s5);
+  padding: 0 6px 0 14px;
+  border-radius: 22px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+  flex: none;
+}
+
+.drawer-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.drawer-search input::placeholder {
+  color: var(--text-muted);
+}
+
+.drawer-search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.drawer-search:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+}
+
+.drawer-search-clear {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+}
+
+.constellation {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.constellation-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.constellation-lines polyline {
+  fill: none;
+  stroke: var(--tree-line);
+  stroke-width: 1;
+  opacity: 0.8;
+}
+
+.constellation-lines .to-new {
+  stroke-dasharray: 3 4;
+}
+
+.star-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: 52px;
+  margin-left: 44px;
+  padding: 6px 10px 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--ease);
+}
+
+.star-row:hover {
+  background: var(--drawer-hover);
+}
+
+.star-row.active {
+  background: var(--drawer-active);
+}
+
+.star-row.everything {
+  min-height: 64px;
+  border-radius: 22px;
+}
+
+.star-slot {
+  position: absolute;
+  left: -44px;
+  top: 0;
+  bottom: 0;
+  width: 44px;
+}
+
+.star {
+  position: absolute;
+  left: calc(16px + var(--sway, 0px));
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text);
+  transform: translate(-50%, -50%);
+  transition: box-shadow var(--ease), background var(--ease);
+}
+
+.star.bright,
+.star.vega {
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  box-shadow:
+    0 0 0 1px var(--accent-text),
+    0 0 0 6px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.star.vega {
+  width: 13px;
+  height: 13px;
+  box-shadow:
+    0 0 0 1px var(--accent-text),
+    0 0 0 8px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+.star.hollow {
+  width: 10px;
+  height: 10px;
+  background: none;
+  border: 1.2px dashed var(--text-muted);
+}
+
+.star-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.star-name {
+  font-size: 18px;
+  font-weight: 550;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.everything .star-name {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.star-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.star-row.add .star-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.new-pill {
+  flex: none;
+  margin-left: auto;
+  padding: 2px 10px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.constellation .drawer-empty {
+  margin: var(--s3) var(--s3) 0 58px;
+}
+
+/* phone: the app's sections along the bottom of the menu */
+.drawer-sections {
+  margin-top: auto;
+  padding-top: var(--s4);
+  display: grid;
+  /* one even column per section, across the whole width */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 4px;
+  flex: none;
+}
+
+.drawer-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 60px;
+  border-radius: 18px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background var(--ease);
+}
+
+/* phone: only Settings is left, as one row under the channels */
+.drawer-sections.single {
+  display: flex;
+}
+
+.drawer-sections.single .drawer-section {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 18px;
+  font-size: 15px;
+}
+
+.drawer-section:hover,
+.drawer-section.active {
+  background: var(--drawer-active);
+}
+
+.drawer-section-icon {
+  position: relative;
+  display: grid;
+}
+
+.dot-badge {
+  position: absolute;
+  top: -2px;
+  right: -5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--drawer-bg);
+}
+
+/* search across every chat */
+.search-hits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.search-hit {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.search-hit:hover {
+  background: var(--drawer-hover);
+}
+
+.search-where {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s3);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.search-where span {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.search-snippet {
+  font-size: 14px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* desktop sidebar: the same constellation, tighter */
+.app.desk .drawer-search {
+  height: 38px;
+  margin-bottom: var(--s4);
+}
+
+.app.desk .star-row {
+  min-height: 40px;
+  margin-left: 36px;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.app.desk .star-row.everything {
+  min-height: 52px;
+}
+
+.app.desk .star-slot {
+  left: -36px;
+  width: 36px;
+}
+
+.app.desk .star {
+  left: calc(12px + var(--sway, 0px) * 0.8);
+}
+
+.app.desk .star-name {
+  font-size: 15px;
+}
+
+.app.desk .everything .star-name {
+  font-size: 16px;
+}
+
+.app.desk .star-sub {
+  font-size: 12px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .star.bright {
+    animation: star-twinkle 3.2s ease-in-out infinite;
+  }
+}
+
+@keyframes star-twinkle {
+  50% {
+    box-shadow:
+      0 0 0 1px var(--accent-text),
+      0 0 0 9px color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+}

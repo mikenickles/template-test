@@ -1,0 +1,351 @@
+/* =========================================================================
+   Kit (0.59): Lyra's face. A blob in the accent color on a soft halo. On its own it
+   glances side to side, blinks and hops now and then; it wobbles while Lyra works
+   (body[data-busy]), hops when a reply lands (body[data-landed]) and tilts to listen
+   in a voice call (.voice-listening). Still when Gentle motion is off.
+   ========================================================================= */
+.kit {
+  display: block;
+  overflow: visible;
+  border-radius: 0;
+}
+.orb:has(.kit),
+.orb:has(.avatar) {
+  background: transparent;
+  box-shadow: none;
+}
+html[data-ambient="on"] .orb:has(.kit)::before,
+.orb:has(.kit)::after {
+  display: none;
+}
+.kit .kit-halo {
+  fill: var(--accent-soft);
+}
+.kit .kit-body {
+  fill: var(--accent);
+}
+.kit .kit-shadow {
+  fill: var(--accent);
+  opacity: 0.18;
+}
+.kit .kit-lid {
+  fill: #1a1a1a;
+}
+.kit .kit-hop {
+  transform-box: view-box;
+  transform-origin: 50px 80px;
+  transition: transform 0.4s ease;
+}
+.kit .kit-eyes {
+  transform-box: view-box;
+  transition: transform 0.4s ease;
+}
+.kit .kit-lid {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.kit .kit-shadow {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+html[data-ambient="on"] .kit .kit-eyes {
+  animation: kit-look 7s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+}
+html[data-ambient="on"] .kit .kit-lid {
+  animation: kit-blink 4.6s infinite;
+}
+html[data-ambient="on"] .kit .kit-hop {
+  animation: kit-hop 5.2s cubic-bezier(0.3, 0.7, 0.3, 1) infinite;
+}
+html[data-ambient="on"] .kit .kit-shadow {
+  animation: kit-shadow 5.2s cubic-bezier(0.3, 0.7, 0.3, 1) infinite;
+}
+/* thinking: eyes up, a little wobble */
+body[data-busy] .kit .kit-eyes,
+html[data-ambient="on"] body[data-busy] .kit .kit-eyes {
+  animation: none;
+  transform: translate(2px, -5px);
+}
+html[data-ambient="on"] body[data-busy] .kit .kit-hop {
+  animation: kit-wobble 1.2s ease-in-out infinite;
+}
+html[data-ambient="on"] body[data-busy] .kit .kit-shadow {
+  animation: none;
+}
+/* a reply landed: one quick hop */
+html[data-ambient="on"] body[data-landed] .kit .kit-hop {
+  animation: kit-hop-once 1.2s cubic-bezier(0.3, 0.7, 0.3, 1) 1;
+}
+html[data-ambient="on"] body[data-landed] .kit .kit-shadow {
+  animation: kit-shadow-once 1.2s cubic-bezier(0.3, 0.7, 0.3, 1) 1;
+}
+/* listening in a voice call: head tilted */
+.voice-listening .kit .kit-hop,
+html[data-ambient="on"] .voice-listening .kit .kit-hop {
+  animation: none;
+  transform: rotate(-7deg);
+}
+@keyframes kit-look {
+  0%, 18% { transform: translateX(0); }
+  26%, 44% { transform: translateX(-17px); }
+  52%, 62% { transform: translateX(0); }
+  68%, 84% { transform: translateX(4px); }
+  92%, 100% { transform: translateX(0); }
+}
+@keyframes kit-blink {
+  0%, 46%, 50%, 92%, 95%, 100% { transform: scaleY(1); }
+  48%, 93.5% { transform: scaleY(0.12); }
+}
+@keyframes kit-hop {
+  0%, 70% { transform: translateY(0) scale(1, 1); }
+  74% { transform: translateY(0) scale(1.07, 0.9); }
+  82% { transform: translateY(-9px) scale(0.96, 1.05); }
+  90% { transform: translateY(0) scale(1.05, 0.94); }
+  95%, 100% { transform: translateY(0) scale(1, 1); }
+}
+@keyframes kit-shadow {
+  0%, 74% { transform: scale(1); opacity: 0.18; }
+  82% { transform: scale(0.7); opacity: 0.08; }
+  90%, 100% { transform: scale(1); opacity: 0.18; }
+}
+@keyframes kit-hop-once {
+  0% { transform: translateY(0) scale(1.07, 0.9); }
+  35% { transform: translateY(-11px) scale(0.96, 1.05); }
+  65% { transform: translateY(0) scale(1.05, 0.94); }
+  100% { transform: none; }
+}
+@keyframes kit-shadow-once {
+  35% { transform: scale(0.65); opacity: 0.07; }
+}
+@keyframes kit-wobble {
+  50% { transform: rotate(3deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kit * {
+    animation: none !important;
+  }
+}
+
+/* ---- (0.59.1) Kit stands on its own: no circle behind it, bigger, front and center at the top of the chat ---- */
+.kit .kit-halo {
+  display: none;
+}
+html[data-ambient="on"] .lp-orb:has(.kit)::before,
+.lp-orb:has(.kit) {
+  background: none;
+  box-shadow: none;
+}
+html[data-ambient="on"] .lp-orb:has(.kit)::before {
+  display: none;
+}
+:root {
+  --orb-sm: 72px;
+}
+[data-avatar="small"] {
+  --orb-sm: 58px;
+}
+[data-avatar="large"] {
+  --orb-sm: 88px;
+}
+.avatar-stack.head-row {
+  flex-direction: column;
+  gap: 0;
+}
+.avatar-stack.head-row .head-words {
+  align-items: center;
+  margin-top: -4px;
+}
+.avatar-stack.head-row .head-name {
+  font-size: 15px;
+}
+.chat .log {
+  padding-top: calc(var(--inset-top) + 150px);
+}
+.chat .log {
+  --fade: linear-gradient(
+    transparent 0,
+    transparent calc(var(--inset-top) + 6px),
+    rgba(0, 0, 0, 0.12) calc(var(--inset-top) + 60px),
+    rgba(0, 0, 0, 0.45) calc(var(--inset-top) + 112px),
+    #000 calc(var(--inset-top) + 156px),
+    #000 calc(100% - var(--below) - 40px),
+    rgba(0, 0, 0, 0.4) calc(100% - var(--below) + 20px),
+    rgba(0, 0, 0, 0.1) 100%
+  );
+}
+.app:not(.desk) .chat::before {
+  height: calc(var(--inset-top) + 150px);
+}
+
+/* ---- (0.59.3) the chat stays readable most of the way up, and the words under Kit sit in a pill ---- */
+.chat .log {
+  --fade: linear-gradient(
+    transparent 0,
+    transparent calc(var(--inset-top) + 2px),
+    rgba(0, 0, 0, 0.45) calc(var(--inset-top) + 26px),
+    rgba(0, 0, 0, 0.8) calc(var(--inset-top) + 64px),
+    #000 calc(var(--inset-top) + 96px),
+    #000 calc(100% - var(--below) - 40px),
+    rgba(0, 0, 0, 0.4) calc(100% - var(--below) + 20px),
+    rgba(0, 0, 0, 0.1) 100%
+  );
+}
+.app:not(.desk) .chat::before {
+  height: calc(var(--inset-top) + 70px);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  -webkit-mask-image: linear-gradient(#000 30%, transparent);
+  mask-image: linear-gradient(#000 30%, transparent);
+}
+.avatar-stack.head-row .head-words {
+  margin-top: 0;
+  padding: 3px 12px 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 0 0 1px var(--border), 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+.avatar-stack.head-row .head-name {
+  line-height: 1.2;
+}
+
+/* ---- (0.59.4) no fading at all: the chat is fully visible from the very top to the very bottom ---- */
+.chat .log {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.app:not(.desk) .chat::before {
+  display: none;
+}
+
+/* ---- (0.59.5) the chat runs from the very top to the very bottom of the screen, fading only at the
+   two edges; the tab bar is a floating pill with the accent line under the section you're on ---- */
+.chat {
+  --tabbar-h: calc(var(--inset-bottom) + 72px);
+}
+.chat .log {
+  --fade: linear-gradient(
+    transparent 0,
+    transparent var(--inset-top),
+    #000 calc(var(--inset-top) + 36px),
+    #000 calc(100% - var(--inset-bottom) - 44px),
+    transparent calc(100% - var(--inset-bottom) - 4px)
+  );
+  -webkit-mask-image: var(--fade);
+  mask-image: var(--fade);
+}
+.tabbar,
+.tabbar.floating,
+.tabbar:not(.floating),
+html[data-ambient="on"] .tabbar:not(.floating) {
+  padding: 0 24px calc(var(--inset-bottom) + 12px);
+  border-top: 0;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+.tabbar-inner,
+.tabbar.floating .tabbar-inner {
+  pointer-events: auto;
+  max-width: 340px;
+  margin: 0 auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  backdrop-filter: blur(16px) saturate(1.3);
+  box-shadow: 0 0 0 1px var(--border), 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+.tabbar-item,
+.tabbar-item.on {
+  min-height: 48px;
+  padding-top: 6px;
+}
+.tabbar-inner > .slide-pill::after {
+  bottom: 5px;
+}
+
+/* ---- (0.59.6) the menu button and your initial sit in frosted circles, readable over the chat ---- */
+.topbar .ring,
+.topbar.floating .ring,
+.topbar .ring:has(.initial) {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 0 0 1px var(--border), 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+/* ---- (0.59.7) a long, soft fade at the top and the bottom: the chat stays faintly readable right to
+   the screen's edges, getting lighter as it goes (like the app the user pointed to) ---- */
+.chat .log {
+  --fade: linear-gradient(
+    rgba(0, 0, 0, 0.18) 0,
+    rgba(0, 0, 0, 0.3) calc(var(--inset-top) + 40px),
+    rgba(0, 0, 0, 0.62) calc(var(--inset-top) + 110px),
+    #000 calc(var(--inset-top) + 190px),
+    #000 calc(100% - var(--below) - 40px),
+    rgba(0, 0, 0, 0.45) calc(100% - var(--below) + 30px),
+    rgba(0, 0, 0, 0.18) 100%
+  );
+  -webkit-mask-image: var(--fade);
+  mask-image: var(--fade);
+}
+
+/* ---- (0.59.9) a little more room under the last reply, so its thumbs and token line clear the message box ---- */
+.chat .log {
+  padding-bottom: calc(var(--below) + 40px);
+  --fade: linear-gradient(
+    rgba(0, 0, 0, 0.18) 0,
+    rgba(0, 0, 0, 0.3) calc(var(--inset-top) + 40px),
+    rgba(0, 0, 0, 0.62) calc(var(--inset-top) + 110px),
+    #000 calc(var(--inset-top) + 190px),
+    #000 calc(100% - var(--below) - 6px),
+    rgba(0, 0, 0, 0.45) calc(100% - var(--below) + 40px),
+    rgba(0, 0, 0, 0.18) 100%
+  );
+}
+
+/* ---- (0.60) a step on a web page: what Lyra filled in, as label / value rows ---- */
+.browser-typed {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.browser-typed li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.browser-typed li:last-child {
+  border-bottom: 0;
+}
+
+/* ---- (0.60.2) tab bar words: a bit bigger, and centered in the pill (the underline no longer pushes them up) ---- */
+.tabbar-item,
+.tabbar-item.on {
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+}
+.tabbar-inner > .slide-pill::after {
+  bottom: 6px;
+  width: 20px;
+  margin-left: -10px;
+}
+.tabbar-icon {
+  margin-left: 24px;
+  top: 6px;
+}

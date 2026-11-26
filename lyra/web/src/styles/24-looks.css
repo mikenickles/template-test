@@ -1,0 +1,259 @@
+/* =========================================================================
+   Looks (0.66): four page tones on Quiet's rules (ink, hairlines, one small accent).
+   Set on <html data-theme>, and on each card of the picker so it previews itself.
+   Quiet (id "paper"), Linen and Sage follow the phone's light/dark; Night is always dark.
+   The accent color and the bubble style stay the user's own choice in every look;
+   look blocks never set --accent* (Night copies the dark accent values below).
+   ========================================================================= */
+
+/* Quiet (id "paper"), restated so its picker card looks right inside another look */
+[data-theme="paper"] {
+  --bg: #ffffff; --surface: #f6f7f2; --surface-2: #ececea; --text: #111111; --text-muted: #6b6b6b; --border: #ececec;
+  --shadow: 0 1px 2px rgba(19, 20, 22, 0.04), 0 10px 30px rgba(19, 20, 22, 0.07);
+}
+
+/* ---- Linen: a warm off-white page with warm greys, like Tomo's shell ---- */
+[data-theme="linen"] {
+  --bg: #f8f5f0; --surface: #f0ebe3; --surface-2: #e6dfd4; --text: #221d18; --text-muted: #766c61; --border: #e6dfd5;
+  --chart-line: #d6cdbf; --drawer-bg: #f8f5f0; --drawer-hover: rgba(34, 29, 24, 0.04); --drawer-active: #f0ebe3; --tree-line: #d9d0c3;
+  --scrim: rgba(34, 29, 24, 0.28);
+  --shadow: 0 1px 2px rgba(60, 45, 30, 0.04), 0 10px 30px rgba(60, 45, 30, 0.08);
+}
+
+/* ---- Sage: a pale green-grey page that echoes the backpack ---- */
+[data-theme="sage"] {
+  --bg: #f3f5f0; --surface: #e9ede4; --surface-2: #dde3d6; --text: #1a1d17; --text-muted: #66705d; --border: #dfe4d8;
+  --chart-line: #cdd5c4; --drawer-bg: #f3f5f0; --drawer-hover: rgba(26, 29, 23, 0.04); --drawer-active: #e9ede4; --tree-line: #d2d9c9;
+  --scrim: rgba(26, 29, 23, 0.28);
+  --shadow: 0 1px 2px rgba(30, 40, 25, 0.04), 0 10px 30px rgba(30, 40, 25, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="paper"] {
+    --bg: #0f0f10; --surface: #19191b; --surface-2: #242427; --text: #f2f2f2; --text-muted: #9b9ba0; --border: #252528;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
+  }
+  [data-theme="linen"] {
+    --bg: #171411; --surface: #201c18; --surface-2: #2a2520; --text: #eee7dd; --text-muted: #a39787; --border: #2d2722;
+    --chart-line: #3d362f; --drawer-bg: #171411; --drawer-hover: rgba(238, 231, 221, 0.05); --drawer-active: #201c18; --tree-line: #3a332c;
+    --scrim: rgba(0, 0, 0, 0.45);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
+  }
+  [data-theme="sage"] {
+    --bg: #121511; --surface: #1a1e18; --surface-2: #242a21; --text: #e8ece3; --text-muted: #98a28e; --border: #262c23;
+    --chart-line: #363d32; --drawer-bg: #121511; --drawer-hover: rgba(232, 236, 227, 0.05); --drawer-active: #1a1e18; --tree-line: #333a2f;
+    --scrim: rgba(0, 0, 0, 0.45);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
+  }
+}
+
+/* Linen and Sage: your grey bubbles and outlines take the page's tone */
+[data-theme="linen"][data-bubbles="softer"],
+[data-theme="linen"] [data-bubbles="softer"],
+[data-theme="sage"][data-bubbles="softer"],
+[data-theme="sage"] [data-bubbles="softer"] {
+  --me: color-mix(in srgb, var(--text) 6%, var(--bg));
+  --me-text: var(--text);
+}
+[data-theme="linen"][data-bubbles="neutral"],
+[data-theme="linen"] [data-bubbles="neutral"],
+[data-theme="sage"][data-bubbles="neutral"],
+[data-theme="sage"] [data-bubbles="neutral"] {
+  --me-line: color-mix(in srgb, var(--text) 13%, var(--bg));
+}
+
+/* ---- Night: always dark, in the graphite of Tomo's face screen ---- */
+[data-theme="night"] {
+  --bg: #16171a; --surface: #1f2024; --surface-2: #292a2f; --text: #eeeef0; --text-muted: #9a9ca3; --border: #2a2b30;
+  --good: #5cc48a; --warn: #e0a940; --bad: #f07a68;
+  --orb: #1f2024; --orb-edge: #34353b; --orb-line: rgba(238, 238, 240, 0.38); --orb-star: #eeeef0; --chart-line: #3a3b41;
+  --drawer-bg: #16171a; --drawer-hover: rgba(238, 238, 240, 0.05); --drawer-active: #1f2024; --drawer-active-edge: transparent;
+  --tree-line: #38393f; --scrim: rgba(0, 0, 0, 0.5);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; --series-5: #d55181; --series-other: #6b7280;
+  --accent: #ec7a40; --accent-ink: #1a0b04; --accent-soft: #3a2116; --accent-text: #f29462;
+  color-scheme: dark;
+}
+/* Night is dark whatever the phone is set to: the dark accent and bubble colors, always */
+[data-theme="night"][data-accent="orange"],
+[data-theme="night"] [data-accent="orange"],
+[data-accent="orange"] [data-theme="night"] {
+  --accent: #ec7a40;
+  --accent-ink: #1a0b04;
+  --accent-soft: #3a2116;
+  --accent-text: #f29462;
+}
+[data-theme="night"][data-accent="honey"],
+[data-theme="night"] [data-accent="honey"],
+[data-accent="honey"] [data-theme="night"] {
+  --accent: #e0a73a;
+  --accent-ink: #1a1204;
+  --accent-soft: #33270f;
+  --accent-text: #ebbb5c;
+}
+[data-theme="night"][data-accent="cocoa"],
+[data-theme="night"] [data-accent="cocoa"],
+[data-accent="cocoa"] [data-theme="night"] {
+  --accent: #c08a64;
+  --accent-ink: #1a0e07;
+  --accent-soft: #33231a;
+  --accent-text: #d4a483;
+}
+[data-theme="night"][data-accent="moss"],
+[data-theme="night"] [data-accent="moss"],
+[data-accent="moss"] [data-theme="night"] {
+  --accent: #a3b55a;
+  --accent-ink: #12160a;
+  --accent-soft: #262b16;
+  --accent-text: #b8c973;
+}
+[data-theme="night"][data-accent="pine"],
+[data-theme="night"] [data-accent="pine"],
+[data-accent="pine"] [data-theme="night"] {
+  --accent: #5fb08f;
+  --accent-ink: #06140e;
+  --accent-soft: #15302a;
+  --accent-text: #7cc4a6;
+}
+[data-theme="night"][data-accent="denim"],
+[data-theme="night"] [data-accent="denim"],
+[data-accent="denim"] [data-theme="night"] {
+  --accent: #7d9fd0;
+  --accent-ink: #0a1120;
+  --accent-soft: #1a2538;
+  --accent-text: #9db8e0;
+}
+[data-theme="night"][data-accent="plum"],
+[data-theme="night"] [data-accent="plum"],
+[data-accent="plum"] [data-theme="night"] {
+  --accent: #c48aae;
+  --accent-ink: #1a0a14;
+  --accent-soft: #33202c;
+  --accent-text: #d6a5c4;
+}
+[data-theme="night"][data-accent="graphite"],
+[data-theme="night"] [data-accent="graphite"],
+[data-accent="graphite"] [data-theme="night"] {
+  --accent: #c9cbd0;
+  --accent-ink: #111214;
+  --accent-soft: #2a2b2e;
+  --accent-text: #dcdde1;
+}
+[data-theme="night"][data-bubbles="classic"],
+[data-theme="night"] [data-bubbles="classic"] {
+  --me: #eeeef0;
+  --me-text: #16171a;
+}
+[data-theme="night"][data-bubbles="accent"],
+[data-theme="night"] [data-bubbles="accent"] {
+  --me: color-mix(in srgb, var(--accent) 20%, var(--surface));
+  --me-text: var(--text);
+}
+[data-theme="night"][data-bubbles="neutral"],
+[data-theme="night"] [data-bubbles="neutral"] {
+  --me: var(--bg);
+  --me-text: var(--text);
+  --me-line: #3a3b41;
+}
+[data-theme="night"][data-bubbles="softer"],
+[data-theme="night"] [data-bubbles="softer"] {
+  --me: #26272c;
+  --me-text: var(--text);
+}
+[data-theme="night"] .badge,
+[data-theme="night"] .voice-btn.end {
+  color: #141310;
+}
+
+/* ---- the picker (Settings, You and appearance, Look) ---- */
+.theme-styles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s3);
+}
+.theme-style {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s2);
+  padding: var(--s3);
+  border-radius: 20px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: transform 160ms ease;
+}
+.theme-style:active {
+  transform: scale(0.98);
+}
+.theme-style:has(input:checked) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.theme-style:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.theme-style input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.theme-sample {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 7px 8px;
+  align-items: center;
+  width: 100%;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.ts-face {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--accent);
+}
+.ts-lines {
+  display: grid;
+  gap: 4px;
+}
+.ts-lines i {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--text);
+}
+.ts-lines i + i {
+  width: 62%;
+  background: var(--text-muted);
+}
+.ts-me {
+  grid-column: 1 / -1;
+  justify-self: end;
+  width: 58%;
+  height: 14px;
+  border-radius: 8px 8px 3px 8px;
+  background: color-mix(in srgb, var(--text) 8%, var(--bg));
+}
+.ts-tab {
+  grid-column: 1 / -1;
+  width: 22px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+.theme-style .name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.theme-style .about {
+  margin-top: -6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}

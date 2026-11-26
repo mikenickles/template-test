@@ -1,0 +1,898 @@
+/* ---------- now playing (0.46): little bars in the status, and Lyra's headphones glow ---------- */
+.status-bars {
+  flex: none;
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 11px;
+}
+.status-bars i {
+  width: 2.5px;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--accent-text);
+  transform-origin: bottom;
+  animation: bars 0.9s ease-in-out infinite;
+}
+.status-bars i:nth-child(2) {
+  animation-duration: 0.7s;
+  animation-delay: -0.3s;
+}
+.status-bars i:nth-child(3) {
+  animation-duration: 1.1s;
+  animation-delay: -0.6s;
+}
+@keyframes bars {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+body[data-music] .orb:has(.avatar),
+body[data-music] .lp-orb {
+  animation: music-glow 2.4s ease-in-out infinite;
+}
+@keyframes music-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent),
+      0 0 10px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--accent) 60%, transparent),
+      0 0 22px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .status-bars i,
+  body[data-music] .orb:has(.avatar),
+  body[data-music] .lp-orb {
+    animation: none;
+  }
+  body[data-music] .orb:has(.avatar) {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+}
+
+/* ---------- getting started (0.47): the short checklist on the welcome screen and Today ---------- */
+.setup {
+  margin: 0 0 var(--s5);
+  padding: 14px 14px 6px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.setup-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.setup-title {
+  font-weight: 650;
+  font-size: 15px;
+}
+.setup-count {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.setup-hide {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: -4px -6px -4px 0;
+  border-radius: 50%;
+  color: var(--text-muted);
+}
+.setup-bar {
+  height: 4px;
+  margin: 10px 0 4px;
+  border-radius: 2px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.setup-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 500ms var(--glide);
+}
+.setup-steps-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.setup-steps-list li + li {
+  border-top: 1px solid var(--border);
+}
+.setup-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 0;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.setup-row.done {
+  padding: 8px 0;
+  color: var(--text-muted);
+}
+.setup-row.done .setup-step {
+  font-weight: 500;
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--text-muted) 50%, transparent);
+}
+.setup-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-muted);
+}
+.setup-mark.done {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.setup-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.setup-step {
+  font-weight: 600;
+  font-size: 15px;
+}
+.setup-sub {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+.setup .chev {
+  flex: none;
+  color: var(--text-muted);
+}
+.setup.compact {
+  margin: var(--s4) 0 0;
+}
+.hello .setup p {
+  margin: 0;
+}
+
+/* ---------- Lyra's own "are you sure?" (ask.tsx) ---------- */
+.ask-layer {
+  z-index: 95;
+  align-items: center;
+}
+.ask {
+  max-width: 380px;
+  padding: var(--s5) var(--s5) var(--s4);
+}
+.ask-title {
+  margin: 0 0 var(--s2);
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.ask-body {
+  margin: 0 0 var(--s2);
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.ask .field {
+  margin: var(--s2) 0;
+}
+.ask .dialog-actions {
+  margin-top: var(--s4);
+}
+.ask .btn.danger {
+  background: var(--bad);
+  border-color: var(--bad);
+  color: #fff;
+}
+
+/* ---------- Settings: find a setting by name (0.47) ---------- */
+.settings-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 var(--s4);
+  padding: 0 14px;
+  min-height: 48px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.settings-search:focus-within {
+  border-color: var(--text-muted);
+}
+.settings-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  font: inherit;
+  color: var(--text);
+}
+.settings-search input::-webkit-search-cancel-button {
+  display: none;
+}
+.settings-found .item {
+  min-height: 60px;
+}
+.settings-none {
+  margin: 0;
+  padding: var(--s4);
+}
+
+/* ---------- pop-up notices sit low on pages without the message box (they covered the middle) ---------- */
+/* (0.54) smaller, and App.tsx puts them right above the bottom bar / message box when there is one */
+.toast {
+  bottom: calc(var(--inset-bottom) + 20px);
+  padding: 8px 16px;
+  font-size: 13.5px;
+  line-height: 1.35;
+  text-align: center;
+}
+.app:has(.tabbar) ~ .toast,
+.app:has(.tabbar) .toast {
+  bottom: calc(var(--inset-bottom) + 100px);
+}
+.app:has(.composer) ~ .toast,
+.app:has(.composer) .toast {
+  bottom: calc(var(--inset-bottom) + 188px);
+}
+
+/* ---------- widgets under a reply (0.48): choices, a checklist, a place ---------- */
+.widget {
+  width: 100%;
+  max-width: 520px;
+  margin: var(--s3) 0 0 22px;
+  width: calc(100% - 22px);
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.widget-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.widget-count {
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.widget-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.widget-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  transition:
+    transform 160ms ease,
+    border-color var(--ease),
+    background var(--ease);
+}
+.widget-choice:not(:disabled):active {
+  transform: scale(0.98);
+}
+.widget-choice:disabled:not(.picked) {
+  opacity: 0.55;
+}
+.widget-choice.picked {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.widget-choice.picked svg {
+  color: var(--accent-text);
+}
+.widget-choice-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.widget-choice-label {
+  font-weight: 600;
+}
+.widget-choice-detail {
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+.widget .chev {
+  flex: none;
+  color: var(--text-muted);
+}
+.widget-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.widget-list li + li {
+  border-top: 1px solid var(--border);
+}
+.widget-check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.widget-check input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.widget-box {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 1.5px solid var(--text-muted);
+  transition:
+    background var(--ease),
+    border-color var(--ease);
+}
+.widget-check.done .widget-box {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.widget-check input:focus-visible + .widget-box {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.widget-check.done .widget-check-text {
+  color: var(--text-muted);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--text-muted) 50%, transparent);
+}
+.widget-place-name {
+  margin: 0;
+  font-weight: 650;
+  font-size: 17px;
+}
+.widget-place-line {
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.widget-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.widget-actions .btn {
+  text-decoration: none;
+}
+
+/* ---------- Today at a glance (0.48): weather, what Lyra did, what's on the calendar ---------- */
+.today-head {
+  margin-bottom: var(--s4);
+}
+.today-glance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 var(--s4);
+}
+.glance-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 13.5px;
+  font-weight: 550;
+  color: var(--text);
+  text-decoration: none;
+}
+.glance-chip.link {
+  color: var(--accent-text);
+}
+.today-agenda {
+  margin: 0 0 var(--s5);
+  padding: 12px 14px 6px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.today-agenda-label {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.today-agenda ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.today-agenda li {
+  display: flex;
+  gap: 12px;
+  padding: 9px 0;
+}
+.today-agenda li + li {
+  border-top: 1px solid var(--border);
+}
+.agenda-time {
+  flex: none;
+  min-width: 68px;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-text);
+}
+.agenda-what {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.agenda-title {
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.agenda-place {
+  font-size: 13px;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+.agenda-none {
+  margin: 0;
+  padding: 6px 0 8px;
+  color: var(--text-muted);
+}
+
+/* day buttons are only for a routine on a schedule */
+.day-picks[hidden] {
+  display: none;
+}
+
+/* ---------- Display size (this device): chat text and Lyra's avatar ---------- */
+:root {
+  --chat-text: 17px;
+  --orb-sm: 66px;
+}
+[data-text="small"] { --chat-text: 15px; }
+[data-text="large"] { --chat-text: 19px; }
+[data-text="larger"] { --chat-text: 22px; }
+[data-avatar="small"] { --orb-sm: 48px; }
+[data-avatar="large"] { --orb-sm: 84px; }
+
+.size-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin-bottom: var(--s4);
+}
+.size-row > span {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.seg.four {
+  grid-template-columns: repeat(4, 1fr);
+}
+.size-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  margin-bottom: var(--s4);
+  border-radius: var(--radius, 18px);
+  background: var(--surface);
+}
+.size-preview .orb { flex: none; }
+.size-preview p {
+  margin: 0;
+  font-size: var(--chat-text);
+  line-height: 1.5;
+}
+
+/* ---------- 0.49: Reach Lyra faster (Settings), Try again under a reply that failed ---------- */
+.reach-list {
+  margin: var(--s3) 0 0;
+  padding: 0 var(--s2);
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+.reach-list b {
+  color: var(--text);
+  font-weight: 600;
+}
+.retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: var(--s2) 0 0 22px;
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+
+/* ---------- 0.49.1: replying to one message ---------- */
+.replying {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin: 4px 4px 2px;
+  padding: 8px 8px 8px 12px;
+  border-radius: 14px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface-2);
+  animation: fade 200ms ease backwards;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: calc(100% - 8px);
+  overflow: hidden;
+}
+.replying-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.replying-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+.replying-text {
+  font-size: 14px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.replying-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--text-muted);
+}
+.bubble-quote {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0 0 6px;
+  padding: 2px 0 2px 9px;
+  border-left: 2px solid currentColor;
+  font-size: 0.85em;
+  line-height: 1.35;
+  white-space: normal;
+  opacity: 0.75;
+}
+
+/* 0.50: a removal card's warning line (a repeating event) */
+.action-warn {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+/* ---------- 0.50.4: Artifacts as a grid of cards, each with a little preview ---------- */
+.art-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--s3);
+}
+.art-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  overflow: hidden;
+  transition: transform 160ms ease, box-shadow var(--ease);
+}
+.art-card:active {
+  transform: scale(0.97);
+}
+.art-card:hover {
+  box-shadow: var(--shadow);
+}
+.art-preview {
+  position: relative;
+  height: 118px;
+  margin: 8px 8px 0;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--text-muted);
+}
+.art-preview > svg {
+  margin: auto;
+  opacity: 0.6;
+}
+.art-preview.doc span {
+  font-size: 10.5px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.art-preview.doc span:first-child {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text);
+}
+/* the page runs on past the card */
+.art-preview.doc::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 36px;
+  background: linear-gradient(transparent, var(--surface-2));
+}
+.art-preview.dash {
+  background: var(--accent-soft);
+}
+.art-stat-label {
+  font-size: 11px;
+  color: var(--accent-text);
+}
+.art-stat {
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.art-bars {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.art-bars i {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+.art-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px 12px;
+  min-width: 0;
+}
+.art-title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.art-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.art-meta svg {
+  flex: none;
+}
+/* the filter chips keep their sideways scroll (edge to edge) but sit clear of the grid */
+.activity-filters.artifact-filters {
+  margin: var(--s4) calc(-1 * var(--s4)) var(--s5);
+}
+
+/* ---------- 0.52: tokens by job, latest calls, a reply's own count ---------- */
+.usage-job .body {
+  min-width: 0;
+}
+.usage-job-bar {
+  display: block;
+  height: 4px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.usage-job-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.usage-job-total,
+.usage-call-n {
+  flex: none;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.usage-call-n small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.reply-tokens {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.reply-tokens:not(.rate .reply-tokens) {
+  margin: 2px 0 0 22px;
+}
+.sheet-usage {
+  margin: -4px 0 var(--s3);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.usage-more {
+  margin-top: var(--s6, 32px);
+}
+
+/* ---------- 0.54: the "⋯" at the end of a row of actions ---------- */
+.btn.more-btn {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  justify-content: center;
+}
+.task-actions .btn.more-btn {
+  width: 48px;
+}
+
+/* 0.54: Getting started shows the next step; the rest behind this */
+.setup-more {
+  display: block;
+  margin: 2px 0 0;
+  padding: 6px 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-text);
+  cursor: pointer;
+}
+
+/* 0.54: three tabs on Tasks (Active, Scheduled, Life admin) fit a phone's top bar on one line each */
+#topbar-center .seg-tabs button {
+  padding: 0 11px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* ---------- 0.55 cards: mail changes, event details, Drive files ---------- */
+.action-change {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.action-change .action-sub {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.action-change-what {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.action-file-text {
+  margin-top: 10px;
+  padding: 8px 10px;
+  max-height: 180px;
+  overflow: auto;
+  border-radius: 12px;
+  background: var(--surface-2);
+  font-size: 13.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.action-done-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  margin-top: var(--s3);
+}
+.action-done-row .action-link {
+  margin-top: 0;
+}
+.action-undo {
+  margin-left: auto;
+  min-height: 32px;
+  padding: 0 4px;
+}
+
+/* ---------- 0.56: your browser (Lyra's extension) ---------- */
+.browser-steps {
+  margin: var(--s3) 0 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.browser-folder {
+  display: block;
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}

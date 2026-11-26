@@ -1,0 +1,142 @@
+/* ---------- Phase 10: people and the tidy-up ---------- */
+
+.mem-sections .page-sub {
+  margin-bottom: 0;
+}
+
+.mem-tabs {
+  margin: var(--s5) 0 var(--s4);
+  align-self: flex-start;
+  display: inline-flex;
+}
+
+.tidy-now {
+  margin-top: var(--s3);
+}
+
+.person-initial {
+  font-weight: 600;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.person-sheet {
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+}
+
+.people-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin: var(--s2) 0 0 22px;
+}
+
+.person-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px 6px 10px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+.person-chip::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-text);
+}
+
+.tidy-undo {
+  margin: var(--s2) 0 0 22px;
+  align-self: flex-start;
+}
+
+/* ---------- Phase 13: docs ---------- */
+
+.doc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin: var(--s4) 0 var(--s5);
+}
+
+.doc-body {
+  padding: var(--s5);
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 16px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+
+.doc-link {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.doc-screen .editor {
+  min-height: 50vh;
+}
+
+/* ---------- fixes from a full walk through every screen ---------- */
+
+/* one long word (a link, a file name) wraps instead of pushing the buttons beside it off the screen */
+.page-title,
+.item .title,
+.item .sub,
+.task-title,
+.nav-name,
+.activity-title,
+.dash-stat-value,
+.search-empty {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.bar > .page-title {
+  flex: 1 1 auto;
+}
+
+/* a long channel name in the message box: one line, cut with an ellipsis */
+.composer textarea::placeholder {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* the task's status sits clear of the Title field's floating label */
+.task-edit {
+  margin-top: var(--s4);
+}
+
+/* ---------- push setup (home base) ---------- */
+
+.push-steps {
+  margin: 0 0 var(--s4);
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.push-steps .mono {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+  user-select: all;
+}
+
+.push-setup input[type="file"] {
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}

@@ -1,0 +1,118 @@
+/* =========================================================================
+   Redesign: chat
+   ========================================================================= */
+
+/* Vega beside each of Lyra's replies, instead of a dot */
+.reply::before {
+  left: 0;
+  top: 0.42em;
+  width: 13px;
+  height: 13px;
+  border-radius: 0;
+  background: var(--accent-text);
+  box-shadow: none;
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+}
+
+.day {
+  gap: var(--s2);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.day svg {
+  color: var(--accent-text);
+  flex: none;
+}
+
+/* Talk: a quiet icon beside Send, not a second big button */
+.talk {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-muted);
+}
+
+.talk:hover {
+  color: var(--text);
+}
+
+.send:disabled {
+  background: var(--accent);
+  color: var(--accent-ink);
+  opacity: 0.55;
+}
+
+/* in a channel: the name under Lyra's face, the status under the name */
+.channel-head .channel-chip {
+  top: calc(100% + 4px);
+  min-height: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.avatar-stack.in-channel > .status-line {
+  top: calc(100% + 28px);
+}
+
+.status-pill {
+  box-shadow: none;
+}
+
+button.orb {
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* a message you jumped to from search or Today */
+.row.focused .bubble,
+.row.focused .reply {
+  animation: focus-glow 2.4s ease both;
+}
+
+@keyframes focus-glow {
+  0%,
+  40% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 55%, transparent);
+    border-radius: 16px;
+  }
+  100% {
+    box-shadow: 0 0 0 4px transparent;
+  }
+}
+
+/* the tab bar: slimmer, icon beside the label */
+.chat {
+  --tabbar-h: calc(var(--inset-bottom) + 76px);
+}
+
+.tabbar-inner {
+  border: 0;
+}
+
+.tabbar-item {
+  flex-direction: row;
+  gap: var(--s2);
+  min-height: 48px;
+  font-weight: 500;
+}
+
+.tabbar-item.on {
+  font-weight: 600;
+  border-color: transparent;
+}
+
+.tabbar-item.on svg {
+  color: var(--accent-text);
+}

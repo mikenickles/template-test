@@ -1,0 +1,139 @@
+/* ---------- Gentle motion (0.57): a haze drifts behind everything, and Lyra breathes ----------
+   On unless turned off (Settings, You and appearance, Feel: html[data-ambient]), and never
+   moving for people who ask their phone for less motion. Only transform and opacity move,
+   so the phone's graphics chip does the work. */
+.haze {
+  display: none;
+}
+html[data-ambient="on"] .haze {
+  display: block;
+  /* stays put while the page scrolls, behind everything in it */
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  margin-bottom: -100dvh;
+  /* the page is a flex column: don't let it squeeze the haze away */
+  flex: none;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  --haze-a: color-mix(in srgb, var(--accent) 34%, transparent);
+  --haze-b: color-mix(in srgb, color-mix(in srgb, var(--accent) 45%, #8fb6ff) 26%, transparent);
+  --haze-c: color-mix(in srgb, color-mix(in srgb, var(--accent) 50%, #ffb38f) 22%, transparent);
+}
+.haze i {
+  position: absolute;
+  width: 95vmax;
+  height: 95vmax;
+  border-radius: 50%;
+  will-change: transform;
+}
+.haze i:nth-child(1) {
+  left: -42vmax;
+  top: -40vmax;
+  background: radial-gradient(closest-side, var(--haze-a), transparent);
+  animation: haze-1 31s ease-in-out infinite alternate;
+}
+.haze i:nth-child(2) {
+  right: -48vmax;
+  top: 10vmax;
+  background: radial-gradient(closest-side, var(--haze-b), transparent);
+  animation: haze-2 43s ease-in-out infinite alternate;
+}
+.haze i:nth-child(3) {
+  left: -20vmax;
+  bottom: -55vmax;
+  background: radial-gradient(closest-side, var(--haze-c), transparent);
+  animation: haze-3 37s ease-in-out infinite alternate;
+}
+@keyframes haze-1 {
+  to {
+    transform: translate3d(26vmax, 22vmax, 0) scale(1.18);
+  }
+}
+@keyframes haze-2 {
+  to {
+    transform: translate3d(-30vmax, 18vmax, 0) scale(0.86);
+  }
+}
+@keyframes haze-3 {
+  to {
+    transform: translate3d(18vmax, -28vmax, 0) scale(1.12);
+  }
+}
+/* a little quieter at night */
+@media (prefers-color-scheme: dark) {
+  html[data-ambient="on"] .haze {
+    opacity: 0.7;
+  }
+}
+/* task rows sit on the haze too; their Later / Done buttons show only once you swipe */
+html[data-ambient="on"] .swipe:not(.moved) .swipe-front {
+  background: transparent;
+}
+html[data-ambient="on"] .swipe:not(.moved) .swipe-actions {
+  opacity: 0;
+}
+/* bars over a page let the haze through, softly frosted */
+html[data-ambient="on"] .topbar:not(.floating),
+html[data-ambient="on"] .tabbar:not(.floating) {
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+/* Lyra breathes: a slow swell with a soft glow, quicker while it's thinking */
+html[data-ambient="on"] .orb:has(.avatar),
+html[data-ambient="on"] .lp-orb {
+  isolation: isolate;
+  animation: orb-breathe 6.5s ease-in-out infinite;
+}
+html[data-ambient="on"] .orb:has(.avatar)::before,
+html[data-ambient="on"] .lp-orb::before {
+  content: "";
+  position: absolute;
+  inset: -14%;
+  border-radius: 50%;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 55%, transparent), transparent);
+  animation: orb-glow 6.5s ease-in-out infinite;
+}
+html[data-ambient="on"] body[data-busy] .orb:has(.avatar),
+html[data-ambient="on"] body[data-busy] .orb:has(.avatar)::before {
+  animation-duration: 2.4s;
+}
+@keyframes orb-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.045);
+  }
+}
+@keyframes orb-glow {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.12);
+  }
+}
+/* music already has its own glow on the avatar; it wins while something plays */
+html[data-ambient="on"] body[data-music] .orb:has(.avatar),
+html[data-ambient="on"] body[data-music] .lp-orb {
+  animation: music-glow 2.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .haze i,
+  html[data-ambient="on"] .orb:has(.avatar),
+  html[data-ambient="on"] .lp-orb,
+  html[data-ambient="on"] .orb:has(.avatar)::before,
+  html[data-ambient="on"] .lp-orb::before {
+    animation: none;
+  }
+}
