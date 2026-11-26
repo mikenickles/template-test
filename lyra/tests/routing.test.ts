@@ -63,4 +63,27 @@ describe("model routing", () => {
     expect((await lyra.saveSettings({ backgroundModel: "same" })).backgroundModel).toBe("same");
     await expect(lyra.saveSettings({ backgroundModel: "bad name!" })).rejects.toThrow(/looks wrong/);
   });
+
+  it("a routine can run on its own model, the whole way (0.67)", async () => {
+    const main = new FakeProvider([call("nothing_new", { note: "Nothing new." })]);
+    const quick = new FakeProvider([]);
+    const lyra = await Lyra.start(platform({ provider: main, quickProvider: quick }));
+    await expect(lyra.createRoutine({ name: "Bills", instructions: "Any new bills?", times: "08:00", model: "anthropic:claude-haiku-5-5" })).rejects.toThrow(/no anthropic key/);
+    await lyra.saveSettings({ keys: { anthropic: "sk-ant-test" } });
+    const r = await lyra.createRoutine({ name: "Bills", instructions: "Any new bills?", times: "08:00", postMode: "news", model: "anthropic:claude-haiku-5-5" });
+    expect(r.model).toBe("anthropic:claude-haiku-5-5");
+    // the runner asks for the routine's own model, and skips the look-then-write split
+    const d = (lyra.routinesRunner as unknown as { d: { provider: (...a: unknown[]) => Promise<unknown> } }).d;
+    const asked: unknown[] = [];
+    const real = d.provider;
+    d.provider = (...a: unknown[]) => (asked.push(a[3]), real(...a));
+    lyra.runRoutine(r.id);
+    await lyra.routinesRunner.settle();
+    expect(asked).toEqual(["anthropic:claude-haiku-5-5"]);
+    expect(quick.requests.length).toBe(0);
+    expect(await lyra.setupSummary()).toContain("Bills: claude-haiku-5-5");
+    // back to the default
+    expect((await lyra.updateRoutine(r.id, { model: "default" })).model).toBe("");
+    await expect(lyra.updateRoutine(r.id, { model: "not a model!" })).rejects.toThrow(/No model called/);
+  });
 });

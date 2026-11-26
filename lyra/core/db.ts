@@ -333,6 +333,8 @@ export const MIGRATIONS: string[] = [
      SELECT id, kind, status, payload, result, error, tainted, channel_id, created_at, decided_at, message_id FROM actions;
    DROP TABLE actions;
    ALTER TABLE actions_next RENAME TO actions;`,
+  // 0.67: a routine can run on its own model ("provider:model"); "" follows Who does what
+  `ALTER TABLE routines ADD COLUMN model TEXT NOT NULL DEFAULT '';`,
 ];
 
 const FILE = "lyra.db";

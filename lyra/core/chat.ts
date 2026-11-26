@@ -71,7 +71,7 @@ export interface Workspace {
   startTask?(id: number, note?: string): void;
   /** Scheduled routines. */
   routines?: {
-    list(): { id: number; name: string; schedule: string; enabled: number; post_mode: string; channel_name: string | null }[];
+    list(): { id: number; name: string; schedule: string; enabled: number; post_mode: string; channel_name: string | null; model?: string }[];
     create(input: RoutineInput): Promise<{ id: number; name: string }>;
     update(id: number, input: Partial<RoutineInput>): Promise<{ id: number; name: string }>;
   };
@@ -744,6 +744,7 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
           days: { type: "string", description: "Days as digits, 0 = Sunday … 6 = Saturday. '0123456' every day, '12345' weekdays." },
           always_post: { type: "boolean", description: "Post every run (like a daily brief) instead of only when there's news." },
           channel: { type: "string", enum: ["none", ...channels.map((c) => c.name)], description: current ? `Defaults to this channel (${current.name}).` : "Where it posts. Defaults to the main chat." },
+          model: { type: "string", description: "Only when the user asks for one: the model this routine runs on, by name ('haiku', 'Opus 5.5', 'gemini flash') or 'default' to follow Who does what." },
         },
         required: ["name", "instructions"],
       },
@@ -760,6 +761,7 @@ function memoryTools(channels: ChannelSummary[], current: Channel | null): ToolD
           days: { type: "string" },
           instructions: { type: "string" },
           name: { type: "string" },
+          model: { type: "string", description: "Only when the user asks for one: the model this routine runs on, by name ('haiku', 'Opus 5.5', 'gemini flash') or 'default' to follow Who does what." },
         },
         required: ["id"],
       },
@@ -1780,7 +1782,7 @@ async function runTool(
       return {
         content: list.length
           ? list
-              .map((r) => `- #${r.id} ${r.name}: ${r.schedule}${r.enabled ? "" : " (paused)"}, ${r.post_mode === "always" ? "always posts" : "posts only news"}${r.channel_name ? `, in ${r.channel_name}` : ""}`)
+              .map((r) => `- #${r.id} ${r.name}: ${r.schedule}${r.enabled ? "" : " (paused)"}, ${r.post_mode === "always" ? "always posts" : "posts only news"}${r.channel_name ? `, in ${r.channel_name}` : ""}, runs on ${r.model ? r.model.slice(r.model.indexOf(":") + 1) : "the default routine model"}`)
               .join("\n")
           : "No routines yet.",
         isError: false,
@@ -1808,6 +1810,7 @@ async function runTool(
           postMode: input.always_post ?? !!when ? "always" : "news",
           channelId,
           ...(when ? { trigger: when } : {}),
+          ...(typeof input.model === "string" && input.model.trim() ? { model: input.model } : {}),
         });
         emit.status(`Set up ${r.name}`);
         const sched = rs.list().find((x) => x.id === r.id)?.schedule ?? "";
@@ -1819,6 +1822,7 @@ async function runTool(
       if (typeof input.days === "string") patch.days = input.days;
       if (typeof input.instructions === "string") patch.instructions = input.instructions;
       if (typeof input.name === "string") patch.name = input.name;
+      if (typeof input.model === "string") patch.model = input.model;
       const r = await rs.update(Number(input.id), patch);
       return { content: `Updated routine #${r.id} "${r.name}".`, isError: false };
     } catch (e) {

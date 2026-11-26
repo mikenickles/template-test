@@ -727,7 +727,10 @@ export class Lyra {
       db,
       workspace: this.workspace,
       connectors: this.connectors,
-      provider: async (source = "routine", tier = "main", job?: string) => {
+      provider: async (source = "routine", tier = "main", job?: string, pick?: string) => {
+        // (0.67) a routine's own model, while its provider's key is still saved
+        const own = pick && !this.p.provider ? parsePick(pick) : null;
+        if (own && this.keys[own.provider as "anthropic" | "openai" | "gemini"]) return metered(await createProvider(this.keys, own), source, db, p.timeZone, job);
         const id = jobIdFor(source, tier, job);
         return metered(id ? await this.modelForJob(id) : await this.modelFor(tier), source, db, p.timeZone, job);
       },
@@ -2258,8 +2261,31 @@ export class Lyra {
     }
   }
 
+  /** (0.67) a routine's model from what the user (or Tomo) wrote: "default", "provider:model", or a name like "haiku" */
+  async routineModel(text: string): Promise<string> {
+    const s = text.trim();
+    if (!s || /^(default|auto)$/i.test(s)) return "";
+    const pick = parsePick(s);
+    if (pick) {
+      if (!this.keys[pick.provider as "anthropic" | "openai" | "gemini"]) throw new Error(`There's no ${pick.provider} key saved, so that model can't be used.`);
+      return `${pick.provider}:${pick.model}`;
+    }
+    const want = s.toLowerCase().replace(/^claude\s+/, "").replace(/\s+/g, "-");
+    const found: { provider: string; id: string; label: string }[] = [];
+    for (const prov of ["anthropic", "openai", "gemini"] as const) {
+      if (!this.keys[prov]) continue;
+      const list = await listModels(this.keys, prov, this.fetch).catch(() => []);
+      for (const m of list) if (m.id.toLowerCase().includes(want) || m.label.toLowerCase().replace(/\s+/g, "-").includes(want)) found.push({ provider: prov, id: m.id, label: m.label });
+    }
+    if (!found.length) throw new Error(`No model called "${s}" with the keys saved. Models are listed in Settings › AI model.`);
+    // the plain current one over dated or preview ids
+    const best = found.find((m) => !/preview|exp|latest|\d{8}/i.test(m.id)) ?? found[0];
+    return `${best.provider}:${best.id}`;
+  }
+
   async createRoutine(input: R.RoutineInput): Promise<R.RoutineRow> {
     this.checkTriggerFits(input);
+    if (input.model) input = { ...input, model: await this.routineModel(input.model) };
     const r = R.createRoutine(this.db, input);
     await this.db.flush();
     this.listeners.forEach((l) => l({ type: "routine", routineId: r.id }));
@@ -2274,6 +2300,7 @@ export class Lyra {
 
   async updateRoutine(id: number, input: Partial<R.RoutineInput>): Promise<R.RoutineRow> {
     this.checkTriggerFits(input);
+    if (input.model !== undefined) input = { ...input, model: await this.routineModel(input.model) };
     const r = R.updateRoutine(this.db, id, input);
     await this.db.flush();
     this.listeners.forEach((l) => l({ type: "routine", routineId: id }));
@@ -2617,6 +2644,7 @@ export class Lyra {
     return [
       `- AI model for chat, tasks, voice and dashboards: ${main.provider === "fake" ? "the practice model (no real AI yet; an API key is needed)" : `${main.model} from ${prov}`}. Changed in Settings › AI model.`,
       `- Background model setting: ${main.provider === "fake" ? "the practice model" : quick}. Who does what (job id: model; change with set_job_model when ${s.userName} asks, or Settings › AI model › Who does what): ${(await this.jobModels().catch(() => [])).map((j) => `${j.id} (${j.label}): ${j.model}${j.pick !== "auto" && j.pick !== "main" ? " (picked)" : ""}`).join("; ")}.`,
+      `- Routines on their own model (set per routine in its editor, or with update_routine's model when ${s.userName} asks; the rest follow the routine jobs above): ${R.listRoutines(this.db).filter((r) => r.model).map((r) => `${r.name}: ${r.model.slice(r.model.indexOf(":") + 1)}`).join("; ") || "none"}.`,
       `- Web search: ${on(s.webSearch)} (Settings › AI model). Keys saved for: ${(["anthropic", "openai", "gemini"] as const).filter((k) => s.keys[k]).join(", ") || "none"}.`,
       `- Connections (the Tomo page, opened by tapping Tomo's face): ${conns.join("; ")}.`,
       `- Approval switches on the Tomo page (each action still waits for a tap on its card): write emails ${on(s.actions.email)}, add/change events ${on(s.actions.event)}, organize mail ${on(s.actions.archive)}, change Drive files ${on(s.actions.file)}${s.actions.text !== null ? `, texts ${on(s.actions.text)}` : ""}${s.browser !== null ? `, use the browser ${on(s.browser)}` : ""}${s.contacts !== null ? `, phone contacts ${on(s.contacts)}` : ""}${s.notices !== null ? `, phone notifications ${on(s.notices)}` : ""}.`,

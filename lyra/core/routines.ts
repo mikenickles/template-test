@@ -43,6 +43,8 @@ export interface Routine {
   created_at: string;
   /** a Trigger as JSON when the routine starts from something happening, not the clock; "" otherwise */
   starts_on: string;
+  /** (0.67) its own model, "provider:model"; "" runs it on what Who does what picks for routines */
+  model: string;
 }
 
 /**
@@ -128,6 +130,16 @@ export interface RoutineInput {
   enabled?: boolean;
   /** starts from something happening instead of a time; null puts it back on its schedule */
   trigger?: unknown;
+  /** (0.67) "provider:model" to run on its own model; "" (or "default") follows Who does what */
+  model?: string;
+}
+
+/** A routine's own model: "" for the default, else "provider:model". */
+export function cleanRoutineModel(v: string): string {
+  const s = v.trim();
+  if (!s || /^(default|auto)$/i.test(s)) return "";
+  if (!/^(anthropic|openai|gemini):[\w.:@/-]{1,120}$/.test(s)) throw new Error("Pick the routine's model as provider:model, or default.");
+  return s;
 }
 
 /** Ready-made routines the user can add with one tap. */
@@ -306,15 +318,16 @@ function validate(db: DB, input: Partial<RoutineInput>, current?: Routine) {
   const channelId = input.channelId !== undefined ? input.channelId : (current?.channel_id ?? null);
   if (channelId !== null && !getChannel(db, channelId)) throw new Error("That channel no longer exists.");
   const enabled = input.enabled ?? (current ? !!current.enabled : true);
-  return { name, instructions, times, days, postMode, channelId, enabled, trigger };
+  const model = input.model !== undefined ? cleanRoutineModel(input.model) : (current?.model ?? "");
+  return { name, instructions, times, days, postMode, channelId, enabled, trigger, model };
 }
 
 export function createRoutine(db: DB, input: RoutineInput, now = new Date()): RoutineRow {
   const v = validate(db, input);
   const next = v.enabled && !v.trigger ? nextRun(v.times, v.days, now).toISOString() : null;
   const r = db.run<{ id: number }>(
-    "INSERT INTO routines (name, instructions, times, days, post_mode, channel_id, enabled, next_run_at, starts_on) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
-    [v.name, v.instructions, v.times, v.days, v.postMode, v.channelId, v.enabled ? 1 : 0, next, v.trigger ? JSON.stringify(v.trigger) : ""],
+    "INSERT INTO routines (name, instructions, times, days, post_mode, channel_id, enabled, next_run_at, starts_on, model) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+    [v.name, v.instructions, v.times, v.days, v.postMode, v.channelId, v.enabled ? 1 : 0, next, v.trigger ? JSON.stringify(v.trigger) : "", v.model],
   )!;
   return getRoutine(db, r.id)!;
 }
@@ -324,7 +337,7 @@ export function updateRoutine(db: DB, id: number, input: Partial<RoutineInput>, 
   if (!cur) throw new Error("That routine no longer exists.");
   const v = validate(db, input, cur);
   const next = v.enabled && !v.trigger ? nextRun(v.times, v.days, now).toISOString() : null;
-  db.run("UPDATE routines SET name = ?, instructions = ?, times = ?, days = ?, post_mode = ?, channel_id = ?, enabled = ?, next_run_at = ?, starts_on = ? WHERE id = ?", [
+  db.run("UPDATE routines SET name = ?, instructions = ?, times = ?, days = ?, post_mode = ?, channel_id = ?, enabled = ?, next_run_at = ?, starts_on = ?, model = ? WHERE id = ?", [
     v.name,
     v.instructions,
     v.times,
@@ -334,6 +347,7 @@ export function updateRoutine(db: DB, id: number, input: Partial<RoutineInput>, 
     v.enabled ? 1 : 0,
     next,
     v.trigger ? JSON.stringify(v.trigger) : "",
+    v.model,
     id,
   ]);
   return getRoutine(db, id)!;
@@ -366,7 +380,8 @@ export interface RoutineDeps {
   connectors: Connectors;
   /** the model to run with; `source` says which kind of work it's counted as on the Usage page */
   /** "quick": the background model (looking around); "main": the one picked in Settings (writing to the user) */
-  provider: (source?: "routine" | "proactive", tier?: "main" | "quick", job?: string) => Promise<ModelProvider>;
+  /** pick: a routine's own "provider:model" (0.67), which wins over the job's model */
+  provider: (source?: "routine" | "proactive", tier?: "main" | "quick", job?: string, pick?: string) => Promise<ModelProvider>;
   /** Is the background model a different one from the main model? (Only then is there a hand-off.) */
   splitModels?: (source?: string, job?: string) => Promise<boolean>;
   userName: () => string;
@@ -381,6 +396,8 @@ export interface RoutineDeps {
 export type RoutineJob = Pick<RoutineRow, "name" | "instructions" | "last_run_at" | "last_summary" | "post_mode" | "channel_id"> & {
   /** what just happened to set it off (new mail, a place, a notification): outside content, shown to the model as data */
   spark?: string;
+  /** (0.67) the routine's own model, if it has one */
+  model?: string;
 };
 
 function routinePrompt(r: RoutineJob, d: RoutineDeps, search: boolean, memory: string, tasks: string, notebook?: string, own = false): string {
@@ -664,8 +681,10 @@ export class Routines {
       // something to say, the main model takes over and writes it (see the hand-off below)
       // what the calls are for, on the Usage page: a routine by its name, Lyra's own checks by theirs
       const job = source === "routine" ? `Routine: ${r.name}` : r.name;
-      let quick = r.post_mode === "news" && !!(await this.d.splitModels?.(source, job).catch(() => false));
-      let provider = await this.d.provider(source, quick ? "quick" : "main", job);
+      // (0.67) a routine with its own model runs on it the whole way (no look-then-write split)
+      const pick = source === "routine" ? r.model || "" : "";
+      let quick = !pick && r.post_mode === "news" && !!(await this.d.splitModels?.(source, job).catch(() => false));
+      let provider = await this.d.provider(source, quick ? "quick" : "main", job, pick || undefined);
       const search = !!this.d.webSearch?.();
       const notebook = r.channel_id ? (await this.d.workspace.notebook(r.channel_id).catch(() => undefined))?.read() : undefined;
       const system = routinePrompt(

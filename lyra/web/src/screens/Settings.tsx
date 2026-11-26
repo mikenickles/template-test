@@ -42,6 +42,7 @@ const FINDER: { label: string; more: string; where: string; href: string; phone?
   { label: "Background model", more: "cheaper smaller haiku terra flash routing cost save money quick model", where: "AI model", href: "#/settings/model" },
   { label: "Web search", more: "internet browse look up online", where: "AI model", href: "#/settings/model" },
   { label: "Live voice", more: "talk call speak voice mode", where: "AI model", href: "#/settings/model" },
+  { label: "Model for a routine", more: "haiku routine cheaper smaller per routine scheduled morning brief which model", where: "Tasks, Scheduled, the routine, Edit", href: "#/tasks?scheduled" },
   { label: "Usage", more: "tokens cost spend money how much", where: "Usage", href: "#/settings/usage" },
   { label: "Your name", more: "call me who", where: "You and appearance", href: "#/settings/you" },
   { label: "Look", more: "theme quiet linen sage night paper dark mode style warm cream green", where: "You and appearance", href: "#/settings/you" },

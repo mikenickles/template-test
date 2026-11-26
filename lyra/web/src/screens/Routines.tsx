@@ -186,7 +186,38 @@ function AddRoutineDialog({ toast, onClose, onAdded }: { toast: (m: string) => v
   );
 }
 
+/** (0.67) the models a routine can run on (every provider with a key), and what "Default" means right now */
+function useRoutineModels() {
+  const [models, setModels] = useState<{ value: string; label: string }[]>([]);
+  const [auto, setAuto] = useState<{ always: string; news: string }>({ always: "", news: "" });
+  useEffect(() => {
+    let alive = true;
+    void api.state().then(async (s) => {
+      const ready = s.providers.filter((p) => p.ready && p.id !== "fake");
+      const all = await Promise.all(
+        ready.map((p) =>
+          api.models(p.id as "anthropic" | "openai" | "gemini").then(
+            (m) => m.map((x) => ({ value: `${p.id}:${x.id}`, label: `${x.label}${ready.length > 1 ? ` · ${p.label}` : ""}` })),
+            () => [],
+          ),
+        ),
+      );
+      if (alive) setModels(all.flat());
+    }, () => {});
+    void api.jobModels().then((rows) => alive && setAuto({ always: rows.find((r) => r.id === "routine")?.model ?? "", news: rows.find((r) => r.id === "routine_news")?.model ?? "" }), () => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const name = (v: string) => {
+    const m = models.find((x) => x.value === v || x.value.endsWith(`:${v}`));
+    return m ? m.label.split(" · ")[0] : v.slice(v.indexOf(":") + 1);
+  };
+  return { models, auto, name };
+}
+
 export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: string) => void; channels: Channel[] }) {
+  const choices = useRoutineModels();
   const [data, setData] = useState<{ routine: Routine; runs: RoutineRun[] } | null>(null);
   const [draft, setDraft] = useState<{
     name: string;
@@ -201,6 +232,8 @@ export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: st
     place: string;
     on: "arrive" | "leave";
     match: string;
+    /** (0.67) "" = default, else "provider:model" */
+    model: string;
   } | null>(null);
   const [saved, setSaved] = useState<string[]>([]);
   useEffect(() => void api.places().then((p) => setSaved(p.map((x) => x.name)), () => {}), []);
@@ -249,6 +282,7 @@ export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: st
               days: draft.days,
               postMode: draft.always ? "always" : "news",
               channelId: draft.channelId,
+              model: draft.model,
               trigger:
                 draft.start === "mail"
                   ? { kind: "mail", from: draft.from }
@@ -369,6 +403,21 @@ export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: st
           </span>
           <input type="checkbox" role="switch" className="switch" checked={draft.always} onChange={(e) => setDraft({ ...draft, always: e.target.checked })} />
         </label>
+        <label className="field-label" htmlFor="rt-model" style={{ marginTop: 20 }}>
+          Model
+        </label>
+        <select id="rt-model" className="select field" value={draft.model} onChange={(e) => setDraft({ ...draft, model: e.target.value })}>
+          <option value="">
+            Default{(draft.always ? choices.auto.always : choices.auto.news) ? ` (${choices.name(draft.always ? choices.auto.always : choices.auto.news)})` : ""}
+          </option>
+          {choices.models.map((m) => (
+            <option key={m.value} value={m.value}>
+              {m.label}
+            </option>
+          ))}
+          {draft.model && !choices.models.some((m) => m.value === draft.model) && <option value={draft.model}>{draft.model.slice(draft.model.indexOf(":") + 1)}</option>}
+        </select>
+        <p className="hint">Default follows Settings › AI model › Who does what. Pick one to run just this routine on it.</p>
         {channels.length > 0 && (
           <>
             <p className="field-label" style={{ marginTop: 20 }} id="rt-ch">
@@ -405,7 +454,8 @@ export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: st
       </p>
       <h1 className="page-title">{r.name}</h1>
       <p className="task-brief">
-        {r.schedule}. {r.post_mode === "always" ? "Posts every time." : "Posts only when there's news."} {r.enabled && (r.next_run_at || r.running) ? `${nextLabel(r)}.` : ""}
+        {r.schedule}. {r.post_mode === "always" ? "Posts every time." : "Posts only when there's news."} {r.enabled && (r.next_run_at || r.running) ? `${nextLabel(r)}.` : ""}{" "}
+        {r.model ? `Runs on ${choices.name(r.model)}.` : ""}
       </p>
 
       {r.running && (
@@ -441,6 +491,7 @@ export function RoutinePage({ id, toast, channels }: { id: number; toast: (m: st
                   place: t?.kind === "place" ? t.place : (saved[0] ?? ""),
                   on: t?.kind === "place" ? t.on : "arrive",
                   match: t?.kind === "notice" ? t.match : "",
+                  model: r.model ?? "",
                 });
               }
             }

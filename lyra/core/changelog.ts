@@ -12,6 +12,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "0.67.0",
+    date: "2026-11-26",
+    notes: [
+      "Each routine can run on its own model: open it (Tasks, Scheduled), tap Edit and pick one under Model, or ask Tomo (\"run my morning brief on Haiku\"). Default follows Who does what.",
+      "Routines with their own model use it the whole way, both looking and writing.",
+    ],
+  },
+  {
     version: "0.66.5",
     date: "2026-11-25",
     notes: ["The round buttons, the message box, the tab bar and the little chips over the chat are frosted glass now, like Tomo's name pill: the chat shows through softly as it scrolls underneath."],

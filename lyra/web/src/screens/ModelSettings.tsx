@@ -124,7 +124,7 @@ function WhoDoesWhat({ state, run, busy }: { state: AppState; run: (fn: () => Pr
   return (
     <section className="section who-does-what">
       <h2 className="section-label">Who does what</h2>
-      <p className="hint">Each job Tomo does, and the model it uses. Auto puts real work on your main model, light work on its smaller partner, and watching on the smallest. Watching jobs only look; when they find something, your main model writes it. You can also ask Tomo to change one.</p>
+      <p className="hint">Each job Tomo does, and the model it uses. Auto puts real work on your main model, light work on its smaller partner, and watching on the smallest. Watching jobs only look; when they find something, your main model writes it. A routine can also have its own model (open it on the Tasks page, Scheduled, then Edit). You can also ask Tomo to change one.</p>
       <div className="group">
         {rows.map((r) => {
           const head = r.lane !== lane ? ((lane = r.lane), LANE[r.lane]) : null;
