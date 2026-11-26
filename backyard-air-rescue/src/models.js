@@ -11,7 +11,8 @@ export function makeHeli() {
   const root = new THREE.Group();      // world position
   const body = new THREE.Group();      // yaw + lean
   root.add(body);
-  const red = M(0xdc1f2e, { r: 0.22, env: 1.0 }), white = M(0xfff8ee, { r: 0.3, env: 0.8 }), yellow = M(0xffcf3a, { r: 0.3 }), dark = M(0x3a3f4a, { r: 0.4 });
+  // its own material (not the shared cache) so the bodywork can be repainted
+  const red = new THREE.MeshStandardMaterial({ color: 0xdc1f2e, roughness: 0.22, envMapIntensity: 1.0 }), white = M(0xfff8ee, { r: 0.3, env: 0.8 }), yellow = M(0xffcf3a, { r: 0.3 }), dark = M(0x3a3f4a, { r: 0.4 });
 
   // bubbly cabin, white belly
   put(body, sph(0.82, 28, 20), red, [0, 0, 0], null, [1, 0.9, 1.22]);
@@ -67,7 +68,7 @@ export function makeHeli() {
   const disc = put(rotor, new THREE.RingGeometry(0.2, 1.84, 40), new THREE.MeshBasicMaterial({ color: 0xf2f2f2, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }), [0, 0, 0], [-Math.PI / 2, 0, 0], null, false);
   const discTip = put(rotor, new THREE.RingGeometry(1.55, 1.84, 40), new THREE.MeshBasicMaterial({ color: 0xffd23a, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }), [0, 0.005, 0], [-Math.PI / 2, 0, 0], null, false);
   body.scale.setScalar(0.92);
-  return { root, body, rotor, tailRotor, blades, disc, discTip, beacon, hookLocal: new THREE.Vector3(0, -0.82, 0), skidY: 0.98 };
+  return { root, body, rotor, tailRotor, blades, disc, discTip, beacon, paint: red, hookLocal: new THREE.Vector3(0, -0.82, 0), skidY: 0.98 };
 }
 
 // ---------------------------------------------------------------- toys
@@ -184,6 +185,119 @@ export function makeRobot() {
     else { arms[0].rotation.x = arms[1].rotation.x = 0; arms[0].rotation.z = -1.4 + Math.sin(t * 6) * 0.9; arms[1].rotation.z = 1.4 + Math.sin(t * 6) * 0.9; head.rotation.y = Math.sin(t * 1.3) * 0.5; }
   };
   return { name: 'robot', group: g, height: 2.3, anim, carry: { len: 2.6, damp: 0.6, mass: 0.42, spring: 0, g: 22 } };
+}
+
+export function makeKite() {
+  // diamond kite with a face and a bow-tie tail; origin at the bottom corner, loop at the top corner
+  const g = new THREE.Group(), H = 1.9;
+  const face = new THREE.Group(); face.position.y = 0.95; g.add(face);
+  const tri = (a, b, c, col) => {
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute([...a, ...b, ...c], 3)); geo.computeVertexNormals();
+    put(face, geo, M(col, { r: 0.45, side: THREE.DoubleSide }));
+  };
+  const T = [0, 0.85, 0], B = [0, -0.95, 0], Lp = [-0.72, 0.18, 0], R = [0.72, 0.18, 0], C = [0, 0.18, 0.06];
+  tri(T, Lp, C, 0xff4f6d); tri(T, C, R, 0xffd23f); tri(Lp, B, C, 0xffd23f); tri(C, B, R, 0xff4f6d);
+  const stick = M(0xc98d55, { r: 0.7 });
+  put(face, new THREE.CylinderGeometry(0.03, 0.03, 1.8, 5), stick, [0, -0.05, 0.07]);
+  put(face, new THREE.CylinderGeometry(0.03, 0.03, 1.44, 5), stick, [0, 0.18, 0.07], [0, 0, Math.PI / 2]);
+  for (const sx of [-1, 1]) { put(face, new THREE.SphereGeometry(0.09, 10, 8), BLACK(), [sx * 0.2, 0.32, 0.1], null, [1, 1, 0.5], false); put(face, new THREE.SphereGeometry(0.03, 6, 6), M(0xffffff, { e: 0xffffff }), [sx * 0.2 + 0.02, 0.35, 0.14], null, null, false); }
+  put(face, new THREE.TorusGeometry(0.11, 0.022, 5, 10, Math.PI), BLACK(), [0, 0.06, 0.1], [0, 0, Math.PI], null, false);
+  const tail = [];
+  for (let i = 0; i < 4; i++) {
+    const k = new THREE.Group(); (i ? tail[i - 1] : face).add(k); k.position.y = i ? -0.42 : -0.95;
+    put(k, new THREE.CylinderGeometry(0.012, 0.012, 0.42, 4), M(0xffffff, { r: 0.8 }), [0, -0.21, 0], null, null, false);
+    put(k, new THREE.ConeGeometry(0.12, 0.2, 4), M([0x3d8fe0, 0x7bd66a, 0xff8a3c, 0xb86bff][i], { r: 0.5 }), [0.09, -0.34, 0], [0, 0, Math.PI / 2], [1, 1, 0.3], false);
+    put(k, new THREE.ConeGeometry(0.12, 0.2, 4), M([0x3d8fe0, 0x7bd66a, 0xff8a3c, 0xb86bff][i], { r: 0.5 }), [-0.09, -0.34, 0], [0, 0, -Math.PI / 2], [1, 1, 0.3], false);
+    tail.push(k);
+  }
+  loop(g, H);
+  const anim = (t, mood) => {
+    tail.forEach((k, i) => { k.rotation.z = Math.sin(t * (mood === 'hang' ? 6 : 2.5) - i * 0.8) * (mood === 'hang' ? 0.45 : 0.25); k.rotation.x = Math.sin(t * 1.7 - i) * 0.15; });
+    face.rotation.y = mood === 'happy' ? Math.sin(t * 5) * 0.3 : Math.sin(t * 1.4) * 0.08;
+  };
+  return { name: 'kite', group: g, height: H, anim, carry: { len: 2.4, damp: 2.4, mass: 0.03, spring: 0, g: 18 } };
+}
+
+export function makeBall() {
+  // striped bouncy ball; rides on a stretchy cable so it boings
+  const g = new THREE.Group(), r = 0.5, H = 1.18;
+  const c = document.createElement('canvas'); c.width = 256; c.height = 128;
+  const x = c.getContext('2d'); ['#ff4f6d', '#ffd23f', '#3d9be9', '#7bd66a', '#ffffff', '#b86bff'].forEach((col, i) => { x.fillStyle = col; x.fillRect(0, i * 128 / 6, 256, 128 / 6 + 1); });
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const body = new THREE.Group(); body.position.y = r; g.add(body);
+  put(body, new THREE.SphereGeometry(r, 24, 16), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.25, envMapIntensity: 0.9 }), [0, 0, 0], [0, 0, 0.3]);
+  for (const sx of [-1, 1]) { put(body, new THREE.SphereGeometry(0.08, 10, 8), BLACK(), [sx * 0.16, 0.1, r - 0.04], null, [1, 1, 0.5], false); put(body, new THREE.SphereGeometry(0.026, 6, 6), M(0xffffff, { e: 0xffffff }), [sx * 0.16 + 0.02, 0.13, r + 0.01], null, null, false); }
+  put(body, new THREE.TorusGeometry(0.1, 0.02, 5, 10, Math.PI), BLACK(), [0, -0.05, r - 0.02], [0.2, 0, Math.PI], null, false);
+  loop(g, H);
+  const anim = (t, mood) => {
+    const b = mood === 'happy' ? Math.abs(Math.sin(t * 6)) * 0.12 : 0;
+    body.position.y = r + b; body.scale.set(1 + (mood === 'help' ? Math.sin(t * 3) * 0.03 : 0), 1 - (mood === 'help' ? Math.sin(t * 3) * 0.03 : 0), 1);
+  };
+  return { name: 'ball', group: g, height: H, anim, carry: { len: 2.0, damp: 0.8, mass: 0.05, spring: 150, g: 24 } };
+}
+
+export function makeBoat() {
+  // toy sailboat; origin at the waterline, loop at the top of the mast
+  const g = new THREE.Group(), H = 2.05;
+  const hull = new THREE.Group(); g.add(hull);
+  put(hull, new THREE.SphereGeometry(0.5, 20, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M(0xff6b4a, { r: 0.35 }), [0, 0.18, 0], null, [1.0, 0.7, 1.9]);
+  put(hull, new RoundedBoxGeometry(0.98, 0.1, 1.8, 2, 0.05), M(0xfff1d6, { r: 0.6 }), [0, 0.2, 0], null, [1, 1, 1]);
+  put(hull, new THREE.TorusGeometry(0.5, 0.05, 6, 24), M(0xffffff, { r: 0.4 }), [0, 0.2, 0], [Math.PI / 2, 0, 0], [1, 1.85, 1]);
+  for (const sx of [-1, 1]) { put(hull, new THREE.SphereGeometry(0.075, 10, 8), BLACK(), [sx * 0.16, 0.1, 0.9], null, [1, 1, 0.5], false); put(hull, new THREE.SphereGeometry(0.024, 6, 6), M(0xffffff, { e: 0xffffff }), [sx * 0.16 + 0.02, 0.13, 0.94], null, null, false); }
+  put(hull, new THREE.CylinderGeometry(0.04, 0.05, 1.7, 6), M(0xc98d55, { r: 0.7 }), [0, 1.05, 0.05]);
+  const sail = new THREE.Shape(); sail.moveTo(0, 0); sail.lineTo(0, 1.3); sail.quadraticCurveTo(0.5, 0.5, 0.75, 0); sail.closePath();
+  const sailG = new THREE.Group(); sailG.position.set(0, 0.35, 0.08); hull.add(sailG);
+  put(sailG, new THREE.ShapeGeometry(sail, 6), M(0xffffff, { r: 0.7, side: THREE.DoubleSide }), [0, 0, 0], [0, -Math.PI / 2, 0]);
+  const flag = put(hull, new THREE.ConeGeometry(0.12, 0.34, 3), M(0x3d8fe0, { r: 0.5 }), [0, 1.82, -0.17], [Math.PI / 2, 0, 0], [1, 1, 0.25]);
+  loop(g, H);
+  const anim = (t, mood) => {
+    sailG.rotation.y = Math.sin(t * 1.3) * 0.18; flag.rotation.z = Math.sin(t * 7) * 0.4;
+    hull.rotation.z = mood === 'happy' ? Math.sin(t * 6) * 0.15 : 0;
+  };
+  return { name: 'boat', group: g, height: H, anim, carry: { len: 2.2, damp: 1.4, mass: 0.06, spring: 0, g: 24 } };
+}
+
+export function makeDoll() {
+  // rag doll with yarn hair; sits upright, loop on top of her head
+  const g = new THREE.Group(), H = 1.7;
+  const cloth = M(0x7bc8f6, { r: 0.8, env: 0.3 }), skin = M(0xf7c9a0, { r: 0.7, env: 0.3 }), hair = M(0xff7a2a, { r: 0.9, env: 0.2 });
+  put(g, new THREE.ConeGeometry(0.5, 0.85, 14), cloth, [0, 0.55, 0]);
+  put(g, new THREE.SphereGeometry(0.06, 6, 6), M(0xffd23f), [0, 0.7, 0.3], null, null, false);
+  put(g, new THREE.SphereGeometry(0.06, 6, 6), M(0xffd23f), [0, 0.5, 0.36], null, null, false);
+  const head = new THREE.Group(); head.position.set(0, 1.25, 0); g.add(head);
+  put(head, new THREE.SphereGeometry(0.34, 18, 14), skin);
+  const hg = [];
+  for (let i = 0; i < 9; i++) { const a = -1.4 + i * 0.35; hg.push(tg(new THREE.SphereGeometry(0.11, 8, 6), [Math.sin(a) * 0.32, 0.18 + Math.cos(a) * 0.08, Math.cos(a) * -0.12 - 0.04])); }
+  for (const sx of [-1, 1]) hg.push(tg(new THREE.CapsuleGeometry(0.08, 0.32, 3, 8), [sx * 0.33, -0.1, -0.06], [0, 0, sx * 0.25]));
+  put(head, merge(hg), hair);
+  for (const sx of [-1, 1]) { put(head, new THREE.CylinderGeometry(0.06, 0.06, 0.03, 10), BLACK(), [sx * 0.12, 0.03, 0.31], [Math.PI / 2, 0, 0], null, false); put(head, new THREE.SphereGeometry(0.05, 8, 6), M(0xff9aa8, { r: 0.7 }), [sx * 0.2, -0.08, 0.27], null, [1, 0.7, 0.5], false); }
+  put(head, new THREE.TorusGeometry(0.08, 0.018, 5, 10, Math.PI), M(0xd23b5a, { r: 0.6 }), [0, -0.1, 0.31], [0.1, 0, Math.PI], null, false);
+  const arms = [], legs = [];
+  for (const sx of [-1, 1]) {
+    const a = new THREE.Group(); a.position.set(sx * 0.2, 0.88, 0); g.add(a);
+    put(a, new THREE.CapsuleGeometry(0.07, 0.38, 3, 8), skin, [sx * 0.08, -0.22, 0], [0, 0, sx * 0.35]); arms.push(a);
+    const l = new THREE.Group(); l.position.set(sx * 0.16, 0.2, 0.1); g.add(l);
+    put(l, new THREE.CapsuleGeometry(0.08, 0.36, 3, 8), skin, [0, -0.05, 0.25], [Math.PI / 2 - 0.3, 0, 0]);
+    put(l, new THREE.SphereGeometry(0.1, 8, 6), M(0xe23b2e, { r: 0.5 }), [0, -0.1, 0.48], null, [1, 0.8, 1.3]); legs.push(l);
+  }
+  loop(g, H);
+  const anim = (t, mood) => {
+    if (mood === 'hang') { arms[0].rotation.z = -2.4; arms[1].rotation.z = 2.4; legs.forEach((l, i) => (l.rotation.x = 1.1 + Math.sin(t * 5 + i * 3) * 0.35)); }
+    else if (mood === 'happy') { arms[0].rotation.z = -2 + Math.sin(t * 8) * 0.4; arms[1].rotation.z = 2 - Math.sin(t * 8 + 1) * 0.4; legs.forEach((l, i) => (l.rotation.x = Math.sin(t * 8 + i * 3) * 0.3)); }
+    else { arms[0].rotation.z = -1.6 + Math.sin(t * 6) * 0.6; arms[1].rotation.z = Math.sin(t * 1.4) * 0.1; legs.forEach((l, i) => (l.rotation.x = Math.sin(t * 2.2 + i * 3) * 0.2)); }
+    head.rotation.z = Math.sin(t * 1.6) * 0.12;
+  };
+  return { name: 'doll', group: g, height: H, anim, carry: { len: 2.3, damp: 1.8, mass: 0.05, spring: 0, g: 28 } };
+}
+
+/** Golden acorn hidden around the yard. */
+export function makeAcorn() {
+  const g = new THREE.Group();
+  const gold = new THREE.MeshStandardMaterial({ color: 0xffc23a, metalness: 0.55, roughness: 0.25, emissive: 0xffa400, emissiveIntensity: 0.35 });
+  put(g, new THREE.SphereGeometry(0.34, 16, 12), gold, [0, 0.36, 0], null, [1, 1.25, 1]);
+  put(g, new THREE.SphereGeometry(0.38, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), M(0xa66a2a, { r: 0.8 }), [0, 0.6, 0], null, [1, 0.6, 1]);
+  put(g, new THREE.CylinderGeometry(0.04, 0.05, 0.22, 6), M(0x7a4a22, { r: 0.8 }), [0, 0.88, 0], [0, 0, 0.3]);
+  return { group: g, gold };
 }
 
 export function makeHook() {

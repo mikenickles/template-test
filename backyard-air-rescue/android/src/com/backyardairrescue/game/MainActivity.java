@@ -28,6 +28,7 @@ public class MainActivity extends Activity implements View.OnLongClickListener {
         web = new WebView(this);
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true); // progress is saved on the phone
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setBlockNetworkLoads(true);
         s.setSupportZoom(false);

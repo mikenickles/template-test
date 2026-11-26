@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { clamp, lerp, damp, dampAngle, smoothstep, blobShadow } from './util.js';
 import { L, PUSHERS, buildWorld, cruiseAlt, restHeight, inPond } from './world.js';
-import { makeHeli, makeTeddy, makeDuck, makeRobot, makeHook, makeMarker } from './models.js';
+import { makeHeli, makeTeddy, makeDuck, makeRobot, makeKite, makeBall, makeBoat, makeDoll, makeAcorn, makeHook, makeMarker } from './models.js';
+import { makeBasket, buildApples, buildHammock, APPLES } from './picnic.js';
 import { buildLife } from './life.js';
 import { buildGarden, makeBucket } from './garden.js';
 import { makeAudio } from './audio.js';
@@ -52,6 +53,8 @@ const world = buildWorld(scene, renderer, uniforms, { grass: lowEnd ? 27000 : 52
 world.lights.sun.shadow.mapSize.setScalar(lowEnd ? 1024 : 2048);
 const life = buildLife(scene);
 const garden = buildGarden(scene);
+const orchard = buildApples(scene);
+const hammock = buildHammock(scene);
 const audio = makeAudio();
 
 // ---------------------------------------------------------------- helicopter
@@ -67,17 +70,40 @@ const toyShadow = blobShadow(0.95, 0.4); scene.add(toyShadow); toyShadow.visible
 const hookShadow = blobShadow(0.32, 0.55); scene.add(hookShadow);
 
 // ---------------------------------------------------------------- toys
-const toys = [makeTeddy(), makeDuck(), makeRobot()].map((t, i) => {
-  scene.add(t.group);
-  return Object.assign(t, { state: 'stranded', rescued: false, yaw: 0, sq: 0, sqV: 0, wiggle: 0, hopT: 0, hopFrom: new THREE.Vector3(), happy: 0, rest: 0, floaty: false,
-    home: new THREE.Vector3(L.home.x - 1.6 + i * 1.6, 0.11, L.home.z + (i === 1 ? 0.5 : 0)) });
+const MAKERS = [makeTeddy, makeDuck, makeRobot, makeKite, makeBall, makeBoat, makeDoll];
+const ROUND1 = 3;
+const blanketC = new THREE.Vector3(L.home.x, 0.1, L.home.z);
+const toys = MAKERS.map((mk, i) => {
+  const t = mk(); scene.add(t.group);
+  // picnic places: round one in front of the basket, round two behind it
+  const home = i < ROUND1 ? new THREE.Vector3(L.home.x - 2.0 + i * 2.0, 0.11, L.home.z + 1.5) : new THREE.Vector3(L.home.x - 2.7 + (i - ROUND1) * 1.8, 0.11, L.home.z - 1.5);
+  return Object.assign(t, { state: i < ROUND1 ? 'stranded' : 'hidden', rescued: false, yaw: 0, sq: 0, sqV: 0, wiggle: 0, hopT: 0, hopFrom: new THREE.Vector3(), happy: 0, rest: 0, floaty: false, appear: 1, home, isToy: true });
 });
-const [teddy, duck, robot] = toys;
-toys.forEach((t) => (t.isToy = true));
+const [teddy, duck, robot, kite, ball, boat, doll] = toys;
+teddy.group.position.set(L.bed.x, 0.3, L.bed.z); teddy.rest = 0.3;
+duck.group.position.set(L.pond.x - 0.4, 0.02, L.pond.z + 0.2); duck.rest = 0.02; duck.floaty = true; duck.yaw = -0.5;
+robot.group.position.set(L.tower.x, L.tower.platY, L.tower.z + 0.3); robot.rest = L.tower.platY;
+// round two: each one needs a different trick
+const KITE_AT = new THREE.Vector3(L.apple.x + 0.3, 7.7, L.apple.z + 3.75);
+kite.rest = KITE_AT.y;
+kite.idle = (t) => { kite.group.position.copy(KITE_AT); kite.group.rotation.set(-0.35 + Math.sin(t * 2.3) * 0.03, 0.25, 0.18 + Math.sin(t * 1.7) * 0.03); };
+ball.group.position.set(L.shed.x - 1.5, 6.05, L.shed.z + 0.6); ball.rest = 6.05;
+boat.rest = L.pool.y - 0.1;
+boat.idle = (t) => {
+  const a = t * 0.32, r = 1.7;
+  boat.group.position.set(L.pool.x + Math.cos(a) * r, L.pool.y - 0.12 + Math.sin(t * 2.1) * 0.04, L.pool.z + Math.sin(a) * r);
+  boat.group.rotation.set(Math.sin(t * 1.8) * 0.05, Math.atan2(-Math.sin(a), Math.cos(a)), Math.cos(t * 1.5) * 0.06);
+};
+doll.rest = L.hammock.pivotY - L.hammock.drop;
+doll.idle = () => { hammock.seat(doll.group.position); doll.group.rotation.set(hammock.st.a * 0.3, 0.15, 0); };
 // the bucket rides the winch like a toy, but its job is watering
-const bucket = Object.assign(makeBucket(), { state: 'stranded', rescued: false, yaw: 0.4, sq: 0, sqV: 0, wiggle: 0, hopT: 0, hopFrom: new THREE.Vector3(), happy: 0, rest: 0, floaty: false, home: new THREE.Vector3() });
+const extra = () => ({ state: 'stranded', rescued: false, yaw: 0.4, sq: 0, sqV: 0, wiggle: 0, hopT: 0, hopFrom: new THREE.Vector3(), happy: 0, rest: 0, floaty: false, appear: 1, home: new THREE.Vector3() });
+const bucket = Object.assign(makeBucket(), extra());
 bucket.group.position.set(L.bucket.x, 0, L.bucket.z); scene.add(bucket.group);
-const things = [...toys, bucket];
+// the picnic basket waits on the blanket
+const basket = Object.assign(makeBasket(), extra(), { state: 'placed', rest: 0.1, yaw: 0 });
+basket.group.position.copy(blanketC); scene.add(basket.group);
+const things = [...toys, bucket, basket];
 teddy.group.position.set(L.bed.x, 0.3, L.bed.z); teddy.rest = 0.3;
 duck.group.position.set(L.pond.x - 0.4, 0.02, L.pond.z + 0.2); duck.rest = 0.02; duck.floaty = true; duck.yaw = -0.5;
 robot.group.position.set(L.tower.x, L.tower.platY, L.tower.z + 0.3); robot.rest = L.tower.platY;
@@ -90,22 +116,28 @@ const winch = { state: 'idle', len: STOW, bob: heli.pos.clone().add(new THREE.Ve
 const anchor = new THREE.Vector3();
 
 const BLUE = 0x2f9bff;
-const markers = things.map((t) => makeMarker(t.isBucket ? BLUE : 0xffa81f));
+const RED = 0xff5a4a, ORANGE = 0xffa81f;
+const markerColor = (t) => (t.isBucket ? BLUE : t.isBasket ? RED : ORANGE);
+const markers = things.map((t) => makeMarker(markerColor(t)));
 const padMarker = makeMarker(0x35d07f);
 const waterSpots = [{ x: L.pond.x, y: 0.1, z: L.pond.z, s: 4 }, { x: L.pool.x, y: L.pool.y + 0.05, z: L.pool.z, s: 2.6 }];
 const waterMarkers = waterSpots.map(() => makeMarker(BLUE));
 const plantMarkers = garden.plants.map(() => makeMarker(BLUE));
-[...markers, padMarker, ...waterMarkers, ...plantMarkers].forEach((m) => scene.add(m.g));
+const treeMarker = makeMarker(RED), blanketMarker = makeMarker(0x35d07f), finaleMarker = makeMarker(0x35d07f);
+const appleMarkers = orchard.apples.map(() => makeMarker(RED));
+appleMarkers.forEach((m) => { m.arrow.visible = false; m.ring.scale.setScalar(1.1); });
+treeMarker.g.position.set(L.apple.x, 0.05, L.apple.z + 2.6); blanketMarker.g.position.copy(blanketC); finaleMarker.g.position.set(L.pad.x, L.pad.y + 0.03, L.pad.z);
+[...markers, padMarker, ...waterMarkers, ...plantMarkers, treeMarker, blanketMarker, finaleMarker, ...appleMarkers].forEach((m) => scene.add(m.g));
 waterMarkers.forEach((m, i) => m.g.position.set(waterSpots[i].x, waterSpots[i].y, waterSpots[i].z));
 plantMarkers.forEach((m, i) => { const p = garden.plants[i]; m.g.position.set(p.x, p.y + 0.05, p.z); m.arrow.scale.setScalar(0.75); });
 padMarker.g.position.set(L.pad.x, L.pad.y + 0.03, L.pad.z);
 
 const timers = [];
 const later = (sec, fn) => timers.push({ at: game.time + sec, fn });
-const game = { time: 0, rescued: 0, free: false, celebrate: -1, usedWinch: false, delivered: false, gardenDone: 0, pourTick: 0 };
+const game = { time: 0, rescued: 0, free: false, celebrate: -1, usedWinch: false, delivered: false, gardenDone: 0, pourTick: 0, round: 1, picnic: false, finale: null, duskK: 0, acorns: 0, paint: 0, shakeT: 0 };
 
 // ---------------------------------------------------------------- HUD
-const hud = { joy: $('joy'), knob: $('knob'), btn: $('winch'), slots: [...document.querySelectorAll('.slot')], edge: $('edge'), hintMove: $('hintMove'), hintTap: $('hintTap'), star: $('star'), pips: [...document.querySelectorAll('#garden .pip')], gstar: $('gstar'), water: $('water'), wd: [...document.querySelectorAll('#water i')] };
+const hud = { joy: $('joy'), knob: $('knob'), btn: $('winch'), slots: [...document.querySelectorAll('.slot')], edge: $('edge'), hintMove: $('hintMove'), hintTap: $('hintTap'), star: $('star'), pips: [...document.querySelectorAll('#garden .pip')], counter: $('counter'), acornPips: [...document.querySelectorAll('#acorns i')], swatches: [...document.querySelectorAll('#paints .sw')], applebar: $('applebar'), ap: [...document.querySelectorAll('#applebar i')], bigstar: $('bigstar'), gstar: $('gstar'), water: $('water'), wd: [...document.querySelectorAll('#water i')] };
 function makeThumbs() {
   // Render each toy once into its counter slot so the HUD matches the 3D toys exactly.
   const r = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
@@ -113,7 +145,7 @@ function makeThumbs() {
   const s = new THREE.Scene(); s.add(new THREE.HemisphereLight(0xffffff, 0x99aa88, 2.2));
   const d = new THREE.DirectionalLight(0xfff0d0, 2.5); d.position.set(2, 4, 5); s.add(d);
   const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
-  [makeTeddy, makeDuck, makeRobot].forEach((mk, i) => {
+  MAKERS.forEach((mk, i) => {
     const t = mk(); t.anim(0.4, 'happy'); t.group.rotation.y = 0.45; s.add(t.group);
     cam.position.set(0, t.height * 0.62, t.height * 2.45); cam.lookAt(0, t.height * 0.5, 0);
     r.render(s, cam);
@@ -144,7 +176,7 @@ function setJoy(dx, dy) {
 }
 addEventListener('pointerdown', (e) => {
   audio.start();
-  if (e.target.closest('#winch')) return;
+  if (e.target.closest('#winch, #paints, #counter')) return;
   if (joy.id === null && e.clientX < innerWidth * 0.6) {
     joy.id = e.pointerId; joy.bx = e.clientX; joy.by = e.clientY;
     hud.joy.classList.add('on'); setJoy(0, 0);
@@ -176,7 +208,7 @@ function readInput() {
 
 // ---------------------------------------------------------------- winch logic
 const hdist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
-const pickable = (t) => (t.state === 'stranded' || t.state === 'placed' || (t.state === 'home' && game.free)) && (game.free || !t.rescued);
+const pickable = (t) => (t.isBasket ? !game.picnic : true) && (t.state === 'stranded' || t.state === 'placed' || (t.state === 'home' && game.free)) && (game.free || !t.rescued);
 function nearestToy() {
   let best = null, bd = PICK_R;
   for (const t of things) { if (!pickable(t)) continue; const d = hdist(heli.pos, t.group.position); if (d < bd) { bd = d; best = t; } }
@@ -184,11 +216,21 @@ function nearestToy() {
 }
 function hookFloor(x, z) {
   if (Math.abs(x - L.tower.x) < 2.7 && Math.abs(z - L.tower.z) < 2.7) return L.tower.platY + 0.15;
-  if (Math.abs(x - L.shed.x) < L.shed.w / 2 + 0.9 && Math.abs(z - L.shed.z) < L.shed.d / 2 + 0.8) return L.shed.h + 1.5;
+  const hw = L.shed.w / 2 + 0.9;
+  if (Math.abs(x - L.shed.x) < hw && Math.abs(z - L.shed.z) < L.shed.d / 2 + 0.8) return L.shed.h + 0.3 + 3.0 * (1 - Math.abs(x - L.shed.x) / hw);
+  { // apple tree canopy: the hook rests on the leaves
+    const r = Math.hypot(x - L.apple.x, z - L.apple.z), r3 = Math.hypot(x - L.apple.x - 0.4, z - L.apple.z - 2.3);
+    let f = 0;
+    if (r < 3.6) f = 7.6 + 2.95 * Math.sqrt(1 - (r / 3.6) ** 2) - 0.25;
+    if (r3 < 2.2) f = Math.max(f, 6.4 + 1.8 * Math.sqrt(1 - (r3 / 2.2) ** 2) - 0.2);
+    if (f > 0) return f;
+  }
+  if (Math.abs(x - L.hammock.x) < 2.6 && Math.abs(z - L.hammock.z) < 0.9) return L.hammock.pivotY - L.hammock.drop + 0.1;
   if (Math.hypot(x - L.pad.x, z - L.pad.z) < L.pad.r) return L.pad.y + 0.15;
   return 0.15;
 }
-function toyTop(t, out) { return out.copy(t.group.position).setY(t.group.position.y + t.height); }
+function toyTop(t, out) {
+  if (t.state === 'stranded' && t.idle) { t.group.updateMatrixWorld(); return t.group.localToWorld(out.set(0, t.height, 0)); } return out.copy(t.group.position).setY(t.group.position.y + t.height); }
 const tmpTop = new THREE.Vector3();
 
 function pressWinch() {
@@ -216,6 +258,13 @@ function dropToy(t) {
   t.state = 'falling'; t.rest = rest;
   winch.toy = null; winch.state = 'idle'; winch.vel.set(0, 0, 0);
   if (t.isBucket && t.water > 0.05) { garden.splash(p.x, p.y + 1, p.z, 18, 1.2); t.water = 0; }
+  if (t.isBasket && t.held.length) { // apples tumble out and can be scooped up again
+    for (const a of t.held) {
+      const [ax, az] = landingSpot(sx + (Math.random() - 0.5) * 3, sz + (Math.random() - 0.5) * 3);
+      a.state = 'spill'; orchard.fly(a, new THREE.Vector3(ax, (restHeight(ax, az) ?? 0) + 0.3, az), 0.75, 1.3, 'ground');
+    }
+    t.held = [];
+  }
   audio.sfx.uhoh();
 }
 
@@ -227,12 +276,16 @@ function landToy(t) {
   if (!game.free && !t.rescued && hdist(t.group.position, L.pad) < L.pad.r) rescue(t);
 }
 
+function dropZone(t) {
+  if (t.isBasket) return { x: L.home.x, z: L.home.z, r: 3.4, exact: true };
+  return { x: L.pad.x, z: L.pad.z, r: PAD_DROP_R, exact: false };
+}
 function letGo() {
-  const t = winch.toy, p = t.group.position;
-  const overPad = hdist(p, L.pad) < PAD_DROP_R;
-  if (!game.free && !t.rescued && !overPad) return dropToy(t);
-  // over the pad (or anywhere during free flight): set it down gently
-  const hx = overPad && !game.free ? L.pad.x + clamp(p.x - L.pad.x, -1.5, 1.5) : p.x, hz = overPad && !game.free ? L.pad.z + clamp(p.z - L.pad.z, -1.5, 1.5) : p.z;
+  const t = winch.toy, p = t.group.position, zn = dropZone(t);
+  const inZone = hdist(p, zn) < zn.r;
+  if (!inZone && !game.free) return dropToy(t);
+  // over its drop zone (or anywhere during free flight): set it down gently
+  const hx = inZone ? (zn.exact ? zn.x : zn.x + clamp(p.x - zn.x, -1.5, 1.5)) : p.x, hz = inZone ? (zn.exact ? zn.z : zn.z + clamp(p.z - zn.z, -1.5, 1.5)) : p.z;
   const rest = restHeight(hx, hz);
   if (rest === null) return dropToy(t);
   winch.hold = { x: hx, z: hz }; winch.rest = rest; winch.state = 'lower'; winch.timer = 0; winch.landed = false;
@@ -286,6 +339,7 @@ function updateWinch(dt) {
         audio.sfx.pomf(); if (t.floaty) audio.sfx.splash();
         w.toy = null; w.state = 'release'; w.timer = 0;
         if (!game.free && !t.rescued && hdist(t.group.position, L.pad) < L.pad.r + 0.8) rescue(t);
+        if (t.isBasket && hdist(t.group.position, L.home) < 3) deliverBasket();
       }
       break;
     }
@@ -296,6 +350,7 @@ function updateWinch(dt) {
 
 function bloom(pl) {
   pl.target = 1; pl.progress = 0; pl.pop = 1;
+  later(0.1, save);
   audio.sfx.grow(); life.burst(pl.x, pl.y + pl.top * 0.8, pl.z, 26, 0.7);
   if (garden.thirsty().length === 0) later(0.9, () => {
     // whole garden in bloom: celebrate, then let plants get thirsty again one at a time so there is always a job
@@ -358,6 +413,191 @@ function updateBucket(dt, t, thirstyCount) {
   hud.wd.forEach((el, i) => el.classList.toggle('on', b.water > i + 0.15));
 }
 
+// ---------------------------------------------------------------- apples
+function updateApples(dt, t) {
+  const B = basket, carrying = B.state === 'hanging';
+  // flying close to the apple tree shakes the apples loose, one at a time
+  const nearTree = heli.flying && hdist(heli.pos, L.apple) < 6.2;
+  if (nearTree) { game.shakeT -= dt; if (game.shakeT <= 0) { const a = orchard.apples.find((q) => q.state === 'tree'); if (a) { a.state = 'wobble'; a.wob = 0; audio.sfx.rustle(); } game.shakeT = 0.8; } }
+  garden.appleTree.rotation.z = nearTree && orchard.apples.some((q) => q.state === 'tree' || q.state === 'wobble') ? Math.sin(t * 23) * 0.012 : garden.appleTree.rotation.z * 0.9;
+  // the basket dips to the grass when it is over fallen apples, and they hop in
+  B.dunk = null;
+  if (carrying && B.held.length < APPLES) {
+    let near = false;
+    for (const a of orchard.apples) {
+      if (a.state !== 'ground') continue;
+      const d = hdist(a.pos, B.group.position);
+      if (d < 2.4) near = true;
+      if (d < 1.5 && B.group.position.y < a.pos.y + 0.8 && B.held.length < APPLES) {
+        a.state = 'hop'; B.held.push(a); a.slot = B.slots[B.held.length - 1];
+        orchard.fly(a, null, 0.4, 0.9, 'basket'); later(0.38, () => audio.sfx.plop());
+      }
+    }
+    // the helicopter floats high near the tree, so the basket may need a long cable to reach the grass
+    if (near) B.dunk = clamp(anchor.y - (restHeight(winch.bob.x, winch.bob.z) ?? 0) - 0.05 - B.height, 1.0, 14);
+  }
+  B.group.updateMatrixWorld();
+  for (const a of orchard.apples) {
+    const m = a.mesh;
+    if (a.state === 'tree') { m.position.copy(a.pos); m.position.y += Math.sin(t * 1.4 + a.pos.x) * 0.02; }
+    else if (a.state === 'wobble') {
+      a.wob += dt; m.rotation.z = Math.sin(a.wob * 40) * 0.35;
+      if (a.wob > 0.45) { a.state = 'fall'; m.rotation.z = 0; orchard.fly(a, orchard.groundSpot(), 0.7, 0, 'ground'); }
+    } else if (a.anim) {
+      const an = a.anim; an.t += dt;
+      const u = Math.min(1, an.t / an.dur), to = an.to || B.group.localToWorld(v2.copy(a.slot));
+      m.position.lerpVectors(an.from, to, a.state === 'fall' ? u : u * u * (3 - 2 * u));
+      if (a.state === 'fall') m.position.y = lerp(an.from.y, to.y, u * u);
+      m.position.y += Math.sin(u * Math.PI) * an.arc;
+      m.rotation.x += dt * 9;
+      if (u >= 1) {
+        a.anim = null; a.state = an.next;
+        if (a.state === 'ground') { a.pos.copy(to); m.rotation.set(0, m.rotation.y, 0); audio.sfx.plop(); }
+      }
+    } else if (a.state === 'ground') m.position.copy(a.pos);
+    else if (a.state === 'basket') { m.position.copy(B.group.localToWorld(v2.copy(a.slot))); m.quaternion.copy(B.group.quaternion); }
+  }
+  // where to go: the tree, a fallen apple, or home to the blanket
+  const onGround = orchard.apples.filter((q) => q.state === 'ground'), onTree = orchard.apples.some((q) => q.state === 'tree' || q.state === 'wobble' || q.state === 'fall');
+  const full = B.held.length >= APPLES;
+  treeMarker.g.visible = carrying && !full && !onGround.length && onTree;
+  blanketMarker.g.visible = carrying && full && !game.picnic;
+  orchard.apples.forEach((a, i) => {
+    const mk = appleMarkers[i]; mk.g.visible = carrying && !full && a.state === 'ground';
+    if (mk.g.visible) { mk.g.position.set(a.pos.x, a.pos.y - 0.25, a.pos.z); const s = 1.0 + Math.sin(t * 4 + i) * 0.12; mk.ring.scale.set(s, s, 1); }
+  });
+  for (const [mk, s0, h] of [[treeMarker, 3.2, 10.5], [blanketMarker, 3.4, 2.4]]) if (mk.g.visible) { mk.arrow.position.y = h + Math.abs(Math.sin(t * 3.2)) * 0.8; mk.arrow.rotation.y = t * 1.5; const s = s0 + Math.sin(t * 3.2) * 0.3; mk.ring.scale.set(s, s, 1); }
+  hud.applebar.classList.toggle('on', carrying);
+  hud.ap.forEach((el, i) => el.classList.toggle('on', i < B.held.length));
+}
+
+// ---------------------------------------------------------------- golden acorns + paint
+const ACORN_SPOTS = [[9.5, 0, -12.6], [20, 0, -9.6], [21.7, 5.5, -19.7], [58.2, 0.15, 5.0], [-21.4, 0.3, 13.6], [-19.8, 0, -29.4], [L.pond.x + 5.6, 0.1, L.pond.z + 2.6], [-9.6, 0.36, -9.6], [45, 1.6, -7.5]];
+const ACORN_R = 2.4;
+const PAINTS = [{ c: 0xdc1f2e, r: 0.22, m: 0 }, { c: 0x2f80ed, r: 0.22, m: 0 }, { c: 0x8f5bd6, r: 0.22, m: 0 }, { c: 0xffc23a, r: 0.18, m: 0.65 }];
+const acorns = ACORN_SPOTS.map(([x, y, z], i) => {
+  const a = makeAcorn(); a.group.position.set(x, y, z); a.group.scale.setScalar(1.25); scene.add(a.group);
+  return Object.assign(a, { home: new THREE.Vector3(x, y, z), got: false, t: -1, ph: i * 0.37 });
+});
+const NG = 70, gpos = new Float32Array(NG * 3), gcol = new Float32Array(NG * 3), glitter = [];
+for (let i = 0; i < NG; i++) glitter.push({ x: 0, y: -50, z: 0, life: 0 });
+const ggeo = new THREE.BufferGeometry();
+ggeo.setAttribute('position', new THREE.BufferAttribute(gpos, 3)); ggeo.setAttribute('color', new THREE.BufferAttribute(gcol, 3));
+{
+  const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+  const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,230,1)'); gr.addColorStop(0.3, 'rgba(255,215,90,0.8)'); gr.addColorStop(1, 'rgba(255,200,60,0)');
+  x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(c);
+  // drawn on top of everything so a sparkle gives away an acorn hidden under the slide or behind the shed
+  const pts = new THREE.Points(ggeo, new THREE.PointsMaterial({ size: 0.55, map: tex, vertexColors: true, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending }));
+  pts.frustumCulled = false; pts.renderOrder = 9; scene.add(pts);
+}
+let gi = 0;
+function setPaint(i, fanfare) {
+  const P = PAINTS[i]; H.paint.color.set(P.c); H.paint.roughness = P.r; H.paint.metalness = P.m; game.paint = i;
+  hud.swatches.forEach((el, k) => el.classList.toggle('sel', k === i));
+  if (fanfare) { audio.sfx.paint(); life.burst(heli.pos.x, heli.pos.y + 1, heli.pos.z, 40, 0.8); }
+}
+function unlockPaints() {
+  const n = Math.floor(game.acorns / 3);
+  hud.swatches.forEach((el, k) => el.classList.toggle('locked', k > n));
+  hud.acornPips.forEach((el, k) => el.classList.toggle('on', k < game.acorns));
+  hud.swatches[0].parentNode.classList.toggle('any', n > 0);
+}
+hud.swatches.forEach((el, k) => el.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); audio.start(); if (!el.classList.contains('locked') && game.paint !== k) { setPaint(k, true); save(); } }));
+function updateAcorns(dt, t) {
+  for (const a of acorns) {
+    const g = a.group;
+    if (!a.got) {
+      g.rotation.y = t * 1.2 + a.ph; g.position.y = a.home.y + 0.12 + Math.sin(t * 2 + a.ph) * 0.1;
+      if (Math.sin(t * 3.1 + a.ph * 5) > 0.93) { const p = glitter[gi++ % NG]; p.x = a.home.x + (Math.random() - 0.5) * 0.8; p.y = a.home.y + 0.6; p.z = a.home.z + (Math.random() - 0.5) * 0.8; p.life = 1.3; }
+      if (heli.flying && hdist(heli.pos, a.home) < ACORN_R) {
+        a.got = true; a.t = 0; game.acorns++;
+        audio.sfx.acorn(); life.burst(a.home.x, a.home.y + 1, a.home.z, 18, 0.6);
+        unlockPaints();
+        if (game.acorns % 3 === 0 && game.acorns / 3 < PAINTS.length) later(0.6, () => setPaint(game.acorns / 3, true));
+        save();
+      }
+    } else if (a.t >= 0) { // zip up into the helicopter
+      a.t += dt; const u = Math.min(1, a.t / 0.5);
+      g.position.lerpVectors(a.home, heli.pos, u * u); g.scale.setScalar(1.25 * (1 - u) + 0.01); g.rotation.y += dt * 14;
+      if (u >= 1) { a.t = -1; g.visible = false; }
+    }
+  }
+  for (let i = 0; i < NG; i++) {
+    const p = glitter[i];
+    if (p.life > 0) { p.life -= dt; p.y += dt * 1.9; }
+    gpos[i * 3] = p.x; gpos[i * 3 + 1] = p.life > 0 ? p.y : -50; gpos[i * 3 + 2] = p.z;
+    const b = Math.max(0, Math.sin((p.life / 1.3) * Math.PI)); gcol[i * 3] = b; gcol[i * 3 + 1] = b; gcol[i * 3 + 2] = b;
+  }
+  ggeo.attributes.position.needsUpdate = true; ggeo.attributes.color.needsUpdate = true;
+}
+
+// ---------------------------------------------------------------- sunset finale
+const allDone = () => game.free && game.gardenDone > 0 && game.picnic;
+function updateFinale(dt, t) {
+  if (!game.finale && allDone()) { game.finale = 'dusk'; later(0.5, () => audio.sfx.chime()); }
+  const k = game.finale === 'dusk' || game.finale === 'landing' || game.finale === 'done' ? 1 : 0;
+  if (Math.abs(game.duskK - k) > 0.001 || (k && game.duskK < 1)) {
+    game.duskK = Math.min(1, Math.max(0, game.duskK + Math.sign(k - game.duskK) * dt * 0.12));
+    world.setDusk(game.duskK); life.setFireflies(smoothstep(0.4, 1, game.duskK));
+    renderer.toneMappingExposure = 1.02 - game.duskK * 0.02;
+  }
+  // come home: hover over the pad and the helicopter lands itself
+  if (game.finale === 'dusk' && heli.flying && !winch.toy && winch.state === 'idle' && hdist(heli.pos, L.pad) < 2.4 && heli.vel.length() < 1.6) { heli.flying = false; game.finale = 'landing'; }
+  if (game.finale === 'landing') {
+    if (heli.flying) game.finale = 'dusk';
+    else if (heli.pos.y < L.pad.y + H.skidY * 0.92 + 0.15) {
+      game.finale = 'done'; save();
+      audio.sfx.fanfare(); toys.forEach((x) => (x.happy = 14));
+      hud.bigstar.classList.add('on'); later(4.5, () => hud.bigstar.classList.remove('on'));
+      for (let j = 0; j < 6; j++) later(j * 0.4, () => life.burst(L.pad.x + Math.cos(j) * 4, 3 + (j % 3), L.pad.z + Math.sin(j) * 3, 45, 1.3));
+    }
+  }
+  finaleMarker.g.visible = game.finale === 'dusk' && !winch.toy;
+  if (finaleMarker.g.visible) { finaleMarker.arrow.position.y = 2.4 + Math.abs(Math.sin(t * 3.2)) * 0.8; finaleMarker.arrow.rotation.y = t * 1.5; const s = 3.5 + Math.sin(t * 3.2) * 0.3; finaleMarker.ring.scale.set(s, s, 1); }
+}
+
+// ---------------------------------------------------------------- saving (on the phone, offline)
+const SAVE_KEY = 'backyard-air-rescue-v1';
+function save() {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      rescued: toys.filter((x) => x.rescued).map((x) => x.name), round: game.round, plants: garden.plants.map((p) => p.target), gardenDone: game.gardenDone,
+      acorns: acorns.map((a) => a.got), paint: game.paint, picnic: game.picnic, finale: game.finale === 'done' || game.finale === 'over',
+    }));
+  } catch (_) { /* no storage: the game still plays, it just won't remember */ }
+}
+function load() {
+  let d = null;
+  try { d = params.has('fresh') ? null : JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (_) {}
+  if (!d) return;
+  for (const x of toys) if (d.rescued?.includes(x.name)) {
+    x.rescued = true; x.state = 'home'; x.rest = x.home.y; x.floaty = false; x.group.position.copy(x.home); x.group.rotation.set(0, 0, 0); x.group.visible = true; x.appear = 1;
+    game.rescued++; hud.slots[toys.indexOf(x)].classList.add('saved');
+  }
+  game.round = d.round || 1;
+  if (game.round >= 2) startRound2(true);
+  if (game.rescued === toys.length) { game.free = true; hud.star.classList.add('on'); }
+  (d.plants || []).forEach((v, i) => { const p = garden.plants[i]; if (p) { p.target = p.bloom = v; } });
+  game.gardenDone = d.gardenDone || 0;
+  if (game.gardenDone) { later(75, wiltOne); if (!garden.thirsty().length) hud.gstar.classList.add('on'); }
+  (d.acorns || []).forEach((got, i) => { if (got && acorns[i]) { acorns[i].got = true; acorns[i].group.visible = false; game.acorns++; } });
+  unlockPaints(); setPaint(Math.min(d.paint || 0, Math.floor(game.acorns / 3)), false);
+  if (d.picnic) {
+    game.picnic = true;
+    orchard.apples.forEach((a, i) => { a.state = 'basket'; a.anim = null; a.slot = basket.slots[i]; basket.held.push(a); });
+  }
+  if (d.finale) game.finale = 'over';
+}
+// grown-ups: hold the toy counter for three seconds to start over
+{
+  let tmr = null;
+  hud.counter.addEventListener('pointerdown', (e) => { e.preventDefault(); hud.counter.classList.add('resetting'); tmr = setTimeout(() => { try { localStorage.removeItem(SAVE_KEY); } catch (_) {} location.replace(location.pathname + location.search.replace(/[?&]fresh\b/, '')); }, 3000); });
+  const stop = () => { clearTimeout(tmr); hud.counter.classList.remove('resetting'); };
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((n) => hud.counter.addEventListener(n, stop));
+}
+
 function rescue(t) {
   if (!t.isToy) return;
   t.rescued = true; game.rescued++; game.delivered = true; t.happy = 5;
@@ -365,7 +605,28 @@ function rescue(t) {
   later(0.25, () => { audio.sfx.chime(); audio.sfx[t.name](); });
   later(0.65, () => { if (t.state === 'placed') { t.state = 'hop'; t.hopT = 0; t.hopFrom.copy(t.group.position); } });
   life.burst(t.group.position.x, 1.5, t.group.position.z, 45);
+  if (game.round === 1 && toys.slice(0, ROUND1).every((x) => x.rescued)) { game.round = 2; later(2.2, startRound2); }
   if (game.rescued === toys.length) game.celebrate = 1.6;
+  save();
+}
+function startRound2(quiet) {
+  hud.counter.classList.add('r2');
+  toys.slice(ROUND1).forEach((x, k) => {
+    if (x.rescued || x.state !== 'hidden') return;
+    x.state = 'stranded'; x.appear = quiet ? 1 : -k * 0.35; x.group.visible = true;
+    if (x.idle) x.idle(game.time);
+    if (!quiet) later(0.35 * k + 0.2, () => { life.burst(x.group.position.x, x.rest + 1.5, x.group.position.z, 24, 0.8); audio.sfx.pop(); });
+  });
+  if (!quiet) audio.sfx.chime();
+}
+function deliverBasket() {
+  if (game.picnic || basket.held.length < APPLES) { audio.sfx.chime(); return; }
+  game.picnic = true; basket.happy = 0;
+  toys.forEach((x) => (x.happy = 6));
+  for (let k = 0; k < 5; k++) later(0.3 + k * 0.28, () => audio.sfx.chomp());
+  life.burst(L.home.x, 2, L.home.z, 50, 1.1);
+  later(0.4, () => audio.sfx.fanfare());
+  save();
 }
 
 // ---------------------------------------------------------------- simulation
@@ -515,6 +776,8 @@ function update(dt) {
   // --- toys and the bucket
   things.forEach((toy, i) => {
     const g = toy.group;
+    if (toy.state === 'hidden') { g.visible = false; markers[i].g.visible = false; return; }
+    g.visible = true;
     toy.sqV += (-toy.sq * 160 - toy.sqV * 11) * dt; toy.sq += toy.sqV * dt;
     toy.wiggle = Math.max(0, toy.wiggle - dt * 1.9);
     toy.happy = Math.max(0, toy.happy - dt);
@@ -535,6 +798,9 @@ function update(dt) {
       g.rotation.set(Math.sin(f.t * 7) * 0.5, toy.yaw, f.t * f.spin);
       mood = 'hang';
       if (u >= 1) { g.position.copy(f.to); landToy(toy); }
+    } else if (toy.state === 'stranded' && toy.idle) {
+      toy.idle(t, dt);
+      g.rotation.z += Math.sin(t * 38) * 0.2 * toy.wiggle;
     } else if (toy.state === 'hop') {
       toy.hopT += dt; const u = Math.min(1, toy.hopT / 1.1);
       g.position.lerpVectors(toy.hopFrom, toy.home, u * u * (3 - 2 * u));
@@ -548,10 +814,13 @@ function update(dt) {
       if (toy.rescued && toy.happy <= 0 && hdist(heli.pos, g.position) > 9) at = t * 0.3; // calm when you're far away
       if (toy.rescued && toy.happy > 0) g.position.y += Math.abs(Math.sin(t * 7 + i)) * 0.35;
     }
-    g.scale.set(1 + toy.sq * 0.25, 1 - toy.sq * 0.3, 1 + toy.sq * 0.25);
+    if (toy.appear < 1) toy.appear = Math.min(1, toy.appear + dt * 1.6);
+    const ap = toy.appear <= 0 ? 0.001 : 1 + 2.7 * (toy.appear - 1) ** 3 + 1.7 * (toy.appear - 1) ** 2; // pop in with an overshoot
+    g.scale.set((1 + toy.sq * 0.25) * ap, (1 - toy.sq * 0.3) * ap, (1 + toy.sq * 0.25) * ap);
     toy.anim(at + i, mood);
     // rescue marker
-    const m = markers[i], show = toy.isBucket ? toy.state !== 'hanging' && toy.state !== 'falling' && !winch.toy && thirstyCount > 0 : !game.free && !toy.rescued && toy.state !== 'hanging' && !winch.toy;
+    const loose = toy.state !== 'hanging' && toy.state !== 'falling' && !winch.toy;
+    const m = markers[i], show = toy.isBucket ? loose && thirstyCount > 0 : toy.isBasket ? loose && !game.picnic : !game.free && !toy.rescued && loose && toy.appear >= 1;
     m.g.visible = show;
     if (show) {
       m.g.position.set(g.position.x, toy.rest + 0.06, g.position.z);
@@ -561,7 +830,7 @@ function update(dt) {
       m.arrow.rotation.y = t * 1.5;
       const s = 2.0 + Math.sin(t * 3.2 + i) * 0.25; m.ring.scale.set(s, s, 1);
       toyTop(toy, tmpTop);
-      m.ring.material.color.set(hdist(winch.bob, tmpTop) < CATCH_R && winch.len > 1 ? 0x35d07f : toy.isBucket ? BLUE : 0xffa81f);
+      m.ring.material.color.set(hdist(winch.bob, tmpTop) < CATCH_R && winch.len > 1 ? 0x35d07f : markerColor(toy));
     }
   });
   toyShadow.visible = !!winch.toy;
@@ -571,6 +840,9 @@ function update(dt) {
     toyShadow.position.set(p.x, (ty ?? (overDeck ? L.tower.platY : 0)) + 0.05, p.z);
   }
   updateBucket(dt, t, thirstyCount);
+  updateApples(dt, t);
+  updateAcorns(dt, t);
+  updateFinale(dt, t);
   const padOn = !game.free && !!winch.toy && winch.toy.isToy;
   padMarker.g.visible = padOn;
   if (padOn) { padMarker.arrow.position.y = 2.4 + Math.abs(Math.sin(t * 3.2)) * 0.8; padMarker.arrow.rotation.y = t * 1.5; const s = 3.5 + Math.sin(t * 3.2) * 0.3; padMarker.ring.scale.set(s, s, 1); }
@@ -579,7 +851,7 @@ function update(dt) {
   if (game.celebrate > 0) {
     game.celebrate -= dt;
     if (game.celebrate <= 0) {
-      game.free = true; audio.sfx.fanfare(); hud.star.classList.add('on');
+      game.free = true; audio.sfx.fanfare(); hud.star.classList.add('on'); save();
       toys.forEach((x) => (x.happy = 8));
       for (let k = 0; k < 4; k++) later(k * 0.35, () => life.burst(L.home.x + (k - 1.5) * 2.5, 3 + k, L.home.z - 1, 40, 1.3));
     }
@@ -592,6 +864,7 @@ function update(dt) {
   world.update(dt, t, heli.pos, wash);
   life.update(dt, t, heli.pos, wash);
   garden.update(dt, t, heli.pos, wash);
+  hammock.update(dt, t, heli.pos, wash);
 
   // --- camera: glides after the helicopter, never turns
   const busy = (winch.held && !winch.toy) || winch.state === 'grab' || winch.state === 'lower' || winch.state === 'release';
@@ -607,7 +880,7 @@ const cam = { x: heli.pos.x, y: heli.pos.y, z: heli.pos.z, zoom: 0.8, fit: 1 };
 
 function updateHud(t) {
   const canGrab = !winch.toy && !winch.held && winch.state === 'idle' && heli.flying && !!nearestToy();
-  const letGoNow = !!winch.toy && winch.state === 'idle' && (game.free || hdist(winch.toy.group.position, L.pad) < PAD_DROP_R);
+  const letGoNow = !!winch.toy && winch.state === 'idle' && (game.free || hdist(winch.toy.group.position, dropZone(winch.toy)) < dropZone(winch.toy).r);
   hud.btn.classList.toggle('ready', canGrab);
   hud.btn.classList.toggle('letgo', letGoNow);
   hud.btn.classList.toggle('down', winch.held);
@@ -618,15 +891,22 @@ function updateHud(t) {
   let target = null, kind = '';
   const nearestOf = (list, pos) => { let best = null, bd = 1e9; for (const q of list) { const d = hdist(heli.pos, pos(q)); if (d < bd) { bd = d; best = q; } } return best; };
   if (heli.flying) {
-    if (winch.toy && winch.toy.isBucket) {
+    const W = winch.toy;
+    if (W && W.isBucket) {
       kind = 'water';
       if (bucket.water < 0.3) { const w = nearestOf(waterSpots, (q) => q); target = v2.set(w.x, 1.5, w.z); }
       else { const pl = nearestOf(garden.thirsty(), (q) => q); if (pl) target = v2.set(pl.x, pl.y + 1.5, pl.z); }
-    } else if (winch.toy) { if (!game.free) { kind = 'pad'; target = v2.set(L.pad.x, 1.5, L.pad.z); } }
+    } else if (W && W.isBasket) {
+      kind = 'apple';
+      if (basket.held.length >= APPLES) { kind = 'pad'; target = v2.set(L.home.x, 1.5, L.home.z); }
+      else { const a = nearestOf(orchard.apples.filter((q) => q.state === 'ground'), (q) => q.pos); target = a ? v2.copy(a.pos).setY(1.5) : v2.set(L.apple.x, 8, L.apple.z + 2); }
+    } else if (W) { if (!game.free) { kind = 'pad'; target = v2.set(L.pad.x, 1.5, L.pad.z); } }
     else {
-      const toy = game.free ? null : nearestOf(toys.filter((q) => !q.rescued && q.state !== 'hop'), (q) => q.group.position);
+      const toy = game.free ? null : nearestOf(toys.filter((q) => !q.rescued && q.state !== 'hop' && q.state !== 'hidden' && q.appear >= 1), (q) => q.group.position);
       if (toy) target = v2.copy(toy.group.position).setY(toy.group.position.y + 1.5);
-      else if (garden.thirsty().length && bucket.state !== 'falling') { kind = 'water'; target = v2.copy(bucket.group.position).setY(1.5); }
+      else if (garden.thirsty().length && game.gardenDone === 0 && bucket.state !== 'falling') { kind = 'water'; target = v2.copy(bucket.group.position).setY(1.5); }
+      else if (!game.picnic && basket.state !== 'falling') { kind = 'apple'; target = v2.copy(basket.group.position).setY(1.5); }
+      else if (game.finale === 'dusk') { kind = 'pad'; target = v2.set(L.pad.x, 1.5, L.pad.z); }
     }
   }
   let show = false;
@@ -642,7 +922,7 @@ function updateHud(t) {
       const k = Math.min(mx / Math.abs(Math.cos(a) || 1e-6), my / Math.abs(Math.sin(a) || 1e-6));
       const ex = innerWidth / 2 + Math.cos(a) * k, ey = innerHeight / 2 - Math.sin(a) * k;
       hud.edge.style.transform = `translate(${ex}px,${ey}px) rotate(${-a}rad) scale(${1 + Math.sin(t * 6) * 0.08})`;
-      hud.edge.classList.toggle('pad', kind === 'pad'); hud.edge.classList.toggle('water', kind === 'water');
+      hud.edge.classList.toggle('pad', kind === 'pad'); hud.edge.classList.toggle('water', kind === 'water'); hud.edge.classList.toggle('apple', kind === 'apple');
       show = true;
     }
   }
@@ -673,6 +953,7 @@ function frame(now) {
   }
 }
 function boot() {
+  load();
   update(1 / 60); renderer.render(scene, camera);
   document.body.classList.add('ready');
   if (!MANUAL) requestAnimationFrame((n) => { last = n; requestAnimationFrame(frame); });
@@ -682,14 +963,19 @@ document.addEventListener('visibilitychange', () => { last = performance.now(); 
 
 // Hooks for the automated playtest (tools/playtest.mjs) – not used by the game itself.
 window.__game = {
-  heli, winch, toys, game, L, bucket, garden,
+  heli, winch, toys, game, L, bucket, garden, basket, acorns,
   advance(dt, steps = 1, draw = true) { for (let i = 0; i < steps; i++) update(dt); if (draw) renderer.render(scene, camera); },
   draw() { renderer.render(scene, camera); },
   script(x, y) { scripted = x === null ? null : { x, y }; },
+  dusk() { game.finale = 'dusk'; game.duskK = 0.999; },
+  round2() { if (game.round < 2) { game.round = 2; startRound2(false); } },
   press: pressWinch,
   hold(on) { if (on) pressWinch(); else winch.held = false; },
   info: () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, dpr: renderer.getPixelRatio() }),
   state: () => ({ t: game.time, pos: heli.pos.toArray(), vel: heli.vel.toArray(), tilt: heli.tilt.toArray(), winch: winch.state, len: winch.len, carrying: winch.toy ? winch.toy.name : null, held: winch.held, rescued: game.rescued, free: game.free,
-    bucket: { state: bucket.state, water: bucket.water, pos: bucket.group.position.toArray() }, plants: garden.plants.map((p) => ({ x: p.x, z: p.z, bloomed: p.target === 1, progress: p.progress })),
-    bob: winch.bob.toArray(), toys: toys.map((t) => ({ name: t.name, state: t.state, rescued: t.rescued, pos: t.group.position.toArray() })) }),
+    bucket: { state: bucket.state, water: bucket.water, pos: bucket.group.position.toArray(), loop: toyTop(bucket, new THREE.Vector3()).toArray() },
+    basket: { state: basket.state, held: basket.held.length, pos: basket.group.position.toArray(), loop: toyTop(basket, new THREE.Vector3()).toArray() },
+    apples: orchard.apples.map((a) => ({ state: a.state, pos: a.pos.toArray() })), acorns: acorns.map((a) => ({ got: a.got, pos: a.home.toArray() })),
+    paint: game.paint, round: game.round, picnic: game.picnic, finale: game.finale, dusk: game.duskK, flying: heli.flying, gardenDone: game.gardenDone, plants: garden.plants.map((p) => ({ x: p.x, z: p.z, bloomed: p.target === 1, progress: p.progress })),
+    bob: winch.bob.toArray(), toys: toys.map((t) => ({ name: t.name, state: t.state, rescued: t.rescued, pos: t.group.position.toArray(), loop: toyTop(t, new THREE.Vector3()).toArray() })) }),
 };

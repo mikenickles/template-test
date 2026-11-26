@@ -63,10 +63,11 @@ export async function launch({ width = 844, height = 390, scale = 1, query = 'ma
       await d.release();
     },
     /** Careful flying: ease the helicopter so that the hook (not the helicopter) is over (x, z). */
-    async hover(x, z, frames) {
+    async hover(x, z, frames, tvx = 0, tvz = 0) {
       const s = await d.state();
       const ex = x - s.bob[0], ez = z - s.bob[2];
-      const vx = Math.max(-4, Math.min(4, ex * 1.6)) - s.vel[0] * 0.35, vz = Math.max(-4, Math.min(4, ez * 1.6)) - s.vel[2] * 0.35;
+      // proportional on the hook's error, plus the target's own velocity for moving targets
+      const vx = Math.max(-4, Math.min(4, ex * 1.6)) + tvx - (s.vel[0] - tvx) * 0.35, vz = Math.max(-4, Math.min(4, ez * 1.6)) + tvz - (s.vel[2] - tvz) * 0.35;
       await d.stick(vx / 10.5, vz / 10.5); await d.step(frames);
       return Math.hypot(ex, ez);
     },

@@ -95,7 +95,7 @@ export function buildGarden(scene) {
   put(scene, new THREE.TorusGeometry(W.r, 0.75, 14, 40), new THREE.MeshStandardMaterial({ map: ringTex, roughness: 0.3, envMapIntensity: 0.8 }), [W.x, 0.7, W.z], [Math.PI / 2, 0, 0]);
   put(scene, new THREE.CylinderGeometry(W.r, W.r, 0.15, 32), M(0x8fd8ff, { r: 0.5 }), [W.x, 0.1, W.z], null, null, false);
   const poolWater = put(scene, new THREE.CircleGeometry(W.r - 0.3, 32), new THREE.MeshStandardMaterial({ color: 0x35c3e8, roughness: 0.08, transparent: true, opacity: 0.85, envMapIntensity: 1.4 }), [W.x, W.y, W.z], [-Math.PI / 2, 0, 0], null, false);
-  const floatie = put(scene, new THREE.TorusGeometry(0.6, 0.24, 10, 20), M(0xffd23f, { r: 0.3 }), [W.x + 1.2, W.y + 0.1, W.z - 0.8], [Math.PI / 2, 0, 0]);
+  const floatie = put(scene, new THREE.TorusGeometry(0.6, 0.24, 10, 20), M(0xffd23f, { r: 0.3 }), [W.x - 2.1, W.y + 0.1, W.z + 1.3], [Math.PI / 2, 0, 0]);
 
   // --- apple tree
   const T = L.apple, tree = new THREE.Group(); tree.position.set(T.x, 0, T.z); scene.add(tree);
@@ -103,9 +103,8 @@ export function buildGarden(scene) {
   const blob = new THREE.IcosahedronGeometry(1, 2), lm = [M(0x5fae3e, { r: 0.8, env: 0.25 }), M(0x4a9438, { r: 0.8, env: 0.25 })];
   [[0, 7.6, 0, 3.6], [-2.2, 6.6, 1, 2.4], [2.3, 6.9, -0.6, 2.6], [0.4, 6.4, 2.3, 2.2], [-0.6, 9.4, -0.8, 2.3]].forEach(([x, y, z, r], i) => put(tree, blob, lm[i % 2], [x, y, z], [rnd(), rnd(), 0], [r, r * 0.82, r]));
   const ap = [];
-  for (let i = 0; i < 12; i++) { const a = i * 2.4, e = 0.5 + (i % 4) * 0.35, r = 3.5; ap.push(tg(sph(0.3, 8, 6), [Math.cos(a) * Math.sin(e) * r, 7.4 + Math.cos(e) * 2.6, Math.sin(a) * Math.sin(e) * r])); }
+  for (let i = 0; i < 7; i++) { const a = i * 2.4 + 2.0, e = 0.5 + (i % 4) * 0.35, r = 3.5; ap.push(tg(sph(0.3, 8, 6), [Math.cos(a) * Math.sin(e) * r, 7.4 + Math.cos(e) * 2.6, Math.sin(a) * Math.sin(e) * r])); }
   put(tree, merge(ap), M(0xe23b2e, { r: 0.3 }));
-  for (const [x, z] of [[2.6, 2.2], [-1.8, 3.1]]) put(scene, sph(0.3, 8, 6), M(0xe23b2e, { r: 0.3 }), [T.x + x, 0.28, T.z + z]);
 
   // --- clothesline that flaps in the rotor wash
   const C = L.line, cloths = [];
@@ -159,7 +158,7 @@ export function buildGarden(scene) {
       c.v += (-c.a * 9 - c.v * 1.2 + (dz / d) * k * 22 + Math.sin(t * 1.7 + c.ph) * 0.8 + Math.sin(t * 13 + c.ph) * k * 8) * dt; c.a += c.v * dt;
       c.g.rotation.x = clamp(c.a, -1.3, 1.3);
     }
-    floatie.position.x = W.x + Math.cos(t * 0.3) * 1.3; floatie.position.z = W.z + Math.sin(t * 0.3) * 1.3; floatie.position.y = W.y + 0.1 + Math.sin(t * 2) * 0.03;
+    floatie.position.y = W.y + 0.1 + Math.sin(t * 2) * 0.03; floatie.rotation.z = t * 0.2;
     poolWater.material.opacity = 0.82 + Math.sin(t * 2.3) * 0.05;
     for (let i = 0; i < ND; i++) {
       const d = drops[i];
@@ -173,7 +172,7 @@ export function buildGarden(scene) {
     }
     dropMesh.instanceMatrix.needsUpdate = true;
   }
-  return { plants, thirsty, waterAt, drop, splash, update };
+  return { plants, thirsty, waterAt, drop, splash, update, appleTree: tree };
 }
 
 /** The bucket: carried on the winch like a toy, holds three pours of water. */

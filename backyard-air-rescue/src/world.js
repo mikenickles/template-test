@@ -21,6 +21,8 @@ export const L = {
   patch: { x: 56, z: 8, r: 5 },
   pool: { x: 41, z: 17, r: 3.6, y: 0.8 },
   apple: { x: 64, z: -23 },
+  hammock: { x: 42, z: 3, half: 3.6, pivotY: 4.2, drop: 2.75 },
+  blanket: { w: 8.0, d: 5.0 },
   line: { x: 43, z: -26, half: 5.2 },
   sunDir: new THREE.Vector3(-0.5, 0.66, -0.45).normalize(),
   baseAlt: 6,
@@ -30,7 +32,7 @@ export const L = {
 const OBSTACLES = [
   { x: L.tower.x, z: L.tower.z, r: 4.2, top: 8.9 },
   { x: L.tower.x, z: -12.6, r: 2.2, top: 4.4 },
-  { x: L.shed.x, z: L.shed.z, r: 4.4, top: 7.3 },
+  { x: L.shed.x, z: L.shed.z, r: 4.4, top: 8.0 },
   { x: L.apple.x, z: L.apple.z, r: 3.6, top: 11.2 },
 ];
 // Things it slides around.
@@ -59,6 +61,8 @@ export function restHeight(x, z) {
   if (Math.abs(x - s.x) < s.w / 2 + 1 && Math.abs(z - s.z) < s.d / 2 + 1.2) return null;
   if (Math.hypot(x - L.tree.x, z - L.tree.z) < 4.6) return null;
   if (Math.hypot(x - L.apple.x, z - L.apple.z) < 1.6) return null;
+  if (Math.abs(x - L.hammock.x) < L.hammock.half + 0.5 && Math.abs(z - L.hammock.z) < 1.4) return null;
+  if (Math.abs(x - L.home.x) < L.blanket.w / 2 && Math.abs(z - L.home.z) < L.blanket.d / 2) return 0.1;
   for (const p of L.pots) if (Math.hypot(x - p.x, z - p.z) < 1.5) return null;
   if (Math.abs(x - L.planter.x) < L.planter.w / 2 + 0.3 && Math.abs(z - L.planter.z) < L.planter.d / 2 + 0.3) return 0.95;
   if (Math.hypot(x - L.pool.x, z - L.pool.z) < L.pool.r + 0.8) return Math.hypot(x - L.pool.x, z - L.pool.z) < L.pool.r - 0.8 ? 0.5 : null;
@@ -78,7 +82,8 @@ function noGrass(x, z) {
   if (Math.abs(x - L.tower.x) < 3 && Math.abs(z - L.tower.z) < 3) return true;
   if (Math.abs(x - L.tower.x) < 1.6 && z > -9 && z < -4.6) return true;
   if (Math.hypot(x - L.tree.x, z - L.tree.z) < 4.2) return true;
-  if (Math.abs(x - L.home.x) < 2.7 && Math.abs(z - L.home.z) < 2.0) return true;
+  if (Math.abs(x - L.home.x) < L.blanket.w / 2 + 0.2 && Math.abs(z - L.home.z) < L.blanket.d / 2 + 0.2) return true;
+  for (const sx of [-1, 1]) if (Math.hypot(x - L.hammock.x - sx * L.hammock.half, z - L.hammock.z) < 0.5) return true;
   for (const [sx, sz] of [[8.0, -4.9], [6.9, -3.2], [6.2, -1.4], [5.9, 0.4]]) if (Math.hypot(x - sx, z - sz) < 1.0) return true;
   if (Math.abs(x - L.planter.x) < L.planter.w / 2 + 0.5 && Math.abs(z - L.planter.z) < L.planter.d / 2 + 0.5) return true;
   if (Math.hypot(x - L.patch.x, z - L.patch.z) < L.patch.r) return true;
@@ -131,7 +136,15 @@ function buildSky(scene, renderer) {
   sc.left = -74; sc.right = 74; sc.top = 66; sc.bottom = -52; sc.near = 10; sc.far = 260;
   sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.06;
   scene.add(sun, sun.target);
-  return { sun, hemi };
+  const day = { top: top.clone(), mid: mid.clone(), low: low.clone(), sun: sun.color.clone(), sunI: sun.intensity, hemiI: hemi.intensity, hemiSky: hemi.color.clone(), fog: scene.fog.color.clone() };
+  const dusk = { top: new THREE.Color(0x5a63b8), mid: new THREE.Color(0xffa98a), low: new THREE.Color(0xff8d6a), sun: new THREE.Color(0xffa066), sunI: 2.5, hemiI: 1.0, hemiSky: new THREE.Color(0xc4b4ff), fog: new THREE.Color(0xe6a088) };
+  function setDusk(k) {
+    top.copy(day.top).lerp(dusk.top, k); mid.copy(day.mid).lerp(dusk.mid, k); low.copy(day.low).lerp(dusk.low, k);
+    sun.color.copy(day.sun).lerp(dusk.sun, k); sun.intensity = lerp(day.sunI, dusk.sunI, k);
+    hemi.intensity = lerp(day.hemiI, dusk.hemiI, k); hemi.color.copy(day.hemiSky).lerp(dusk.hemiSky, k);
+    scene.fog.color.copy(day.fog).lerp(dusk.fog, k);
+  }
+  return { sun, hemi, setDusk };
 }
 
 // ---------------------------------------------------------------- ground
@@ -592,8 +605,8 @@ function buildPad(scene, dyn) {
     c.fillStyle = 'rgba(226,59,46,0.55)';
     for (let i = 0; i < 8; i += 2) { c.fillRect(i * 32, 0, 32, w); c.fillRect(0, i * 32, w, 32); }
   });
-  const bl = new THREE.Mesh(new RoundedBoxGeometry(5.2, 0.1, 3.6, 2, 0.05), new THREE.MeshStandardMaterial({ map: btex, roughness: 0.95, envMapIntensity: 0.2 }));
-  bl.position.set(L.home.x, 0.06, L.home.z); bl.rotation.y = -0.12; bl.receiveShadow = true; scene.add(bl);
+  const bl = new THREE.Mesh(new RoundedBoxGeometry(L.blanket.w, 0.1, L.blanket.d, 2, 0.05), new THREE.MeshStandardMaterial({ map: btex, roughness: 0.95, envMapIntensity: 0.2 }));
+  bl.position.set(L.home.x, 0.06, L.home.z); bl.receiveShadow = true; scene.add(bl);
 }
 
 // ---------------------------------------------------------------- fence, backdrop, sandbox
@@ -710,7 +723,7 @@ export function buildWorld(scene, renderer, uniforms, quality) {
     }
     dyn.beacon.material.emissiveIntensity = 0.6 + 1.6 * Math.max(0, Math.sin(t * 3));
     dyn.padLights.forEach((m, i) => { m.material.emissiveIntensity = 0.3 + 1.6 * Math.max(0, Math.sin(t * 4 - i * 0.785)); });
-    for (const s of dyn.shafts) s.m.material.opacity = s.o * (0.75 + 0.25 * Math.sin(t * 0.6 + s.ph));
+    for (const s of dyn.shafts) s.m.material.opacity = s.o * (0.75 + 0.25 * Math.sin(t * 0.6 + s.ph)) * (1 - (dyn.duskK || 0) * 0.7);
   }
-  return { update, lights };
+  return { update, lights, setDusk(k) { dyn.duskK = k; lights.setDusk(k); } };
 }

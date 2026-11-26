@@ -43,6 +43,34 @@
   #water i.on { background: #35b8f5; }
   #edge.water path { fill: #2f9bff; }
 
+  /* round two slots appear when the second set of toys turns up */
+  #counter { pointer-events: auto; }
+  .slot.r2 { display: none; }
+  #counter.r2 .slot { width: calc(var(--u) * 6.6); height: calc(var(--u) * 6.6); }
+  #counter.r2 .slot.r2 { display: block; animation: pop .7s cubic-bezier(.3, 1.8, .5, 1); }
+  #counter.r2 #star.on, #counter.r2 #star svg { width: calc(var(--u) * 6.6); }
+  #counter.resetting { animation: nope .35s infinite; opacity: .6; }
+  /* apples in the basket */
+  #applebar { position: absolute; right: calc(env(safe-area-inset-right) + var(--u) * 3); bottom: calc(env(safe-area-inset-bottom) + var(--u) * 27.5); display: grid; grid-template-columns: repeat(4, auto); gap: calc(var(--u) * .7); opacity: 0; transition: opacity .3s; }
+  #applebar.on { opacity: 1; }
+  #applebar i { width: calc(var(--u) * 3.4); height: calc(var(--u) * 3.4); border-radius: 50%; background: #ffffff70; box-shadow: 0 0 0 calc(var(--u) * .4) #fff; transition: background .25s, transform .3s cubic-bezier(.3, 1.8, .5, 1); }
+  #applebar i.on { background: radial-gradient(circle at 35% 30%, #ff8a7a, #e23b2e 60%, #b8202a); transform: scale(1.12); }
+  #edge.apple path { fill: #ff5a4a; }
+  /* golden acorns and paint jobs */
+  #topright { position: absolute; right: calc(env(safe-area-inset-right) + var(--u) * 2); top: calc(env(safe-area-inset-top) + var(--u) * 2); display: flex; flex-direction: column; align-items: flex-end; gap: calc(var(--u) * 1.2); }
+  #acorns { display: flex; gap: calc(var(--u) * .55); padding: calc(var(--u) * .9) calc(var(--u) * 1.2); border-radius: calc(var(--u) * 4); background: #fff9ecd9; box-shadow: 0 calc(var(--u) * .4) 0 #0002, 0 0 0 calc(var(--u) * .4) #fff; }
+  #acorns i { width: calc(var(--u) * 2.3); height: calc(var(--u) * 2.9); border-radius: 50% 50% 46% 46% / 40% 40% 60% 60%; background: #d9d3c4; box-shadow: inset 0 calc(var(--u) * .9) 0 #b8ad98; transition: background .4s, transform .5s cubic-bezier(.3, 1.8, .5, 1); }
+  #acorns i.on { background: radial-gradient(circle at 40% 70%, #fff2b0, #ffc23a 50%, #d99a10); box-shadow: inset 0 calc(var(--u) * .9) 0 #a66a2a; transform: scale(1.15); }
+  #paints { display: flex; gap: calc(var(--u) * 1.1); pointer-events: auto; }
+  #paints .sw { width: calc(var(--u) * 5.2); height: calc(var(--u) * 5.2); border-radius: 50%; background: var(--c); box-shadow: 0 0 0 calc(var(--u) * .5) #fff, 0 calc(var(--u) * .5) calc(var(--u) * 1) #0004; transition: transform .25s; animation: pop .6s cubic-bezier(.3, 1.8, .5, 1); }
+  #paints .sw.sel { transform: scale(1.2); box-shadow: 0 0 0 calc(var(--u) * .5) #fff, 0 0 0 calc(var(--u) * 1.1) #ffd23f, 0 calc(var(--u) * .5) calc(var(--u) * 1) #0004; }
+  #paints .sw.locked { display: none; }
+  #paints:not(.any) { display: none; }
+  /* the big "you did it" star */
+  #bigstar { position: absolute; left: 50%; top: 42%; width: 34vmin; height: 34vmin; margin: -17vmin; opacity: 0; transform: scale(.2) rotate(-40deg); transition: opacity .5s, transform .9s cubic-bezier(.3, 1.6, .5, 1); filter: drop-shadow(0 1vmin 2vmin #0005); }
+  #bigstar.on { opacity: 1; transform: scale(1) rotate(0); }
+  #bigstar.on svg { animation: twirl 2.4s ease-in-out infinite; }
+
   /* winch button */
   #winch { position: absolute; right: calc(env(safe-area-inset-right) + var(--u) * 4); bottom: calc(env(safe-area-inset-bottom) + var(--u) * 4); width: calc(var(--u) * 21); height: calc(var(--u) * 21); border-radius: 50%; pointer-events: auto; touch-action: none;
     background: radial-gradient(circle at 35% 28%, #fff3a8, #ffcf2e 48%, #f5a400); box-shadow: 0 calc(var(--u) * 1.1) 0 #b96f00, 0 calc(var(--u) * 1.6) calc(var(--u) * 2.4) #0005, inset 0 0 0 calc(var(--u) * .9) #fff; display: grid; place-items: center; transition: transform .08s, filter .3s; filter: saturate(.75) brightness(.96); }
@@ -94,6 +122,10 @@
     <div class="slot"><img alt=""></div>
     <div class="slot"><img alt=""></div>
     <div class="slot"><img alt=""></div>
+    <div class="slot r2"><img alt=""></div>
+    <div class="slot r2"><img alt=""></div>
+    <div class="slot r2"><img alt=""></div>
+    <div class="slot r2"><img alt=""></div>
     <div id="star"><svg viewBox="0 0 48 48"><path d="M24 4l6 13 14 1.6-10.5 9.4 3 14L24 34.8 11.500 42l3-14L4 18.600 18 17z" fill="#ffc928" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg></div>
   </div>
   <div id="garden">
@@ -102,6 +134,12 @@
     <div id="gstar"><svg viewBox="0 0 48 48"><path d="M24 4l6 13 14 1.6-10.5 9.4 3 14L24 34.8 11.500 42l3-14L4 18.600 18 17z" fill="#ffc928" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg></div>
   </div>
   <div id="water"><i></i><i></i><i></i></div>
+  <div id="applebar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div id="topright">
+    <div id="acorns"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div id="paints"><span class="sw sel" style="--c:#dc1f2e"></span><span class="sw locked" style="--c:#2f80ed"></span><span class="sw locked" style="--c:#8f5bd6"></span><span class="sw locked" style="--c:linear-gradient(135deg,#fff2b0,#ffc23a 45%,#d99a10)"></span></div>
+  </div>
+  <div id="bigstar"><svg viewBox="0 0 48 48"><path d="M24 4l6 13 14 1.6-10.5 9.4 3 14L24 34.8 11.500 42l3-14L4 18.600 18 17z" fill="#ffc928" stroke="#fff" stroke-width="2.500" stroke-linejoin="round"/></svg></div>
   <div id="joy"><div id="knob"></div></div>
   <div id="edge"><svg viewBox="0 0 48 48"><path d="M8 8 L42 24 L8 40 L15 24 Z"/></svg></div>
   <div id="hintMove" class="hand"></div>

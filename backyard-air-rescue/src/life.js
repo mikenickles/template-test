@@ -74,7 +74,27 @@ export function buildLife(scene) {
     }
   }
 
+  // ---- fireflies for the evening
+  const NF = 90, fpos = new Float32Array(NF * 3), fcol = new Float32Array(NF * 3), flies2 = [];
+  for (let i = 0; i < NF; i++) flies2.push({ x: rr(-30, L.east - 3), z: rr(-28, 24), y: rr(0.6, 4.2), ph: rnd() * 20, sp: rr(0.2, 0.5) });
+  const fgeo = new THREE.BufferGeometry();
+  fgeo.setAttribute('position', new THREE.BufferAttribute(fpos, 3)); fgeo.setAttribute('color', new THREE.BufferAttribute(fcol, 3));
+  const glow = canvasTex(64, 64, (c) => { const gr = c.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,220,1)'); gr.addColorStop(0.25, 'rgba(255,240,120,0.9)'); gr.addColorStop(1, 'rgba(255,220,80,0)'); c.fillStyle = gr; c.fillRect(0, 0, 64, 64); });
+  const fireflies = new THREE.Points(fgeo, new THREE.PointsMaterial({ size: 1.4, map: glow, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+  fireflies.frustumCulled = false; fireflies.visible = false; scene.add(fireflies);
+  let ffK = 0;
+
   function update(dt, t, heli, wash) {
+    if (ffK > 0.01) {
+      for (let i = 0; i < NF; i++) {
+        const f = flies2[i], tt = t * f.sp + f.ph;
+        fpos[i * 3] = f.x + Math.sin(tt) * 2.2 + Math.sin(tt * 2.7) * 0.6; fpos[i * 3 + 1] = f.y + Math.sin(tt * 1.9) * 0.5; fpos[i * 3 + 2] = f.z + Math.cos(tt * 0.8) * 2.2;
+        const tw = ffK * Math.max(0, Math.sin(t * 2.1 + f.ph * 3)) ** 2;
+        fcol[i * 3] = tw; fcol[i * 3 + 1] = tw; fcol[i * 3 + 2] = tw * 0.7;
+      }
+      fgeo.attributes.position.needsUpdate = true; fgeo.attributes.color.needsUpdate = true;
+    }
+
     // leaves
     for (let i = 0; i < NL; i++) {
       const l = leaves[i];
@@ -152,5 +172,5 @@ export function buildLife(scene) {
     }
     conf.instanceMatrix.needsUpdate = true;
   }
-  return { update, burst };
+  return { update, burst, setFireflies(k) { ffK = k; fireflies.visible = k > 0.01; } };
 }
