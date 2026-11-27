@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="kb_background">#FF1C1D21</color>
+    <color name="kb_key">#FF3A3C42</color>
+    <color name="kb_key_pressed">#FF55585F</color>
+    <color name="kb_key_special">#FF2A2C31</color>
+    <color name="kb_key_text">#FFECEDF0</color>
+    <color name="kb_strip">#FF25262B</color>
+    <color name="kb_strip_text">#FFD0D2D8</color>
+    <color name="kb_accent">#FF7C8CFF</color>
+    <color name="kb_accent_text">#FF10121A</color>
+</resources>

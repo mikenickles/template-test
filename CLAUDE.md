@@ -6,6 +6,14 @@
 **Status**: New/empty repository — no application code has been added yet.
 **Remote**: `mikenickles/template-test`
 
+## Projects in this repo
+
+- Root: Astro + Tailwind blog (`npm run dev`, `npm run build`).
+- `ai-keyboard/`: Android keyboard (Kotlin, AGP 8.11, compileSdk 35, minSdk 26) that uses the
+  Claude API (official `com.anthropic:anthropic-java` SDK) to fix typing mistakes. Build with
+  `cd ai-keyboard && ./gradlew assembleDebug` (needs JDK 17+ and the Android SDK). See
+  `ai-keyboard/README.md`.
+
 ## Getting Started
 
 This repository is freshly initialized. When project code is added, update this file with:

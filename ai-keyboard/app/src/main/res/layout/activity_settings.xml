@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            style="@android:style/TextAppearance.DeviceDefault.Large"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="AI Keyboard"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="A keyboard that uses Claude to catch and fix your typing mistakes." />
+
+        <!-- Setup -->
+        <TextView style="@style/SectionTitle" android:text="1. Turn it on" />
+
+        <Button
+            android:id="@+id/enableKeyboard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Enable AI Keyboard in system settings" />
+
+        <Button
+            android:id="@+id/pickKeyboard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Switch to AI Keyboard" />
+
+        <TextView
+            android:id="@+id/setupStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp" />
+
+        <!-- API key -->
+        <TextView style="@style/SectionTitle" android:text="2. Claude API key" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Create one at platform.claude.com → API keys. It's stored only on this phone." />
+
+        <EditText
+            android:id="@+id/apiKey"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="sk-ant-…"
+            android:importantForAutofill="no"
+            android:inputType="textPassword"
+            android:singleLine="true" />
+
+        <!-- Mistakes -->
+        <TextView style="@style/SectionTitle" android:text="3. Mistakes I usually make" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Describe them in your own words, one per line. Claude will watch for these especially." />
+
+        <EditText
+            android:id="@+id/mistakes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="top"
+            android:hint="I type &quot;teh&quot; instead of &quot;the&quot;\nI forget apostrophes (dont, cant, im)\nI hit 'n' instead of 'm'\nI mix up your / you're\nI double-tap space and get two spaces"
+            android:inputType="textMultiLine|textCapSentences"
+            android:minLines="5" />
+
+        <!-- Behaviour -->
+        <TextView style="@style/SectionTitle" android:text="4. How it works" />
+
+        <Switch
+            android:id="@+id/autoCheck"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingVertical="8dp"
+            android:text="Check automatically as I type" />
+
+        <Switch
+            android:id="@+id/autoApply"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingVertical="8dp"
+            android:text="Apply fixes automatically (otherwise tap Fix)" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Model" />
+
+        <RadioGroup
+            android:id="@+id/model"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <RadioButton
+                android:id="@+id/modelOpus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Claude Opus 5.5 — most accurate" />
+
+            <RadioButton
+                android:id="@+id/modelSonnet"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Claude Sonnet 5.5 — balanced" />
+
+            <RadioButton
+                android:id="@+id/modelHaiku"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Claude Haiku 5.5 — fastest, cheapest" />
+        </RadioGroup>
+
+        <Button
+            android:id="@+id/save"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Save" />
+
+        <!-- Try it -->
+        <TextView style="@style/SectionTitle" android:text="Try it here" />
+
+        <EditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="top"
+            android:hint="Type something with a few typos…"
+            android:inputType="textMultiLine|textCapSentences"
+            android:minLines="3" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:alpha="0.7"
+            android:text="Privacy: what you type in normal text fields is sent to Anthropic's API to be checked. Password fields, number fields and fields that ask not to be learned from (like incognito tabs) are never sent." />
+    </LinearLayout>
+</ScrollView>
