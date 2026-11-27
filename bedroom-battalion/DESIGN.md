@@ -1534,6 +1534,83 @@ clash by moving the end.
 - **CTF:** attackers and carriers may route by zip.
 - **Liveness:** the 16.11 rule holds; a bot never waits at a zip top.
 
+### 21.5 Round 9 build notes (deviations and choices; numbers in `CONFIG.zip`)
+- **Ends moved** (all within 8; the shelf pair is still mirrored in z, and the two ruin landings in the point mirror):
+
+  | Line | From | To | Why |
+  | --- | --- | --- | --- |
+  | zip.bed | `(35.7, 18, 79)` (was x 31) | `(57.85, 1.2, 79)` (was x 57.5) | The start was 4 inside the bed edge, so the descending body cut through the bed's edge. It now starts 0.7 past the edge, and a grab snaps the rider there in 0.12 s. The landing moved so the body is 0.3 above the platform's edge on touchdown. |
+  | zip.desk | `(94.3, 26, 81)` (was x 96) | `(62.15, 1.2, 81)` (was x 62.5) | As for the bed. The line still passes under the chair back, through the gap above the seat. |
+  | zip.green | `(107.3, 40, 40)` (was x 110) | `(66.5, 0, 61.5)` (was `(64, 0, 69)`, a move of 7.9) | The start had the same edge problem as the bed. The old landing put the bottom post on the n.c.5 to n.r.ne walk edge. |
+  | zip.tan | `(107.3, 40, 120)` | `(66.5, 0, 98.5)` | The mirror of zip.green. The old landing `(64, 0, 91)` was inside `s.C-f.block` (64..67, 90..93), which is not mirrored on the Green side. |
+- **Clearance** (a standalone node script over the collider list copied out of `index.html`, sampling the ride every 0.02
+  units; body box 0.8 x 1.8 x 0.8 hung from the line, sag included). The landing surface is skipped only while the body is
+  wholly over its top.
+  - zip.bed: closest 0.300, to the bed slab at the start and to its own bottom post at the end.
+    - Ruin west wall north part 1.04, west sill 2.83, platform edge 0.32, pillar 0.75.
+    - Over the track, the feet are 3.87 above the train's top.
+  - zip.desk: closest 0.300, to the desk top at the start.
+    - Chair back 0.34, chair seat 0.93, tunnel roof 0.49, ruin east wall 1.14, platform edge 0.33, pillar 0.75.
+    - Over the track, the feet are 4.05 above the train.
+  - zip.green and zip.tan: closest 0.300, to their own shelf's L2 board at the start.
+    - Desk top and desk legs 7.00, ruler bridges 14.41, ruler ramps 14.39, skateboard 9.17, tunnel 8.05.
+    - Over the track, the feet are 1.21 above the train's top. This is the tightest margin against the 1 required.
+- **Line height and sag.** The ride follows the drawn sag (0.4 at the middle) so the trolley stays on the cord. The cord
+  goes on straight to each post.
+- **Posts:**
+  - The top pencil stands 1.05 behind the start in plan; the bottom one stands 1.05 beyond the landing, or 0.85 for the two
+    ruin lines, so it clears the pillar.
+  - Both are `cyl` colliders of radius 0.15. The clay is visual only.
+  - The orange route cap is the top pencil's big eraser.
+  - A player launched from the north strip of the spring pad (z 78.5 to 79.55) can graze the zip.bed top pencil at
+    `(34.65, 79)` on the way over the bed edge. Bots launch from the pad's centre (z 80), 1.0 from the pencil.
+- **Ride times** (from `v0` 8, growing by g sin(slope) with g 22, capped at 28; the 0.12 s grab snap included):
+  - zip.bed 1.65 s, which is under the "2 to 3 s" of 21.2 because the line is short;
+  - zip.desk 2.10 s;
+  - the shelf lines 2.80 s.
+- **Grab:**
+  - Within 2 (in 3D) of the start, standing on the ground, with no grab cooldown.
+  - JUMP then grabs instead of jumping.
+  - After letting go, a line can't be grabbed for 0.6 s.
+- **Letting go:**
+  - **Early:** JUMP, a blast, death, or anything in the body's way (a `volumeFree` test every tick). The rider keeps the
+    line's velocity and falls, with normal fall damage from the height where they let go.
+  - **At the end:** the rider is put on the landing with a push of 2.5 along the line.
+- **Blast knock-off.** There was no blast knock-off to reuse. It is new, in `damageSoldier`: any blast damage to a rider
+  lets go. Teammates' blasts do no damage, so they don't knock riders off.
+- **On the line:**
+  - Crouch is ignored and ADS is off.
+  - Firing uses the air spread (the existing `!onGround` rule); reloading and switching weapons work.
+  - Grenades are allowed. 21.2 lists only the gun, but does not forbid them.
+- **Bots:**
+  - The 0.7 chance is rolled per plan in `pathFromHere`, only for a bot with a brain standing 15 or more up (bed, desk,
+    chair seat, shelves). Bots on the floor never consider lines, so their plans and the seeded random sequence are as
+    before.
+  - A zip edge costs its ride time times walk speed. That is less than its straight-line distance, so A* may miss the
+    very best route through a line, but it always finds a path.
+  - **At a top:** a bot presses JUMP only when this line's grab is available. With no grab within 1.2 s it repaths
+    without lines and leaves lines alone for 20 s, so it never waits at a top.
+  - **Riding:** a bot perceives and shoots a visible target in range with the normal aim error. Its own movement raises
+    that error, which gives the air aim error. A flag carrier only rides.
+  - **Afterwards:** at the bottom the zip edge counts as reached. After an early let-go, the bot repaths from where it
+    lands.
+- **New nodes:** `z.<line>.top` beside each start (1.56 to 1.73 from it), `z.<line>.bot` at each landing, and
+  `z.bed.plat` / `z.desk.plat` on the platform.
+  - **Walk links:** `z.bed.top`-`m.bed.e`, `z.desk.top`-`m.desk`, `z.green.top`-`n.ss2.b`, `z.tan.top`-`s.ts2.b`,
+    `z.bed.bot`-`z.bed.plat`-`m.plat`, `z.desk.bot`-`z.desk.plat`-`m.plat`, `z.green.bot`-`n.c.y`, `z.tan.bot`-`s.c.y`.
+  - **Checks:** the script swept all ten new walk links as `validateWaypoints` does: the standing capsule, ground under
+    every 0.1 step, no blocker between step height and head height. All pass. It also checked every older walk and cross
+    edge against the new posts; none comes near.
+  - **The sweep itself:** run over the 149 older edges, it flags none, which agrees with the game's validator.
+- **Sound:**
+  - Clacks on grab and on letting go, heard from the rider's position.
+  - One whirr voice follows the rider nearest the listener, with pitch rising with speed.
+  - The grab's clack also tells enemy bots within 25 where the rider is, as a quiet gunshot does.
+- **HUD:** "JUMP to zip" in range, and "JUMP to let go" while riding.
+- **Touch:** the JUMP button shows a striped-line icon with ZIP in range, and reads LET GO while riding.
+- **Match stats:** `matchReport()` stats gain `zips` per team.
+- **Test hook:** `__game.zipLines()` lists the lines, with their lengths and ride times.
+
 ## 22. Round 10: health regen and "feeling powerful" (user request, 2026-11-27)
 
 The user asked for health regen after 10 s, plus every item from the "feeling powerful" list:
@@ -1623,79 +1700,102 @@ This is a gameplay change. Nothing runs, as before: `node --check` and ESLint on
   but only once no soldier is standing in it.
 - **Collider hash:** `colliderHash()` reports the intact map. A new `__game.brokenCover()` lists the broken pieces.
 
-### 21.5 Round 9 build notes (deviations and choices; numbers in `CONFIG.zip`)
-- **Ends moved** (all within 8; the shelf pair is still mirrored in z, and the two ruin landings in the point mirror):
-
-  | Line | From | To | Why |
-  | --- | --- | --- | --- |
-  | zip.bed | `(35.7, 18, 79)` (was x 31) | `(57.85, 1.2, 79)` (was x 57.5) | The start was 4 inside the bed edge, so the descending body cut through the bed's edge. It now starts 0.7 past the edge, and a grab snaps the rider there in 0.12 s. The landing moved so the body is 0.3 above the platform's edge on touchdown. |
-  | zip.desk | `(94.3, 26, 81)` (was x 96) | `(62.15, 1.2, 81)` (was x 62.5) | As for the bed. The line still passes under the chair back, through the gap above the seat. |
-  | zip.green | `(107.3, 40, 40)` (was x 110) | `(66.5, 0, 61.5)` (was `(64, 0, 69)`, a move of 7.9) | The start had the same edge problem as the bed. The old landing put the bottom post on the n.c.5 to n.r.ne walk edge. |
-  | zip.tan | `(107.3, 40, 120)` | `(66.5, 0, 98.5)` | The mirror of zip.green. The old landing `(64, 0, 91)` was inside `s.C-f.block` (64..67, 90..93), which is not mirrored on the Green side. |
-- **Clearance** (a standalone node script over the collider list copied out of `index.html`, sampling the ride every 0.02
-  units; body box 0.8 x 1.8 x 0.8 hung from the line, sag included). The landing surface is skipped only while the body is
-  wholly over its top.
-  - zip.bed: closest 0.300, to the bed slab at the start and to its own bottom post at the end.
-    - Ruin west wall north part 1.04, west sill 2.83, platform edge 0.32, pillar 0.75.
-    - Over the track, the feet are 3.87 above the train's top.
-  - zip.desk: closest 0.300, to the desk top at the start.
-    - Chair back 0.34, chair seat 0.93, tunnel roof 0.49, ruin east wall 1.14, platform edge 0.33, pillar 0.75.
-    - Over the track, the feet are 4.05 above the train.
-  - zip.green and zip.tan: closest 0.300, to their own shelf's L2 board at the start.
-    - Desk top and desk legs 7.00, ruler bridges 14.41, ruler ramps 14.39, skateboard 9.17, tunnel 8.05.
-    - Over the track, the feet are 1.21 above the train's top. This is the tightest margin against the 1 required.
-- **Line height and sag.** The ride follows the drawn sag (0.4 at the middle) so the trolley stays on the cord. The cord
-  goes on straight to each post.
-- **Posts:**
-  - The top pencil stands 1.05 behind the start in plan; the bottom one stands 1.05 beyond the landing, or 0.85 for the two
-    ruin lines, so it clears the pillar.
-  - Both are `cyl` colliders of radius 0.15. The clay is visual only.
-  - The orange route cap is the top pencil's big eraser.
-  - A player launched from the north strip of the spring pad (z 78.5 to 79.55) can graze the zip.bed top pencil at
-    `(34.65, 79)` on the way over the bed edge. Bots launch from the pad's centre (z 80), 1.0 from the pencil.
-- **Ride times** (from `v0` 8, growing by g sin(slope) with g 22, capped at 28; the 0.12 s grab snap included):
-  - zip.bed 1.65 s, which is under the "2 to 3 s" of 21.2 because the line is short;
-  - zip.desk 2.10 s;
-  - the shelf lines 2.80 s.
-- **Grab:**
-  - Within 2 (in 3D) of the start, standing on the ground, with no grab cooldown.
-  - JUMP then grabs instead of jumping.
-  - After letting go, a line can't be grabbed for 0.6 s.
-- **Letting go:**
-  - **Early:** JUMP, a blast, death, or anything in the body's way (a `volumeFree` test every tick). The rider keeps the
-    line's velocity and falls, with normal fall damage from the height where they let go.
-  - **At the end:** the rider is put on the landing with a push of 2.5 along the line.
-- **Blast knock-off.** There was no blast knock-off to reuse. It is new, in `damageSoldier`: any blast damage to a rider
-  lets go. Teammates' blasts do no damage, so they don't knock riders off.
-- **On the line:**
-  - Crouch is ignored and ADS is off.
-  - Firing uses the air spread (the existing `!onGround` rule); reloading and switching weapons work.
-  - Grenades are allowed. 21.2 lists only the gun, but does not forbid them.
-- **Bots:**
-  - The 0.7 chance is rolled per plan in `pathFromHere`, only for a bot with a brain standing 15 or more up (bed, desk,
-    chair seat, shelves). Bots on the floor never consider lines, so their plans and the seeded random sequence are as
-    before.
-  - A zip edge costs its ride time times walk speed. That is less than its straight-line distance, so A* may miss the
-    very best route through a line, but it always finds a path.
-  - **At a top:** a bot presses JUMP only when this line's grab is available. With no grab within 1.2 s it repaths
-    without lines and leaves lines alone for 20 s, so it never waits at a top.
-  - **Riding:** a bot perceives and shoots a visible target in range with the normal aim error. Its own movement raises
-    that error, which gives the air aim error. A flag carrier only rides.
-  - **Afterwards:** at the bottom the zip edge counts as reached. After an early let-go, the bot repaths from where it
-    lands.
-- **New nodes:** `z.<line>.top` beside each start (1.56 to 1.73 from it), `z.<line>.bot` at each landing, and
-  `z.bed.plat` / `z.desk.plat` on the platform.
-  - **Walk links:** `z.bed.top`-`m.bed.e`, `z.desk.top`-`m.desk`, `z.green.top`-`n.ss2.b`, `z.tan.top`-`s.ts2.b`,
-    `z.bed.bot`-`z.bed.plat`-`m.plat`, `z.desk.bot`-`z.desk.plat`-`m.plat`, `z.green.bot`-`n.c.y`, `z.tan.bot`-`s.c.y`.
-  - **Checks:** the script swept all ten new walk links as `validateWaypoints` does: the standing capsule, ground under
-    every 0.1 step, no blocker between step height and head height. All pass. It also checked every older walk and cross
-    edge against the new posts; none comes near.
-  - **The sweep itself:** run over the 149 older edges, it flags none, which agrees with the game's validator.
-- **Sound:**
-  - Clacks on grab and on letting go, heard from the rider's position.
-  - One whirr voice follows the rider nearest the listener, with pitch rising with speed.
-  - The grab's clack also tells enemy bots within 25 where the rider is, as a quiet gunshot does.
-- **HUD:** "JUMP to zip" in range, and "JUMP to let go" while riding.
-- **Touch:** the JUMP button shows a striped-line icon with ZIP in range, and reads LET GO while riding.
-- **Match stats:** `matchReport()` stats gain `zips` per team.
-- **Test hook:** `__game.zipLines()` lists the lines, with their lengths and ride times.
+### 22.6 Round 10 build notes (deviations and choices; numbers in `CONFIG.regen`, `.bodies`, `.push`, `.streaks`, `.replay`, `.cover`)
+- **Regen:**
+  - Any damage restarts the 10 s wait, falls and train hits included. God mode doesn't.
+  - The low-health effect is the existing `.low` health brick (30 HP or less), which clears as health comes back. The
+    regen glow is a pulsing green ring on the health brick.
+- **Bot regen wait:**
+  - It starts at most once per life: under 50 HP, no visible enemy, 1.5 s after the last hit.
+  - The bot walks to cover from its last known threat (within 12, as `goCover` does) or crouches where it is.
+  - It ends at full health, after 10 s, or when an enemy shows. Liveness counts it as active for those 10 s at most.
+- **Streak counting:**
+  - Kills by the RC car and barrage bands count toward streaks.
+  - Banked rewards survive death; only the count resets.
+  - "Most recent" is the order earned. Bots follow the same rule, so a held RC car with no floor target also holds back
+    any older reward.
+- **Barrage mark (player):** Q enters marking mode, with a prompt and a white preview ring where the crosshair meets
+  the room (within 120, dropped to the ground). Fire marks, and Q again cancels. While marking, the trigger doesn't fire
+  the gun.
+- **Scout plane:**
+  - It weaves across the room at y 58 sinking to 50, from the team's back wall to the far one.
+  - Red markers sit over every enemy on the user's screen when Green's plane is up, on screen only (no edge arrows).
+  - Bots of that team get the nearest enemy in their shared team memory twice a second.
+  - Hitscan, bands and blasts can hit it (a 1.6 sphere); teammates can't.
+- **RC car:**
+  - It is a small mover of its own rather than the soldier controller, so it can have a 0.5 step limit: book stairs
+    and strings stop it, ramps don't.
+  - It drives at 22 with an acceleration of 40. The camera sits behind it along the look direction and is pulled in
+    where something is in the way.
+  - **What sets it off:** fire, an enemy within 1.2, 15 s, leaving the room, or a hit on its driver. The driver case
+    goes off on the next tick, so blasts are never nested.
+  - **Damage:** the spec gives only the centre value, so it falls from 150 to 20 at the radius of 9.
+  - The car itself can't be shot. The pool holds 4 cars.
+- **RC car bots:**
+  - They path on floor walk edges only (a new `floor` option of `astar`) to the nearest enemy standing on the floor.
+  - They go off within 3 of any enemy, or when stuck for 1.5 s.
+  - A carrier never deploys one.
+- **Barrage:**
+  - The bands arc from above the green small shelf (L2) or the tan tall shelf (L3), with 2.2 to 2.6 s flights.
+  - They are ordinary band projectiles at 40 damage, with the bounce and head multiplier. The projectile pool grew from
+    16 to 40.
+  - The scatter uses a seeded random generator, seeded per match, so seeded matches repeat.
+- **Barrage bots:**
+  - Enemy bots inside a marked circle run straight out of it.
+  - A bot calls a barrage on the densest group (within 10) of enemies any teammate saw in the last 5 s. It fires at 2
+    or more enemies, or at 1 after holding the reward 15 s.
+- **Stings and banners:** both teams hear every sting. Banners show your own READY rewards and FRIENDLY or ENEMY
+  launches, and the callout list names the team.
+- **Replay titles:** FINAL KILL for kills, CAPTURE STOPPED for a carrier killed within 5 of their own stand, and WINNING
+  CAPTURE for the last capture.
+- **Replay timing:**
+  - Elimination plays it in the round-end gap: it starts 0.5 s after the kill and ends 3.5 s in, inside the 4 s gap.
+  - A winning capture plays it before the match-end card.
+  - CTF has no gap, so the mid-match CAPTURE STOPPED replay pauses the simulation for its 3 s. The match clock doesn't
+    move.
+- **Replay recording:**
+  - It covers soldier position, yaw, pitch, tip, dead, crouch, weapon, flag carried and the rigid-body orientation;
+    projectiles; flags; and shot and blast triggers. The train is posed from the recorded time.
+  - Zip trolleys, RC cars, scout planes and barrage rings show as they are live.
+  - Recording pauses while a replay plays.
+- **Replay sound:** a master low-pass falls to 700 Hz, and the replayed shots and blasts play at 0.55 pitch. Live sounds
+  are only low-passed, not slowed.
+- **Replay depth of field:** the post-processing bokeh pass, focused on the subject, so not on presets without post.
+- **Rigid bodies:**
+  - Box half-extents are 0.45 x 0.9 x 0.32, mass 1.
+  - Each corner is pushed out through the collider's shallowest face, with impulse, restitution and friction. There are
+    1 to 3 substeps by speed.
+  - Train cars are not static colliders, so a car that reaches a body throws it clear.
+  - Bodies and debris never block soldiers or bullets.
+  - The dead soldier's position follows its body, so the death camera and spectating follow it.
+- **Blast push:** any soldier a blast damages and does not kill is pushed, the thrower included. The push carries
+  through the air the way a spring launch does, and bots repath from where they land.
+- **Breakable pieces** (21 in all):
+  - The 17 letter-block colliders (`W-a.*`, `W-c`, `C-f.block`, `E-a.*`, `n.E-c`).
+  - The 4 fort front walls above the slits (`n.fort.front.w.high`, `n.fort.front.e.high` and their tan pair).
+  - There are no floor book stacks among the colliders, so none break. No other floor cover breaks.
+  - "Between the pillars" became the wall above the slits. The slit pillars and the low wall below are separate
+    colliders and stay; splitting the walls would have added colliders.
+- **How walls break:**
+  - At half HP the top half is lowered.
+  - At 0 the box settles as a 0.02 rubble slab on the low wall (1.15 to 1.17). The slits then open into gaps you can
+    jump through.
+- **How blocks break:** a block becomes a 0.02 slab and throws 2 or 3 debris cubes, as rigid bodies of their own.
+- **Cover art:**
+  - The breakable walls lost their top studs, which would float once broken.
+  - Each piece has its own mesh, plus a half-height mesh for the walls.
+  - Decals on a removed part are cleared.
+- **Cover damage:**
+  - It follows the blast's own falloff, if the blast reaches the piece (a ray from the centre to the piece's nearest
+    point).
+  - Only barrage bands, not the band gun's, damage cover.
+- **Cover bots:** after a break or rebuild, nearby cover bits are recomputed and bots in cover there replan.
+- **CTF rebuild:** a damaged piece rebuilds 45 s after its last damage (half-broken walls too), once no living soldier
+  overlaps it.
+- **Navigation:**
+  - The standalone script confirms no waypoint stands on a piece and no edge runs over one.
+  - `colliderHash()` hashes the intact heights, so it stays `cb059ceb`.
+- **Controls:**
+  - Q, the touch STREAK button (shown only while a reward is ready) and the controller's D-pad up.
+  - While driving, move and look steer the car and fire sets it off.
+  - Any key, click, tap or controller button skips the replay.

@@ -2081,3 +2081,92 @@ DESIGN 21.5.
   - The touch JUMP button shows a zip icon and ZIP in range, and LET GO while riding.
   - The title help gains a zip line line, and its freeze-pick line now lists 4 bazooka and 5 band gun.
 - **Reports and test hooks:** `matchReport()` stats gain `zips`; `__game.zipLines()` lists the lines.
+
+## Round 10
+
+DESIGN 22: health regen, kill streaks, the slow-motion final kill, blasts that launch rigid plastic bodies, and breakable
+cover. Nothing was run, as ordered. The checks were static:
+
+- `node --check` and ESLint (`no-undef`, `no-dupe-keys`, `no-redeclare`) on the module extracted from `index.html`
+  (both clean);
+- the Round 9 standalone collider script.
+
+The collider script still gives hash `cb059ceb`, still finds every zip line clear, and confirms that no waypoint stands on
+a breakable piece. Deviations are in DESIGN 22.6. Everything is preallocated at load: rigid bodies and debris, streak
+objects, the replay ring buffer and cover pieces.
+
+### Health regen (22.1)
+
+- **Rule:** 10 s after any damage, the player and every bot regain 15 HP/s up to 100, in both modes.
+- **HUD:** the health brick pulses green while it regenerates.
+- **Bots:** a bot under 50 HP with no visible enemy holds cover (or crouches) until healed, for 10 s at most. Liveness
+  treats the wait as active.
+
+### Blasts and rigid bodies (22.4)
+
+- **Bodies:**
+  - A dead soldier becomes a rigid box (pool 10): velocity, spin and gravity.
+  - Its corners bounce off every collider (restitution 0.35, friction 0.6). It sleeps under 0.3 u/s and clatters per
+    bounce, pitched by the surface.
+  - The train throws bodies clear.
+- **Launches:**
+  - A killing bullet pushes the body 2 u/s along the shot.
+  - Grenade, bazooka and RC car blasts launch bodies away from the centre at up to 30 u/s with a strong spin, including
+    bodies already lying there.
+- **The living:** a blast pushes them back at 0.15 x damage (cap 14) plus 4 up. That knocks soldiers off ledges and
+  zip lines, and bots repath where they land.
+
+### Kill streaks (22.2)
+
+- **Earning:**
+  - Kills in a row without dying; in elimination the count carries across rounds.
+  - Rewards are banked at 3, 5 and 7, one of each.
+  - Q, the touch STREAK button or the controller's D-pad up uses the newest.
+  - Ready rewards show by the weapon bar. Banners and stings announce them.
+- **Scout plane (3):**
+  - A paper plane glides across the room for 10 s.
+  - Every enemy shows as a red marker on your team's screens, and bots get the enemy positions.
+  - HP 60; it can be shot down.
+- **RC car bomb (5):**
+  - Drive it with move and look (camera behind, 22 u/s) while your soldier stands still.
+  - Fire, enemy contact, 15 s, or a hit on your soldier blows it up: 150 at the centre, radius 9, with line of sight.
+  - Floor and ramps only; a flag carrier can't use it.
+  - Bots drive it along floor walk edges to an enemy and blow it within 3.
+- **Band barrage (7):**
+  - Mark a spot in sight within 120.
+  - After 2 s, 24 bands at 40 each arc from your team's shelf over 3 s, within 10 of the mark.
+  - Everyone sees the marked circle, and enemy bots run out of it.
+  - Bots target the largest enemy group seen in the last 5 s.
+
+### Slow-motion final kill (22.3)
+
+- **Recording:** a 4 s ring buffer at 30 Hz of soldiers, bodies, projectiles, flags and effect triggers. The train is
+  posed from its clock.
+- **Playback:** 3 s at 0.3x, ending 0.5 s after the kill.
+  - An orbiting camera starts behind the killer, frames both, then holds on the victim.
+  - Letterbox bars, the title with the killer's name, the title screen's depth of field, low-passed sound and replayed
+    shots at low pitch.
+  - Any key, click, tap or button skips it.
+- **When it plays:**
+  - Elimination: after the round-ending kill, in the existing gap.
+  - CTF: after the winning capture, before the match-end card, and after a carrier is stopped within 5 of their stand.
+    The last pauses play for 3 s.
+
+### Breakable cover (22.5)
+
+- **Pieces:** the 17 alphabet blocks (HP 200) and the 4 fort front walls above the slits (HP 300).
+- **Damage:** only explosives (grenade, bazooka, RC car) and barrage bands. Bullets still only leave decals.
+- **Breaking:**
+  - A block becomes flat rubble and throws 2 or 3 tumbling debris blocks.
+  - A wall chips to half height, then settles as rubble on the low wall, which opens the slits.
+  - Breaking only lowers colliders. Debris is visual.
+  - Bots get fresh cover data nearby and replan if their cover broke.
+- **Reset:** pieces rebuild every elimination round. In CTF a piece rebuilds 45 s after its last damage, once nobody
+  stands in it.
+- **Test hooks:** `colliderHash()` reports the intact map, unchanged at `cb059ceb`; `__game.brokenCover()` lists the
+  damaged pieces.
+
+### Also
+
+- The title help lists the streaks and regen.
+- DESIGN 21.5 (Round 9's notes) moved back before section 22.
