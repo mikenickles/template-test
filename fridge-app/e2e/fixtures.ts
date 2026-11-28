@@ -42,7 +42,8 @@ export const test = base.extend<{ app: Page; errors: string[] }>({
   app: async ({ page, errors }, use) => {
     page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
     page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
-    await page.clock.setFixedTime(NOW);
+    // Pin the app's "now" (see src/dates.ts) instead of freezing the browser clock, which stalls fade animations.
+    await page.addInitScript((t) => { (window as unknown as { __FF_NOW__: number }).__FF_NOW__ = t; }, NOW.getTime());
     await page.route('**/api.open-meteo.com/**', (r) => r.fulfill({ json: WEATHER }));
     await page.addInitScript(FAKE_SPEECH);
     await page.goto('/');
@@ -54,9 +55,22 @@ export const test = base.extend<{ app: Page; errors: string[] }>({
 
 export { expect };
 
-export async function goTab(page: Page, tab: 'home' | 'stock' | 'calendar' | 'tasks' | 'food') {
-  await page.getByTestId('tab-' + tab).click();
+export type Section = 'home' | 'stock' | 'calendar' | 'tasks' | 'groceries' | 'meals' | 'settings';
+
+/** Opens the sidebar and picks a section. */
+export async function goTab(page: Page, tab: Section) {
+  await page.getByTestId('menu-button').first().click();
+  await expect(page.getByTestId('menu')).toBeVisible();
+  await page.getByTestId('nav-' + tab).click();
   await expect(page.getByTestId('app')).toHaveAttribute('data-tab', tab);
+  await expect(page.getByTestId('menu')).toHaveCount(0);
+  await expect(page.getByTestId('menu-button')).toHaveCount(1);
+}
+
+/** Reloads the app, like closing and reopening it. */
+export async function restart(page: Page) {
+  await page.reload();
+  await expect(page.getByTestId('app')).toBeVisible();
 }
 
 export async function say(page: Page, text: string) {

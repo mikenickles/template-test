@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useMemo, useRef, useState } from 'react';
 import { CATEGORY_ORDER, categorize, categoryFor, WHERE_LABEL, type StockItem, type Where } from '../data';
 import { ITrash } from '../icons';
+import { MenuButton } from '../Menu';
 import { useStore } from '../store';
 import { FabPlus, Field, Press, Segmented, Sheet, ease, spring, tap } from '../ui';
 
@@ -49,7 +50,9 @@ export default function Stock() {
   return (
     <div className="screen">
       <header className="screen-head">
-        <div className="col" style={{ gap: 2 }}>
+        <div className="head-row" style={{ gap: 12 }}>
+          <MenuButton />
+          <div className="col grow" style={{ gap: 2 }}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.span key={flash || 'default'} className="kicker" data-testid="stock-summary" style={{ color: flash ? '#23704A' : undefined }}
               initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.25 }}>
@@ -57,6 +60,7 @@ export default function Stock() {
             </motion.span>
           </AnimatePresence>
           <h1 className="title">Stock</h1>
+          </div>
         </div>
         <Segmented label="Location" value={tab} onChange={pick} testId="stock-tabs"
           options={KEYS.map((k) => ({ value: k, label: WHERE_LABEL[k], count: data.stock.filter((s) => s.where === k).length }))} />

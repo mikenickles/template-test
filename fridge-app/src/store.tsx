@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  type AppData, type CalEvent, type Grocery, type PersonId, type StockItem, type StoreId, type Task, type Where,
-  categorize, capitalize, inStock, seedData, uid
+  type AppData, type CalEvent, type Grocery, type PersonId, type Settings, type StockItem, type StoreId, type Task, type Where,
+  DEFAULT_SETTINGS, categorize, capitalize, inStock, peopleFor, seedData, uid
 } from './data';
 
 const KEY = 'family-fridge:data:v1';
@@ -11,7 +11,11 @@ function load(): AppData {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const d = JSON.parse(raw) as AppData;
-      if (d && d.version === 1 && Array.isArray(d.stock)) return d;
+      // Data saved before settings existed gets the defaults filled in.
+      if (d && d.version === 1 && Array.isArray(d.stock)) {
+        const st = { ...DEFAULT_SETTINGS, ...(d.settings || {}) };
+        return { ...d, settings: { ...st, names: { ...DEFAULT_SETTINGS.names, ...(st.names || {}) } } };
+      }
     }
   } catch { /* fall through to seed */ }
   return seedData();
@@ -38,7 +42,9 @@ export interface Actions {
   eventRemove(id: string): void;
   // meals
   planSet(key: string, meal: string | null): void;
-  // misc
+  // settings & data
+  settingsSet(patch: Partial<Settings>): void;
+  clearAll(): void;
   snapshot(): AppData;
   restore(d: AppData): void;
   reset(): void;
@@ -143,9 +149,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return { ...d, plan };
       });
     },
+    settingsSet(patch) { set((d) => ({ ...d, settings: { ...d.settings, ...patch } })); },
+    clearAll() { set((d) => ({ ...d, stock: [], groceries: [], tasks: [], events: [], skipped: [], plan: {}, noRoutines: true })); },
     snapshot() { return ref.current; },
     restore(d) { set(() => d); },
-    reset() { set(() => seedData()); }
+    reset() { set((d) => ({ ...seedData(), settings: d.settings })); }
   }), [set]);
 
   const value = useMemo(() => ({ data, act }), [data, act]);
@@ -156,4 +164,10 @@ export function useStore() {
   const c = useContext(StoreCtx);
   if (!c) throw new Error('useStore outside provider');
   return c;
+}
+
+/** People (colors + the family's own names). */
+export function usePeople() {
+  const { data } = useStore();
+  return useMemo(() => peopleFor(data.settings), [data.settings]);
 }

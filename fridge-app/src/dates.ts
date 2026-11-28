@@ -5,7 +5,12 @@ export const DOW_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
 export const pad = (n: number) => String(n).padStart(2, '0');
 export const dateKey = (d: Date) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 export const fromKey = (k: string) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d, 12); };
-export const today = () => { const d = new Date(); d.setHours(12, 0, 0, 0); return d; };
+/**
+ * The current time. Tests pin it with `window.__FF_NOW__` (ms since epoch) so dates are predictable
+ * without freezing the browser clock, which would also freeze animations.
+ */
+export const now = () => { const f = (globalThis as { __FF_NOW__?: number }).__FF_NOW__; return f ? new Date(f) : new Date(); };
+export const today = () => { const d = now(); d.setHours(12, 0, 0, 0); return d; };
 export const todayKey = () => dateKey(today());
 export const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 export const sameDay = (a: Date, b: Date) => dateKey(a) === dateKey(b);
@@ -30,7 +35,7 @@ export function relativeLabel(d: Date) {
   return shortDate(d);
 }
 
-export function greeting(h = new Date().getHours()) {
+export function greeting(h = now().getHours()) {
   if (h < 5) return 'Good night';
   if (h < 12) return 'Good morning';
   if (h < 17) return 'Good afternoon';
@@ -38,5 +43,5 @@ export function greeting(h = new Date().getHours()) {
   return 'Good night';
 }
 
-export const minutesNow = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); };
+export const minutesNow = () => { const n = now(); return n.getHours() * 60 + n.getMinutes(); };
 export const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };

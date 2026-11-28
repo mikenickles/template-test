@@ -15,7 +15,8 @@
   --shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 0 0 1px rgba(30, 36, 60, 0.035), 0 12px 32px rgba(30, 36, 60, 0.06);
   --sat: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
   --sab: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
-  --tabbar: calc(64px + var(--sab));
+  /* No bottom bar any more: floating buttons sit just above the phone's gesture area. */
+  --tabbar: calc(6px + var(--sab));
   --font: 'Geist Variable', -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -125,17 +126,6 @@ h1, h2, h3, p { margin: 0; }
 .check { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .check-ring { width: 26px; height: 26px; border-radius: 13px; display: flex; align-items: center; justify-content: center; border: 1.5px solid #CFCDC7; background: rgba(255, 255, 255, 0.7); }
 
-/* Tab bar */
-.tabbar {
-  position: absolute; left: 0; right: 0; bottom: 0; z-index: 20; height: var(--tabbar); padding: 6px 8px var(--sab);
-  display: flex; gap: 2px; background: rgba(255, 255, 255, 0.76); border-top: 1px solid var(--glass-edge);
-  backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%); box-shadow: 0 -8px 24px rgba(30, 36, 60, 0.05);
-}
-.tab { position: relative; flex: 1 1 0; min-width: 0; height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--sub); transition: color .3s; }
-.tab.on { color: var(--accent-ink); }
-.tab-pill { position: relative; width: 52px; height: 30px; display: flex; align-items: center; justify-content: center; }
-.tab-pill-bg { position: absolute; inset: 0; border-radius: 15px; background: var(--accent-tint); }
-
 /* Floating buttons */
 .fab {
   position: absolute; right: 20px; bottom: calc(var(--tabbar) + 16px); z-index: 22; width: 58px; height: 58px; border-radius: 29px;
@@ -149,6 +139,29 @@ h1, h2, h3, p { margin: 0; }
 }
 .voice.on { background: var(--accent); border-color: var(--accent); box-shadow: 0 12px 30px rgba(79, 91, 213, 0.4); }
 .voice-ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--accent); pointer-events: none; }
+
+/* Sidebar menu */
+.menu {
+  position: absolute; left: 0; top: 0; bottom: 0; z-index: 35; width: min(84%, 320px);
+  padding: calc(var(--sat) + 22px) 14px calc(var(--sab) + 18px); display: flex; flex-direction: column;
+  background: rgba(247, 247, 250, 0.97); border-right: 1px solid var(--glass-edge); border-radius: 0 28px 28px 0;
+  backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
+  box-shadow: 20px 0 60px rgba(20, 22, 40, 0.18); touch-action: pan-y;
+}
+.menu-item {
+  position: relative; display: flex; align-items: center; gap: 14px; width: 100%; min-height: 54px; padding: 8px 12px;
+  border-radius: 16px; text-align: left; font-size: 16px; font-weight: 600; color: var(--ink); transition: color .25s;
+}
+.menu-item.on { color: var(--accent-ink); }
+.menu-active { position: absolute; inset: 0; border-radius: 16px; background: var(--accent-tint); }
+.menu-icon { position: relative; width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: rgba(46, 52, 92, 0.05); flex-shrink: 0; }
+.menu-item.on .menu-icon { background: rgba(255, 255, 255, 0.85); }
+.menu-badge { position: relative; min-width: 26px; height: 22px; padding: 0 7px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; background: rgba(46, 52, 92, 0.06); color: var(--sub); }
+.menu-item.on .menu-badge { background: rgba(255, 255, 255, 0.85); color: var(--accent-ink); }
+
+/* Settings page */
+.settings-page { position: absolute; inset: 0; z-index: 28; display: flex; flex-direction: column; background: linear-gradient(180deg, #EEF0F5 0%, #E9EBF1 100%); box-shadow: -20px 0 50px rgba(20, 22, 40, 0.12); }
+.app.calm .blob, .app.calm .shim { animation: none; }
 
 /* Sheets */
 .overlay-root { position: absolute; inset: 0; z-index: 30; pointer-events: none; }

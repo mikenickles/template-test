@@ -1,9 +1,10 @@
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
-import { eventsOn, PEOPLE, PERSON_IDS, type DayEvent, type PersonId } from '../data';
+import { eventsOn, PERSON_IDS, type DayEvent, type PersonId } from '../data';
 import { addDays, dateKey, DOW_LONG, DOW_SHORT, fmtTime, fromKey, MONTHS, minutesNow, sameDay, shortDate, today, weekStart } from '../dates';
 import { IChevL, IChevR } from '../icons';
-import { useStore } from '../store';
+import { MenuButton } from '../Menu';
+import { usePeople, useStore } from '../store';
 import { FabPlus, Field, Press, Segmented, Sheet, ease, spring, tap } from '../ui';
 
 type View = 'month' | 'week' | 'day';
@@ -11,6 +12,7 @@ const HOUR = 48, FIRST = 7, HOURS = 15;
 
 export default function Calendar() {
   const { data, act } = useStore();
+  const PEOPLE = usePeople();
   const [view, setView] = useState<View>('month');
   const [cur, setCur] = useState(() => today());
   const [dir, setDir] = useState(0);
@@ -70,11 +72,12 @@ export default function Calendar() {
   return (
     <div className="screen">
       <header className="screen-head">
-        <div className="head-row">
-          <div className="col" style={{ gap: 2, minWidth: 0 }}>
+        <div className="head-row" style={{ gap: 10 }}>
+          <MenuButton />
+          <div className="col grow" style={{ gap: 2, minWidth: 0 }}>
             <span className="kicker">Family calendar</span>
             <AnimatePresence mode="wait" initial={false}>
-              <motion.h1 key={heading} className="title ellipsis" style={{ fontSize: 28 }} data-testid="cal-title"
+              <motion.h1 key={heading} className="title ellipsis" style={{ fontSize: 24 }} data-testid="cal-title"
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22 }}>{heading}</motion.h1>
             </AnimatePresence>
           </div>
@@ -212,6 +215,7 @@ export default function Calendar() {
 
 function Month({ cur, onPick, onOpen }: { cur: Date; onPick: (d: Date) => void; onOpen: (ev: DayEvent) => void }) {
   const { data } = useStore();
+  const PEOPLE = usePeople();
   const T = today();
   const first = new Date(cur.getFullYear(), cur.getMonth(), 1, 12);
   const start = weekStart(first);
@@ -255,7 +259,7 @@ function Month({ cur, onPick, onOpen }: { cur: Date; onPick: (d: Date) => void; 
 }
 
 function EventRow({ ev, onOpen }: { ev: DayEvent; onOpen: () => void }) {
-  const p = PEOPLE[ev.who];
+  const p = usePeople()[ev.who];
   return (
     <motion.button layout onClick={onOpen} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} whileTap={{ scale: 0.98 }} transition={spring}
       data-testid="event-row" style={{ display: 'flex', gap: 12, alignItems: 'stretch', padding: '10px 12px', borderRadius: 14, background: p.tint, textAlign: 'left', width: '100%' }}>

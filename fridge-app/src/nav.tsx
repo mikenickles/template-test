@@ -2,14 +2,12 @@ import { createContext, useContext } from 'react';
 import type { AppData } from './data';
 import type { Tab } from './voice';
 
-export type FoodView = 'meals' | 'groceries';
 export interface Nav {
   tab: Tab;
-  food: FoodView;
-  go(tab: Tab, food?: FoodView): void;
-  setFood(v: FoodView): void;
+  go(tab: Tab): void;
   toast(message: string, undo?: AppData): void;
   openVoice(): void;
+  openMenu(): void;
 }
 export const NavCtx = createContext<Nav | null>(null);
 export function useNav() {
@@ -17,4 +15,5 @@ export function useNav() {
   if (!n) throw new Error('useNav outside provider');
   return n;
 }
-export const TABS: Tab[] = ['home', 'stock', 'calendar', 'tasks', 'food'];
+/** Order of sections in the menu (used for slide direction). */
+export const TABS: Tab[] = ['home', 'stock', 'calendar', 'tasks', 'groceries', 'meals', 'settings'];

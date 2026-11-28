@@ -4,13 +4,18 @@ import { createPortal } from 'react-dom';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { Capacitor } from '@capacitor/core';
 import { useBackHandler } from './back';
+import { now as nowDate } from './dates';
 
 export const spring = { type: 'spring' as const, stiffness: 420, damping: 34, mass: 0.9 };
 export const softSpring = { type: 'spring' as const, stiffness: 260, damping: 28 };
 export const ease = [0.32, 0.72, 0, 1] as const;
 
+let hapticsOn = true;
+/** Turned on/off from Settings. */
+export function setHaptics(on: boolean) { hapticsOn = on; }
+
 export function tap(style: 'light' | 'medium' = 'light') {
-  if (!Capacitor.isNativePlatform()) return;
+  if (!hapticsOn || !Capacitor.isNativePlatform()) return;
   Haptics.impact({ style: style === 'light' ? ImpactStyle.Light : ImpactStyle.Medium }).catch(() => undefined);
 }
 
@@ -185,7 +190,19 @@ export function useTimeout() {
 }
 
 export function useNow(ms = 30000) {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => { const i = window.setInterval(() => setNow(new Date()), ms); return () => window.clearInterval(i); }, [ms]);
-  return now;
+  const [current, setNow] = useState(() => nowDate());
+  useEffect(() => { const i = window.setInterval(() => setNow(nowDate()), ms); return () => window.clearInterval(i); }, [ms]);
+  return current;
+}
+
+/** On/off switch with a springy knob. */
+export function Switch({ on, onChange, label, testId, disabled }: { on: boolean; onChange: (v: boolean) => void; label: string; testId?: string; disabled?: boolean }) {
+  return (
+    <button role="switch" aria-checked={on} aria-label={label} disabled={disabled} data-testid={testId}
+      onClick={() => { tap(); onChange(!on); }} style={{ width: 52, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexShrink: 0, opacity: disabled ? 0.4 : 1 }}>
+      <motion.span animate={{ backgroundColor: on ? '#4F5BD5' : 'rgba(46,52,92,0.18)' }} transition={{ duration: 0.25 }} style={{ width: 46, height: 28, borderRadius: 14, position: 'relative', display: 'inline-block' }}>
+        <motion.span animate={{ x: on ? 18 : 0 }} transition={spring} style={{ position: 'absolute', top: 3, left: 3, width: 22, height: 22, borderRadius: 11, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+      </motion.span>
+    </button>
+  );
 }

@@ -188,27 +188,55 @@ export function inStock(stock: StockItem[], ingredient: string) {
   });
 }
 
+export interface Settings {
+  names: Record<PersonId, string>;
+  defaultStore: StoreId;
+  weather: boolean;
+  units: 'F' | 'C';
+  haptics: boolean;
+  reduceMotion: boolean;
+}
+
+export const DEFAULT_SETTINGS: Settings = {
+  names: { D: 'Dad', M: 'Mom', K: 'Kid', F: 'Family' },
+  defaultStore: 'safeway',
+  weather: true,
+  units: 'F',
+  haptics: true,
+  reduceMotion: false
+};
+
+/** People with the family's own names applied. A blank name falls back to the default. */
+export function peopleFor(settings: Settings): typeof PEOPLE {
+  const out = {} as typeof PEOPLE;
+  PERSON_IDS.forEach((k) => { out[k] = { ...PEOPLE[k], name: settings.names[k]?.trim() || PEOPLE[k].name }; });
+  return out;
+}
+
 export interface AppData {
   version: number;
+  settings: Settings;
   stock: StockItem[];
   groceries: Grocery[];
   tasks: Task[];
   events: CalEvent[];
   skipped: string[];
   plan: Record<string, string>;
+  /** Set by "Start fresh": hides the sample weekly routines. */
+  noRoutines?: boolean;
 }
 
 export function seedData(): AppData {
-  return { version: 1, stock: seedStock(), groceries: seedGroceries(), tasks: seedTasks(), events: seedEvents(), skipped: [], plan: seedPlan() };
+  return { version: 1, settings: DEFAULT_SETTINGS, stock: seedStock(), groceries: seedGroceries(), tasks: seedTasks(), events: seedEvents(), skipped: [], plan: seedPlan() };
 }
 
 export interface DayEvent { id: string; title: string; start: string; end: string; who: PersonId; routine: boolean; }
 
-export function eventsOn(data: Pick<AppData, 'events' | 'skipped'>, key: string): DayEvent[] {
+export function eventsOn(data: Pick<AppData, 'events' | 'skipped' | 'noRoutines'>, key: string): DayEvent[] {
   const [y, m, d] = key.split('-').map(Number);
   const dow = new Date(y, m - 1, d).getDay();
   const list: DayEvent[] = [];
-  ROUTINES.forEach((r) => {
+  if (!data.noRoutines) ROUTINES.forEach((r) => {
     const id = r.id + '@' + key;
     if (r.dow.includes(dow) && !data.skipped.includes(id)) list.push({ id, title: r.title, start: r.start, end: r.end, who: r.who, routine: true });
   });

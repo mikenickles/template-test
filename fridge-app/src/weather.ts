@@ -19,11 +19,11 @@ export function codeLabel(c: number) {
   return 'Storms';
 }
 
-async function fetchWeather(): Promise<Weather> {
+async function fetchWeather(units: 'F' | 'C'): Promise<Weather> {
   const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000, maximumAge: 3600000 });
   const { latitude, longitude } = pos.coords;
   const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + latitude.toFixed(3) + '&longitude=' + longitude.toFixed(3) +
-    '&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=5';
+    '&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=' + (units === 'C' ? 'celsius' : 'fahrenheit') + '&timezone=auto&forecast_days=5';
   const r = await fetch(url);
   if (!r.ok) throw new Error('weather ' + r.status);
   const j = await r.json();
@@ -37,22 +37,30 @@ async function fetchWeather(): Promise<Weather> {
   };
 }
 
-export function useWeather() {
-  const [w, setW] = useState<Weather | null>(() => {
-    try { const c = JSON.parse(localStorage.getItem(CACHE) || 'null'); return c ? c.w : null; } catch { return null; }
-  });
+interface Cached { at: number; units: 'F' | 'C'; w: Weather; }
+function readCache(units: 'F' | 'C'): Cached | null {
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE) || 'null') as Cached | null;
+    return c && c.units === units ? c : null;
+  } catch { return null; }
+}
+
+/** Weather for the current location, cached for 30 minutes. Off when `enabled` is false. */
+export function useWeather(enabled = true, units: 'F' | 'C' = 'F') {
+  const [w, setW] = useState<Weather | null>(() => readCache(units)?.w ?? null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
+    if (!enabled) return;
     let alive = true;
-    let cachedAt = 0;
-    try { cachedAt = JSON.parse(localStorage.getItem(CACHE) || 'null')?.at || 0; } catch { /* ignore */ }
-    if (Date.now() - cachedAt < 30 * 60 * 1000 && w) return;
-    fetchWeather().then((nw) => {
+    const cached = readCache(units);
+    setW(cached?.w ?? null);
+    if (cached && Date.now() - cached.at < 30 * 60 * 1000) return;
+    fetchWeather(units).then((nw) => {
       if (!alive) return;
       setW(nw);
-      try { localStorage.setItem(CACHE, JSON.stringify({ at: Date.now(), w: nw })); } catch { /* ignore */ }
+      try { localStorage.setItem(CACHE, JSON.stringify({ at: Date.now(), units, w: nw })); } catch { /* ignore */ }
     }).catch(() => { if (alive) setFailed(true); });
     return () => { alive = false; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  return { weather: w, failed };
+  }, [enabled, units]);
+  return { weather: enabled ? w : null, failed };
 }

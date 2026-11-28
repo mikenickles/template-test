@@ -1,33 +1,32 @@
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import Assistant from './Assistant';
 import { popBack } from './back';
 import type { AppData } from './data';
-import { ICalendar, IFood, IFridge, IHome, ITasks, IWave } from './icons';
-import { NavCtx, TABS, type FoodView, type Nav } from './nav';
+import { IWave } from './icons';
+import Menu from './Menu';
+import { NavCtx, TABS, type Nav } from './nav';
 import Calendar from './screens/Calendar';
-import Food from './screens/Food';
+import { GroceriesScreen, MealsScreen } from './screens/Food';
 import Home from './screens/Home';
+import Settings from './screens/Settings';
 import Stock from './screens/Stock';
 import Tasks from './screens/Tasks';
 import { useStore } from './store';
-import { ease, spring, tap } from './ui';
-import type { Tab } from './voice';
-
-const TAB_META: { id: Tab; label: string; Icon: typeof IHome }[] = [
-  { id: 'home', label: 'Home', Icon: IHome },
-  { id: 'stock', label: 'Stock', Icon: IFridge },
-  { id: 'calendar', label: 'Calendar', Icon: ICalendar },
-  { id: 'tasks', label: 'Tasks', Icon: ITasks },
-  { id: 'food', label: 'Food', Icon: IFood }
-];
+import { ease, setHaptics, spring, tap } from './ui';
+import { setPersonNames, type Tab } from './voice';
 
 export default function App() {
-  const { act } = useStore();
+  const { act, data } = useStore();
+  const settings = data.settings;
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Settings that live outside React: assistant names and vibration.
+  useEffect(() => { setPersonNames(settings.names); }, [settings.names]);
+  useEffect(() => { setHaptics(settings.haptics); }, [settings.haptics]);
   const [tab, setTab] = useState<Tab>('home');
-  const [food, setFood] = useState<FoodView>('meals');
   const [dir, setDir] = useState(0);
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [listening, setListening] = useState(false);
@@ -36,9 +35,8 @@ export default function App() {
   const tabRef = useRef(tab);
   tabRef.current = tab;
 
-  const go = useCallback((t: Tab, f?: FoodView) => {
+  const go = useCallback((t: Tab) => {
     setDir(Math.sign(TABS.indexOf(t) - TABS.indexOf(tabRef.current)));
-    if (f) setFood(f);
     setTab(t);
   }, []);
 
@@ -48,7 +46,7 @@ export default function App() {
     toastTimer.current = window.setTimeout(() => setToast(null), 3800);
   }, []);
 
-  const nav = useMemo<Nav>(() => ({ tab, food, go, setFood, toast: showToast, openVoice: () => setVoiceOpen(true) }), [tab, food, go, showToast]);
+  const nav = useMemo<Nav>(() => ({ tab, go, toast: showToast, openVoice: () => setVoiceOpen(true), openMenu: () => { setVoiceOpen(false); setMenuOpen(true); } }), [tab, go, showToast]);
 
   // Android hardware back: close the top sheet, else go Home, else leave the app.
   useEffect(() => {
@@ -61,11 +59,16 @@ export default function App() {
     return () => { h.then((x) => x.remove()); };
   }, [go]);
 
-  const screen = tab === 'home' ? <Home /> : tab === 'stock' ? <Stock /> : tab === 'calendar' ? <Calendar /> : tab === 'tasks' ? <Tasks /> : <Food />;
+  const screens: Record<Tab, React.ReactElement> = {
+    home: <Home />, stock: <Stock />, calendar: <Calendar />, tasks: <Tasks />,
+    groceries: <GroceriesScreen />, meals: <MealsScreen />, settings: <Settings />
+  };
+  const screen = screens[tab];
 
   return (
     <NavCtx.Provider value={nav}>
-      <div className="app" data-testid="app" data-tab={tab}>
+      <MotionConfig reducedMotion={settings.reduceMotion ? 'always' : 'user'}>
+      <div className={'app' + (settings.reduceMotion ? ' calm' : '')} data-testid="app" data-tab={tab}>
         <div className="blobs" aria-hidden><div className="blob b1" /><div className="blob b2" /><div className="blob b3" /></div>
 
         <AnimatePresence mode="popLayout" initial={false} custom={dir}>
@@ -82,7 +85,7 @@ export default function App() {
 
         <Assistant open={voiceOpen} onClose={() => setVoiceOpen(false)} onListening={setListening} />
 
-        {/* Live voice button — always visible above the tab bar */}
+        {/* Live voice button — always visible at the bottom of every screen */}
         <div className="voice-wrap">
           <AnimatePresence>
             {listening && [0, 1].map((i) => (
@@ -99,23 +102,7 @@ export default function App() {
           </motion.button>
         </div>
 
-        <nav className="tabbar" aria-label="Main">
-          {TAB_META.map(({ id, label, Icon }) => {
-            const on = tab === id;
-            return (
-              <button key={id} className={'tab' + (on ? ' on' : '')} aria-current={on ? 'page' : undefined} data-testid={'tab-' + id}
-                onClick={() => { if (!on) { tap(); go(id); } }}>
-                <span className="tab-pill">
-                  {on && <motion.span layoutId="tab-pill" className="tab-pill-bg" transition={spring} />}
-                  <motion.span key={on ? 'on' : 'off'} style={{ position: 'relative', display: 'flex' }} initial={on ? { scale: 0.7, y: 2 } : false} animate={{ scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 15 }}>
-                    <Icon size={22} color={on ? '#4F5BD5' : '#66656D'} />
-                  </motion.span>
-                </span>
-                {label}
-              </button>
-            );
-          })}
-        </nav>
+        <Menu open={menuOpen} onClose={() => setMenuOpen(false)} />
 
         <div id="overlay-root" className="overlay-root" />
 
@@ -129,6 +116,7 @@ export default function App() {
           )}
         </AnimatePresence>
       </div>
+      </MotionConfig>
     </NavCtx.Provider>
   );
 }

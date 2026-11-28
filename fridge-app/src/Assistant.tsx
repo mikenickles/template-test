@@ -1,18 +1,17 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { useBackHandler } from './back';
-import { PEOPLE, STORES, WHERE_LABEL, type Task } from './data';
+import { peopleFor, STORES, WHERE_LABEL, type Task } from './data';
 import { dateKey, fmtTime, fromKey, relativeLabel, today } from './dates';
 import { IBag, ICalendar, ICheck, IFood, IFridge, IHome, IMic, ISend, ITasks } from './icons';
 import { useNav } from './nav';
 import { useStore, type Actions } from './store';
 import { ease, spring, tap } from './ui';
-import { parseCommand, speechSupported, startListening, type Command, type Listener, type Tab } from './voice';
+import { parseCommand, personIn, speechSupported, startListening, type Command, type Listener, type Tab } from './voice';
 import type { AppData } from './data';
-import type { FoodView } from './nav';
 
 type Phase = 'listening' | 'idle' | 'done' | 'error';
-interface Result { ok: boolean; area: string; text: string; tab?: Tab; food?: FoodView; auto?: boolean; }
+interface Result { ok: boolean; area: string; text: string; tab?: Tab; auto?: boolean; }
 
 const EXAMPLES = [
   'Add milk and eggs to the shopping list',
@@ -26,9 +25,10 @@ const EXAMPLES = [
 const STOP = new Set(['the', 'a', 'an', 'my', 'our', 'task', 'chore', 'kid', "kid's", 'kids', 'dad', "dad's", 'mom', "mom's", 'family', 'for', 'to', 'of', 'as', 'done']);
 const words = (s: string) => s.toLowerCase().replace(/[^a-z' ]/g, ' ').split(/\s+/).filter((w) => w && !STOP.has(w)).map((w) => w.replace(/'s$/, '').replace(/(ing|es|s)$/, ''));
 
-function findTask(tasks: Task[], query: string): Task | null {
-  const q = words(query);
-  const who = /\bdad\b/i.test(query) ? 'D' : /\bmom\b/i.test(query) ? 'M' : /\bkid/i.test(query) ? 'K' : null;
+function findTask(tasks: Task[], query: string, names: string[]): Task | null {
+  const nameSet = new Set(names.flatMap((n) => words(n)));
+  const q = words(query).filter((w) => !nameSet.has(w));
+  const who = personIn(query);
   let best: Task | null = null, score = 0;
   for (const t of tasks) {
     if (who && t.who !== who) continue;
@@ -41,18 +41,20 @@ function findTask(tasks: Task[], query: string): Task | null {
 
 export function runCommands(cmds: Command[], data: AppData, act: Actions): Result[] {
   const out: Result[] = [];
+  const people = peopleFor(data.settings);
+  const home = data.settings.defaultStore;
   for (const c of cmds) {
     switch (c.kind) {
       case 'grocery': {
-        const store = c.store || 'safeway';
+        const store = c.store || home;
         c.items.forEach((i) => act.groceryAdd(i.name, i.qty, store));
-        out.push({ ok: true, area: 'Groceries', text: c.items.map((i) => i.name).join(', ') + ' · ' + STORES[store].name, tab: 'food', food: 'groceries' });
+        out.push({ ok: true, area: 'Groceries', text: c.items.map((i) => i.name).join(', ') + ' · ' + STORES[store].name, tab: 'groceries' });
         break;
       }
       case 'out': {
         const marked: string[] = [];
-        c.items.forEach((i) => { if (!c.partial && act.stockOut(i.name)) marked.push(i.name); act.groceryAdd(i.name, i.qty, 'safeway'); });
-        out.push({ ok: true, area: 'Groceries', text: 'Added ' + c.items.map((i) => i.name).join(', '), tab: 'food', food: 'groceries' });
+        c.items.forEach((i) => { if (!c.partial && act.stockOut(i.name)) marked.push(i.name); act.groceryAdd(i.name, i.qty, home); });
+        out.push({ ok: true, area: 'Groceries', text: 'Added ' + c.items.map((i) => i.name).join(', '), tab: 'groceries' });
         if (marked.length) out.push({ ok: true, area: 'Stock', text: marked.join(', ') + ' marked as out', tab: 'stock' });
         break;
       }
@@ -63,11 +65,11 @@ export function runCommands(cmds: Command[], data: AppData, act: Actions): Resul
       }
       case 'task': {
         act.taskAdd(c.who, c.title, c.due);
-        out.push({ ok: true, area: 'Tasks', text: PEOPLE[c.who].name + ': ' + c.title + ' · ' + c.due, tab: 'tasks' });
+        out.push({ ok: true, area: 'Tasks', text: people[c.who].name + ': ' + c.title + ' · ' + c.due, tab: 'tasks' });
         break;
       }
       case 'done': {
-        const t = findTask(data.tasks, c.query);
+        const t = findTask(data.tasks, c.query, Object.values(data.settings.names));
         if (t) { act.taskSetDone(t.id, true); out.push({ ok: true, area: 'Tasks', text: t.title + ' marked done', tab: 'tasks' }); }
         else out.push({ ok: false, area: 'Tasks', text: 'I couldn’t find a task like “' + c.query + '”', tab: 'tasks' });
         break;
@@ -79,17 +81,17 @@ export function runCommands(cmds: Command[], data: AppData, act: Actions): Resul
       }
       case 'plan': {
         act.planSet(c.date, c.meal);
-        out.push({ ok: true, area: 'Meals', text: c.meal + ' for dinner ' + (c.date === dateKey(today()) ? 'tonight' : relativeLabel(fromKey(c.date))), tab: 'food', food: 'meals' });
+        out.push({ ok: true, area: 'Meals', text: c.meal + ' for dinner ' + (c.date === dateKey(today()) ? 'tonight' : relativeLabel(fromKey(c.date))), tab: 'meals' });
         break;
       }
       case 'dinner': {
         const m = data.plan[dateKey(today())];
-        out.push({ ok: true, area: 'Meals', text: m ? 'Tonight is ' + m : 'Nothing planned tonight. Here are ideas.', tab: 'food', food: 'meals', auto: true });
+        out.push({ ok: true, area: 'Meals', text: m ? 'Tonight is ' + m : 'Nothing planned tonight. Here are ideas.', tab: 'meals', auto: true });
         break;
       }
       case 'nav': {
-        const names: Record<Tab, string> = { home: 'Home', stock: 'Stock', calendar: 'Calendar', tasks: 'Tasks', food: c.food === 'groceries' ? 'Groceries' : 'Meals' };
-        out.push({ ok: true, area: 'Open', text: names[c.tab], tab: c.tab, food: c.food, auto: true });
+        const names: Record<Tab, string> = { home: 'Home', stock: 'Stock', calendar: 'Calendar', tasks: 'Tasks', groceries: 'Groceries', meals: 'Meals', settings: 'Settings' };
+        out.push({ ok: true, area: 'Open', text: names[c.tab], tab: c.tab, auto: true });
         break;
       }
       default:
@@ -127,7 +129,7 @@ export default function Assistant({ open, onClose, onListening }: { open: boolea
     tap('medium');
     const only = res.length === 1 ? res[0] : null;
     if (only && only.auto && only.tab) {
-      window.setTimeout(() => { nav.go(only.tab!, only.food); onClose(); }, 700);
+      window.setTimeout(() => { nav.go(only.tab!); onClose(); }, 700);
     }
   };
 
@@ -201,7 +203,7 @@ export default function Assistant({ open, onClose, onListening }: { open: boolea
                     const Icon = AREA_ICON[r.area] || ICheck;
                     return (
                       <motion.button key={i} variants={{ h: { opacity: 0, y: 10, scale: 0.96 }, s: { opacity: 1, y: 0, scale: 1 } }} transition={spring} whileTap={{ scale: 0.98 }}
-                        onClick={() => { if (r.tab) { nav.go(r.tab, r.food); onClose(); } }} data-testid="result"
+                        onClick={() => { if (r.tab) { nav.go(r.tab); onClose(); } }} data-testid="result"
                         style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 14, background: r.ok ? 'rgba(46,52,92,0.05)' : '#FFF3DE', textAlign: 'left' }}>
                         <span style={{ width: 32, height: 32, borderRadius: 16, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: r.ok ? '#ECEEFB' : '#FFE6BF' }}>
                           <Icon size={16} color={r.ok ? '#3D47B8' : '#8A5200'} />

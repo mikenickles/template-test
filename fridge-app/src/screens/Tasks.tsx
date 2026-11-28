@@ -1,12 +1,14 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState } from 'react';
-import { PEOPLE, PERSON_IDS, type PersonId } from '../data';
+import { PERSON_IDS, type PersonId } from '../data';
 import { IClose, IPlus } from '../icons';
-import { useStore } from '../store';
+import { MenuButton } from '../Menu';
+import { usePeople, useStore } from '../store';
 import { Check, Press, ease, spring, tap } from '../ui';
 
 export default function Tasks() {
   const { data, act } = useStore();
+  const PEOPLE = usePeople();
   const [who, setWho] = useState<PersonId>('K');
   const [hideDone, setHideDone] = useState(false);
   const [draft, setDraft] = useState('');
@@ -28,9 +30,12 @@ export default function Tasks() {
   return (
     <div className="screen">
       <header className="screen-head">
-        <div className="col" style={{ gap: 2 }}>
+        <div className="head-row" style={{ gap: 12 }}>
+          <MenuButton />
+          <div className="col grow" style={{ gap: 2 }}>
           <span className="kicker" data-testid="tasks-summary">{allDone} of {data.tasks.length} done across the family</span>
           <h1 className="title">Tasks</h1>
+          </div>
         </div>
         <div role="tablist" aria-label="Family member" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
           {PERSON_IDS.map((k) => {

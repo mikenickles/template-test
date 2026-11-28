@@ -2,40 +2,33 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
 import { inStock, RECIPES, STORE_IDS, STORES, type Recipe, type StoreId } from '../data';
 import { addDays, dateKey, DOW_SHORT, today } from '../dates';
-import { IBag, IClose, IFood, ISpark } from '../icons';
+import { IClose, ISpark } from '../icons';
+import { TitleBar } from '../Menu';
 import { useNav } from '../nav';
 import { useStore } from '../store';
-import { Check, FabPlus, Field, Press, Segmented, Sheet, ease, spring, tap, useTimeout } from '../ui';
+import { Check, FabPlus, Field, Press, Sheet, ease, spring, tap, useTimeout } from '../ui';
 
-export default function Food() {
-  const nav = useNav();
-  const { data } = useStore();
-  const toBuy = data.groceries.filter((g) => !g.got).length;
-  const dir = nav.food === 'groceries' ? 1 : -1;
+export function MealsScreen() {
   return (
     <div className="screen">
       <header className="screen-head" style={{ paddingBottom: 8 }}>
-        <div className="head-row">
-          <div className="col" style={{ gap: 2, minWidth: 0 }}>
-            <span className="kicker">{nav.food === 'meals' ? 'Dinner ideas from what you have' : toBuy + ' items to pick up'}</span>
-            <h1 className="title">Food</h1>
-          </div>
-        </div>
-        <Segmented label="Food sections" value={nav.food} onChange={nav.setFood} testId="food-tabs"
-          options={[
-            { value: 'meals', label: <><IFood size={16} />Meals</> },
-            { value: 'groceries', label: <><IBag size={16} />Groceries</>, count: toBuy }
-          ]} />
+        <TitleBar kicker={<span className="kicker">Dinner ideas from what you have</span>} title="Meals" />
       </header>
-      <div style={{ position: 'relative', flex: '1 1 auto', minHeight: 0 }}>
-        <AnimatePresence mode="popLayout" initial={false} custom={dir}>
-          <motion.div key={nav.food} custom={dir} style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}
-            variants={{ enter: (d: number) => ({ opacity: 0, x: 50 * d }), center: { opacity: 1, x: 0 }, exit: (d: number) => ({ opacity: 0, x: -50 * d }) }}
-            initial="enter" animate="center" exit="exit" transition={{ duration: 0.38, ease }}>
-            {nav.food === 'meals' ? <Meals /> : <Groceries />}
-          </motion.div>
-        </AnimatePresence>
-      </div>
+      <Meals />
+    </div>
+  );
+}
+
+export function GroceriesScreen() {
+  const { data } = useStore();
+  const toBuy = data.groceries.filter((g) => !g.got);
+  const stores = new Set(toBuy.map((g) => g.store)).size;
+  return (
+    <div className="screen">
+      <header className="screen-head" style={{ paddingBottom: 8 }}>
+        <TitleBar kicker={<span className="kicker" data-testid="groceries-summary">{toBuy.length} items · {stores} {stores === 1 ? 'store' : 'stores'}</span>} title="Groceries" />
+      </header>
+      <Groceries />
     </div>
   );
 }
@@ -85,7 +78,7 @@ function Meals() {
   };
   const addNeeds = (need: string[]) => {
     const before = act.snapshot();
-    need.forEach((n) => act.groceryAdd(n, '1', 'safeway'));
+    need.forEach((n) => act.groceryAdd(n, '1', data.settings.defaultStore));
     tap('medium');
     nav.toast('Added ' + need.length + ' to Groceries', before);
   };
@@ -194,7 +187,7 @@ function Groceries() {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
   const [qty, setQty] = useState('');
-  const [store, setStore] = useState<StoreId>('safeway');
+  const [store, setStore] = useState<StoreId>(data.settings.defaultStore);
   const checked = data.groceries.filter((g) => g.got).length;
   const stores = STORE_IDS.filter((k) => filter === 'all' || k === filter);
 
@@ -277,7 +270,7 @@ function Groceries() {
         </div>
       </main>
 
-      <FabPlus open={adding} onClick={() => { setStore(filter === 'all' ? 'safeway' : filter); setAdding(!adding); }} label="Add item" testId="grocery-add" />
+      <FabPlus open={adding} onClick={() => { setStore(filter === 'all' ? data.settings.defaultStore : filter); setAdding(!adding); }} label="Add item" testId="grocery-add" />
       <Sheet open={adding} onClose={() => setAdding(false)} label="Add grocery item" testId="grocery-sheet">
         <form onSubmit={submit} className="col" style={{ gap: 12 }}>
           <h2 className="sheet-title">Add to groceries</h2>

@@ -7,7 +7,7 @@ import type { PersonId, StoreId, Where } from './data';
    Command parsing — turns a spoken sentence into app actions.
    ============================================================ */
 
-export type Tab = 'home' | 'stock' | 'calendar' | 'tasks' | 'food';
+export type Tab = 'home' | 'stock' | 'calendar' | 'tasks' | 'groceries' | 'meals' | 'settings';
 export type Command =
   | { kind: 'grocery'; items: { name: string; qty: string }[]; store: StoreId | null }
   | { kind: 'out'; items: { name: string; qty: string }[]; partial: boolean }
@@ -16,7 +16,7 @@ export type Command =
   | { kind: 'done'; query: string }
   | { kind: 'event'; title: string; date: string; start: string; end: string; who: PersonId }
   | { kind: 'plan'; meal: string; date: string }
-  | { kind: 'nav'; tab: Tab; food?: 'meals' | 'groceries' }
+  | { kind: 'nav'; tab: Tab }
   | { kind: 'dinner' }
   | { kind: 'unknown'; text: string };
 
@@ -27,7 +27,21 @@ const VERB_START = '(?:add|put|remind|schedule|book|create|plan|we|we\'re|i|i\'v
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const clean = (s: string) => s.replace(/\s+/g, ' ').replace(/^[\s,]+|[\s,.!?]+$/g, '').trim();
 
-function personIn(s: string): PersonId | null {
+/** The family's own names (from Settings), so "remind Ava to…" works. */
+let customNames: Partial<Record<PersonId, string>> = {};
+export function setPersonNames(names: Partial<Record<PersonId, string>>) { customNames = names; }
+const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const nameWords = () => Object.values(customNames).map((n) => (n || '').trim().toLowerCase()).filter((n) => n.length > 1).map(esc);
+/** Regex alternation for any way of naming a family member. */
+function who(): string {
+  return ['dad', 'daddy', 'mom', 'mommy', 'mum', 'the kids?', 'kids?', 'son', 'daughter', 'the family', 'family', 'everyone', 'us', ...nameWords()].join('|');
+}
+
+export function personIn(s: string): PersonId | null {
+  for (const k of ['D', 'M', 'K', 'F'] as PersonId[]) {
+    const n = (customNames[k] || '').trim();
+    if (n.length > 1 && new RegExp('\\b' + esc(n) + "(?:'s)?\\b", 'i').test(s)) return k;
+  }
   if (/\b(dad|daddy|father)\b/i.test(s)) return 'D';
   if (/\b(mom|mommy|mum|mother)\b/i.test(s)) return 'M';
   if (/\b(the kid|kid|kids|son|daughter)\b/i.test(s)) return 'K';
@@ -131,16 +145,17 @@ export function parseClause(raw: string): Command {
     if (/stock|fridge|freezer|pantry/.test(w)) return { kind: 'nav', tab: 'stock' };
     if (/calendar|schedule/.test(w)) return { kind: 'nav', tab: 'calendar' };
     if (/task|to-?do|chore/.test(w)) return { kind: 'nav', tab: 'tasks' };
-    if (/grocer|shopping|list/.test(w)) return { kind: 'nav', tab: 'food', food: 'groceries' };
-    return { kind: 'nav', tab: 'food', food: 'meals' };
+    if (/grocer|shopping|list/.test(w)) return { kind: 'nav', tab: 'groceries' };
+    return { kind: 'nav', tab: 'meals' };
   }
+  if (/^(?:open|show(?: me)?|go to)\s+(?:the\s+|my\s+)?(?:settings|preferences|options)\b|^settings$/.test(lower)) return { kind: 'nav', tab: 'settings' };
   if (/what(?:'s| is| are we having)? for dinner|what are we (?:having|eating)/.test(lower)) return { kind: 'dinner' };
-  if (/what can (?:we|i) (?:make|cook|have)|dinner ideas|meal ideas|ideas for dinner/.test(lower)) return { kind: 'nav', tab: 'food', food: 'meals' };
+  if (/what can (?:we|i) (?:make|cook|have)|dinner ideas|meal ideas|ideas for dinner/.test(lower)) return { kind: 'nav', tab: 'meals' };
 
   // Mark a task done
   m = s.match(/^(?:mark|check off|tick off|finish(?:ed)?|complete(?:d)?)\s+(.+?)(?:\s+as)?(?:\s+(?:done|complete|completed|finished))?$/i);
   if (m && !/\blist\b/i.test(s)) return { kind: 'done', query: clean(m[1].replace(/^(the|my|our)\s+/i, '')) };
-  m = s.match(/^(?:i|we|dad|mom|the kid|kid)\s+(?:just\s+)?(?:finished|did|completed)\s+(.+)$/i);
+  m = s.match(new RegExp('^(?:i|we|' + who() + ')\\s+(?:just\\s+)?(?:finished|did|completed)\\s+(.+)$', 'i'));
   if (m) return { kind: 'done', query: clean(m[1].replace(/^(the|my|our)\s+/i, '')) };
 
   // Out of / running low
@@ -148,7 +163,7 @@ export function parseClause(raw: string): Command {
   if (m) return { kind: 'out', items: splitItems(m[2]).map(({ name, qty }) => ({ name, qty })), partial: !/^(out of|all out of)$/i.test(m[1]) };
 
   // Bought / put away
-  m = s.match(/^(?:i|we|dad|mom)\s+(?:just\s+)?(?:bought|got|picked up|put|added|stocked up on)\s+(.+?)(?:\s+(?:in|into|to)\s+the\s+(fridge|freezer|pantry))?$/i);
+  m = s.match(new RegExp('^(?:i|we|' + who() + ')\\s+(?:just\\s+)?(?:bought|got|picked up|put|added|stocked up on)\\s+(.+?)(?:\\s+(?:in|into|to)\\s+the\\s+(fridge|freezer|pantry))?$', 'i'));
   if (m) return { kind: 'stock', items: splitItems(m[1]).map(({ name, n }) => ({ name, qty: n })), where: (m[2]?.toLowerCase() as Where) || null };
   m = s.match(/^(?:add|put)\s+(.+?)\s+(?:to|in|into)\s+(?:the\s+)?(fridge|freezer|pantry|stock)$/i);
   if (m) return { kind: 'stock', items: splitItems(m[1]).map(({ name, n }) => ({ name, qty: n })), where: m[2].toLowerCase() === 'stock' ? null : (m[2].toLowerCase() as Where) };
@@ -163,18 +178,18 @@ export function parseClause(raw: string): Command {
   if (m) return { kind: 'plan', meal: cap(clean(m[1])), date: (m[2] && extractDate(m[2]).date) || dateKey(today()) };
 
   // Tasks
-  m = s.match(/^remind\s+(me|dad|mom|the kid|kid|the kids|everyone|us|the family)\s+to\s+(.+)$/i);
+  m = s.match(new RegExp('^remind\\s+(me|' + who() + ')\\s+to\\s+(.+)$', 'i'));
   if (m) {
     const who = (m[1].toLowerCase() === 'me' ? null : personIn(m[1])) || 'F';
     const { due, rest } = dueLabel(m[2]);
     return { kind: 'task', who, title: cap(clean(rest)), due };
   }
-  m = s.match(/^(?:add|create|make|new)\s+(?:a\s+)?(?:task|to-?do|chore)(?:\s+for\s+(dad|mom|the kid|kid|the family|family|everyone))?(?:\s+to|:)?\s+(.+)$/i);
+  m = s.match(new RegExp('^(?:add|create|make|new)\\s+(?:a\\s+)?(?:task|to-?do|chore)(?:\\s+for\\s+(' + who() + '))?(?:\\s+to|:)?\\s+(.+)$', 'i'));
   if (m) {
     const { due, rest } = dueLabel(m[2]);
-    return { kind: 'task', who: (m[1] && personIn(m[1])) || personIn(rest) || 'F', title: cap(clean(rest.replace(/\s+for\s+(dad|mom|the kid|kid|the family|family|everyone)\b/i, ''))), due };
+    return { kind: 'task', who: (m[1] && personIn(m[1])) || personIn(rest) || 'F', title: cap(clean(rest.replace(new RegExp('\\s+for\\s+(' + who() + ')\\b', 'i'), ''))), due };
   }
-  m = s.match(/^(?:add|put)\s+(.+?)\s+(?:for|on)\s+(dad|mom|the kid|kid|the kids|the family|family|everyone)(?:'s\s+(?:list|tasks))?(?:\s+(.*))?$/i);
+  m = s.match(new RegExp('^(?:add|put)\\s+(.+?)\\s+(?:for|on)\\s+(' + who() + ")(?:'s\\s+(?:list|tasks))?(?:\\s+(.*))?$", 'i'));
   if (m && !/\b(shopping|grocery|groceries)\b/i.test(s) && !extractTime(s).time) {
     const { due } = dueLabel(m[3] || '');
     return { kind: 'task', who: personIn(m[2]) || 'F', title: cap(clean(m[1])), due };
@@ -187,14 +202,14 @@ export function parseClause(raw: string): Command {
     const start = t.time || '12:00';
     const [h, mi] = start.split(':').map(Number);
     const end = String(Math.min(23, h + 1)).padStart(2, '0') + ':' + String(mi).padStart(2, '0');
-    const who = personIn(d.rest) || 'F';
+    const person = personIn(d.rest) || 'F';
     const title = clean(d.rest
       .replace(/^(?:put|schedule|book|add|plan|set up|make|we have|there's|there is|i have)\s+/i, '')
       .replace(/\b(?:on|to|in)\s+(?:the|our|my)\s+calendar\b/gi, ' ')
-      .replace(/\bfor\s+(?:dad|mom|the kid|kid|the kids|the family|family|everyone|us)\b/gi, ' ')
+      .replace(new RegExp('\\bfor\\s+(?:' + who() + ')\\b', 'gi'), ' ')
       .replace(/\b(?:on|at|for)\s*$/i, ' ')
       .replace(/^(?:a|an|the)\s+/i, ''));
-    return { kind: 'event', title: cap(title || 'New event'), date: d.date || dateKey(today()), start, end, who };
+    return { kind: 'event', title: cap(title || 'New event'), date: d.date || dateKey(today()), start, end, who: person };
   }
 
   // Groceries

@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion';
 import { useMemo } from 'react';
-import { eventsOn, PEOPLE, WHERE_LABEL, type Where } from '../data';
+import { eventsOn, WHERE_LABEL, type Where } from '../data';
 import { addDays, dateKey, DOW_LONG, fmtTime, greeting, MONTHS, minutesNow, toMinutes, today } from '../dates';
 import { IChevR, ICheck, ISpark } from '../icons';
+import { TitleBar } from '../Menu';
 import { useNav } from '../nav';
-import { useStore } from '../store';
+import { usePeople, useStore } from '../store';
 import { Count, ease, riseItem, stagger, useNow } from '../ui';
 import { useWeather } from '../weather';
 
@@ -24,9 +25,10 @@ export function themeFor(h: number) {
 
 export default function Home() {
   const { data } = useStore();
+  const PEOPLE = usePeople();
   const nav = useNav();
   const now = useNow();
-  const { weather } = useWeather();
+  const { weather } = useWeather(data.settings.weather, data.settings.units);
   const T = themeFor(now.getHours());
   const t = today();
   const tKey = dateKey(t);
@@ -61,10 +63,7 @@ export default function Home() {
   return (
     <div className="screen">
       <header className="screen-head">
-        <div className="col" style={{ gap: 2 }}>
-          <span className="kicker">{DOW_LONG[t.getDay()]}, {MONTHS[t.getMonth()]} {t.getDate()}</span>
-          <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.03em' }}>Home</h1>
-        </div>
+        <TitleBar kicker={<span className="kicker">{DOW_LONG[t.getDay()]}, {MONTHS[t.getMonth()]} {t.getDate()}</span>} title="Home" size={22} />
       </header>
       <motion.main className="scroll noscroll" variants={stagger} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* Hero */}
@@ -156,7 +155,7 @@ export default function Home() {
         </motion.button>
 
         {/* Dinner */}
-        <motion.button variants={riseItem} className="card" onClick={() => nav.go('food', 'meals')} aria-label="Open Meals" data-testid="home-dinner" style={{ textAlign: 'left', position: 'relative', overflow: 'hidden', minHeight: 140, display: 'flex', flexShrink: 0 }} whileTap={{ scale: 0.98 }}>
+        <motion.button variants={riseItem} className="card" onClick={() => nav.go('meals')} aria-label="Open Meals" data-testid="home-dinner" style={{ textAlign: 'left', position: 'relative', overflow: 'hidden', minHeight: 140, display: 'flex', flexShrink: 0 }} whileTap={{ scale: 0.98 }}>
           <div className="col grow" style={{ padding: '18px 0 18px 18px', gap: 4 }}>
             <h2 className="h2">Dinner tonight</h2>
             <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1.05, marginTop: 6 }}>{dinner || 'Nothing planned'}</div>
@@ -169,7 +168,7 @@ export default function Home() {
         </motion.button>
 
         {/* Groceries */}
-        <motion.button variants={riseItem} className="card card-pad" onClick={() => nav.go('food', 'groceries')} aria-label="Open Groceries" data-testid="home-groceries" style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 12, flexShrink: 0 }} whileTap={{ scale: 0.98 }}>
+        <motion.button variants={riseItem} className="card card-pad" onClick={() => nav.go('groceries')} aria-label="Open Groceries" data-testid="home-groceries" style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 12, flexShrink: 0 }} whileTap={{ scale: 0.98 }}>
           <div className="row" style={{ justifyContent: 'space-between' }}><h2 className="h2">Groceries</h2><span className="small" style={{ color: '#5E5D66' }}>{storesUsed} {storesUsed === 1 ? 'store' : 'stores'}</span></div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
             <Count value={toBuy.length} style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-0.05em', lineHeight: 1 }} />
@@ -191,6 +190,7 @@ const TILE: Record<Where, { bg: string; ink: string }> = {
 };
 
 function EventList({ list, empty }: { list: ReturnType<typeof eventsOn>; empty: string }) {
+  const PEOPLE = usePeople();
   if (!list.length) return <div className="muted" style={{ fontSize: 14, padding: '4px 2px' }}>{empty}</div>;
   return (
     <div className="col" style={{ gap: 6 }}>

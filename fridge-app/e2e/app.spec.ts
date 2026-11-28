@@ -1,4 +1,4 @@
-import { expect, goTab, say, test, typeRequest } from './fixtures';
+import { expect, goTab, say, test, typeRequest, restart } from './fixtures';
 
 test.describe('Home', () => {
   test('shows live greeting, weather, summary and counts', async ({ app }) => {
@@ -16,33 +16,53 @@ test.describe('Home', () => {
   });
 
   test('each card opens its section', async ({ app }) => {
-    const cards: [string, string, string?][] = [
+    const cards: [string, string][] = [
       ['home-calendar', 'calendar'], ['home-tasks', 'tasks'], ['home-stock', 'stock'],
-      ['home-dinner', 'food', 'Meals'], ['home-groceries', 'food', 'Groceries']
+      ['home-dinner', 'meals'], ['home-groceries', 'groceries']
     ];
-    for (const [card, tab, sub] of cards) {
+    for (const [card, tab] of cards) {
       await goTab(app, 'home');
       await app.getByTestId(card).click();
       await expect(app.getByTestId('app')).toHaveAttribute('data-tab', tab);
-      if (sub) await expect(app.getByRole('tab', { name: new RegExp(sub) })).toHaveAttribute('aria-selected', 'true');
     }
   });
 
   test('hides weather when location is unavailable', async ({ app, context }) => {
     await context.clearPermissions();
     await app.evaluate(() => localStorage.removeItem('family-fridge:weather'));
-    await app.reload();
+    await restart(app);
     await expect(app.getByTestId('greeting')).toBeVisible();
     await expect(app.getByTestId('weather')).toHaveCount(0);
   });
 });
 
-test('tab bar reaches every section and marks the current one', async ({ app }) => {
-  for (const t of ['stock', 'calendar', 'tasks', 'food', 'home'] as const) {
+test('sidebar menu reaches every section, marks the current one, and closes by tapping outside or swiping', async ({ app }) => {
+  for (const t of ['stock', 'calendar', 'tasks', 'groceries', 'meals', 'settings', 'home'] as const) {
     await goTab(app, t);
-    await expect(app.getByTestId('tab-' + t)).toHaveAttribute('aria-current', 'page');
+    await app.getByTestId('menu-button').click();
+    await expect(app.getByTestId('nav-' + t)).toHaveAttribute('aria-current', 'page');
+    await app.getByTestId('menu-scrim').click({ position: { x: 370, y: 400 } });
+    await expect(app.getByTestId('menu')).toHaveCount(0);
   }
-  await expect(app.locator('.tab')).toHaveCount(5);
+  await expect(app.locator('.tabbar')).toHaveCount(0);
+
+  // Settings is the last item, and the counts are live.
+  await app.getByTestId('menu-button').click();
+  const ids = await app.locator('.menu-item').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')));
+  expect(ids).toEqual(['nav-home', 'nav-stock', 'nav-calendar', 'nav-tasks', 'nav-groceries', 'nav-meals', 'nav-settings']);
+  await expect(app.getByTestId('nav-groceries')).toContainText('15');
+  await expect(app.getByTestId('nav-tasks')).toContainText('15');
+  await expect(app.getByTestId('nav-meals')).toContainText('Tonight: Chicken tacos');
+
+  // Swipe the panel left to close it (once it has finished sliding in).
+  await expect.poll(async () => (await app.getByTestId('menu').boundingBox())!.x).toBeGreaterThanOrEqual(-1);
+  const box = (await app.getByTestId('menu').boundingBox())!;
+  await app.mouse.move(box.x + box.width - 40, box.y + 300);
+  await app.mouse.down();
+  await app.mouse.move(box.x + box.width - 140, box.y + 300, { steps: 6 });
+  await app.mouse.move(box.x + 20, box.y + 300, { steps: 4 });
+  await app.mouse.up();
+  await expect(app.getByTestId('menu')).toHaveCount(0);
 });
 
 test.describe('Stock', () => {
@@ -222,7 +242,7 @@ test.describe('Tasks', () => {
 
 test.describe('Food · Meals', () => {
   test('week plan: remove and add dinners', async ({ app }) => {
-    await goTab(app, 'food');
+    await goTab(app, 'meals');
     const tonight = app.getByTestId('plan-day').first();
     await expect(tonight).toHaveAttribute('data-meal', 'Chicken tacos');
     await app.getByRole('button', { name: 'Remove Chicken tacos' }).click();
@@ -240,7 +260,7 @@ test.describe('Food · Meals', () => {
   });
 
   test('filters, missing ingredients go to groceries, and new ideas reshuffle', async ({ app }) => {
-    await goTab(app, 'food');
+    await goTab(app, 'meals');
     await app.getByRole('button', { name: 'Vegetarian' }).click();
     const names = await app.getByTestId('idea').evaluateAll((els) => els.map((e) => e.getAttribute('data-name')));
     expect(names.sort()).toEqual(['Black bean quesadillas', 'Grilled cheese & tomato soup', 'Lemon spinach pasta', 'Spinach & cheddar frittata']);
@@ -250,7 +270,9 @@ test.describe('Food · Meals', () => {
     await pasta.getByTestId('need-btn').click();
     await expect(pasta.getByTestId('need-btn')).toHaveText('On the list');
     await expect(app.getByTestId('toast')).toContainText('Added 1 to Groceries');
-    await expect(app.getByRole('tab', { name: /Groceries/ })).toContainText('16');
+    await app.getByTestId('menu-button').click();
+    await expect(app.getByTestId('nav-groceries')).toContainText('16');
+    await app.getByTestId('menu-scrim').click({ position: { x: 370, y: 400 } });
 
     await app.getByTestId('undo').click();
     await expect(pasta.getByTestId('need-btn')).toHaveText('Add 1 to groceries');
@@ -264,8 +286,7 @@ test.describe('Food · Meals', () => {
 
 test.describe('Food · Groceries', () => {
   test('filter by store, check off, put away into stock, undo', async ({ app }) => {
-    await goTab(app, 'food');
-    await app.getByRole('tab', { name: /Groceries/ }).click();
+    await goTab(app, 'groceries');
     await expect(app.getByTestId('store-card')).toHaveCount(4);
     await app.getByRole('tab', { name: /^Costco/ }).click();
     await expect(app.getByTestId('store-card')).toHaveCount(1);
@@ -295,8 +316,7 @@ test.describe('Food · Groceries', () => {
   });
 
   test('add and remove items', async ({ app }) => {
-    await goTab(app, 'food');
-    await app.getByRole('tab', { name: /Groceries/ }).click();
+    await goTab(app, 'groceries');
     await app.getByTestId('grocery-add').click();
     await app.locator('#g-name').fill('limes');
     await app.locator('#g-qty').fill('6');
@@ -327,8 +347,7 @@ test.describe('Voice assistant', () => {
     await app.getByRole('button', { name: /^Fri, Nov 27,/ }).click();
     await expect(app.getByTestId('agenda')).toContainText('Vet');
 
-    await goTab(app, 'food');
-    await app.getByRole('tab', { name: /Groceries/ }).click();
+    await goTab(app, 'groceries');
     await expect(app.getByRole('region', { name: 'Target' })).toContainText('Paper plates');
   });
 
@@ -363,7 +382,7 @@ test.describe('Voice assistant', () => {
     await app.getByRole('tab', { name: /Pantry/ }).click();
     await expect(app.locator('[data-testid=stock-row][data-name="Coffee"]')).toContainText('Out');
 
-    await goTab(app, 'food');
+    await goTab(app, 'meals');
     await expect(app.getByTestId('plan-day').nth(3)).toHaveAttribute('data-meal', 'Tacos');
   });
 
@@ -375,12 +394,11 @@ test.describe('Voice assistant', () => {
     await app.getByTestId('voice').click();
     await app.getByRole('button', { name: "What's for dinner?" }).click();
     await expect(app.getByTestId('results')).toContainText('Tonight is Chicken tacos');
-    await expect(app.getByTestId('app')).toHaveAttribute('data-tab', 'food');
-    await expect(app.getByRole('tab', { name: /Meals/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(app.getByTestId('app')).toHaveAttribute('data-tab', 'meals');
   });
 
   test('voice button stays on every screen and toggles the panel', async ({ app }) => {
-    for (const t of ['home', 'stock', 'calendar', 'tasks', 'food'] as const) {
+    for (const t of ['home', 'stock', 'calendar', 'tasks', 'groceries', 'meals', 'settings'] as const) {
       await goTab(app, t);
       await expect(app.getByTestId('voice')).toBeVisible();
       await expect(app.getByTestId('voice')).toBeInViewport();
@@ -397,18 +415,18 @@ test('everything is saved and survives a restart', async ({ app }) => {
   await goTab(app, 'tasks');
   await app.locator('#new-task').fill('Walk the dog');
   await app.getByRole('button', { name: 'Add task for Kid' }).click();
-  await goTab(app, 'food');
+  await goTab(app, 'meals');
   await app.getByRole('button', { name: 'Remove Chicken tacos' }).click();
-  await app.reload();
+  await restart(app);
   await goTab(app, 'tasks');
   await expect(app.locator('[data-testid=task-row][data-title="Walk the dog"]')).toBeVisible();
-  await goTab(app, 'food');
+  await goTab(app, 'meals');
   await expect(app.getByTestId('plan-day').first()).toHaveAttribute('data-meal', '');
 });
 
 test('no sideways scrolling on a small phone', async ({ app }) => {
   await app.setViewportSize({ width: 360, height: 740 });
-  for (const t of ['home', 'stock', 'calendar', 'tasks', 'food'] as const) {
+  for (const t of ['home', 'stock', 'calendar', 'tasks', 'groceries', 'meals', 'settings'] as const) {
     await goTab(app, t);
     await app.waitForTimeout(450);
     const over = await app.evaluate(() => {
@@ -424,8 +442,7 @@ test('no sideways scrolling on a small phone', async ({ app }) => {
 });
 
 test('sheets can be swiped down to close', async ({ app }) => {
-  await goTab(app, 'food');
-  await app.getByRole('tab', { name: /Groceries/ }).click();
+  await goTab(app, 'groceries');
   await app.getByTestId('grocery-add').click();
   const sheet = app.getByTestId('grocery-sheet');
   await expect(sheet).toBeVisible();
