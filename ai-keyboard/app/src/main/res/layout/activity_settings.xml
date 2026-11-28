@@ -74,7 +74,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="top"
-            android:hint="I type &quot;teh&quot; instead of &quot;the&quot;\nI forget apostrophes (dont, cant, im)\nI hit 'n' instead of 'm'\nI mix up your / you're\nI double-tap space and get two spaces"
+            android:hint="@string/mistakes_hint"
+            android:textSize="16sp"
             android:inputType="textMultiLine|textCapSentences"
             android:minLines="5" />
 

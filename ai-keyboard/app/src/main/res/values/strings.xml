@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">AI Keyboard</string>
     <string name="subtype_en_us">English (US)</string>
+    <string name="mistakes_hint">I type \"teh\" instead of \"the\"\nI forget apostrophes (dont, cant, im)\nI hit \'n\' instead of \'m\'\nI mix up your / you\'re\nI double-tap space and get two spaces</string>
 </resources>
