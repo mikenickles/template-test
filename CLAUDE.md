@@ -6,6 +6,16 @@
 **Status**: New/empty repository — no application code has been added yet.
 **Remote**: `mikenickles/template-test`
 
+## Family Fridge Android app (`fridge-app/`)
+
+React + TypeScript + Vite + Framer Motion, packaged for Android with Capacitor 8. See `fridge-app/README.md`.
+
+```
+# Build:    cd fridge-app && npm run build
+# Test:     cd fridge-app && npm run build && npm test   (Playwright, phone viewport)
+# APK:      cd fridge-app && npm run android:apk        (needs JDK 21 + Android SDK 36, ANDROID_HOME set)
+```
+
 ## Getting Started
 
 This repository is freshly initialized. When project code is added, update this file with:
