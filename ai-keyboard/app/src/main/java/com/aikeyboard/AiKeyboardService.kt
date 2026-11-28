@@ -161,7 +161,7 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
             }
             is CheckResult.NoChanges -> {
                 pending = null
-                keyboard?.showIdle(if (manual) "Looks good ✓" else "")
+                keyboard?.showIdle(if (manual) "Looks good" else "")
             }
             is CheckResult.Error -> {
                 // Leave any earlier suggestion in place for background checks.
@@ -180,7 +180,7 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
         val now = ic.getTextBeforeCursor(fix.original.length + MAX_TAIL, 0)?.toString().orEmpty()
         val start = now.lastIndexOf(fix.original)
         if (start < 0) {
-            keyboard?.showIdle("Text changed — tap ✨ to check again")
+            keyboard?.showIdle("Text changed — tap the sparkle to check again")
             return
         }
         val tail = now.substring(start + fix.original.length)
@@ -195,7 +195,7 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
         ic.endBatchEdit()
 
         lastChecked = null
-        keyboard?.showIdle(if (prefs.autoApply) "Fixed ✓" else "")
+        keyboard?.showIdle(if (prefs.autoApply) "Fixed" else "")
         updateAutoShift()
     }
 
