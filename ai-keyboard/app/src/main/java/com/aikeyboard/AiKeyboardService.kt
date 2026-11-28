@@ -25,11 +25,24 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
     /** True for password fields and fields that ask keyboards not to learn from them. */
     private var privateField = false
 
+    /** True for password and non-text fields, where even on-phone swaps would be wrong. */
+    private var passwordField = false
+
+    private lateinit var voice: VoiceInput
+
+    /** The last instant swap, so one backspace can undo it. */
+    private data class Swap(val original: String, val replaced: String)
+    private var lastSwap: Swap? = null
+
+    /** Words the user undid in this field; don't swap them again until the field changes. */
+    private val undone = mutableSetOf<String>()
+
     private val autoCheck = Runnable { runCheck(manual = false) }
 
     override fun onCreate() {
         super.onCreate()
         prefs = Prefs(this)
+        voice = VoiceInput(this)
     }
 
     override fun onCreateInputView(): View = KeyboardView(this, this).also { keyboard = it }
@@ -37,6 +50,9 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         privateField = isPrivate(info)
+        passwordField = isPassword(info)
+        lastSwap = null
+        undone.clear()
         cancelCheck()
         lastChecked = null
         keyboard?.showIdle(if (privateField) "AI checking is off for this field" else "")
@@ -45,6 +61,7 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
 
     override fun onFinishInputView(finishingInput: Boolean) {
         cancelCheck()
+        voice.stop()
         super.onFinishInputView(finishingInput)
     }
 
@@ -57,7 +74,9 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
 
     override fun onText(text: String) {
         val ic = currentInputConnection ?: return
-        ic.commitText(text, 1)
+        lastSwap = null
+        val swapped = text.length == 1 && text[0] in DELIMITERS && commitWithSwap(text)
+        if (!swapped) ic.commitText(text, 1)
         val kb = keyboard
         if (kb != null && kb.shift == KeyboardView.Shift.ONCE && text.any { it.isLetter() }) {
             kb.shift = KeyboardView.Shift.OFF
@@ -68,6 +87,11 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
 
     override fun onBackspace() {
         val ic = currentInputConnection ?: return
+        if (undoSwap()) {
+            onUserTyped(null)
+            updateAutoShift()
+            return
+        }
         if (!ic.getSelectedText(0).isNullOrEmpty()) {
             ic.commitText("", 1)
         } else {
@@ -87,9 +111,12 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
         if (!multiLine && !noEnterAction &&
             action != EditorInfo.IME_ACTION_NONE && action != EditorInfo.IME_ACTION_UNSPECIFIED
         ) {
+            lastSwap = null
+            commitWithSwap("") // Fix the last word before sending.
             ic.performEditorAction(action)
         } else {
-            ic.commitText("\n", 1)
+            lastSwap = null
+            if (!commitWithSwap("\n")) ic.commitText("\n", 1)
             onUserTyped('\n')
         }
         updateAutoShift()
@@ -104,6 +131,104 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
         val caps = currentInputConnection?.getCursorCapsMode(info.inputType) ?: 0
         val want = if (caps != 0) KeyboardView.Shift.ONCE else KeyboardView.Shift.OFF
         if (kb.shift != want) kb.shift = want
+    }
+
+    // ---- Instant "always fix" swaps ---------------------------------------------------------
+
+    /**
+     * If the word just before the cursor is one of the user's always-fix typos, replace it and
+     * commit [delimiter] after it. Runs on the phone, so it's instant and works offline.
+     */
+    private fun commitWithSwap(delimiter: String): Boolean {
+        if (passwordField) return false
+        val rules = prefs.learned.replacements
+        if (rules.isEmpty()) return false
+        val ic = currentInputConnection ?: return false
+        val before = ic.getTextBeforeCursor(MAX_WORD, 0)?.toString() ?: return false
+        val word = before.takeLastWhile { it.isLetterOrDigit() || it == '\'' || it == '’' }
+        if (word.isEmpty() || word.length == before.length && before.length == MAX_WORD) return false
+        val key = word.lowercase()
+        if (key in undone) return false
+        val correct = rules[key] ?: return false
+        val fixed = matchCase(word, correct)
+        if (fixed == word) return false
+
+        ic.beginBatchEdit()
+        ic.deleteSurroundingText(word.length, 0)
+        ic.commitText(fixed + delimiter, 1)
+        ic.endBatchEdit()
+        lastSwap = Swap(word, fixed + delimiter)
+        return true
+    }
+
+    /** Backspace right after a swap puts the original word back (and stops swapping it here). */
+    private fun undoSwap(): Boolean {
+        val swap = lastSwap ?: return false
+        lastSwap = null
+        val ic = currentInputConnection ?: return false
+        if (ic.getTextBeforeCursor(swap.replaced.length, 0)?.toString() != swap.replaced) return false
+        ic.beginBatchEdit()
+        ic.deleteSurroundingText(swap.replaced.length, 0)
+        ic.commitText(swap.original, 1)
+        ic.endBatchEdit()
+        undone += swap.original.lowercase()
+        return true
+    }
+
+    /** "Teh" -> "The", "TEH" -> "THE", "teh" -> "the". */
+    private fun matchCase(typed: String, correct: String): String = when {
+        typed.length > 1 && typed.all { !it.isLetter() || it.isUpperCase() } -> correct.uppercase()
+        typed.first().isUpperCase() -> correct.replaceFirstChar { it.uppercaseChar() }
+        else -> correct
+    }
+
+    // ---- Teaching mistakes by voice --------------------------------------------------------
+
+    override fun onMic() {
+        if (voice.isListening) {
+            voice.stop()
+            keyboard?.showIdle()
+            return
+        }
+        if (!voice.hasPermission()) {
+            askMicPermission()
+            return
+        }
+        cancelCheck()
+        keyboard?.showListening("")
+        voice.start(object : VoiceInput.Callback {
+            override fun onPartial(text: String) {
+                keyboard?.showListening(text)
+            }
+
+            override fun onFinal(text: String) = learn(text)
+
+            override fun onError(message: String, needsPermission: Boolean) {
+                keyboard?.showIdle(message)
+                if (needsPermission) askMicPermission()
+            }
+        })
+    }
+
+    private fun learn(spoken: String) {
+        keyboard?.showLearning()
+        executor.execute {
+            val result = corrector.learn(spoken, prefs)
+            // Save on the worker thread so a second request always builds on this one.
+            if (result is LearnResult.Learned) prefs.learned = result.rules
+            main.post {
+                when (result) {
+                    is LearnResult.Learned -> keyboard?.showMessage(result.reply)
+                    is LearnResult.Error -> keyboard?.showIdle(result.message)
+                }
+            }
+        }
+    }
+
+    private fun askMicPermission() {
+        startActivity(
+            Intent(this, MicPermissionActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
     }
 
     // ---- AI checking -----------------------------------------------------------------------
@@ -216,6 +341,16 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
         pending = null
     }
 
+    private fun isPassword(info: EditorInfo): Boolean {
+        val type = info.inputType
+        val cls = type and InputType.TYPE_MASK_CLASS
+        val variation = type and InputType.TYPE_MASK_VARIATION
+        return cls != InputType.TYPE_CLASS_TEXT ||
+            variation == InputType.TYPE_TEXT_VARIATION_PASSWORD ||
+            variation == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD ||
+            variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
+    }
+
     private fun isPrivate(info: EditorInfo): Boolean {
         val type = info.inputType
         val cls = type and InputType.TYPE_MASK_CLASS
@@ -246,5 +381,9 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
         private const val MAX_CHARS = 1500
         /** How much the user may type after a check before we give up applying it. */
         private const val MAX_TAIL = 500
+        /** Longest word we look at for instant swaps. */
+        private const val MAX_WORD = 48
+        /** Typing one of these ends a word and triggers an instant swap. */
+        private val DELIMITERS = setOf(' ', ',', '.', '!', '?', ';', ':')
     }
 }

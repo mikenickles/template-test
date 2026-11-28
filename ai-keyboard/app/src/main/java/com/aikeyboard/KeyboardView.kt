@@ -46,6 +46,7 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
         fun onDismissSuggestion()
         fun onCheckNow()
         fun onOpenSettings()
+        fun onMic()
     }
 
     enum class Shift { OFF, ONCE, LOCKED }
@@ -62,6 +63,7 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
     private val fixButton = TextView(context)
     private val dismissButton = ImageView(context)
     private val sparkle = ImageView(context)
+    private lateinit var mic: ImageView
     private var pulse: ObjectAnimator? = null
     private val repeatHandler = Handler(Looper.getMainLooper())
 
@@ -104,6 +106,8 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
             iconButton(R.drawable.ic_settings, "Settings", mutedColor) { listener.onOpenSettings() },
             LayoutParams(dp(44), dp(40))
         )
+        mic = iconButton(R.drawable.ic_mic, "Teach a mistake by voice", mutedColor) { listener.onMic() }
+        bar.addView(mic, LayoutParams(dp(40), dp(40)))
 
         statusText.apply {
             setTextColor(mutedColor)
@@ -162,7 +166,33 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
 
     fun showChecking() {
         showIdle()
-        pulse = ObjectAnimator.ofFloat(sparkle, View.ALPHA, 1f, 0.25f).apply {
+        startPulse(sparkle)
+    }
+
+    /** A message that should stand out more than [showIdle]'s, e.g. confirming a learned rule. */
+    fun showMessage(message: String) {
+        showIdle(message)
+        statusText.setTextColor(textColor)
+    }
+
+    /** Mic is listening; [partial] is what has been heard so far. */
+    fun showListening(partial: String) {
+        showIdle(partial.ifBlank { "Listening… say a mistake you make" })
+        if (partial.isNotBlank()) statusText.setTextColor(textColor)
+        mic.imageTintList = ColorStateList.valueOf(textColor)
+        startPulse(mic)
+    }
+
+    fun showLearning() {
+        showIdle("Learning…")
+        mic.imageTintList = ColorStateList.valueOf(textColor)
+        startPulse(mic)
+    }
+
+    private fun startPulse(view: View) {
+        if (pulse?.target === view) return
+        pulse?.cancel()
+        pulse = ObjectAnimator.ofFloat(view, View.ALPHA, 1f, 0.25f).apply {
             duration = 550
             repeatMode = ValueAnimator.REVERSE
             repeatCount = ValueAnimator.INFINITE
@@ -201,6 +231,8 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
         pulse?.cancel()
         pulse = null
         sparkle.alpha = 1f
+        mic.alpha = 1f
+        mic.imageTintList = ColorStateList.valueOf(mutedColor)
     }
 
     private fun SpannableStringBuilder.span(s: String, vararg spans: Any) {

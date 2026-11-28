@@ -12,8 +12,15 @@ typing mistakes, and offers a one-tap **Fix**. You can give it a list of mistake
     cursor (up to 1,500 characters) to Claude;
   - if Claude finds mistakes, the strip shows them (`teh → the   dont → don't`) with a **Fix** button;
   - **✨** checks right away; **✕** dismisses a suggestion; **⚙** opens settings.
-- **Your common mistakes**: in settings, write things like *"I type 'teh' for 'the'"* or *"I mix up
-  your/you're"*. These go into Claude's instructions on every check.
+- **Teach it by voice**: tap the mic in the bar (or *Tell it a mistake* in settings) and say
+  something like *"I always type teh instead of the"* or *"stop fixing teh"*. Claude turns it into rules:
+  - **Always-fix swaps** for typos that aren't real words (`teh → the`, `dont → don't`). These run on
+    the phone the moment you finish the word, every time, with no network call. Press backspace once
+    right after a swap to undo it; that word won't be swapped again in that field.
+  - **Context notes** for mix-ups between real words (*your/you're*, *form/from*). These are added to
+    Claude's instructions on every check so it fixes them where the context shows the mistake.
+  - Everything learned is listed in settings, where you can remove any item. You can also type extra
+    notes there.
 - **Only typos are fixed**: Claude is told to leave your wording, slang, shorthand and emoji alone,
   and not to touch a word you're still typing.
 - If you keep typing while a check is running, the fix is still applied to the right spot, and only
@@ -21,7 +28,8 @@ typing mistakes, and offers a one-tap **Fix**. You can give it a list of mistake
 
 ## Privacy
 
-What you type in normal text fields is sent to Anthropic's API to be checked. These are **never sent**:
+When you teach it by voice, the phone's speech recognizer turns what you say into text, and that text
+is sent to Claude. What you type in normal text fields is sent to Anthropic's API to be checked. These are **never sent**:
 password fields, number/phone fields, and fields that ask keyboards not to learn from them
 (`IME_FLAG_NO_PERSONALIZED_LEARNING`, used by incognito tabs and similar). Your API key is stored in
 the app's private storage on the phone.
@@ -60,7 +68,9 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 |---|---|
 | `AiKeyboardService.kt` | The input method: handles keys, decides when to check, applies fixes |
 | `KeyboardView.kt` | The keyboard and suggestion strip UI (built in code) |
-| `Corrector.kt` | Calls Claude through the official Anthropic Java SDK and returns structured fixes |
+| `Corrector.kt` | Calls Claude through the official Anthropic Java SDK: proofreads text, and turns spoken mistakes into rules |
+| `VoiceInput.kt` | Listens through the phone's speech recognizer |
+| `MicPermissionActivity.kt` | Asks for microphone permission (a keyboard can't show the prompt itself) |
 | `SettingsActivity.kt` | Setup, API key, common mistakes, options |
 | `Prefs.kt` | Saved settings |
 
