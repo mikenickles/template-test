@@ -2,13 +2,12 @@ package com.aikeyboard
 
 import android.app.Activity
 import android.content.Intent
-import android.content.ActivityNotFoundException
 import android.os.Bundle
 import android.provider.Settings
-import android.speech.RecognizerIntent
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import android.widget.LinearLayout
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
@@ -22,11 +21,11 @@ class SettingsActivity : Activity() {
 
     private lateinit var prefs: Prefs
     private lateinit var apiKey: EditText
-    private lateinit var mistakes: EditText
     private lateinit var autoCheck: Switch
     private lateinit var autoApply: Switch
     private lateinit var model: RadioGroup
     private lateinit var setupStatus: TextView
+    private lateinit var teachInput: EditText
     private lateinit var teachButton: Button
     private val corrector = Corrector()
 
@@ -36,14 +35,12 @@ class SettingsActivity : Activity() {
         prefs = Prefs(this)
 
         apiKey = findViewById(R.id.apiKey)
-        mistakes = findViewById(R.id.mistakes)
         autoCheck = findViewById(R.id.autoCheck)
         autoApply = findViewById(R.id.autoApply)
         model = findViewById(R.id.model)
         setupStatus = findViewById(R.id.setupStatus)
 
         apiKey.setText(prefs.apiKey)
-        mistakes.setText(prefs.commonMistakes)
         autoCheck.isChecked = prefs.autoCheck
         autoApply.isChecked = prefs.autoApply
         model.check(
@@ -60,8 +57,12 @@ class SettingsActivity : Activity() {
         findViewById<Button>(R.id.pickKeyboard).setOnClickListener {
             getSystemService(InputMethodManager::class.java).showInputMethodPicker()
         }
-        teachButton = findViewById(R.id.teachByVoice)
-        teachButton.setOnClickListener { startVoice() }
+        teachInput = findViewById(R.id.teachInput)
+        teachButton = findViewById(R.id.teach)
+        teachButton.setOnClickListener { teach() }
+        teachInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) { teach(); true } else false
+        }
 
         findViewById<Button>(R.id.save).setOnClickListener {
             save()
@@ -88,7 +89,6 @@ class SettingsActivity : Activity() {
 
     private fun save() {
         prefs.apiKey = apiKey.text.toString()
-        prefs.commonMistakes = mistakes.text.toString()
         prefs.autoCheck = autoCheck.isChecked
         prefs.autoApply = autoApply.isChecked
         prefs.model = when (model.checkedRadioButtonId) {
@@ -98,39 +98,26 @@ class SettingsActivity : Activity() {
         }
     }
 
-    // ---- Teaching by voice ------------------------------------------------------------------
+    // ---- Teaching mistakes in plain language -----------------------------------------------
 
-    private fun startVoice() {
+    private fun teach() {
+        val description = teachInput.text.toString().trim()
+        if (description.isEmpty()) return
         save() // Make sure the API key just typed is used.
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(RecognizerIntent.EXTRA_PROMPT, "Say a mistake you make when typing")
-        try {
-            @Suppress("DEPRECATION")
-            startActivityForResult(intent, REQUEST_VOICE)
-        } catch (e: ActivityNotFoundException) {
-            Toast.makeText(this, "Voice input isn't available on this phone", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        @Suppress("DEPRECATION")
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != REQUEST_VOICE || resultCode != RESULT_OK) return
-        val spoken = data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-        if (spoken.isNullOrBlank()) return
 
         teachButton.isEnabled = false
         teachButton.text = "Learning…"
         Thread {
-            val result = corrector.learn(spoken, prefs)
+            val result = corrector.learn(description, prefs)
             if (result is LearnResult.Learned) prefs.learned = result.rules
             runOnUiThread {
                 teachButton.isEnabled = true
-                teachButton.text = "Tell it a mistake"
+                teachButton.text = "Teach"
                 val message = when (result) {
-                    is LearnResult.Learned -> result.reply
+                    is LearnResult.Learned -> {
+                        teachInput.text.clear()
+                        result.reply
+                    }
                     is LearnResult.Error -> result.message
                 }
                 Toast.makeText(this, message, Toast.LENGTH_LONG).show()
@@ -194,7 +181,4 @@ class SettingsActivity : Activity() {
         }
     }
 
-    private companion object {
-        const val REQUEST_VOICE = 1
-    }
 }

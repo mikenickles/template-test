@@ -1,7 +1,7 @@
 # AI Keyboard (Android)
 
 An Android keyboard with Claude built in. As you type, it reads the text in the field, finds your
-typing mistakes, and offers a one-tap **Fix**. You can give it a list of mistakes you usually make
+typing mistakes, and offers a one-tap **Fix**. You can tell it, in your own words, the mistakes you usually make
 (in plain words), and it watches for those especially.
 
 ## How it works
@@ -11,16 +11,17 @@ typing mistakes, and offers a one-tap **Fix**. You can give it a list of mistake
   - after you finish a word or sentence and pause briefly, the keyboard sends the text before the
     cursor (up to 1,500 characters) to Claude;
   - if Claude finds mistakes, the strip shows them (`teh → the   dont → don't`) with a **Fix** button;
-  - **✨** checks right away; **✕** dismisses a suggestion; **⚙** opens settings.
-- **Teach it by voice**: tap the mic in the bar (or *Tell it a mistake* in settings) and say
-  something like *"I always type teh instead of the"* or *"stop fixing teh"*. Claude turns it into rules:
+  - the sparkle button checks right away; **✕** dismisses a suggestion; the sliders button opens settings.
+- **Tell it your mistakes in plain words**: tap the speech-bubble button in the bar, and what you type
+  goes into the bar instead of the app. Write something like *"I always type teh instead of the"* or
+  *"stop fixing teh"*, then press enter or **Teach** (✕ cancels). You can do the same in settings.
+  Claude turns what you wrote into rules:
   - **Always-fix swaps** for typos that aren't real words (`teh → the`, `dont → don't`). These run on
     the phone the moment you finish the word, every time, with no network call. Press backspace once
     right after a swap to undo it; that word won't be swapped again in that field.
   - **Context notes** for mix-ups between real words (*your/you're*, *form/from*). These are added to
     Claude's instructions on every check so it fixes them where the context shows the mistake.
-  - Everything learned is listed in settings, where you can remove any item. You can also type extra
-    notes there.
+  - Everything learned is listed in settings, where you can remove any item.
 - **Only typos are fixed**: Claude is told to leave your wording, slang, shorthand and emoji alone,
   and not to touch a word you're still typing.
 - If you keep typing while a check is running, the fix is still applied to the right spot, and only
@@ -28,8 +29,7 @@ typing mistakes, and offers a one-tap **Fix**. You can give it a list of mistake
 
 ## Privacy
 
-When you teach it by voice, the phone's speech recognizer turns what you say into text, and that text
-is sent to Claude. What you type in normal text fields is sent to Anthropic's API to be checked. These are **never sent**:
+What you write when teaching it a mistake is sent to Claude. What you type in normal text fields is sent to Anthropic's API to be checked. These are **never sent**:
 password fields, number/phone fields, and fields that ask keyboards not to learn from them
 (`IME_FLAG_NO_PERSONALIZED_LEARNING`, used by incognito tabs and similar). Your API key is stored in
 the app's private storage on the phone.
@@ -40,7 +40,7 @@ the app's private storage on the phone.
 2. Open **AI Keyboard**, tap **Enable AI Keyboard in system settings**, and turn it on.
 3. Tap **Switch to AI Keyboard**.
 4. Paste a Claude API key (from platform.claude.com → API keys).
-5. Write the mistakes you usually make, then type in the "Try it here" box.
+5. Under "Mistakes I usually make", describe a mistake in your own words and tap **Teach**, then type in the "Try it here" box.
 
 ### Settings
 
@@ -68,10 +68,8 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 |---|---|
 | `AiKeyboardService.kt` | The input method: handles keys, decides when to check, applies fixes |
 | `KeyboardView.kt` | The keyboard and suggestion strip UI (built in code) |
-| `Corrector.kt` | Calls Claude through the official Anthropic Java SDK: proofreads text, and turns spoken mistakes into rules |
-| `VoiceInput.kt` | Listens through the phone's speech recognizer |
-| `MicPermissionActivity.kt` | Asks for microphone permission (a keyboard can't show the prompt itself) |
-| `SettingsActivity.kt` | Setup, API key, common mistakes, options |
+| `Corrector.kt` | Calls Claude through the official Anthropic Java SDK: proofreads text, and turns your descriptions of mistakes into rules |
+| `SettingsActivity.kt` | Setup, API key, teaching mistakes and the list of what's learned, options |
 | `Prefs.kt` | Saved settings |
 
 Claude is called with low effort and a JSON output schema (`corrected` text plus a list of

@@ -5,7 +5,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Mistakes the user taught by voice.
+ * Mistakes the user described in their own words.
  * [replacements]: typo (lowercase) -> correct word, swapped instantly on the phone every time.
  * [notes]: context-dependent mistakes (e.g. your/you're) that Claude watches for on each check.
  */
@@ -25,11 +25,6 @@ class Prefs(context: Context) {
     var model: String
         get() = sp.getString(KEY_MODEL, Models.DEFAULT) ?: Models.DEFAULT
         set(v) = sp.edit().putString(KEY_MODEL, v).apply()
-
-    /** Free-form notes the user typed in settings about mistakes they commonly make. */
-    var commonMistakes: String
-        get() = sp.getString(KEY_MISTAKES, "") ?: ""
-        set(v) = sp.edit().putString(KEY_MISTAKES, v).apply()
 
     /** Check text automatically after each word / sentence. */
     var autoCheck: Boolean
@@ -66,7 +61,6 @@ class Prefs(context: Context) {
     companion object {
         private const val KEY_API_KEY = "api_key"
         private const val KEY_MODEL = "model"
-        private const val KEY_MISTAKES = "common_mistakes"
         private const val KEY_AUTO_CHECK = "auto_check"
         private const val KEY_AUTO_APPLY = "auto_apply"
         private const val KEY_LEARNED = "learned_rules"

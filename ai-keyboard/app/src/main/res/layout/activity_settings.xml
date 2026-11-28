@@ -67,14 +67,32 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Tap the mic on the keyboard (or the button below) and say a mistake you make, like &quot;I always type teh instead of the&quot;. Typos are then fixed instantly, every time. Mix-ups between real words, like your / you're, are fixed by Claude using context." />
+            android:text="Describe a mistake in your own words, here or with the speech-bubble button on the keyboard. Typos are then fixed instantly, every time. Mix-ups between real words, like your / you're, are fixed by Claude using context." />
 
-        <Button
-            android:id="@+id/teachByVoice"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Tell it a mistake" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/teachInput"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="@string/teach_hint"
+                android:imeOptions="actionDone"
+                android:inputType="textCapSentences"
+                android:singleLine="true"
+                android:textSize="16sp" />
+
+            <Button
+                android:id="@+id/teach"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Teach" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/swapsTitle"
@@ -103,22 +121,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Anything else to watch for (type it here, one per line)" />
-
-        <EditText
-            android:id="@+id/mistakes"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="top"
-            android:hint="@string/mistakes_hint"
-            android:textSize="16sp"
-            android:inputType="textMultiLine|textCapSentences"
-            android:minLines="3" />
 
         <!-- Behaviour -->
         <TextView style="@style/SectionTitle" android:text="4. How it works" />

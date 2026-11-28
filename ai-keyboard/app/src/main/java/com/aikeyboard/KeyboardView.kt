@@ -46,7 +46,7 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
         fun onDismissSuggestion()
         fun onCheckNow()
         fun onOpenSettings()
-        fun onMic()
+        fun onTeach()
     }
 
     enum class Shift { OFF, ONCE, LOCKED }
@@ -63,7 +63,7 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
     private val fixButton = TextView(context)
     private val dismissButton = ImageView(context)
     private val sparkle = ImageView(context)
-    private lateinit var mic: ImageView
+    private lateinit var teach: ImageView
     private var pulse: ObjectAnimator? = null
     private val repeatHandler = Handler(Looper.getMainLooper())
 
@@ -106,8 +106,8 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
             iconButton(R.drawable.ic_settings, "Settings", mutedColor) { listener.onOpenSettings() },
             LayoutParams(dp(44), dp(40))
         )
-        mic = iconButton(R.drawable.ic_mic, "Teach a mistake by voice", mutedColor) { listener.onMic() }
-        bar.addView(mic, LayoutParams(dp(40), dp(40)))
+        teach = iconButton(R.drawable.ic_teach, "Tell it a mistake you make", mutedColor) { listener.onTeach() }
+        bar.addView(teach, LayoutParams(dp(40), dp(40)))
 
         statusText.apply {
             setTextColor(mutedColor)
@@ -175,18 +175,35 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
         statusText.setTextColor(textColor)
     }
 
-    /** Mic is listening; [partial] is what has been heard so far. */
-    fun showListening(partial: String) {
-        showIdle(partial.ifBlank { "Listening… say a mistake you make" })
-        if (partial.isNotBlank()) statusText.setTextColor(textColor)
-        mic.imageTintList = ColorStateList.valueOf(textColor)
-        startPulse(mic)
+    /**
+     * Teach mode: keys type into the bar instead of the app. [typed] is the user's description
+     * of a mistake so far.
+     */
+    fun showTeachInput(typed: String) {
+        stopPulse()
+        teach.imageTintList = ColorStateList.valueOf(textColor)
+        sparkle.visibility = GONE // Not needed while typing a mistake; gives the text more room.
+        // Keep the end of a long description (where the user is typing) in view.
+        statusText.ellipsize = if (typed.isEmpty()) TextUtils.TruncateAt.END else TextUtils.TruncateAt.START
+        statusText.gravity = Gravity.CENTER_VERTICAL or Gravity.START
+        val text = SpannableStringBuilder()
+        if (typed.isEmpty()) {
+            text.span("│", ForegroundColorSpan(textColor))
+            text.span(" Describe a mistake", ForegroundColorSpan(mutedColor))
+        } else {
+            text.span(typed, ForegroundColorSpan(textColor))
+            text.span("│", ForegroundColorSpan(mutedColor))
+        }
+        statusText.text = text
+        fixButton.text = "Teach"
+        fixButton.visibility = VISIBLE
+        dismissButton.visibility = VISIBLE
     }
 
     fun showLearning() {
         showIdle("Learning…")
-        mic.imageTintList = ColorStateList.valueOf(textColor)
-        startPulse(mic)
+        teach.imageTintList = ColorStateList.valueOf(textColor)
+        startPulse(teach)
     }
 
     private fun startPulse(view: View) {
@@ -223,6 +240,7 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
             }
         }
         statusText.text = text
+        fixButton.text = "Fix"
         fixButton.visibility = VISIBLE
         dismissButton.visibility = VISIBLE
     }
@@ -231,8 +249,11 @@ class KeyboardView(context: Context, private val listener: Listener) : LinearLay
         pulse?.cancel()
         pulse = null
         sparkle.alpha = 1f
-        mic.alpha = 1f
-        mic.imageTintList = ColorStateList.valueOf(mutedColor)
+        sparkle.visibility = VISIBLE
+        teach.alpha = 1f
+        teach.imageTintList = ColorStateList.valueOf(mutedColor)
+        statusText.gravity = Gravity.CENTER
+        statusText.ellipsize = TextUtils.TruncateAt.END
     }
 
     private fun SpannableStringBuilder.span(s: String, vararg spans: Any) {

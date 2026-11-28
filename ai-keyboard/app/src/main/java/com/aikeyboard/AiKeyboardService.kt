@@ -28,7 +28,9 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
     /** True for password and non-text fields, where even on-phone swaps would be wrong. */
     private var passwordField = false
 
-    private lateinit var voice: VoiceInput
+    /** Teach mode: keys type a description of a mistake into the bar instead of the app. */
+    private var teaching = false
+    private val teachText = StringBuilder()
 
     /** The last instant swap, so one backspace can undo it. */
     private data class Swap(val original: String, val replaced: String)
@@ -42,7 +44,6 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
     override fun onCreate() {
         super.onCreate()
         prefs = Prefs(this)
-        voice = VoiceInput(this)
     }
 
     override fun onCreateInputView(): View = KeyboardView(this, this).also { keyboard = it }
@@ -53,6 +54,7 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
         passwordField = isPassword(info)
         lastSwap = null
         undone.clear()
+        endTeaching()
         cancelCheck()
         lastChecked = null
         keyboard?.showIdle(if (privateField) "AI checking is off for this field" else "")
@@ -61,7 +63,7 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
 
     override fun onFinishInputView(finishingInput: Boolean) {
         cancelCheck()
-        voice.stop()
+        endTeaching()
         super.onFinishInputView(finishingInput)
     }
 
@@ -73,6 +75,11 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
     // ---- Key handling ----------------------------------------------------------------------
 
     override fun onText(text: String) {
+        if (teaching) {
+            teachText.append(text)
+            afterTeachKey()
+            return
+        }
         val ic = currentInputConnection ?: return
         lastSwap = null
         val swapped = text.length == 1 && text[0] in DELIMITERS && commitWithSwap(text)
@@ -86,6 +93,15 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
     }
 
     override fun onBackspace() {
+        if (teaching) {
+            if (teachText.isNotEmpty()) {
+                // Remove a whole character, including emoji made of two UTF-16 units.
+                val end = teachText.length
+                teachText.delete(teachText.offsetByCodePoints(end, -1), end)
+            }
+            afterTeachKey()
+            return
+        }
         val ic = currentInputConnection ?: return
         if (undoSwap()) {
             onUserTyped(null)
@@ -103,6 +119,10 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
     }
 
     override fun onEnter() {
+        if (teaching) {
+            submitTeaching()
+            return
+        }
         val ic = currentInputConnection ?: return
         val info = currentInputEditorInfo
         val action = info?.imeOptions?.and(EditorInfo.IME_MASK_ACTION) ?: EditorInfo.IME_ACTION_NONE
@@ -127,6 +147,11 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
     private fun updateAutoShift() {
         val kb = keyboard ?: return
         if (kb.shift == KeyboardView.Shift.LOCKED) return
+        if (teaching) {
+            val want = if (teachText.isBlank()) KeyboardView.Shift.ONCE else KeyboardView.Shift.OFF
+            if (kb.shift != want) kb.shift = want
+            return
+        }
         val info = currentInputEditorInfo ?: return
         val caps = currentInputConnection?.getCursorCapsMode(info.inputType) ?: 0
         val want = if (caps != 0) KeyboardView.Shift.ONCE else KeyboardView.Shift.OFF
@@ -182,38 +207,38 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
         else -> correct
     }
 
-    // ---- Teaching mistakes by voice --------------------------------------------------------
+    // ---- Teaching mistakes in plain language -----------------------------------------------
 
-    override fun onMic() {
-        if (voice.isListening) {
-            voice.stop()
+    override fun onTeach() {
+        if (teaching) {
+            endTeaching()
             keyboard?.showIdle()
             return
         }
-        if (!voice.hasPermission()) {
-            askMicPermission()
-            return
-        }
         cancelCheck()
-        keyboard?.showListening("")
-        voice.start(object : VoiceInput.Callback {
-            override fun onPartial(text: String) {
-                keyboard?.showListening(text)
-            }
-
-            override fun onFinal(text: String) = learn(text)
-
-            override fun onError(message: String, needsPermission: Boolean) {
-                keyboard?.showIdle(message)
-                if (needsPermission) askMicPermission()
-            }
-        })
+        teaching = true
+        teachText.clear()
+        keyboard?.showTeachInput("")
+        updateAutoShift()
     }
 
-    private fun learn(spoken: String) {
+    private fun afterTeachKey() {
+        val kb = keyboard ?: return
+        if (kb.shift == KeyboardView.Shift.ONCE && teachText.isNotEmpty()) kb.shift = KeyboardView.Shift.OFF
+        kb.showTeachInput(teachText.toString())
+        updateAutoShift()
+    }
+
+    private fun submitTeaching() {
+        val description = teachText.toString().trim()
+        endTeaching()
+        if (description.isEmpty()) {
+            keyboard?.showIdle()
+            return
+        }
         keyboard?.showLearning()
         executor.execute {
-            val result = corrector.learn(spoken, prefs)
+            val result = corrector.learn(description, prefs)
             // Save on the worker thread so a second request always builds on this one.
             if (result is LearnResult.Learned) prefs.learned = result.rules
             main.post {
@@ -223,12 +248,12 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
                 }
             }
         }
+        updateAutoShift()
     }
 
-    private fun askMicPermission() {
-        startActivity(
-            Intent(this, MicPermissionActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        )
+    private fun endTeaching() {
+        teaching = false
+        teachText.clear()
     }
 
     // ---- AI checking -----------------------------------------------------------------------
@@ -248,6 +273,7 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
     }
 
     override fun onCheckNow() {
+        if (teaching) endTeaching()
         if (privateField) {
             keyboard?.showIdle("AI checking is off for this field")
             return
@@ -296,6 +322,10 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
     }
 
     override fun onApplySuggestion() {
+        if (teaching) {
+            submitTeaching()
+            return
+        }
         val fix = pending ?: return
         pending = null
         val ic = currentInputConnection ?: return
@@ -325,6 +355,12 @@ class AiKeyboardService : InputMethodService(), KeyboardView.Listener {
     }
 
     override fun onDismissSuggestion() {
+        if (teaching) {
+            endTeaching()
+            keyboard?.showIdle()
+            updateAutoShift()
+            return
+        }
         pending = null
         keyboard?.showIdle()
     }
